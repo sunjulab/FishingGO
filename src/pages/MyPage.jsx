@@ -30,8 +30,8 @@ export default function MyPage() {
   // 설정 대시보드 상태
   const [notiSetting, setNotiSetting] = useState({ flow: true, bait: true, comm: false });
 
-  const nextLevelExp = 20000;
-  const expPercentage = (user.points / nextLevelExp) * 100;
+  const nextLevelExp = user.level ? user.level * 100 : 100;
+  const expPercentage = user.exp ? (user.exp / nextLevelExp) * 100 : 0;
 
   useEffect(() => {
     fetchUserData();
@@ -64,7 +64,7 @@ export default function MyPage() {
         email: user.email, newNickname: newName
       });
       if (res.data.success) {
-        updateUser({ name: res.data.nickname });
+        updateUser({ name: res.data.name });
         setIsEditing(false);
         addToast('닉네임이 성공적으로 변경되었습니다.', 'success');
       }
@@ -112,8 +112,8 @@ export default function MyPage() {
             <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '600', marginTop: '4px' }}>{user.email}</p>
             <div style={{ marginTop: '16px' }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px' }}>
-                  <span>LEVEL {user.level}</span>
-                  <span style={{ color: '#0056D2' }}>{user.points.toLocaleString()} / {nextLevelExp.toLocaleString()} XP</span>
+                  <span>LEVEL {user.level || 1}</span>
+                  <span style={{ color: '#0056D2' }}>{(user.exp || 0).toLocaleString()} / {nextLevelExp.toLocaleString()} XP</span>
                </div>
                <div style={{ width: '100%', height: '8px', background: '#E5E5EA', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ width: `${expPercentage}%`, height: '100%', background: 'linear-gradient(90deg, #0056D2, #00C48C)', borderRadius: '4px' }}></div>
@@ -124,8 +124,8 @@ export default function MyPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', backgroundColor: '#F2F2F7', borderRadius: '24px', overflow: 'hidden', marginTop: '30px', border: '1.5px solid #F2F2F7' }}>
            {[
-             { label: '조과기록', val: realRecords.length || user.records, icon: Trophy, color: '#FF9B26' },
-             { label: '팔로워', val: user.followers, icon: Star, color: '#0056D2' },
+             { label: '조과기록', val: realRecords.length, icon: Trophy, color: '#FF9B26' },
+             { label: '팔로워', val: user.followers?.length || 0, icon: Star, color: '#0056D2' },
              { label: '활동피드', val: realPosts.length, icon: Heart, color: '#FF5A5F' }
            ].map(s => (
              <div key={s.label} style={{ backgroundColor: '#fff', padding: '16px 10px', textAlign: 'center' }}>

@@ -3,6 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
@@ -11,6 +14,9 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/fishinggo'
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB Connected (Models loaded)'))
   .catch(err => console.log('⚠️ MongoDB Timeout (Using In-Memory Fallback)'));
+
+const User = require('./models/User');
+const Post = require('./models/Post');
 
 const app = express();
 app.use(cors());
@@ -160,6 +166,83 @@ async function updateAllStationsCache() {
 updateAllStationsCache();
 setInterval(updateAllStationsCache, 3600000);
 
+/* =========================================================
+   AUTH & USER LEVELING API
+========================================================= */
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    const existing = await User.findOne({ $or: [{ email }, { name }] });
+    if (existing) return res.status(400).json({ error: '이미 사용중인 이메일이거나 닉네임입니다.' });
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ email, password: hashedPassword, name });
+    await user.save();
+    
+    res.json({ success: true, user: { email: user.email, name: user.name, level: user.level, exp: user.exp } });
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+    
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+    
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    
+    // Auto Attendance Logic (Simple)
+    const today = new Date().toISOString().split('T')[0];
+    let justAttended = false;
+    let leveledUp = false;
+    if (user.lastAttendance !== today) {
+      user.lastAttendance = today;
+      user.totalAttendance += 1;
+      user.exp += 15;
+      if (user.exp >= user.level * 100) {
+        user.exp -= user.level * 100;
+        user.level += 1;
+        leveledUp = true;
+      }
+      await user.save();
+      justAttended = true;
+    }
+    
+    res.json({ 
+      token, 
+      user: { id: user._id, email: user.email, name: user.name, level: user.level, exp: user.exp, tier: user.tier, avatar: user.avatar, followers: user.followers, following: user.following, totalAttendance: user.totalAttendance },
+      justAttended,
+      leveledUp
+    });
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+app.put('/api/user/nickname', async (req, res) => {
+  try {
+    const { email, newName } = req.body; 
+    const duplicate = await User.findOne({ name: newName });
+    if (duplicate) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
+    
+    const user = await User.findOneAndUpdate({ email }, { name: newName }, { new: true });
+    // 업데이트 된 유저 게시글들의 닉네임도 일괄 업데이트 (디노말라이즈 동기화)
+    await Post.updateMany({ author_email: email }, { author: newName });
+    res.json({ success: true, name: user.name });
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+app.get('/api/user/posts', async (req, res) => {
+  try {
+    const posts = await Post.find({ author_email: req.query.email }).sort({ createdAt: -1 });
+    res.json(posts);
+  } catch(err) { res.json([]); }
+});
+
+/* =========================================================
+   MARINE API
+========================================================= */
 app.get('/api/weather/precision', (req, res) => {
   const { stationId } = req.query;
   const sid = stationId || 'DT_0001';
