@@ -108,12 +108,25 @@ export default function WritePost() {
         {/* 하단 툴바 */}
         <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', display: 'flex', gap: '20px' }}>
           <div 
-            onClick={() => {
-              const url = window.prompt('이미지 주소(URL)를 입력하세요.');
-              if (url) setImage(url);
-            }}
+            onClick={() => document.getElementById('image-upload-input').click()}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', color: image ? '#0056D2' : '#666', fontSize: '14px', cursor: 'pointer' }}
           >
+            <input 
+              id="image-upload-input"
+              type="file" 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setImage(reader.result);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
             <div style={{ width: '36px', height: '36px', backgroundColor: image ? 'rgba(0,86,210,0.05)' : '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Image size={20} />
             </div>
