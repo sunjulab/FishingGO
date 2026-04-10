@@ -87,7 +87,7 @@ function Header() {
 }
 
 export default function App() {
-  const GOOGLE_CLIENT_ID = "317197655538-44imkco7069ti2c62k7ds6uie85o2sac.apps.googleusercontent.com"; 
+  const GOOGLE_CLIENT_ID = "779696124026-7dgp86dmo15jjsvm1dds31j2eim00pgb.apps.googleusercontent.com"; 
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
