@@ -1,0 +1,29 @@
+{
+  "name": "fishing-go",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@react-oauth/google": "^0.13.4",
+    "axios": "^1.14.0",
+    "jwt-decode": "^4.0.0",
+    "lucide-react": "^0.344.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-player": "^3.4.0",
+    "react-router-dom": "^7.13.2",
+    "recharts": "^3.8.1",
+    "socket.io-client": "^4.8.3",
+    "vite-plugin-pwa": "^1.2.0",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.4"
+  }
+}

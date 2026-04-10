@@ -1,0 +1,39 @@
+name: FishingGO CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install Frontend Dependencies
+      run: npm ci
+      
+    - name: Build Frontend
+      run: npm run build
+      
+    - name: Install Backend Dependencies
+      run: cd server && npm ci
+      
+    # - name: Run E2E Tests (Cypress)
+    #   run: npm run test:e2e
+    
+    - name: Deploy Placeholder
+      run: echo 'Deployment to AWS/Vercel goes here automatically after successful build!'

@@ -1,0 +1,314 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '../api/index';
+import { useUserStore } from '../store/useUserStore';
+import { useToastStore } from '../store/useToastStore';
+import { 
+  BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
+  ShieldAlert, ChevronRight, LayoutGrid, Edit3, Check, X, 
+  Trophy, Star, Heart, MessageSquare, Camera, History,
+  ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon
+} from 'lucide-react';
+
+export default function MyPage() {
+  const navigate = useNavigate();
+  const { user, updateUser, logout, canAccessBusinessShop } = useUserStore();
+  const addToast = useToastStore((state) => state.addToast);
+  const canAccessPartnerCenter = canAccessBusinessShop();
+  
+  const [activeTab, setActiveTab] = useState('records');
+  const [showModal, setShowModal] = useState(null); // 'noti', 'premium', 'security'
+  
+  const [realPosts, setRealPosts] = useState([]);
+  const [realRecords, setRealRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [newName, setNewName] = useState(user.name);
+  const [error, setError] = useState('');
+
+  // 설정 대시보드 상태
+  const [notiSetting, setNotiSetting] = useState({ flow: true, bait: true, comm: false });
+
+  const nextLevelExp = 20000;
+  const expPercentage = (user.points / nextLevelExp) * 100;
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      const [postsRes, recordsRes] = await Promise.all([
+        apiClient.get(`/api/user/posts?email=${user.email}`),
+        apiClient.get(`/api/user/records?email=${user.email}`)
+      ]);
+      setRealPosts(postsRes.data);
+      setRealRecords(recordsRes.data);
+    } catch (err) {
+      console.error('Failed to fetch my activity', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNicknameChange = async () => {
+    const nicknameRegex = /^[a-zA-Z0-9가-힣]+$/;
+    if (!nicknameRegex.test(newName)) {
+      addToast('한글, 영어, 숫자만 사용 가능합니다.', 'error');
+      return;
+    }
+    try {
+      const res = await apiClient.post(`/api/user/nickname`, {
+        email: user.email, newNickname: newName
+      });
+      if (res.data.success) {
+        updateUser({ name: res.data.nickname });
+        setIsEditing(false);
+        addToast('닉네임이 성공적으로 변경되었습니다.', 'success');
+      }
+    } catch (err) {
+      addToast(err.response?.data?.error || '서버 연결 실패', 'error');
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    addToast('로그아웃 되었습니다.', 'success');
+    navigate('/login');
+  };
+
+  const menuItems = [
+    { id: 'noti', icon: Bell, title: '알림 설정', color: '#0056D2', desc: '물때 및 커뮤니티 알림' },
+    { id: 'premium', icon: CreditCard, title: '프리미엄 구독 관리', color: '#FF9B26', desc: '포인트 및 구독권 요금' },
+    { id: 'security', icon: ShieldAlert, title: '보안 및 차단 설정', color: '#FF5A5F', desc: '계정 보안 및 차단 목록' }
+  ];
+
+  return (
+    <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '120px' }}>
+      {/* 🟦 Top Profile Card 🟦 */}
+      <div style={{ background: 'linear-gradient(180deg, #fff 0%, #F8F9FA 100%)', padding: '40px 24px 30px', borderBottom: '1px solid #F0F0F0' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <img src={user.picture} alt="P" style={{ width: '100px', height: '100px', borderRadius: '35px', objectFit: 'cover', border: '4px solid #fff', boxShadow: '0 15px 30px rgba(0,86,210,0.1)' }} />
+            <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', backgroundColor: '#0056D2', color: '#fff', fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '14px', border: '3px solid #fff' }}>PRO</div>
+          </div>
+          
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {isEditing ? (
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input value={newName} onChange={e => setNewName(e.target.value)} style={{ background: '#fff', border: '2px solid #0056D2', borderRadius: '12px', padding: '8px 40px 8px 12px', fontSize: '18px', fontWeight: '900', width: '100%', outline: 'none' }} />
+                  <Check size={18} color="#00C48C" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }} onClick={handleNicknameChange} />
+                </div>
+              ) : (
+                <>
+                  <h2 style={{ fontSize: '24px', fontWeight: '950', color: '#1c1c1e' }}>{user.name}</h2>
+                  <div onClick={() => setIsEditing(true)} style={{ backgroundColor: '#F2F2F7', padding: '6px', borderRadius: '8px', cursor: 'pointer' }}><Edit3 size={14} color="#8E8E93" /></div>
+                </>
+              )}
+            </div>
+            <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '600', marginTop: '4px' }}>{user.email}</p>
+            <div style={{ marginTop: '16px' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px' }}>
+                  <span>LEVEL {user.level}</span>
+                  <span style={{ color: '#0056D2' }}>{user.points.toLocaleString()} / {nextLevelExp.toLocaleString()} XP</span>
+               </div>
+               <div style={{ width: '100%', height: '8px', background: '#E5E5EA', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${expPercentage}%`, height: '100%', background: 'linear-gradient(90deg, #0056D2, #00C48C)', borderRadius: '4px' }}></div>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', backgroundColor: '#F2F2F7', borderRadius: '24px', overflow: 'hidden', marginTop: '30px', border: '1.5px solid #F2F2F7' }}>
+           {[
+             { label: '조과기록', val: realRecords.length || user.records, icon: Trophy, color: '#FF9B26' },
+             { label: '팔로워', val: user.followers, icon: Star, color: '#0056D2' },
+             { label: '활동피드', val: realPosts.length, icon: Heart, color: '#FF5A5F' }
+           ].map(s => (
+             <div key={s.label} style={{ backgroundColor: '#fff', padding: '16px 10px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '4px' }}>
+                   <s.icon size={12} color={s.color} fill={s.color} />
+                   <span style={{ fontSize: '18px', fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
+             </div>
+           ))}
+        </div>
+      </div>
+
+      {/* 🟦 Tabs Switcher 🟦 */}
+      <div style={{ display: 'flex', padding: '20px 24px 10px', gap: '24px' }}>
+         <div onClick={() => setActiveTab('records')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'records' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer' }}>
+            기록부 {activeTab === 'records' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
+         </div>
+         <div onClick={() => setActiveTab('posts')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'posts' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer' }}>
+            나의 피드 {activeTab === 'posts' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
+         </div>
+      </div>
+
+      {/* 🟦 Tab Content 🟦 */}
+      <div style={{ padding: '20px 24px' }}>
+         {activeTab === 'records' ? (
+           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
+              {realRecords.length > 0 ? realRecords.map(r => (
+                <div key={r.id} style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7' }}>
+                   <img src={r.image} style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
+                   <div style={{ padding: '14px' }}>
+                      <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800' }}>{r.time}</div>
+                      <div style={{ fontSize: '14px', fontWeight: '900', marginTop: '2px' }}>{r.content.substring(0,20)}...</div>
+                   </div>
+                </div>
+              )) : (
+                <div style={{ gridColumn: 'span 2', padding: '40px', textAlign: 'center', color: '#8E8E93' }}>
+                   <p style={{ fontSize: '14px', fontWeight: '700' }}>아직 등록된 조과 기록이 없습니다.</p>
+                </div>
+              )}
+              <div onClick={() => navigate('/write')} style={{ height: '190px', borderRadius: '28px', border: '2px dashed #D1D1D6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#8E8E93', cursor: 'pointer' }}>
+                 <Camera size={24} /><span style={{ fontSize: '13px', fontWeight: '800' }}>기록 추가</span>
+              </div>
+           </div>
+         ) : (
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {realPosts.length > 0 ? realPosts.map(p => (
+                <div key={p.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '28px', border: '1.5px solid #F2F2F7' }}>
+                   <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', marginBottom: '8px' }}>{p.time}</div>
+                   <p style={{ fontSize: '14px', fontWeight: '700', color: '#1c1c1e', margin: '0 0 16px' }}>{p.content}</p>
+                   <div style={{ display: 'flex', gap: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#8e8e93', fontWeight: '700' }}><Heart size={14} color="#FF5A5F" /> {p.likes}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#8e8e93', fontWeight: '700' }}><MessageSquare size={14} /> {p.comments.length}</div>
+                   </div>
+                </div>
+              )) : (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#8E8E93' }}>
+                   <p style={{ fontSize: '14px', fontWeight: '700' }}>등록된 게시글이 없습니다.</p>
+                </div>
+              )}
+           </div>
+         )}
+      </div>
+
+      {/* 🟦 비즈니스 파트너 센터 (BUSINESS LITE/PRO/VIP 한정) 🟦 */}
+      {canAccessPartnerCenter && (
+        <div className="fade-in" style={{ padding: '10px 24px 20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '950', marginBottom: '14px', color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '20px' }}>👑</span> 비즈니스 파트너 센터
+          </h3>
+          <div style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #2A2A4A 100%)', borderRadius: '28px', padding: '24px', color: '#fff', boxShadow: '0 12px 30px rgba(26,26,46,0.2)' }}>
+            
+            {/* 1. 예약 현황 */}
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '18px', borderRadius: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div>
+                <div style={{ fontSize: '11.5px', color: '#FFD700', fontWeight: '900', marginBottom: '6px', letterSpacing: '0.02em' }}>실시간 예약 현황</div>
+                <div style={{ fontSize: '17px', fontWeight: '950', letterSpacing: '-0.02em' }}>신규 예약 문의 <span style={{ color: '#00C48C' }}>3건</span></div>
+              </div>
+              <button style={{ backgroundColor: '#FFD700', color: '#1A1A2E', border: 'none', padding: '12px 18px', borderRadius: '14px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,215,0,0.3)', transition: 'transform 0.15s' }}>
+                연락처 확인
+              </button>
+            </div>
+
+            {/* 2. 조과 타임라인 & 상품 관리 액션 버튼 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '18px', borderRadius: '20px', cursor: 'pointer' }}>
+                <Camera size={26} color="#00C48C" style={{ marginBottom: '10px' }} />
+                <div style={{ fontSize: '14.5px', fontWeight: '900', marginBottom: '6px' }}>조과 갤러리 등록</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4', fontWeight: '600' }}>홈 화면 '대박 선박'에 자동 노출되어 홍보됩니다.</div>
+              </div>
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '18px', borderRadius: '20px', cursor: 'pointer' }}>
+                <CardIcon size={26} color="#FFD700" style={{ marginBottom: '10px' }} />
+                <div style={{ fontSize: '14.5px', fontWeight: '900', marginBottom: '6px' }}>승선권/상품 관리</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4', fontWeight: '600' }}>승선권 스케줄 조정 및 판매 비품을 추가합니다.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 🟦 Settings Section 🟦 */}
+      <div style={{ padding: '10px 24px 40px' }}>
+         <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7' }}>
+            {menuItems.map((item, idx) => (
+              <div key={idx} onClick={() => setShowModal(item.id)} style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: idx === menuItems.length - 1 ? 'none' : '1px solid #F8F9FA', cursor: 'pointer' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ backgroundColor: `${item.color}15`, padding: '10px', borderRadius: '12px' }}><item.icon size={20} color={item.color} strokeWidth={2.5} /></div>
+                    <div>
+                        <div style={{ fontSize: '15px', fontWeight: '850', color: '#1c1c1e' }}>{item.title}</div>
+                        <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600' }}>{item.desc}</div>
+                    </div>
+                 </div>
+                 <ChevronRight size={18} color="#C7C7CC" />
+              </div>
+            ))}
+         </div>
+         <button onClick={handleLogout} style={{ width: '100%', padding: '20px', background: 'transparent', color: '#FF5A5F', border: '2px solid #FF5A5F22', borderRadius: '24px', fontWeight: '900', fontSize: '16px', marginTop: '24px' }}>로그아웃</button>
+      </div>
+
+      {/* 🟦 Settings Modals (Bottom Sheets) 🟦 */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setShowModal(null)}>
+           <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#fff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '32px 24px 60px', borderRadius: 'inherit', animation: 'slideUp 0.3s ease-out' }} onClick={e => e.stopPropagation()}>
+              <div style={{ width: '40px', height: '5px', background: '#E5E5EA', borderRadius: '3px', margin: '0 auto 24px' }}></div>
+              
+              {showModal === 'noti' && (
+                <>
+                  <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '24px' }}>알림 설정</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {[
+                        { key: 'flow', label: '물때 및 피딩 타임 알림', icon: History },
+                        { key: 'bait', label: '실시간 미끼 추천 알림', icon: Trophy },
+                        { key: 'comm', label: '커뮤니티 댓글 알림', icon: MessageSquare }
+                    ].map(n => (
+                        <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <n.icon size={18} color="#8E8E93" /><span style={{ fontSize: '15px', fontWeight: '750' }}>{n.label}</span>
+                            </div>
+                            <div onClick={() => setNotiSetting({...notiSetting, [n.key]: !notiSetting[n.key]})} style={{ cursor: 'pointer' }}>
+                                {notiSetting[n.key] ? <ToggleRight size={32} color="#0056D2" fill="#0056D2" /> : <ToggleLeft size={32} color="#E5E5EA" />}
+                            </div>
+                        </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {showModal === 'premium' && (
+                <>
+                  <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '20px' }}>프리미엄 구독 관리</h3>
+                  <div style={{ padding: '24px', background: 'linear-gradient(135deg, #FFD700, #FFA500)', borderRadius: '24px', color: '#1c1c1e', marginBottom: '24px' }}>
+                     <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>CURRENT PLAN</div>
+                     <div style={{ fontSize: '22px', fontWeight: '950' }}>Fishing GO Premium</div>
+                     <div style={{ fontSize: '13px', fontWeight: '800', marginTop: '12px', opacity: 0.8 }}>다음 갱신일: 2024년 4월 28일</div>
+                  </div>
+                  <div style={{ padding: '20px', backgroundColor: '#F8F9FA', borderRadius: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><CardIcon size={20} color="#1c1c1e" /><span style={{ fontWeight: '800' }}>결제 수단: KakaoPay</span></div>
+                     <div style={{ fontSize: '13px', color: '#0056D2', fontWeight: '800' }}>변경</div>
+                  </div>
+                </>
+              )}
+
+              {showModal === 'security' && (
+                <>
+                  <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '24px' }}>보안 및 차단 설정</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ padding: '18px', border: '1px solid #F0F0F0', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Lock size={18} color="#8E8E93" /><span style={{ fontWeight: '750' }}>비밀번호 변경</span></div>
+                        <ChevronRight size={18} color="#C7C7CC" />
+                    </div>
+                    <div style={{ padding: '18px', border: '1px solid #F0F0F0', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><ShieldAlert size={18} color="#8E8E93" /><span style={{ fontWeight: '750' }}>차단 사용자 관리</span></div>
+                        <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>0명</span>
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              <button onClick={() => setShowModal(null)} style={{ width: '100%', marginTop: '32px', padding: '18px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '16px' }}>닫기</button>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+}

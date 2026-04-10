@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1774811151444,
+    "author": "테스터",
+    "category": "루어",
+    "content": "테스트 게시글 (JSON Persistence) 2026-03-29T19:05:51.416Z",
+    "time": "방금 전",
+    "likes": 0,
+    "comments": 0
+  },
+  {
+    "id": 1,
+    "author": "강릉감성돔",
+    "category": "찌낚시",
+    "time": "10분 전",
+    "content": "안목 방파제 현재 감성돔 3짜 나옵니다!",
+    "likes": 12,
+    "comments": 4
+  },
+  {
+    "id": 2,
+    "author": "루어마스터",
+    "category": "루어",
+    "time": "1시간 전",
+    "content": "남항진 무늬오징어 시즌 대비 장비 추천 부탁드려요.",
+    "likes": 8,
+    "comments": 15
+  }
+]
