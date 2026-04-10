@@ -220,6 +220,50 @@ app.post('/api/auth/login', async (req, res) => {
   } catch(err) { res.status(500).json({ error: 'Server error' }); }
 });
 
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { email, name, picture } = req.body;
+    let user = await User.findOne({ email });
+    
+    // Auto Register if not found
+    if (!user) {
+      // Handle nickname collision from Google name
+      let baseName = name.replace(/[^a-zA-Z0-9가-힣]/g, '') || 'Fisher';
+      let checkName = await User.findOne({ name: baseName });
+      if (checkName) {
+        baseName = baseName + Math.floor(Math.random() * 10000);
+      }
+      user = new User({ email, name: baseName, password: 'google_sso_placeholder', avatar: picture });
+      await user.save();
+    }
+    
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    
+    const today = new Date().toISOString().split('T')[0];
+    let justAttended = false;
+    let leveledUp = false;
+    if (user.lastAttendance !== today) {
+      user.lastAttendance = today;
+      user.totalAttendance += 1;
+      user.exp += 15;
+      if (user.exp >= user.level * 100) {
+        user.exp -= user.level * 100;
+        user.level += 1;
+        leveledUp = true;
+      }
+      await user.save();
+      justAttended = true;
+    }
+    
+    res.json({ 
+      token, 
+      user: { id: user._id, email: user.email, name: user.name, level: user.level, exp: user.exp, tier: user.tier, avatar: user.avatar, followers: user.followers, following: user.following, totalAttendance: user.totalAttendance },
+      justAttended,
+      leveledUp
+    });
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
 app.put('/api/user/nickname', async (req, res) => {
   try {
     const { email, newName } = req.body; 
