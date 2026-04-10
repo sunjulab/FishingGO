@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: fishing-go-backend
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false # 유저가 Render 웹사이트 환경변수 설정에서 직접 넣도록 빈칸 처리
+      - key: KHOA_KEY
+        sync: false # 유저가 Render 웹사이트 환경변수 설정에서 직접 넣도록 빈칸 처리
