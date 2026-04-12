@@ -8,14 +8,25 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-// MongoDB 연결 설정 (DB가 없을 경우 Graceful fallback)
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/fishinggo';
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ MongoDB Connected (Models loaded)'))
-  .catch(err => console.log('⚠️ MongoDB Timeout (Using In-Memory Fallback)'));
+const JWT_SECRET = process.env.JWT_SECRET || 'fishinggo_secret_2024';
 
-const User = require('./models/User');
-const Post = require('./models/Post');
+// In-Memory Fallback - DB 없어도 즉시 회원가입/로그인 작동
+let memUsers = [];
+let dbReady = false;
+
+// MongoDB 연결 (없어도 정상 작동)
+const MONGO_URI = process.env.MONGO_URI || '';
+if (MONGO_URI) {
+  mongoose.connect(MONGO_URI)
+    .then(() => { dbReady = true; console.log('MongoDB Connected'); })
+    .catch(() => console.log('MongoDB 연결실패 - 인메모리 모드로 실행'));
+}
+
+let User, Post;
+try {
+  User = require('./models/User');
+  Post = require('./models/Post');
+} catch(e) { User = null; Post = null; }
 
 const app = express();
 app.use(cors());
@@ -166,116 +177,151 @@ updateAllStationsCache();
 setInterval(updateAllStationsCache, 3600000);
 
 /* =========================================================
-   AUTH & USER LEVELING API
+   AUTH & USER LEVELING API (DB + 인메모리 이중 레이어)
 ========================================================= */
+
+function buildUserResponse(user) {
+  return {
+    id: user._id || user.id,
+    email: user.email,
+    name: user.name,
+    level: user.level || 1,
+    exp: user.exp || 0,
+    tier: user.tier || 'Silver',
+    avatar: user.avatar || 'https://i.pravatar.cc/150?img=11',
+    followers: user.followers || [],
+    following: user.following || [],
+    totalAttendance: user.totalAttendance || 0
+  };
+}
+
+function applyAttendance(user) {
+  const today = new Date().toISOString().split('T')[0];
+  let justAttended = false;
+  let leveledUp = false;
+  if (user.lastAttendance !== today) {
+    user.lastAttendance = today;
+    user.totalAttendance = (user.totalAttendance || 0) + 1;
+    user.exp = (user.exp || 0) + 15;
+    const levelThreshold = (user.level || 1) * 100;
+    if (user.exp >= levelThreshold) {
+      user.exp -= levelThreshold;
+      user.level = (user.level || 1) + 1;
+      leveledUp = true;
+    }
+    justAttended = true;
+  }
+  return { justAttended, leveledUp };
+}
+
+// --- 회원가입 ---
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
-    const existing = await User.findOne({ $or: [{ email }, { name }] });
-    if (existing) return res.status(400).json({ error: '이미 사용중인 이메일이거나 닉네임입니다.' });
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ email, password: hashedPassword, name });
-    await user.save();
-    
-    res.json({ success: true, user: { email: user.email, name: user.name, level: user.level, exp: user.exp } });
-  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+    if (!email || !password || !name) return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+
+    if (dbReady && User) {
+      const existing = await User.findOne({ $or: [{ email }, { name }] });
+      if (existing) return res.status(400).json({ error: '이미 사용 중인 이메일이거나 닉네임입니다.' });
+      const hashed = await bcrypt.hash(password, 10);
+      const user = new User({ email, password: hashed, name });
+      await user.save();
+      return res.json({ success: true });
+    } else {
+      // 인메모리 fallback
+      if (memUsers.find(u => u.email === email)) return res.status(400).json({ error: '이미 등록된 이메일입니다.' });
+      if (memUsers.find(u => u.name === name)) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
+      const hashed = await bcrypt.hash(password, 10);
+      memUsers.push({ id: Date.now().toString(), email, password: hashed, name, level: 1, exp: 0, tier: 'Silver', avatar: 'https://i.pravatar.cc/150?img=11', followers: [], following: [], lastAttendance: null, totalAttendance: 0 });
+      return res.json({ success: true });
+    }
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
+// --- 이메일 로그인 ---
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-    
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
-    
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-    
-    // Auto Attendance Logic (Simple)
-    const today = new Date().toISOString().split('T')[0];
-    let justAttended = false;
-    let leveledUp = false;
-    if (user.lastAttendance !== today) {
-      user.lastAttendance = today;
-      user.totalAttendance += 1;
-      user.exp += 15;
-      if (user.exp >= user.level * 100) {
-        user.exp -= user.level * 100;
-        user.level += 1;
-        leveledUp = true;
-      }
-      await user.save();
-      justAttended = true;
+
+    let user;
+    if (dbReady && User) {
+      user = await User.findOne({ email });
+    } else {
+      user = memUsers.find(u => u.email === email);
     }
-    
-    res.json({ 
-      token, 
-      user: { id: user._id, email: user.email, name: user.name, level: user.level, exp: user.exp, tier: user.tier, avatar: user.avatar, followers: user.followers, following: user.following, totalAttendance: user.totalAttendance },
-      justAttended,
-      leveledUp
-    });
-  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+    if (!user) return res.status(400).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+
+    const { justAttended, leveledUp } = applyAttendance(user);
+    if (dbReady && User) await user.save();
+
+    const token = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: buildUserResponse(user), justAttended, leveledUp });
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
+// --- 구글 소셜 로그인 (자동 회원가입) ---
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { email, name, picture } = req.body;
-    let user = await User.findOne({ email });
-    
-    // Auto Register if not found
-    if (!user) {
-      // Handle nickname collision from Google name
-      let baseName = name.replace(/[^a-zA-Z0-9가-힣]/g, '') || 'Fisher';
-      let checkName = await User.findOne({ name: baseName });
-      if (checkName) {
-        baseName = baseName + Math.floor(Math.random() * 10000);
+    if (!email) return res.status(400).json({ error: 'Google 정보를 가져올 수 없습니다.' });
+
+    let user;
+    if (dbReady && User) {
+      user = await User.findOne({ email });
+      if (!user) {
+        let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
+        if (!safeName) safeName = 'Fisher';
+        const dup = await User.findOne({ name: safeName });
+        if (dup) safeName = safeName + Math.floor(Math.random() * 9999);
+        user = new User({ email, name: safeName, password: 'google_oauth', avatar: picture || 'https://i.pravatar.cc/150?img=11' });
+        await user.save();
       }
-      user = new User({ email, name: baseName, password: 'google_sso_placeholder', avatar: picture });
-      await user.save();
-    }
-    
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-    
-    const today = new Date().toISOString().split('T')[0];
-    let justAttended = false;
-    let leveledUp = false;
-    if (user.lastAttendance !== today) {
-      user.lastAttendance = today;
-      user.totalAttendance += 1;
-      user.exp += 15;
-      if (user.exp >= user.level * 100) {
-        user.exp -= user.level * 100;
-        user.level += 1;
-        leveledUp = true;
+    } else {
+      // 인메모리 fallback
+      user = memUsers.find(u => u.email === email);
+      if (!user) {
+        let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
+        if (!safeName) safeName = 'Fisher';
+        if (memUsers.find(u => u.name === safeName)) safeName = safeName + Math.floor(Math.random() * 9999);
+        user = { id: Date.now().toString(), email, password: 'google_oauth', name: safeName, level: 1, exp: 0, tier: 'Silver', avatar: picture || 'https://i.pravatar.cc/150?img=11', followers: [], following: [], lastAttendance: null, totalAttendance: 0 };
+        memUsers.push(user);
       }
-      await user.save();
-      justAttended = true;
     }
-    
-    res.json({ 
-      token, 
-      user: { id: user._id, email: user.email, name: user.name, level: user.level, exp: user.exp, tier: user.tier, avatar: user.avatar, followers: user.followers, following: user.following, totalAttendance: user.totalAttendance },
-      justAttended,
-      leveledUp
-    });
-  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+
+    const { justAttended, leveledUp } = applyAttendance(user);
+    if (dbReady && User) await user.save();
+
+    const token = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: buildUserResponse(user), justAttended, leveledUp });
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
+// --- 닉네임 변경 ---
 app.put('/api/user/nickname', async (req, res) => {
   try {
-    const { email, newName } = req.body; 
-    const duplicate = await User.findOne({ name: newName });
-    if (duplicate) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
+    const { email, newName } = req.body;
+    if (!newName) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
     
-    const user = await User.findOneAndUpdate({ email }, { name: newName }, { new: true });
-    // 업데이트 된 유저 게시글들의 닉네임도 일괄 업데이트 (디노말라이즈 동기화)
-    await Post.updateMany({ author_email: email }, { author: newName });
-    res.json({ success: true, name: user.name });
-  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+    if (dbReady && User) {
+      const dup = await User.findOne({ name: newName });
+      if (dup) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
+      const user = await User.findOneAndUpdate({ email }, { name: newName }, { new: true });
+      if (Post) await Post.updateMany({ author_email: email }, { author: newName });
+      return res.json({ success: true, name: user.name });
+    } else {
+      const userIdx = memUsers.findIndex(u => u.email === email);
+      if (userIdx === -1) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      if (memUsers.find(u => u.name === newName)) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
+      memUsers[userIdx].name = newName;
+      return res.json({ success: true, name: newName });
+    }
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
+// --- 내 게시글 목록 ---
 app.get('/api/user/posts', async (req, res) => {
   try {
     const posts = await Post.find({ author_email: req.query.email }).sort({ createdAt: -1 });
