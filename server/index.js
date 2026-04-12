@@ -6,7 +6,6 @@ const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const mongoose = require('mongoose');
 require('dotenv').config();
 
 // MongoDB 연결 설정 (DB가 없을 경우 Graceful fallback)
