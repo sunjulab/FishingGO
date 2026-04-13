@@ -14,13 +14,30 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fishinggo_secret_2024';
 let memUsers = [];
 let dbReady = false;
 
-// MongoDB 연결 (없어도 정상 작동)
-const MONGO_URI = process.env.MONGO_URI || '';
+// ─── MongoDB 연결 ───────────────────────────────────────────────────────────
+// Render 환경변수에 MONGO_PASS=@@1q2w3e 따로 설정하면 자동으로 URI 조합
+// 또는 MONGO_URI 에 완성된 연결주소를 직접 넣어도 됨
+const buildMongoUri = () => {
+  if (process.env.MONGO_URI) return process.env.MONGO_URI;
+  const pass = process.env.MONGO_PASS;
+  const host = process.env.MONGO_HOST || 'cluster0.cyqhznd.mongodb.net';
+  const user = process.env.MONGO_USER || 'fishinggo';
+  const db   = process.env.MONGO_DB   || 'fishinggo';
+  if (pass) {
+    const enc = encodeURIComponent(pass); // @, # 등 특수문자 자동 인코딩
+    return `mongodb+srv://${user}:${enc}@${host}/${db}?appName=Cluster0`;
+  }
+  return '';
+};
+
+const MONGO_URI = buildMongoUri();
 if (MONGO_URI) {
-  console.log('MongoDB 연결 시도 중...');
-  mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 })
-    .then(() => { dbReady = true; console.log('\✅ MongoDB 실제 연결 완벽 성공!!!'); })
-    .catch((err) => console.log('\⚠️ MongoDB 연결실패 (IP 차단 또는 비번오류) - 인메모리 전환', err.message));
+  console.log('MongoDB 연결 시도 중 (URI 존재)...');
+  mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 8000 })
+    .then(() => { dbReady = true; console.log('✅ MongoDB 연결 성공! 영구저장 모드 활성화'); })
+    .catch(err => console.log('⚠️ MongoDB 연결실패 → 인메모리 모드 전환\n원인:', err.message));
+} else {
+  console.log('⚠️ MONGO_URI/MONGO_PASS 미설정 → 인메모리 모드. Render 환경변수를 확인하세요.');
 }
 
 let User, Post;
@@ -32,6 +49,21 @@ try {
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ─── 진단용 디버그 엔드포인트 ─────────────────────────────────────────────
+app.get('/api/debug', (req, res) => {
+  const uri = MONGO_URI ? MONGO_URI.replace(/:[^@]+@/, ':***@') : '미설정';
+  res.json({
+    dbReady,
+    mongoUri: uri,
+    memUserCount: memUsers.length,
+    env: {
+      MONGO_URI: !!process.env.MONGO_URI,
+      MONGO_PASS: !!process.env.MONGO_PASS,
+      NODE_ENV: process.env.NODE_ENV
+    }
+  });
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {
