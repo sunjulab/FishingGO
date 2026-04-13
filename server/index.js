@@ -17,9 +17,10 @@ let dbReady = false;
 // MongoDB 연결 (없어도 정상 작동)
 const MONGO_URI = process.env.MONGO_URI || '';
 if (MONGO_URI) {
-  mongoose.connect(MONGO_URI)
-    .then(() => { dbReady = true; console.log('MongoDB Connected'); })
-    .catch(() => console.log('MongoDB 연결실패 - 인메모리 모드로 실행'));
+  console.log('MongoDB 연결 시도 중...');
+  mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 })
+    .then(() => { dbReady = true; console.log('\✅ MongoDB 실제 연결 완벽 성공!!!'); })
+    .catch((err) => console.log('\⚠️ MongoDB 연결실패 (IP 차단 또는 비번오류) - 인메모리 전환', err.message));
 }
 
 let User, Post;
