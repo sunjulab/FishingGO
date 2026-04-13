@@ -33,11 +33,16 @@ const buildMongoUri = () => {
 const MONGO_URI = buildMongoUri();
 if (MONGO_URI) {
   console.log('MongoDB 연결 시도 중 (URI 존재)...');
-  mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 8000 })
+  mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
     .then(() => { dbReady = true; console.log('✅ MongoDB 연결 성공! 영구저장 모드 활성화'); })
-    .catch(err => console.log('⚠️ MongoDB 연결실패 → 인메모리 모드 전환\n원인:', err.message));
+    .catch(err => {
+      dbReady = false;
+      console.log('⚠️ MongoDB 연결실패 → 인메모리 모드 전환');
+      console.log('원인:', err.message);
+      console.log('💡 Atlas IP 허용(0.0.0.0/0) 또는 URI 재확인 필요');
+    });
 } else {
-  console.log('⚠️ MONGO_URI/MONGO_PASS 미설정 → 인메모리 모드. Render 환경변수를 확인하세요.');
+  console.log('⚠️ MONGO_URI/MONGO_PASS 미설정 → 인메모리 모드.');
 }
 
 let User, Post;
@@ -251,32 +256,48 @@ function applyAttendance(user) {
 app.post('/api/auth/check-id', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: '아이디를 입력해주세요.' });
+    if (!email || !email.trim()) return res.status(400).json({ error: '아이디를 입력해주세요.' });
+    const id = email.trim();
+    // DB 모드 시도 → 실패하면 인메모리 fallback
     if (dbReady && User) {
-      const existing = await User.findOne({ email });
-      if (existing) return res.json({ available: false });
-      return res.json({ available: true });
-    } else {
-      const existing = memUsers.find(u => u.email === email);
-      return res.json({ available: !existing });
+      try {
+        const existing = await User.findOne({ email: id });
+        return res.json({ available: !existing });
+      } catch (dbErr) {
+        console.error('[check-id] DB 조회 실패, 인메모리 fallback:', dbErr.message);
+      }
     }
-  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+    // 인메모리 fallback
+    const existing = memUsers.find(u => u.email === id);
+    return res.json({ available: !existing });
+  } catch(err) {
+    console.error('[check-id] 오류:', err.message);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
 });
 
 // --- 닉네임 중복 확인 ---
 app.post('/api/auth/check-name', async (req, res) => {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
+    if (!name || !name.trim()) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
+    const nm = name.trim();
+    // DB 모드 시도 → 실패하면 인메모리 fallback
     if (dbReady && User) {
-      const existing = await User.findOne({ name });
-      if (existing) return res.json({ available: false });
-      return res.json({ available: true });
-    } else {
-      const existing = memUsers.find(u => u.name === name);
-      return res.json({ available: !existing });
+      try {
+        const existing = await User.findOne({ name: nm });
+        return res.json({ available: !existing });
+      } catch (dbErr) {
+        console.error('[check-name] DB 조회 실패, 인메모리 fallback:', dbErr.message);
+      }
     }
-  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+    // 인메모리 fallback
+    const existing = memUsers.find(u => u.name === nm);
+    return res.json({ available: !existing });
+  } catch(err) {
+    console.error('[check-name] 오류:', err.message);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
 });
 
 // --- 회원가입 ---
@@ -456,7 +477,8 @@ app.get('/api/weather/cctv', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'API Error' }); }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Fishing GO Logic Server: http://127.0.0.1:${PORT}`);
+  console.log(`Fishing GO Logic Server running on PORT ${PORT}`);
+  console.log(`DB 모드: ${dbReady ? 'MongoDB ✅' : '인메모리 ⚠️'}`);
 });
