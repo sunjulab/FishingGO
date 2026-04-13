@@ -362,8 +362,12 @@ app.get('/api/user/posts', async (req, res) => {
 });
 
 /* =========================================================
-   MARINE API
+   MARINE API & ROOT
 ========================================================= */
+app.get('/', (req, res) => {
+  res.send('<h1>Fishing GO Backend is running flawlessly! 🚀</h1><p>DB Status: ' + (dbReady ? 'MongoDB Connected ✅' : 'In-Memory Mode ⚠️') + '</p>');
+});
+
 app.get('/api/weather/precision', (req, res) => {
   const { stationId } = req.query;
   const sid = stationId || 'DT_0001';
