@@ -16,6 +16,28 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [idChecked, setIdChecked] = useState(false);
+  const [nameChecked, setNameChecked] = useState(false);
+
+  const checkId = async () => {
+    if (!email) return addToast('아이디를 입력해주세요.', 'error');
+    try {
+      const res = await fetch(`${API}/api/auth/check-id`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      const data = await res.json();
+      if (data.available) { setIdChecked(true); addToast('사용 가능한 아이디입니다.', 'success'); }
+      else addToast('이미 사용 중인 아이디입니다.', 'error');
+    } catch(err) { addToast('오류가 발생했습니다.', 'error'); }
+  };
+
+  const checkName = async () => {
+    if (!name) return addToast('닉네임을 입력해주세요.', 'error');
+    try {
+      const res = await fetch(`${API}/api/auth/check-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+      const data = await res.json();
+      if (data.available) { setNameChecked(true); addToast('사용 가능한 닉네임입니다.', 'success'); }
+      else addToast('이미 사용 중인 닉네임입니다.', 'error');
+    } catch(err) { addToast('오류가 발생했습니다.', 'error'); }
+  };
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -52,6 +74,9 @@ export default function LoginPage() {
   const handleAuth = async () => {
     if (!email || !password || (!isLogin && !name)) {
       return addToast('모든 정보를 입력해주세요.', 'error');
+    }
+    if (!isLogin && (!idChecked || !nameChecked)) {
+      return addToast('아이디와 닉네임 중복확인을 완료해주세요.', 'error');
     }
 
     try {
@@ -125,22 +150,46 @@ export default function LoginPage() {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '6px 0' }}>
             <div style={{ flex: 1, height: '1px', background: '#eee' }}></div>
-            <span style={{ fontSize: '11px', color: '#aaa', fontWeight: '700' }}>또는 이메일로</span>
+            <span style={{ fontSize: '11px', color: '#aaa', fontWeight: '700' }}>또는 아이디로</span>
             <div style={{ flex: 1, height: '1px', background: '#eee' }}></div>
           </div>
 
           {!isLogin && (
+            <>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text" placeholder="아이디 (추후 로그인용)"
+                  value={email} onChange={e => { setEmail(e.target.value); setIdChecked(false); }}
+                  style={{ flex: 1, padding: '16px', borderRadius: '16px', border: '1px solid #ddd', fontSize: '15px', outline: 'none' }}
+                />
+                <button 
+                  onClick={checkId}
+                  style={{ padding: '0 16px', borderRadius: '16px', border: '1px solid #0056D2', backgroundColor: idChecked ? '#0056D2' : '#fff', color: idChecked ? '#fff' : '#0056D2', fontWeight: '800' }}>
+                  {idChecked ? '사용가' : '중복확인'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text" placeholder="닉네임 (중복불가)"
+                  value={name} onChange={e => { setName(e.target.value); setNameChecked(false); }}
+                  style={{ flex: 1, padding: '16px', borderRadius: '16px', border: '1px solid #ddd', fontSize: '15px', outline: 'none' }}
+                />
+                <button 
+                  onClick={checkName}
+                  style={{ padding: '0 16px', borderRadius: '16px', border: '1px solid #FF5A5F', backgroundColor: nameChecked ? '#FF5A5F' : '#fff', color: nameChecked ? '#fff' : '#FF5A5F', fontWeight: '800' }}>
+                  {nameChecked ? '사용가' : '중복확인'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {isLogin && (
             <input 
-              type="text" placeholder="닉네임 (중복불가)"
-              value={name} onChange={e => setName(e.target.value)}
+              type="text" placeholder="아이디"
+              value={email} onChange={e => setEmail(e.target.value)}
               style={{ width: '100%', padding: '16px', borderRadius: '16px', border: '1px solid #ddd', fontSize: '15px', outline: 'none' }}
             />
           )}
-          <input 
-            type="email" placeholder="이메일"
-            value={email} onChange={e => setEmail(e.target.value)}
-            style={{ width: '100%', padding: '16px', borderRadius: '16px', border: '1px solid #ddd', fontSize: '15px', outline: 'none' }}
-          />
           <input 
             type="password" placeholder="비밀번호"
             value={password} onChange={e => setPassword(e.target.value)}

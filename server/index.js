@@ -214,6 +214,38 @@ function applyAttendance(user) {
   return { justAttended, leveledUp };
 }
 
+// --- 아이디(email 필드 활용) 중복 확인 ---
+app.post('/api/auth/check-id', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: '아이디를 입력해주세요.' });
+    if (dbReady && User) {
+      const existing = await User.findOne({ email });
+      if (existing) return res.json({ available: false });
+      return res.json({ available: true });
+    } else {
+      const existing = memUsers.find(u => u.email === email);
+      return res.json({ available: !existing });
+    }
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// --- 닉네임 중복 확인 ---
+app.post('/api/auth/check-name', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
+    if (dbReady && User) {
+      const existing = await User.findOne({ name });
+      if (existing) return res.json({ available: false });
+      return res.json({ available: true });
+    } else {
+      const existing = memUsers.find(u => u.name === name);
+      return res.json({ available: !existing });
+    }
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
 // --- 회원가입 ---
 app.post('/api/auth/register', async (req, res) => {
   try {
