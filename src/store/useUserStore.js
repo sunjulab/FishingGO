@@ -15,6 +15,15 @@ export const useUserStore = create((set, get) => ({
     return { user: updatedUser };
   }),
 
+  setUser: (newUser) => set(() => {
+    if (newUser) {
+      localStorage.setItem('user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('user');
+    }
+    return { user: newUser };
+  }),
+
   logout: () => {
     localStorage.removeItem('user');
     set({ user: null });
