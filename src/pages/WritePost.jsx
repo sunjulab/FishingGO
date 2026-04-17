@@ -1,27 +1,40 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, Image, MapPin, Send, ChevronDown, CheckCircle2, Scan } from 'lucide-react';
+import { RewardGateModal } from '../components/AdUnit';
+import { useToastStore } from '../store/useToastStore';
+import { useUserStore } from '../store/useUserStore';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function WritePost() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const postType = searchParams.get('type') || 'open';
+
   const [category, setCategory] = useState('전체');
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
-  const [showPaywallPopup, setShowPaywallPopup] = useState(false); // 과금 및 리워드 광고 벽 모달
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
+  const [showAdGate, setShowAdGate] = useState(false);
 
-  const handlePostSubmitRequest = () => {
+  const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
+  const addToast = useToastStore((state) => state.addToast);
+  const user = useUserStore((state) => state.user);
+  const isBusinessLite = user?.plan === 'business_lite' || user?.plan === 'pro' || user?.plan === 'vip';
+
+  // '등록' 버튼 클릭 시 — 비즈니스라이트 구독자는 바로 통과, 일반 유저는 광고 게이트
+  const handlePostClick = () => {
     if (!content) return;
-    // 제출 전 네이티브/리워드 광고 정책에 따른 비즈니스 라이트 구독/광고 모달 강제 팝업 (병목 화수분)
-    setShowPaywallPopup(true);
+    if (isBusinessLite) {
+      doPost(); // 구독자는 광고 없이 바로 등록
+    } else {
+      setShowAdGate(true); // 일반 유저는 광고 시청 게이트 모달
+    }
   };
 
-  const executePost = async () => {
-    setShowPaywallPopup(false);
+  const doPost = async () => {
     setIsSubmitting(true);
     const storedUser = JSON.parse(localStorage.getItem('user')) || { name: '주문진낚시꾼' };
     try {
@@ -37,21 +50,21 @@ export default function WritePost() {
         })
       });
       if (response.ok) {
+        addToast('게시글이 등록되었습니다! 🎉', 'success');
         navigate('/community');
       }
     } catch (err) {
-      console.error("Post error:", err);
-      alert("등록 중 오류가 발생했습니다.");
+      console.error('Post error:', err);
+      addToast('등록 중 오류가 발생했습니다.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleWatchAd = () => {
-    alert('동영상 광고가 재생됩니다 (15초)... 🎬\n(테스트 모드: 즉시 스킵됨)');
-    setTimeout(() => {
-      executePost();
-    }, 1500);
+  const handleSubscribe = () => {
+    setShowAdGate(false);
+    addToast('비즈니스 라이트 구독 페이지로 이동합니다.', 'info');
+    navigate('/subscribe?plan=business_lite');
   };
 
   return (
@@ -61,12 +74,14 @@ export default function WritePost() {
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <X size={24} color="#1c1c1e" />
         </button>
-        <h2 style={{ fontSize: '17px', fontWeight: '800' }}>새 조황 공유하기</h2>
-        <button 
+        <h2 style={{ fontSize: '17px', fontWeight: '800' }}>
+          {postType === 'business' ? '선상 배 홍보 등록' : '새 조황 공유하기'}
+        </h2>
+        <button
           disabled={!content || isSubmitting}
-          style={{ 
-            border: 'none', 
-            background: content ? '#0056D2' : '#f0f0f0', 
+          style={{
+            border: 'none',
+            background: content ? '#0056D2' : '#f0f0f0',
             color: content ? '#fff' : '#bbb',
             padding: '6px 16px',
             borderRadius: '20px',
@@ -76,26 +91,41 @@ export default function WritePost() {
             alignItems: 'center',
             gap: '4px'
           }}
-          onClick={handlePostSubmitRequest}
+          onClick={handlePostClick}
         >
           {isSubmitting ? '등록 중...' : '등록'} <Send size={14} />
         </button>
       </div>
 
       <div style={{ padding: '20px' }}>
+        {/* 구독 혜택 배너 — 비즈니스라이트 미구독자에게만 표시 */}
+        {!isBusinessLite && (
+          <div
+            onClick={handleSubscribe}
+            style={{
+              background: 'linear-gradient(135deg, #0056D2, #0096FF)',
+              borderRadius: '14px', padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: '12px',
+              marginBottom: '16px', cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,86,210,0.2)'
+            }}
+          >
+            <div style={{ fontSize: '24px' }}>👑</div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>비즈니스 라이트 — 월 ₩9,900</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)' }}>광고 없이 무제한 등록 + 쿠팡 파트너스 수익 연동</div>
+            </div>
+            <div style={{ marginLeft: 'auto', fontSize: '18px' }}>›</div>
+          </div>
+        )}
+
         {/* 카테고리 선택 */}
-        <div 
+        <div
           onClick={() => setShowCategoryPopup(true)}
-          style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            padding: '8px 16px', 
-            backgroundColor: '#f8f9fa', 
-            borderRadius: '12px',
-            marginBottom: '20px',
-            cursor: 'pointer',
-            border: '1px solid #eee'
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '8px 16px', backgroundColor: '#f8f9fa', borderRadius: '12px',
+            marginBottom: '20px', cursor: 'pointer', border: '1px solid #eee'
           }}
         >
           <span style={{ fontSize: '13px', fontWeight: '800', color: '#0056D2' }}>{category}</span>
@@ -103,72 +133,44 @@ export default function WritePost() {
         </div>
 
         {/* 텍스트 입력 영역 */}
-        <textarea 
+        <textarea
           placeholder="현장 상황이나 조과를 자유롭게 공유해보세요. (예: 현재 강릉항 파고가 높습니다!)"
-          style={{ 
-            width: '100%', 
-            minHeight: '200px', 
-            border: 'none', 
-            fontSize: '16px', 
-            lineHeight: '1.6', 
-            outline: 'none',
-            resize: 'none'
-          }}
+          style={{ width: '100%', minHeight: '200px', border: 'none', fontSize: '16px', lineHeight: '1.6', outline: 'none', resize: 'none' }}
           onChange={(e) => setContent(e.target.value)}
           value={content}
         />
 
         {/* 하단 툴바 */}
         <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', display: 'flex', gap: '20px' }}>
-          <div 
+          <div
             onClick={() => document.getElementById('image-upload-input').click()}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', color: image ? '#0056D2' : '#666', fontSize: '14px', cursor: 'pointer' }}
           >
-            <input 
-              id="image-upload-input"
-              type="file" 
-              accept="image/*" 
-              style={{ display: 'none' }} 
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    setImage(reader.result);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
+            <input id="image-upload-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+              const file = e.target.files[0];
+              if (file) { const reader = new FileReader(); reader.onloadend = () => setImage(reader.result); reader.readAsDataURL(file); }
+            }} />
             <div style={{ width: '36px', height: '36px', backgroundColor: image ? 'rgba(0,86,210,0.05)' : '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Image size={20} />
             </div>
             <span style={{ fontWeight: '600' }}>{image ? '사진 추가됨' : '사진 추가'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '14px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MapPin size={20} />
-            </div>
+            <div style={{ width: '36px', height: '36px', backgroundColor: '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MapPin size={20} /></div>
             <span style={{ fontWeight: '600' }}>위치 추가</span>
           </div>
-          
-          <div 
-             onClick={() => {
-                if(!image) {
-                   alert('사진을 먼저 올려주세요.'); return;
-                }
-                const btn = document.getElementById('ai-btn-text');
-                if (btn) btn.innerText = 'AI 판별 중...';
-                setTimeout(() => {
-                   setContent((prev) => prev + '\n\n🤖 [AI 어종 판별 결과]\n- 어종: 감성돔 (확률 98%)\n- 예상 길이: 약 45~50cm\n- 기상 데이터 연동 매핑 완료');
-                   setCategory('찌낚시');
-                   if (btn) {
-                     btn.innerText = 'AI 분석 완료 ✨';
-                     btn.style.color = '#00C48C';
-                   }
-                }, 2000);
-             }}
-             style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1565C0', fontSize: '13px', cursor: 'pointer', background: 'rgba(21,101,192,0.1)', padding: '6px 12px', borderRadius: '16px', marginLeft: 'auto', border: '1px solid rgba(21,101,192,0.3)' }}
+          <div
+            onClick={() => {
+              if (!image) { alert('사진을 먼저 올려주세요.'); return; }
+              const btn = document.getElementById('ai-btn-text');
+              if (btn) btn.innerText = 'AI 판별 중...';
+              setTimeout(() => {
+                setContent((prev) => prev + '\n\n🤖 [AI 어종 판별 결과]\n- 어종: 감성돔 (확률 98%)\n- 예상 길이: 약 45~50cm\n- 기상 데이터 연동 매핑 완료');
+                setCategory('찌낚시');
+                if (btn) { btn.innerText = 'AI 분석 완료 ✨'; btn.style.color = '#00C48C'; }
+              }, 2000);
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1565C0', fontSize: '13px', cursor: 'pointer', background: 'rgba(21,101,192,0.1)', padding: '6px 12px', borderRadius: '16px', marginLeft: 'auto', border: '1px solid rgba(21,101,192,0.3)' }}
           >
             <Scan size={16} />
             <span id="ai-btn-text" style={{ fontWeight: '800' }}>AI 자동 일지</span>
@@ -178,17 +180,14 @@ export default function WritePost() {
         {image && (
           <div style={{ marginTop: '20px', position: 'relative', width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden' }}>
             <img src={image} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div 
-              onClick={(e) => { e.stopPropagation(); setImage(''); }} 
-              style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', padding: '4px', cursor: 'pointer' }}
-            >
+            <div onClick={(e) => { e.stopPropagation(); setImage(''); }} style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', padding: '4px', cursor: 'pointer' }}>
               <X size={12} />
             </div>
           </div>
         )}
       </div>
 
-      {/* 카테고리 모달 시트 (Premium UI) */}
+      {/* 카테고리 모달 */}
       {showCategoryPopup && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div className="bottom-sheet open" style={{ height: 'auto', padding: '24px 20px', maxWidth: '480px', margin: '0 auto' }}>
@@ -196,23 +195,8 @@ export default function WritePost() {
             <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px' }}>장르 선택</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {categories.map(c => (
-                <div 
-                  key={c}
-                  onClick={() => {
-                    setCategory(c);
-                    setShowCategoryPopup(false);
-                  }}
-                  style={{ 
-                    padding: '16px', 
-                    borderRadius: '12px', 
-                    backgroundColor: category === c ? 'rgba(0,86,210,0.05)' : '#f8f9fa',
-                    border: category === c ? '1.5px solid #0056D2' : '1.5px solid transparent',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
+                <div key={c} onClick={() => { setCategory(c); setShowCategoryPopup(false); }}
+                  style={{ padding: '16px', borderRadius: '12px', backgroundColor: category === c ? 'rgba(0,86,210,0.05)' : '#f8f9fa', border: category === c ? '1.5px solid #0056D2' : '1.5px solid transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                   <span style={{ fontWeight: category === c ? '800' : '600', color: category === c ? '#0056D2' : '#333' }}>{c}</span>
                   {category === c && <CheckCircle2 size={16} color="#0056D2" />}
                 </div>
@@ -222,42 +206,14 @@ export default function WritePost() {
         </div>
       )}
 
-      {/* 🚀 수익화 바운더리: 비즈니스 라이트 구독 / 리워드 영상 시청 모달 */}
-      {showPaywallPopup && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '24px', padding: '30px 24px', maxWidth: '340px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
-            <button onClick={() => setShowPaywallPopup(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#999' }}>
-               <X size={24} />
-            </button>
-            <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)', borderRadius: '50%', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <Scan size={32} color="#fff" />
-            </div>
-            <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>이 게시물을 널리 알릴까요?</h3>
-            <p style={{ fontSize: '13px', color: '#555', lineHeight: '1.5', marginBottom: '24px' }}>
-              더 많은 앵글러들에게 노출하기 위해 광고 시청이 필요합니다.
-            </p>
-
-            {/* 비즈니스 구독 티켓 옵션 */}
-            <div 
-              onClick={() => { alert('비즈니스 라이트 구독(월 9,900원) 구글 플레이 결제창 연결...'); }}
-              style={{ padding: '16px', borderRadius: '16px', border: '2px solid #0056D2', backgroundColor: 'rgba(0,86,210,0.05)', marginBottom: '12px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-            >
-              <div style={{ backgroundColor: '#0056D2', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '4px', marginBottom: '8px' }}>PROMOTION</div>
-              <div style={{ fontSize: '16px', fontWeight: '800', color: '#0056D2', marginBottom: '4px' }}>비즈니스 라이트 패스</div>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>쇼핑, 장비 수정 태그를 <b>내 쿠팡 파트너스 링크</b>로 100% 무제한 자동 치환! (광고 영구 면제)</div>
-              <div style={{ fontSize: '15px', fontWeight: '900', color: '#1c1c1e' }}>월 9,900원</div>
-            </div>
-
-            {/* 단건 영상 시청 (무료) 옵션 */}
-            <button 
-              onClick={handleWatchAd}
-              style={{ width: '100%', padding: '16px', borderRadius: '16px', backgroundColor: '#F2F2F7', border: 'none', fontSize: '14px', fontWeight: '800', color: '#1c1c1e', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              ▶ 15초 영상 시청하고 1회 무료 등록하기
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 보상형 광고 게이트 모달 */}
+      <RewardGateModal
+        isOpen={showAdGate}
+        onClose={() => setShowAdGate(false)}
+        onRewardComplete={doPost}
+        onSubscribe={handleSubscribe}
+        context="post"
+      />
     </div>
   );
 }

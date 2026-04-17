@@ -5,6 +5,7 @@ import { useUserStore } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
+import { NativeAd, BannerAd } from '../components/AdUnit';
 export default function CommunityTab() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('business');
@@ -249,7 +250,8 @@ export default function CommunityTab() {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}><MessageSquare size={16} /> {post.comments?.length || 0}</span>
                   </div>
                 </div>
-                {/* 광고 노출 빈도 대폭 완화! (기존 2 -> AD_CONFIG에 따라 10 등) */}
+                {/* [정지 방지] 4개 글당 1개 - 과도한 광고 도배 금지 */}
+                {(index + 1) % 4 === 0 && <NativeAd />}
                 {!canAccessPremium && (index + 1) % AD_CONFIG.FREE_USER.FEED_AD_INTERVAL === 0 && <InFeedAd />}
               </React.Fragment>
             ))}
