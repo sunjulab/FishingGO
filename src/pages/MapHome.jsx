@@ -13,6 +13,7 @@ import FishingPointBottomSheet from '../components/FishingPointBottomSheet';
 import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
+import { useUserStore } from '../store/useUserStore';
 
 const EMOJI_MAP = { '방파제': '⚓', '갯바위': '🪨', '선착장': '🚢', '항구': '🏖️' };
 const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#1565C0', '보통': '#8E8E93' };
@@ -20,6 +21,7 @@ const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#
 export default function MapHome() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
+  const user = useUserStore((state) => state.user);
   const [selectedPoint, setSelectedPoint]   = useState(null);
   const [mapLoaded, setMapLoaded]           = useState(false);
   const [precisionData, setPrecisionData]   = useState(null);
@@ -269,6 +271,21 @@ export default function MapHome() {
   const phase       = tideData.tide?.phase || '7물(사리)';
   const PREMIUM_POINTS = ALL_FISHING_POINTS.filter(p => p.score >= 90).slice(0, 8);
 
+  /* ── 낚시점수 원 색상 계산 ── */
+  const getScoreCircleStyle = (s) => {
+    if (s >= 90) return { bg: 'rgba(0,196,140,0.18)', border: 'rgba(0,196,140,0.7)', glow: '0 0 18px rgba(0,196,140,0.5)', numColor: '#00E5A8', label: 'PERFECT' };
+    if (s >= 75) return { bg: 'rgba(21,101,192,0.18)', border: 'rgba(100,181,246,0.7)', glow: '0 0 18px rgba(21,101,192,0.4)', numColor: '#64B5F6', label: 'GOOD' };
+    if (s >= 50) return { bg: 'rgba(255,155,38,0.18)', border: 'rgba(255,155,38,0.7)', glow: '0 0 14px rgba(255,155,38,0.4)', numColor: '#FFB74D', label: 'NORMAL' };
+    if (s >= 30) return { bg: 'rgba(255,90,95,0.22)', border: 'rgba(255,90,95,0.8)', glow: '0 0 16px rgba(255,90,95,0.5)', numColor: '#FF7070', label: 'POOR' };
+    return { bg: 'rgba(211,47,47,0.28)', border: 'rgba(211,47,47,0.9)', glow: '0 0 20px rgba(211,47,47,0.6)', numColor: '#FF4444', label: 'DANGER' };
+  };
+  const scoreStyle = getScoreCircleStyle(score);
+
+  /* ── advice 줄바꿈 분리 ── */
+  const adviceParts = cond.advice.split(/\[특보\]/);
+  const mainAdvice  = adviceParts[0].trim();
+  const alertAdvice = adviceParts[1]?.trim() || null;
+
   return (
     <div style={{ backgroundColor: '#F4F6FA', height: '100vh', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
       <div style={{
@@ -323,7 +340,19 @@ export default function MapHome() {
                   <Bell size={20} color="#333" strokeWidth={2} />
                   <span style={{ position: 'absolute', top: '-1px', right: '-1px', width: '6px', height: '6px', background: '#FF3B30', borderRadius: '50%', border: '1.5px solid #fff' }} />
                 </div>
-                <img src="https://i.pravatar.cc/150?img=11" alt="profile" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1.5px solid #E8F0FE', objectFit: 'cover', cursor: 'pointer' }} />
+                <div
+                  onClick={() => navigate('/mypage')}
+                  style={{ position: 'relative', cursor: 'pointer' }}
+                >
+                  <img
+                    src={user?.avatar || user?.picture || 'https://i.pravatar.cc/150?img=11'}
+                    alt="profile"
+                    style={{ width: '34px', height: '34px', borderRadius: '50%', border: '2px solid #E8F0FE', objectFit: 'cover', transition: 'transform 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  />
+                  <span style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', background: '#00C48C', borderRadius: '50%', border: '1.5px solid #fff' }} />
+                </div>
               </div>
             </>
           )}
@@ -355,24 +384,50 @@ export default function MapHome() {
                   <MapPin size={10} color="rgba(255,255,255,0.75)" fill="rgba(255,255,255,0.4)" />
                   {precisionData?.pointName || selectedPoint?.name || '강릉 안목항 방파제'}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', gap: '10px' }}>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '38px', fontWeight: '950', color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>
                       {tideData.temp ? (typeof tideData.temp === 'string' ? tideData.temp.replace('°C', '') : tideData.temp) + '°' : '15.2°'}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: '700', marginTop: '4px' }}>
-                      {cond.advice}
+                    {/* 조언 텍스트 */}
+                    <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', marginTop: '6px', lineHeight: 1.5 }}>
+                      {mainAdvice}
                     </div>
+                    {/* 특보 */}
+                    {alertAdvice && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'flex-start', gap: '5px',
+                        marginTop: '6px', background: 'rgba(255,80,80,0.22)',
+                        border: '1px solid rgba(255,80,80,0.5)', borderRadius: '8px',
+                        padding: '5px 9px', lineHeight: 1.45,
+                      }}>
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#FF8080', flexShrink: 0, paddingTop: '1px' }}>⚠ 특보</span>
+                        <span style={{ fontSize: '10px', color: 'rgba(255,200,200,0.95)', fontWeight: '700' }}>{alertAdvice}</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 낚시점수 원 */}
                   <div style={{
-                    width: '68px', height: '68px', borderRadius: '50%',
-                    background: isGolden ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.12)',
-                    border: isGolden ? '2px solid rgba(255,215,0,0.5)' : '1.5px solid rgba(255,255,255,0.2)',
+                    width: '72px', height: '72px', borderRadius: '50%', flexShrink: 0,
+                    background: scoreStyle.bg,
+                    border: `2px solid ${scoreStyle.border}`,
+                    boxShadow: scoreStyle.glow,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    backdropFilter: 'blur(8px)',
+                    backdropFilter: 'blur(10px)', position: 'relative',
                   }}>
-                    <div style={{ fontSize: '24px', fontWeight: '950', color: isGolden ? '#FFD700' : '#fff', lineHeight: 1 }}>{score}</div>
-                    <div style={{ fontSize: '8px', fontWeight: '800', color: isGolden ? 'rgba(255,215,0,0.8)' : 'rgba(255,255,255,0.6)', marginTop: '2px' }}>낚시점수</div>
+                    {/* 외곽 링 (점수 진행도 시각화) */}
+                    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)' }} viewBox="0 0 72 72">
+                      <circle cx="36" cy="36" r="32" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
+                      <circle cx="36" cy="36" r="32" fill="none" stroke={scoreStyle.border}
+                        strokeWidth="3" strokeLinecap="round"
+                        strokeDasharray={`${(score / 100) * 201} 201`}
+                        style={{ transition: 'stroke-dasharray 0.6s ease' }}
+                      />
+                    </svg>
+                    <div style={{ fontSize: '22px', fontWeight: '950', color: scoreStyle.numColor, lineHeight: 1, position: 'relative' }}>{score}</div>
+                    <div style={{ fontSize: '7.5px', fontWeight: '800', color: 'rgba(255,255,255,0.55)', marginTop: '2px', position: 'relative' }}>낚시점수</div>
+                    <div style={{ fontSize: '6.5px', fontWeight: '900', color: scoreStyle.numColor, opacity: 0.9, position: 'relative', marginTop: '1px', letterSpacing: '0.02em' }}>{scoreStyle.label}</div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>

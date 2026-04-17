@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/index';
 import { useUserStore } from '../store/useUserStore';
@@ -15,6 +15,7 @@ export default function MyPage() {
   const { user, updateUser, logout, canAccessBusinessShop } = useUserStore();
   const addToast = useToastStore((state) => state.addToast);
   const canAccessPartnerCenter = canAccessBusinessShop();
+  const fileInputRef = useRef(null);
   
   const [activeTab, setActiveTab] = useState('records');
   const [showModal, setShowModal] = useState(null); // 'noti', 'premium', 'security'
@@ -73,6 +74,23 @@ export default function MyPage() {
     }
   };
 
+  /* ── 프로필 사진 변경 ── */
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('파일 크기는 5MB 이하만 가능합니다.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target.result;
+      updateUser({ avatar: base64, picture: base64 });
+      addToast('프로필 사진이 변경되었습니다! 📸', 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleLogout = () => {
     logout();
     addToast('로그아웃 되었습니다.', 'success');
@@ -90,9 +108,56 @@ export default function MyPage() {
       {/* 🟦 Top Profile Card 🟦 */}
       <div style={{ background: 'linear-gradient(180deg, #fff 0%, #F8F9FA 100%)', padding: '40px 24px 30px', borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <img src={user.picture} alt="P" style={{ width: '100px', height: '100px', borderRadius: '35px', objectFit: 'cover', border: '4px solid #fff', boxShadow: '0 15px 30px rgba(0,86,210,0.1)' }} />
-            <div style={{ position: 'absolute', bottom: '-8px', right: '-8px', backgroundColor: '#0056D2', color: '#fff', fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '14px', border: '3px solid #fff' }}>PRO</div>
+          {/* 프로필 사진 + 수정 버튼 */}
+          <div
+            style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}
+            onClick={() => fileInputRef.current?.click()}
+            title="사진 변경"
+          >
+            <img
+              src={user.avatar || user.picture || 'https://i.pravatar.cc/150?img=11'}
+              alt="P"
+              style={{ width: '100px', height: '100px', borderRadius: '35px', objectFit: 'cover', border: '4px solid #fff', boxShadow: '0 15px 30px rgba(0,86,210,0.1)', transition: 'filter 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(0.75)'; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)'; }}
+            />
+            {/* 카메라 오버레이 */}
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '35px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0)', transition: 'background 0.2s',
+              pointerEvents: 'none',
+            }}>
+              <Camera size={26} color="#fff" style={{ opacity: 0, transition: 'opacity 0.2s' }}
+                ref={el => {
+                  if (el) {
+                    el.closest('div[title="사진 변경"]')?.addEventListener('mouseenter', () => { el.style.opacity = '1'; el.parentElement.style.background = 'rgba(0,0,0,0.35)'; });
+                    el.closest('div[title="사진 변경"]')?.addEventListener('mouseleave', () => { el.style.opacity = '0'; el.parentElement.style.background = 'rgba(0,0,0,0)'; });
+                  }
+                }}
+              />
+            </div>
+            {/* 카메라 뱃지 (항상 표시) */}
+            <div style={{
+              position: 'absolute', bottom: '-6px', right: '-6px',
+              width: '30px', height: '30px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #0056D2, #003fa3)',
+              border: '2.5px solid #fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 10px rgba(0,86,210,0.35)',
+            }}>
+              <Camera size={14} color="#fff" />
+            </div>
+            {/* PRO 뱃지 */}
+            <div style={{ position: 'absolute', top: '-8px', left: '-8px', backgroundColor: '#0056D2', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '3px 9px', borderRadius: '12px', border: '2.5px solid #fff', letterSpacing: '0.02em' }}>PRO</div>
+            {/* 숨겨진 파일 input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarChange}
+            />
           </div>
           
           <div style={{ flex: 1 }}>
