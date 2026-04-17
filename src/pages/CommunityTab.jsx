@@ -25,6 +25,12 @@ export default function CommunityTab() {
     { id: 'b3_vip', shipName: '남일호 VIP 크루즈', author: '남일해적선장', type: '선상/참돔', target: '참돔/방어', price: '인당 20만원', date: '이번 주 스페셜 야간', content: '👑 [VVIP 전용 배너] 특급 쉐프 승선, 초대형 넓은 갑판, 최고급 장비 100% 무상 렌탈. 이번 생에 최고의 낚시 여행을 약속합니다.', likes: 832, comments: 142, cover: 'https://images.unsplash.com/photo-1544427920-549b6d60a5e5?auto=format&fit=crop&w=400&q=80', isPinned: true },
     { id: 'b1', shipName: '강릉 에이스호', author: '강릉에이스선장', type: '선상낚시', target: '대구/문어', price: '인당 12만원', date: '이번 주 주말 출항', content: '초보자 환영! 몸만 오시면 됩니다. 장비 대여 가능. 점심(문어라면) 제공!', likes: 12, comments: 4, cover: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=400&q=80', isPinned: false },
     { id: 'b2', shipName: '인천 나이스호', author: '인천씨호크', type: '야간선상', target: '쭈꾸미/갑오징어', price: '인당 8만원', date: '매일 야간', content: '쭈꾸미 낚시 시즌 오픈! 최신 시설 완비, 깨끗한 화장실. 가족 단위 대환영.', likes: 45, comments: 18, cover: 'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=400&q=80', isPinned: false }
+    { id: 'b2', shipName: '인천 나이스호', author: '인천씨호크', type: '야간선상', target: '쭈꾸미/갑오징어', price: '인당 8만원', date: '매일 야간', content: '쭈꾸미 낚시 시즌 오픈! 최신 시설 완비, 깨끗한 화장실. 가족 단위 대환영.', likes: 45, comments: 18, cover: 'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=400&q=80', isPinned: false }
+  ]);
+  const [noticePosts, setNoticePosts] = useState([
+    { id: 'n1', author: 'Fishing GO 마스터', title: '🚨 커뮤니티 클린봇 가동 안내 (욕설 및 도배)', date: '2026.04.18', content: '투명하고 매너 있는 낚시 커뮤니티 문화를 위해 AI 클린봇이 24시간 감시 중입니다. 위반 시 경고 없이 영구 차단됩니다.', views: 1250, isPinned: true },
+    { id: 'n2', author: 'Fishing GO 마스터', title: '🎁 전국 배스 낚시 챔피언십 온라인 대회 (총상금 1,000만 원)', date: '2026.04.15', content: '다음 주부터 앱 내 기록실을 통한 온라인 낚시 대회가 개막합니다! 많은 기대 부탁드립니다.', views: 800, isPinned: false },
+    { id: 'n3', author: 'Fishing GO 마스터', title: '🚀 V1.5 유튜브 통합 검색 기능 오픈!', date: '2026.04.17', content: '낚시채널 탭에서 원하는 모든 낚시 유튜버의 영상을 검색하고, 실시간 쿠팡 파트너스 최저가 장비를 만나보세요.', views: 3410, isPinned: true }
   ]);
   const [loading, setLoading] = useState(true);
 
@@ -76,6 +82,12 @@ export default function CommunityTab() {
         addToast("선장님 환영합니다! 🎉 비즈니스 홍보글을 작성합니다.", "success");
         navigate('/write?type=business');
       }
+    } else if (activeTab === 'notice') {
+      if (!isAdmin) {
+        addToast("❌ 공지사항은 Fishing GO 마스터(운영자)만 작성할 수 있습니다.", "error");
+      } else {
+        navigate('/write?type=notice');
+      }
     }
   };
 
@@ -106,11 +118,13 @@ export default function CommunityTab() {
         await apiClient.delete(`/api/community/posts/${id}`);
         if (type === 'open') setPosts(posts.filter(p => p.id !== id));
         if (type === 'business') setBusinessPosts(businessPosts.filter(p => p.id !== id));
+        if (type === 'notice') setNoticePosts(noticePosts.filter(p => p.id !== id));
         addToast("게시물이 삭제되었습니다.", "success");
       } catch (err) {
         // Fallback for UI if server is mock
         if (type === 'open') setPosts(posts.filter(p => p.id !== id));
         if (type === 'business') setBusinessPosts(businessPosts.filter(p => p.id !== id));
+        if (type === 'notice') setNoticePosts(noticePosts.filter(p => p.id !== id));
         addToast("서버 오류이나, 강제로 삭제 처리했습니다 (UI 한정).", "success");
       }
     }
@@ -147,6 +161,18 @@ export default function CommunityTab() {
             크루
           </button>
           <button 
+            onClick={() => setActiveTab('notice')}
+            style={{
+              flex: 1, padding: '12px 0', backgroundColor: 'transparent',
+              border: 'none', borderBottom: activeTab === 'notice' ? '3px solid #FF3B30' : '3px solid transparent',
+              color: activeTab === 'notice' ? '#FF3B30' : '#999',
+              fontWeight: activeTab === 'notice' ? '900' : 'bold', fontSize: '1rem', cursor: 'pointer',
+              transition: 'all 0.2s', whiteSpace: 'nowrap'
+            }}
+          >
+            공지사항
+          </button>
+          <button 
             onClick={() => setActiveTab('business')}
             style={{
               flex: 1, padding: '12px 0', backgroundColor: 'transparent',
@@ -165,6 +191,26 @@ export default function CommunityTab() {
       <div style={{ padding: '16px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px' }}>로딩 중...</div>
+        ) : activeTab === 'notice' ? (
+          <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {noticePosts.map(notice => (
+              <div key={notice.id} style={{ backgroundColor: notice.isPinned ? '#FFF1F0' : '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative', border: notice.isPinned ? '1px solid #FFCCC7' : '1px solid #E5E5EA' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                   {notice.isPinned && <div style={{ padding: '4px 8px', backgroundColor: '#FF3B30', color: '#fff', fontSize: '10px', borderRadius: '6px', fontWeight: '900' }}>중요 필독</div>}
+                   <div style={{ fontSize: '12px', color: '#888', fontWeight: 'bold' }}>{notice.date}</div>
+                   <div style={{ fontSize: '11px', color: '#aaa', marginLeft: 'auto' }}>조회 {notice.views}</div>
+                 </div>
+                 <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e', marginBottom: '10px', wordBreak: 'keep-all' }}>{notice.title}</h3>
+                 <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.6', paddingBottom: isAdmin ? '30px' : '0' }}>{notice.content}</p>
+                 
+                 {isAdmin && (
+                   <button onClick={(e) => handleDeletePost(e, notice.id, 'notice')} style={{ position: 'absolute', bottom: '16px', right: '16px', border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Trash2 size={14} /> 삭제
+                   </button>
+                 )}
+              </div>
+            ))}
+          </div>
         ) : activeTab === 'open' ? (
           // [오픈 게시판 뷰]
           <div className="fade-in">
@@ -319,18 +365,20 @@ export default function CommunityTab() {
       </div>
 
       {/* 플로팅 글쓰기/방만들기 버튼 (FAB) */}
-      <button 
-        onClick={handleFabClick}
-        style={{
-          position: 'fixed', bottom: '90px', right: '20px', backgroundColor: '#0056D2', color: '#fff',
-          border: 'none', borderRadius: '50%', width: '56px', height: '56px', display: 'flex', justifyContent: 'center', alignItems: 'center',
-          boxShadow: '0 8px 16px rgba(0, 86, 210, 0.4)', cursor: 'pointer', zIndex: 100, transition: 'transform 0.2s'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-      >
-        <PlusCircle size={32} />
-      </button>
+      {(!((activeTab === 'notice') && !isAdmin)) && (
+        <button 
+          onClick={handleFabClick}
+          style={{
+            position: 'fixed', bottom: '90px', right: '20px', backgroundColor: activeTab === 'notice' ? '#FF3B30' : '#0056D2', color: '#fff',
+            border: 'none', borderRadius: '50%', width: '56px', height: '56px', display: 'flex', justifyContent: 'center', alignItems: 'center',
+            boxShadow: activeTab === 'notice' ? '0 8px 16px rgba(255, 59, 48, 0.4)' : '0 8px 16px rgba(0, 86, 210, 0.4)', cursor: 'pointer', zIndex: 100, transition: 'transform 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <PlusCircle size={32} />
+        </button>
+      )}
     </div>
   );
 }
