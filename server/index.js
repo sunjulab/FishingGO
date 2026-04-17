@@ -657,12 +657,30 @@ app.get('/api/media/youtube', async (req, res) => {
     const channelId = process.env.YOUTUBE_CHANNEL_ID;
     const apiKey = process.env.YOUTUBE_API_KEY;
 
-    // 키가 없으면 로컬 데이터(Fallback) 전송
-    if (!channelId || !apiKey) {
-      return res.json({ videos: FALLBACK_VIDEOS, source: 'fallback (no-api-key)' });
+    // ─── API 키가 없는 경우 완전 무료 RSS 파싱 (rss2json) ───
+    if (!apiKey) {
+      const RSS_URL = encodeURIComponent(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId || 'UCeBw0Qp_Q_Y96f30d-V96qQ'}`); // 기본은 입질의 추억 채널
+      const response = await axios.get(`https://api.rss2json.com/v1/api.json?rss_url=${RSS_URL}`);
+      
+      if (response.data.status !== 'ok') throw new Error('RSS Parser Error');
+      
+      const liveVideos = response.data.items.slice(0, 10).map((item, idx) => {
+        const vidId = item.link.split('v=')[1];
+        return {
+          id: `rss_${vidId}`,
+          title: item.title,
+          category: '최신',
+          youtubeId: vidId,
+          views: 'NEW', 
+          description: `어제 갓 올라온 유튜브 최신 영상입니다: ${item.author}`,
+          products: FALLBACK_VIDEOS[idx % 4].products
+        };
+      });
+      return res.json({ videos: liveVideos.length > 0 ? liveVideos : FALLBACK_VIDEOS, source: 'youtube-rss-free' });
     }
 
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${channelId}&part=snippet,id&order=date&maxResults=10`;
+    // ─── API 키가 있는 경우 Google Data API 파싱 ───
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${channelId || 'UCeBw0Qp_Q_Y96f30d-V96qQ'}&part=snippet,id&order=date&maxResults=10`;
     const response = await axios.get(searchUrl);
     
     const liveVideos = response.data.items
