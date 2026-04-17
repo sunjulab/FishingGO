@@ -71,7 +71,7 @@ export default function CommunityTab() {
       }
     } else if (activeTab === 'business') {
       if (!canAccessBusinessPromo) {
-        addToast("월 11만원 이상 비즈니스(Pro/VIP) 등급 선장님만 홍보 가능합니다.", "error");
+        addToast("비즈니스 인증을 거친(Pro/VIP) 등급 선장님만 홍보 가능합니다.", "error");
       } else {
         addToast("선장님 환영합니다! 🎉 비즈니스 홍보글을 작성합니다.", "success");
         navigate('/write?type=business');
@@ -251,7 +251,7 @@ export default function CommunityTab() {
               <div style={{ fontSize: '15px', fontWeight: '950', color: '#FFD700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Award size={18} /> 프리미엄 선상 직거래 
               </div>
-              <p style={{ margin: '0 0 4px', fontSize: '12.5px', fontWeight: '700', lineHeight: '1.4' }}>월 11만원 비즈니스 인증을 거친 검증된 선장님들의 공간입니다.</p>
+              <p style={{ margin: '0 0 4px', fontSize: '12.5px', fontWeight: '700', lineHeight: '1.4' }}>비즈니스 인증을 거친 검증된 선장님들의 공간입니다.</p>
               <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>게시물 하단의 [직통 전화] 버튼을 눌러 수수료 없이 다이렉트 예약하세요!</p>
             </div>
             
