@@ -108,30 +108,29 @@ export default function WriteBusinessPost() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: '120px' }}>
+    <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: '80px' }}>
       {/* 헤더 */}
-      <div style={{ backgroundColor: '#fff', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={24} color="#1c1c1e" /></button>
-        <h2 style={{ fontSize: '17px', fontWeight: '900', margin: 0 }}>선상 배 홍보 등록</h2>
+      <div style={{ backgroundColor: '#fff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
+        <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={22} color="#1c1c1e" /></button>
+        <h2 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>선상 배 홍보 등록</h2>
         <button
           disabled={!isReady || !content || isSubmitting}
           onClick={handlePostClick}
-          style={{ border: 'none', background: isReady && content ? '#0056D2' : '#f0f0f0', color: isReady && content ? '#fff' : '#bbb', padding: '8px 18px', borderRadius: '20px', fontSize: '13px', fontWeight: '800', cursor: isReady && content ? 'pointer' : 'default' }}
+          style={{ border: 'none', background: isReady && content ? '#0056D2' : '#f0f0f0', color: isReady && content ? '#fff' : '#bbb', padding: '6px 14px', borderRadius: '16px', fontSize: '12px', fontWeight: '800', cursor: isReady && content ? 'pointer' : 'default' }}
         >{isSubmitting ? '등록 중...' : '등록 ›'}</button>
       </div>
 
-      <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
         {/* 커버 이미지 업로드 */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '20px', overflow: 'hidden' }}>
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden' }}>
           <label htmlFor="cover-upload" style={{ display: 'block', cursor: 'pointer' }}>
             {coverImage ? (
-              <img src={coverImage} alt="커버" style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
+              <img src={coverImage} alt="커버" style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
             ) : (
-              <div style={{ height: '140px', backgroundColor: '#F8F9FA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#aaa' }}>
-                <Image size={32} />
-                <span style={{ fontSize: '14px', fontWeight: '700' }}>배 사진 등록 (필드 클릭)</span>
-                <span style={{ fontSize: '11px' }}>조과 or 배 이미지 — 등록 시 미입력 시 기본 이미지 사용</span>
+              <div style={{ height: '80px', backgroundColor: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#aaa' }}>
+                <Image size={22} />
+                <span style={{ fontSize: '13px', fontWeight: '700' }}>배 사진 등록 (클릭)</span>
               </div>
             )}
           </label>
@@ -142,9 +141,9 @@ export default function WriteBusinessPost() {
         </section>
 
         {/* 기본 정보 */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '900', color: '#8E8E93', marginBottom: '14px' }}>🚢 기본 정보</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '10px' }}>🚢 기본 정보</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <input value={shipName} onChange={e => setShipName(e.target.value)} placeholder="배 이름 (예: 강릉 에이스호)" style={INPUT_STYLE} />
             <select value={region} onChange={e => setRegion(e.target.value)} style={INPUT_STYLE}>
               <option value="">📍 출항 지역 / 항구 선택</option>
@@ -157,14 +156,14 @@ export default function WriteBusinessPost() {
           </div>
         </section>
 
-        {/* 목표어종 (다중선택 최대 4종) */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '900', color: '#8E8E93', marginBottom: '12px' }}>🐟 목표 어종 (최대 4종)</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {/* 목표어종 */}
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '8px' }}>🐟 목표 어종 (최대 4종)</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {FISH_TYPES.map(fish => {
               const selected = targetFish.includes(fish);
               return (
-                <button key={fish} onClick={() => toggleFish(fish)} style={{ padding: '8px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '800', backgroundColor: selected ? '#0056D2' : '#F2F2F7', color: selected ? '#fff' : '#555', transition: 'all 0.15s', transform: selected ? 'scale(1.05)' : 'scale(1)' }}>
+                <button key={fish} onClick={() => toggleFish(fish)} style={{ padding: '6px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '800', backgroundColor: selected ? '#0056D2' : '#F2F2F7', color: selected ? '#fff' : '#555', transition: 'all 0.15s' }}>
                   {selected && '✓ '}{fish}
                 </button>
               );
@@ -173,45 +172,45 @@ export default function WriteBusinessPost() {
         </section>
 
         {/* 출조 상세 */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '900', color: '#8E8E93', marginBottom: '14px' }}>📋 출조 상세 정보</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '10px' }}>📌 출조 상세</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <input value={price} onChange={e => setPrice(e.target.value)} placeholder="💰 인당 가격 (예: 인당 12만원)" style={INPUT_STYLE} />
             <input value={schedule} onChange={e => setSchedule(e.target.value)} placeholder="📅 출조 일정 (예: 매주 주말 오전 5시 출항)" style={INPUT_STYLE} />
             <input value={capacity} onChange={e => setCapacity(e.target.value.replace(/[^0-9]/g, ''))} placeholder="👥 모집 인원 (숫자만, 예: 8)" style={INPUT_STYLE} type="number" />
           </div>
         </section>
 
-        {/* 연락처 - 즉시 전화 연동 핵심 */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '900', color: '#8E8E93', marginBottom: '12px' }}>📞 직통 연락처 (즉시 전화 연결)</div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', backgroundColor: '#F0F7FF', borderRadius: '14px', padding: '14px 16px', border: '1.5px solid #0056D2' }}>
-            <Phone size={20} color="#0056D2" />
-            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="010-0000-0000 (등록 후 카드에서 바로 연결됨)" type="tel" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '16px', fontWeight: '800', outline: 'none', color: '#0056D2' }} />
+        {/* 연락처 */}
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '8px' }}>📞 직통 연락저 (즉시 전화 연결)</div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', backgroundColor: '#F0F7FF', borderRadius: '12px', padding: '12px 14px', border: '1.5px solid #0056D2' }}>
+            <Phone size={18} color="#0056D2" />
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="010-0000-0000" type="tel" style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '15px', fontWeight: '800', outline: 'none', color: '#0056D2' }} />
           </div>
           {phone && (
-            <a href={`tel:${phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px', padding: '12px', backgroundColor: '#0056D2', borderRadius: '12px', color: '#fff', fontWeight: '900', fontSize: '14px', textDecoration: 'none' }}>
-              <Phone size={16} /> 입력한 번호로 테스트 통화
+            <a href={`tel:${phone}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px', padding: '10px', backgroundColor: '#0056D2', borderRadius: '10px', color: '#fff', fontWeight: '900', fontSize: '13px', textDecoration: 'none' }}>
+              <Phone size={14} /> 테스트 통화
             </a>
           )}
         </section>
 
         {/* 추가 홍보 포인트 */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: '900', color: '#8E8E93', marginBottom: '12px' }}>✏️ 추가 홍보 포인트 (선택)</div>
-          <textarea value={extraMsg} onChange={e => setExtraMsg(e.target.value)} placeholder="예: 장비 무료 대여 / 점심 도시락 제공 / 초보자 완전 환영..." style={{ ...INPUT_STYLE, minHeight: '80px', resize: 'none' }} />
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '8px' }}>✏️ 추가 홍보 포인트 (선택)</div>
+          <textarea value={extraMsg} onChange={e => setExtraMsg(e.target.value)} placeholder="예: 장비 무료 대여 / 점심 도시락 제공..." style={{ ...INPUT_STYLE, minHeight: '60px', resize: 'none' }} />
         </section>
 
         {/* AI 홍보 문구 생성 */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ fontSize: '13px', fontWeight: '900', color: '#8E8E93' }}>🤖 AI 홍보 문구</div>
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93' }}>🤖 AI 홍보 문구</div>
             <button
               onClick={handleGenerateAI}
               disabled={!isReady || isGenerating}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '20px', border: 'none', background: isReady ? 'linear-gradient(135deg, #7C3AED, #4F46E5)' : '#f0f0f0', color: isReady ? '#fff' : '#bbb', fontSize: '13px', fontWeight: '800', cursor: isReady ? 'pointer' : 'default' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '16px', border: 'none', background: isReady ? 'linear-gradient(135deg, #7C3AED, #4F46E5)' : '#f0f0f0', color: isReady ? '#fff' : '#bbb', fontSize: '12px', fontWeight: '800', cursor: isReady ? 'pointer' : 'default' }}
             >
-              <Sparkles size={14} />
+              <Sparkles size={12} />
               {isGenerating ? '생성 중...' : 'AI 자동 생성'}
             </button>
           </div>
@@ -219,11 +218,11 @@ export default function WriteBusinessPost() {
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
-              style={{ ...INPUT_STYLE, minHeight: '200px', resize: 'none', lineHeight: '1.7', whiteSpace: 'pre-line', fontFamily: 'inherit' }}
+              style={{ ...INPUT_STYLE, minHeight: '160px', resize: 'none', lineHeight: '1.6', whiteSpace: 'pre-line', fontFamily: 'inherit' }}
             />
           ) : (
-            <div style={{ height: '100px', backgroundColor: '#F8F9FA', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: '14px' }}>
-              위 정보를 입력 후 'AI 자동 생성'을 눌러주세요
+            <div style={{ height: '72px', backgroundColor: '#F8F9FA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: '12px' }}>
+              위 정보 입력 후 'AI 자동 생성'을 눌러주세요
             </div>
           )}
         </section>
@@ -267,11 +266,11 @@ export default function WriteBusinessPost() {
       </div>
 
       {/* 하단 고정 등록 버튼 */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', padding: '16px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', maxWidth: '480px', margin: '0 auto' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', padding: '12px 16px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0' }}>
         <button
           disabled={!isReady || !content || isSubmitting}
           onClick={handlePostClick}
-          style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', background: isReady && content ? 'linear-gradient(135deg, #0056D2, #0096FF)' : '#f0f0f0', color: isReady && content ? '#fff' : '#bbb', fontSize: '17px', fontWeight: '900', cursor: isReady && content ? 'pointer' : 'default', boxShadow: isReady && content ? '0 8px 24px rgba(0,86,210,0.25)' : 'none' }}
+          style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: isReady && content ? 'linear-gradient(135deg, #0056D2, #0096FF)' : '#f0f0f0', color: isReady && content ? '#fff' : '#bbb', fontSize: '15px', fontWeight: '900', cursor: isReady && content ? 'pointer' : 'default', boxShadow: isReady && content ? '0 6px 18px rgba(0,86,210,0.25)' : 'none' }}
         >
           {isSubmitting ? '등록 중...' : '🚢 선상 홍보 카드 등록하기'}
         </button>
@@ -289,8 +288,8 @@ export default function WriteBusinessPost() {
 }
 
 const INPUT_STYLE = {
-  width: '100%', padding: '14px 16px', borderRadius: '14px',
+  width: '100%', padding: '11px 13px', borderRadius: '12px',
   border: '1.5px solid #E5E5EA', backgroundColor: '#FAFAFA',
-  fontSize: '15px', fontWeight: '600', outline: 'none', boxSizing: 'border-box',
+  fontSize: '14px', fontWeight: '600', outline: 'none', boxSizing: 'border-box',
   fontFamily: 'inherit'
 };
