@@ -1,73 +1,46 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, ShoppingBag, Tv, Flame, Search, X, TrendingUp, ChevronRight, Star, ShoppingCart, ShoppingBag as BagIcon, ExternalLink, Maximize2 } from 'lucide-react';
+import { useToastStore } from '../store/useToastStore';
 
-const TUTORIAL_VIDEOS = [
-  {
-    id: '1',
-    title: '[감성돔] 찌낚시 채비법 (반유동/전유동) 완전정복',
-    category: '찌낚시',
-    youtubeId: 'Xvj2T6U8WqI',
-    views: '124k',
-    description: '입문자가 가장 어려워하는 수심 측정부터 채비 정렬까지 상세히 설명합니다.',
-    products: [
-      { name: '다이와 토너먼트 ISO 1호 530', price: '1,250,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' },
-      { name: '시마노 BB-X 테크늄 C3000DXG', price: '980,000원', discount: '5%', img: 'https://images.unsplash.com/photo-1622325067905-24e5b497675f?auto=format&fit=crop&w=100&q=60' }
-    ]
-  },
-  {
-    id: '2',
-    title: '[에깅] 무늬오징어 낚시 입문 - 기본 액션과 장비 세팅',
-    category: '에깅',
-    youtubeId: 'pY5m4A2f-3Y',
-    views: '85k',
-    description: '박선비tv가 알려주는 무늬오징어 시즌 대비 기초 에깅 낚시법입니다.',
-    products: [
-      { name: '야마시타 에기왕 K 3.5호 (모자익)', price: '14,500원', discount: '15%', img: 'https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=100&q=60' },
-      { name: '다이와 에메랄다스 에어 86ML', price: '420,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=100&q=60' }
-    ]
-  },
-  {
-    id: '3',
-    title: '[루어] 광어 다운샷 채비법 - 웜 끼우는 법과 단차 조절',
-    category: '루어',
-    youtubeId: 'XWghA2gO2A8',
-    views: '52k',
-    description: '선상 낚시 필수 코스! 광어 다운샷에서 마릿수를 올리는 채비 비결입니다.',
-    products: [
-      { name: '버클리 걸프 얼라이브 웜 5인치', price: '18,500원', discount: '20%', img: 'https://images.unsplash.com/photo-1545167622-3a6ac756afa4?auto=format&fit=crop&w=100&q=60' },
-      { name: '다운샷 전용 싱커(봉돌) 40호 세트', price: '9,800원', discount: '무료나눔급', img: 'https://images.unsplash.com/photo-1529618160092-2f8ccc8e087b?auto=format&fit=crop&w=100&q=60' }
-    ]
-  },
-  {
-    id: '4',
-    title: '[선상] 쭈꾸미 갑오징어 낚시 입문 - 기초 채비 마스터',
-    category: '선상',
-    youtubeId: 'Lq1tK6fD_O0',
-    views: '210k',
-    description: '삼분선생의 쭈꾸미 낚시 기초 레슨. 이 영상 하나로 쭈꾸미 낚시 끝!',
-    products: [
-      { name: '요즈리 오로라 에기 세트', price: '25,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' },
-      { name: '쭈꾸미 전용 갑갑이 로드 (B-622)', price: '89,000원', discount: '신상', img: 'https://images.unsplash.com/photo-1627063467406-89684f4791ea?auto=format&fit=crop&w=100&q=60' }
-    ]
-  }
-];
-
-const CATEGORIES = ['전체', '루어', '찌낚시', '원투', '선상', '에깅'];
+const CATEGORIES = ['전체', '최신', '루어', '찌낚시', '원투', '선상', '에깅'];
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function MediaTab() {
   const [activeChip, setActiveChip] = useState('전체');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVideo, setSelectedVideo] = useState(null); // 전체화면용 시청 모드
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const addToast = useToastStore((state) => state.addToast);
+
+  useEffect(() => {
+    fetchVideos();
+  }, []);
+
+  const fetchVideos = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API}/api/media/youtube`);
+      if (res.ok) {
+        const data = await res.json();
+        setVideos(data.videos || []);
+      }
+    } catch (err) {
+      addToast('유튜브 채널 연동에 실패했습니다.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredVideos = useMemo(() => {
-    return TUTORIAL_VIDEOS.filter(video => {
+    return videos.filter(video => {
       const matchCategory = activeChip === '전체' || video.category === activeChip;
       const matchSearch = video.title.toLowerCase().includes(searchQuery.toLowerCase());
       return matchCategory && matchSearch;
     });
-  }, [activeChip, searchQuery]);
+  }, [videos, activeChip, searchQuery]);
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F2F2F7', paddingBottom: '100px', overflowX: 'hidden' }}>
@@ -150,9 +123,16 @@ export default function MediaTab() {
         </div>
       </div>
 
+      {/* 카테고리 로딩 및 빈 상태 */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: '#8E8E93', fontSize: '15px' }}>
+          유튜브 채널 연동 중... 🐟
+        </div>
+      )}
+
       {/* 영상 카드 리스트 */}
       <div style={{ padding: '16px' }}>
-        {filteredVideos.map(video => (
+        {!loading && filteredVideos.map(video => (
           <div key={video.id} className="card fade-up" style={{ marginBottom: '24px', backgroundColor: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}>
              {/* 영상 썸네일 영역 - 클릭 시 전체화면 오버레이 */}
              <div 

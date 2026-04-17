@@ -644,6 +644,47 @@ app.get('/api/weather/cctv', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'API Error' }); }
 });
 
+// --- 유튜브 비디오 API (최신 영상 자동 렌더링용) ---
+const FALLBACK_VIDEOS = [
+  { id: '1', title: '[감성돔] 찌낚시 채비법 (반유동/전유동) 완전정복', category: '찌낚시', youtubeId: 'Xvj2T6U8WqI', views: '124k', description: '입문자가 가장 어려워하는 수심 측정부터 채비 정렬까지 상세히 설명합니다.', products: [{ name: '다이와 토너먼트 ISO 1호 530', price: '1,250,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '2', title: '[에깅] 무늬오징어 낚시 입문 - 기본 액션과 장비 세팅', category: '에깅', youtubeId: 'pY5m4A2f-3Y', views: '85k', description: '박선비tv가 알려주는 무늬오징어 시즌 대비 기초 에깅 낚시법입니다.', products: [{ name: '야마시타 에기왕 K 3.5호 (모자익)', price: '14,500원', discount: '15%', img: 'https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '3', title: '[루어] 광어 다운샷 채비법 - 웜 끼우는 법과 단차 조절', category: '루어', youtubeId: 'XWghA2gO2A8', views: '52k', description: '선상 낚시 필수 코스! 광어 다운샷에서 마릿수를 올리는 채비 비결입니다.', products: [{ name: '버클리 걸프 얼라이브 웜 5인치', price: '18,500원', discount: '20%', img: 'https://images.unsplash.com/photo-1545167622-3a6ac756afa4?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '4', title: '[선상] 쭈꾸미 갑오징어 낚시 입문 - 기초 채비 마스터', category: '선상', youtubeId: 'Lq1tK6fD_O0', views: '210k', description: '삼분선생의 쭈꾸미 낚시 기초 레슨. 이 영상 하나로 쭈꾸미 낚시 끝!', products: [{ name: '요즈리 오로라 에기 세트', price: '25,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' }] }
+];
+
+app.get('/api/media/youtube', async (req, res) => {
+  try {
+    const channelId = process.env.YOUTUBE_CHANNEL_ID;
+    const apiKey = process.env.YOUTUBE_API_KEY;
+
+    // 키가 없으면 로컬 데이터(Fallback) 전송
+    if (!channelId || !apiKey) {
+      return res.json({ videos: FALLBACK_VIDEOS, source: 'fallback (no-api-key)' });
+    }
+
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${channelId}&part=snippet,id&order=date&maxResults=10`;
+    const response = await axios.get(searchUrl);
+    
+    const liveVideos = response.data.items
+      .filter(item => item.id.videoId)
+      .map((item, idx) => ({
+        id: `yt_${item.id.videoId}`,
+        title: item.snippet.title,
+        category: '최신',
+        youtubeId: item.id.videoId,
+        views: 'NEW', 
+        description: item.snippet.description || '유튜브 채널에서 연동된 최신 영상입니다.',
+        products: FALLBACK_VIDEOS[idx % 4].products
+      }));
+
+    if (liveVideos.length === 0) return res.json({ videos: FALLBACK_VIDEOS, source: 'fallback (empty)' });
+    res.json({ videos: liveVideos, source: 'youtube-live' });
+  } catch (err) {
+    console.error('YouTube Fetch Error:', err.message);
+    res.json({ videos: FALLBACK_VIDEOS, source: 'fallback (error)' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Fishing GO Logic Server running on PORT ${PORT}`);
