@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { Anchor, ShieldCheck, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, LEVEL_CONFIG } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -103,8 +103,18 @@ export default function LoginPage() {
     setUser(data.user);
     localStorage.setItem('token', data.token);
     addToast(`환영합니다, ${data.user.name}님! 🎣`, 'success');
-    if (data.justAttended) setTimeout(() => addToast('🎉 오늘 출석 완료! +15 EXP 획득', 'success'), 800);
-    if (data.leveledUp)    setTimeout(() => addToast(`⭐ 레벨 ${data.user.level} 달성!`, 'success'), 1600);
+    
+    if (data.justAttended) {
+      setTimeout(() => addToast(`🎉 오늘 출석 완료! +${data.expGained || 20} EXP 획득`, 'success'), 800);
+    }
+    if (data.leveledUp) {
+      const currentLevelIndex = (data.user.level || 1) - 1;
+      const levelReward = LEVEL_CONFIG[currentLevelIndex]?.reward || '소정의 찌(포인트)';
+      setTimeout(() => {
+        addToast(`⭐ 레벨 ${data.user.level} 달성 기념 보상!`, 'success');
+        addToast(`🎁 보상: [${levelReward}] 지급 완료!`, 'info');
+      }, 1600);
+    }
     navigate('/');
   };
 

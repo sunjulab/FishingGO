@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate }
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Home, Tv, Users, ShoppingBag, User, Anchor } from 'lucide-react';
 import Toast from './components/Toast';
-import { useUserStore, TIER_CONFIG } from './store/useUserStore';
+import { useToastStore } from './store/useToastStore';
+import { useUserStore, TIER_CONFIG, LEVEL_CONFIG } from './store/useUserStore';
 
 // 라우트 레이지 로딩 (코드 스플리팅)
 const MapHome = lazy(() => import('./pages/MapHome')); 
@@ -106,6 +107,29 @@ function Header() {
   );
 }
 
+function GlobalLevelUpListener() {
+  const lastExpGain = useUserStore((state) => state.lastExpGain);
+  const clearLastExpGain = useUserStore((state) => state.clearLastExpGain);
+  const addToast = useToastStore((state) => state.addToast);
+
+  React.useEffect(() => {
+    if (lastExpGain && lastExpGain.leveledUp) {
+      const { newLevel } = lastExpGain;
+      const currentLevelIndex = (newLevel?.level || 1) - 1;
+      const levelReward = LEVEL_CONFIG[currentLevelIndex]?.reward || '소정의 찌(포인트)';
+      
+      setTimeout(() => {
+        addToast(`⭐ 레벨 ${newLevel?.level} 달성 기념 보상!`, 'success');
+        addToast(`🎁 보상: [${levelReward}] 지급 완료!`, 'info');
+      }, 500);
+
+      clearLastExpGain();
+    }
+  }, [lastExpGain, addToast, clearLastExpGain]);
+
+  return null;
+}
+
 export default function App() {
   const GOOGLE_CLIENT_ID = "779696124026-7dgp86dmo15jjsvm1dds31j2eim00pgb.apps.googleusercontent.com"; 
 
@@ -114,6 +138,7 @@ export default function App() {
       <BrowserRouter>
         <Toast />
         <RealTimeAlert />
+        <GlobalLevelUpListener />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<PageLoading />}>
