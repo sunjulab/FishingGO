@@ -13,16 +13,16 @@ export const TIER_CONFIG = {
 // ── 레벨 시스템 설정 ────────────────────────────────────────────
 // 레벨별 필요 EXP: 레벨 N 달성에 필요한 누적 EXP
 export const LEVEL_CONFIG = [
-  { level: 1,  title: '초보 낚시꾼',   emoji: '🪱', expRequired: 0,    color: '#8E8E93', reward: '기본 포인트 지도 해금' },
-  { level: 2,  title: '견습 낚시꾼',   emoji: '🎣', expRequired: 100,  color: '#8E8E93', reward: '조황 기록 작성 해금' },
-  { level: 3,  title: '낚시 입문자',   emoji: '🐟', expRequired: 250,  color: '#34C759', reward: '미끼 추천 기능 확장' },
-  { level: 4,  title: '낚시 애호가',   emoji: '🐠', expRequired: 500,  color: '#34C759', reward: '날씨 상세 레이어 해금' },
-  { level: 5,  title: '베테랑 낚시인', emoji: '🐡', expRequired: 850,  color: '#0056D2', reward: '실시간 피딩 알림 해금' },
-  { level: 6,  title: '중급 낚시꾼',   emoji: '🦈', expRequired: 1300, color: '#0056D2', reward: '프리미엄 포인트 즐겨찾기 20개' },
-  { level: 7,  title: '고수 낚시인',   emoji: '🎯', expRequired: 1900, color: '#FF9B26', reward: '조황 예보 7일 미리보기' },
-  { level: 8,  title: '낚시 장인',     emoji: '⚓', expRequired: 2700, color: '#FF9B26', reward: '독점 낚시 포인트 지도 열람' },
-  { level: 9,  title: '전설의 낚시인', emoji: '👑', expRequired: 3700, color: '#FF5A5F', reward: '전국 대물 신고 우선 순위' },
-  { level: 10, title: '낚시의 신',     emoji: '🌊', expRequired: 5000, color: '#FFD700', reward: '명예의 전당 등재 + VIP 배지' },
+  { level: 1,  title: '초보 낚시꾼',   emoji: '🪱', expRequired: 0,    color: '#8E8E93', reward: '가입 환영 500 P 지급' },
+  { level: 2,  title: '견습 낚시꾼',   emoji: '🎣', expRequired: 100,  color: '#8E8E93', reward: '1,000 P 지급' },
+  { level: 3,  title: '낚시 입문자',   emoji: '🐟', expRequired: 250,  color: '#34C759', reward: '입문자용 프로필 은장 테두리' },
+  { level: 4,  title: '낚시 애호가',   emoji: '🐠', expRequired: 500,  color: '#34C759', reward: '2,000 P 지급' },
+  { level: 5,  title: '베테랑 낚시인', emoji: '🐡', expRequired: 850,  color: '#0056D2', reward: '낚시 쇼핑몰 5% 할인 쿠폰' },
+  { level: 6,  title: '중급 낚시꾼',   emoji: '🦈', expRequired: 1300, color: '#0056D2', reward: '커뮤니티 닉네임 볼드(Bold) 효과' },
+  { level: 7,  title: '고수 낚시인',   emoji: '🎯', expRequired: 1900, color: '#FF9B26', reward: '고강도 프로필 금장 테두리 + 5,000 P' },
+  { level: 8,  title: '낚시 장인',     emoji: '⚓', expRequired: 2700, color: '#FF9B26', reward: '낚시 쇼핑몰 10% 할인 쿠폰' },
+  { level: 9,  title: '전설의 낚시인', emoji: '👑', expRequired: 3700, color: '#FF5A5F', reward: '전설 등급 한정판 뱃지 이펙트' },
+  { level: 10, title: '낚시의 신',     emoji: '🌊', expRequired: 5000, color: '#FFD700', reward: '명예의 전당 등재 및 VIP 멤버쉽 1개월권' },
 ];
 
 // ── EXP 활동 보상표 ─────────────────────────────────────────────
