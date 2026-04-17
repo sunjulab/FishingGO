@@ -113,7 +113,7 @@ export default function WritePost() {
             <div style={{ fontSize: '24px' }}>👑</div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>비즈니스 라이트 — 월 ₩9,900</div>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)' }}>광고 없이 무제한 등록 + 쿠팡 파트너스 수익 연동</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)' }}>광고 없이 무제한 등록 + 비즈니스 홍보글 작성 권한</div>
             </div>
             <div style={{ marginLeft: 'auto', fontSize: '18px' }}>›</div>
           </div>
