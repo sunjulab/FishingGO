@@ -110,10 +110,11 @@ export default function CreateCrew() {
         </div>
 
         <div style={{ marginBottom: '40px' }}>
-           <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#8e8e93', marginBottom: '16px' }}>최대 인원 성정 (3 ~ 100명)</label>
+           <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#8e8e93', marginBottom: '16px' }}>최대 인원 설정 (3 ~ 1000명)</label>
            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input type="range" min="3" max="100" value={limit} onChange={(e) => setLimit(e.target.value)} style={{ flex: 1, accentColor: '#0056D2' }} />
-              <div style={{ fontSize: '16px', fontWeight: '800', color: '#0056D2', width: '40px' }}>{limit}</div>
+              <input type="range" min="3" max="1000" step="1" value={limit} onChange={(e) => setLimit(e.target.value)} style={{ flex: 1, accentColor: '#0056D2' }} />
+              <div style={{ fontSize: '16px', fontWeight: '800', color: '#0056D2', width: '45px', textAlign: 'right' }}>{limit}</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#8e8e93' }}>명</div>
            </div>
         </div>
 
