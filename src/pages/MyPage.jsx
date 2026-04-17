@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/index';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, TIER_CONFIG } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { 
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
@@ -12,10 +12,11 @@ import {
 
 export default function MyPage() {
   const navigate = useNavigate();
-  const { user, updateUser, logout, canAccessBusinessShop } = useUserStore();
+  const { user, updateUser, logout, canAccessBusinessShop, userTier } = useUserStore();
   const addToast = useToastStore((state) => state.addToast);
   const canAccessPartnerCenter = canAccessBusinessShop();
   const fileInputRef = useRef(null);
+  const tierBadge = TIER_CONFIG[userTier] || TIER_CONFIG.FREE;
   
   const [activeTab, setActiveTab] = useState('records');
   const [showModal, setShowModal] = useState(null); // 'noti', 'premium', 'security'
@@ -97,6 +98,22 @@ export default function MyPage() {
     navigate('/login');
   };
 
+  // 비로그인 상태면 로그인 페이지로
+  if (!user) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F8F9FA', gap: '16px' }}>
+        <div style={{ fontSize: '48px' }}>🎣</div>
+        <p style={{ fontSize: '16px', fontWeight: '800', color: '#1c1c1e' }}>로그인이 필요합니다</p>
+        <button
+          onClick={() => navigate('/login')}
+          style={{ padding: '14px 32px', background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '15px', cursor: 'pointer' }}
+        >
+          로그인 / 회원가입
+        </button>
+      </div>
+    );
+  }
+
   const menuItems = [
     { id: 'noti', icon: Bell, title: '알림 설정', color: '#0056D2', desc: '물때 및 커뮤니티 알림' },
     { id: 'premium', icon: CreditCard, title: '프리미엄 구독 관리', color: '#FF9B26', desc: '포인트 및 구독권 요금' },
@@ -148,8 +165,19 @@ export default function MyPage() {
             }}>
               <Camera size={14} color="#fff" />
             </div>
-            {/* PRO 뱃지 */}
-            <div style={{ position: 'absolute', top: '-8px', left: '-8px', backgroundColor: '#0056D2', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '3px 9px', borderRadius: '12px', border: '2.5px solid #fff', letterSpacing: '0.02em' }}>PRO</div>
+            {/* PRO/VIP/FREE 등 티어 뱃지 (FREE면 표시 안 함) */}
+            {tierBadge.label && (
+              <div style={{
+                position: 'absolute', top: '-8px', left: '-8px',
+                background: tierBadge.bg,
+                color: tierBadge.color,
+                fontSize: '10px', fontWeight: '900',
+                padding: '3px 9px', borderRadius: '12px',
+                border: '2.5px solid #fff', letterSpacing: '0.02em',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                whiteSpace: 'nowrap',
+              }}>{tierBadge.label}</div>
+            )}
             {/* 숨겨진 파일 input */}
             <input
               ref={fileInputRef}
@@ -339,20 +367,65 @@ export default function MyPage() {
                 </>
               )}
 
-              {showModal === 'premium' && (
-                <>
-                  <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '20px' }}>프리미엄 구독 관리</h3>
-                  <div style={{ padding: '24px', background: 'linear-gradient(135deg, #FFD700, #FFA500)', borderRadius: '24px', color: '#1c1c1e', marginBottom: '24px' }}>
-                     <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>CURRENT PLAN</div>
-                     <div style={{ fontSize: '22px', fontWeight: '950' }}>Fishing GO Premium</div>
-                     <div style={{ fontSize: '13px', fontWeight: '800', marginTop: '12px', opacity: 0.8 }}>다음 갱신일: 2024년 4월 28일</div>
-                  </div>
-                  <div style={{ padding: '20px', backgroundColor: '#F8F9FA', borderRadius: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><CardIcon size={20} color="#1c1c1e" /><span style={{ fontWeight: '800' }}>결제 수단: KakaoPay</span></div>
-                     <div style={{ fontSize: '13px', color: '#0056D2', fontWeight: '800' }}>변경</div>
-                  </div>
-                </>
-              )}
+              {showModal === 'premium' && (() => {
+                const { setUserTier } = useUserStore.getState();
+                const planNames = { FREE: '무료 플랜', PRO: 'PRO 플랜', BUSINESS_LITE: 'Business Lite', BUSINESS_PRO: 'Business Pro', BUSINESS_VIP: 'Business VIP' };
+                const isFree = userTier === 'FREE';
+                return (
+                  <>
+                    <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '6px' }}>구독 관리</h3>
+                    <p style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '600', marginBottom: '20px' }}>현재 플랜: <strong style={{ color: '#1c1c1e' }}>{planNames[userTier]}</strong></p>
+
+                    {/* 현재 플랜 카드 */}
+                    <div style={{ padding: '20px', background: tierBadge.bg || '#F2F2F7', borderRadius: '20px', color: tierBadge.color || '#1c1c1e', marginBottom: '20px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '900', marginBottom: '4px', opacity: 0.75 }}>CURRENT PLAN</div>
+                      <div style={{ fontSize: '22px', fontWeight: '950' }}>{planNames[userTier]}</div>
+                      {!isFree && <div style={{ fontSize: '12px', fontWeight: '700', marginTop: '10px', opacity: 0.7 }}>구독 중 · 다음 갱신일 미정</div>}
+                    </div>
+
+                    {/* 플랜 선택 목록 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                      {[
+                        { tier: 'FREE',          name: '무료',         price: '₩0',       desc: '기본 포인트 기능' },
+                        { tier: 'PRO',           name: 'PRO',          price: '₩4,900/월', desc: '프리미엄 포인트 + 히트맵' },
+                        { tier: 'BUSINESS_LITE', name: 'Business Lite',price: '₩14,900/월', desc: '선박 홍보 기능' },
+                        { tier: 'BUSINESS_PRO',  name: 'Business Pro', price: '₩29,900/월', desc: '예약 관리 + 조과 갤러리 노출' },
+                        { tier: 'BUSINESS_VIP',  name: 'Business VIP', price: '₩59,900/월', desc: '전체 기능 + VIP 지원' },
+                      ].map(plan => {
+                        const isActive = userTier === plan.tier;
+                        const cfg = TIER_CONFIG[plan.tier];
+                        return (
+                          <div key={plan.tier}
+                            onClick={() => { setUserTier(plan.tier); addToast(`${plan.name} 플랜으로 변경됐습니다.`, 'success'); setShowModal(null); }}
+                            style={{
+                              padding: '14px 18px', borderRadius: '16px', cursor: 'pointer',
+                              border: isActive ? '2px solid #0056D2' : '1.5px solid #F0F0F0',
+                              background: isActive ? '#EBF2FF' : '#fff',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {cfg.label && (
+                                  <span style={{ fontSize: '9px', fontWeight: '900', padding: '2px 7px', borderRadius: '8px', background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
+                                )}
+                                <span style={{ fontSize: '14px', fontWeight: '900', color: '#1c1c1e' }}>{plan.name}</span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{plan.desc}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '13px', fontWeight: '900', color: isActive ? '#0056D2' : '#1c1c1e' }}>{plan.price}</div>
+                              {isActive && <div style={{ fontSize: '10px', color: '#0056D2', fontWeight: '800' }}>현재 플랜</div>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
+
 
               {showModal === 'security' && (
                 <>
