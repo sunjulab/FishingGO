@@ -100,7 +100,7 @@ export default function VVIPSubscribe() {
         <Crown size={36} color="#FFD700" style={{ marginBottom: '12px' }} />
         <div style={{ fontSize: '24px', fontWeight: '900', marginBottom: '6px' }}>항구별 전용 선상 광고</div>
         <div style={{ fontSize: '14px', opacity: 0.85, lineHeight: '1.6', marginBottom: '20px' }}>
-          원하는 항구 1자리를 선점하면, 해당 항구의 선상 배 홍보 피드 최상단에 <strong>영구 고정</strong>됩니다.<br />
+          원하는 항구 1자리를 선점하면, 해당 항구의 선상 배 홍보 피드 최상단에 <strong>월 구독 유지 시 고정</strong>됩니다.<br />
           전국 낚시인들이 포인트 검색 시 가장 먼저 노출되는 프리미엄 광고 자리입니다.
         </div>
         <div style={{ display: 'flex', gap: '16px' }}>

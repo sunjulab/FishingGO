@@ -433,7 +433,7 @@ export default function MyPage() {
                       {[
                         { tier: 'FREE',          name: '무료',         price: '₩0',       desc: '기본 포인트 기능' },
                         { tier: 'PRO',           name: 'PRO',          price: '₩4,900/월', desc: '프리미엄 포인트 + 히트맵' },
-                        { tier: 'BUSINESS_LITE', name: 'Business Lite',price: '₩14,900/월', desc: '선박 홍보 기능' },
+                        { tier: 'BUSINESS_LITE', name: 'Business Lite',price: '₩9,900/월', desc: '광고 없이 무제한 등록 (홍보글 제외)' },
                         { tier: 'BUSINESS_PRO',  name: 'Business Pro', price: '₩29,900/월', desc: '예약 관리 + 조과 갤러리 노출' },
                         { tier: 'BUSINESS_VIP',  name: 'Business VIP', price: '₩59,900/월', desc: '전체 기능 + VIP 지원' },
                       ].map(plan => {

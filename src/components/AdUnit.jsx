@@ -169,7 +169,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
           {ctx.title}
         </h2>
         <p style={{ fontSize: '14px', color: '#888', textAlign: 'center', marginBottom: '28px' }}>
-          무료로 이용하거나 비즈니스 라이트를 구독하세요
+          무료로 이용하거나 PRO / VVIP를 구독하세요
         </p>
 
         {/* 옵션 1: 비즈니스 라이트 구독 */}
@@ -187,9 +187,9 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: '12px', opacity: 0.85, fontWeight: '700', marginBottom: '4px' }}>👑 BUSINESS LITE</div>
+              <div style={{ fontSize: '12px', opacity: 0.85, fontWeight: '700', marginBottom: '4px' }}>👑 PRO / VVIP</div>
               <div style={{ fontSize: '18px', fontWeight: '900', marginBottom: '4px' }}>광고 없이 무제한 등록</div>
-              <div style={{ fontSize: '12px', opacity: 0.9 }}>광고 없이 무제한 등록 · 비즈니스 홍보글 작성 권한 포함</div>
+              <div style={{ fontSize: '12px', opacity: 0.9 }}>광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음</div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
               <div style={{ fontSize: '22px', fontWeight: '900' }}>₩9,900</div>
