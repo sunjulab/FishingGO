@@ -108,7 +108,7 @@ export default function WriteBusinessPost() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: '80px' }}>
+    <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: '80px', maxWidth: '430px', margin: '0 auto', position: 'relative' }}>
       {/* 헤더 */}
       <div style={{ backgroundColor: '#fff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={22} color="#1c1c1e" /></button>
@@ -266,7 +266,7 @@ export default function WriteBusinessPost() {
       </div>
 
       {/* 하단 고정 등록 버튼 */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', padding: '12px 16px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '430px', padding: '12px 16px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', boxSizing: 'border-box' }}>
         <button
           disabled={!isReady || !content || isSubmitting}
           onClick={handlePostClick}
