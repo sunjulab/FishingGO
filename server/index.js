@@ -806,6 +806,103 @@ server.listen(PORT, '0.0.0.0', () => {
 });
 
 // =================================================================
+//  PRO 월정액 구독 관리 시스템
+//  - 월 ₩29,900, 30일 만료 후 자동 권한 해제
+//  - VVIP와 동일한 만료 로직 적용
+// =================================================================
+let proSubscriptions = {}; // { userId: { purchasedAt, expiresAt, userName } }
+
+// PRO 구독 구매 (or 갱신)
+app.post('/api/pro/purchase', (req, res) => {
+  const { userId, userName } = req.body;
+  if (!userId) return res.status(400).json({ error: '필수 정보 누락' });
+
+  const now = new Date();
+  const existing = proSubscriptions[userId];
+
+  let expiresAt;
+  if (existing && new Date(existing.expiresAt) > now) {
+    // 이미 유효한 구독 → 30일 연장
+    expiresAt = new Date(new Date(existing.expiresAt).getTime() + 30 * 24 * 60 * 60 * 1000);
+  } else {
+    // 신규 구독 or 만료 후 재구독 → 지금부터 30일
+    expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  }
+
+  proSubscriptions[userId] = {
+    userId,
+    userName: userName || userId,
+    purchasedAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    tier: 'PRO'
+  };
+
+  const daysLeft = Math.ceil((expiresAt - now) / 86400000);
+  res.json({
+    success: true,
+    expiresAt: expiresAt.toISOString(),
+    daysLeft,
+    message: `PRO 구독 완료! (${expiresAt.toLocaleDateString('ko-KR')} ${expiresAt.getHours()}시까지 유효)`
+  });
+});
+
+// PRO 구독 상태 확인 (만료 시 자동 FREE 다운그레이드)
+app.get('/api/pro/status', (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: '사용자 ID 필요' });
+
+  const now = new Date();
+  const sub = proSubscriptions[userId];
+
+  if (!sub) return res.json({ tier: 'FREE', isActive: false });
+
+  const isExpired = new Date(sub.expiresAt) < now;
+  if (isExpired) {
+    delete proSubscriptions[userId];
+    return res.json({
+      tier: 'FREE', isActive: false,
+      reason: 'expired',
+      message: 'PRO 구독이 만료되었습니다. 재구독 시 홍보글 작성 권한이 복구됩니다.'
+    });
+  }
+
+  const daysLeft = Math.max(0, Math.ceil((new Date(sub.expiresAt) - now) / 86400000));
+  res.json({
+    tier: 'PRO', isActive: true,
+    expiresAt: sub.expiresAt,
+    daysLeft,
+    message: `PRO 구독 활성 중 (잔여 ${daysLeft}일)`
+  });
+});
+
+// PRO 구독 강제 해지 (관리자용)
+app.delete('/api/pro/cancel', (req, res) => {
+  const { userId, adminId } = req.body;
+  if (adminId !== 'sunjulab') return res.status(403).json({ error: '관리자만 접근 가능' });
+  if (proSubscriptions[userId]) {
+    delete proSubscriptions[userId];
+    res.json({ success: true, message: `${userId} PRO 구독 해지 완료` });
+  } else {
+    res.status(404).json({ error: '해당 유저의 PRO 구독이 없습니다.' });
+  }
+});
+
+// 24시간마다 만료된 PRO 구독 자동 정리
+setInterval(() => {
+  const now = new Date();
+  let cleaned = 0;
+  Object.keys(proSubscriptions).forEach(userId => {
+    const sub = proSubscriptions[userId];
+    if (new Date(sub.expiresAt) < now) {
+      console.log(`[PRO 만료 정리] ${sub.userName} 구독 자동 해제`);
+      delete proSubscriptions[userId];
+      cleaned++;
+    }
+  });
+  if (cleaned > 0) console.log(`[PRO 클린업] ${cleaned}개 만료 구독 제거`);
+}, 24 * 60 * 60 * 1000);
+
+// =================================================================
 //  VVIP 선상 항구 선주은 슬롯 시스템
 //  - 항구당 1명만 VVIP 슬롯 포지 가능 (55만원/년, 선착순)
 //  - 슬롯 회사는 공개 API로 제공

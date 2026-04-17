@@ -158,6 +158,41 @@ export const useUserStore = create((set, get) => ({
     set({ user: null, userTier: 'FREE', lastExpGain: null });
   },
 
+  // ── PRO/VVIP 구독 만료 자동 체크 (앱 시작 시 호출) ──
+  checkSubscriptionExpiry: async () => {
+    const state = get();
+    const userId = state.user?.id || state.user?.email;
+    if (!userId || state.user?.id === 'sunjulab') return; // 마스터는 스킵
+
+    const API = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+
+    // PRO 만료 체크
+    if (state.userTier === 'PRO') {
+      try {
+        const res = await fetch(`${API}/api/pro/status?userId=${encodeURIComponent(userId)}`);
+        const data = await res.json();
+        if (!data.isActive) {
+          localStorage.setItem('userTier', 'FREE');
+          set({ userTier: 'FREE' });
+          console.log('[PRO 만료] 자동 FREE 다운그레이드');
+        }
+      } catch (e) { /* 네트워크 오류 시 무시 */ }
+    }
+
+    // VVIP 만료 체크
+    if (state.userTier === 'BUSINESS_VIP') {
+      try {
+        const res = await fetch(`${API}/api/vvip/my-slot?userId=${encodeURIComponent(userId)}`);
+        const data = await res.json();
+        if (!data.hasSlot) {
+          localStorage.setItem('userTier', 'FREE');
+          set({ userTier: 'FREE' });
+          console.log('[VVIP 만료] 자동 FREE 다운그레이드');
+        }
+      } catch (e) { /* 네트워크 오류 시 무시 */ }
+    }
+  },
+
   // ── 레벨 정보 헬퍼 ──
   getLevelInfo: () => getLevelInfo(get().user?.totalExp || 0),
 

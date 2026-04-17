@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Home, Tv, Users, ShoppingBag, User, Anchor } from 'lucide-react';
@@ -132,6 +132,31 @@ function GlobalLevelUpListener() {
   return null;
 }
 
+// PRO/VVIP 구독 만료 자동 체크 컴포넌트 (앱 시작 + 포커스 복귀 시)
+function SubscriptionExpiryChecker() {
+  const checkSubscriptionExpiry = useUserStore((s) => s.checkSubscriptionExpiry);
+  const addToast = useToastStore((s) => s.addToast);
+  const userTier = useUserStore((s) => s.userTier);
+
+  useEffect(() => {
+    // 앱 최초 시작 시 체크
+    const prevTier = userTier;
+    checkSubscriptionExpiry().then(() => {
+      const newTier = useUserStore.getState().userTier;
+      if (prevTier !== 'FREE' && newTier === 'FREE') {
+        addToast('⚠️ 구독이 만료되어 권한이 해제되었습니다. 재구독해주세요.', 'error');
+      }
+    });
+
+    // 탭 포커스 복귀 시 재체크 (백그라운드 복귀)
+    const onFocus = () => checkSubscriptionExpiry();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   const GOOGLE_CLIENT_ID = "779696124026-7dgp86dmo15jjsvm1dds31j2eim00pgb.apps.googleusercontent.com"; 
 
@@ -140,6 +165,7 @@ export default function App() {
       <BrowserRouter>
         <Toast />
         <RealTimeAlert />
+        <SubscriptionExpiryChecker />
         <GlobalLevelUpListener />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
