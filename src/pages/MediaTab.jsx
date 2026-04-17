@@ -22,6 +22,23 @@ export default function MediaTab() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
 
+  // 쿠팡 파트너스 자동 연동: 비디오 클릭 시 해당 비디오의 핵심 키워드를 추출하여 실시간 쿠팡 링크로 변환
+  useEffect(() => {
+    if (selectedVideo) {
+      const keyword = selectedVideo.category === '검색결과' || selectedVideo.category === '최신' || selectedVideo.category === '전체'
+          ? selectedVideo.title.split(' ')[0].replace(/[^가-힣a-zA-Z0-9]/g, '') + ' 낚시'
+          : selectedVideo.category + ' 낚시 장비';
+      
+      fetch(`${API}/api/commerce/coupang/search?keyword=${encodeURIComponent(keyword)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.products && data.products.length > 0) {
+            setSelectedVideo(prev => ({ ...prev, products: data.products }));
+          }
+        }).catch(err => console.error('Coupang Load Error:', err));
+    }
+  }, [selectedVideo?.id]);
+
   useEffect(() => {
     fetchVideos();
   }, []);

@@ -746,6 +746,59 @@ app.get('/api/media/youtube', async (req, res) => {
   }
 });
 
+// --- 쿠팡 파트너스 자동 연동 엔진 (HMAC Open API) ---
+const crypto = require('crypto');
+
+app.get('/api/commerce/coupang/search', async (req, res) => {
+  const { keyword } = req.query;
+  const ACCESS_KEY = process.env.COUPANG_ACCESS_KEY;
+  const SECRET_KEY = process.env.COUPANG_SECRET_KEY;
+  const AFFILIATE_ID = 'AF3563639'; // 파트너스 추적 ID
+  
+  if (!keyword) return res.status(400).json({ error: '검색어가 필요합니다.' });
+  
+  if (!ACCESS_KEY || !SECRET_KEY) {
+    console.warn('[Coupang] API Keys not provided. Returning fallback product.');
+    // API 키 미세팅 시 임시 Mock 응답
+    return res.json({
+      products: [{
+        name: `[쿠팡최저가] ${keyword} 입문자 올인원 세트 (API 키 등록 필요)`,
+        price: '35,000원',
+        discount: '15%',
+        img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60',
+        link: 'https://partners.coupang.com/'
+      }]
+    });
+  }
+
+  try {
+    const method = 'GET';
+    const path = `/v2/providers/affiliate_open_api/apis/openapi/products/search?keyword=${encodeURIComponent(keyword)}&limit=1`;
+    const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '').replace(/-/g, '').replace(/:/g, '').replace(/ /g, '') + 'Z';
+    const message = `${method}${path.split('?')[0]}${datetime}`;
+
+    const signature = crypto.createHmac('sha256', SECRET_KEY).update(message).digest('hex');
+    const authorization = `CEA algorithm=HmacSHA256, access-key=${ACCESS_KEY}, signed-date=${datetime}, signature=${signature}`;
+
+    const response = await axios.get(`https://api-gateway.coupang.com${path}`, {
+      headers: { 'Authorization': authorization, 'Content-Type': 'application/json' }
+    });
+
+    const products = response.data.data.productData.map(p => ({
+      name: p.productName,
+      price: `${p.productPrice.toLocaleString()}원`,
+      discount: '', // API 응답에 할인율이 별도로 없는 경우 생략
+      img: p.productImage,
+      link: p.productUrl // 수익 창출용 파트너스 자동 전환된 단축 링크 (AF3563639 자동 매핑됨)
+    }));
+
+    res.json({ products });
+  } catch (err) {
+    console.error('Coupang API Error:', err.message);
+    res.status(500).json({ error: '쿠팡 파트너스 연동 중 오류가 발생했습니다.' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Fishing GO Logic Server running on PORT ${PORT}`);
