@@ -292,11 +292,13 @@ export default function MapHome() {
   };
 
   /* ── 포인트 클릭 ── */
-  const handlePointClick = async (point) => {
+  const handlePointClick = async (point, fromDashboard = false) => {
     setSelectedPoint(point);
     setPrecisionData(null);
-    setSheetVisible(true);
-    if (mapRef.current) mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
+    if (!fromDashboard) {
+      setSheetVisible(true);
+      if (mapRef.current) mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
+    }
     const nearest = findNearestStation(point.lat, point.lng);
     try {
       const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
@@ -474,6 +476,67 @@ export default function MapHome() {
         {/* ── 대시보드 뷰 ── */}
         <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px', scrollbarWidth: 'none' }}>
+
+            {/* 검색바 + 드롭다운 (최상단 이동) */}
+            <div style={{ padding: '16px 16px 0', position: 'relative', zIndex: 50 }} ref={searchRef}>
+              <div style={{ height: '48px', backgroundColor: '#fff', borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '10px', border: '1.5px solid #EBF2FF', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                <Search size={16} color="#1565C0" strokeWidth={3} />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  onFocus={() => searchQuery && setShowSearch(true)}
+                  placeholder="포인트, 어종, 지역 검색하여 현재 화면에 반영"
+                  style={{ border: 'none', background: 'none', fontSize: '13.5px', fontWeight: '800', outline: 'none', width: '100%', color: '#1A1A2E' }}
+                />
+                {searchQuery && (
+                  <button onClick={() => { setSearchQuery(''); setSearchResults([]); setShowSearch(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#AAB0BE', padding: 0 }}>
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* 검색 결과 드롭다운 */}
+              {showSearch && searchResults.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff',
+                  borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7',
+                  zIndex: 100, maxHeight: '280px', overflowY: 'auto', marginTop: '6px'
+                }}>
+                  {searchResults.map((p, i) => (
+                    <div key={p.id}
+                      onClick={() => {
+                        handlePointClick(p, true); // Dashboard view 갱신
+                        setShowSearch(false); setSearchQuery(''); setSearchResults([]);
+                      }}
+                      style={{
+                        padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px',
+                        borderBottom: i < searchResults.length - 1 ? '1px solid #F8F9FC' : 'none',
+                        cursor: 'pointer', transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#F8F9FC'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div style={{ width: '32px', height: '32px', background: '#EBF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                        {EMOJI_MAP[p.type] || '⚓'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                        <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
+                      </div>
+                      <div style={{ background: STATUS_COLOR[p.status] || '#8E8E93', borderRadius: '6px', padding: '3px 8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '900', color: '#fff' }}>{p.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showSearch && searchResults.length === 0 && searchQuery && (
+                <div style={{ position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff', borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, padding: '20px', textAlign: 'center', marginTop: '6px' }}>
+                  <AlertCircle size={24} color="#AAB0BE" style={{ margin: '0 auto 8px' }} />
+                  <div style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '800' }}>검색 결과가 없어요</div>
+                </div>
+              )}
+            </div>
 
             {/* 메인 블루 카드 */}
             <div style={{ padding: '16px 16px 0' }}>
@@ -686,63 +749,7 @@ export default function MapHome() {
               </div>
             </div>
 
-            {/* 검색바 + 드롭다운 */}
-            <div style={{ padding: '4px 16px 6px', position: 'relative' }} ref={searchRef}>
-              <div style={{ height: '46px', backgroundColor: '#F8F9FC', borderRadius: '12px', display: 'flex', alignItems: 'center', padding: '0 14px', gap: '10px', border: '1.5px solid #F0F2F7' }}>
-                <Search size={15} color="#1565C0" strokeWidth={3} />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  onFocus={() => searchQuery && setShowSearch(true)}
-                  placeholder="포인트, 어종, 지역 검색"
-                  style={{ border: 'none', background: 'none', fontSize: '13px', fontWeight: '700', outline: 'none', width: '100%' }}
-                />
-                {searchQuery && (
-                  <button onClick={() => { setSearchQuery(''); setSearchResults([]); setShowSearch(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#AAB0BE', padding: 0 }}>
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
 
-              {/* 검색 결과 드롭다운 */}
-              {showSearch && searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff',
-                  borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7',
-                  zIndex: 100, maxHeight: '240px', overflowY: 'auto',
-                }}>
-                  {searchResults.map((p, i) => (
-                    <div key={p.id}
-                      onClick={() => { setViewMode('map'); handlePointClick(p); setShowSearch(false); setSearchQuery(''); setSearchResults([]); }}
-                      style={{
-                        padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px',
-                        borderBottom: i < searchResults.length - 1 ? '1px solid #F8F9FC' : 'none',
-                        cursor: 'pointer', transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F8F9FC'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <div style={{ width: '30px', height: '30px', background: '#EBF2FF', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
-                        {EMOJI_MAP[p.type] || '⚓'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                        <div style={{ fontSize: '10px', color: '#AAB0BE', fontWeight: '700' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
-                      </div>
-                      <div style={{ background: STATUS_COLOR[p.status] || '#8E8E93', borderRadius: '6px', padding: '2px 7px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '900', color: '#fff' }}>{p.status}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {showSearch && searchResults.length === 0 && searchQuery && (
-                <div style={{ position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff', borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, padding: '20px', textAlign: 'center' }}>
-                  <AlertCircle size={20} color="#AAB0BE" style={{ margin: '0 auto 6px' }} />
-                  <div style={{ fontSize: '12px', color: '#AAB0BE', fontWeight: '700' }}>검색 결과가 없어요</div>
-                </div>
-              )}
-            </div>
 
             {/* 조황 보고 */}
             <div style={{ padding: '10px 16px' }}>
