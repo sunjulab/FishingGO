@@ -13,7 +13,7 @@ import FishingPointBottomSheet from '../components/FishingPointBottomSheet';
 import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, TIER_CONFIG } from '../store/useUserStore';
 
 const EMOJI_MAP = { '방파제': '⚓', '갯바위': '🪨', '선착장': '🚢', '항구': '🏖️' };
 const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#1565C0', '보통': '#8E8E93' };
@@ -22,7 +22,9 @@ export default function MapHome() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
   const user = useUserStore((state) => state.user);
+  const userTier = useUserStore((state) => state.userTier);
   const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  const currentTier = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
   const [selectedPoint, setSelectedPoint]   = useState(null);
   const [mapLoaded, setMapLoaded]           = useState(false);
   const [precisionData, setPrecisionData]   = useState(null);
@@ -399,7 +401,11 @@ export default function MapHome() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Anchor size={22} color="#1565C0" strokeWidth={2.5} />
                 <span style={{ fontSize: '19px', fontWeight: '950', color: '#1A1A2E', letterSpacing: '-0.04em' }}>낚시GO</span>
-                <span style={{ background: isAdmin ? 'linear-gradient(135deg, #E60000, #990000)' : 'linear-gradient(90deg, #FFD700, #FFA500)', fontSize: '8px', padding: '2px 7px', borderRadius: '20px', color: isAdmin ? '#fff' : '#5C3A00', fontWeight: '900', marginLeft: '2px' }}>{isAdmin ? 'MASTER' : 'PREMIUM'}</span>
+                {currentTier.label && (
+                  <span style={{ background: currentTier.bg, fontSize: '8px', padding: '2px 7px', borderRadius: '20px', color: currentTier.color || '#fff', fontWeight: '900', marginLeft: '2px' }}>
+                    {currentTier.label}
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
                 <div style={{ position: 'relative', cursor: 'pointer' }}>

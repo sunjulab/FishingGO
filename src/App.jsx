@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate }
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Home, Tv, Users, ShoppingBag, User, Anchor } from 'lucide-react';
 import Toast from './components/Toast';
-import { useUserStore } from './store/useUserStore';
+import { useUserStore, TIER_CONFIG } from './store/useUserStore';
 
 // 라우트 레이지 로딩 (코드 스플리팅)
 const MapHome = lazy(() => import('./pages/MapHome')); 
@@ -72,22 +72,27 @@ function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
+  const userTier = useUserStore((state) => state.userTier);
   const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
   
   const hideHeader = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/'].some(path => location.pathname !== '/' && location.pathname.includes(path)) || location.pathname === '/';
   if (hideHeader) return null;
+
+  const currentTier = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
 
   return (
     <div className="premium-header">
       <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
         <Anchor size={24} color="#0056D2" />
         낚시GO
-        <span 
-          className="premium-badge" 
-          style={isAdmin ? { background: 'linear-gradient(135deg, #E60000, #990000)' } : undefined}
-        >
-          {isAdmin ? 'MASTER' : 'PREMIUM'}
-        </span>
+        {currentTier.label && (
+          <span 
+            className="premium-badge" 
+            style={{ background: currentTier.bg || undefined, color: currentTier.color || undefined }}
+          >
+            {currentTier.label}
+          </span>
+        )}
       </div>
       <div>
         <img 
