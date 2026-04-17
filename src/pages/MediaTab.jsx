@@ -70,13 +70,20 @@ export default function MediaTab() {
            </div>
            
            {/* 비디오 본체 영역 */}
-           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
               <iframe 
                 style={{ width: '100vw', height: '56.25vw', maxHeight: '100vh', border: 'none' }}
                 src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
+              <button 
+                onClick={() => window.open(`https://www.youtube.com/watch?v=${selectedVideo.youtubeId}`, '_blank')}
+                style={{ marginTop: '16px', padding: '10px 20px', borderRadius: '24px', backgroundColor: '#FF0000', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255,0,0,0.3)' }}
+              >
+                <Play size={16} fill="#fff" />
+                영상이 재생되지 않나요? 유튜브에서 직접 보기
+              </button>
            </div>
 
            {/* 모달 하단 상품 유도 바 */}
