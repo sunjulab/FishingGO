@@ -37,6 +37,7 @@ export default function MapHome() {
   const [cctvUrl, setCctvUrl]               = useState('');
   const [cctvLoading, setCctvLoading]       = useState(false);
   const [sheetVisible, setSheetVisible]     = useState(false);
+  const [heatmapMode, setHeatmapMode]       = useState('sst'); // 'sst' | 'score' (향후 확장)
 
   const mapRef      = useRef(null);
   const clustererRef= useRef(null);
@@ -154,26 +155,88 @@ export default function MapHome() {
   /* ── 수온 히트맵 렌더링 (Premium Feature) ── */
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
-    
-    heatmapRef.current.forEach(c => c.setMap(null));
+
+    // 기존 히트맵 제거
+    heatmapRef.current.forEach(item => {
+      if (item?.setMap) item.setMap(null);
+    });
     heatmapRef.current = [];
-    
-    if (showHeatmap) {
-      ALL_FISHING_POINTS.forEach(point => {
-        if (!window.kakao?.maps) return;
-        const temp = 10 + Math.random() * 10; // 10도 ~ 20도 시뮬레이션
-        const color = temp > 17 ? '#FF3B30' : (temp > 14 ? '#FF9B26' : '#1565C0');
-        const circle = new window.kakao.maps.Circle({
-          center: new window.kakao.maps.LatLng(point.lat, point.lng),
-          radius: 4000, 
-          strokeWeight: 0,
-          fillColor: color,
-          fillOpacity: 0.35
-        });
-        circle.setMap(mapRef.current);
-        heatmapRef.current.push(circle);
+
+    if (!showHeatmap) return;
+
+    // 수온 → 색상 변환 (8단계 그라디언트)
+    // 한국 4월 실제 해황: 서해 9~11°C / 동해 11~14°C / 남해 13~17°C / 제주 17~19°C
+    const getSstColor = (sst) => {
+      if (sst < 8)  return { fill: '#1a3c8f', text: '❄️ 극저',  opacity: 0.75 }; // 극저수온 - 짙은 남색
+      if (sst < 10) return { fill: '#1565C0', text: '🥶 저수온', opacity: 0.70 }; // 저수온 - 파랑
+      if (sst < 12) return { fill: '#29B6F6', text: '🌊 차가움', opacity: 0.65 }; // 약저수온 - 하늘
+      if (sst < 14) return { fill: '#26C6DA', text: '💧 서늘',   opacity: 0.60 }; // 서늘 - 청록
+      if (sst < 16) return { fill: '#66BB6A', text: '✅ 보통',   opacity: 0.60 }; // 적정 하단 - 연두
+      if (sst < 18) return { fill: '#FFCA28', text: '🎣 양호',   opacity: 0.65 }; // 적정 - 노랑
+      if (sst < 21) return { fill: '#FFA726', text: '🔥 적정',   opacity: 0.70 }; // 최적 - 주황
+      if (sst < 24) return { fill: '#FF7043', text: '♨️ 고수온', opacity: 0.70 }; // 고수온 - 적색
+      return              { fill: '#B71C1C', text: '🌡 고수온!', opacity: 0.75 }; // 위험 고수온
+    };
+
+    // 수온에 따라 원 크기 결정 (적정 수온일수록 도드라짐)
+    const getRadius = (sst) => {
+      if (sst >= 16 && sst < 21) return 5000; // 최적 수온: 가장 크게
+      if (sst >= 14 && sst < 23) return 4000; // 양호
+      return 2800;                            // 차거나 너무 뜨거운 곳: 작게
+    };
+
+    ALL_FISHING_POINTS.forEach(point => {
+      if (!window.kakao?.maps) return;
+
+      // 실제 SST 데이터 사용 (랜덤 제거)
+      const weatherData = getPointSpecificData(point);
+      const sst = parseFloat(weatherData?.sst || 13);
+      const { fill, text, opacity } = getSstColor(sst);
+      const radius = getRadius(sst);
+
+      // 수온 원 (배경)
+      const circle = new window.kakao.maps.Circle({
+        center:        new window.kakao.maps.LatLng(point.lat, point.lng),
+        radius,
+        strokeWeight:  1.5,
+        strokeColor:   fill,
+        strokeOpacity: 0.5,
+        fillColor:     fill,
+        fillOpacity:   opacity,
       });
-    }
+      circle.setMap(mapRef.current);
+      heatmapRef.current.push(circle);
+
+      // 수온 라벨 CustomOverlay
+      const mainFish = (point.fish || '').split(',')[0].trim();
+      const content = [
+        '<div style="',
+          'background:rgba(0,0,0,0.78);',
+          'color:#fff;',
+          'padding:4px 8px;',
+          'border-radius:10px;',
+          'font-size:11px;',
+          'font-weight:800;',
+          'white-space:nowrap;',
+          'line-height:1.5;',
+          'border:1.5px solid ', fill, ';',
+          'pointer-events:none;',
+        '">',
+          '<div style="color:', fill, ';font-size:13px">', sst.toFixed(1), '°C</div>',
+          '<div style="color:#ccc;font-size:9px">', text, '</div>',
+          '<div style="color:#aaa;font-size:9px">', mainFish || point.name.slice(0,5), '</div>',
+        '</div>',
+      ].join('');
+
+      const overlay = new window.kakao.maps.CustomOverlay({
+        position: new window.kakao.maps.LatLng(point.lat, point.lng),
+        content,
+        yAnchor: 2.6,
+        zIndex: 3,
+      });
+      overlay.setMap(mapRef.current);
+      heatmapRef.current.push(overlay);
+    });
   }, [showHeatmap, mapLoaded]);
 
   /* ── 맵 리사이즈 (뷰모드 변경 시) ── */
@@ -361,6 +424,45 @@ export default function MapHome() {
         {/* ── 지도 풀스크린 뷰 ── */}
         <div style={{ display: viewMode === 'map' ? 'flex' : 'none', flex: 1, flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
           <div id="kakao-map" style={{ width: '100%', flex: 1, background: '#e8edf5' }} />
+          
+          {/* 수온 범례 (Legend) */}
+          {showHeatmap && (
+            <div style={{
+              position: 'absolute', bottom: '24px', left: '16px', zIndex: 10,
+              background: 'rgba(255, 255, 255, 0.95)', border: '1.5px solid rgba(0,0,0,0.08)',
+              borderRadius: '16px', padding: '12px 14px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+              backdropFilter: 'blur(10px)', width: '220px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '900', color: '#1A1A2E' }}>🌡 표층 수온(SST) 범례</span>
+                <span style={{ fontSize: '9px', fontWeight: '800', background: '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>PRO</span>
+              </div>
+              
+              <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
+                <div style={{ flex: 1, background: '#1a3c8f' }} />
+                <div style={{ flex: 1, background: '#1565C0' }} />
+                <div style={{ flex: 1, background: '#29B6F6' }} />
+                <div style={{ flex: 1, background: '#26C6DA' }} />
+                <div style={{ flex: 1, background: '#66BB6A' }} />
+                <div style={{ flex: 1, background: '#FFCA28' }} />
+                <div style={{ flex: 1, background: '#FFA726' }} />
+                <div style={{ flex: 1, background: '#FF7043' }} />
+                <div style={{ flex: 1, background: '#B71C1C' }} />
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
+                <span>&lt;8°C</span>
+                <span>(어종별 적정수온)</span>
+                <span>24°C&gt;</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
+                <span style={{ color: '#1565C0' }}>극저/저수온</span>
+                <span style={{ color: '#FFA726' }}>🔥 최상의 활성도</span>
+                <span style={{ color: '#B71C1C' }}>고수온</span>
+              </div>
+            </div>
+          )}
+
           {!mapLoaded && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F4F6FA', gap: '12px' }}>
               <div style={{ width: '40px', height: '40px', border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
