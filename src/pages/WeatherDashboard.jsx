@@ -23,7 +23,12 @@ export default function WeatherDashboard() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F4F6FA', paddingBottom: '90px', fontFamily: 'Pretendard, sans-serif' }}>
+    <div style={{ backgroundColor: '#F4F6FA', height: '100vh', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ 
+        width: '100%', maxWidth: '480px', backgroundColor: '#F4F6FA', height: '100%', 
+        position: 'relative', overflowY: 'auto', paddingBottom: '30px', 
+        fontFamily: 'Pretendard, sans-serif', boxShadow: '0 0 40px rgba(0,0,0,0.05)' 
+      }}>
       {/* 글로벌 헤더 대체용 커스텀 헤더 */}
       <div style={{ background: '#fff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F5', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate(-1)}>
@@ -132,6 +137,7 @@ export default function WeatherDashboard() {
           </button>
         </div>
 
+      </div>
       </div>
     </div>
   );
