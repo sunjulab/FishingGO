@@ -7,10 +7,10 @@ const CATEGORIES = ['전체', '최신', '루어', '찌낚시', '원투', '선상
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const FALLBACK_VIDEOS = [
-  { id: '1', title: '[앵쩡TV] 역대급 사이즈 런커 배스! 낚시 대박 성공기', category: '루어', youtubeId: 'JoKQwJBZgIM', views: '1.2M', description: '루어 낚시의 꽃, 런커 배스 히트부터 랜딩까지 숨막히는 순간!', products: [{ name: '앵쩡 추천 루어대 풀세트', price: '185,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '2', title: '[진석기시대] 무인도 극한 생존 낚시와 대방어 먹방쇼', category: '선상', youtubeId: 'Gl5IlXTg2ko', views: '984k', description: '직접 잡은 대자연의 선물! 날 것 그대로의 원초적인 낚시 먹방.', products: [{ name: '진석기 생존용 캠핑 칼', price: '45,000원', discount: '5%', img: 'https://plus.unsplash.com/premium_photo-1678812638848-8ef7c0b0afaa?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '3', title: '[입질의 추억] 99% 확정! 바다 낚시 명당과 꿀팁', category: '찌낚시', youtubeId: 'Zza0s44GS5g', views: '2.5M', description: '수산물 전문가 어류칼럼니스트 김지민이 공개하는 특급 포인트.', products: [{ name: '초정밀 카본 찌 세트', price: '28,500원', discount: '20%', img: 'https://images.unsplash.com/photo-1545167622-3a6ac756afa4?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '4', title: '[밀루유떼] 쭈꾸미/갑오징어 에깅 낚시 무조건 잡는 법', category: '에깅', youtubeId: 'Xvj2T6U8WqI', views: '710k', description: '생활 낚시 끝판왕, 에깅 낚시 초보자도 바로 따라하는 액션 가이드.', products: [{ name: '국민 에기 10색 혼합 세트', price: '15,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' }] }
+  { id: '1', title: '[앵쩡TV] 미지의 포인트에서 만난 가을 배스! (미친 입질)', category: '루어', youtubeId: 'XXYHZnsZse0', views: '1.2M', description: '루어 낚시의 꽃, 런커 배스 히트부터 랜딩까지 숨막히는 순간!', products: [{ name: '앵쩡 추천 루어대 풀세트', price: '185,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '2', title: '[진석기시대] 소문이 자자한 갯바위 명포인트에서 24시간 캠핑 낚시!!', category: '선상', youtubeId: '_SUmTxKlZ68', views: '984k', description: '직접 잡은 대자연의 선물! 날 것 그대로의 원초적인 낚시 먹방.', products: [{ name: '진석기 생존용 캠핑 칼', price: '45,000원', discount: '5%', img: 'https://plus.unsplash.com/premium_photo-1678812638848-8ef7c0b0afaa?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '3', title: '[입질의 추억] 수산시장 내부자의 충격 폭로, 단골도 예외 없습니다', category: '찌낚시', youtubeId: '0qsAaapI748', views: '2.5M', description: '수산물 전문가 어류칼럼니스트 김지민이 공개하는 특급 수산시장 꿀팁.', products: [{ name: '초정밀 카본 찌 세트', price: '28,500원', discount: '20%', img: 'https://images.unsplash.com/photo-1545167622-3a6ac756afa4?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '4', title: '[밀루유떼] 쭈꾸미, 갑오징어 두 마리 토끼 다 잡는 가성비 갑 채비법', category: '에깅', youtubeId: 'N_ICJmZlmnc', views: '710k', description: '생활 낚시 끝판왕, 에깅 낚시 초보자도 바로 따라하는 액션 가이드.', products: [{ name: '국민 에기 10색 혼합 세트', price: '15,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' }] }
 ];
 
 export default function MediaTab() {
