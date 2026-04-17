@@ -34,19 +34,21 @@ export default function MyPage() {
   // 설정 대시보드 상태
   const [notiSetting, setNotiSetting] = useState({ flow: true, bait: true, comm: false });
 
-  const nextLevelExp = user.level ? user.level * 100 : 100;
-  const expPercentage = user.exp ? (user.exp / nextLevelExp) * 100 : 0;
+  const nextLevelExp = user?.level ? user.level * 100 : 100;
+  const expPercentage = user?.exp ? (user.exp / nextLevelExp) * 100 : 0;
 
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    if (user) {
+      fetchUserData();
+    }
+  }, [user]);
 
   const fetchUserData = async () => {
     try {
       setLoading(true);
       const [postsRes, recordsRes] = await Promise.all([
-        apiClient.get(`/api/user/posts?email=${user.email}`),
-        apiClient.get(`/api/user/records?email=${user.email}`)
+        apiClient.get(`/api/user/posts?email=${user?.email || 'guest'}`),
+        apiClient.get(`/api/user/records?email=${user?.email || 'guest'}`)
       ]);
       setRealPosts(postsRes.data);
       setRealRecords(recordsRes.data);
