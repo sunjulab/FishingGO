@@ -206,11 +206,11 @@ export const useUserStore = create((set, get) => ({
     if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
     return ['PRO', 'BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
-  // 비즈니스 홍보글 작성: PRO 또는 VVIP만 허용 (Business Lite는 배제)
+  // 비즈니스 홍보글 작성: BUSINESS_LITE / PRO / VVIP 모두 허용
   canAccessBusinessPromo:() => {
     const state = get();
     if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
-    return ['PRO', 'BUSINESS_VIP'].includes(state.userTier);
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
   canAccessBusinessShop: () => {
     const state = get();
