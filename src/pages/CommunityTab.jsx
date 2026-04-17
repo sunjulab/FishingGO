@@ -95,7 +95,6 @@ export default function CommunityTab() {
         setLoading(false);
       }
     };
-    };
     fetchData();
   }, [activeTab]);
 
