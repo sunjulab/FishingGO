@@ -646,10 +646,10 @@ app.get('/api/weather/cctv', async (req, res) => {
 
 // --- 유튜브 비디오 API (최신 영상 자동 렌더링용) ---
 const FALLBACK_VIDEOS = [
-  { id: '1', title: '[감성돔] 찌낚시 채비법 (반유동/전유동) 완전정복', category: '찌낚시', youtubeId: 'Xvj2T6U8WqI', views: '124k', description: '입문자가 가장 어려워하는 수심 측정부터 채비 정렬까지 상세히 설명합니다.', products: [{ name: '다이와 토너먼트 ISO 1호 530', price: '1,250,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '2', title: '[에깅] 무늬오징어 낚시 입문 - 기본 액션과 장비 세팅', category: '에깅', youtubeId: 'pY5m4A2f-3Y', views: '85k', description: '박선비tv가 알려주는 무늬오징어 시즌 대비 기초 에깅 낚시법입니다.', products: [{ name: '야마시타 에기왕 K 3.5호 (모자익)', price: '14,500원', discount: '15%', img: 'https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '3', title: '[루어] 광어 다운샷 채비법 - 웜 끼우는 법과 단차 조절', category: '루어', youtubeId: 'XWghA2gO2A8', views: '52k', description: '선상 낚시 필수 코스! 광어 다운샷에서 마릿수를 올리는 채비 비결입니다.', products: [{ name: '버클리 걸프 얼라이브 웜 5인치', price: '18,500원', discount: '20%', img: 'https://images.unsplash.com/photo-1545167622-3a6ac756afa4?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '4', title: '[선상] 쭈꾸미 갑오징어 낚시 입문 - 기초 채비 마스터', category: '선상', youtubeId: 'Lq1tK6fD_O0', views: '210k', description: '삼분선생의 쭈꾸미 낚시 기초 레슨. 이 영상 하나로 쭈꾸미 낚시 끝!', products: [{ name: '요즈리 오로라 에기 세트', price: '25,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' }] }
+  { id: '1', title: '[앵쩡TV] 역대급 사이즈 런커 배스! 낚시 대박 성공기', category: '루어', youtubeId: 'JoKQwJBZgIM', views: '1.2M', description: '루어 낚시의 꽃, 런커 배스 히트부터 랜딩까지 숨막히는 순간!', products: [{ name: '앵쩡 추천 루어대 풀세트', price: '185,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '2', title: '[진석기시대] 무인도 극한 생존 낚시와 대방어 먹방쇼', category: '선상', youtubeId: 'Gl5IlXTg2ko', views: '984k', description: '직접 잡은 대자연의 선물! 날 것 그대로의 원초적인 낚시 먹방.', products: [{ name: '진석기 생존용 캠핑 칼', price: '45,000원', discount: '5%', img: 'https://plus.unsplash.com/premium_photo-1678812638848-8ef7c0b0afaa?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '3', title: '[입질의 추억] 99% 확정! 바다 낚시 명당과 꿀팁', category: '찌낚시', youtubeId: 'Zza0s44GS5g', views: '2.5M', description: '수산물 전문가 어류칼럼니스트 김지민이 공개하는 특급 포인트.', products: [{ name: '초정밀 카본 찌 세트', price: '28,500원', discount: '20%', img: 'https://images.unsplash.com/photo-1545167622-3a6ac756afa4?auto=format&fit=crop&w=100&q=60' }] },
+  { id: '4', title: '[밀루유떼] 쭈꾸미/갑오징어 에깅 낚시 무조건 잡는 법', category: '에깅', youtubeId: 'Xvj2T6U8WqI', views: '710k', description: '생활 낚시 끝판왕, 에깅 낚시 초보자도 바로 따라하는 액션 가이드.', products: [{ name: '국민 에기 10색 혼합 세트', price: '15,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' }] }
 ];
 
 app.get('/api/media/youtube', async (req, res) => {
