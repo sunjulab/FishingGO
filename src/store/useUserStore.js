@@ -7,6 +7,7 @@ export const TIER_CONFIG = {
   BUSINESS_LITE:  { label: 'LITE',     color: '#1A1A2E', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)' },
   BUSINESS_PRO:   { label: 'BIZ PRO',  color: '#fff',    bg: 'linear-gradient(135deg, #FF9B26, #E67E00)' },
   BUSINESS_VIP:   { label: 'VIP',      color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
+  MASTER:         { label: 'MASTER',   color: '#fff',    bg: 'linear-gradient(135deg, #E60000, #990000)' },
 };
 
 // ── 레벨 시스템 설정 ────────────────────────────────────────────
@@ -137,8 +138,24 @@ export const useUserStore = create((set, get) => ({
   clearLastExpGain: () => set({ lastExpGain: null }),
 
   // ── 권한 헬퍼 ──
-  canAccessPremium:      () => ['PRO', 'BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(get().userTier),
-  canAccessBusinessPromo:() => ['BUSINESS_PRO', 'BUSINESS_VIP'].includes(get().userTier),
-  canAccessBusinessShop: () => ['BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(get().userTier),
-  canAccessVIP:          () => get().userTier === 'BUSINESS_VIP',
+  canAccessPremium:      () => {
+    const state = get();
+    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
+    return ['PRO', 'BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
+  },
+  canAccessBusinessPromo:() => {
+    const state = get();
+    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
+    return ['BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
+  },
+  canAccessBusinessShop: () => {
+    const state = get();
+    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
+    return ['BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
+  },
+  canAccessVIP:          () => {
+    const state = get();
+    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
+    return state.userTier === 'BUSINESS_VIP';
+  },
 }));

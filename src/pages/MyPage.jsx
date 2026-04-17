@@ -16,7 +16,8 @@ export default function MyPage() {
   const addToast = useToastStore((state) => state.addToast);
   const canAccessPartnerCenter = canAccessBusinessShop();
   const fileInputRef = useRef(null);
-  const tierBadge = TIER_CONFIG[userTier] || TIER_CONFIG.FREE;
+  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  const tierBadge = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
   const levelInfo  = getLevelInfo(user?.totalExp || 0);
   
   const [activeTab, setActiveTab] = useState('records');

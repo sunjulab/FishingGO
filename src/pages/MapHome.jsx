@@ -22,6 +22,7 @@ export default function MapHome() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
   const user = useUserStore((state) => state.user);
+  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
   const [selectedPoint, setSelectedPoint]   = useState(null);
   const [mapLoaded, setMapLoaded]           = useState(false);
   const [precisionData, setPrecisionData]   = useState(null);
@@ -389,7 +390,7 @@ export default function MapHome() {
                     color: showHeatmap ? '#fff' : '#FF3B30',
                     transition: 'all 0.2s',
                   }}>
-                  {showHeatmap ? '🔥 히트맵 끄기' : '🔥 수온 히트맵 (PRO)'}
+                  {showHeatmap ? '🔥 히트맵 끄기' : `🔥 수온 히트맵 (${isAdmin ? 'MASTER' : 'PRO'})`}
                 </button>
               </div>
             </>
@@ -398,7 +399,7 @@ export default function MapHome() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Anchor size={22} color="#1565C0" strokeWidth={2.5} />
                 <span style={{ fontSize: '19px', fontWeight: '950', color: '#1A1A2E', letterSpacing: '-0.04em' }}>낚시GO</span>
-                <span style={{ background: 'linear-gradient(90deg, #FFD700, #FFA500)', fontSize: '8px', padding: '2px 7px', borderRadius: '20px', color: '#5C3A00', fontWeight: '900', marginLeft: '2px' }}>PREMIUM</span>
+                <span style={{ background: isAdmin ? 'linear-gradient(135deg, #E60000, #990000)' : 'linear-gradient(90deg, #FFD700, #FFA500)', fontSize: '8px', padding: '2px 7px', borderRadius: '20px', color: isAdmin ? '#fff' : '#5C3A00', fontWeight: '900', marginLeft: '2px' }}>{isAdmin ? 'MASTER' : 'PREMIUM'}</span>
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
                 <div style={{ position: 'relative', cursor: 'pointer' }}>
@@ -437,7 +438,7 @@ export default function MapHome() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '11px', fontWeight: '900', color: '#1A1A2E' }}>🌡 표층 수온(SST) 범례</span>
-                <span style={{ fontSize: '9px', fontWeight: '800', background: '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>PRO</span>
+                <span style={{ fontSize: '9px', fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>{isAdmin ? 'MASTER' : 'PRO'}</span>
               </div>
               
               <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>

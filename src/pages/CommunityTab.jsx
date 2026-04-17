@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award } from 'lucide-react';
+import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
@@ -11,6 +11,9 @@ export default function CommunityTab() {
   
   const canAccessPremium = useUserStore((state) => state.canAccessPremium());
   const canAccessBusinessPromo = useUserStore((state) => state.canAccessBusinessPromo());
+  const user = useUserStore((state) => state.user);
+  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  
   const addToast = useToastStore((state) => state.addToast);
   const [posts, setPosts] = useState([
     { id: 'f1', author: '강릉감성돔', category: '찌낚시', time: '방금 전', content: '데이터 연동 중...', likes: 0, comments: 0 }
@@ -92,8 +95,27 @@ export default function CommunityTab() {
         setLoading(false);
       }
     };
+    };
     fetchData();
   }, [activeTab]);
+
+  const handleDeletePost = async (e, id, type) => {
+    e.stopPropagation();
+    if (!isAdmin) return;
+    if (window.confirm("정말 이 게시물을 삭제하시겠습니까? (운영자 권한)")) {
+      try {
+        await apiClient.delete(`/api/community/posts/${id}`);
+        if (type === 'open') setPosts(posts.filter(p => p.id !== id));
+        if (type === 'business') setBusinessPosts(businessPosts.filter(p => p.id !== id));
+        addToast("게시물이 삭제되었습니다.", "success");
+      } catch (err) {
+        // Fallback for UI if server is mock
+        if (type === 'open') setPosts(posts.filter(p => p.id !== id));
+        if (type === 'business') setBusinessPosts(businessPosts.filter(p => p.id !== id));
+        addToast("서버 오류이나, 강제로 삭제 처리했습니다 (UI 한정).", "success");
+      }
+    }
+  };
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F2F2F7', paddingBottom: '100px' }}>
@@ -155,13 +177,22 @@ export default function CommunityTab() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      {post.author_email === 'premium_user@fishinggo.com' && (
+                      {post.author === 'sunjulab' ? (
+                        <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #E60000, #990000)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>MASTER</span>
+                      ) : post.author_email === 'premium_user@fishinggo.com' ? (
                         <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #FFD700, #F57F17)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>PRO</span>
-                      )}
+                      ) : null}
                       <span style={{ fontSize: '11px', backgroundColor: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '4px 8px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
                       <strong style={{ fontSize: '14px', color: '#333' }}>{post.author}</strong>
                     </div>
-                    <span style={{ fontSize: '12px', color: '#bbb' }}>{post.time}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#bbb' }}>{post.time}</span>
+                      {isAdmin && (
+                        <button onClick={(e) => handleDeletePost(e, post.id, 'open')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p style={{ margin: '8px 0 16px 0', fontSize: '15px', color: '#1c1c1e', lineHeight: '1.6', fontWeight: '400' }}>{post.content}</p>
                   {post.image && (
@@ -249,6 +280,11 @@ export default function CommunityTab() {
                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px' }}>
                          <span style={{ fontSize: '10px', background: post.isPinned ? '#E65100' : '#FF5A5F', color: '#fff', padding: '3px 8px', borderRadius: '6px', fontWeight: '950' }}>예약 모집중</span>
                          <span style={{ fontSize: '16px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.shipName}</span>
+                         {isAdmin && (
+                           <button onClick={(e) => handleDeletePost(e, post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30', marginLeft: 'auto' }}>
+                             <Trash2 size={16} />
+                           </button>
+                         )}
                        </div>
                        <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#555', lineHeight: '1.5', fontWeight: post.isPinned?'700':'400' }}>{post.content.slice(0, 52)}...</p>
                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px', color: '#1565C0', fontWeight: '900' }}>
