@@ -35,6 +35,9 @@ export default function WriteBusinessPost() {
   const user = useUserStore((s) => s.user);
   const isBusinessLite = user?.plan === 'business_lite' || user?.plan === 'pro' || user?.plan === 'vip';
 
+  const userTier = useUserStore((s) => s.userTier);
+  const isVVIP = userTier === 'BUSINESS_VIP' || user?.id === 'sunjulab' || user?.email === 'sunjulab';
+
   const [shipName, setShipName] = useState('');
   const [region, setRegion] = useState('');
   const [boatType, setBoatType] = useState('');
@@ -46,6 +49,7 @@ export default function WriteBusinessPost() {
   const [extraMsg, setExtraMsg] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [content, setContent] = useState('');
+  const [isPinned, setIsPinned] = useState(false); // VVIP 프리미엄 스폰서 고정
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdGate, setShowAdGate] = useState(false);
@@ -95,6 +99,7 @@ export default function WriteBusinessPost() {
           capacity: Number(capacity),
           phone,
           content,
+          isPinned: isVVIP && isPinned, // VVIP이고 체크했을 때만 교집 고정
           cover: coverImage || `https://images.unsplash.com/photo-1544427920-549b6d60a5e5?auto=format&fit=crop&w=400&q=80`
         })
       });
@@ -226,6 +231,44 @@ export default function WriteBusinessPost() {
             </div>
           )}
         </section>
+
+        {/* VVIP 전용: 프리미엄 스폰서 등록 체크박스 */}
+        {isVVIP && (
+          <section
+            onClick={() => setIsPinned(prev => !prev)}
+            style={{
+              borderRadius: '16px', padding: '14px 16px', cursor: 'pointer',
+              background: isPinned
+                ? 'linear-gradient(135deg, #1A1A2E, #0F3460)'
+                : '#fff',
+              border: isPinned ? '2px solid #FFD700' : '2px dashed #FFD700',
+              transition: 'all 0.2s',
+              userSelect: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* 커스텀 체크박스 */}
+              <div style={{
+                width: '24px', height: '24px', borderRadius: '8px', flexShrink: 0,
+                border: isPinned ? 'none' : '2px solid #FFD700',
+                background: isPinned ? 'linear-gradient(135deg, #FFD700, #FF9B26)' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}>
+                {isPinned && <span style={{ fontSize: '14px', fontWeight: '900' }}>✓</span>}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: '900', color: isPinned ? '#FFD700' : '#B8860B', marginBottom: '2px' }}>
+                  👑 VVIP 프리미엄 스폰서로 등록하기
+                </div>
+                <div style={{ fontSize: '11px', color: isPinned ? 'rgba(255,215,0,0.8)' : '#999' }}>
+                  선상 배 홍보 피드 최상단에 '금앞 테두리 + VVIP 븹지'로 영구 고정 노출 됩니다
+                </div>
+              </div>
+              {isPinned && <span style={{ fontSize: '18px' }}>📌</span>}
+            </div>
+          </section>
+        )}
 
         {/* 최종 미리보기 카드 */}
         {isReady && content && (
