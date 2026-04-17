@@ -10,12 +10,18 @@ export default function WritePost() {
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
-
+  const [showPaywallPopup, setShowPaywallPopup] = useState(false); // 과금 및 리워드 광고 벽 모달
   const [isSubmitting, setIsSubmitting] = useState(false);
   const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
 
-  const handlePost = async () => {
+  const handlePostSubmitRequest = () => {
     if (!content) return;
+    // 제출 전 네이티브/리워드 광고 정책에 따른 비즈니스 라이트 구독/광고 모달 강제 팝업 (병목 화수분)
+    setShowPaywallPopup(true);
+  };
+
+  const executePost = async () => {
+    setShowPaywallPopup(false);
     setIsSubmitting(true);
     const storedUser = JSON.parse(localStorage.getItem('user')) || { name: '주문진낚시꾼' };
     try {
@@ -41,6 +47,13 @@ export default function WritePost() {
     }
   };
 
+  const handleWatchAd = () => {
+    alert('동영상 광고가 재생됩니다 (15초)... 🎬\n(테스트 모드: 즉시 스킵됨)');
+    setTimeout(() => {
+      executePost();
+    }, 1500);
+  };
+
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
       {/* 고정 헤더 */}
@@ -63,7 +76,7 @@ export default function WritePost() {
             alignItems: 'center',
             gap: '4px'
           }}
-          onClick={handlePost}
+          onClick={handlePostSubmitRequest}
         >
           {isSubmitting ? '등록 중...' : '등록'} <Send size={14} />
         </button>
@@ -205,6 +218,43 @@ export default function WritePost() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 수익화 바운더리: 비즈니스 라이트 구독 / 리워드 영상 시청 모달 */}
+      {showPaywallPopup && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '24px', padding: '30px 24px', maxWidth: '340px', width: '90%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', position: 'relative' }}>
+            <button onClick={() => setShowPaywallPopup(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#999' }}>
+               <X size={24} />
+            </button>
+            <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)', borderRadius: '50%', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <Scan size={32} color="#fff" />
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>이 게시물을 널리 알릴까요?</h3>
+            <p style={{ fontSize: '13px', color: '#555', lineHeight: '1.5', marginBottom: '24px' }}>
+              더 많은 앵글러들에게 노출하기 위해 광고 시청이 필요합니다.
+            </p>
+
+            {/* 비즈니스 구독 티켓 옵션 */}
+            <div 
+              onClick={() => { alert('비즈니스 라이트 구독(월 9,900원) 구글 플레이 결제창 연결...'); }}
+              style={{ padding: '16px', borderRadius: '16px', border: '2px solid #0056D2', backgroundColor: 'rgba(0,86,210,0.05)', marginBottom: '12px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            >
+              <div style={{ backgroundColor: '#0056D2', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '4px', marginBottom: '8px' }}>PROMOTION</div>
+              <div style={{ fontSize: '16px', fontWeight: '800', color: '#0056D2', marginBottom: '4px' }}>비즈니스 라이트 패스</div>
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>쇼핑, 장비 수정 태그를 <b>내 쿠팡 파트너스 링크</b>로 100% 무제한 자동 치환! (광고 영구 면제)</div>
+              <div style={{ fontSize: '15px', fontWeight: '900', color: '#1c1c1e' }}>월 9,900원</div>
+            </div>
+
+            {/* 단건 영상 시청 (무료) 옵션 */}
+            <button 
+              onClick={handleWatchAd}
+              style={{ width: '100%', padding: '16px', borderRadius: '16px', backgroundColor: '#F2F2F7', border: 'none', fontSize: '14px', fontWeight: '800', color: '#1c1c1e', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              ▶ 15초 영상 시청하고 1회 무료 등록하기
+            </button>
           </div>
         </div>
       )}
