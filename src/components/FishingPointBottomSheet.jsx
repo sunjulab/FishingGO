@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { evaluateFishingCondition } from '../utils/evaluator';
+import { useNavigate } from 'react-router-dom';
+import { useUserStore } from '../store/useUserStore';
+import { useToastStore } from '../store/useToastStore';
 
 export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
   const [marineData, setMarineData] = useState({
@@ -9,6 +12,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
     fishingIndex: null
   });
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const canAccessPremium = useUserStore(state => state.canAccessPremium());
+  const addToast = useToastStore(state => state.addToast);
 
   useEffect(() => {
     if (!selectedPoint || !selectedPoint.obsCode) return;
@@ -75,6 +81,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
               <div style={{ fontSize: '15px', color: '#fff', fontWeight: '950', marginBottom: '14px' }}>{selectedPoint.name} 현장 실황</div>
               <button 
                 onClick={async () => {
+                  if (!canAccessPremium) {
+                    addToast('실시간 해양 CCTV는 PRO 또는 Business Lite 플랜 이상에서 제공됩니다.', 'error');
+                    navigate('/subscribe');
+                    return;
+                  }
                   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
                   try {
                     const res = await axios.get(`${API}/api/weather/cctv?stationId=${selectedPoint.obsCode}`);

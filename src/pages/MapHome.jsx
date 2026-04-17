@@ -382,6 +382,11 @@ export default function MapHome() {
                 ))}
                 <button 
                   onClick={() => {
+                    if (!canAccessPremium) {
+                      addToast('프리미엄 수온 히트맵은 PRO 또는 Business Lite 이상에서 제공됩니다.', 'error');
+                      navigate('/subscribe');
+                      return;
+                    }
                     setShowHeatmap(!showHeatmap);
                     if (!showHeatmap) addToast('🔥 프리미엄 표층 수온 히트맵 생성을 완료했습니다.', 'success');
                   }} 
@@ -392,7 +397,7 @@ export default function MapHome() {
                     color: showHeatmap ? '#fff' : '#FF3B30',
                     transition: 'all 0.2s',
                   }}>
-                  {showHeatmap ? '🔥 히트맵 끄기' : `🔥 수온 히트맵 (${isAdmin ? 'MASTER' : 'PRO'})`}
+                  {showHeatmap ? '🔥 히트맵 끄기' : `🔥 수온 히트맵 (${isAdmin ? 'MASTER' : 'PRO / LITE'})`}
                 </button>
               </div>
             </>
@@ -630,6 +635,11 @@ export default function MapHome() {
                   {/* CCTV 링크 버튼 추가 */}
                   <button 
                     onClick={async () => {
+                      if (!canAccessPremium) {
+                        addToast('실시간 해양 CCTV는 PRO 또는 Business Lite 플랜 이상에서 제공됩니다.', 'error');
+                        navigate('/subscribe');
+                        return;
+                      }
                       const sid = selectedPoint?.obsCode || 'DT_0001';
                       try {
                         const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
