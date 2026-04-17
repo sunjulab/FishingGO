@@ -838,18 +838,31 @@ const HARBOR_LIST = [
 // In-Memory VVIP 슬롯 쿠 (실제에는 MongoDB에 저장)
 let vvipSlots = {}; // { harborId: { userId, userName, purchasedAt } }
 
-// 항구 목록 + 슬롯 현황 조회
+// 항구 목록 + 슬롯 현황 조회 (만료 자동 해제 포함)
 app.get('/api/vvip/harbors', (req, res) => {
+  const now = new Date();
+  // 만료된 VVIP 슬롯 자동 정리
+  Object.keys(vvipSlots).forEach(harborId => {
+    const slot = vvipSlots[harborId];
+    if (slot.expiresAt && new Date(slot.expiresAt) < now) {
+      console.log(`[VVIP 만료] ${slot.harborName} 슬롯 자동 해제`);
+      delete vvipSlots[harborId];
+    }
+  });
   const harborData = HARBOR_LIST.map(h => ({
     ...h,
     isTaken: !!vvipSlots[h.id],
     takenBy: vvipSlots[h.id]?.userName || null,
-    takenAt: vvipSlots[h.id]?.purchasedAt || null
+    takenAt: vvipSlots[h.id]?.purchasedAt || null,
+    expiresAt: vvipSlots[h.id]?.expiresAt || null,
+    daysLeft: vvipSlots[h.id]?.expiresAt
+      ? Math.max(0, Math.ceil((new Date(vvipSlots[h.id].expiresAt) - now) / 86400000))
+      : null
   }));
   res.json({ harbors: harborData });
 });
 
-// VVIP 슬롯 구매 (선첫순)
+// VVIP 슬롯 구매 (선착순) — 만료일 1년 자동 설정
 app.post('/api/vvip/purchase', (req, res) => {
   const { harborId, userId, userName } = req.body;
   if (!harborId || !userId) return res.status(400).json({ error: '필수 정보 누락' });
@@ -857,28 +870,66 @@ app.post('/api/vvip/purchase', (req, res) => {
   const harbor = HARBOR_LIST.find(h => h.id === harborId);
   if (!harbor) return res.status(404).json({ error: '존재하지 않는 항구입니다.' });
 
+  const now = new Date();
   if (vvipSlots[harborId]) {
-    return res.status(409).json({ error: '이미 다른 선장님이 해당 항구의 VVIP 자리를 선점하셨습니다.', takenBy: vvipSlots[harborId].userName });
+    const slot = vvipSlots[harborId];
+    if (!slot.expiresAt || new Date(slot.expiresAt) >= now) {
+      return res.status(409).json({ error: '이미 다른 선장님이 선점하셨습니다.', takenBy: slot.userName });
+    }
+    // 만료된 슬롯이면 자동 해제 후 재구매 허용
+    console.log(`[VVIP 만료 재구매] ${harbor.name}`);
+    delete vvipSlots[harborId];
   }
+
+  const expiresAt = new Date(now);
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
   vvipSlots[harborId] = {
     userId,
     userName: userName || userId,
-    purchasedAt: new Date().toISOString(),
+    purchasedAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
     harborName: harbor.name
   };
 
-  res.json({ success: true, harbor, message: `${harbor.name} VVIP 낭시 상회 독점 예약 완료!` });
+  res.json({
+    success: true, harbor,
+    expiresAt: expiresAt.toISOString(),
+    message: `${harbor.name} VVIP 독점 예약 완료! (${expiresAt.toLocaleDateString('ko-KR')}까지 유효)`
+  });
 });
 
-// 내 VVIP 슬롯 확인
+// 내 VVIP 슬롯 확인 (만료 여부 + 잔여일 포함)
 app.get('/api/vvip/my-slot', (req, res) => {
   const { userId } = req.query;
-  const mySlot = Object.entries(vvipSlots).find(([, v]) => v.userId === userId);
-  if (mySlot) {
-    const harbor = HARBOR_LIST.find(h => h.id === mySlot[0]);
-    res.json({ hasSlot: true, harbor, slot: mySlot[1] });
+  const now = new Date();
+  const myEntry = Object.entries(vvipSlots).find(([, v]) => v.userId === userId);
+  if (myEntry) {
+    const [harborId, slot] = myEntry;
+    const harbor = HARBOR_LIST.find(h => h.id === harborId);
+    const isExpired = slot.expiresAt && new Date(slot.expiresAt) < now;
+    if (isExpired) {
+      delete vvipSlots[harborId];
+      return res.json({ hasSlot: false, reason: 'expired', message: 'VVIP 구독이 만료되었습니다. 재구독 시 슬롯을 다시 선점하세요.' });
+    }
+    const daysLeft = Math.max(0, Math.ceil((new Date(slot.expiresAt) - now) / 86400000));
+    res.json({ hasSlot: true, harbor, slot, daysLeft });
   } else {
     res.json({ hasSlot: false });
   }
 });
+
+// 24시간마다 만료된 VVIP 슬롯 자동 정리 (서버 백그라운드)
+setInterval(() => {
+  const now = new Date();
+  let cleaned = 0;
+  Object.keys(vvipSlots).forEach(harborId => {
+    const slot = vvipSlots[harborId];
+    if (slot.expiresAt && new Date(slot.expiresAt) < now) {
+      console.log(`[VVIP 자동 만료 정리] ${slot.harborName} (${slot.userName})`);
+      delete vvipSlots[harborId];
+      cleaned++;
+    }
+  });
+  if (cleaned > 0) console.log(`[VVIP 클린업] ${cleaned}개 만료 슬롯 제거 완료`);
+}, 24 * 60 * 60 * 1000);

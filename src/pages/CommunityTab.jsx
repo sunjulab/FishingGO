@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
@@ -23,10 +23,24 @@ export default function CommunityTab() {
     { id: 'CREW_001', name: '동해 무늬 사냥단', members: 42, isPrivate: true }
   ]);
   const [businessPosts, setBusinessPosts] = useState([
-    { id: 'b3_vip', shipName: '남일호 VIP 크루즈', author: '남일해적선장', type: '선상/참돔', target: '참돔/방어', price: '인당 20만원', date: '이번 주 스페셜 야간', content: '👑 [VVIP 전용 배너] 특급 쉐프 승선, 초대형 넓은 갑판, 최고급 장비 100% 무상 렌탈. 이번 생에 최고의 낚시 여행을 약속합니다.', likes: 832, comments: 142, cover: 'https://images.unsplash.com/photo-1544427920-549b6d60a5e5?auto=format&fit=crop&w=400&q=80', isPinned: true },
+    { id: 'b3_vip', shipName: '남일호 VIP 크루즈', author: '남일해적선장', type: '선상/참돔', target: '참돔/방어', price: '인당 20만원', date: '이번 주 스페셜 야간', content: '👑 [VVIP 전용 배너] 특급 쉐프 승선, 초대형 넓은 갑판, 최고급 장비 100% 무상 렌탈.', likes: 832, comments: 142, cover: 'https://images.unsplash.com/photo-1544427920-549b6d60a5e5?auto=format&fit=crop&w=400&q=80', isPinned: true, expiresAt: null },
     { id: 'b1', shipName: '강릉 에이스호', author: '강릉에이스선장', type: '선상낚시', target: '대구/문어', price: '인당 12만원', date: '이번 주 주말 출항', content: '초보자 환영! 몸만 오시면 됩니다. 장비 대여 가능. 점심(문어라면) 제공!', likes: 12, comments: 4, cover: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=400&q=80', isPinned: false },
     { id: 'b2', shipName: '인천 나이스호', author: '인천씨호크', type: '야간선상', target: '쭈꾸미/갑오징어', price: '인당 8만원', date: '매일 야간', content: '쭈꾸미 낚시 시즌 오픈! 최신 시설 완비, 깨끗한 화장실. 가족 단위 대환영.', likes: 45, comments: 18, cover: 'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=400&q=80', isPinned: false }
   ]);
+
+  // VVIP 만료 실시간 체크: expiresAt 지나면 isPinned 자동 해제
+  const effectiveBusinessPosts = useMemo(() => {
+    const now = new Date();
+    return businessPosts
+      .map(post => {
+        if (post.isPinned && post.expiresAt && new Date(post.expiresAt) < now) {
+          return { ...post, isPinned: false, _expired: true };
+        }
+        return post;
+      })
+      .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+  }, [businessPosts]);
+
   const [noticePosts, setNoticePosts] = useState([
     { id: 'n1', author: 'Fishing GO 마스터', title: '🚨 커뮤니티 클린봇 가동 안내 (욕설 및 도배)', date: '2026.04.18', content: '투명하고 매너 있는 낚시 커뮤니티 문화를 위해 AI 클린봇이 24시간 감시 중입니다. 위반 시 경고 없이 영구 차단됩니다.', views: 1250, isPinned: true },
     { id: 'n2', author: 'Fishing GO 마스터', title: '🎁 전국 배스 낚시 챔피언십 온라인 대회 (총상금 1,000만 원)', date: '2026.04.15', content: '다음 주부터 앱 내 기록실을 통한 온라인 낚시 대회가 개막합니다! 많은 기대 부탁드립니다.', views: 800, isPinned: false },
@@ -303,7 +317,7 @@ export default function CommunityTab() {
               <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>게시물 하단의 [직통 전화] 버튼을 눌러 수수료 없이 다이렉트 예약하세요!</p>
             </div>
             
-            {businessPosts.map((post) => (
+            {effectiveBusinessPosts.map((post) => (
               <div 
                 key={post.id} 
                 className={post.isPinned ? "pulse-border" : ""}
