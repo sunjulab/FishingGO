@@ -54,16 +54,23 @@ export const getLevelInfo = (totalExp = 0) => {
       }
     }
   } else {
-    // 5000 이상의 경험치부터는 끝이 없는 초월(Infinite) 레벨 적용 (매 1500 EXP 당 1레벨업)
+    // 5000 이상의 경험치부터는 끝이 없는 초월(Infinite) 레벨 적용 (레벨이 오를수록 요구 경험치가 기하급수적으로 증가)
     const baseExp = 5000;
     const additionalExp = totalExp - baseExp;
-    const expPerExtraLevel = 1500;
     
-    const extraLevelIndex = Math.floor(additionalExp / expPerExtraLevel);
+    let extraLevelIndex = 0;
+    let currentExpThreshold = 0;
+    let nextStepExp = 1500; // 11레벨 달성에는 1500 필요, 이후 300씩 난이도 상승
+    
+    while (additionalExp >= currentExpThreshold + nextStepExp) {
+      currentExpThreshold += nextStepExp;
+      nextStepExp += 300;
+      extraLevelIndex++;
+    }
+    
     const currentLvlNum = 10 + extraLevelIndex;
-    
-    const expForCurrent = baseExp + (extraLevelIndex * expPerExtraLevel);
-    const expForNext = baseExp + ((extraLevelIndex + 1) * expPerExtraLevel);
+    const expForCurrent = baseExp + currentExpThreshold;
+    const expForNext = baseExp + currentExpThreshold + nextStepExp;
     
     currentLevel = {
       level: currentLvlNum,
@@ -71,7 +78,7 @@ export const getLevelInfo = (totalExp = 0) => {
       emoji: '🌌',
       expRequired: expForCurrent,
       color: '#FFD700',
-      reward: `초월 ${extraLevelIndex + 1}단계 기념 스페셜 뱃지`
+      reward: `초월 ${extraLevelIndex + 1}단계 스페셜 뱃지`
     };
     
     nextLevel = {

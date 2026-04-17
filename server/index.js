@@ -280,20 +280,30 @@ function getLevelFromExp(totalExp) {
       }
     }
   } else {
+    // 점진적으로 상승하는 초월 난이도 로직 적용
     const baseExp = 5000;
     const additionalExp = totalExp - baseExp;
-    const expPerExtraLevel = 1500;
-    const extraLevelIndex = Math.floor(additionalExp / expPerExtraLevel);
+    
+    let extraLevelIndex = 0;
+    let currentExpThreshold = 0;
+    let nextStepExp = 1500;
+    
+    while (additionalExp >= currentExpThreshold + nextStepExp) {
+      currentExpThreshold += nextStepExp;
+      nextStepExp += 300;
+      extraLevelIndex++;
+    }
+    
     const currentLvlNum = 10 + extraLevelIndex;
 
     current = {
       level: currentLvlNum,
       title: `초월 낙시신 ${extraLevelIndex + 1}단계`,
-      expRequired: baseExp + (extraLevelIndex * expPerExtraLevel)
+      expRequired: baseExp + currentExpThreshold
     };
     next = {
       level: currentLvlNum + 1,
-      expRequired: baseExp + ((extraLevelIndex + 1) * expPerExtraLevel)
+      expRequired: baseExp + currentExpThreshold + nextStepExp
     };
   }
 
