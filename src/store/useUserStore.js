@@ -5,7 +5,7 @@ export const TIER_CONFIG = {
   FREE:           { label: null,         color: null,      bg: null,       price: 0        },
   BUSINESS_LITE:  { label: 'LITE',       color: '#1A1A2E', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)', price: 9900   },
   PRO:            { label: 'PRO',        color: '#fff',    bg: 'linear-gradient(135deg, #0056D2, #003fa3)', price: 29900  },
-  BUSINESS_VIP:   { label: '👑 VVIP',   color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FF9B26)', price: 550000 }, // 항구별 독점 1명, 연 단위
+  BUSINESS_VIP:   { label: '👑 VVIP',   color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FF9B26)', price: 550000 }, // 항구별 독점 1명, 월 단위
   MASTER:         { label: 'MASTER',     color: '#fff',    bg: 'linear-gradient(135deg, #E60000, #990000)', price: null   },
 };
 

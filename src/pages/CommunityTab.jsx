@@ -318,63 +318,81 @@ export default function CommunityTab() {
             </div>
             
             {effectiveBusinessPosts.map((post) => (
-              <div 
-                key={post.id} 
-                className={post.isPinned ? "pulse-border" : ""}
-                style={{ 
-                  backgroundColor: post.isPinned ? '#FEFCF5' : '#fff', 
-                  borderRadius: '20px', marginBottom: '16px', 
-                  boxShadow: post.isPinned ? '0 10px 30px rgba(255,215,0,0.15)' : '0 4px 14px rgba(0,0,0,0.04)', 
-                  border: post.isPinned ? '2.5px solid #FFD700' : '1.5px solid #F0F2F7', 
-                  position: 'relative', overflow: 'hidden'
-                }}
-              >
-                {post.isPinned && (
-                  <div style={{ background: 'linear-gradient(90deg, #FFD700, #FFA000)', color: '#5C3A00', padding: '6px 14px', fontSize: '11px', fontWeight: '950', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Award size={14} fill="#5C3A00" /> VVIP 프리미엄 스폰서 (해당 지역 1위)
-                  </div>
-                )}
-                <div style={{ padding: '16px' }} onClick={() => navigate(`/post/${post.id}`)}>
-                  <div style={{ display: 'flex', gap: '14px' }}>
-                    <img src={post.cover} style={{ width: '100px', height: '100px', borderRadius: '14px', objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} alt="배 이미지" />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px' }}>
-                         <span style={{ fontSize: '10px', background: post.isPinned ? '#E65100' : '#FF5A5F', color: '#fff', padding: '3px 8px', borderRadius: '6px', fontWeight: '950' }}>예약 모집중</span>
-                         <span style={{ fontSize: '16px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.shipName}</span>
-                         {isAdmin && (
-                           <button onClick={(e) => handleDeletePost(e, post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30', marginLeft: 'auto' }}>
-                             <Trash2 size={16} />
-                           </button>
-                         )}
-                       </div>
-                       <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#555', lineHeight: '1.5', fontWeight: post.isPinned?'700':'400' }}>{post.content.slice(0, 52)}...</p>
-                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px', color: '#1565C0', fontWeight: '900' }}>
-                         <span style={{ background: '#F4F6FA', padding: '5px 10px', borderRadius: '8px', color: '#333' }}>{post.target}</span>
-                         <span style={{ background: '#F4F6FA', padding: '5px 10px', borderRadius: '8px', color: '#333' }}>{post.date}</span>
-                         <span style={{ background: '#FFF3E0', padding: '5px 10px', borderRadius: '8px', color: '#E65100' }}>{post.price}</span>
-                       </div>
+              <React.Fragment key={post.id}>
+                {/* VVIP \ud504\ub9ac\ubbf8\uc5c4 \ub300\ud615 \uce74\ub4dc (3\uac1c\uc9dc\ub9ac \ud06c\uae30) */}
+                {post.isPinned ? (
+                  <div style={{ backgroundColor: '#FEFCF5', borderRadius: '20px', marginBottom: '16px', boxShadow: '0 10px 36px rgba(255,215,0,0.2)', border: '2.5px solid #FFD700', overflow: 'hidden' }}>
+                    {/* VVIP \ubc30\uc9c0 \ud5e4\ub354 */}
+                    <div style={{ background: 'linear-gradient(90deg, #FFD700, #FF9B26)', color: '#5C3A00', padding: '8px 16px', fontSize: '12px', fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Award size={14} fill="#5C3A00" /> VVIP \ud504\ub9ac\ubbf8\uc5c4 \uc2a4\ud3f0\uc11c (\ud574\ub2f9 \ud56d\uad6c 1\uc704)</span>
+                      {isAdmin && <button onClick={(e) => handleDeletePost(e, post.id, 'business')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5C3A00' }}><Trash2 size={14} /></button>}
+                    </div>
+                    {/* \ub300\ud615 \ucee4\ubc84 \uc774\ubbf8\uc9c0 */}
+                    <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate(`/post/${post.id}`)}>
+                      <img src={post.cover} style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} alt="\ubc30" />
+                      <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.65)', color: '#FFD700', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '900' }}>
+                        \ud83d\udc51 {post.region || '\ud56d\uad6c \uc804\uc6a9 VVIP'}
+                      </div>
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#FF5A5F', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: '950' }}>\uc608\uc57d \ubaa8\uc9d1\uc911</div>
+                    </div>
+                    {/* \ub300\ud615 \ubcf8\ubb38 */}
+                    <div style={{ padding: '18px 16px' }} onClick={() => navigate(`/post/${post.id}`)}>
+                      <div style={{ fontSize: '20px', fontWeight: '950', color: '#1A1A2E', marginBottom: '8px' }}>{post.shipName}</div>
+                      <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#333', lineHeight: '1.7', fontWeight: '600' }}>{post.content.slice(0, 120)}{post.content.length > 120 ? '...' : ''}</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', marginBottom: '14px' }}>
+                        <span style={{ background: '#F4F6FA', padding: '6px 12px', borderRadius: '10px', color: '#333', fontWeight: '800' }}>🎣 {post.target}</span>
+                        <span style={{ background: '#F4F6FA', padding: '6px 12px', borderRadius: '10px', color: '#333', fontWeight: '800' }}>📅 {post.date}</span>
+                        <span style={{ background: '#FFF3E0', padding: '6px 12px', borderRadius: '10px', color: '#E65100', fontWeight: '950' }}>💰 {post.price}</span>
+                      </div>
+                    </div>
+                    {/* \ub300\ud615 CTA \ubc84\ud2bc */}
+                    <div style={{ padding: '0 16px 18px', display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }}
+                        style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '16px', borderRadius: '14px', fontWeight: '950', fontSize: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 16px rgba(0,86,210,0.3)' }}
+                      >
+                        <Phone size={18} fill="#fff" /> \uc120\uc7a5\ub2d8\uaed8 \uc989\uc2dc \uc804\ud654
+                      </button>
+                      <button
+                        onClick={() => navigate(`/crew/msg/${post.id}`)}
+                        style={{ backgroundColor: '#fff', color: '#0056D2', border: '2px solid #0056D2', padding: '16px 18px', borderRadius: '14px', fontWeight: '900', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                      >
+                        <MessageSquare size={18} /> \uc571 \uce58\ud305
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                {/* 하단 강력한 CTA 영역 (예약 전환율 극대화) */}
-                <div style={{ padding: '12px 16px', background: post.isPinned ? '#FFFDF4' : '#F8F9FA', borderTop: post.isPinned ? '1px solid rgba(255,215,0,0.3)' : '1px solid #F0F2F7', display: 'flex', gap: '8px' }}>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }}
-                    style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: '950', fontSize: '14px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,86,210,0.2)', transition: 'transform 0.15s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform='scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform='scale(1)'}
-                  >
-                    <Phone size={16} fill="#fff" /> 선장님께 즉시 전화
-                  </button>
-                  <button 
-                    onClick={() => navigate(`/crew/msg/${post.id}`)}
-                    style={{ backgroundColor: '#fff', color: '#0056D2', border: '1.5px solid #0056D2', padding: '14px 16px', borderRadius: '12px', fontWeight: '900', fontSize: '13px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                  >
-                    <MessageSquare size={16} /> 앱 채팅
-                  </button>
-                </div>
-              </div>
+                ) : (
+                  /* \uc77c\ubc18 \uce74\ub4dc */
+                  <div style={{ backgroundColor: '#fff', borderRadius: '20px', marginBottom: '16px', boxShadow: '0 4px 14px rgba(0,0,0,0.04)', border: '1.5px solid #F0F2F7', overflow: 'hidden' }}>
+                    <div style={{ padding: '16px' }} onClick={() => navigate(`/post/${post.id}`)}>
+                      <div style={{ display: 'flex', gap: '14px' }}>
+                        <img src={post.cover} style={{ width: '100px', height: '100px', borderRadius: '14px', objectFit: 'cover', flexShrink: 0, border: '1px solid #eee' }} alt="\ubc30 \uc774\ubbf8\uc9c0" />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '10px', background: '#FF5A5F', color: '#fff', padding: '3px 8px', borderRadius: '6px', fontWeight: '950' }}>\uc608\uc57d \ubaa8\uc9d1\uc911</span>
+                            <span style={{ fontSize: '16px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.shipName}</span>
+                            {isAdmin && <button onClick={(e) => handleDeletePost(e, post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30', marginLeft: 'auto' }}><Trash2 size={16} /></button>}
+                          </div>
+                          <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#555', lineHeight: '1.5' }}>{post.content.slice(0, 52)}...</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
+                            <span style={{ background: '#F4F6FA', padding: '5px 10px', borderRadius: '8px', color: '#333' }}>{post.target}</span>
+                            <span style={{ background: '#F4F6FA', padding: '5px 10px', borderRadius: '8px', color: '#333' }}>{post.date}</span>
+                            <span style={{ background: '#FFF3E0', padding: '5px 10px', borderRadius: '8px', color: '#E65100' }}>{post.price}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px 16px', background: '#F8F9FA', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '8px' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: '950', fontSize: '14px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <Phone size={16} fill="#fff" /> \uc120\uc7a5\ub2d8\uaed8 \uc989\uc2dc \uc804\ud654
+                      </button>
+                      <button onClick={() => navigate(`/crew/msg/${post.id}`)} style={{ backgroundColor: '#fff', color: '#0056D2', border: '1.5px solid #0056D2', padding: '14px 16px', borderRadius: '12px', fontWeight: '900', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <MessageSquare size={16} /> \uc571 \uce58\ud305
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
             ))}
           </div>
         )}

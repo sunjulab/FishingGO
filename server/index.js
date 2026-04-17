@@ -978,8 +978,8 @@ app.post('/api/vvip/purchase', (req, res) => {
     delete vvipSlots[harborId];
   }
 
-  const expiresAt = new Date(now);
-  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+  // 월 구독 30일 만료
+  const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   vvipSlots[harborId] = {
     userId,

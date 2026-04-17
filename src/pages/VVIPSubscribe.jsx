@@ -106,7 +106,7 @@ export default function VVIPSubscribe() {
         <div style={{ display: 'flex', gap: '16px' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '28px', fontWeight: '900', color: '#FFD700' }}>₩550,000</div>
-            <div style={{ fontSize: '11px', opacity: 0.8 }}>연 단위 · 세금계산서 발행</div>
+            <div style={{ fontSize: '11px', opacity: 0.8 }}>월 정액 · 세금계산서 발행</div>
           </div>
           <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
           <div style={{ textAlign: 'center' }}>
