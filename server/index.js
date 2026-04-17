@@ -656,6 +656,24 @@ app.get('/api/media/youtube/search', async (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: 'No query' });
   try {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (apiKey) {
+      // ─── API 키가 있는 경우 Google Data API 공식 검색 (클라우드 IP 차단 우회) ───
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&q=${encodeURIComponent(q + ' 낚시')}&key=${apiKey}&type=video`;
+      const response = await axios.get(searchUrl);
+      const searchVideos = response.data.items.map((item, idx) => ({
+        id: `search_${item.id.videoId}`,
+        title: item.snippet.title,
+        category: '검색결과',
+        youtubeId: item.id.videoId,
+        views: 'NEW',
+        description: item.snippet.description || `${item.snippet.channelTitle} 크리에이터의 영상입니다.`,
+        products: FALLBACK_VIDEOS[idx % 4]?.products || FALLBACK_VIDEOS[0].products
+      }));
+      return res.json({ videos: searchVideos.length > 0 ? searchVideos : FALLBACK_VIDEOS, source: 'youtube-api-search' });
+    }
+
+    // ─── API 키가 없을 경우 임시 무료 스크래핑 (yt-search) ───
     const yts = require('yt-search');
     const result = await yts(q + ' 낚시');
     const searchVideos = result.videos.slice(0, 15).map((item, idx) => ({
@@ -665,11 +683,11 @@ app.get('/api/media/youtube/search', async (req, res) => {
       youtubeId: item.videoId,
       views: item.views ? `${(item.views/10000).toFixed(1)}만` : 'NEW', 
       description: item.description || `${item.author.name} 크리에이터의 낚시 검색 결과입니다.`,
-      products: FALLBACK_VIDEOS[idx % 4].products
+      products: FALLBACK_VIDEOS[idx % 4]?.products || FALLBACK_VIDEOS[0].products
     }));
     res.json({ videos: searchVideos.length > 0 ? searchVideos : FALLBACK_VIDEOS, source: 'yt-search' });
   } catch (err) {
-    console.error('YTS Error:', err.message);
+    console.error('Search API Error:', err.message);
     res.status(500).json({ videos: FALLBACK_VIDEOS, source: 'fallback (error)' });
   }
 });
