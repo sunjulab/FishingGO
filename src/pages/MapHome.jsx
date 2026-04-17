@@ -51,61 +51,67 @@ export default function MapHome() {
   /* ── 카카오맵 초기화 ── */
   useEffect(() => {
     const initMap = () => {
-      if (!window.kakao?.maps) return;
+      if (!window.kakao?.maps || !window.kakao.maps.Map) return false;
       const container = document.getElementById('kakao-map');
-      if (!container) return;
+      if (!container) return false;
       
-      const options = { 
-        center: new window.kakao.maps.LatLng(36.5, 127.8), // 대한민국 중심부
-        level: 11 // 전국을 조망할 수 있는 레벨
-      };
-      
-      const map = new window.kakao.maps.Map(container, options);
-      
-      // 지도 컨트롤 추가 (확대/축소 UI 추가로 더 부드러운 경험 제공)
-      const zoomControl = new window.kakao.maps.ZoomControl();
-      map.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
-      const mapTypeControl = new window.kakao.maps.MapTypeControl();
-      map.addControl(mapTypeControl, window.kakao.maps.ControlPosition.TOPRIGHT);
-      
-      // 줌 가능 및 드래그 가능 명시적 설정
-      map.setZoomable(true);
-      map.setDraggable(true);
-      
-      mapRef.current = map;
-      
-      // 클러스터러 초기화
-      clustererRef.current = new window.kakao.maps.MarkerClusterer({
-        map: map,
-        averageCenter: true,
-        minLevel: 10
-      });
-      
-      setMapLoaded(true);
-      
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-          if (!window.kakao?.maps) return;
-          const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-          map.panTo(cp);
-          new window.kakao.maps.CustomOverlay({
-            position: cp, map,
-            content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
-          });
+      try {
+        const options = { 
+          center: new window.kakao.maps.LatLng(36.5, 127.8), // 대한민국 중심부
+          level: 11 // 전국을 조망할 수 있는 레벨
+        };
+        
+        const map = new window.kakao.maps.Map(container, options);
+        
+        // 지도 컨트롤 추가 (확대/축소 UI 추가로 더 부드러운 경험 제공)
+        const zoomControl = new window.kakao.maps.ZoomControl();
+        map.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
+        const mapTypeControl = new window.kakao.maps.MapTypeControl();
+        map.addControl(mapTypeControl, window.kakao.maps.ControlPosition.TOPRIGHT);
+        
+        // 줌 가능 및 드래그 가능 명시적 설정
+        map.setZoomable(true);
+        map.setDraggable(true);
+        
+        mapRef.current = map;
+        
+        // 클러스터러 초기화
+        clustererRef.current = new window.kakao.maps.MarkerClusterer({
+          map: map,
+          averageCenter: true,
+          minLevel: 10
         });
+        
+        setMapLoaded(true);
+        
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition((pos) => {
+            if (!window.kakao?.maps) return;
+            const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+            map.panTo(cp);
+            new window.kakao.maps.CustomOverlay({
+              position: cp, map,
+              content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
+            });
+          });
+        }
+        return true;
+      } catch (err) {
+        console.error("카카오맵 초기화 중 오류 발생 (재시도 중):", err);
+        return false;
       }
     };
 
     let retry = 0;
     const interval = setInterval(() => {
-      if (window.kakao?.maps) { 
-        initMap(); 
+      const isSuccess = initMap();
+      if (isSuccess) { 
         clearInterval(interval); 
-      } else if (retry > 30) {
+      } else if (retry > 40) {
         clearInterval(interval);
       }
       retry++;
-    }, 200); // 더 빠른 주기적 체크
+    }, 250);
     
     return () => clearInterval(interval);
   }, []);
