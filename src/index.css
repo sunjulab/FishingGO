@@ -226,3 +226,19 @@ body {
   align-items: center;
   gap: 12px;
 }
+
+/* ─── AdSense Fallback (로컬/테스트 무응답 방어) ─── */
+ins.adsbygoogle[data-ad-status="unfilled"] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background-color: #F2F2F7 !important;
+  color: #8E8E93 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  border: 1px dashed #C7C7CC;
+}
+
+ins.adsbygoogle[data-ad-status="unfilled"]::after {
+  content: "구글 광고 예약 영역 (Unfilled)";
+}

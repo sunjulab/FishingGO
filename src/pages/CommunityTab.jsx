@@ -229,6 +229,7 @@ export default function CommunityTab() {
         ) : activeTab === 'open' ? (
           // [오픈 게시판 뷰]
           <div className="fade-in">
+            <BannerAd style={{ marginBottom: '16px' }} />
             {posts.map((post, index) => (
               <React.Fragment key={post.id}>
                 <div 
@@ -316,6 +317,7 @@ export default function CommunityTab() {
               <p style={{ margin: '0 0 4px', fontSize: '12.5px', fontWeight: '700', lineHeight: '1.4' }}>비즈니스 인증을 거친 검증된 선장님들의 공간입니다.</p>
               <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>게시물 하단의 [직통 전화] 버튼을 눌러 수수료 없이 다이렉트 예약하세요!</p>
             </div>
+            <BannerAd style={{ marginBottom: '16px' }} />
             
             {effectiveBusinessPosts.map((post) => (
               <React.Fragment key={post.id}>
@@ -343,11 +345,11 @@ export default function CommunityTab() {
                       </div>
                     </div>
                     <div style={{ padding: '0 18px 20px', display: 'flex', gap: '12px' }}>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '18px', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', boxShadow: '0 6px 18px rgba(0,86,210,0.3)' }}>
-                        <Phone size={22} fill="#fff" />
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '18px', borderRadius: '16px', fontWeight: '950', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 18px rgba(0,86,210,0.3)' }}>
+                        <Phone size={20} fill="#fff" /> 선장님께 즉시 전화
                       </button>
-                      <button onClick={() => navigate(`/crew/msg/${post.id}`)} style={{ backgroundColor: '#fff', color: '#0056D2', border: '2px solid #0056D2', padding: '18px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <MessageSquare size={22} />
+                      <button onClick={() => navigate(`/crew/msg/${post.id}`)} style={{ backgroundColor: '#fff', color: '#0056D2', border: '2px solid #0056D2', padding: '18px 20px', borderRadius: '16px', fontWeight: '900', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <MessageSquare size={20} /> 채팅
                       </button>
                     </div>
                   </div>
@@ -372,11 +374,11 @@ export default function CommunityTab() {
                       </div>
                     </div>
                     <div style={{ padding: '8px 12px', background: '#F8F9FA', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '6px' }}>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
-                        <Phone size={15} fill="#fff" />
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '950', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <Phone size={13} fill="#fff" /> 즉시 전화
                       </button>
-                      <button onClick={() => navigate(`/crew/msg/${post.id}`)} style={{ backgroundColor: '#fff', color: '#0056D2', border: '1.5px solid #0056D2', padding: '10px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <MessageSquare size={15} />
+                      <button onClick={() => navigate(`/crew/msg/${post.id}`)} style={{ backgroundColor: '#fff', color: '#0056D2', border: '1.5px solid #0056D2', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <MessageSquare size={13} /> 채팅
                       </button>
                     </div>
                   </div>
