@@ -1,8 +1,9 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, NavLink } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Home, Tv, Users, ShoppingBag, User, Anchor } from 'lucide-react';
 import Toast from './components/Toast';
+import { useUserStore } from './store/useUserStore';
 
 // 라우트 레이지 로딩 (코드 스플리팅)
 const MapHome = lazy(() => import('./pages/MapHome')); 
@@ -69,18 +70,32 @@ function BottomNav() {
 
 function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const user = useUserStore((state) => state.user);
+  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  
   const hideHeader = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/'].some(path => location.pathname !== '/' && location.pathname.includes(path)) || location.pathname === '/';
   if (hideHeader) return null;
 
   return (
     <div className="premium-header">
-      <div className="logo">
+      <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
         <Anchor size={24} color="#0056D2" />
         낚시GO
-        <span className="premium-badge">PREMIUM</span>
+        <span 
+          className="premium-badge" 
+          style={isAdmin ? { background: 'linear-gradient(135deg, #E60000, #990000)' } : undefined}
+        >
+          {isAdmin ? 'MASTER' : 'PREMIUM'}
+        </span>
       </div>
       <div>
-        <img src="https://i.pravatar.cc/150?img=11" alt="Profile" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
+        <img 
+          src={user?.avatar || user?.picture || 'https://i.pravatar.cc/150?img=11'} 
+          alt="Profile" 
+          onClick={() => navigate('/mypage')}
+          style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', cursor: 'pointer' }} 
+        />
       </div>
     </div>
   );
