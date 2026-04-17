@@ -2,12 +2,11 @@ import { create } from 'zustand';
 
 // ── 구독 티어 설정 ──────────────────────────────────────────────
 export const TIER_CONFIG = {
-  FREE:           { label: null,       color: null,      bg: null },
-  PRO:            { label: 'PRO',      color: '#fff',    bg: 'linear-gradient(135deg, #0056D2, #003fa3)' },
-  BUSINESS_LITE:  { label: 'LITE',     color: '#1A1A2E', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)' },
-  BUSINESS_PRO:   { label: 'BIZ PRO',  color: '#fff',    bg: 'linear-gradient(135deg, #FF9B26, #E67E00)' },
-  BUSINESS_VIP:   { label: 'VIP',      color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
-  MASTER:         { label: 'MASTER',   color: '#fff',    bg: 'linear-gradient(135deg, #E60000, #990000)' },
+  FREE:           { label: null,         color: null,      bg: null,       price: 0        },
+  BUSINESS_LITE:  { label: 'LITE',       color: '#1A1A2E', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)', price: 9900   },
+  PRO:            { label: 'PRO',        color: '#fff',    bg: 'linear-gradient(135deg, #0056D2, #003fa3)', price: 29900  },
+  BUSINESS_VIP:   { label: '👑 VVIP',   color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FF9B26)', price: 550000 }, // 항구별 독점 1명, 연 단위
+  MASTER:         { label: 'MASTER',     color: '#fff',    bg: 'linear-gradient(135deg, #E60000, #990000)', price: null   },
 };
 
 // ── 레벨 시스템 설정 ────────────────────────────────────────────
@@ -172,10 +171,11 @@ export const useUserStore = create((set, get) => ({
     if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
     return ['PRO', 'BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
+  // 비즈니스 홍보글 작성: PRO 또는 VVIP만 허용 (Business Lite는 배제)
   canAccessBusinessPromo:() => {
     const state = get();
     if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab') return true;
-    return ['BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
+    return ['PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
   canAccessBusinessShop: () => {
     const state = get();

@@ -804,3 +804,81 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`Fishing GO Logic Server running on PORT ${PORT}`);
   console.log(`DB 모드: ${dbReady ? 'MongoDB ✅' : '인메모리 ⚠️'}`);
 });
+
+// =================================================================
+//  VVIP 선상 항구 선주은 슬롯 시스템
+//  - 항구당 1명만 VVIP 슬롯 포지 가능 (55만원/년, 선착순)
+//  - 슬롯 회사는 공개 API로 제공
+// =================================================================
+
+// 항구 목록 (한국 주요 낭시 항구 전수)
+const HARBOR_LIST = [
+  { id: 'GN_001', region: '강원', name: '주문진항', lat: 37.907, lng: 128.819 },
+  { id: 'GN_002', region: '강원', name: '속초항', lat: 37.741, lng: 128.866 },
+  { id: 'GN_003', region: '강원', name: '카리항', lat: 38.128, lng: 128.621 },
+  { id: 'GN_004', region: '강원', name: '동해항 (동룡)', lat: 37.524, lng: 129.113 },
+  { id: 'GN_005', region: '강원', name: '묵호항', lat: 37.423, lng: 129.168 },
+  { id: 'BS_001', region: '부산', name: '부산신항', lat: 35.094, lng: 129.044 },
+  { id: 'BS_002', region: '부산', name: '치좌항', lat: 35.121, lng: 129.092 },
+  { id: 'GJ_001', region: '경남', name: '통영항', lat: 34.836, lng: 128.429 },
+  { id: 'GJ_002', region: '경남', name: '거제항', lat: 34.946, lng: 128.621 },
+  { id: 'GJ_003', region: '경남', name: '여수항', lat: 34.737, lng: 127.742 },
+  { id: 'GJ_004', region: '경남', name: '사천항 ()삼천포)', lat: 35.002, lng: 128.065 },
+  { id: 'JN_001', region: '전남', name: '목포항', lat: 34.812, lng: 126.380 },
+  { id: 'JN_002', region: '전남', name: '완도항', lat: 34.312, lng: 126.754 },
+  { id: 'JN_003', region: '전남', name: '여수도항', lat: 34.633, lng: 127.295 },
+  { id: 'JJ_001', region: '제주', name: '제주연안항 (제주시)', lat: 33.521, lng: 126.527 },
+  { id: 'JJ_002', region: '제주', name: '성산포항 (서귀포)', lat: 33.252, lng: 126.564 },
+  { id: 'IC_001', region: '인천', name: '인천냘항', lat: 37.449, lng: 126.627 },
+  { id: 'IC_002', region: '인천', name: '연안항 ()연평)', lat: 37.067, lng: 126.414 },
+  { id: 'CB_001', region: '충남', name: '븴도항', lat: 36.776, lng: 126.421 },
+  { id: 'CB_002', region: '충남', name: '주문진항 (말도)', lat: 36.511, lng: 126.151 },
+];
+
+// In-Memory VVIP 슬롯 쿠 (실제에는 MongoDB에 저장)
+let vvipSlots = {}; // { harborId: { userId, userName, purchasedAt } }
+
+// 항구 목록 + 슬롯 현황 조회
+app.get('/api/vvip/harbors', (req, res) => {
+  const harborData = HARBOR_LIST.map(h => ({
+    ...h,
+    isTaken: !!vvipSlots[h.id],
+    takenBy: vvipSlots[h.id]?.userName || null,
+    takenAt: vvipSlots[h.id]?.purchasedAt || null
+  }));
+  res.json({ harbors: harborData });
+});
+
+// VVIP 슬롯 구매 (선첫순)
+app.post('/api/vvip/purchase', (req, res) => {
+  const { harborId, userId, userName } = req.body;
+  if (!harborId || !userId) return res.status(400).json({ error: '필수 정보 누락' });
+
+  const harbor = HARBOR_LIST.find(h => h.id === harborId);
+  if (!harbor) return res.status(404).json({ error: '존재하지 않는 항구입니다.' });
+
+  if (vvipSlots[harborId]) {
+    return res.status(409).json({ error: '이미 다른 선장님이 해당 항구의 VVIP 자리를 선점하셨습니다.', takenBy: vvipSlots[harborId].userName });
+  }
+
+  vvipSlots[harborId] = {
+    userId,
+    userName: userName || userId,
+    purchasedAt: new Date().toISOString(),
+    harborName: harbor.name
+  };
+
+  res.json({ success: true, harbor, message: `${harbor.name} VVIP 낭시 상회 독점 예약 완료!` });
+});
+
+// 내 VVIP 슬롯 확인
+app.get('/api/vvip/my-slot', (req, res) => {
+  const { userId } = req.query;
+  const mySlot = Object.entries(vvipSlots).find(([, v]) => v.userId === userId);
+  if (mySlot) {
+    const harbor = HARBOR_LIST.find(h => h.id === mySlot[0]);
+    res.json({ hasSlot: true, harbor, slot: mySlot[1] });
+  } else {
+    res.json({ hasSlot: false });
+  }
+});

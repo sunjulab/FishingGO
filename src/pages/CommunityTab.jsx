@@ -77,9 +77,10 @@ export default function CommunityTab() {
       }
     } else if (activeTab === 'business') {
       if (!canAccessBusinessPromo) {
-        addToast("비즈니스 인증을 거친(Pro/VIP) 등급 선장님만 홍보 가능합니다.", "error");
+        addToast('선상 홍보글은 PRO 또는 항구 독점 VVIP 보유자만 작성 가능합니다.', 'error');
+        setTimeout(() => navigate('/vvip-subscribe'), 1500);
       } else {
-        addToast("선장님 환영합니다! 🎉 비즈니스 홍보글을 작성합니다.", "success");
+        addToast('선장님 환영합니다! 및 비즈니스 홍보글을 작성합니다.', 'success');
         navigate('/write?type=business');
       }
     } else if (activeTab === 'notice') {
