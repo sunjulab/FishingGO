@@ -17,12 +17,11 @@ export const LEVEL_CONFIG = [
   { level: 2,  title: '견습 낚시꾼',   emoji: '🎣', expRequired: 100,  color: '#8E8E93', reward: '1,000 P 지급' },
   { level: 3,  title: '낚시 입문자',   emoji: '🐟', expRequired: 250,  color: '#34C759', reward: '입문자용 프로필 은장 테두리' },
   { level: 4,  title: '낚시 애호가',   emoji: '🐠', expRequired: 500,  color: '#34C759', reward: '2,000 P 지급' },
-  { level: 5,  title: '베테랑 낚시인', emoji: '🐡', expRequired: 850,  color: '#0056D2', reward: '낚시 쇼핑몰 5% 할인 쿠폰' },
-  { level: 6,  title: '중급 낚시꾼',   emoji: '🦈', expRequired: 1300, color: '#0056D2', reward: '커뮤니티 닉네임 볼드(Bold) 효과' },
+  { level: 5,  title: '베테랑 낚시인', emoji: '🐡', expRequired: 850,  color: '#0056D2', reward: '커뮤니티 닉네임 블루 네온 글로우 효과' },
+  { level: 6,  title: '중급 낚시꾼',   emoji: '🦈', expRequired: 1300, color: '#0056D2', reward: '커뮤니티 닉네임 볼드(Bold) 형광 효과' },
   { level: 7,  title: '고수 낚시인',   emoji: '🎯', expRequired: 1900, color: '#FF9B26', reward: '고강도 프로필 금장 테두리 + 5,000 P' },
-  { level: 8,  title: '낚시 장인',     emoji: '⚓', expRequired: 2700, color: '#FF9B26', reward: '낚시 쇼핑몰 10% 할인 쿠폰' },
-  { level: 9,  title: '전설의 낚시인', emoji: '👑', expRequired: 3700, color: '#FF5A5F', reward: '전설 등급 한정판 뱃지 이펙트' },
-  { level: 10, title: '낚시의 신',     emoji: '🌊', expRequired: 5000, color: '#FFD700', reward: '명예의 전당 등재 및 VIP 멤버쉽 1개월권' },
+  { level: 8,  title: '낚시 장인',     emoji: '⚓', expRequired: 2700, color: '#FF9B26', reward: '채팅 및 글 작성 무지개색 폰트 사용권' },
+  { level: 9,  title: '전설의 낚시인', emoji: '👑', expRequired: 3700, color: '#FF5A5F', reward: '전설 등급 한정판 뱃지 애니메이션' },
 ];
 
 // ── EXP 활동 보상표 ─────────────────────────────────────────────
@@ -43,24 +42,47 @@ export const EXP_REWARDS = {
  * 현재 레벨 정보 반환
  */
 export const getLevelInfo = (totalExp = 0) => {
-  let currentLevel = LEVEL_CONFIG[0];
-  let nextLevel = LEVEL_CONFIG[1] || null;
+  let currentLevel;
+  let nextLevel;
 
-  for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
-    if (totalExp >= LEVEL_CONFIG[i].expRequired) {
-      currentLevel = LEVEL_CONFIG[i];
-      nextLevel = LEVEL_CONFIG[i + 1] || null;
-      break;
+  if (totalExp < 5000) {
+    for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+      if (totalExp >= LEVEL_CONFIG[i].expRequired) {
+        currentLevel = LEVEL_CONFIG[i];
+        nextLevel = LEVEL_CONFIG[i + 1] || { level: 10, expRequired: 5000 };
+        break;
+      }
     }
+  } else {
+    // 5000 이상의 경험치부터는 끝이 없는 초월(Infinite) 레벨 적용 (매 1500 EXP 당 1레벨업)
+    const baseExp = 5000;
+    const additionalExp = totalExp - baseExp;
+    const expPerExtraLevel = 1500;
+    
+    const extraLevelIndex = Math.floor(additionalExp / expPerExtraLevel);
+    const currentLvlNum = 10 + extraLevelIndex;
+    
+    const expForCurrent = baseExp + (extraLevelIndex * expPerExtraLevel);
+    const expForNext = baseExp + ((extraLevelIndex + 1) * expPerExtraLevel);
+    
+    currentLevel = {
+      level: currentLvlNum,
+      title: `초월 낚시신 ${extraLevelIndex + 1}단계`,
+      emoji: '🌌',
+      expRequired: expForCurrent,
+      color: '#FFD700',
+      reward: `초월 ${extraLevelIndex + 1}단계 기념 스페셜 뱃지`
+    };
+    
+    nextLevel = {
+      level: currentLvlNum + 1,
+      expRequired: expForNext,
+    };
   }
 
   const expInCurrentLevel = totalExp - currentLevel.expRequired;
-  const expNeededForNext = nextLevel
-    ? nextLevel.expRequired - currentLevel.expRequired
-    : 0;
-  const progressPct = nextLevel
-    ? Math.min(100, Math.round((expInCurrentLevel / expNeededForNext) * 100))
-    : 100;
+  const expNeededForNext = nextLevel.expRequired - currentLevel.expRequired;
+  const progressPct = Math.min(100, Math.max(0, Math.round((expInCurrentLevel / expNeededForNext) * 100)));
 
   return {
     ...currentLevel,
@@ -69,7 +91,7 @@ export const getLevelInfo = (totalExp = 0) => {
     expNeededForNext,
     progressPct,
     nextLevel,
-    isMaxLevel: !nextLevel,
+    isMaxLevel: false, // 만렙 삭제
   };
 };
 

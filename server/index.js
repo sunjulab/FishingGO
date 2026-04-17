@@ -268,13 +268,38 @@ const EXP_REWARDS = {
 
 // totalExp 기반으로 레벨 정보 계산
 function getLevelFromExp(totalExp) {
-  let current = LEVEL_CONFIG[0];
-  for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
-    if (totalExp >= LEVEL_CONFIG[i].expRequired) { current = LEVEL_CONFIG[i]; break; }
+  let current;
+  let next;
+
+  if (totalExp < 5000) {
+    for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+      if (totalExp >= LEVEL_CONFIG[i].expRequired) {
+        current = LEVEL_CONFIG[i];
+        next = LEVEL_CONFIG[i + 1] || { level: 10, expRequired: 5000 };
+        break;
+      }
+    }
+  } else {
+    const baseExp = 5000;
+    const additionalExp = totalExp - baseExp;
+    const expPerExtraLevel = 1500;
+    const extraLevelIndex = Math.floor(additionalExp / expPerExtraLevel);
+    const currentLvlNum = 10 + extraLevelIndex;
+
+    current = {
+      level: currentLvlNum,
+      title: `초월 낙시신 ${extraLevelIndex + 1}단계`,
+      expRequired: baseExp + (extraLevelIndex * expPerExtraLevel)
+    };
+    next = {
+      level: currentLvlNum + 1,
+      expRequired: baseExp + ((extraLevelIndex + 1) * expPerExtraLevel)
+    };
   }
-  const next = LEVEL_CONFIG.find(l => l.level === current.level + 1) || null;
+
   const expInLevel = totalExp - current.expRequired;
-  const expNeeded  = next ? next.expRequired - current.expRequired : 0;
+  const expNeeded = next.expRequired - current.expRequired;
+  
   return { ...current, expInLevel, expNeeded, next, totalExp };
 }
 
