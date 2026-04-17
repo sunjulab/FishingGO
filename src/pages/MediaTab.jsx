@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, ShoppingBag, Tv, Flame, Search, X, TrendingUp, ChevronRight, Star, ShoppingCart, ShoppingBag as BagIcon, ExternalLink, Maximize2 } from 'lucide-react';
 import { useToastStore } from '../store/useToastStore';
 
-const CATEGORIES = ['전체', '최신', '루어', '찌낚시', '원투', '선상', '에깅'];
+const CATEGORIES = ['전체', '검색결과', '최신', '루어', '찌낚시', '원투', '선상', '에깅'];
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const FALLBACK_VIDEOS = [
@@ -46,11 +46,36 @@ export default function MediaTab() {
 
   const filteredVideos = useMemo(() => {
     return videos.filter(video => {
-      const matchCategory = activeChip === '전체' || video.category === activeChip;
-      const matchSearch = video.title.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCategory && matchSearch;
+      const matchCategory = activeChip === '전체' || activeChip === '검색결과' || video.category === activeChip;
+      // const matchSearch = video.title.toLowerCase().includes(searchQuery.toLowerCase()); // 통합 검색 API 사용 (로컬 검색 방지)
+      return matchCategory;
     });
-  }, [videos, activeChip, searchQuery]);
+  }, [videos, activeChip]);
+
+  const handleSearch = async (e) => {
+    if (e.key === 'Enter') {
+      if (!searchQuery.trim()) {
+        setActiveChip('전체');
+        return fetchVideos();
+      }
+      try {
+        setLoading(true);
+        setActiveChip('검색결과'); // 검색결과 카테고리로 강제 이동
+        const res = await fetch(`${API}/api/media/youtube/search?q=${encodeURIComponent(searchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setVideos(data.videos && data.videos.length > 0 ? data.videos : FALLBACK_VIDEOS);
+        } else {
+          setVideos(FALLBACK_VIDEOS);
+        }
+      } catch (err) {
+        setVideos(FALLBACK_VIDEOS);
+        addToast('검색 중 서버 오류가 발생했습니다.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F2F2F7', paddingBottom: '100px', overflowX: 'hidden' }}>
@@ -121,9 +146,10 @@ export default function MediaTab() {
             <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#8E8E93' }} size={18} />
             <input 
               type="text" 
-              placeholder="영상 제목을 검색하세요"
+              placeholder="검색어를 입력하고 Enter를 누르세요 (예: 돌돔 낚시)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
               style={{ width: '100%', padding: '16px 16px 16px 48px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '18px', fontSize: '15px', fontWeight: '700', outline: 'none' }}
             />
         </div>

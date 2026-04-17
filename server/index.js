@@ -644,7 +644,7 @@ app.get('/api/weather/cctv', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'API Error' }); }
 });
 
-// --- 유튜브 비디오 API (최신 영상 자동 렌더링용) ---
+// --- 유튜브 비디오 API (검색 및 최신 영상) ---
 const FALLBACK_VIDEOS = [
   { id: '1', title: '[앵쩡TV] 미지의 포인트에서 만난 가을 배스! (미친 입질)', category: '루어', youtubeId: 'XXYHZnsZse0', views: '1.2M', description: '루어 낚시의 꽃, 런커 배스 히트부터 랜딩까지 숨막히는 순간!', products: [{ name: '앵쩡 추천 루어대 풀세트', price: '185,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' }] },
   { id: '2', title: '[진석기시대] 소문이 자자한 갯바위 명포인트에서 24시간 캠핑 낚시!!', category: '선상', youtubeId: '_SUmTxKlZ68', views: '984k', description: '직접 잡은 대자연의 선물! 날 것 그대로의 원초적인 낚시 먹방.', products: [{ name: '진석기 생존용 캠핑 칼', price: '45,000원', discount: '5%', img: 'https://plus.unsplash.com/premium_photo-1678812638848-8ef7c0b0afaa?auto=format&fit=crop&w=100&q=60' }] },
@@ -652,6 +652,27 @@ const FALLBACK_VIDEOS = [
   { id: '4', title: '[밀루유떼] 쭈꾸미, 갑오징어 두 마리 토끼 다 잡는 가성비 갑 채비법', category: '에깅', youtubeId: 'N_ICJmZlmnc', views: '710k', description: '생활 낚시 끝판왕, 에깅 낚시 초보자도 바로 따라하는 액션 가이드.', products: [{ name: '국민 에기 10색 혼합 세트', price: '15,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' }] }
 ];
 
+app.get('/api/media/youtube/search', async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.status(400).json({ error: 'No query' });
+  try {
+    const yts = require('yt-search');
+    const result = await yts(q + ' 낚시');
+    const searchVideos = result.videos.slice(0, 15).map((item, idx) => ({
+      id: `search_${item.videoId}`,
+      title: item.title,
+      category: '검색결과',
+      youtubeId: item.videoId,
+      views: item.views ? `${(item.views/10000).toFixed(1)}만` : 'NEW', 
+      description: item.description || `${item.author.name} 크리에이터의 낚시 검색 결과입니다.`,
+      products: FALLBACK_VIDEOS[idx % 4].products
+    }));
+    res.json({ videos: searchVideos.length > 0 ? searchVideos : FALLBACK_VIDEOS, source: 'yt-search' });
+  } catch (err) {
+    console.error('YTS Error:', err.message);
+    res.status(500).json({ videos: FALLBACK_VIDEOS, source: 'fallback (error)' });
+  }
+});
 app.get('/api/media/youtube', async (req, res) => {
   try {
     const channelId = process.env.YOUTUBE_CHANNEL_ID;
