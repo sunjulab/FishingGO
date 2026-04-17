@@ -6,12 +6,32 @@ const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fishinggo_secret_2024';
 
 // In-Memory Fallback - DB 없어도 즉시 회원가입/로그인 작동
+const USERS_FILE = path.join(__dirname, 'users.json');
 let memUsers = [];
+try {
+  if (fs.existsSync(USERS_FILE)) {
+    memUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    console.log(`[Fallback] 로컬 보존 파일 로드 완료. (총 ${memUsers.length}명)`);
+  }
+} catch (e) {
+  console.log('[Fallback] users.json 로드 실패, 초기화합니다.');
+}
+
+function saveMemUsers() {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(memUsers, null, 2));
+  } catch (e) {
+    console.error('[Fallback] 로컬 저장 실패:', e);
+  }
+}
+
 let dbReady = false;
 
 // ─── MongoDB 연결 ───────────────────────────────────────────────────────────
@@ -385,7 +405,8 @@ app.post('/api/auth/register', async (req, res) => {
       if (memUsers.find(u => u.email === email)) return res.status(400).json({ error: '이미 등록된 이메일입니다.' });
       if (memUsers.find(u => u.name === name)) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
       const hashed = await bcrypt.hash(password, 10);
-      memUsers.push({ id: Date.now().toString(), email, password: hashed, name, level: 1, exp: 0, tier: 'Silver', avatar: 'https://i.pravatar.cc/150?img=11', followers: [], following: [], lastAttendance: null, totalAttendance: 0 });
+      memUsers.push({ id: Date.now().toString(), email, password: hashed, name, level: 1, exp: 0, tier: 'Silver', avatar: 'https://i.pravatar.cc/150?img=11', followers: [], following: [], lastAttendance: null, totalAttendance: 0, totalExp: 0 });
+      saveMemUsers(); // 영구 보존
       return res.json({ success: true });
     }
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
@@ -408,7 +429,11 @@ app.post('/api/auth/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
 
     const { justAttended, leveledUp, expGained, streak } = applyAttendance(user);
-    if (dbReady && User) await user.save();
+    if (dbReady && User) {
+      await user.save();
+    } else {
+      saveMemUsers(); // 출석 및 경험치 갱신 보존
+    }
 
     const token = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
@@ -439,13 +464,18 @@ app.post('/api/auth/google', async (req, res) => {
         let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
         if (!safeName) safeName = 'Fisher';
         if (memUsers.find(u => u.name === safeName)) safeName = safeName + Math.floor(Math.random() * 9999);
-        user = { id: Date.now().toString(), email, password: 'google_oauth', name: safeName, level: 1, exp: 0, tier: 'Silver', avatar: picture || 'https://i.pravatar.cc/150?img=11', followers: [], following: [], lastAttendance: null, totalAttendance: 0 };
+        user = { id: Date.now().toString(), email, password: 'google_oauth', name: safeName, level: 1, exp: 0, tier: 'Silver', avatar: picture || 'https://i.pravatar.cc/150?img=11', followers: [], following: [], lastAttendance: null, totalAttendance: 0, totalExp: 0 };
         memUsers.push(user);
+        saveMemUsers(); // 영구 보존
       }
     }
 
     const { justAttended, leveledUp } = applyAttendance(user);
-    if (dbReady && User) await user.save();
+    if (dbReady && User) {
+      await user.save();
+    } else {
+      saveMemUsers(); // 로그인 시 출석 보존
+    }
 
     const token = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: buildUserResponse(user), justAttended, leveledUp });
@@ -469,6 +499,7 @@ app.put('/api/user/nickname', async (req, res) => {
       if (userIdx === -1) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
       if (memUsers.find(u => u.name === newName)) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
       memUsers[userIdx].name = newName;
+      saveMemUsers(); // 영구 보존
       return res.json({ success: true, name: newName });
     }
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
@@ -502,6 +533,7 @@ app.post('/api/user/exp', async (req, res) => {
       const prevLevel = getLevelFromExp(prevTotalExp).level;
       const newLevelInfo = getLevelFromExp(u.totalExp);
       u.level = newLevelInfo.level;
+      saveMemUsers();
       return res.json({ success: true, expGained: expAmount, ...buildUserResponse(u), leveledUp: newLevelInfo.level > prevLevel });
     }
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
