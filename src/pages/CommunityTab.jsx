@@ -81,7 +81,7 @@ export default function CommunityTab() {
         setTimeout(() => navigate('/vvip-subscribe'), 1500);
       } else {
         addToast('선장님 환영합니다! 및 비즈니스 홍보글을 작성합니다.', 'success');
-        navigate('/write?type=business');
+        navigate('/write-business');
       }
     } else if (activeTab === 'notice') {
       if (!isAdmin) {
@@ -346,7 +346,7 @@ export default function CommunityTab() {
                 {/* 하단 강력한 CTA 영역 (예약 전환율 극대화) */}
                 <div style={{ padding: '12px 16px', background: post.isPinned ? '#FFFDF4' : '#F8F9FA', borderTop: post.isPinned ? '1px solid rgba(255,215,0,0.3)' : '1px solid #F0F2F7', display: 'flex', gap: '8px' }}>
                   <button 
-                    onClick={() => window.location.href = 'tel:010-1234-5678'}
+                    onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || '010-1234-5678'}`; }}
                     style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: '950', fontSize: '14px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,86,210,0.2)', transition: 'transform 0.15s' }}
                     onMouseEnter={(e) => e.currentTarget.style.transform='scale(1.02)'}
                     onMouseLeave={(e) => e.currentTarget.style.transform='scale(1)'}

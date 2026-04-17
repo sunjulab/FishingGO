@@ -20,6 +20,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const CrewChat = lazy(() => import('./pages/CrewChat'));
 const WeatherDashboard = lazy(() => import('./pages/WeatherDashboard'));
 const VVIPSubscribe = lazy(() => import('./pages/VVIPSubscribe'));
+const WriteBusinessPost = lazy(() => import('./pages/WriteBusinessPost'));
 import RealTimeAlert from './components/RealTimeAlert';
 
 // 스켈레톤 로딩 뼈대
@@ -157,6 +158,7 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/weather" element={<WeatherDashboard />} />
               <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
+              <Route path="/write-business" element={<WriteBusinessPost />} />
             </Routes>
           </Suspense>
         </div>
