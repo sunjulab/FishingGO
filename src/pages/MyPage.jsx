@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/index';
-import { useUserStore, TIER_CONFIG } from '../store/useUserStore';
+import { useUserStore, TIER_CONFIG, getLevelInfo, EXP_REWARDS } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { 
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
@@ -17,16 +17,17 @@ export default function MyPage() {
   const canAccessPartnerCenter = canAccessBusinessShop();
   const fileInputRef = useRef(null);
   const tierBadge = TIER_CONFIG[userTier] || TIER_CONFIG.FREE;
+  const levelInfo  = getLevelInfo(user?.totalExp || 0);
   
   const [activeTab, setActiveTab] = useState('records');
-  const [showModal, setShowModal] = useState(null); // 'noti', 'premium', 'security'
+  const [showModal, setShowModal] = useState(null); // 'noti', 'premium', 'security', 'level'
   
   const [realPosts, setRealPosts] = useState([]);
   const [realRecords, setRealRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [newName, setNewName] = useState(user.name);
+  const [newName, setNewName] = useState(user?.name || '');
   const [error, setError] = useState('');
 
   // 설정 대시보드 상태
@@ -197,36 +198,77 @@ export default function MyPage() {
                 </div>
               ) : (
                 <>
-                  <h2 style={{ fontSize: '24px', fontWeight: '950', color: '#1c1c1e' }}>{user.name}</h2>
+                  <h2 style={{ fontSize: '22px', fontWeight: '950', color: '#1c1c1e' }}>{user.name}</h2>
                   <div onClick={() => setIsEditing(true)} style={{ backgroundColor: '#F2F2F7', padding: '6px', borderRadius: '8px', cursor: 'pointer' }}><Edit3 size={14} color="#8E8E93" /></div>
                 </>
               )}
             </div>
-            <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '600', marginTop: '4px' }}>{user.email}</p>
-            <div style={{ marginTop: '16px' }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px' }}>
-                  <span>LEVEL {user.level || 1}</span>
-                  <span style={{ color: '#0056D2' }}>{(user.exp || 0).toLocaleString()} / {nextLevelExp.toLocaleString()} XP</span>
-               </div>
-               <div style={{ width: '100%', height: '8px', background: '#E5E5EA', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${expPercentage}%`, height: '100%', background: 'linear-gradient(90deg, #0056D2, #00C48C)', borderRadius: '4px' }}></div>
-               </div>
+            <p style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{user.email}</p>
+
+            {/* 레벨 카드 */}
+            <div
+              onClick={() => setShowModal('level')}
+              style={{ marginTop: '14px', background: 'linear-gradient(135deg, #EBF2FF 0%, #F0FFF8 100%)', borderRadius: '18px', padding: '12px 16px', cursor: 'pointer', border: '1.5px solid #D0E4FF' }}
+            >
+              {/* 쫐호 + 이모지 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '18px' }}>{levelInfo.emoji}</span>
+                  <div>
+                    <div style={{ fontSize: '10px', color: '#0056D2', fontWeight: '900', letterSpacing: '0.04em' }}>LV.{levelInfo.level}</div>
+                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#1c1c1e', lineHeight: 1.2 }}>{levelInfo.title}</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {levelInfo.isMaxLevel ? (
+                    <span style={{ fontSize: '10px', fontWeight: '900', color: '#FFD700' }}>MAX LEVEL 🏆</span>
+                  ) : (
+                    <span style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700' }}>
+                      {levelInfo.expInCurrentLevel} / {levelInfo.expNeededForNext} XP
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* 프로그레스 바 */}
+              <div style={{ width: '100%', height: '7px', background: 'rgba(0,86,210,0.15)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${levelInfo.progressPct}%`, height: '100%',
+                  background: `linear-gradient(90deg, ${levelInfo.color}, #00C48C)`,
+                  borderRadius: '4px', transition: 'width 0.6s ease'
+                }} />
+              </div>
+              {/* 다음 레벨 보상 */}
+              {levelInfo.nextLevel && (
+                <div style={{ fontSize: '10px', color: '#0056D2', fontWeight: '700', marginTop: '6px' }}>
+                  LV.{levelInfo.nextLevel.level} 달성 시: {levelInfo.nextLevel.reward || levelInfo.nextLevel.title}
+                </div>
+              )}
             </div>
+
+            {/* 연속출석 */}
+            {(user.streak || 0) > 0 && (
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '14px' }}>🔥</span>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#FF5A5F' }}>{user.streak}일 연속 출석 중!</span>
+                {(user.streak >= 7) && <span style={{ fontSize: '9px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '8px', fontWeight: '900' }}>+80 EXP 발동 중</span>}
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', backgroundColor: '#F2F2F7', borderRadius: '24px', overflow: 'hidden', marginTop: '30px', border: '1.5px solid #F2F2F7' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', backgroundColor: '#F2F2F7', borderRadius: '24px', overflow: 'hidden', marginTop: '24px', border: '1.5px solid #F2F2F7' }}>
            {[
              { label: '조과기록', val: realRecords.length, icon: Trophy, color: '#FF9B26' },
              { label: '팔로워', val: user.followers?.length || 0, icon: Star, color: '#0056D2' },
-             { label: '활동피드', val: realPosts.length, icon: Heart, color: '#FF5A5F' }
+             { label: '활동픽드', val: realPosts.length, icon: Heart, color: '#FF5A5F' },
+             { label: '연속출석', val: `${user.streak || 0}일`, icon: Calendar, color: '#00C48C' },
            ].map(s => (
-             <div key={s.label} style={{ backgroundColor: '#fff', padding: '16px 10px', textAlign: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '4px' }}>
-                   <s.icon size={12} color={s.color} fill={s.color} />
-                   <span style={{ fontSize: '18px', fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
+             <div key={s.label} style={{ backgroundColor: '#fff', padding: '14px 6px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}>
+                   <s.icon size={11} color={s.color} fill={s.color} />
+                   <span style={{ fontSize: '16px', fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
+                <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
              </div>
            ))}
         </div>

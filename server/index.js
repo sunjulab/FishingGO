@@ -218,38 +218,105 @@ setInterval(updateAllStationsCache, 3600000);
    AUTH & USER LEVELING API (DB + 인메모리 이중 레이어)
 ========================================================= */
 
+// 레벨 설정 (서버와 프론트엔드를 자동 동기화)
+const LEVEL_CONFIG = [
+  { level: 1,  title: '초보 낙시꿼',   expRequired: 0    },
+  { level: 2,  title: '견습 낙시꿼',   expRequired: 100  },
+  { level: 3,  title: '낙시 입문자',   expRequired: 250  },
+  { level: 4,  title: '낙시 애호가',   expRequired: 500  },
+  { level: 5,  title: '베테랑 낙시인', expRequired: 850  },
+  { level: 6,  title: '중급 낙시꿼',   expRequired: 1300 },
+  { level: 7,  title: '고수 낙시인',   expRequired: 1900 },
+  { level: 8,  title: '낙시 장인',     expRequired: 2700 },
+  { level: 9,  title: '전설의 낙시인', expRequired: 3700 },
+  { level: 10, title: '낙시의 신',     expRequired: 5000 },
+];
+
+// 활동별 EXP 보상
+const EXP_REWARDS = {
+  attendance:    20,
+  post_write:    30,
+  record_write:  50,
+  comment_write: 10,
+  like_receive:   5,
+  point_visit:   15,
+  photo_upload:  25,
+  first_catch:  100,
+  weekly_streak: 80,
+  monthly_streak:300,
+};
+
+// totalExp 기반으로 레벨 정보 계산
+function getLevelFromExp(totalExp) {
+  let current = LEVEL_CONFIG[0];
+  for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+    if (totalExp >= LEVEL_CONFIG[i].expRequired) { current = LEVEL_CONFIG[i]; break; }
+  }
+  const next = LEVEL_CONFIG.find(l => l.level === current.level + 1) || null;
+  const expInLevel = totalExp - current.expRequired;
+  const expNeeded  = next ? next.expRequired - current.expRequired : 0;
+  return { ...current, expInLevel, expNeeded, next, totalExp };
+}
+
 function buildUserResponse(user) {
+  const totalExp = user.totalExp || 0;
+  const levelInfo = getLevelFromExp(totalExp);
   return {
-    id: user._id || user.id,
-    email: user.email,
-    name: user.name,
-    level: user.level || 1,
-    exp: user.exp || 0,
-    tier: user.tier || 'Silver',
-    avatar: user.avatar || 'https://i.pravatar.cc/150?img=11',
-    followers: user.followers || [],
-    following: user.following || [],
-    totalAttendance: user.totalAttendance || 0
+    id:              user._id || user.id,
+    email:           user.email,
+    name:            user.name,
+    level:           levelInfo.level,
+    exp:             levelInfo.expInLevel,
+    totalExp,
+    levelTitle:      levelInfo.title,
+    expNeeded:       levelInfo.expNeeded,
+    tier:            user.tier || 'FREE',
+    avatar:          user.avatar || null,
+    picture:         user.picture || null,
+    followers:       user.followers || [],
+    following:       user.following || [],
+    totalAttendance: user.totalAttendance || 0,
+    streak:          user.streak || 0,
   };
 }
 
 function applyAttendance(user) {
   const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   let justAttended = false;
   let leveledUp = false;
+  let expGained = 0;
+
   if (user.lastAttendance !== today) {
+    // 연속 출석 스트릭
+    if (user.lastAttendance === yesterday) {
+      user.streak = (user.streak || 0) + 1;
+    } else {
+      user.streak = 1; // 출석 끄김 시 리셋
+    }
+
     user.lastAttendance = today;
     user.totalAttendance = (user.totalAttendance || 0) + 1;
-    user.exp = (user.exp || 0) + 15;
-    const levelThreshold = (user.level || 1) * 100;
-    if (user.exp >= levelThreshold) {
-      user.exp -= levelThreshold;
-      user.level = (user.level || 1) + 1;
-      leveledUp = true;
-    }
+
+    // 기본 출석 EXP
+    expGained = EXP_REWARDS.attendance;
+
+    // 연속출석 보너스
+    if (user.streak >= 30) expGained += EXP_REWARDS.monthly_streak;
+    else if (user.streak >= 7) expGained += EXP_REWARDS.weekly_streak;
+    else if (user.streak >= 3) expGained += 20; // 3일 연속 소액 보너스
+
+    // totalExp 기반으로 업데이트
+    const prevTotalExp = user.totalExp || 0;
+    user.totalExp = prevTotalExp + expGained;
+    const prevLevel = getLevelFromExp(prevTotalExp).level;
+    const newLevel  = getLevelFromExp(user.totalExp).level;
+    user.level = newLevel;
+
+    if (newLevel > prevLevel) leveledUp = true;
     justAttended = true;
   }
-  return { justAttended, leveledUp };
+  return { justAttended, leveledUp, expGained, streak: user.streak || 0 };
 }
 
 // --- 아이디(email 필드 활용) 중복 확인 ---
@@ -340,11 +407,11 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
 
-    const { justAttended, leveledUp } = applyAttendance(user);
+    const { justAttended, leveledUp, expGained, streak } = applyAttendance(user);
     if (dbReady && User) await user.save();
 
     const token = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: buildUserResponse(user), justAttended, leveledUp });
+    res.json({ token, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
@@ -405,6 +472,39 @@ app.put('/api/user/nickname', async (req, res) => {
       return res.json({ success: true, name: newName });
     }
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
+});
+
+// --- 활동별 EXP 지급 ---
+app.post('/api/user/exp', async (req, res) => {
+  try {
+    const { email, activity } = req.body;
+    if (!email || !activity) return res.status(400).json({ error: 'email과 activity가 필요합니다.' });
+    const expAmount = EXP_REWARDS[activity];
+    if (!expAmount) return res.status(400).json({ error: '알 수 없는 활동입니다.' });
+
+    let user;
+    if (dbReady && User) {
+      user = await User.findOne({ email });
+      if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      const prevTotalExp = user.totalExp || 0;
+      user.totalExp = prevTotalExp + expAmount;
+      const prevLevel = getLevelFromExp(prevTotalExp).level;
+      const newLevelInfo = getLevelFromExp(user.totalExp);
+      user.level = newLevelInfo.level;
+      await user.save();
+      return res.json({ success: true, expGained: expAmount, ...buildUserResponse(user), leveledUp: newLevelInfo.level > prevLevel });
+    } else {
+      const userIdx = memUsers.findIndex(u => u.email === email);
+      if (userIdx === -1) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      const u = memUsers[userIdx];
+      const prevTotalExp = u.totalExp || 0;
+      u.totalExp = prevTotalExp + expAmount;
+      const prevLevel = getLevelFromExp(prevTotalExp).level;
+      const newLevelInfo = getLevelFromExp(u.totalExp);
+      u.level = newLevelInfo.level;
+      return res.json({ success: true, expGained: expAmount, ...buildUserResponse(u), leveledUp: newLevelInfo.level > prevLevel });
+    }
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 내 게시글 목록 ---

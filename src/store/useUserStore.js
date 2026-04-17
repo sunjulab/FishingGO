@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 
-// 티어 정의 (낮은 순 → 높은 순)
-// FREE → PRO → BUSINESS_LITE → BUSINESS_PRO → BUSINESS_VIP
+// ── 구독 티어 설정 ──────────────────────────────────────────────
 export const TIER_CONFIG = {
   FREE:           { label: null,       color: null,      bg: null },
   PRO:            { label: 'PRO',      color: '#fff',    bg: 'linear-gradient(135deg, #0056D2, #003fa3)' },
@@ -10,13 +9,77 @@ export const TIER_CONFIG = {
   BUSINESS_VIP:   { label: 'VIP',      color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
 };
 
+// ── 레벨 시스템 설정 ────────────────────────────────────────────
+// 레벨별 필요 EXP: 레벨 N 달성에 필요한 누적 EXP
+export const LEVEL_CONFIG = [
+  { level: 1,  title: '초보 낚시꾼',   emoji: '🪱', expRequired: 0,    color: '#8E8E93', reward: '기본 포인트 지도 해금' },
+  { level: 2,  title: '견습 낚시꾼',   emoji: '🎣', expRequired: 100,  color: '#8E8E93', reward: '조황 기록 작성 해금' },
+  { level: 3,  title: '낚시 입문자',   emoji: '🐟', expRequired: 250,  color: '#34C759', reward: '미끼 추천 기능 확장' },
+  { level: 4,  title: '낚시 애호가',   emoji: '🐠', expRequired: 500,  color: '#34C759', reward: '날씨 상세 레이어 해금' },
+  { level: 5,  title: '베테랑 낚시인', emoji: '🐡', expRequired: 850,  color: '#0056D2', reward: '실시간 피딩 알림 해금' },
+  { level: 6,  title: '중급 낚시꾼',   emoji: '🦈', expRequired: 1300, color: '#0056D2', reward: '프리미엄 포인트 즐겨찾기 20개' },
+  { level: 7,  title: '고수 낚시인',   emoji: '🎯', expRequired: 1900, color: '#FF9B26', reward: '조황 예보 7일 미리보기' },
+  { level: 8,  title: '낚시 장인',     emoji: '⚓', expRequired: 2700, color: '#FF9B26', reward: '독점 낚시 포인트 지도 열람' },
+  { level: 9,  title: '전설의 낚시인', emoji: '👑', expRequired: 3700, color: '#FF5A5F', reward: '전국 대물 신고 우선 순위' },
+  { level: 10, title: '낚시의 신',     emoji: '🌊', expRequired: 5000, color: '#FFD700', reward: '명예의 전당 등재 + VIP 배지' },
+];
+
+// ── EXP 활동 보상표 ─────────────────────────────────────────────
+export const EXP_REWARDS = {
+  attendance:       { exp: 20,  label: '출석 체크',         icon: '📅' },
+  post_write:       { exp: 30,  label: '게시글 작성',       icon: '📝' },
+  record_write:     { exp: 50,  label: '조과 기록 등록',    icon: '🐟' },
+  comment_write:    { exp: 10,  label: '댓글 작성',         icon: '💬' },
+  like_receive:     { exp: 5,   label: '좋아요 획득',       icon: '❤️' },
+  point_visit:      { exp: 15,  label: '포인트 방문 확인',  icon: '📍' },
+  photo_upload:     { exp: 25,  label: '낚시 사진 등록',    icon: '📸' },
+  first_catch:      { exp: 100, label: '첫 조과 기록',      icon: '🏆' },
+  weekly_streak:    { exp: 80,  label: '7일 연속 출석',     icon: '🔥' },
+  monthly_streak:   { exp: 300, label: '30일 연속 출석',    icon: '⭐' },
+};
+
+/**
+ * 현재 레벨 정보 반환
+ */
+export const getLevelInfo = (totalExp = 0) => {
+  let currentLevel = LEVEL_CONFIG[0];
+  let nextLevel = LEVEL_CONFIG[1] || null;
+
+  for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+    if (totalExp >= LEVEL_CONFIG[i].expRequired) {
+      currentLevel = LEVEL_CONFIG[i];
+      nextLevel = LEVEL_CONFIG[i + 1] || null;
+      break;
+    }
+  }
+
+  const expInCurrentLevel = totalExp - currentLevel.expRequired;
+  const expNeededForNext = nextLevel
+    ? nextLevel.expRequired - currentLevel.expRequired
+    : 0;
+  const progressPct = nextLevel
+    ? Math.min(100, Math.round((expInCurrentLevel / expNeededForNext) * 100))
+    : 100;
+
+  return {
+    ...currentLevel,
+    totalExp,
+    expInCurrentLevel,
+    expNeededForNext,
+    progressPct,
+    nextLevel,
+    isMaxLevel: !nextLevel,
+  };
+};
+
 export const useUserStore = create((set, get) => ({
-  // 사용자 데이터 — localStorage에서 로드, 없으면 null
+  // 사용자 데이터
   user: JSON.parse(localStorage.getItem('user')) || null,
 
-  // 티어 — localStorage에서 로드, 기본값 FREE
+  // 구독 티어
   userTier: localStorage.getItem('userTier') || 'FREE',
 
+  // ── 기본 유저 업데이트 ──
   updateUser: (newData) => set((state) => {
     const updatedUser = { ...state.user, ...newData };
     localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -26,7 +89,6 @@ export const useUserStore = create((set, get) => ({
   setUser: (newUser) => set(() => {
     if (newUser) {
       localStorage.setItem('user', JSON.stringify(newUser));
-      // 로그인 응답에 tier가 있으면 함께 저장
       if (newUser.tier) localStorage.setItem('userTier', newUser.tier);
     } else {
       localStorage.removeItem('user');
@@ -34,6 +96,28 @@ export const useUserStore = create((set, get) => ({
     return { user: newUser };
   }),
 
+  // ── EXP 추가 (로컬 즉시 반영) ──
+  addExp: (amount, activityKey = '') => set((state) => {
+    if (!state.user) return {};
+    const currentTotalExp = state.user.totalExp || 0;
+    const newTotalExp = currentTotalExp + amount;
+    const newLevelInfo = getLevelInfo(newTotalExp);
+    const oldLevelInfo = getLevelInfo(currentTotalExp);
+
+    const updatedUser = {
+      ...state.user,
+      totalExp: newTotalExp,
+      level: newLevelInfo.level,
+      exp: newLevelInfo.expInCurrentLevel,
+      levelTitle: newLevelInfo.title,
+    };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+    const leveledUp = newLevelInfo.level > oldLevelInfo.level;
+    return { user: updatedUser, lastExpGain: { amount, activityKey, leveledUp, newLevel: newLevelInfo } };
+  }),
+
+  // ── 구독 티어 ──
   setUserTier: (tier) => {
     localStorage.setItem('userTier', tier);
     set({ userTier: tier });
@@ -42,10 +126,17 @@ export const useUserStore = create((set, get) => ({
   logout: () => {
     localStorage.removeItem('user');
     localStorage.removeItem('userTier');
-    set({ user: null, userTier: 'FREE' });
+    set({ user: null, userTier: 'FREE', lastExpGain: null });
   },
 
-  // 권한 헬퍼
+  // ── 레벨 정보 헬퍼 ──
+  getLevelInfo: () => getLevelInfo(get().user?.totalExp || 0),
+
+  // 마지막 EXP 획득 이벤트 (레벨업 알림 등에 활용)
+  lastExpGain: null,
+  clearLastExpGain: () => set({ lastExpGain: null }),
+
+  // ── 권한 헬퍼 ──
   canAccessPremium:      () => ['PRO', 'BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(get().userTier),
   canAccessBusinessPromo:() => ['BUSINESS_PRO', 'BUSINESS_VIP'].includes(get().userTier),
   canAccessBusinessShop: () => ['BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(get().userTier),
