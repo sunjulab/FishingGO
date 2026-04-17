@@ -60,7 +60,6 @@ function useAdPush(ref) {
 export function BannerAd({ style = {} }) {
   const ref = useRef();
   useAdPush(ref);
-  const isLocalhost = window.location.hostname === 'localhost';
 
   return (
     <div
@@ -74,20 +73,15 @@ export function BannerAd({ style = {} }) {
         ...style
       }}
     >
-      {isLocalhost ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '60px', backgroundColor: '#F2F2F7', color: '#8E8E93', fontSize: '12px', fontWeight: '800' }}>
-          배너 광고 테스트 영역
-        </div>
-      ) : (
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'block', width: '100%', minHeight: '60px' }}
-          data-ad-client={PUB_ID}
-          data-ad-slot={SLOT_BANNER}
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        />
-      )}
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block', width: '100%', minHeight: '60px', background: '#f5f5f5' }}
+        data-ad-client={PUB_ID}
+        data-ad-slot={SLOT_BANNER}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+        data-adtest="on"
+      />
     </div>
   );
 }
@@ -99,7 +93,6 @@ export function BannerAd({ style = {} }) {
 export function NativeAd({ style = {} }) {
   const ref = useRef();
   useAdPush(ref);
-  const isLocalhost = window.location.hostname === 'localhost';
 
   return (
     <div
@@ -116,20 +109,15 @@ export function NativeAd({ style = {} }) {
       <div style={{ fontSize: '10px', color: '#aaa', fontWeight: '700', padding: '4px 8px', textAlign: 'right' }}>
         광고 · Sponsored
       </div>
-      {isLocalhost ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '120px', backgroundColor: '#F2F2F7', color: '#8E8E93', fontSize: '12px', fontWeight: '800' }}>
-          네이티브(인피드) 광고 테스트 영역
-        </div>
-      ) : (
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'block' }}
-          data-ad-format="fluid"
-          data-ad-layout="in-article"
-          data-ad-client={PUB_ID}
-          data-ad-slot={SLOT_NATIVE}
-        />
-      )}
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block', minHeight: '120px', background: '#f5f5f5' }}
+        data-ad-format="fluid"
+        data-ad-layout="in-article"
+        data-ad-client={PUB_ID}
+        data-ad-slot={SLOT_NATIVE}
+        data-adtest="on"
+      />
     </div>
   );
 }
