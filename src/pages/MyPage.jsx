@@ -366,6 +366,28 @@ export default function MyPage() {
       )}
 
       {/* 🟦 Settings Section 🟦 */}
+      {/* ── 마스터 전용 관리 패널 ── */}
+      {isAdmin && (
+        <div style={{ padding: '0 24px 16px' }}>
+          <div style={{ background: 'linear-gradient(135deg, #0A0F1C, #1A2340)', borderRadius: '20px', padding: '16px 18px', border: '1.5px solid rgba(255,215,0,0.25)' }}>
+            <div style={{ fontSize: '10px', color: 'rgba(255,215,0,0.7)', fontWeight: '900', letterSpacing: '0.1em', marginBottom: '12px' }}>⚙️ MASTER ADMIN</div>
+            <button
+              onClick={() => navigate('/cctv-admin')}
+              style={{ width: '100%', padding: '14px 16px', background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: '#fff', textAlign: 'left' }}
+            >
+              <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '18px' }}>📺</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '14px', fontWeight: '900', color: '#FFD700' }}>CCTV 채널 관리</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>지역별 YouTube ID 직접 수정 · 미리보기</div>
+              </div>
+              <ChevronRight size={16} color="#FFD700" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: '10px 24px 40px' }}>
          <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7' }}>
             {menuItems.map((item, idx) => (
@@ -432,8 +454,8 @@ export default function MyPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
                       {[
                         { tier: 'FREE',          name: '무료',         price: '₩0',       desc: '기본 포인트 기능' },
-                        { tier: 'PRO',           name: 'PRO',          price: '₩4,900/월', desc: '프리미엄 포인트 + 히트맵' },
-                        { tier: 'BUSINESS_LITE', name: 'Business Lite',price: '₩9,900/월', desc: '광고 없이 무제한 등록 (홍보글 제외)' },
+                        { tier: 'PRO',           name: 'PRO',          price: '₩4,900/월', desc: '히트맵 + CCTV + 비밀 포인트' },
+                        { tier: 'BUSINESS_LITE', name: 'Business Lite',price: '₩9,900/월', desc: '광고제거 + CCTV/히트맵/비밀포인트 (홍보글 제외)' },
                         { tier: 'BUSINESS_PRO',  name: 'Business Pro', price: '₩29,900/월', desc: '예약 관리 + 조과 갤러리 노출' },
                         { tier: 'BUSINESS_VIP',  name: 'Business VIP', price: '₩59,900/월', desc: '전체 기능 + VIP 지원' },
                       ].map(plan => {

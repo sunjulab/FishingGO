@@ -637,25 +637,92 @@ app.get('/api/weather/precision', (req, res) => {
 app.get('/api/weather/cctv', async (req, res) => {
   const { stationId } = req.query;
   try {
-    const { getCctvInfo } = require('./cctvMapping');
-    const info = getCctvInfo(stationId || 'DT_0001');
-
+    const { getCctvInfo, CCTV_MAP } = require('./cctvMapping');
+    // 마스터가 앱에서 직접 변경한 오버라이드가 있으면 우선 적용
+    const override = cctvOverrides[stationId];
+    let info;
+    if (override) {
+      const base = CCTV_MAP[stationId] || {};
+      const merged = { ...base, ...override };
+      if (merged.type === 'youtube' && merged.youtubeId) {
+        merged.embedUrl = `https://www.youtube.com/embed/${merged.youtubeId}?autoplay=1&mute=1&controls=1&rel=0`;
+        merged.thumbnailUrl = `https://img.youtube.com/vi/${merged.youtubeId}/maxresdefault.jpg`;
+      }
+      info = merged;
+    } else {
+      info = getCctvInfo(stationId || 'DT_0001');
+    }
     res.json({
-      obsCode:     stationId,
-      areaName:    info.areaName,
-      region:      info.region,
-      label:       info.label,
-      type:        info.type,           // 'youtube' | 'image'
-      url:         info.embedUrl,       // YouTube embed URL (youtube 타입)
-      thumbnailUrl: info.thumbnailUrl,  // 썸네일 또는 지역 대표 이미지
+      obsCode:      stationId,
+      areaName:     info.areaName,
+      region:       info.region,
+      label:        info.label,
+      type:         info.type,
+      url:          info.embedUrl,
+      thumbnailUrl: info.thumbnailUrl,
       fallbackImg:  info.fallbackImg,
-      youtubeId:   info.youtubeId || null,
+      youtubeId:    info.youtubeId || null,
+      isOverride:   !!override,
     });
   } catch (err) {
     console.error('[CCTV API 오류]', err.message);
     res.status(500).json({ error: 'CCTV 정보 조회 실패' });
   }
 });
+
+// ── 마스터 전용 CCTV 관리 API ──────────────────────────────────────────────
+// In-Memory 오버라이드 저장소 (서버 재시작 시 초기화 → 추후 DB 연동 가능)
+let cctvOverrides = {}; // { obsCode: { youtubeId, type, areaName, label } }
+
+function isMaster(req) {
+  const adminId = req.headers['x-admin-id'] || req.query.adminId || req.body?.adminId;
+  return adminId === 'sunjulab';
+}
+
+// GET /api/admin/cctv — 전체 CCTV 목록 + 오버라이드 현황 조회
+app.get('/api/admin/cctv', (req, res) => {
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
+  const { CCTV_MAP } = require('./cctvMapping');
+  const list = Object.entries(CCTV_MAP).map(([obsCode, base]) => ({
+    obsCode,
+    areaName:   base.areaName,
+    region:     base.region,
+    type:       (cctvOverrides[obsCode]?.type)       || base.type,
+    youtubeId:  (cctvOverrides[obsCode]?.youtubeId)  || base.youtubeId || null,
+    label:      (cctvOverrides[obsCode]?.label)      || base.label,
+    isOverride: !!cctvOverrides[obsCode],
+  }));
+  res.json({ list, overrideCount: Object.keys(cctvOverrides).length });
+});
+
+// PUT /api/admin/cctv/:obsCode — 특정 지역 YouTube ID / 타입 수정
+app.put('/api/admin/cctv/:obsCode', (req, res) => {
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
+  const { obsCode } = req.params;
+  const { youtubeId, type, label } = req.body;
+  if (!obsCode) return res.status(400).json({ error: 'obsCode 필요' });
+
+  const prev = cctvOverrides[obsCode] || {};
+  cctvOverrides[obsCode] = {
+    ...prev,
+    ...(youtubeId !== undefined && { youtubeId }),
+    ...(type      !== undefined && { type }),
+    ...(label     !== undefined && { label }),
+    updatedAt: new Date().toISOString(),
+  };
+  console.log(`[마스터 CCTV 수정] ${obsCode}:`, cctvOverrides[obsCode]);
+  res.json({ success: true, obsCode, override: cctvOverrides[obsCode] });
+});
+
+// DELETE /api/admin/cctv/:obsCode — 오버라이드 제거 (기본값으로 복원)
+app.delete('/api/admin/cctv/:obsCode', (req, res) => {
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
+  const { obsCode } = req.params;
+  delete cctvOverrides[obsCode];
+  console.log(`[마스터 CCTV 초기화] ${obsCode} 오버라이드 제거`);
+  res.json({ success: true, message: `${obsCode} 기본값으로 복원` });
+});
+
 
 // --- 유튜브 비디오 API (검색 및 최신 영상) ---
 const FALLBACK_VIDEOS = [

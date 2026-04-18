@@ -21,6 +21,7 @@ const CrewChat = lazy(() => import('./pages/CrewChat'));
 const WeatherDashboard = lazy(() => import('./pages/WeatherDashboard'));
 const VVIPSubscribe = lazy(() => import('./pages/VVIPSubscribe'));
 const WriteBusinessPost = lazy(() => import('./pages/WriteBusinessPost'));
+const CctvAdmin = lazy(() => import('./pages/CctvAdmin'));
 import RealTimeAlert from './components/RealTimeAlert';
 
 // 스켈레톤 로딩 뼈대
@@ -45,7 +46,7 @@ function BottomNav() {
   ];
 
   // 상세/글쓰기 페이지에서는 내비게이션 숨김
-  const hideNav = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/'].some(path => location.pathname.includes(path));
+  const hideNav = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin'].some(path => location.pathname.includes(path));
   if (hideNav) return null;
 
   return (
@@ -78,7 +79,7 @@ function Header() {
   const userTier = useUserStore((state) => state.userTier);
   const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
   
-  const hideHeader = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/'].some(path => location.pathname !== '/' && location.pathname.includes(path)) || location.pathname === '/';
+  const hideHeader = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin'].some(path => location.pathname !== '/' && location.pathname.includes(path)) || location.pathname === '/';
   if (hideHeader) return null;
 
   const currentTier = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
@@ -185,6 +186,7 @@ export default function App() {
               <Route path="/weather" element={<WeatherDashboard />} />
               <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
               <Route path="/write-business" element={<WriteBusinessPost />} />
+              <Route path="/cctv-admin" element={<CctvAdmin />} />
             </Routes>
           </Suspense>
         </div>
