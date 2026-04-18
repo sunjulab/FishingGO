@@ -250,18 +250,24 @@ export default function MapHome() {
 
   /* ── 맵 리사이즈 (뷰모드 변경 시) ── */
   useEffect(() => {
-    if (viewMode === 'map' && mapRef.current) {
-      // 즉시 relayout 시도 및 지연 실행으로 안전성 확보
-      mapRef.current.relayout();
-      const timer = setTimeout(() => {
+    if (viewMode === 'map') {
+      // 지도 뷰로 전환 시 로딩 화면 즉시 제거
+      setMapLoaded(true);
+      if (mapRef.current) {
         mapRef.current.relayout();
-        if (selectedPoint) {
-          mapRef.current.panTo(new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng));
-        }
-      }, 50);
-      return () => clearTimeout(timer);
+        const timer = setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.relayout();
+            if (selectedPoint) {
+              mapRef.current.panTo(new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng));
+            }
+          }
+        }, 50);
+        return () => clearTimeout(timer);
+      }
     }
   }, [viewMode, selectedPoint]);
+
 
   /* ── 커뮤니티 최신글 ── */
   useEffect(() => {
