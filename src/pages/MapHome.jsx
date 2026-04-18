@@ -37,7 +37,7 @@ export default function MapHome() {
   const [showSearch, setShowSearch]         = useState(false);
   const [recentPosts, setRecentPosts]       = useState([]);
   const [showCCTV, setShowCCTV]             = useState(false);
-  const [cctvUrl, setCctvUrl]               = useState('');
+  const [cctvData, setCctvData]             = useState(null);  // { type, url, fallbackImg, areaName, label }
   const [cctvLoading, setCctvLoading]       = useState(false);
   const [sheetVisible, setSheetVisible]     = useState(false);
   const [heatmapMode, setHeatmapMode]       = useState('sst'); // 'sst' | 'score' (향후 확장)
@@ -649,12 +649,8 @@ export default function MapHome() {
                       const sid = selectedPoint?.obsCode || 'DT_0001';
                       try {
                         const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
-                        if (res.data.url) {
-                          setCctvUrl(res.data.url);
-                          setShowCCTV(true);
-                        } else {
-                          addToast('현재 지점에 제공 가능한 실시간 영상이 없습니다.', 'error');
-                        }
+                        setCctvData(res.data);  // { type, url, fallbackImg, areaName, label }
+                        setShowCCTV(true);
                       } catch {
                         addToast('영상 데이터를 불러오는 데 실패했습니다.', 'error');
                       }
@@ -831,41 +827,59 @@ export default function MapHome() {
         </div>
 
         {/* ── CCTV 모달 ── */}
-        {showCCTV && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1200, display: 'flex', flexDirection: 'column' }}>
-            {/* 모달 헤더 */}
+        {showCCTV && cctvData && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1200, display: 'flex', flexDirection: 'column' }}>
+            {/* 헤더 */}
             <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontWeight: '700', marginBottom: '2px' }}>실시간 현장 영상</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginBottom: '2px', letterSpacing: '0.05em' }}>
+                  📡 {cctvData.label || '실시간 현장 영상'}
+                </div>
                 <div style={{ fontSize: '16px', fontWeight: '950', color: '#fff' }}>{selectedPoint?.name}</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '600', marginTop: '2px' }}>
+                  {cctvData.areaName} · {cctvData.region}
+                </div>
               </div>
-              <button onClick={() => { setShowCCTV(false); setCctvUrl(''); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <button onClick={() => { setShowCCTV(false); setCctvData(null); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                 <X size={18} color="#fff" />
               </button>
             </div>
 
-            {/* 플레이어 */}
+            {/* 영상/이미지 */}
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-              {cctvUrl ? (
-                <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative' }}>
-                  <iframe 
-                    src={cctvUrl} 
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} 
+              {cctvData.type === 'youtube' && cctvData.url ? (
+                <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+                  <iframe
+                    src={cctvData.url}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
                   />
+                </div>
+              ) : cctvData.fallbackImg ? (
+                <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+                  <img
+                    src={cctvData.fallbackImg}
+                    alt={cctvData.areaName}
+                    style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
+                    <div style={{ fontSize: '11px', color: '#FFD700', fontWeight: '800' }}>📷 현장 대표 이미지</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '2px' }}>실시간 스트리밍 준비 중 · 연결 시 자동 업데이트</div>
+                  </div>
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
-                  <AlertCircle size={40} style={{ margin: '0 auto 10px', display: 'block', color: 'rgba(255,255,255,0.3)' }} />
-                  <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '4px' }}>CCTV 실시간 영상을 준비 중입니다</div>
-                  <div style={{ fontSize: '11px', fontWeight: '500', color: 'rgba(255,255,255,0.4)' }}>해당 포인트는 안전상의 이유로 영상 송출이 제한되었습니다.</div>
+                  <AlertCircle size={40} style={{ margin: '0 auto 10px', display: 'block' }} />
+                  <div style={{ fontSize: '14px', fontWeight: '700' }}>영상 준비 중입니다</div>
                 </div>
               )}
             </div>
 
             {/* 하단 안내 */}
-            <div style={{ padding: '16px 20px 30px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: '700', textAlign: 'center' }}>
-                📡 해양수산부 공공 CCTV 연동 · 일부 구간 지연 발생 가능
+            <div style={{ padding: '12px 20px 30px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: '700', textAlign: 'center' }}>
+                {cctvData.type === 'youtube' ? '📺 YouTube 라이브 스트리밍 연동 (지자체 공식 채널)' : '📡 지역 대표 해안 이미지 · 실시간 스트리밍 추가 예정'}
               </div>
             </div>
           </div>

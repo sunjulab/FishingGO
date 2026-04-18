@@ -637,12 +637,24 @@ app.get('/api/weather/precision', (req, res) => {
 app.get('/api/weather/cctv', async (req, res) => {
   const { stationId } = req.query;
   try {
-    const KEY = process.env.KHOA_KEY || '2c92debdb84fc6c2ca60816fa5e9acbbfa06a9ae502cc37919ebec6be629623a';
-    const resUrl = await axios.get(`http://www.khoa.go.kr/api/oceangrid/oceanObsCctv/search.do?ServiceKey=${KEY}&ObsCode=${stationId || 'DT_0001'}&ResultType=json`);
-    const url = resUrl.data?.result?.data?.[0]?.cctv_url;
-    if (url) res.json({ url });
-    else res.status(404).json({ error: 'CCTV not found' });
-  } catch (err) { res.status(500).json({ error: 'API Error' }); }
+    const { getCctvInfo } = require('./cctvMapping');
+    const info = getCctvInfo(stationId || 'DT_0001');
+
+    res.json({
+      obsCode:     stationId,
+      areaName:    info.areaName,
+      region:      info.region,
+      label:       info.label,
+      type:        info.type,           // 'youtube' | 'image'
+      url:         info.embedUrl,       // YouTube embed URL (youtube 타입)
+      thumbnailUrl: info.thumbnailUrl,  // 썸네일 또는 지역 대표 이미지
+      fallbackImg:  info.fallbackImg,
+      youtubeId:   info.youtubeId || null,
+    });
+  } catch (err) {
+    console.error('[CCTV API 오류]', err.message);
+    res.status(500).json({ error: 'CCTV 정보 조회 실패' });
+  }
 });
 
 // --- 유튜브 비디오 API (검색 및 최신 영상) ---
