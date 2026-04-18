@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+const coupang = require('./coupangService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fishinggo_secret_2024';
 
@@ -1030,3 +1031,72 @@ setInterval(() => {
   });
   if (cleaned > 0) console.log(`[VVIP 클린업] ${cleaned}개 만료 슬롯 제거 완료`);
 }, 24 * 60 * 60 * 1000);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ─── 쿠팡 파트너스 Open API 라우트 ────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/products?category=낙시용품
+ * Shop 탭 메인 상품 목록 (Shop.jsx 전용)
+ */
+app.get('/api/products', async (req, res) => {
+  try {
+    const category = req.query.category || '낙시용품';
+    const products = await coupang.getRecommendedProducts(category);
+
+    // Shop.jsx가 기대하는 포맷으로 변환
+    const formatted = products.map(p => ({
+      id:       p.productId,
+      name:     p.productName,
+      price:    p.productPrice?.toLocaleString('ko-KR') || '0',
+      discount: p.discountRate > 0 ? `${p.discountRate}%` : '0%',
+      img:      p.productImage,
+      link:     p.coupangUrl,
+      badge:    p.badge || '낙시GO 추천',
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('[/api/products] 오류:', err.message);
+    res.status(500).json({ error: '상품 조회 실패' });
+  }
+});
+
+/**
+ * GET /api/commerce/coupang/search?keyword=루어 낙시 장비
+ * 미디어 탭 영상 콴텐츠 연동 상품 (MediaTab.jsx 전용)
+ */
+app.get('/api/commerce/coupang/search', async (req, res) => {
+  try {
+    const keyword  = req.query.keyword  || '낙시용품';
+    const category = req.query.category || '';
+    
+    const products = category
+      ? await coupang.getProductsByVideoCategory(category)
+      : await coupang.searchCoupang(keyword, 3);
+
+    res.json({
+      keyword,
+      isMock: coupang.IS_TEST_MODE,
+      products,
+    });
+  } catch (err) {
+    console.error('[/api/commerce/coupang/search] 오류:', err.message);
+    res.status(500).json({ error: '상품 검색 실패', products: [] });
+  }
+});
+
+/**
+ * GET /api/commerce/coupang/status
+ * 쿠팡 API 코나테스트 / 키 상태 확인
+ */
+app.get('/api/commerce/coupang/status', (req, res) => {
+  res.json({
+    mode: coupang.IS_TEST_MODE ? 'MOCK (테스트 목업 데이터)' : 'LIVE (쿠팡 실상)' ,
+    partnersId: coupang.PARTNERS_ID,
+    hasAccessKey: process.env.COUPANG_ACCESS_KEY && !process.env.COUPANG_ACCESS_KEY.startsWith('TEST_'),
+    hasSecretKey: process.env.COUPANG_SECRET_KEY && !process.env.COUPANG_SECRET_KEY.startsWith('TEST_'),
+    note: '쿠팡 Access Key / Secret Key를 .env에 추가하면 자동으로 LIVE 모드로 전환됩니다.',
+  });
+});

@@ -28,10 +28,10 @@ export default function Shop() {
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (category = '낚시용품') => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/api/products`);
+      const res = await axios.get(`${API}/api/products?category=${encodeURIComponent(category)}`);
       setProducts(res.data);
     } catch (err) {
       console.error('Failed to fetch products', err);
@@ -49,8 +49,7 @@ export default function Shop() {
 
   const handleCategoryClick = (cat) => {
     setActiveCat(cat.name);
-    const url = `https://www.coupang.com/np/search?q=${encodeURIComponent(cat.query)}&lptag=${PARTNERS_ID}`;
-    window.open(url, '_blank');
+    fetchProducts(cat.query); // 서버에서 해당 카테고리 상품 동적 로드
   };
 
   const handleProductClick = (url) => {
