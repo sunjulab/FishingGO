@@ -42,79 +42,66 @@ export default function MapHome() {
   const [sheetVisible, setSheetVisible]     = useState(false);
   const [heatmapMode, setHeatmapMode]       = useState('sst'); // 'sst' | 'score' (향후 확장)
 
-  const mapRef      = useRef(null);
-  const clustererRef= useRef(null);
-  const markersRef  = useRef([]);
-  const heatmapRef  = useRef([]);
-  const searchRef   = useRef(null);
+  const mapRef         = useRef(null);
+  const clustererRef   = useRef(null);
+  const markersRef     = useRef([]);
+  const heatmapRef     = useRef([]);
+  const searchRef      = useRef(null);
+  const mapInitialized = useRef(false); // Lazy Init 플래그
 
-  /* ── 카카오맵 초기화 ── */
+  /* ── 카카오맵 Lazy Init (지도 뷰 최초 진입 시에만 초기화) ── */
   useEffect(() => {
+    // 대시보드 모드이거나 이미 초기화됐으면 스킵
+    if (viewMode !== 'map' || mapInitialized.current) return;
+
     const initMap = () => {
       if (!window.kakao?.maps || !window.kakao.maps.Map) return false;
       const container = document.getElementById('kakao-map');
-      if (!container) return false;
+      if (!container || container.offsetWidth === 0) return false; // 사이즈 0이면 재시도
       
       try {
         const options = { 
-          center: new window.kakao.maps.LatLng(36.5, 127.8), // 대한민국 중심부
-          level: 11 // 전국을 조망할 수 있는 레벨
+          center: new window.kakao.maps.LatLng(36.5, 127.8),
+          level: 11
         };
-        
         const map = new window.kakao.maps.Map(container, options);
-        
-        // 지도 컨트롤 추가 (확대/축소 UI 추가로 더 부드러운 경험 제공)
         const zoomControl = new window.kakao.maps.ZoomControl();
         map.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
         const mapTypeControl = new window.kakao.maps.MapTypeControl();
         map.addControl(mapTypeControl, window.kakao.maps.ControlPosition.TOPRIGHT);
-        
-        // 줌 가능 및 드래그 가능 명시적 설정
         map.setZoomable(true);
         map.setDraggable(true);
-        
         mapRef.current = map;
-        
-        // 클러스터러 초기화
         clustererRef.current = new window.kakao.maps.MarkerClusterer({
-          map: map,
-          averageCenter: true,
-          minLevel: 10
+          map, averageCenter: true, minLevel: 10
         });
-        
+        mapInitialized.current = true;
         setMapLoaded(true);
-        
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition((pos) => {
-            if (!window.kakao?.maps) return;
+            if (!mapRef.current) return;
             const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-            map.panTo(cp);
+            mapRef.current.panTo(cp);
             new window.kakao.maps.CustomOverlay({
-              position: cp, map,
+              position: cp, map: mapRef.current,
               content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
             });
           });
         }
         return true;
       } catch (err) {
-        console.error("카카오맵 초기화 중 오류 발생 (재시도 중):", err);
+        console.error('카카오맵 초기화 오류:', err);
         return false;
       }
     };
 
     let retry = 0;
     const interval = setInterval(() => {
-      const isSuccess = initMap();
-      if (isSuccess) { 
-        clearInterval(interval); 
-      } else if (retry > 40) {
-        clearInterval(interval);
-      }
+      if (initMap() || retry > 60) clearInterval(interval);
       retry++;
-    }, 250);
-    
+    }, 200);
     return () => clearInterval(interval);
-  }, []);
+  }, [viewMode]); // viewMode가 'map'이 될 때 트리거
 
   /* ── 마커 렌더링 (최적화) ── */
   useEffect(() => {
@@ -450,13 +437,10 @@ export default function MapHome() {
         {/* ── 컨텐츠 영역 래퍼 (헤더 아래 나머지 공간) ── */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
-          {/* ── 지도 풀스크린 뷰 (항상 렌더, visibility로 전환) ── */}
+          {/* ── 지도 풀스크린 뷰 ── */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            display: 'flex', flexDirection: 'column',
-            visibility: viewMode === 'map' ? 'visible' : 'hidden',
-            zIndex: viewMode === 'map' ? 5 : 0,
-            pointerEvents: viewMode === 'map' ? 'auto' : 'none',
+            display: viewMode === 'map' ? 'flex' : 'none',
+            flexDirection: 'column', width: '100%', height: '100%', position: 'relative'
           }}>
             <div id="kakao-map" style={{ width: '100%', flex: 1, background: '#e8edf5' }} />
             
@@ -498,11 +482,8 @@ export default function MapHome() {
 
           {/* ── 대시보드 뷰 ── */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-            visibility: viewMode === 'dashboard' ? 'visible' : 'hidden',
-            zIndex: viewMode === 'dashboard' ? 5 : 0,
-            pointerEvents: viewMode === 'dashboard' ? 'auto' : 'none',
+            display: viewMode === 'dashboard' ? 'flex' : 'none',
+            flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden'
           }}>
 
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px', scrollbarWidth: 'none' }}>
