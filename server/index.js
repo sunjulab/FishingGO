@@ -64,7 +64,7 @@ if (MONGO_URI) {
 }
 
 // ─── 모델 로드 ────────────────────────────────────────────────────────────────
-let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel;
+let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage;
 try {
   User             = require('./models/User');
   Post             = require('./models/Post');
@@ -72,7 +72,9 @@ try {
   Notice           = require('./models/Notice');
   BusinessPost     = require('./models/BusinessPost');
   CctvOverrideModel= require('./models/CctvOverride');
-} catch(e) { User = Post = Crew = Notice = BusinessPost = CctvOverrideModel = null; }
+  CatchRecord      = require('./models/CatchRecord');
+  ChatMessage      = require('./models/ChatMessage');
+} catch(e) { User = Post = Crew = Notice = BusinessPost = CctvOverrideModel = CatchRecord = ChatMessage = null; }
 
 // ─── 인메모리 Fallback 저장소 (DB 미연결 시 사용) ─────────────────────────────
 let memCrews         = [];
@@ -122,13 +124,20 @@ const chatHistories = {};
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  socket.on('join_crew', (crewId) => {
+  socket.on('join_crew', async (crewId) => {
     socket.join(crewId);
+    // DB에서 최근 100개 메시지 로드
+    if (dbReady && ChatMessage) {
+      try {
+        const msgs = await ChatMessage.find({ crewId }).sort({ createdAt: -1 }).limit(100);
+        chatHistories[crewId] = msgs.reverse().map(m => ({ sender: m.sender, text: m.text, time: m.time }));
+      } catch(e) {}
+    }
     if (!chatHistories[crewId]) chatHistories[crewId] = [];
     socket.emit('chat_history', chatHistories[crewId]);
   });
 
-  socket.on('send_msg', (data) => {
+  socket.on('send_msg', async (data) => {
     const msgData = {
       sender: data.sender || 'Anonymous',
       text: data.text,
@@ -138,6 +147,12 @@ io.on('connection', (socket) => {
     chatHistories[data.crewId].push(msgData);
     // 방 전체 인원에게 발송
     io.to(data.crewId).emit('new_msg', msgData);
+    // DB 영구저장
+    if (dbReady && ChatMessage) {
+      try {
+        await new ChatMessage({ crewId: data.crewId, sender: msgData.sender, text: msgData.text, time: msgData.time }).save();
+      } catch(e) {}
+    }
   });
 
   socket.on('disconnect', () => {
@@ -607,9 +622,60 @@ app.get('/api/user/posts', async (req, res) => {
 });
 
 // =================================================================
+//  조과 기록 API (낚시 기록실)
+//  MongoDB 영구저장 / 인메모리 fallback
+// =================================================================
+let memRecords = []; // 인메모리 fallback
+
+// ── 내 조과기록 조회 ──────────────────────────────────────────────────────────
+app.get('/api/user/records', async (req, res) => {
+  try {
+    if (dbReady && CatchRecord) {
+      const records = await CatchRecord.find({ author_email: req.query.email }).sort({ createdAt: -1 });
+      return res.json(records);
+    }
+    res.json(memRecords.filter(r => r.author_email === req.query.email));
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 조과기록 작성 ──────────────────────────────────────────────────────────────
+app.post('/api/user/records', async (req, res) => {
+  try {
+    const { author, author_email, fish, size, weight, location, bait, weather, wind, wave, memo, img, date, time, pointId } = req.body;
+    if (!author || !author_email || !fish) return res.status(400).json({ error: '필수 항목 누락 (어종 필수)' });
+    const data = { author, author_email, fish, size: size||'', weight: weight||'', location: location||'', bait: bait||'', weather: weather||'', wind: wind||'', wave: wave||'', memo: memo||'', img: img||null, date: date||'', time: time||'', pointId: pointId||null };
+    if (dbReady && CatchRecord) {
+      const record = new CatchRecord(data);
+      await record.save();
+      return res.json(record);
+    }
+    const record = { id: Date.now().toString(), _id: Date.now().toString(), ...data, createdAt: new Date() };
+    memRecords.unshift(record);
+    res.json(record);
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 조과기록 삭제 ──────────────────────────────────────────────────────────────
+app.delete('/api/user/records/:id', async (req, res) => {
+  try {
+    const { email, adminId } = req.body;
+    if (dbReady && CatchRecord) {
+      const record = await CatchRecord.findById(req.params.id);
+      if (!record) return res.status(404).json({ error: '기록 없음' });
+      if (adminId !== 'sunjulab' && record.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+      await CatchRecord.findByIdAndDelete(req.params.id);
+      return res.json({ success: true });
+    }
+    memRecords = memRecords.filter(r => r.id !== req.params.id);
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// =================================================================
 //  커뮤니티 API (오픈게시판 / 크루 / 공지사항 / 선상배홍보)
 //  MongoDB 연결 시 영구저장, 미연결 시 인메모리 fallback
 // =================================================================
+
 
 // ── 오픈게시판 전체 조회 ──────────────────────────────────────────────────────
 app.get('/api/community/posts', async (req, res) => {
@@ -1299,8 +1365,8 @@ app.get('/api/vvip/harbors', (req, res) => {
   res.json({ harbors: harborData });
 });
 
-// VVIP 슬롯 구매 (선착순) — 만료일 1년 자동 설정
-app.post('/api/vvip/purchase', (req, res) => {
+// VVIP 슬롯 구매 (선착순) — 만료일 30일 자동 설정 + User DB 저장
+app.post('/api/vvip/purchase', async (req, res) => {
   const { harborId, userId, userName } = req.body;
   if (!harborId || !userId) return res.status(400).json({ error: '필수 정보 누락' });
 
@@ -1313,12 +1379,10 @@ app.post('/api/vvip/purchase', (req, res) => {
     if (!slot.expiresAt || new Date(slot.expiresAt) >= now) {
       return res.status(409).json({ error: '이미 다른 선장님이 선점하셨습니다.', takenBy: slot.userName });
     }
-    // 만료된 슬롯이면 자동 해제 후 재구매 허용
     console.log(`[VVIP 만료 재구매] ${harbor.name}`);
     delete vvipSlots[harborId];
   }
 
-  // 월 구독 30일 만료
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   vvipSlots[harborId] = {
@@ -1328,6 +1392,16 @@ app.post('/api/vvip/purchase', (req, res) => {
     expiresAt: expiresAt.toISOString(),
     harborName: harbor.name
   };
+
+  // User DB에 VVIP 정보 영구 저장
+  if (dbReady && User) {
+    try {
+      await User.findOneAndUpdate(
+        { email: userId },
+        { tier: 'BUSINESS_VIP', vvipHarborId: harborId, vvipExpiresAt: expiresAt }
+      );
+    } catch(e) { console.error('[VVIP DB 저장 실패]', e.message); }
+  }
 
   res.json({
     success: true, harbor,
