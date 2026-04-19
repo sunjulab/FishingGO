@@ -684,30 +684,58 @@ app.get('/api/community/posts', async (req, res) => {
       const posts = await Post.find().sort({ createdAt: -1 }).limit(100);
       return res.json(posts);
     }
-    res.json([]);
+    // 인메모리 fallback: 최신순 정렬
+    return res.json([...memPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 100));
   } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── 오픈게시판 단건 조회 ──────────────────────────────────────────────────────
 app.get('/api/community/posts/:id', async (req, res) => {
+  const pid = req.params.id;
   try {
     if (dbReady && Post) {
-      const post = await Post.findById(req.params.id);
-      if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-      return res.json(post);
+      let post = null;
+      try { post = await Post.findById(pid); } catch(castErr) {}
+      if (post) return res.json(post);
     }
+    const mem = memPosts.find(p => p._id === pid || p.id === pid);
+    if (mem) return res.json(mem);
+    return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+  } catch(err) {
+    const mem = memPosts.find(p => p._id === pid || p.id === pid);
+    if (mem) return res.json(mem);
     res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+  }
 });
 
-// ── 오픈게시판 좋아요 (POST /like → 기존 PATCH 유지하고 POST도 추가) ─────────
-app.post('/api/community/posts/:id/like', async (req, res) => {
+// ── 오픈게시판 작성 (author_email 없을시 보정) ──────────────────────────────
+app.post('/api/community/posts', async (req, res) => {
   try {
+    let { author, author_email, category, content, image } = req.body;
+    if (!author || !category || !content) return res.status(400).json({ error: '필수 항목 누락' });
+    if (!author_email) author_email = 'guest@fishinggo.kr';
+    
     if (dbReady && Post) {
-      const post = await Post.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
+      const post = new Post({ author, author_email, category, content, image: image||null });
+      await post.save();
+      memPosts.unshift({ _id: post._id.toString(), id: post._id.toString(), author, author_email, category, content, image: image||null, likes: 0, comments: [], createdAt: post.createdAt });
+      if (memPosts.length > 200) memPosts.splice(200);
       return res.json(post);
     }
-    res.json({ likes: 0 });
+    const uid = Date.now().toString();
+    const post = { _id: uid, id: uid, author, author_email, category, content, image: image||null, likes: 0, comments: [], createdAt: new Date().toISOString() };
+    memPosts.unshift(post);
+    if (memPosts.length > 200) memPosts.splice(200);
+    return res.json(post);
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 오픈게시판 글 삭제 ────────────────────────────────────────────────────────
+app.delete('/api/community/posts/:id', async (req, res) => {
+  try {
+    if (dbReady && Post) { await Post.findByIdAndDelete(req.params.id).catch(() => {}); }
+    memPosts = memPosts.filter(p => p._id !== req.params.id && p.id !== req.params.id);
+    res.json({ success: true });
   } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
@@ -715,59 +743,55 @@ app.post('/api/community/posts/:id/like', async (req, res) => {
 app.post('/api/community/posts/:id/comments', async (req, res) => {
   try {
     const { author, text } = req.body;
-    if (!author || !text) return res.status(400).json({ error: '작성자와 내용 필수' });
+    if (!author || !text) return res.status(400).json({ error: '작성자/내용 필수' });
+    const newComment = { author, text, createdAt: new Date() };
     if (dbReady && Post) {
-      // Post 모델에 comments 배열 없으면 기본 처리
-      const post = await Post.findById(req.params.id);
-      if (!post) return res.status(404).json({ error: '게시글 없음' });
-      if (!post.comments) post.comments = [];
-      if (Array.isArray(post.comments) && typeof post.comments[0] !== 'object') {
-        // comments가 숫자(카운트)로 저장된 경우 초기화
-        post.comments = [];
+      let post = null;
+      try { post = await Post.findById(req.params.id); } catch(e) {}
+      if (post) {
+        if (!Array.isArray(post.comments)) post.comments = [];
+        post.comments.push(newComment);
+        await post.save();
+        return res.json(post);
       }
-      post.comments.push({ author, text, createdAt: new Date() });
-      await post.save();
-      return res.json(post);
     }
-    res.json({ comments: [{ author, text, createdAt: new Date() }] });
+    const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
+    if (mem) {
+      if (!mem.comments) mem.comments = [];
+      mem.comments.push(newComment);
+      return res.json(mem);
+    }
+    res.json({ comments: [newComment] });
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
 });
 
-
-// ── 오픈게시판 글 작성 ────────────────────────────────────────────────────────
-app.post('/api/community/posts', async (req, res) => {
-  try {
-    const { author, author_email, category, content, image } = req.body;
-    if (!author || !author_email || !category || !content)
-      return res.status(400).json({ error: '필수 항목 누락' });
-    if (dbReady && Post) {
-      const post = new Post({ author, author_email, category, content, image: image||null });
-      await post.save();
-      return res.json(post);
-    }
-    const post = { _id: Date.now().toString(), id: Date.now().toString(), author, author_email, category, content, image: image||null, likes: 0, comments: [], createdAt: new Date() };
-    res.json(post);
-  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
-});
-
-// ── 오픈게시판 글 삭제 ────────────────────────────────────────────────────────
-app.delete('/api/community/posts/:id', async (req, res) => {
-  try {
-    if (dbReady && Post) { await Post.findByIdAndDelete(req.params.id); }
-    res.json({ success: true });
-  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
-});
-
-// ── 게시글 좋아요 ────────────────────────────────────────────────────────────
-app.patch('/api/community/posts/:id/like', async (req, res) => {
+// ── 좋아요 POST/PATCH ─────────────────────────────────────────────────────────
+app.post('/api/community/posts/:id/like', async (req, res) => {
   try {
     if (dbReady && Post) {
-      const post = await Post.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
-      return res.json({ likes: post?.likes || 0 });
+      let post = null;
+      try { post = await Post.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true }); } catch(e) {}
+      if (post) return res.json(post);
     }
+    const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
+    if (mem) { mem.likes = (mem.likes || 0) + 1; return res.json(mem); }
     res.json({ likes: 0 });
   } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
+
+app.patch('/api/community/posts/:id/like', async (req, res) => {
+  try {
+    if (dbReady && Post) {
+      let post = null;
+      try { post = await Post.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true }); } catch(e) {}
+      if (post) return res.json({ likes: post.likes });
+    }
+    const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
+    if (mem) { mem.likes = (mem.likes || 0) + 1; return res.json({ likes: mem.likes }); }
+    res.json({ likes: 0 });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
 
 // ── 크루 전체 조회 ────────────────────────────────────────────────────────────
 app.get('/api/community/crews', async (req, res) => {
