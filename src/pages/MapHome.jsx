@@ -49,59 +49,50 @@ export default function MapHome() {
   const searchRef      = useRef(null);
   const mapInitialized = useRef(false); // Lazy Init 플래그
 
-  /* ── 카카오맵 Lazy Init (지도 뷰 최초 진입 시에만 초기화) ── */
+  /* ── 카카오맵 초기화 (앱 시작 즉시) ── */
   useEffect(() => {
-    // 대시보드 모드이거나 이미 초기화됐으면 스킵
-    if (viewMode !== 'map' || mapInitialized.current) return;
-
     const initMap = () => {
       if (!window.kakao?.maps || !window.kakao.maps.Map) return false;
       const container = document.getElementById('kakao-map');
-      if (!container || container.offsetWidth === 0) return false; // 사이즈 0이면 재시도
-      
+      if (!container) return false;
       try {
-        const options = { 
+        const map = new window.kakao.maps.Map(container, {
           center: new window.kakao.maps.LatLng(36.5, 127.8),
           level: 11
-        };
-        const map = new window.kakao.maps.Map(container, options);
-        const zoomControl = new window.kakao.maps.ZoomControl();
-        map.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
-        const mapTypeControl = new window.kakao.maps.MapTypeControl();
-        map.addControl(mapTypeControl, window.kakao.maps.ControlPosition.TOPRIGHT);
+        });
+        map.addControl(new window.kakao.maps.ZoomControl(), window.kakao.maps.ControlPosition.RIGHT);
+        map.addControl(new window.kakao.maps.MapTypeControl(), window.kakao.maps.ControlPosition.TOPRIGHT);
         map.setZoomable(true);
         map.setDraggable(true);
         mapRef.current = map;
-        clustererRef.current = new window.kakao.maps.MarkerClusterer({
-          map, averageCenter: true, minLevel: 10
-        });
-        mapInitialized.current = true;
+        clustererRef.current = new window.kakao.maps.MarkerClusterer({ map, averageCenter: true, minLevel: 10 });
         setMapLoaded(true);
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition((pos) => {
-            if (!mapRef.current) return;
+            if (!window.kakao?.maps) return;
             const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-            mapRef.current.panTo(cp);
+            map.panTo(cp);
             new window.kakao.maps.CustomOverlay({
-              position: cp, map: mapRef.current,
+              position: cp, map,
               content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
             });
           });
         }
         return true;
       } catch (err) {
-        console.error('카카오맵 초기화 오류:', err);
+        console.error('카카오맵 초기화 오류 (재시도 중):', err);
         return false;
       }
     };
-
     let retry = 0;
     const interval = setInterval(() => {
-      if (initMap() || retry > 60) clearInterval(interval);
+      const ok = initMap();
+      if (ok) { clearInterval(interval); }
+      else if (retry > 40) { clearInterval(interval); }
       retry++;
-    }, 200);
+    }, 250);
     return () => clearInterval(interval);
-  }, [viewMode]); // viewMode가 'map'이 될 때 트리거
+  }, []);
 
   /* ── 마커 렌더링 (최적화) ── */
   useEffect(() => {
@@ -237,23 +228,20 @@ export default function MapHome() {
 
   /* ── 맵 리사이즈 (뷰모드 변경 시) ── */
   useEffect(() => {
-    if (viewMode === 'map') {
-      // 지도 뷰로 전환 시 로딩 화면 즉시 제거
-      setMapLoaded(true);
-      if (mapRef.current) {
-        mapRef.current.relayout();
-        const timer = setTimeout(() => {
-          if (mapRef.current) {
-            mapRef.current.relayout();
-            if (selectedPoint) {
-              mapRef.current.panTo(new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng));
-            }
+    if (viewMode === 'map' && mapRef.current) {
+      mapRef.current.relayout();
+      const timer = setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.relayout();
+          if (selectedPoint) {
+            mapRef.current.panTo(new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng));
           }
-        }, 50);
-        return () => clearTimeout(timer);
-      }
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [viewMode, selectedPoint]);
+
 
 
   /* ── 커뮤니티 최신글 ── */
@@ -434,14 +422,8 @@ export default function MapHome() {
           )}
         </div>{/* 헤더 끝 */}
 
-        {/* ── 컨텐츠 영역 래퍼 (헤더 아래 나머지 공간) ── */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-
-          {/* ── 지도 풀스크린 뷰 ── */}
-          <div style={{
-            display: viewMode === 'map' ? 'flex' : 'none',
-            flexDirection: 'column', width: '100%', height: '100%', position: 'relative'
-          }}>
+        {/* ── 지도 풀스크린 뷰 ── */}
+        <div style={{ display: viewMode === 'map' ? 'flex' : 'none', flex: 1, flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             <div id="kakao-map" style={{ width: '100%', flex: 1, background: '#e8edf5' }} />
             
             {/* 수온 범례 (Legend) */}
@@ -480,11 +462,8 @@ export default function MapHome() {
             )}
           </div>
 
-          {/* ── 대시보드 뷰 ── */}
-          <div style={{
-            display: viewMode === 'dashboard' ? 'flex' : 'none',
-            flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden'
-          }}>
+        {/* ── 대시보드 뷰 ── */}
+        <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
 
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px', scrollbarWidth: 'none' }}>
 
@@ -884,7 +863,6 @@ export default function MapHome() {
           input::placeholder { color: #AAB0BE; }
           ::-webkit-scrollbar { display: none; }
         `}</style>
-        </div>{/* 컨텐츠 래퍼 끝 */}
       </div>
     </div>
   );
