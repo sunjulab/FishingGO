@@ -447,8 +447,14 @@ export default function MapHome() {
           )}
         </div>
 
-        {/* ── 지도 풀스크린 뷰 ── */}
-        <div style={{ display: viewMode === 'map' ? 'flex' : 'none', flex: 1, flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+        {/* ── 지도 풀스크린 뷰 (항상 렌더, z-index로 전환) ── */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          display: 'flex', flexDirection: 'column',
+          visibility: viewMode === 'map' ? 'visible' : 'hidden',
+          zIndex: viewMode === 'map' ? 5 : 0,
+          pointerEvents: viewMode === 'map' ? 'auto' : 'none',
+        }}>
           <div id="kakao-map" style={{ width: '100%', flex: 1, background: '#e8edf5' }} />
           
           {/* 수온 범례 (Legend) */}
@@ -463,7 +469,6 @@ export default function MapHome() {
                 <span style={{ fontSize: '11px', fontWeight: '900', color: '#1A1A2E' }}>🌡 표층 수온(SST) 범례</span>
                 <span style={{ fontSize: '9px', fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>{isAdmin ? 'MASTER' : 'PRO'}</span>
               </div>
-              
               <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
                 <div style={{ flex: 1, background: '#1a3c8f' }} />
                 <div style={{ flex: 1, background: '#1565C0' }} />
@@ -475,11 +480,8 @@ export default function MapHome() {
                 <div style={{ flex: 1, background: '#FF7043' }} />
                 <div style={{ flex: 1, background: '#B71C1C' }} />
               </div>
-              
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
-                <span>&lt;8°C</span>
-                <span>(어종별 적정수온)</span>
-                <span>24°C&gt;</span>
+                <span>&lt;8°C</span><span>(어종별 적정수온)</span><span>24°C&gt;</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
                 <span style={{ color: '#1565C0' }}>극저/저수온</span>
@@ -498,7 +500,13 @@ export default function MapHome() {
         </div>
 
         {/* ── 대시보드 뷰 ── */}
-        <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          visibility: viewMode === 'dashboard' ? 'visible' : 'hidden',
+          zIndex: viewMode === 'dashboard' ? 5 : 0,
+          pointerEvents: viewMode === 'dashboard' ? 'auto' : 'none',
+        }}>
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px', scrollbarWidth: 'none' }}>
 
             {/* 검색바 + 드롭다운 (최상단 이동) */}
