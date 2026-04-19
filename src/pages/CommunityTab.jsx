@@ -317,7 +317,6 @@ export default function CommunityTab() {
               <p style={{ margin: '0 0 4px', fontSize: '12.5px', fontWeight: '700', lineHeight: '1.4' }}>비즈니스 인증을 거친 검증된 선장님들의 공간입니다.</p>
               <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>게시물 하단의 [직통 전화] 버튼을 눌러 수수료 없이 다이렉트 예약하세요!</p>
             </div>
-            <BannerAd style={{ marginBottom: '16px' }} />
             
             {effectiveBusinessPosts.map((post) => (
               <React.Fragment key={post.id}>
@@ -385,6 +384,8 @@ export default function CommunityTab() {
                 )}
               </React.Fragment>
             ))}
+            {/* 광고 — VVIP 프리미엄 스폰서 아래 */}
+            <BannerAd style={{ marginTop: '8px', marginBottom: '16px' }} />
           </div>
         )}
       </div>
