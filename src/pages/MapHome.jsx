@@ -757,12 +757,28 @@ export default function MapHome() {
             <div style={{ padding: '10px 16px' }}>
               <h3 style={{ fontSize: '15px', fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>방금 올라온 조황</h3>
               {recentPosts.length > 0 ? recentPosts.map(post => (
-                <div key={post.id} style={{ background: '#fff', borderRadius: '12px', padding: '10px 12px', marginBottom: '8px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #F0F2F7' }}>
-                  <img src={`https://i.pravatar.cc/100?u=${post.author}`} style={{ width: '36px', height: '36px', borderRadius: '10px' }} alt="" />
+                <div
+                  key={post._id || post.id}
+                  onClick={() => navigate(`/post/${post._id || post.id}`)}
+                  style={{
+                    background: '#fff', borderRadius: '12px', padding: '10px 12px', marginBottom: '8px',
+                    display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #F0F2F7',
+                    cursor: 'pointer', transition: 'all 0.18s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,86,210,0.13)'; e.currentTarget.style.borderColor = '#C8D8F5'; }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = '#F0F2F7'; }}
+                >
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0056D2, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '18px' }}>
+                    🎣
+                  </div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
                     <div style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.content}</div>
-                    <div style={{ fontSize: '10px', color: '#AAB0BE', fontWeight: '700' }}>@{post.author}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                      <span style={{ fontSize: '10px', color: '#AAB0BE', fontWeight: '700' }}>@{post.author}</span>
+                      <span style={{ fontSize: '9px', background: '#F0F5FF', color: '#0056D2', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
+                    </div>
                   </div>
+                  <div style={{ color: '#C8D8F5', flexShrink: 0 }}>›</div>
                 </div>
               )) : (
                 <div style={{ padding: '14px', textAlign: 'center', color: '#AAB0BE', fontSize: '12px', fontWeight: '700', border: '1px dotted #D0D5E0', borderRadius: '12px' }}>

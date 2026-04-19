@@ -688,6 +688,52 @@ app.get('/api/community/posts', async (req, res) => {
   } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
+// ── 오픈게시판 단건 조회 ──────────────────────────────────────────────────────
+app.get('/api/community/posts/:id', async (req, res) => {
+  try {
+    if (dbReady && Post) {
+      const post = await Post.findById(req.params.id);
+      if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+      return res.json(post);
+    }
+    res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 오픈게시판 좋아요 (POST /like → 기존 PATCH 유지하고 POST도 추가) ─────────
+app.post('/api/community/posts/:id/like', async (req, res) => {
+  try {
+    if (dbReady && Post) {
+      const post = await Post.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
+      return res.json(post);
+    }
+    res.json({ likes: 0 });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 오픈게시판 댓글 작성 ──────────────────────────────────────────────────────
+app.post('/api/community/posts/:id/comments', async (req, res) => {
+  try {
+    const { author, text } = req.body;
+    if (!author || !text) return res.status(400).json({ error: '작성자와 내용 필수' });
+    if (dbReady && Post) {
+      // Post 모델에 comments 배열 없으면 기본 처리
+      const post = await Post.findById(req.params.id);
+      if (!post) return res.status(404).json({ error: '게시글 없음' });
+      if (!post.comments) post.comments = [];
+      if (Array.isArray(post.comments) && typeof post.comments[0] !== 'object') {
+        // comments가 숫자(카운트)로 저장된 경우 초기화
+        post.comments = [];
+      }
+      post.comments.push({ author, text, createdAt: new Date() });
+      await post.save();
+      return res.json(post);
+    }
+    res.json({ comments: [{ author, text, createdAt: new Date() }] });
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+
 // ── 오픈게시판 글 작성 ────────────────────────────────────────────────────────
 app.post('/api/community/posts', async (req, res) => {
   try {
