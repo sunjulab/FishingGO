@@ -445,68 +445,66 @@ export default function MapHome() {
               </div>
             </>
           )}
-        </div>
+        </div>{/* 헤더 끝 */}
 
-        {/* ── 지도 풀스크린 뷰 (항상 렌더, z-index로 전환) ── */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          display: 'flex', flexDirection: 'column',
-          visibility: viewMode === 'map' ? 'visible' : 'hidden',
-          zIndex: viewMode === 'map' ? 5 : 0,
-          pointerEvents: viewMode === 'map' ? 'auto' : 'none',
-        }}>
-          <div id="kakao-map" style={{ width: '100%', flex: 1, background: '#e8edf5' }} />
-          
-          {/* 수온 범례 (Legend) */}
-          {showHeatmap && (
-            <div style={{
-              position: 'absolute', bottom: '24px', left: '16px', zIndex: 10,
-              background: 'rgba(255, 255, 255, 0.95)', border: '1.5px solid rgba(0,0,0,0.08)',
-              borderRadius: '16px', padding: '12px 14px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-              backdropFilter: 'blur(10px)', width: '220px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: '900', color: '#1A1A2E' }}>🌡 표층 수온(SST) 범례</span>
-                <span style={{ fontSize: '9px', fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>{isAdmin ? 'MASTER' : 'PRO'}</span>
-              </div>
-              <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
-                <div style={{ flex: 1, background: '#1a3c8f' }} />
-                <div style={{ flex: 1, background: '#1565C0' }} />
-                <div style={{ flex: 1, background: '#29B6F6' }} />
-                <div style={{ flex: 1, background: '#26C6DA' }} />
-                <div style={{ flex: 1, background: '#66BB6A' }} />
-                <div style={{ flex: 1, background: '#FFCA28' }} />
-                <div style={{ flex: 1, background: '#FFA726' }} />
-                <div style={{ flex: 1, background: '#FF7043' }} />
-                <div style={{ flex: 1, background: '#B71C1C' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
-                <span>&lt;8°C</span><span>(어종별 적정수온)</span><span>24°C&gt;</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
-                <span style={{ color: '#1565C0' }}>극저/저수온</span>
-                <span style={{ color: '#FFA726' }}>🔥 최상의 활성도</span>
-                <span style={{ color: '#B71C1C' }}>고수온</span>
-              </div>
-            </div>
-          )}
+        {/* ── 컨텐츠 영역 래퍼 (헤더 아래 나머지 공간) ── */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
-          {!mapLoaded && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F4F6FA', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>지도 로딩 중…</span>
-            </div>
-          )}
-        </div>
+          {/* ── 지도 풀스크린 뷰 (항상 렌더, visibility로 전환) ── */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex', flexDirection: 'column',
+            visibility: viewMode === 'map' ? 'visible' : 'hidden',
+            zIndex: viewMode === 'map' ? 5 : 0,
+            pointerEvents: viewMode === 'map' ? 'auto' : 'none',
+          }}>
+            <div id="kakao-map" style={{ width: '100%', flex: 1, background: '#e8edf5' }} />
+            
+            {/* 수온 범례 (Legend) */}
+            {showHeatmap && (
+              <div style={{
+                position: 'absolute', bottom: '24px', left: '16px', zIndex: 10,
+                background: 'rgba(255, 255, 255, 0.95)', border: '1.5px solid rgba(0,0,0,0.08)',
+                borderRadius: '16px', padding: '12px 14px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                backdropFilter: 'blur(10px)', width: '220px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '900', color: '#1A1A2E' }}>🌡 표층 수온(SST) 범례</span>
+                  <span style={{ fontSize: '9px', fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>{isAdmin ? 'MASTER' : 'PRO'}</span>
+                </div>
+                <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
+                  <div style={{ flex: 1, background: '#1a3c8f' }} /><div style={{ flex: 1, background: '#1565C0' }} /><div style={{ flex: 1, background: '#29B6F6' }} />
+                  <div style={{ flex: 1, background: '#26C6DA' }} /><div style={{ flex: 1, background: '#66BB6A' }} /><div style={{ flex: 1, background: '#FFCA28' }} />
+                  <div style={{ flex: 1, background: '#FFA726' }} /><div style={{ flex: 1, background: '#FF7043' }} /><div style={{ flex: 1, background: '#B71C1C' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
+                  <span>&lt;8°C</span><span>(어종별 적정수온)</span><span>24°C&gt;</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
+                  <span style={{ color: '#1565C0' }}>극저/저수온</span>
+                  <span style={{ color: '#FFA726' }}>🔥 최상의 활성도</span>
+                  <span style={{ color: '#B71C1C' }}>고수온</span>
+                </div>
+              </div>
+            )}
 
-        {/* ── 대시보드 뷰 ── */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          visibility: viewMode === 'dashboard' ? 'visible' : 'hidden',
-          zIndex: viewMode === 'dashboard' ? 5 : 0,
-          pointerEvents: viewMode === 'dashboard' ? 'auto' : 'none',
-        }}>
+            {!mapLoaded && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F4F6FA', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>지도 로딩 중…</span>
+              </div>
+            )}
+          </div>
+
+          {/* ── 대시보드 뷰 ── */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            visibility: viewMode === 'dashboard' ? 'visible' : 'hidden',
+            zIndex: viewMode === 'dashboard' ? 5 : 0,
+            pointerEvents: viewMode === 'dashboard' ? 'auto' : 'none',
+          }}>
+
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px', scrollbarWidth: 'none' }}>
 
             {/* 검색바 + 드롭다운 (최상단 이동) */}
@@ -905,6 +903,7 @@ export default function MapHome() {
           input::placeholder { color: #AAB0BE; }
           ::-webkit-scrollbar { display: none; }
         `}</style>
+        </div>{/* 컨텐츠 래퍼 끝 */}
       </div>
     </div>
   );
