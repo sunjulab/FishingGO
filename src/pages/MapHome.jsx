@@ -47,14 +47,33 @@ export default function MapHome() {
   const markersRef     = useRef([]);
   const heatmapRef     = useRef([]);
   const searchRef      = useRef(null);
-  const mapInitialized = useRef(false); // Lazy Init 플래그
+  const mapInitialized = useRef(false);
 
-  /* ── 카카오맵 초기화 (앱 시작 즉시) ── */
+  /* ── 카카오맵 초기화 (viewMode=map 진입 시, display:flex 확인 후) ── */
   useEffect(() => {
-    const initMap = () => {
+    if (viewMode !== 'map') return;
+
+    // 이미 초기화됐으면 relayout만
+    if (mapInitialized.current && mapRef.current) {
+      requestAnimationFrame(() => {
+        if (mapRef.current) {
+          mapRef.current.relayout();
+          if (selectedPoint) {
+            mapRef.current.panTo(
+              new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng)
+            );
+          }
+        }
+      });
+      return;
+    }
+
+    const doInit = () => {
       if (!window.kakao?.maps || !window.kakao.maps.Map) return false;
       const container = document.getElementById('kakao-map');
       if (!container) return false;
+      // display:flex가 반영됐는지 확인 (핵심)
+      if (container.offsetWidth === 0 || container.offsetHeight === 0) return false;
       try {
         const map = new window.kakao.maps.Map(container, {
           center: new window.kakao.maps.LatLng(36.5, 127.8),
@@ -65,34 +84,46 @@ export default function MapHome() {
         map.setZoomable(true);
         map.setDraggable(true);
         mapRef.current = map;
-        clustererRef.current = new window.kakao.maps.MarkerClusterer({ map, averageCenter: true, minLevel: 10 });
+        clustererRef.current = new window.kakao.maps.MarkerClusterer({
+          map, averageCenter: true, minLevel: 10
+        });
+        mapInitialized.current = true;
         setMapLoaded(true);
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition((pos) => {
-            if (!window.kakao?.maps) return;
+            if (!mapRef.current) return;
             const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-            map.panTo(cp);
+            mapRef.current.panTo(cp);
             new window.kakao.maps.CustomOverlay({
-              position: cp, map,
+              position: cp, map: mapRef.current,
               content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
             });
           });
         }
         return true;
       } catch (err) {
-        console.error('카카오맵 초기화 오류 (재시도 중):', err);
+        console.error('카카오맵 초기화 오류:', err);
         return false;
       }
     };
-    let retry = 0;
-    const interval = setInterval(() => {
-      const ok = initMap();
-      if (ok) { clearInterval(interval); }
-      else if (retry > 40) { clearInterval(interval); }
-      retry++;
-    }, 250);
-    return () => clearInterval(interval);
-  }, []);
+
+    // rAF 1프레임 대기 → display:flex 반영 후 시작
+    let rafId;
+    let intervalId;
+    rafId = requestAnimationFrame(() => {
+      if (doInit()) return;
+      let retry = 0;
+      intervalId = setInterval(() => {
+        if (doInit() || retry > 60) clearInterval(intervalId);
+        retry++;
+      }, 200);
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearInterval(intervalId);
+    };
+  }, [viewMode]); // viewMode가 'map'이 될 때만 실행
 
   /* ── 마커 렌더링 (최적화) ── */
   useEffect(() => {
@@ -226,21 +257,17 @@ export default function MapHome() {
     });
   }, [showHeatmap, mapLoaded]);
 
-  /* ── 맵 리사이즈 (뷰모드 변경 시) ── */
+  /* ── 맵 리사이즈 (selectedPoint 변경 시 panTo) ── */
   useEffect(() => {
-    if (viewMode === 'map' && mapRef.current) {
-      mapRef.current.relayout();
+    if (viewMode === 'map' && mapRef.current && selectedPoint) {
       const timer = setTimeout(() => {
         if (mapRef.current) {
-          mapRef.current.relayout();
-          if (selectedPoint) {
-            mapRef.current.panTo(new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng));
-          }
+          mapRef.current.panTo(new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng));
         }
-      }, 50);
+      }, 100);
       return () => clearTimeout(timer);
     }
-  }, [viewMode, selectedPoint]);
+  }, [selectedPoint]);
 
 
 
@@ -424,7 +451,7 @@ export default function MapHome() {
 
         {/* ── 지도 풀스크린 뷰 ── */}
         <div style={{ display: viewMode === 'map' ? 'flex' : 'none', flex: 1, flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-            <div id="kakao-map" style={{ width: '100%', flex: 1, background: '#e8edf5' }} />
+            <div id="kakao-map" style={{ width: '100%', flex: 1, minHeight: '200px', background: '#e8edf5' }} />
             
             {/* 수온 범례 (Legend) */}
             {showHeatmap && (
