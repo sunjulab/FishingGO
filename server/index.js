@@ -35,9 +35,7 @@ function saveMemUsers() {
 
 let dbReady = false;
 
-// ─── MongoDB 연결 ───────────────────────────────────────────────────────────
-// Render 환경변수에 MONGO_PASS=@@1q2w3e 따로 설정하면 자동으로 URI 조합
-// 또는 MONGO_URI 에 완성된 연결주소를 직접 넣어도 됨
+// ─── MongoDB 연결 ─────────────────────────────────────────────────────────────
 const buildMongoUri = () => {
   if (process.env.MONGO_URI) return process.env.MONGO_URI;
   const pass = process.env.MONGO_PASS;
@@ -45,7 +43,7 @@ const buildMongoUri = () => {
   const user = process.env.MONGO_USER || 'fishinggo';
   const db   = process.env.MONGO_DB   || 'fishinggo';
   if (pass) {
-    const enc = encodeURIComponent(pass); // @, # 등 특수문자 자동 인코딩
+    const enc = encodeURIComponent(pass);
     return `mongodb+srv://${user}:${enc}@${host}/${db}?appName=Cluster0`;
   }
   return '';
@@ -53,36 +51,58 @@ const buildMongoUri = () => {
 
 const MONGO_URI = buildMongoUri();
 if (MONGO_URI) {
-  console.log('MongoDB 연결 시도 중 (URI 존재)...');
+  console.log('MongoDB 연결 시도 중...');
   mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
     .then(() => { dbReady = true; console.log('✅ MongoDB 연결 성공! 영구저장 모드 활성화'); })
     .catch(err => {
       dbReady = false;
       console.log('⚠️ MongoDB 연결실패 → 인메모리 모드 전환');
       console.log('원인:', err.message);
-      console.log('💡 Atlas IP 허용(0.0.0.0/0) 또는 URI 재확인 필요');
     });
 } else {
   console.log('⚠️ MONGO_URI/MONGO_PASS 미설정 → 인메모리 모드.');
 }
 
-let User, Post;
+// ─── 모델 로드 ────────────────────────────────────────────────────────────────
+let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel;
 try {
-  User = require('./models/User');
-  Post = require('./models/Post');
-} catch(e) { User = null; Post = null; }
+  User             = require('./models/User');
+  Post             = require('./models/Post');
+  Crew             = require('./models/Crew');
+  Notice           = require('./models/Notice');
+  BusinessPost     = require('./models/BusinessPost');
+  CctvOverrideModel= require('./models/CctvOverride');
+} catch(e) { User = Post = Crew = Notice = BusinessPost = CctvOverrideModel = null; }
+
+// ─── 인메모리 Fallback 저장소 (DB 미연결 시 사용) ─────────────────────────────
+let memCrews         = [];
+let memNotices       = [
+  { id: 'n1', title: '🎉 낚시GO 서비스 오픈 안내', content: '낚시GO 플랫폼이 정식 오픈되었습니다! 더 많은 기능이 업데이트될 예정입니다.', isPinned: true,  author: 'MASTER', views: 1240, date: '2025-01-01' },
+  { id: 'n2', title: '⚠️ 서비스 점검 공지 (4월)',  content: '4월 20일 새벽 2시~4시 서버 업그레이드 점검이 있습니다. 이용에 참고해주세요.', isPinned: false, author: 'MASTER', views:  482, date: '2025-04-15' },
+];
+let memBusinessPosts = [
+  { id: 'b3_vip', shipName: '묵호 VIP 크루즈', author: '박선장', author_email: 'park@demo.com', type: '선상/크루즈', target: '광어구', region: '강원 묵호항', date: '연중무휴', price: '1인 65,000원', phone: '010-1234-0001', content: 'VVIP 전용 묵호항 1위 독점 선상낚시! 광어, 우럭, 가자미 최고 포인트를 안내드립니다. 최신 FRP 낚시 전용선으로 안전하고 쾌적하게 즐기세요.', cover: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=600&q=80', isPinned: true, harborId: 'GN_005', createdAt: new Date() },
+  { id: 'b1', shipName: '속초 이서호', author: '이사장', author_email: 'lee@demo.com', type: '선상낚시', target: '구럭/광어', region: '강원 속초', date: '매주 토/일', price: '1인 55,000원', phone: '010-1234-0002', content: '속초 대표 선상낚시! 동해 최고 포인트 직행. 장비 무료 대여, 초보자 환영합니다.', cover: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?auto=format&fit=crop&w=600&q=80', isPinned: false, createdAt: new Date() },
+  { id: 'b2', shipName: '통영 이선호크루', author: '통영호크루', author_email: 'ttg@demo.com', type: '중고선', target: '멕주바리/스나', region: '경남 통영', date: '매일 출항', price: '7시간 49,900원', phone: '010-1234-0003', content: '남해 통영의 황금 포인트! 참돔, 멱주바리 전문 선상낚시. 안전 장비 완비.', cover: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80', isPinned: false, createdAt: new Date() },
+];
+let memProSubs  = {}; // { userId: { purchasedAt, expiresAt } }
+let memVvipSlots= {}; // { harborId: { userId, ... } }
+let cctvOverrides = {}; // in-memory (DB 연결 시 MongoDB로 교체)
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ─── 진단용 디버그 엔드포인트 ─────────────────────────────────────────────
-app.get('/api/debug', (req, res) => {
+// ─── 진단용 디버그 엔드포인트 ────────────────────────────────────────────────
+app.get('/api/debug', async (req, res) => {
   const uri = MONGO_URI ? MONGO_URI.replace(/:[^@]+@/, ':***@') : '미설정';
   res.json({
     dbReady,
     mongoUri: uri,
     memUserCount: memUsers.length,
+    memCrewCount: memCrews.length,
+    memNoticeCount: memNotices.length,
+    memBusinessCount: memBusinessPosts.length,
     env: {
       MONGO_URI: !!process.env.MONGO_URI,
       MONGO_PASS: !!process.env.MONGO_PASS,
@@ -578,10 +598,217 @@ app.post('/api/user/exp', async (req, res) => {
 // --- 내 게시글 목록 ---
 app.get('/api/user/posts', async (req, res) => {
   try {
-    const posts = await Post.find({ author_email: req.query.email }).sort({ createdAt: -1 });
-    res.json(posts);
-  } catch(err) { res.json([]); }
+    if (dbReady && Post) {
+      const posts = await Post.find({ author_email: req.query.email }).sort({ createdAt: -1 });
+      return res.json(posts);
+    }
+    res.json([]);
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
+
+// =================================================================
+//  커뮤니티 API (오픈게시판 / 크루 / 공지사항 / 선상배홍보)
+//  MongoDB 연결 시 영구저장, 미연결 시 인메모리 fallback
+// =================================================================
+
+// ── 오픈게시판 전체 조회 ──────────────────────────────────────────────────────
+app.get('/api/community/posts', async (req, res) => {
+  try {
+    if (dbReady && Post) {
+      const posts = await Post.find().sort({ createdAt: -1 }).limit(100);
+      return res.json(posts);
+    }
+    res.json([]);
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 오픈게시판 글 작성 ────────────────────────────────────────────────────────
+app.post('/api/community/posts', async (req, res) => {
+  try {
+    const { author, author_email, category, content, image } = req.body;
+    if (!author || !author_email || !category || !content)
+      return res.status(400).json({ error: '필수 항목 누락' });
+    if (dbReady && Post) {
+      const post = new Post({ author, author_email, category, content, image: image||null });
+      await post.save();
+      return res.json(post);
+    }
+    const post = { _id: Date.now().toString(), id: Date.now().toString(), author, author_email, category, content, image: image||null, likes: 0, comments: [], createdAt: new Date() };
+    res.json(post);
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 오픈게시판 글 삭제 ────────────────────────────────────────────────────────
+app.delete('/api/community/posts/:id', async (req, res) => {
+  try {
+    if (dbReady && Post) { await Post.findByIdAndDelete(req.params.id); }
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 게시글 좋아요 ────────────────────────────────────────────────────────────
+app.patch('/api/community/posts/:id/like', async (req, res) => {
+  try {
+    if (dbReady && Post) {
+      const post = await Post.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
+      return res.json({ likes: post?.likes || 0 });
+    }
+    res.json({ likes: 0 });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 크루 전체 조회 ────────────────────────────────────────────────────────────
+app.get('/api/community/crews', async (req, res) => {
+  try {
+    if (dbReady && Crew) {
+      const crews = await Crew.find().sort({ createdAt: -1 });
+      return res.json(crews);
+    }
+    res.json(memCrews);
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 크루 생성 ─────────────────────────────────────────────────────────────────
+app.post('/api/community/crews', async (req, res) => {
+  try {
+    const { name, region, isPrivate, password, owner, ownerName } = req.body;
+    if (!name || !owner || !ownerName) return res.status(400).json({ error: '필수 항목 누락' });
+    if (dbReady && Crew) {
+      const crew = new Crew({ name, region: region||'전국', isPrivate: !!isPrivate, password: password||null, owner, ownerName });
+      await crew.save();
+      return res.json(crew);
+    }
+    const crew = { id: Date.now().toString(), _id: Date.now().toString(), name, region: region||'전국', isPrivate: !!isPrivate, password: password||null, owner, ownerName, members: 1, createdAt: new Date() };
+    memCrews.unshift(crew);
+    res.json(crew);
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 크루 삭제 (마스터 or 오너) ───────────────────────────────────────────────
+app.delete('/api/community/crews/:id', async (req, res) => {
+  try {
+    const { email, adminId } = req.body;
+    if (dbReady && Crew) {
+      const crew = await Crew.findById(req.params.id);
+      if (!crew) return res.status(404).json({ error: '크루 없음' });
+      if (adminId !== 'sunjulab' && crew.owner !== email) return res.status(403).json({ error: '권한 없음' });
+      await Crew.findByIdAndDelete(req.params.id);
+      return res.json({ success: true });
+    }
+    memCrews = memCrews.filter(c => c.id !== req.params.id);
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 공지사항 전체 조회 ────────────────────────────────────────────────────────
+app.get('/api/community/notices', async (req, res) => {
+  try {
+    if (dbReady && Notice) {
+      const notices = await Notice.find().sort({ isPinned: -1, createdAt: -1 });
+      return res.json(notices);
+    }
+    res.json(memNotices);
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 공지사항 작성 (마스터 전용) ───────────────────────────────────────────────
+app.post('/api/community/notices', async (req, res) => {
+  try {
+    const { title, content, isPinned, adminId } = req.body;
+    if (adminId !== 'sunjulab') return res.status(403).json({ error: '마스터 권한 필요' });
+    if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
+    if (dbReady && Notice) {
+      const notice = new Notice({ title, content, isPinned: !!isPinned, author: 'MASTER' });
+      await notice.save();
+      return res.json(notice);
+    }
+    const notice = { id: Date.now().toString(), title, content, isPinned: !!isPinned, author: 'MASTER', views: 0, date: new Date().toISOString().split('T')[0] };
+    memNotices.unshift(notice);
+    res.json(notice);
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 공지사항 삭제 (마스터 전용) ───────────────────────────────────────────────
+app.delete('/api/community/notices/:id', async (req, res) => {
+  try {
+    const adminId = req.body?.adminId || req.query?.adminId;
+    if (adminId !== 'sunjulab') return res.status(403).json({ error: '마스터 권한 필요' });
+    if (dbReady && Notice) {
+      await Notice.findByIdAndDelete(req.params.id);
+      return res.json({ success: true });
+    }
+    memNotices = memNotices.filter(n => n.id !== req.params.id);
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 공지사항 조회수 증가 ──────────────────────────────────────────────────────
+app.patch('/api/community/notices/:id/view', async (req, res) => {
+  try {
+    if (dbReady && Notice) {
+      await Notice.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+    } else {
+      const n = memNotices.find(x => x.id === req.params.id);
+      if (n) n.views = (n.views||0) + 1;
+    }
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 선상배홍보 게시글 전체 조회 ──────────────────────────────────────────────
+app.get('/api/community/business', async (req, res) => {
+  try {
+    if (dbReady && BusinessPost) {
+      const now = new Date();
+      await BusinessPost.updateMany(
+        { isPinned: true, expiresAt: { $ne: null, $lt: now } },
+        { $set: { isPinned: false } }
+      );
+      const posts = await BusinessPost.find().sort({ isPinned: -1, createdAt: -1 });
+      return res.json(posts);
+    }
+    const now = new Date();
+    memBusinessPosts.forEach(p => {
+      if (p.isPinned && p.expiresAt && new Date(p.expiresAt) < now) p.isPinned = false;
+    });
+    res.json([...memBusinessPosts].sort((a,b) => (b.isPinned?1:0)-(a.isPinned?1:0)));
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 선상배홍보 게시글 작성 (PRO/VVIP 전용) ───────────────────────────────────
+app.post('/api/community/business', async (req, res) => {
+  try {
+    const { author, author_email, shipName, type, target, region, date, price, phone, content, cover, isPinned, harborId, expiresAt } = req.body;
+    if (!author || !author_email || !shipName || !content)
+      return res.status(400).json({ error: '필수 항목 누락' });
+    const postData = { author, author_email, shipName, type: type||'선상낚시', target: target||'다수어종', region: region||'', date: date||'', price: price||'', phone: phone||'', content, cover: cover||'', isPinned: !!isPinned, harborId: harborId||null, expiresAt: expiresAt||null };
+    if (dbReady && BusinessPost) {
+      const post = new BusinessPost(postData);
+      await post.save();
+      return res.json(post);
+    }
+    const post = { id: Date.now().toString(), _id: Date.now().toString(), ...postData, createdAt: new Date() };
+    memBusinessPosts.unshift(post);
+    res.json(post);
+  } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 선상배홍보 게시글 삭제 (마스터 or 작성자) ────────────────────────────────
+app.delete('/api/community/business/:id', async (req, res) => {
+  try {
+    const { email, adminId } = req.body;
+    if (dbReady && BusinessPost) {
+      const post = await BusinessPost.findById(req.params.id);
+      if (!post) return res.status(404).json({ error: '게시글 없음' });
+      if (adminId !== 'sunjulab' && post.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+      await BusinessPost.findByIdAndDelete(req.params.id);
+      return res.json({ success: true });
+    }
+    memBusinessPosts = memBusinessPosts.filter(p => p.id !== req.params.id);
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
 
 /* =========================================================
    MARINE API & ROOT
@@ -670,9 +897,20 @@ app.get('/api/weather/cctv', async (req, res) => {
   }
 });
 
-// ── 마스터 전용 CCTV 관리 API ──────────────────────────────────────────────
-// In-Memory 오버라이드 저장소 (서버 재시작 시 초기화 → 추후 DB 연동 가능)
-let cctvOverrides = {}; // { obsCode: { youtubeId, type, areaName, label } }
+// ── CCTV 오버라이드 (DB 우선, 인메모리 fallback) ──────────────────────────────
+// DB 연결 시 시작할 때 MongoDB에서 오버라이드 로드
+async function loadCctvOverridesFromDB() {
+  if (!dbReady || !CctvOverrideModel) return;
+  try {
+    const overrides = await CctvOverrideModel.find();
+    overrides.forEach(o => {
+      cctvOverrides[o.obsCode] = { youtubeId: o.youtubeId, type: o.type, label: o.label, updatedAt: o.updatedAt };
+    });
+    console.log(`[CCTV] DB에서 ${overrides.length}개 오버라이드 로드 완료`);
+  } catch(e) { console.error('[CCTV] 오버라이드 로드 실패:', e.message); }
+}
+setTimeout(loadCctvOverridesFromDB, 3000); // DB 연결 후 3초 대기 후 로드
+
 
 function isMaster(req) {
   const adminId = req.headers['x-admin-id'] || req.query.adminId || req.body?.adminId;
@@ -695,30 +933,47 @@ app.get('/api/admin/cctv', (req, res) => {
   res.json({ list, overrideCount: Object.keys(cctvOverrides).length });
 });
 
-// PUT /api/admin/cctv/:obsCode — 특정 지역 YouTube ID / 타입 수정
-app.put('/api/admin/cctv/:obsCode', (req, res) => {
+// PUT /api/admin/cctv/:obsCode — 특정 지역 YouTube ID / 타입 수정 (DB 영구저장)
+app.put('/api/admin/cctv/:obsCode', async (req, res) => {
   if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
   const { obsCode } = req.params;
   const { youtubeId, type, label } = req.body;
   if (!obsCode) return res.status(400).json({ error: 'obsCode 필요' });
 
   const prev = cctvOverrides[obsCode] || {};
-  cctvOverrides[obsCode] = {
+  const updated = {
     ...prev,
     ...(youtubeId !== undefined && { youtubeId }),
     ...(type      !== undefined && { type }),
     ...(label     !== undefined && { label }),
     updatedAt: new Date().toISOString(),
   };
+  cctvOverrides[obsCode] = updated;
+
+  // DB 영구저장
+  if (dbReady && CctvOverrideModel) {
+    try {
+      await CctvOverrideModel.findOneAndUpdate(
+        { obsCode },
+        { obsCode, ...updated },
+        { upsert: true, new: true }
+      );
+    } catch(e) { console.error('[CCTV DB 저장 실패]', e.message); }
+  }
+
   console.log(`[마스터 CCTV 수정] ${obsCode}:`, cctvOverrides[obsCode]);
   res.json({ success: true, obsCode, override: cctvOverrides[obsCode] });
 });
 
 // DELETE /api/admin/cctv/:obsCode — 오버라이드 제거 (기본값으로 복원)
-app.delete('/api/admin/cctv/:obsCode', (req, res) => {
+app.delete('/api/admin/cctv/:obsCode', async (req, res) => {
   if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
   const { obsCode } = req.params;
   delete cctvOverrides[obsCode];
+  if (dbReady && CctvOverrideModel) {
+    try { await CctvOverrideModel.deleteOne({ obsCode }); }
+    catch(e) { console.error('[CCTV DB 삭제 실패]', e.message); }
+  }
   console.log(`[마스터 CCTV 초기화] ${obsCode} 오버라이드 제거`);
   res.json({ success: true, message: `${obsCode} 기본값으로 복원` });
 });
@@ -886,44 +1141,35 @@ server.listen(PORT, '0.0.0.0', () => {
 });
 
 // =================================================================
-//  PRO 월정액 구독 관리 시스템
-//  - 월 ₩29,900, 30일 만료 후 자동 권한 해제
-//  - VVIP와 동일한 만료 로직 적용
+//  PRO 월정액 구독 관리 시스템 (MongoDB DB 영구저장)
 // =================================================================
-let proSubscriptions = {}; // { userId: { purchasedAt, expiresAt, userName } }
+let proSubscriptions = memProSubs; // DB 연결 시 User 모델 tier 필드 활용
 
 // PRO 구독 구매 (or 갱신)
-app.post('/api/pro/purchase', (req, res) => {
+app.post('/api/pro/purchase', async (req, res) => {
   const { userId, userName } = req.body;
   if (!userId) return res.status(400).json({ error: '필수 정보 누락' });
 
   const now = new Date();
   const existing = proSubscriptions[userId];
-
   let expiresAt;
   if (existing && new Date(existing.expiresAt) > now) {
-    // 이미 유효한 구독 → 30일 연장
     expiresAt = new Date(new Date(existing.expiresAt).getTime() + 30 * 24 * 60 * 60 * 1000);
   } else {
-    // 신규 구독 or 만료 후 재구독 → 지금부터 30일
     expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   }
 
-  proSubscriptions[userId] = {
-    userId,
-    userName: userName || userId,
-    purchasedAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString(),
-    tier: 'PRO'
-  };
+  proSubscriptions[userId] = { userId, userName: userName||userId, purchasedAt: now.toISOString(), expiresAt: expiresAt.toISOString(), tier: 'PRO' };
+
+  // DB에도 User.tier 업데이트
+  if (dbReady && User) {
+    try { await User.findOneAndUpdate({ email: userId }, { tier: 'PRO', proExpiresAt: expiresAt }); }
+    catch(e) { console.error('[PRO DB 저장 실패]', e.message); }
+  }
 
   const daysLeft = Math.ceil((expiresAt - now) / 86400000);
-  res.json({
-    success: true,
-    expiresAt: expiresAt.toISOString(),
-    daysLeft,
-    message: `PRO 구독 완료! (${expiresAt.toLocaleDateString('ko-KR')} ${expiresAt.getHours()}시까지 유효)`
-  });
+  res.json({ success: true, expiresAt: expiresAt.toISOString(), daysLeft,
+    message: `PRO 구독 완료! (${expiresAt.toLocaleDateString('ko-KR')}까지 유효)` });
 });
 
 // PRO 구독 상태 확인 (만료 시 자동 FREE 다운그레이드)
@@ -1012,8 +1258,22 @@ const HARBOR_LIST = [
   { id: 'CB_002', region: '충남', name: '주문진항 (말도)', lat: 36.511, lng: 126.151 },
 ];
 
-// In-Memory VVIP 슬롯 쿠 (실제에는 MongoDB에 저장)
-let vvipSlots = {}; // { harborId: { userId, userName, purchasedAt } }
+// In-Memory VVIP 슬롯 저장소 (DB 연결 시 MongoDB에 영구저장)
+let vvipSlots = memVvipSlots;
+
+// DB 연결 시 VVIP 슬롯 불러오기
+async function loadVvipSlotsFromDB() {
+  if (!dbReady || !BusinessPost) return;
+  try {
+    const now = new Date();
+    const vvipPosts = await BusinessPost.find({ isPinned: true, $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] });
+    vvipPosts.forEach(p => {
+      if (p.harborId) vvipSlots[p.harborId] = { userId: p.author_email, userName: p.author, purchasedAt: p.createdAt?.toISOString(), expiresAt: p.expiresAt?.toISOString(), harborName: p.region };
+    });
+    console.log(`[VVIP] DB에서 ${vvipPosts.length}개 슬롯 복원`);
+  } catch(e) { console.error('[VVIP] 슬롯 로드 실패:', e.message); }
+}
+setTimeout(loadVvipSlotsFromDB, 3500);
 
 // 항구 목록 + 슬롯 현황 조회 (만료 자동 해제 포함)
 app.get('/api/vvip/harbors', (req, res) => {

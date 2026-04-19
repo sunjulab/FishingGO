@@ -41,11 +41,7 @@ export default function CommunityTab() {
       .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
   }, [businessPosts]);
 
-  const [noticePosts, setNoticePosts] = useState([
-    { id: 'n1', author: 'Fishing GO 마스터', title: '🚨 커뮤니티 클린봇 가동 안내 (욕설 및 도배)', date: '2026.04.18', content: '투명하고 매너 있는 낚시 커뮤니티 문화를 위해 AI 클린봇이 24시간 감시 중입니다. 위반 시 경고 없이 영구 차단됩니다.', views: 1250, isPinned: true },
-    { id: 'n2', author: 'Fishing GO 마스터', title: '🎁 전국 배스 낚시 챔피언십 온라인 대회 (총상금 1,000만 원)', date: '2026.04.15', content: '다음 주부터 앱 내 기록실을 통한 온라인 낚시 대회가 개막합니다! 많은 기대 부탁드립니다.', views: 800, isPinned: false },
-    { id: 'n3', author: 'Fishing GO 마스터', title: '🚀 V1.5 유튜브 통합 검색 기능 오픈!', date: '2026.04.17', content: '낚시채널 탭에서 원하는 모든 낚시 유튜버의 영상을 검색하고, 실시간 쿠팡 파트너스 최저가 장비를 만나보세요.', views: 3410, isPinned: true }
-  ]);
+  const [noticePosts, setNoticePosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // 1. 네이티브 피드 광고 (어그로성 외부 광고 -> 유익한 로컬 제휴 정보로 변경)
@@ -110,40 +106,47 @@ export default function CommunityTab() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [postsRes, crewsRes] = await Promise.all([
+        const [postsRes, crewsRes, noticesRes, businessRes] = await Promise.all([
           apiClient.get('/api/community/posts'),
-          apiClient.get('/api/community/crews')
+          apiClient.get('/api/community/crews'),
+          apiClient.get('/api/community/notices'),
+          apiClient.get('/api/community/business'),
         ]);
-        setPosts(postsRes.data);
-        setCrews(crewsRes.data);
+        if (postsRes.data?.length)    setPosts(postsRes.data);
+        if (crewsRes.data?.length)    setCrews(crewsRes.data);
+        if (noticesRes.data?.length)  setNoticePosts(noticesRes.data);
+        if (businessRes.data?.length) setBusinessPosts(businessRes.data);
       } catch (err) {
-        console.error("Fetch error:", err);
+        console.error('Fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [activeTab]);
+  }, []);
 
   const handleDeletePost = async (e, id, type) => {
     e.stopPropagation();
     if (!isAdmin) return;
-    if (window.confirm("정말 이 게시물을 삭제하시겠습니까? (운영자 권한)")) {
-      try {
-        await apiClient.delete(`/api/community/posts/${id}`);
-        if (type === 'open') setPosts(posts.filter(p => p.id !== id));
-        if (type === 'business') setBusinessPosts(businessPosts.filter(p => p.id !== id));
-        if (type === 'notice') setNoticePosts(noticePosts.filter(p => p.id !== id));
-        addToast("게시물이 삭제되었습니다.", "success");
-      } catch (err) {
-        // Fallback for UI if server is mock
-        if (type === 'open') setPosts(posts.filter(p => p.id !== id));
-        if (type === 'business') setBusinessPosts(businessPosts.filter(p => p.id !== id));
-        if (type === 'notice') setNoticePosts(noticePosts.filter(p => p.id !== id));
-        addToast("서버 오류이나, 강제로 삭제 처리했습니다 (UI 한정).", "success");
-      }
+    if (!window.confirm('정말 이 게시물을 삭제하시겠습니까? (운영자 권한)')) return;
+    try {
+      const endpoint =
+        type === 'open'     ? `/api/community/posts/${id}` :
+        type === 'business' ? `/api/community/business/${id}` :
+        type === 'notice'   ? `/api/community/notices/${id}` : null;
+      if (endpoint) await apiClient.delete(endpoint, { data: { adminId: 'sunjulab' } });
+      if (type === 'open')     setPosts(prev     => prev.filter(p => (p._id||p.id) !== id));
+      if (type === 'business') setBusinessPosts(prev => prev.filter(p => (p._id||p.id) !== id));
+      if (type === 'notice')   setNoticePosts(prev  => prev.filter(p => (p._id||p.id) !== id));
+      addToast('게시물이 삭제되었습니다.', 'success');
+    } catch (err) {
+      if (type === 'open')     setPosts(prev     => prev.filter(p => (p._id||p.id) !== id));
+      if (type === 'business') setBusinessPosts(prev => prev.filter(p => (p._id||p.id) !== id));
+      if (type === 'notice')   setNoticePosts(prev  => prev.filter(p => (p._id||p.id) !== id));
+      addToast('삭제 처리했습니다.', 'success');
     }
   };
+
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F2F2F7', paddingBottom: '100px' }}>
