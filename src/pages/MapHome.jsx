@@ -49,12 +49,19 @@ export default function MapHome() {
   const searchRef      = useRef(null);
   const mapInitialized = useRef(false);
 
-  /* ── 카카오맵 초기화 (시작 즉시, visibility제어라 컨테이너 사이즈 유지됨) ── */
+  /* ── 카카오맵 초기화 (viewMode=map 진입 시, kakao.maps.load 공식 콜백) ── */
   useEffect(() => {
-    const initMap = () => {
-      if (!window.kakao?.maps || !window.kakao.maps.Map) return false;
+    if (viewMode !== 'map') return;
+
+    // 이미 초기화됐으면 relayout만
+    if (mapInitialized.current && mapRef.current) {
+      requestAnimationFrame(() => { mapRef.current?.relayout(); });
+      return;
+    }
+
+    const createMap = () => {
       const container = document.getElementById('kakao-map');
-      if (!container || container.offsetWidth === 0) return false;
+      if (!container) return;
       try {
         const map = new window.kakao.maps.Map(container, {
           center: new window.kakao.maps.LatLng(36.5, 127.8),
@@ -65,7 +72,9 @@ export default function MapHome() {
         map.setZoomable(true);
         map.setDraggable(true);
         mapRef.current = map;
-        clustererRef.current = new window.kakao.maps.MarkerClusterer({ map, averageCenter: true, minLevel: 10 });
+        clustererRef.current = new window.kakao.maps.MarkerClusterer({
+          map, averageCenter: true, minLevel: 10
+        });
         mapInitialized.current = true;
         setMapLoaded(true);
         if (navigator.geolocation) {
@@ -79,19 +88,26 @@ export default function MapHome() {
             });
           });
         }
-        return true;
       } catch (err) {
-        console.error('카카오맵 초기화 오류:', err);
-        return false;
+        console.error('카카오맵 Map 생성 오류:', err);
       }
     };
-    let retry = 0;
-    const iv = setInterval(() => {
-      if (initMap()) { clearInterval(iv); }
-      else if (retry++ > 50) { clearInterval(iv); }
-    }, 200);
-    return () => clearInterval(iv);
-  }, []);
+
+    // kakao.maps.load() — autoload=false 일 때 SDK 준비 완료 콜백
+    if (window.kakao && window.kakao.maps) {
+      window.kakao.maps.load(createMap);
+    } else {
+      // SDK 스크립트 자체가 아직 로드 안 된 경우 폴백
+      let retry = 0;
+      const id = setInterval(() => {
+        if (window.kakao?.maps) { clearInterval(id); window.kakao.maps.load(createMap); }
+        else if (retry > 60) clearInterval(id);
+        retry++;
+      }, 200);
+      return () => clearInterval(id);
+    }
+  }, [viewMode]);
+
 
   /* ── 마커 렌더링 (최적화) ── */
   useEffect(() => {
@@ -225,21 +241,15 @@ export default function MapHome() {
     });
   }, [showHeatmap, mapLoaded]);
 
-  /* ── 맵 relayout + panTo (viewMode가 map일 때) ── */
-  useEffect(() => {
-    if (viewMode === 'map' && mapRef.current) {
-      const t = setTimeout(() => { if (mapRef.current) mapRef.current.relayout(); }, 50);
-      return () => clearTimeout(t);
-    }
-  }, [viewMode]);
-
+  /* ── 맵 리사이즈 (selectedPoint 변경 시 panTo) ── */
   useEffect(() => {
     if (viewMode === 'map' && mapRef.current && selectedPoint) {
-      const t = setTimeout(() => {
-        if (mapRef.current)
+      const timer = setTimeout(() => {
+        if (mapRef.current) {
           mapRef.current.panTo(new window.kakao.maps.LatLng(selectedPoint.lat, selectedPoint.lng));
-      }, 120);
-      return () => clearTimeout(t);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [selectedPoint]);
 
@@ -423,13 +433,8 @@ export default function MapHome() {
           )}
         </div>{/* 헤더 끝 */}
 
-        {/* ── 지도 풀스크린 뷰 (visibility로 전환 - 사이즈 유지되어 카카오맵 초기화 성공) ── */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          position: 'relative', overflow: 'hidden',
-          visibility: viewMode === 'map' ? 'visible' : 'hidden',
-          pointerEvents: viewMode === 'map' ? 'auto' : 'none',
-        }}>
+        {/* ── 지도 풀스크린 뷰 ── */}
+        <div style={{ display: viewMode === 'map' ? 'flex' : 'none', flex: 1, flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             <div id="kakao-map" style={{ width: '100%', flex: 1, minHeight: '200px', background: '#e8edf5' }} />
             
             {/* 수온 범례 (Legend) */}
@@ -468,12 +473,8 @@ export default function MapHome() {
             )}
           </div>
 
-        {/* ── 대시보드 뷰 (visibility로 전환) ── */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          visibility: viewMode === 'dashboard' ? 'visible' : 'hidden',
-          pointerEvents: viewMode === 'dashboard' ? 'auto' : 'none',
-        }}>
+        {/* ── 대시보드 뷰 ── */}
+        <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
 
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px', scrollbarWidth: 'none' }}>
 
