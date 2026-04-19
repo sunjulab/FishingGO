@@ -352,8 +352,11 @@ export default function CommunityTab() {
                       </button>
                     </div>
                   </div>
-                ) : (
-                  /* 일반 카드 (소형) */
+                ) : null}
+                {/* VVIP 카드 바로 아래 광고 */}
+                {post.isPinned && <BannerAd style={{ marginBottom: '16px' }} />}
+                {!post.isPinned && (
+
                   <div style={{ backgroundColor: '#fff', borderRadius: '16px', marginBottom: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #F0F2F7', overflow: 'hidden' }}>
                     <div style={{ padding: '12px' }} onClick={() => navigate(`/post/${post.id}`)}>
                       <div style={{ display: 'flex', gap: '12px' }}>
@@ -384,8 +387,6 @@ export default function CommunityTab() {
                 )}
               </React.Fragment>
             ))}
-            {/* 광고 — VVIP 프리미엄 스폰서 아래 */}
-            <BannerAd style={{ marginTop: '8px', marginBottom: '16px' }} />
           </div>
         )}
       </div>
