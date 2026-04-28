@@ -26,6 +26,7 @@ const NoticeDetail = lazy(() => import('./pages/NoticeDetail'));
 const SecretPointAdmin = lazy(() => import('./pages/SecretPointAdmin'));
 
 import RealTimeAlert from './components/RealTimeAlert';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // 스켈레톤 로딩 뼈대
 function PageLoading() {
@@ -190,38 +191,39 @@ function UserSyncChecker() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Toast />
-      <RealTimeAlert />
-      <SubscriptionExpiryChecker />
-      <UserSyncChecker />
-      <GlobalLevelUpListener />
-      <Header />
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Suspense fallback={<PageLoading />}>
-          <Routes>
-            <Route path="/" element={<MapHome />} />
-            <Route path="/media" element={<MediaTab />} />
-            <Route path="/community" element={<CommunityTab />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/mypage" element={<MyPage />} />
-            <Route path="/write" element={<WritePost />} />
-            <Route path="/create-crew" element={<CreateCrew />} />
-            <Route path="/post/:id" element={<PostDetail />} />
-            <Route path="/catch/:id" element={<CatchDetail />} />
-            <Route path="/crew/:id/chat" element={<CrewChat />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/weather" element={<WeatherDashboard />} />
-            <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
-            <Route path="/write-business" element={<WriteBusinessPost />} />
-            <Route path="/cctv-admin" element={<CctvAdmin />} />
-            <Route path="/notice/:id" element={<NoticeDetail />} />
-            <Route path="/secret-admin" element={<SecretPointAdmin />} />
-
-          </Routes>
-        </Suspense>
-      </div>
-      <BottomNav />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Toast />
+        <RealTimeAlert />
+        <SubscriptionExpiryChecker />
+        <UserSyncChecker />
+        <GlobalLevelUpListener />
+        <Header />
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <Suspense fallback={<PageLoading />}>
+            <Routes>
+              <Route path="/" element={<MapHome />} />
+              <Route path="/media" element={<MediaTab />} />
+              <Route path="/community" element={<CommunityTab />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/mypage" element={<MyPage />} />
+              <Route path="/write" element={<WritePost />} />
+              <Route path="/create-crew" element={<CreateCrew />} />
+              <Route path="/post/:id" element={<PostDetail />} />
+              <Route path="/catch/:id" element={<CatchDetail />} />
+              <Route path="/crew/:id/chat" element={<CrewChat />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/weather" element={<WeatherDashboard />} />
+              <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
+              <Route path="/write-business" element={<WriteBusinessPost />} />
+              <Route path="/cctv-admin" element={<CctvAdmin />} />
+              <Route path="/notice/:id" element={<NoticeDetail />} />
+              <Route path="/secret-admin" element={<SecretPointAdmin />} />
+            </Routes>
+          </Suspense>
+        </div>
+        <BottomNav />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

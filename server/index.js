@@ -148,6 +148,49 @@ try {
   console.log('✅ Helmet 보안 헤더 적용');
 } catch(e) { console.log('⚠️ helmet 미설치 → npm install helmet'); }
 
+// ─── 응답 압축 (Compression) - 응답 속도 30~70% 향상 ──────────
+try {
+  const compression = require('compression');
+  app.use(compression({
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+    threshold: 1024, // 1KB 이상 응답만 압축
+  }));
+  console.log('✅ Compression 응답 압축 적용');
+} catch(e) { console.log('⚠️ compression 미설치 → npm install compression'); }
+
+// ─── 구조화된 로거 (Winston) ──────────────────────────────────
+let logger;
+try {
+  const winston = require('winston');
+  logger = winston.createLogger({
+    level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
+    format: winston.format.combine(
+      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+      winston.format.printf(({ timestamp, level, message }) =>
+        `[${timestamp}] [${level.toUpperCase()}] ${message}`
+      )
+    ),
+    transports: [
+      new winston.transports.Console(),
+      new winston.transports.File({ filename: 'error.log', level: 'error', maxsize: 5242880, maxFiles: 3 }),
+      new winston.transports.File({ filename: 'combined.log', maxsize: 5242880, maxFiles: 5 }),
+    ],
+  });
+  console.log('✅ Winston 로거 초기화 완료');
+} catch(e) {
+  // winston 미설치 시 console로 fallback
+  logger = {
+    info:  (...a) => console.log('[INFO]',  ...a),
+    warn:  (...a) => console.warn('[WARN]',  ...a),
+    error: (...a) => console.error('[ERROR]', ...a),
+  };
+  console.log('⚠️ winston 미설치 → console fallback 사용 (npm install winston)');
+}
+global.logger = logger;
+
 // ─── CORS: 허용 도메인 화이트리스트 ──────────────────────────────
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -184,7 +227,7 @@ try {
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 100,
-    message: { error: '요청이 너무 잘쌓니다. 잠시 후 다시 시도해주세요.' },
+    message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
   });
   app.use('/api/auth/', authLimiter);
   app.use('/api/', apiLimiter);
