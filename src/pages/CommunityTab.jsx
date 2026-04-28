@@ -198,13 +198,13 @@ export default function CommunityTab() {
       }
     };
     fetchData();
-    fetchPosts(1, false);
-  }, [location.search]); // location 변화 시(탭 전환·등록 후 리다이렉트) 재로드
+    // fetchPosts는 아래 useEffect가 마운트 시에도 실행하므로 여기서 중복 호출 제거
+  }, [location.search]);
 
-  // 카테고리/디바운스된 검색어 변경 시 1페이지부터 재로드
+  // 마운트·카테고리·검색어 변경 시 1페이지부터 재로드 (단 한 번만 실행됨)
   React.useEffect(() => {
     fetchPosts(1, false);
-  }, [openCategory, debouncedSearch]);
+  }, [openCategory, debouncedSearch, location.search]);
 
   const handleLoadMore = async () => {
     if (page >= totalPages) return;

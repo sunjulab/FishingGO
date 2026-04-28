@@ -202,7 +202,7 @@ export default function WritePost() {
             onClick={() => document.getElementById('image-upload-input').click()}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', color: image ? '#0056D2' : '#666', fontSize: '14px', cursor: 'pointer' }}
           >
-            <input id="image-upload-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+            <input id="image-upload-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
               const file = e.target.files[0];
               if (file) {
                 setImageLoading(true);

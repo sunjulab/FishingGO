@@ -1001,8 +1001,9 @@ app.post('/api/auth/google', async (req, res) => {
       saveMemUsers(); // 로그인 시 출석 보존
     }
 
-    const token = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: buildUserResponse(user), justAttended, leveledUp });
+    const accessToken  = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '1h' });
+    const refreshToken = jwt.sign({ id: user._id || user.id, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp });
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
