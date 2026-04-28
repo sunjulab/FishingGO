@@ -122,9 +122,23 @@ export default function PostDetail() {
     } catch { addToast('서버 오류.', 'error'); }
   };
 
-  const handleShare = () => {
-    if (navigator.share) navigator.share({ title: `낚시GO | ${post?.author}님의 조황`, url: window.location.href });
-    else navigator.clipboard?.writeText(window.location.href);
+  const handleShare = async () => {
+    const shareData = {
+      title: `낚시GO | ${post?.author}님의 조황`,
+      text: post?.content?.slice(0, 80) || '낚시GO에서 조황을 확인하세요!',
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); }
+      catch (e) { /* 사용자가 취소한 경우 무시 */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        addToast('🔗 링크가 클립보드에 복사되었습니다!', 'success');
+      } catch {
+        addToast('링크 복사에 실패했습니다.', 'error');
+      }
+    }
   };
 
   if (loading) return (

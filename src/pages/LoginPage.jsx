@@ -90,6 +90,8 @@ export default function LoginPage() {
 
     setUser(userToSet);
     localStorage.setItem('token', data.token);
+    localStorage.setItem('access_token', data.accessToken || data.token);
+    if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
     addToast(`환영합니다, ${data.user.name}님! 🎣`, 'success');
 
     if (data.justAttended) {
@@ -240,6 +242,32 @@ export default function LoginPage() {
               {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+          {/* 비밀번호 강도 표시기 (회원가입 시에만) */}
+          {!isLogin && password.length > 0 && (() => {
+            let score = 0;
+            if (password.length >= 8) score++;
+            if (/[A-Z]/.test(password)) score++;
+            if (/[0-9]/.test(password)) score++;
+            if (/[^A-Za-z0-9]/.test(password)) score++;
+            const levels = [
+              { label: '약함', color: '#FF3B30', bg: '#FFE5E3' },
+              { label: '보통', color: '#FF9500', bg: '#FFF3E0' },
+              { label: '강함', color: '#34C759', bg: '#E8FFF0' },
+              { label: '매우 강함', color: '#0056D2', bg: '#E8F2FF' },
+            ];
+            const lvl = levels[Math.min(score - 1, 3)] || levels[0];
+            const width = `${Math.max(25, (score / 4) * 100)}%`;
+            return (
+              <div style={{ marginTop: '-4px' }}>
+                <div style={{ height: '4px', borderRadius: '4px', background: '#f0f0f0', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width, background: lvl.color, borderRadius: '4px', transition: 'width 0.3s, background 0.3s' }} />
+                </div>
+                <div style={{ fontSize: '11px', color: lvl.color, fontWeight: '800', marginTop: '4px', textAlign: 'right' }}>
+                  비밀번호 강도: {lvl.label}
+                </div>
+              </div>
+            );
+          })()}
 
           <button id="btn-submit" style={{ ...S.mainBtn, opacity: loading ? 0.7 : 1 }}
             onClick={handleSubmit} disabled={loading}>

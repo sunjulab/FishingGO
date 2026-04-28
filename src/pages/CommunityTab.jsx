@@ -1,11 +1,21 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2 } from 'lucide-react';
+import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2, Search } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import { NativeAd, BannerAd } from '../components/AdUnit';
+
+// ─── 디바운스 훅 (타이핑마다 API 호출 방지) ──────────────────────────────────
+function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = React.useState(value);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
 export default function CommunityTab() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +55,11 @@ export default function CommunityTab() {
   const addToast = useToastStore((state) => state.addToast);
   const [posts, setPosts] = useState([]);
   const [openCategory, setOpenCategory] = useState('전체'); // 오픈게시판 카테고리 필터
+  const [searchQuery, setSearchQuery] = useState('');    // 검색어 (입력값)
+  const debouncedSearch = useDebounce(searchQuery, 350); // 실제 API 호출에 사용
+  const [page, setPage] = useState(1);                   // 현재 페이지
+  const [totalPages, setTotalPages] = useState(1);       // 전체 페이지 수
+  const [loadingMore, setLoadingMore] = useState(false); // 더보기 로딩
   const OPEN_CATEGORIES = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
   const [crews, setCrews] = useState([
     { id: 'CREW_001', name: '동해 무늬 사냥단', members: 42, isPrivate: true }
@@ -55,11 +70,8 @@ export default function CommunityTab() {
     { id: 'b2', shipName: '인천 나이스호', author: '인천씨호크', type: '야간선상', target: '쭈꾸미/갑오징어', price: '인당 8만원', date: '매일 야간', content: '쭈꾸미 낚시 시즌 오픈! 최신 시설 완비, 깨끗한 화장실. 가족 단위 대환영.', likes: 45, comments: 18, cover: 'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=400&q=80', isPinned: false }
   ]);
 
-  // 오픈게시판 카테고리 필터
-  const filteredPosts = useMemo(() => {
-    if (openCategory === '전체') return posts;
-    return posts.filter(p => p.category === openCategory);
-  }, [posts, openCategory]);
+  // 오픈게시판 카테고리 필터 (서버 페이지네이션 사용으로 client 필터 제거)
+  const filteredPosts = posts; // 서버에서 필터링된 결과 사용
 
   // VVIP 만료 실시간 체크: expiresAt 지나면 isPinned 자동 해제
   const effectiveBusinessPosts = useMemo(() => {
@@ -140,18 +152,42 @@ export default function CommunityTab() {
     }
   };
 
+  // 게시글 로드 (페이지네이션 + 검색 지원)
+  const fetchPosts = React.useCallback(async (pageNum = 1, append = false) => {
+    try {
+      const params = new URLSearchParams();
+      params.set('page', pageNum);
+      params.set('limit', 20);
+      if (openCategory !== '전체') params.set('category', openCategory);
+      if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim());
+      const res = await apiClient.get(`/api/community/posts?${params}`);
+      const data = res.data;
+      // 서버가 {posts, total, page, totalPages} 형식 반환
+      const newPosts = data.posts || data; // 구버전 fallback
+      const blocked = user?.blockedUsers || [];
+      const filtered = newPosts.filter(p => !blocked.includes(p.author));
+      if (append) {
+        setPosts(prev => [...prev, ...filtered]);
+      } else {
+        setPosts(filtered);
+      }
+      setTotalPages(data.totalPages || 1);
+      setPage(pageNum);
+    } catch (err) {
+      console.error('Posts fetch error:', err);
+    }
+  }, [openCategory, debouncedSearch, user?.blockedUsers]);
+
   React.useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [postsRes, crewsRes, noticesRes, businessRes] = await Promise.all([
-          apiClient.get('/api/community/posts'),
+        const [crewsRes, noticesRes, businessRes] = await Promise.all([
           apiClient.get('/api/community/crews'),
           apiClient.get('/api/community/notices'),
           apiClient.get('/api/community/business'),
         ]);
         const blocked = user?.blockedUsers || [];
-        setPosts(Array.isArray(postsRes.data) ? postsRes.data.filter(p => !blocked.includes(p.author)) : []);
         if (crewsRes.data?.length)    setCrews(crewsRes.data.filter(c => !blocked.includes(c.ownerName)));
         if (noticesRes.data?.length)  setNoticePosts(noticesRes.data);
         if (businessRes.data?.length) setBusinessPosts(businessRes.data.filter(p => !blocked.includes(p.author)));
@@ -162,7 +198,21 @@ export default function CommunityTab() {
       }
     };
     fetchData();
+    fetchPosts(1, false);
   }, [location.search]); // location 변화 시(탭 전환·등록 후 리다이렉트) 재로드
+
+  // 카테고리/디바운스된 검색어 변경 시 1페이지부터 재로드
+  React.useEffect(() => {
+    fetchPosts(1, false);
+  }, [openCategory, debouncedSearch]);
+
+  const handleLoadMore = async () => {
+    if (page >= totalPages) return;
+    setLoadingMore(true);
+    await fetchPosts(page + 1, true);
+    setLoadingMore(false);
+  };
+
 
   const handleDeletePost = async (e, id, type) => {
     e.stopPropagation();
@@ -248,29 +298,43 @@ export default function CommunityTab() {
         </div>
       </div>
 
-      {/* 오픈게시판 카테고리 필터 탭 */}
+      {/* 오픈게시판 카테고리 필터 + 검색 탭 */}
       {activeTab === 'open' && (
-        <div style={{ backgroundColor: '#fff', borderBottom: '1px solid #F0F0F0', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <div style={{ display: 'flex', gap: '6px', padding: '10px 16px', width: 'max-content' }}>
-            {OPEN_CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setOpenCategory(cat)}
-                style={{
-                  padding: '7px 18px',
-                  borderRadius: '20px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: openCategory === cat ? '900' : '700',
-                  cursor: 'pointer',
-                  backgroundColor: openCategory === cat ? '#0056D2' : '#F2F2F7',
-                  color: openCategory === cat ? '#fff' : '#555',
-                  transition: 'all 0.15s',
-                  whiteSpace: 'nowrap',
-                  boxShadow: openCategory === cat ? '0 2px 8px rgba(0,86,210,0.3)' : 'none',
-                }}
-              >{cat}</button>
-            ))}
+        <div style={{ backgroundColor: '#fff', borderBottom: '1px solid #F0F0F0' }}>
+          {/* 검색창 */}
+          <div style={{ padding: '10px 16px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F2F2F7', borderRadius: '12px', padding: '8px 14px' }}>
+              <span style={{ fontSize: '16px' }}>🔍</span>
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="게시글 검색 (내용, 작성자)"
+                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', color: '#1c1c1e' }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#999', fontSize: '16px' }}>✕</button>
+              )}
+            </div>
+          </div>
+          {/* 카테고리 필터 */}
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', gap: '6px', padding: '10px 16px', width: 'max-content' }}>
+              {OPEN_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setOpenCategory(cat)}
+                  style={{
+                    padding: '7px 18px', borderRadius: '20px', border: 'none',
+                    fontSize: '13px', fontWeight: openCategory === cat ? '900' : '700',
+                    cursor: 'pointer',
+                    backgroundColor: openCategory === cat ? '#0056D2' : '#F2F2F7',
+                    color: openCategory === cat ? '#fff' : '#555',
+                    transition: 'all 0.15s', whiteSpace: 'nowrap',
+                    boxShadow: openCategory === cat ? '0 2px 8px rgba(0,86,210,0.3)' : 'none',
+                  }}
+                >{cat}</button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -508,6 +572,28 @@ export default function CommunityTab() {
                 )}
               </React.Fragment>
             ))}
+            {/* 더 불러오기 버튼 */}
+            {page < totalPages && (
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                style={{
+                  width: '100%', padding: '14px',
+                  backgroundColor: loadingMore ? '#f0f0f0' : '#fff',
+                  border: '1.5px solid #0056D2', borderRadius: '12px',
+                  color: '#0056D2', fontWeight: '700', fontSize: '14px',
+                  cursor: loadingMore ? 'not-allowed' : 'pointer',
+                  marginTop: '4px', marginBottom: '8px', transition: 'all 0.2s',
+                }}
+              >
+                {loadingMore ? '불러오는 중...' : `더 보기 (${page}/${totalPages}페이지)`}
+              </button>
+            )}
+            {page >= totalPages && posts.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '20px', fontSize: '13px', color: '#bbb' }}>
+                모든 게시글을 불러왔습니다 🎣
+              </div>
+            )}
           </div>
         )}
       </div>

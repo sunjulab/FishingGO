@@ -12,6 +12,7 @@ import { useToastStore } from '../store/useToastStore';
 import { useUserStore } from '../store/useUserStore';
 import { RewardGateModal } from '../components/AdUnit';
 import apiClient from '../api/index';
+import { fileToCompressedBase64 } from '../utils/imageUtils';
 
 const FISH_TYPES = ['감성돔', '참돔', '방어', '광어', '대구', '문어', '쭈꾸미', '갑오징어', '우럭', '농어', '삼치', '고등어', '장어'];
 const BOAT_TYPES = ['선상낚시', '야간선상', '에깅/문어', '선상루어', '캐스팅', '심해낚시', '갯바위 투어'];
@@ -183,9 +184,18 @@ export default function WriteBusinessPost() {
               </div>
             )}
           </label>
-          <input id="cover-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+          <input id="cover-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
             const f = e.target.files[0];
-            if (f) { const r = new FileReader(); r.onloadend = () => setCoverImage(r.result); r.readAsDataURL(f); }
+            if (f) {
+              try {
+                const compressed = await fileToCompressedBase64(f, { maxWidth: 1200, maxHeight: 900, quality: 0.8 });
+                setCoverImage(compressed);
+              } catch (err) {
+                const r = new FileReader();
+                r.onloadend = () => setCoverImage(r.result);
+                r.readAsDataURL(f);
+              }
+            }
           }} />
         </section>
 

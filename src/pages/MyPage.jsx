@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/index';
+import { compressAvatar } from '../utils/imageUtils';
 import { useUserStore, TIER_CONFIG, getLevelInfo, EXP_REWARDS } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { 
@@ -192,27 +193,10 @@ export default function MyPage() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = async () => {
-        const canvas = document.createElement('canvas');
-        // 200x200으로 축소하여 base64 크기 최소화
-        const SIZE = 200;
-        let width = img.width;
-        let height = img.height;
-        if (width > height) {
-          height = Math.round(height * SIZE / width);
-          width = SIZE;
-        } else {
-          width = Math.round(width * SIZE / height);
-          height = SIZE;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        // quality 0.6으로 JPEG 압축 (약 10~30KB 수준)
-        const base64 = canvas.toDataURL('image/jpeg', 0.6);
+    reader.onload = async (ev) => {
+      try {
+        // imageUtils.compressAvatar: 300x300 정사각형 크롭 + JPEG 0.8
+        const base64 = await compressAvatar(ev.target.result);
 
         // 즉시 UI 반영 (서버 저장 전)
         updateUser({ avatar: base64, picture: base64 });
@@ -241,8 +225,10 @@ export default function MyPage() {
           // 서버 저장 실패해도 로컬은 이미 반영됨 → 성공 안내
           addToast('📸 프로필 사진이 변경되었습니다! (로컬 저장)', 'success');
         }
-      };
-      img.src = ev.target.result;
+      } catch (compressErr) {
+        console.error('이미지 압축 실패:', compressErr);
+        addToast('이미지 처리 중 오류가 발생했습니다.', 'error');
+      }
     };
     reader.readAsDataURL(file);
   };

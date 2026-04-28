@@ -108,9 +108,10 @@ const buildMongoUri = () => {
 const MONGO_URI = buildMongoUri();
 if (MONGO_URI) {
   console.log('MongoDB 연결 시도 중...');
-  mongoose.connect(MONGO_URI, { 
+  mongoose.connect(MONGO_URI, {
     serverSelectionTimeoutMS: 10000,
-    family: 4 // IPv4 강제 (DNS SRV 에러 방지용)
+    family: 4, // IPv4 강제 (DNS SRV 에러 방지용)
+    heartbeatFrequencyMS: 10000, // 10초마다 heartbeat
   })
     .then(() => { dbReady = true; console.log('✅ MongoDB 연결 성공! 영구저장 모드 활성화'); })
     .catch(err => {
@@ -118,6 +119,20 @@ if (MONGO_URI) {
       console.log('⚠️ MongoDB 연결실패 → 인메모리 모드 전환');
       console.log('원인:', err.message);
     });
+
+  // ─── 자동 재연결 이벤트 핸들러 ────────────────────────────────
+  mongoose.connection.on('disconnected', () => {
+    dbReady = false;
+    console.warn('[MongoDB] 연결 끊김 → 인메모리 모드로 자동 전환');
+  });
+  mongoose.connection.on('reconnected', () => {
+    dbReady = true;
+    console.log('[MongoDB] ✅ 재연결 성공 → MongoDB 모드 복구');
+  });
+  mongoose.connection.on('error', (err) => {
+    console.error('[MongoDB] 연결 오류:', err.message);
+    if (mongoose.connection.readyState !== 1) dbReady = false;
+  });
 } else {
   console.log('⚠️ MONGO_URI/MONGO_PASS 미설정 → 인메모리 모드.');
 }
@@ -457,11 +472,32 @@ async function updateAllStationsCache() {
 }
 
 updateAllStationsCache();
-setInterval(updateAllStationsCache, 3600000);
+
+// ─── 시간대별 스마트 날씨 캐시 갱신 ─────────────────────────────────────────
+// 주간(6~24시): 1시간마다 / 새벽(0~6시): 3시간마다
+function scheduleWeatherCache() {
+  const hour = new Date().getHours();
+  const delay = (hour >= 2 && hour < 6) ? 3 * 60 * 60 * 1000 : 60 * 60 * 1000;
+  setTimeout(() => {
+    updateAllStationsCache();
+    scheduleWeatherCache(); // 재귀 스케줄링
+  }, delay);
+}
+scheduleWeatherCache();
 
 /* =========================================================
    AUTH & USER LEVELING API (DB + 인메모리 이중 레이어)
 ========================================================= */
+
+// ─── Health Check (Render 슬립 방지 핑 수신용) ────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    db: dbReady ? 'mongodb' : 'memory',
+    uptime: Math.floor(process.uptime()),
+    time: new Date().toISOString(),
+  });
+});
 
 // 레벨 설정 (서버와 프론트엔드를 자동 동기화)
 const LEVEL_CONFIG = [
@@ -907,9 +943,25 @@ app.post('/api/auth/login', async (req, res) => {
       saveMemUsers(); // 출석 및 경험치 갱신 보존
     }
 
-    const token = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
+    const accessToken  = jwt.sign({ id: user._id || user.id }, JWT_SECRET, { expiresIn: '1h' });
+    const refreshToken = jwt.sign({ id: user._id || user.id, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
   } catch(err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
+});
+
+// --- 토큰 갱신 (Refresh Token) ---
+app.post('/api/auth/refresh', (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(401).json({ error: 'Refresh Token이 없습니다.' });
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_SECRET);
+    if (decoded.type !== 'refresh') return res.status(401).json({ error: '유효하지 않은 Refresh Token입니다.' });
+    // 새 Access Token 발급 (1시간)
+    const accessToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ accessToken });
+  } catch (err) {
+    return res.status(401).json({ error: 'Refresh Token이 만료되었습니다. 다시 로그인해주세요.' });
+  }
 });
 
 // --- 구글 소셜 로그인 (자동 회원가입) ---
@@ -1231,15 +1283,42 @@ app.delete('/api/user/records/:id', async (req, res) => {
 // =================================================================
 
 
-// ── 오픈게시판 전체 조회 ──────────────────────────────────────────────────────
+// ── 오픈게시판 전체 조회 (페이지네이션 + 검색 + 카테고리 필터) ──────────────
 app.get('/api/community/posts', async (req, res) => {
   try {
+    const page     = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit    = Math.min(50, parseInt(req.query.limit) || 20);
+    const skip     = (page - 1) * limit;
+    const category = req.query.category || '';  // 카테고리 필터
+    const q        = req.query.q || '';          // 검색어
+
     if (dbReady && Post) {
-      const posts = await Post.find().sort({ createdAt: -1 }).limit(100);
-      return res.json(posts);
+      const filter = {};
+      if (category) filter.category = category;
+      if (q) filter.$or = [
+        { content: { $regex: q, $options: 'i' } },
+        { author:  { $regex: q, $options: 'i' } },
+      ];
+      const [posts, total] = await Promise.all([
+        Post.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Post.countDocuments(filter),
+      ]);
+      return res.json({ posts, total, page, totalPages: Math.ceil(total / limit) });
     }
-    // 인메모리 fallback: 최신순 정렬
-    return res.json([...memPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 100));
+
+    // 인메모리 fallback
+    let list = [...memPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    if (category) list = list.filter(p => p.category === category);
+    if (q) {
+      const lq = q.toLowerCase();
+      list = list.filter(p =>
+        (p.content && p.content.toLowerCase().includes(lq)) ||
+        (p.author  && p.author.toLowerCase().includes(lq))
+      );
+    }
+    const total = list.length;
+    const posts = list.slice(skip, skip + limit);
+    return res.json({ posts, total, page, totalPages: Math.ceil(total / limit) });
   } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
@@ -2661,4 +2740,19 @@ server.listen(process.env.PORT || 5000, () => {
   const port = process.env.PORT || 5000;
   console.log(`🚀 Fishing GO 서버 실행 중 → http://localhost:${port}`);
   console.log(`📊 DB 상태: ${dbReady ? 'MongoDB ✅' : '인메모리 모드 ⚠️'}`);
+
+  // ─── Render 슬립 방지 Self Keep-Alive ─────────────────────────────────
+  // 무료 플랜 15분 비활성 시 슬립 → 10분마다 자기 자신에게 핑
+  if (process.env.RENDER_EXTERNAL_URL) {
+    const selfUrl = process.env.RENDER_EXTERNAL_URL;
+    setInterval(async () => {
+      try {
+        await axios.get(`${selfUrl}/api/health`);
+        console.log('[KeepAlive] Self-ping 성공');
+      } catch (e) {
+        console.warn('[KeepAlive] Self-ping 실패:', e.message);
+      }
+    }, 10 * 60 * 1000); // 10분마다
+    console.log(`✅ Render Keep-Alive 활성화 (${selfUrl})`);
+  }
 });

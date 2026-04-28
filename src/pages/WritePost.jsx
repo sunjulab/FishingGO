@@ -5,6 +5,7 @@ import { RewardGateModal } from '../components/AdUnit';
 import { useToastStore } from '../store/useToastStore';
 import { useUserStore } from '../store/useUserStore';
 import apiClient from '../api/index';
+import { fileToCompressedBase64 } from '../utils/imageUtils';
 
 export default function WritePost() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function WritePost() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
+  const [imageLoading, setImageLoading] = useState(false); // 압축 중 상태
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdGate, setShowAdGate] = useState(false);
@@ -202,12 +204,24 @@ export default function WritePost() {
           >
             <input id="image-upload-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
               const file = e.target.files[0];
-              if (file) { const reader = new FileReader(); reader.onloadend = () => setImage(reader.result); reader.readAsDataURL(file); }
+              if (file) {
+                setImageLoading(true);
+                try {
+                  const compressed = await fileToCompressedBase64(file, { maxWidth: 800, maxHeight: 800, quality: 0.75 });
+                  setImage(compressed);
+                } catch (err) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => setImage(reader.result);
+                  reader.readAsDataURL(file);
+                } finally {
+                  setImageLoading(false);
+                }
+              }
             }} />
             <div style={{ width: '36px', height: '36px', backgroundColor: image ? 'rgba(0,86,210,0.05)' : '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Image size={20} />
+              {imageLoading ? <span style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800' }}>압축중</span> : <Image size={20} />}
             </div>
-            <span style={{ fontWeight: '600' }}>{image ? '사진 추가됨' : '사진 추가'}</span>
+            <span style={{ fontWeight: '600' }}>{imageLoading ? '사진 처리 중...' : image ? '사진 추가됨' : '사진 추가'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '14px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MapPin size={20} /></div>

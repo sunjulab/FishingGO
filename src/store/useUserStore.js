@@ -162,6 +162,9 @@ export const useUserStore = create((set, get) => ({
   logout: () => {
     localStorage.removeItem('user');
     localStorage.removeItem('userTier');
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     set({ user: null, userTier: 'FREE', lastExpGain: null });
   },
 
