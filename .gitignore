@@ -30,3 +30,17 @@ dist-ssr
 .env.test.local
 .env.production.local
 server/.env
+
+# 서버 데이터 파일 (사용자 정보 보안 - 공개 저장소 노출 방지)
+server/users.json
+server/posts.json
+server/records.json
+server/crews.json
+server/chats.json
+server/proSubscriptions.json
+server/vvipSlots.json
+# 아래는 마스터 설정으로 공유 가능 (선택적)
+# server/notices.json
+# server/business.json
+# server/cctvOverrides.json
+# server/secretPointOverrides.json

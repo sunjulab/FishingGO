@@ -22,6 +22,9 @@ require('dotenv').config();
 const coupang = require('./coupangService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fishinggo_secret_2024';
+if (!process.env.JWT_SECRET) {
+  console.warn('[SECURITY] ⚠️ JWT_SECRET 환경변수가 설정되지 않았습니다. 프로덕션에서는 반드시 환경변수로 설정하세요!');
+}
 
 // In-Memory Fallback - DB 없어도 작동
 const USERS_FILE = path.join(__dirname, 'users.json');
@@ -137,9 +140,71 @@ try {
 
 
 const app = express();
-app.use(cors());
+
+// ─── 보안 헤더 (Helmet) ────────────────────────────────────────
+try {
+  const helmet = require('helmet');
+  app.use(helmet({ contentSecurityPolicy: false })); // CSP는 SPA 프론트 판단에 맡김으로 off
+  console.log('✅ Helmet 보안 헤더 적용');
+} catch(e) { console.log('⚠️ helmet 미설치 → npm install helmet'); }
+
+// ─── CORS: 허용 도메인 화이트리스트 ──────────────────────────────
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://fishing-go.vercel.app',
+  'https://fishing-go-mbqp.vercel.app',
+  /\.vercel\.app$/,  // Vercel 프리븷 배포 URL
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // Postman/서버간 요청 허용
+    const allowed = ALLOWED_ORIGINS.some(o =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    if (allowed) return callback(null, true);
+    console.warn(`[CORS] 차단된 origin: ${origin}`);
+    return callback(new Error('CORS 차단'));
+  },
+  credentials: true,
+}));
+
+// ─── Rate Limiter ────────────────────────────────────────────────────
+try {
+  const rateLimit = require('express-rate-limit');
+  // 로그인/회원가입/OTP: 10분당 20회
+  const authLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 20,
+    message: { error: '너무 많은 요청입니다. 10분 후 다시 시도해주세요.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  // 일반 API: 1분당 100회
+  const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    message: { error: '요청이 너무 잘쌓니다. 잠시 후 다시 시도해주세요.' },
+  });
+  app.use('/api/auth/', authLimiter);
+  app.use('/api/', apiLimiter);
+  console.log('✅ Rate Limiter 적용 (로그인 10분/20회, 일반 1분/100회)');
+} catch(e) { console.log('⚠️ express-rate-limit 미설치 → npm install express-rate-limit'); }
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
+function verifyToken(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증이 필요합니다.' });
+  try {
+    req.user = jwt.verify(auth.split(' ')[1], JWT_SECRET);
+    next();
+  } catch(e) {
+    return res.status(401).json({ error: '토큰이 유효하지 않거나 만료되었습니다.' });
+  }
+}
 
 // ─── 진단용 디버그 엔드포인트 ────────────────────────────────────────────────
 // ─── 비밀포인트 좌표 오버라이드 API (MASTER 전용) ──────────────────────────────
@@ -740,6 +805,11 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, name, phone } = req.body;
     if (!email || !password || !name) return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
+    // 입력값 검증
+    if (email.trim().length < 4)    return res.status(400).json({ error: 'ID는 4자 이상이어야 합니다.' });
+    if (password.length < 6)        return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다.' });
+    if (name.trim().length < 2)     return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
+    if (name.trim().length > 20)    return res.status(400).json({ error: '닉네임은 20자 이하여야 합니다.' });
 
     // 휴대폰 인증 여부 확인 (phone이 있으면 반드시 인증 완료여야 함)
     if (phone) {
@@ -2482,6 +2552,7 @@ app.post('/api/vvip/purchase', async (req, res) => {
       const existing = memVvipSlots[harborId];
       if (existing && existing.userId !== userId) return res.status(409).json({ error: `${harbor.name}은(는) 이미 선점된 자리입니다.` });
       memVvipSlots[harborId] = { userId, userName, purchasedAt, expiresAt };
+      saveVvipSlots(); // VVIP 슬롯 파일 저장
       const user = memUsers.find(u => u.email === userId || u.id === userId);
       if (user) { user.tier = 'BUSINESS_VIP'; user.vvipHarborId = harborId; user.vvipPurchasedAt = purchasedAt; user.vvipExpiresAt = expiresAt; saveMemUsers(); }
     }
@@ -2500,6 +2571,7 @@ app.post('/api/vvip/cancel', async (req, res) => {
       if (memVvipSlots && memVvipSlots[harborId]) {
         const uid = memVvipSlots[harborId].userId;
         delete memVvipSlots[harborId];
+        saveVvipSlots(); // VVIP 슬롯 파일 저장
         const u = memUsers.find(x => x.email === uid || x.id === uid);
         if (u) { u.tier = 'FREE'; u.vvipHarborId = null; saveMemUsers(); }
       }
@@ -2507,6 +2579,39 @@ app.post('/api/vvip/cancel', async (req, res) => {
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: '서버 오류' }); }
 });
+
+// ─── 서버 종료 시 전체 데이터 강제 플러시 ────────────────────────────────────
+function flushAllData() {
+  console.log('[Flush] 서버 종료 감지 → 전체 데이터 파일 동기화 시작...');
+  try { saveMemUsers();             console.log('[Flush] users.json ✅'); } catch(e) {}
+  try { saveMemPosts();             console.log('[Flush] posts.json ✅'); } catch(e) {}
+  try { saveMemRecords();           console.log('[Flush] records.json ✅'); } catch(e) {}
+  try { saveMemCrews();             console.log('[Flush] crews.json ✅'); } catch(e) {}
+  try { saveChatHistories();        console.log('[Flush] chats.json ✅'); } catch(e) {}
+  try { saveMemNotices();           console.log('[Flush] notices.json ✅'); } catch(e) {}
+  try { saveMemBusinessPosts();     console.log('[Flush] business.json ✅'); } catch(e) {}
+  try { saveSecretPointOverrides(); console.log('[Flush] secretPointOverrides.json ✅'); } catch(e) {}
+  try { saveCctvOverrides();        console.log('[Flush] cctvOverrides.json ✅'); } catch(e) {}
+  try { saveProSubs();              console.log('[Flush] proSubscriptions.json ✅'); } catch(e) {}
+  try { saveVvipSlots();            console.log('[Flush] vvipSlots.json ✅'); } catch(e) {}
+  console.log('[Flush] ✅ 전체 데이터 동기화 완료.');
+}
+
+// 정상 종료 (Render/PM2 배포 환경 재시작)
+process.on('SIGTERM', () => { flushAllData(); process.exit(0); });
+process.on('SIGINT',  () => { flushAllData(); process.exit(0); });
+// 예기치 못한 크래시 대비
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH] 예기치 못한 에러:', err.message);
+  flushAllData();
+  process.exit(1);
+});
+
+// ─── 30분마다 자동 백업 (Render 무료플랜 sleep 대비) ──────────────────────────
+setInterval(() => {
+  console.log('[AutoBackup] 30분 주기 자동 백업 실행...');
+  flushAllData();
+}, 30 * 60 * 1000);
 
 // ─── 서버 시작 ────────────────────────────────────────────────────────────────
 server.listen(process.env.PORT || 5000, () => {
