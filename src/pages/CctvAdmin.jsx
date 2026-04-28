@@ -27,6 +27,7 @@ export default function CctvAdmin() {
   const [editingCode, setEditingCode] = useState(null);
   const [editValues, setEditValues] = useState({ youtubeId: '', type: 'youtube', label: '' });
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [previewCode, setPreviewCode] = useState(null);
 
   // 마스터 권한 체크
@@ -72,7 +73,19 @@ export default function CctvAdmin() {
     try {
       setSaving(true);
       const body = { ...editValues };
-      if (body.type === 'image') body.youtubeId = '';  // 이미지 타입이면 ID 초기화
+
+      // URL 파싱 로직 추가 (전체 주소가 들어오더라도 11자리 ID만 저장)
+      if (body.type === 'youtube' && body.youtubeId) {
+        const extractYoutubeId = (str) => {
+          const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+          const match = str.match(regExp);
+          return (match && match[2].length === 11) ? match[2] : str;
+        };
+        body.youtubeId = extractYoutubeId(body.youtubeId.trim());
+      } else if (body.type === 'image') {
+        body.youtubeId = '';
+      }
+
       const res = await fetch(`${API}/api/admin/cctv/${obsCode}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-id': 'sunjulab' },
@@ -107,6 +120,47 @@ export default function CctvAdmin() {
     }
   };
 
+  const autoSyncCctvs = async () => {
+    if (!window.confirm('유튜브 API를 사용하여 모든 지역의 라이브 URL을 최신화하시겠습니까?\n(YouTube Data API 쿼터가 소모됩니다)')) return;
+    try {
+      setSyncing(true);
+      const res = await fetch(`${API}/api/admin/cctv/auto-sync`, {
+        method: 'POST',
+        headers: { 'x-admin-id': 'sunjulab' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(`✅ ${data.updatedCount}개 지역 실시간 영상 갱신 완료!`, 'success');
+        fetchList();
+      } else {
+        addToast(data.error || '자동 동기화에 실패했습니다.', 'error');
+      }
+    } catch (err) {
+      addToast('네트워크 오류', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleResetAll = async () => {
+    if (!window.confirm('모든 사용자 지정 CCTV 설정을 삭제하고 시스템 기본값(해양수산부 연안침식 모니터링)으로 복원하시겠습니까?')) return;
+    try {
+      const res = await fetch(`${API}/api/admin/cctv/reset-all`, {
+        method: 'POST',
+        headers: { 'x-admin-id': 'sunjulab' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(data.message, 'success');
+        fetchList(); // 새로고침
+      } else {
+        addToast(data.error || '초기화 실패', 'error');
+      }
+    } catch (err) {
+      addToast('서버 오류로 초기화 실패', 'error');
+    }
+  };
+
   const getEmbedUrl = (youtubeId) =>
     `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1`;
 
@@ -137,7 +191,17 @@ export default function CctvAdmin() {
 
       {/* 안내 배너 */}
       <div style={{ margin: '16px 16px 0', padding: '14px 16px', background: 'rgba(255,215,0,0.08)', borderRadius: '16px', border: '1px solid rgba(255,215,0,0.2)' }}>
-        <div style={{ fontSize: '12px', fontWeight: '900', color: '#FFD700', marginBottom: '4px' }}>📺 사용 방법</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '900', color: '#FFD700' }}>📺 사용 방법</div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button onClick={handleResetAll} style={{ background: 'rgba(255,100,100,0.2)', border: '1px solid rgba(255,100,100,0.5)', color: '#FF7B7B', borderRadius: '12px', padding: '6px 12px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <RotateCcw size={12} /> 설정 초기화(MOF)
+            </button>
+            <button onClick={autoSyncCctvs} disabled={syncing} style={{ background: 'linear-gradient(135deg, #00C48C, #0056D2)', color: '#fff', border: 'none', borderRadius: '12px', padding: '6px 12px', fontSize: '10px', fontWeight: '800', cursor: syncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px', opacity: syncing ? 0.7 : 1 }}>
+              <Youtube size={12} className={syncing ? 'spin' : ''} /> {syncing ? '탐색 중...' : '자동 갱신'}
+            </button>
+          </div>
+        </div>
         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.6' }}>
           YouTube 라이브 URL에서 <span style={{ color: '#FFD700', fontWeight: '800' }}>영상 ID(11자리)</span>만 복사하여 입력하세요.<br />
           예: youtube.com/watch?v=<span style={{ color: '#FFD700' }}>iCGFbFulG3Y</span> → <span style={{ color: '#FFD700' }}>iCGFbFulG3Y</span> 입력

@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
@@ -8,17 +8,44 @@ import apiClient from '../api/index';
 import { NativeAd, BannerAd } from '../components/AdUnit';
 export default function CommunityTab() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('business');
-  
+  const highlightedPostId = useRef(null);
+
+  // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab    = params.get('tab');
+    const postId = params.get('postId');
+    if (tab) setActiveTab(tab);
+    if (postId) {
+      highlightedPostId.current = postId;
+      // 탭 전환 후 해당 게시글로 스크롤
+      setTimeout(() => {
+        const el = document.getElementById(`post-${postId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.boxShadow = '0 0 0 3px #0056D2';
+          el.style.borderColor = '#0056D2';
+          setTimeout(() => {
+            el.style.boxShadow = '';
+            el.style.borderColor = '';
+            highlightedPostId.current = null;
+          }, 2500);
+        }
+      }, 350);
+    }
+  }, [location.search]);
+
   const canAccessPremium = useUserStore((state) => state.canAccessPremium());
   const canAccessBusinessPromo = useUserStore((state) => state.canAccessBusinessPromo());
   const user = useUserStore((state) => state.user);
   const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
   
   const addToast = useToastStore((state) => state.addToast);
-  const [posts, setPosts] = useState([
-    { id: 'f1', author: '강릉감성돔', category: '찌낚시', time: '방금 전', content: '데이터 연동 중...', likes: 0, comments: 0 }
-  ]);
+  const [posts, setPosts] = useState([]);
+  const [openCategory, setOpenCategory] = useState('전체'); // 오픈게시판 카테고리 필터
+  const OPEN_CATEGORIES = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
   const [crews, setCrews] = useState([
     { id: 'CREW_001', name: '동해 무늬 사냥단', members: 42, isPrivate: true }
   ]);
@@ -27,6 +54,12 @@ export default function CommunityTab() {
     { id: 'b1', shipName: '강릉 에이스호', author: '강릉에이스선장', type: '선상낚시', target: '대구/문어', price: '인당 12만원', date: '이번 주 주말 출항', content: '초보자 환영! 몸만 오시면 됩니다. 장비 대여 가능. 점심(문어라면) 제공!', likes: 12, comments: 4, cover: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=400&q=80', isPinned: false },
     { id: 'b2', shipName: '인천 나이스호', author: '인천씨호크', type: '야간선상', target: '쭈꾸미/갑오징어', price: '인당 8만원', date: '매일 야간', content: '쭈꾸미 낚시 시즌 오픈! 최신 시설 완비, 깨끗한 화장실. 가족 단위 대환영.', likes: 45, comments: 18, cover: 'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=400&q=80', isPinned: false }
   ]);
+
+  // 오픈게시판 카테고리 필터
+  const filteredPosts = useMemo(() => {
+    if (openCategory === '전체') return posts;
+    return posts.filter(p => p.category === openCategory);
+  }, [posts, openCategory]);
 
   // VVIP 만료 실시간 체크: expiresAt 지나면 isPinned 자동 해제
   const effectiveBusinessPosts = useMemo(() => {
@@ -63,6 +96,11 @@ export default function CommunityTab() {
 
   // 2. 글쓰기/방만들기 권한 로직 (보상형 광고 및 방장 등급 체크)
   const handleFabClick = () => {
+    if (user?.id === 'GUEST') {
+      addToast("로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.", "error");
+      return;
+    }
+
     if (activeTab === 'open') {
       if (!canAccessPremium) {
         if (AD_CONFIG.FREE_USER.SHOW_REWARD_AD_ON_POST) {
@@ -112,10 +150,11 @@ export default function CommunityTab() {
           apiClient.get('/api/community/notices'),
           apiClient.get('/api/community/business'),
         ]);
-        if (postsRes.data?.length)    setPosts(postsRes.data);
-        if (crewsRes.data?.length)    setCrews(crewsRes.data);
+        const blocked = user?.blockedUsers || [];
+        setPosts(Array.isArray(postsRes.data) ? postsRes.data.filter(p => !blocked.includes(p.author)) : []);
+        if (crewsRes.data?.length)    setCrews(crewsRes.data.filter(c => !blocked.includes(c.ownerName)));
         if (noticesRes.data?.length)  setNoticePosts(noticesRes.data);
-        if (businessRes.data?.length) setBusinessPosts(businessRes.data);
+        if (businessRes.data?.length) setBusinessPosts(businessRes.data.filter(p => !blocked.includes(p.author)));
       } catch (err) {
         console.error('Fetch error:', err);
       } finally {
@@ -123,12 +162,16 @@ export default function CommunityTab() {
       }
     };
     fetchData();
-  }, []);
+  }, [location.search]); // location 변화 시(탭 전환·등록 후 리다이렉트) 재로드
 
   const handleDeletePost = async (e, id, type) => {
     e.stopPropagation();
-    if (!isAdmin) return;
-    if (!window.confirm('정말 이 게시물을 삭제하시겠습니까? (운영자 권한)')) return;
+    const myEmail = JSON.parse(localStorage.getItem('user') || '{}').email;
+    const isAuthorDelete = 
+      (type === 'open'     && posts.find(p => (p._id||p.id) === id)?.author_email === myEmail) ||
+      (type === 'business' && businessPosts.find(p => (p._id||p.id) === id)?.author_email === myEmail);
+    if (!isAdmin && !isAuthorDelete) return;
+    if (!window.confirm('이 게시물을 삭제하시겠습니까?')) return;
     try {
       const endpoint =
         type === 'open'     ? `/api/community/posts/${id}` :
@@ -205,6 +248,33 @@ export default function CommunityTab() {
         </div>
       </div>
 
+      {/* 오픈게시판 카테고리 필터 탭 */}
+      {activeTab === 'open' && (
+        <div style={{ backgroundColor: '#fff', borderBottom: '1px solid #F0F0F0', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'flex', gap: '6px', padding: '10px 16px', width: 'max-content' }}>
+            {OPEN_CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setOpenCategory(cat)}
+                style={{
+                  padding: '7px 18px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: openCategory === cat ? '900' : '700',
+                  cursor: 'pointer',
+                  backgroundColor: openCategory === cat ? '#0056D2' : '#F2F2F7',
+                  color: openCategory === cat ? '#fff' : '#555',
+                  transition: 'all 0.15s',
+                  whiteSpace: 'nowrap',
+                  boxShadow: openCategory === cat ? '0 2px 8px rgba(0,86,210,0.3)' : 'none',
+                }}
+              >{cat}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 탭 내용 렌더링 영역 */}
       <div style={{ padding: '16px' }}>
         {loading ? (
@@ -212,31 +282,56 @@ export default function CommunityTab() {
         ) : activeTab === 'notice' ? (
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {noticePosts.map(notice => (
-              <div key={notice.id} style={{ backgroundColor: notice.isPinned ? '#FFF1F0' : '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative', border: notice.isPinned ? '1px solid #FFCCC7' : '1px solid #E5E5EA' }}>
+              <div
+                key={String(notice._id || notice.id)}
+                onClick={() => navigate(`/notice/${String(notice._id || notice.id)}`, { state: { notice } })}
+                style={{ backgroundColor: notice.isPinned ? '#FFF1F0' : '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative', border: notice.isPinned ? '1px solid #FFCCC7' : '1px solid #E5E5EA', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'}
+              >
                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                    {notice.isPinned && <div style={{ padding: '4px 8px', backgroundColor: '#FF3B30', color: '#fff', fontSize: '10px', borderRadius: '6px', fontWeight: '900' }}>중요 필독</div>}
                    <div style={{ fontSize: '12px', color: '#888', fontWeight: 'bold' }}>{notice.date}</div>
                    <div style={{ fontSize: '11px', color: '#aaa', marginLeft: 'auto' }}>조회 {notice.views}</div>
                  </div>
-                 <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e', marginBottom: '10px', wordBreak: 'keep-all' }}>{notice.title}</h3>
-                 <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.6', paddingBottom: isAdmin ? '30px' : '0' }}>{notice.content}</p>
+                 <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e', marginBottom: '8px', wordBreak: 'keep-all' }}>{notice.title}</h3>
+                 <p style={{ fontSize: '14px', color: '#777', lineHeight: '1.6', paddingBottom: isAdmin ? '36px' : '0',
+                   overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
+                 }}>{notice.content}</p>
+                 <div style={{ marginTop: '8px', fontSize: '12px', color: '#0056D2', fontWeight: '700', paddingBottom: isAdmin ? '36px' : '0' }}>
+                   자세히 보기 →
+                 </div>
                  
                  {isAdmin && (
-                   <button onClick={(e) => handleDeletePost(e, notice.id, 'notice')} style={{ position: 'absolute', bottom: '16px', right: '16px', border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                     <Trash2 size={14} /> 삭제
-                   </button>
-                 )}
+                   <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '6px' }}>
+                     <button onClick={(e) => { e.stopPropagation(); navigate(`/write?type=notice&editId=${notice._id || notice.id}`); }} style={{ border: 'none', background: 'rgba(0,86,210,0.1)', color: '#0056D2', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                       <Edit2 size={13} /> 수정
+                     </button>
+                     <button onClick={(e) => handleDeletePost(e, notice._id || notice.id, 'notice')} style={{ border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                       <Trash2 size={13} /> 삭제
+                     </button>
+                   </div>
+                  )}
               </div>
             ))}
           </div>
         ) : activeTab === 'open' ? (
-          // [오픈 게시판 뷰]
           <div className="fade-in">
             <BannerAd style={{ marginBottom: '16px' }} />
-            {posts.map((post, index) => (
-              <React.Fragment key={post.id}>
+            {filteredPosts.length === 0 && !loading && (
+              <div style={{ textAlign: 'center', padding: '48px 20px', color: '#AAB0BE' }}>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎣</div>
+                <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '6px', color: '#555' }}>아직 게시글이 없습니다</div>
+                <div style={{ fontSize: '13px' }}>첫 조황을 공유해보세요!</div>
+              </div>
+            )}
+            {filteredPosts.map((post, index) => {
+              const postId = post._id || post.id;
+              return (
+              <React.Fragment key={postId}>
                 <div 
-                  onClick={() => navigate(`/post/${post.id}`)}
+                  id={`post-${postId}`}
+                  onClick={() => navigate(`/post/${postId}`)}
                   style={{ backgroundColor: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', border: '1px solid #f0f0f0', cursor: 'pointer' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -251,10 +346,15 @@ export default function CommunityTab() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '12px', color: '#bbb' }}>{post.time}</span>
-                      {isAdmin && (
-                        <button onClick={(e) => handleDeletePost(e, post.id, 'open')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}>
-                          <Trash2 size={16} />
-                        </button>
+                      {(isAdmin || post.author_email === (JSON.parse(localStorage.getItem('user') || '{}').email)) && (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/write?editId=${postId}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}>
+                            <Edit2 size={15} />
+                          </button>
+                          <button onClick={(e) => handleDeletePost(e, postId, 'open')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}>
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -273,7 +373,7 @@ export default function CommunityTab() {
                 {(index + 1) % 4 === 0 && <NativeAd />}
                 {!canAccessPremium && (index + 1) % AD_CONFIG.FREE_USER.FEED_AD_INTERVAL === 0 && <InFeedAd />}
               </React.Fragment>
-            ))}
+            )})}
           </div>
         ) : activeTab === 'crew' ? (
           // [프라이빗 크루 뷰]
@@ -290,6 +390,10 @@ export default function CommunityTab() {
                 {crew.isPrivate ? (
                   <button 
                     onClick={() => {
+                      if (user?.id === 'GUEST') {
+                        addToast("로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.", "error");
+                        return;
+                      }
                       const pass = window.prompt(`${crew.name} 크루의 입장 코드 4자리를 입력하세요.`);
                       if (pass === crew.password) {
                         navigate(`/crew/${crew.id}/chat`);
@@ -302,7 +406,16 @@ export default function CommunityTab() {
                     <Lock size={20} />
                   </button>
                 ) : (
-                  <button onClick={() => navigate(`/crew/${crew.id}/chat`)} style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)' }}>
+                  <button 
+                    onClick={() => {
+                      if (user?.id === 'GUEST') {
+                        addToast("로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.", "error");
+                        return;
+                      }
+                      navigate(`/crew/${crew.id}/chat`);
+                    }} 
+                    style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)' }}
+                  >
                     입장하기
                   </button>
                 )}
@@ -368,7 +481,12 @@ export default function CommunityTab() {
                           <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
                             <span style={{ fontSize: '9px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
                             <span style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.shipName}</span>
-                            {isAdmin && <button onClick={(e) => handleDeletePost(e, post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30', marginLeft: 'auto', flexShrink: 0 }}><Trash2 size={14} /></button>}
+                            {(isAdmin || post.author_email === (JSON.parse(localStorage.getItem('user') || '{}').email)) && (
+                              <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
+                                <button onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={14} /></button>
+                                <button onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={14} /></button>
+                              </div>
+                            )}
                           </div>
                           <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#666', lineHeight: '1.5' }}>{post.content.slice(0, 45)}...</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '10px' }}>
@@ -399,9 +517,15 @@ export default function CommunityTab() {
         <button 
           onClick={handleFabClick}
           style={{
-            position: 'fixed', bottom: '90px', right: '20px', backgroundColor: activeTab === 'notice' ? '#FF3B30' : '#0056D2', color: '#fff',
-            border: 'none', borderRadius: '50%', width: '56px', height: '56px', display: 'flex', justifyContent: 'center', alignItems: 'center',
-            boxShadow: activeTab === 'notice' ? '0 8px 16px rgba(255, 59, 48, 0.4)' : '0 8px 16px rgba(0, 86, 210, 0.4)', cursor: 'pointer', zIndex: 100, transition: 'transform 0.2s'
+            position: 'fixed',
+            bottom: '90px',
+            right: 'max(20px, calc(50% - 220px))',
+            backgroundColor: activeTab === 'notice' ? '#FF3B30' : '#0056D2',
+            color: '#fff',
+            border: 'none', borderRadius: '50%', width: '56px', height: '56px',
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            boxShadow: activeTab === 'notice' ? '0 8px 16px rgba(255,59,48,0.4)' : '0 8px 16px rgba(0,86,210,0.4)',
+            cursor: 'pointer', zIndex: 100, transition: 'transform 0.2s'
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}

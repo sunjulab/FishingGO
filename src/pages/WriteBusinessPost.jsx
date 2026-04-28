@@ -5,14 +5,13 @@
  * - 커버사진 업로드
  * - 등록 완료 시 businessPosts 피드에 전화 바로 연결되는 카드로 노출
  */
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, Phone, Image, Sparkles, ChevronDown, CheckCircle2, MapPin } from 'lucide-react';
 import { useToastStore } from '../store/useToastStore';
 import { useUserStore } from '../store/useUserStore';
 import { RewardGateModal } from '../components/AdUnit';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import apiClient from '../api/index';
 
 const FISH_TYPES = ['감성돔', '참돔', '방어', '광어', '대구', '문어', '쭈꾸미', '갑오징어', '우럭', '농어', '삼치', '고등어', '장어'];
 const BOAT_TYPES = ['선상낚시', '야간선상', '에깅/문어', '선상루어', '캐스팅', '심해낚시', '갯바위 투어'];
@@ -31,12 +30,19 @@ function generatePromoText({ shipName, region, boatType, targetFish, price, sche
 
 export default function WriteBusinessPost() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('editId'); // 수정 모드
+  const isEditMode = !!editId;
   const addToast = useToastStore((s) => s.addToast);
   const user = useUserStore((s) => s.user);
-  const isBusinessLite = user?.plan === 'business_lite' || user?.plan === 'pro' || user?.plan === 'vip';
-
   const userTier = useUserStore((s) => s.userTier);
-  const isVVIP = userTier === 'BUSINESS_VIP' || user?.id === 'sunjulab' || user?.email === 'sunjulab';
+
+  const isAdmin  = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  const isPRO    = userTier === 'PRO';
+  const isVVIP   = userTier === 'BUSINESS_VIP';
+
+  // 마스터 + PRO + VIP만 등록 가능
+  const canWrite = isAdmin || isPRO || isVVIP;
 
   const [shipName, setShipName] = useState('');
   const [region, setRegion] = useState('');
@@ -56,6 +62,28 @@ export default function WriteBusinessPost() {
 
   const isReady = shipName && region && boatType && targetFish.length > 0 && price && schedule && capacity && phone;
 
+  // 수정 모드: 기존 데이터 불러오기
+  useEffect(() => {
+    if (!isEditMode) return;
+    fetch(`${API}/api/community/business/${editId}`)
+      .then(r => r.json())
+      .then(data => {
+        setShipName(data.shipName || '');
+        setRegion(data.region || '');
+        setBoatType(data.type || '');
+        setTargetFish(data.target ? data.target.split('/') : []);
+        setPrice(data.price || '');
+        setSchedule(data.date || '');
+        setCapacity(String(data.capacity || ''));
+        setPhone(data.phone || '');
+        setExtraMsg('');
+        setCoverImage(data.cover || '');
+        setContent(data.content || '');
+        setIsPinned(data.isPinned || false);
+      })
+      .catch(() => {});
+  }, [editId]);
+
   const toggleFish = (fish) => {
     setTargetFish(prev =>
       prev.includes(fish) ? prev.filter(f => f !== fish) : (prev.length < 4 ? [...prev, fish] : prev)
@@ -74,41 +102,46 @@ export default function WriteBusinessPost() {
   };
 
   const handlePostClick = () => {
+    if (!canWrite) {
+      addToast('⚠️ 선상 홍보글은 PRO · VIP · 마스터만 등록 가능합니다.', 'error');
+      setTimeout(() => navigate('/community'), 1500);
+      return;
+    }
     if (!isReady || !content) { addToast('모든 항목을 입력하고 홍보 문구를 생성해주세요.', 'error'); return; }
-    setShowAdGate(true);
+    doPost(); // PRO/VIP/마스터는 광고 게이트 없이 직접 등록
   };
 
   const doPost = async () => {
     setIsSubmitting(true);
     const storedUser = JSON.parse(localStorage.getItem('user')) || { name: '선장님' };
     try {
-      const response = await fetch(`${API}/api/community/posts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          author: storedUser.name,
-          author_email: storedUser.email,
-          category: '선상',
-          type: 'business',
-          shipName,
-          region,
-          boatType,
-          target: targetFish.join('/'),
-          price,
-          date: schedule,
-          capacity: Number(capacity),
-          phone,
-          content,
-          isPinned: isVVIP && isPinned, // VVIP이고 체크했을 때만 교집 고정
-          cover: coverImage || `https://images.unsplash.com/photo-1544427920-549b6d60a5e5?auto=format&fit=crop&w=400&q=80`
-        })
-      });
-      if (response.ok) {
-        addToast('🚢 선상 배 홍보글이 등록되었습니다!', 'success');
-        navigate('/community');
-      } else { addToast('등록 중 오류가 발생했습니다.', 'error'); }
+      const payload = {
+        author: storedUser.name,
+        author_email: storedUser.email,
+        shipName, region,
+        type: boatType,
+        target: targetFish.join('/'),
+        price, date: schedule,
+        capacity: Number(capacity),
+        phone, content,
+        isPinned: isVVIP && isPinned,
+        cover: coverImage || `https://images.unsplash.com/photo-1544427920-549b6d60a5e5?auto=format&fit=crop&w=400&q=80`
+      };
+      if (isEditMode) {
+        payload.email = storedUser.email;
+        payload.adminId = storedUser.email || storedUser.name;
+      }
+      const method = isEditMode ? 'put' : 'post';
+      const url = isEditMode
+        ? `/api/community/business/${editId}`
+        : `/api/community/business`;
+      await apiClient[method](url, isEditMode ? payload : { ...payload, category: '선상' });
+      addToast(isEditMode ? '✅ 홍보글이 수정되었습니다!' : '🚢 선상 배 홍보글이 등록되었습니다!', 'success');
+      navigate(isEditMode ? -1 : '/community?tab=business');
     } catch (err) {
-      addToast('서버 오류. 잠시 후 다시 시도해주세요.', 'error');
+      console.error('Business post error:', err);
+      const msg = err.response?.data?.error || '등록 실패. 다시 시도해주세요.';
+      addToast(msg, 'error');
     } finally { setIsSubmitting(false); }
   };
 
@@ -117,13 +150,24 @@ export default function WriteBusinessPost() {
       {/* 헤더 */}
       <div style={{ backgroundColor: '#fff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={22} color="#1c1c1e" /></button>
-        <h2 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>선상 배 홍보 등록</h2>
+        <h2 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>{isEditMode ? '홍보글 수정' : '선상 배 홍보 등록'}</h2>
         <button
           disabled={!isReady || !content || isSubmitting}
           onClick={handlePostClick}
           style={{ border: 'none', background: isReady && content ? '#0056D2' : '#f0f0f0', color: isReady && content ? '#fff' : '#bbb', padding: '6px 14px', borderRadius: '16px', fontSize: '12px', fontWeight: '800', cursor: isReady && content ? 'pointer' : 'default' }}
-        >{isSubmitting ? '등록 중...' : '등록 ›'}</button>
+        >{isSubmitting ? '저장 중...' : isEditMode ? '✅ 수정 완료' : '등록 ›'}</button>
       </div>
+
+      {/* 권한 없는 사용자 안내 배너 */}
+      {!canWrite && (
+        <div style={{ margin: '12px 12px 0', background: 'linear-gradient(135deg,#FF5A5F,#FF3B30)', borderRadius: '14px', padding: '14px 16px', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ fontSize: '22px' }}>🔒</div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '900', marginBottom: '2px' }}>PRO · VIP · 마스터 전용</div>
+            <div style={{ fontSize: '11px', opacity: 0.85 }}>선상 홍보글 등록은 PRO 이상 플랜만 가능합니다.</div>
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
@@ -309,23 +353,24 @@ export default function WriteBusinessPost() {
       </div>
 
       {/* 하단 고정 등록 버튼 */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '430px', padding: '12px 16px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', boxSizing: 'border-box' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', padding: '12px 16px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', boxSizing: 'border-box' }}>
         <button
-          disabled={!isReady || !content || isSubmitting}
+          disabled={!isReady || !content || isSubmitting || !canWrite}
           onClick={handlePostClick}
-          style={{ width: '100%', padding: '15px', borderRadius: '16px', border: 'none', background: isReady && content ? 'linear-gradient(135deg, #0056D2, #0096FF)' : '#f0f0f0', color: isReady && content ? '#fff' : '#bbb', fontSize: '15px', fontWeight: '900', cursor: isReady && content ? 'pointer' : 'default', boxShadow: isReady && content ? '0 6px 18px rgba(0,86,210,0.25)' : 'none' }}
+          style={{
+            width: '100%', padding: '15px', borderRadius: '16px', border: 'none',
+            background: (isReady && content && canWrite) ? 'linear-gradient(135deg, #0056D2, #0096FF)' : '#f0f0f0',
+            color: (isReady && content && canWrite) ? '#fff' : '#bbb',
+            fontSize: '15px', fontWeight: '900',
+            cursor: (isReady && content && canWrite) ? 'pointer' : 'not-allowed',
+            boxShadow: (isReady && content && canWrite) ? '0 6px 18px rgba(0,86,210,0.25)' : 'none'
+          }}
         >
-          {isSubmitting ? '등록 중...' : '🚢 선상 홍보 카드 등록하기'}
+          {!canWrite ? '🔒 PRO · VIP · 마스터만 등록 가능' : isSubmitting ? '저장 중...' : isEditMode ? '✅ 홍보글 수정 완료' : '🚢 선상 홍보 카드 등록하기'}
         </button>
       </div>
 
-      <RewardGateModal
-        isOpen={showAdGate}
-        onClose={() => setShowAdGate(false)}
-        onRewardComplete={doPost}
-        onSubscribe={() => { setShowAdGate(false); navigate('/subscribe?plan=pro'); }}
-        context="post"
-      />
+      {/* PRO/VIP는 광고 게이트 없음 — RewardGateModal 미사용 */}
     </div>
   );
 }

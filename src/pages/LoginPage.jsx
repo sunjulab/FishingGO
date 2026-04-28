@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
+// import { useGoogleLogin } from '@react-oauth/google'; // 추후 구글 로그인 연동 시 활성화
 import { Anchor, ShieldCheck, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import { useUserStore, LEVEL_CONFIG } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
@@ -33,17 +33,11 @@ const S = {
     cursor: 'pointer', background: 'linear-gradient(135deg, #0056D2, #003fa3)',
     color: '#fff', boxShadow: '0 6px 18px rgba(0,86,210,0.4)', transition: 'opacity 0.2s'
   },
-  googleBtn: {
-    width: '100%', height: '52px', borderRadius: '16px', border: '1.5px solid #e0e0e0',
-    background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: '10px', fontSize: '15px', fontWeight: '800', cursor: 'pointer', color: '#3c4043',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-  },
+  // googleBtn: { /* 추후 구글 로그인 연동 시 복원 */ },
   guestBtn: {
     width: '100%', height: '48px', borderRadius: '14px', border: 'none',
     background: '#f1f5f9', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer'
   },
-  divider: { display: 'flex', alignItems: 'center', gap: '10px', margin: '16px 0' },
   tab: (active) => ({
     flex: 1, padding: '10px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '900',
     fontSize: '15px', background: active ? '#0056D2' : '#f1f5f9', color: active ? '#fff' : '#64748b',
@@ -57,7 +51,7 @@ export default function LoginPage() {
   const addToast = useToastStore(state => state.addToast);
 
   const [isLogin, setIsLogin] = useState(true);
-  const [userId, setUserId] = useState('');      // 아이디 (email 필드 사용)
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -65,45 +59,39 @@ export default function LoginPage() {
   const [nameChecked, setNameChecked] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // ─── 구글 로그인 ────────────────────────────────────────────────────────
-  const googleLogin = useGoogleLogin({
-    flow: 'implicit',
-    onSuccess: async (tokenRes) => {
-      try {
-        setLoading(true);
-        const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenRes.access_token}` }
-        });
-        if (!infoRes.ok) throw new Error('Google 사용자 정보를 불러올 수 없습니다.');
-        const gUser = await infoRes.json();
-
-        const res = await fetch(`${API}/api/auth/google`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: gUser.email, name: gUser.name, picture: gUser.picture })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || '서버 오류');
-
-        onLoginSuccess(data);
-      } catch (err) {
-        addToast(err.message || '구글 로그인 실패', 'error');
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: (err) => {
-      console.error('Google OAuth Error:', err);
-      addToast('구글 로그인 팝업 오류. 팝업 차단을 해제하거나 잠시 후 다시 시도하세요.', 'error');
-    }
-  });
+  // ─── 구글 로그인 (추후 연동 예정) ──────────────────────────────────────
+  // const googleLogin = useGoogleLogin({ ... }); // 연동 시 복원
 
   // ─── 로그인/회원가입 성공 공통 처리 ─────────────────────────────────────
-  const onLoginSuccess = (data) => {
-    setUser(data.user);
+  const onLoginSuccess = async (data) => {
+    const email = data.user?.email;
+    let userToSet = data.user;
+
+    // email 기반 별도 저장 아바타 복원 (로그아웃해도 별도 키는 삭제 안 됨)
+    try {
+      const savedAvatar = email ? localStorage.getItem(`avatar_${email}`) : null;
+      const serverAvatar = data.user?.avatar || '';
+      const isServerDefault = !serverAvatar || serverAvatar.includes('pravatar.cc');
+
+      if (savedAvatar && savedAvatar.startsWith('data:image') && isServerDefault) {
+        // 로컬 저장 사진 → 즉시 반영
+        userToSet = { ...data.user, avatar: savedAvatar, picture: savedAvatar };
+        // 서버에도 비동기 업로드 (백그라운드)
+        fetch(`${API}/api/user/avatar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, avatar: savedAvatar })
+        }).catch(() => {});
+      } else if (serverAvatar && !isServerDefault) {
+        // 서버 사진이 이미 커스텀이면 별도 키도 갱신
+        if (email) localStorage.setItem(`avatar_${email}`, serverAvatar);
+      }
+    } catch(e) {}
+
+    setUser(userToSet);
     localStorage.setItem('token', data.token);
     addToast(`환영합니다, ${data.user.name}님! 🎣`, 'success');
-    
+
     if (data.justAttended) {
       setTimeout(() => addToast(`🎉 오늘 출석 완료! +${data.expGained || 20} EXP 획득`, 'success'), 800);
     }
@@ -214,22 +202,7 @@ export default function LoginPage() {
           <button style={S.tab(!isLogin)} onClick={() => switchMode()}>회원가입</button>
         </div>
 
-        {/* 구글 버튼 */}
-        <button id="btn-google-login" onClick={() => googleLogin()} disabled={loading} style={S.googleBtn}>
-          <svg width="20" height="20" viewBox="0 0 48 48">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-          </svg>
-          Google 계정으로 {isLogin ? '로그인' : '간편가입'}
-        </button>
-
-        <div style={S.divider}>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-          <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '700' }}>또는 아이디로</span>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-        </div>
+        {/* 구글 버튼 - 추후 연동 예정 */}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {/* 회원가입 시 닉네임 */}

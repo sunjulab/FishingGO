@@ -1,17 +1,32 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, ShoppingBag, Tv, Flame, Search, X, TrendingUp, ChevronRight, Star, ShoppingCart, ShoppingBag as BagIcon, ExternalLink, Maximize2 } from 'lucide-react';
+import { Play, Tv, Flame, Search, X, ShoppingBag as BagIcon, Maximize2, Clock, User2, Loader2 } from 'lucide-react';
 import { useToastStore } from '../store/useToastStore';
 
-const CATEGORIES = ['전체', '검색결과', '최신', '루어', '찌낚시', '원투', '선상', '에깅'];
+const CATEGORIES = ['전체', '루어', '찌낚시', '원투', '선상', '에깅'];
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const FALLBACK_VIDEOS = [
-  { id: '1', title: '[앵쩡TV] 미지의 포인트에서 만난 가을 배스! (미친 입질)', category: '루어', youtubeId: 'XXYHZnsZse0', views: '1.2M', description: '루어 낚시의 꽃, 런커 배스 히트부터 랜딩까지 숨막히는 순간!', products: [{ name: '앵쩡 추천 루어대 풀세트', price: '185,000원', discount: '10%', img: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '2', title: '[진석기시대] 소문이 자자한 갯바위 명포인트에서 24시간 캠핑 낚시!!', category: '선상', youtubeId: '_SUmTxKlZ68', views: '984k', description: '직접 잡은 대자연의 선물! 날 것 그대로의 원초적인 낚시 먹방.', products: [{ name: '진석기 생존용 캠핑 칼', price: '45,000원', discount: '5%', img: 'https://plus.unsplash.com/premium_photo-1678812638848-8ef7c0b0afaa?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '3', title: '[입질의 추억] 수산시장 내부자의 충격 폭로, 단골도 예외 없습니다', category: '찌낚시', youtubeId: '0qsAaapI748', views: '2.5M', description: '수산물 전문가 어류칼럼니스트 김지민이 공개하는 특급 수산시장 꿀팁.', products: [{ name: '초정밀 카본 찌 세트', price: '28,500원', discount: '20%', img: 'https://images.unsplash.com/photo-1545167622-3a6ac756afa4?auto=format&fit=crop&w=100&q=60' }] },
-  { id: '4', title: '[밀루유떼] 쭈꾸미, 갑오징어 두 마리 토끼 다 잡는 가성비 갑 채비법', category: '에깅', youtubeId: 'N_ICJmZlmnc', views: '710k', description: '생활 낚시 끝판왕, 에깅 낚시 초보자도 바로 따라하는 액션 가이드.', products: [{ name: '국민 에기 10색 혼합 세트', price: '15,000원', discount: '30%', img: 'https://images.unsplash.com/photo-1520110120835-c96534a4c984?auto=format&fit=crop&w=100&q=60' }] }
-];
+// 카테고리 → 검색 키워드 매핑
+const CATEGORY_KEYWORDS = {
+  '루어':  ['루어낚시', '배스낚시', '루어 낚시 포인트'],
+  '찌낚시': ['찌낚시', '갯바위 찌낚시', '방파제 찌낚시'],
+  '원투':  ['원투낚시', '투낚시 포인트', '원투 채비'],
+  '선상':  ['선상낚시', '배낚시', '선상 포인트'],
+  '에깅':  ['에깅낚시', '쭈꾸미낚시', '갑오징어 에깅'],
+};
+// 전체 무한스크롤 키워드 풀
+const SEARCH_KEYWORDS = ['바다낚시', '루어낚시', '민물낚시', '선상낚시', '에깅낚시', '찌낚시', '갯바위낚시', '강낚시', '배스낚시', '돌돔낚시'];
+
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}일 전`;
+  return `${Math.floor(diff / 2592000)}개월 전`;
+}
 
 export default function MediaTab() {
   const [activeChip, setActiveChip] = useState('전체');
@@ -19,241 +34,330 @@ export default function MediaTab() {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const addToast = useToastStore((state) => state.addToast);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  // 쿠팡 파트너스 자동 연동: 비디오 클릭 시 해당 비디오의 핵심 키워드를 추출하여 실시간 쿠팡 링크로 변환
+  // 무한스크롤 상태
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [searchKeyIndex, setSearchKeyIndex] = useState(0);
+  const [catKeyIndex, setCatKeyIndex] = useState(0);
+  const [mode, setMode] = useState('rss'); // 'rss' | 'category' | 'search'
+  const [hasMore, setHasMore] = useState(true);
+
+  const sentinelRef = useRef(null);
+  const navigate = useNavigate();
+  const addToast = useToastStore((s) => s.addToast);
+
+  // 쿠팡 연동
   useEffect(() => {
-    if (selectedVideo) {
-      const keyword = selectedVideo.category === '검색결과' || selectedVideo.category === '최신' || selectedVideo.category === '전체'
-          ? selectedVideo.title.split(' ')[0].replace(/[^가-힣a-zA-Z0-9]/g, '') + ' 낚시'
-          : selectedVideo.category + ' 낚시 장비';
-      
-      fetch(`${API}/api/commerce/coupang/search?keyword=${encodeURIComponent(keyword)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.products && data.products.length > 0) {
-            setSelectedVideo(prev => ({ ...prev, products: data.products }));
-          }
-        }).catch(err => console.error('Coupang Load Error:', err));
-    }
+    if (!selectedVideo) return;
+    const kw = selectedVideo.category && !['전체','최신','검색결과'].includes(selectedVideo.category)
+      ? selectedVideo.category + ' 낚시 장비'
+      : selectedVideo.title.split(' ')[0].replace(/[^가-힣a-zA-Z0-9]/g, '') + ' 낚시';
+    fetch(`${API}/api/commerce/coupang/search?keyword=${encodeURIComponent(kw)}`)
+      .then(r => r.json())
+      .then(d => { if (d.products?.length) setSelectedVideo(p => ({ ...p, products: d.products })); })
+      .catch(() => {});
   }, [selectedVideo?.id]);
 
-  useEffect(() => {
-    fetchVideos();
-  }, []);
+  // 최초 로드
+  useEffect(() => { loadByChip('전체', true); }, []);
 
-  const fetchVideos = async () => {
+  // 칩/검색에 따라 로드 분기
+  const loadByChip = async (chip, isFirst = false) => {
+    setLoading(true);
+    setVideos([]);
+    setHasMore(true);
+    setCatKeyIndex(0);
+    setSearchKeyIndex(0);
+
+    if (chip === '전체') {
+      // 전체: 낚시 최신순 검색 (RSS 대신 직접 search API 사용 - 다양한 채널 최신순)
+      setMode('search');
+      setNextPageToken(null);
+      const vids = await fetchSearchQuery('낚시');
+      setVideos(vids);
+    } else {
+      // 카테고리: 해당 키워드로 검색
+      setMode('category');
+      const kws = CATEGORY_KEYWORDS[chip] || [chip + '낚시'];
+      const vids = await fetchSearchQuery(kws[0]);
+      setVideos(vids); // 빈 배열이면 빈 화면 표시
+      setCatKeyIndex(1); // 다음 키워드부터
+    }
+    setLoading(false);
+  };
+
+  // RSS에서 영상 로드
+  const fetchRss = async (token) => {
     try {
-      setLoading(true);
-      const res = await fetch(`${API}/api/media/youtube`);
-      if (res.ok) {
-        const data = await res.json();
-        setVideos(data.videos && data.videos.length > 0 ? data.videos : FALLBACK_VIDEOS);
+      const url = `${API}/api/media/youtube` + (token ? `?pageToken=${token}` : '');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      // 실제 영상이 있을 때만 반환, 폭백 X
+      return { vids: data.videos?.length ? data.videos : [], token: data.nextPageToken || null };
+    } catch {
+      return { vids: [], token: null };
+    }
+  };
+
+  // 키워드로 검색
+  const fetchSearchQuery = async (kw) => {
+    try {
+      const res = await fetch(`${API}/api/media/youtube/search?q=${encodeURIComponent(kw)}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      return data.videos?.length ? data.videos : [];
+    } catch { return []; }
+  };
+
+  // 추가 로드
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || activeChip === '검색결과') return;
+    setLoadingMore(true);
+
+    if (mode === 'category') {
+      // 카테고리 모드: 해당 카테고리 키워드 순환
+      const kws = CATEGORY_KEYWORDS[activeChip] || [activeChip + '낚시'];
+      const kw = kws[catKeyIndex % kws.length];
+      const vids = await fetchSearchQuery(kw);
+      if (vids.length > 0) {
+        setVideos(p => [...p, ...vids]);
+        setCatKeyIndex(i => i + 1);
       } else {
-        setVideos(FALLBACK_VIDEOS); // Production 업데이트 딜레이 (404) 방어
+        // 키워드 소진 → SEARCH_KEYWORDS에서 보완
+        const fallbackKw = SEARCH_KEYWORDS[searchKeyIndex % SEARCH_KEYWORDS.length];
+        const fallbackVids = await fetchSearchQuery(fallbackKw + ' ' + activeChip);
+        setVideos(p => [...p, ...(fallbackVids.length ? fallbackVids : [])]);
+        setSearchKeyIndex(i => i + 1);
+        if (!fallbackVids.length) setHasMore(false);
       }
-    } catch (err) {
-      setVideos(FALLBACK_VIDEOS);
-      addToast('유튜브 채널 연동에 실패했습니다.', 'error');
-    } finally {
-      setLoading(false);
+    } else if (mode === 'rss' && nextPageToken) {
+      const { vids, token } = await fetchRss(nextPageToken);
+      setVideos(p => [...p, ...vids]);
+      setNextPageToken(token || null);
+      if (!token) setMode('search');
+    } else {
+      // 전체 검색 키워드 순환
+      const kw = SEARCH_KEYWORDS[searchKeyIndex % SEARCH_KEYWORDS.length];
+      const vids = await fetchSearchQuery(kw);
+      setVideos(p => [...p, ...(vids.length ? vids : [])]);
+      setSearchKeyIndex(i => i + 1);
+      if (searchKeyIndex + 1 >= SEARCH_KEYWORDS.length) setSearchKeyIndex(0);
+      if (!vids.length) setHasMore(false);
     }
+
+    setLoadingMore(false);
   };
 
-  const filteredVideos = useMemo(() => {
-    return videos.filter(video => {
-      const matchCategory = activeChip === '전체' || activeChip === '검색결과' || video.category === activeChip;
-      // const matchSearch = video.title.toLowerCase().includes(searchQuery.toLowerCase()); // 통합 검색 API 사용 (로컬 검색 방지)
-      return matchCategory;
-    });
-  }, [videos, activeChip]);
+  // Intersection Observer
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMore(); },
+      { rootMargin: '300px' }
+    );
+    if (sentinelRef.current) obs.observe(sentinelRef.current);
+    return () => obs.disconnect();
+  }, [loadingMore, hasMore, mode, nextPageToken, searchKeyIndex, catKeyIndex, activeChip]);
 
+  // 검색 (Enter)
   const handleSearch = async (e) => {
-    if (e.key === 'Enter') {
-      if (!searchQuery.trim()) {
-        setActiveChip('전체');
-        return fetchVideos();
-      }
-      try {
-        setLoading(true);
-        setActiveChip('검색결과'); // 검색결과 카테고리로 강제 이동
-        const res = await fetch(`${API}/api/media/youtube/search?q=${encodeURIComponent(searchQuery)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setVideos(data.videos && data.videos.length > 0 ? data.videos : FALLBACK_VIDEOS);
-        } else {
-          setVideos(FALLBACK_VIDEOS);
-        }
-      } catch (err) {
-        setVideos(FALLBACK_VIDEOS);
-        addToast('검색 중 서버 오류가 발생했습니다.', 'error');
-      } finally {
-        setLoading(false);
-      }
-    }
+    if (e.key !== 'Enter') return;
+    const q = searchQuery.trim();
+    if (!q) { setActiveChip('전체'); return loadByChip('전체', true); }
+    setLoading(true);
+    setActiveChip('검색결과');
+    setHasMore(false);
+    setVideos([]);
+    try {
+      const res = await fetch(`${API}/api/media/youtube/search?q=${encodeURIComponent(q)}`);
+      const data = res.ok ? await res.json() : {};
+      setVideos(data.videos?.length ? data.videos : FALLBACK_VIDEOS);
+    } catch { setVideos(FALLBACK_VIDEOS); }
+    setLoading(false);
   };
+
+  // 카테고리 클릭
+  const handleChipClick = (chip) => {
+    setActiveChip(chip);
+    loadByChip(chip, true);
+  };
+
+  // 필터: 이미 서버에서 걸러 오지만 로컬 안전망
+  const filteredVideos = videos;
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F2F2F7', paddingBottom: '100px', overflowX: 'hidden' }}>
-      
-      {/* 🔴 전체화면 영상 오버레이 모달 */}
+
+      {/* 전체화면 모달 */}
       {selectedVideo && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
-           {/* 모달 상단 헤더 */}
-           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '24px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10001, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
-             <div style={{ color: '#fff' }}>
-                <div style={{ fontSize: '12px', fontWeight: '800', color: '#0056D2', marginBottom: '4px' }}>{selectedVideo.category} 강좌 실시간</div>
-                <div style={{ fontSize: '18px', fontWeight: '950' }}>{selectedVideo.title}</div>
-             </div>
-             <button onClick={() => setSelectedVideo(null)} style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
-                <X size={24} />
-             </button>
-           </div>
-           
-           {/* 비디오 본체 영역 */}
-           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-              <iframe 
-                style={{ width: '100vw', height: '56.25vw', maxHeight: '100vh', border: 'none' }}
-                src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-              <button 
-                onClick={() => window.open(`https://www.youtube.com/watch?v=${selectedVideo.youtubeId}`, '_blank')}
-                style={{ marginTop: '16px', padding: '10px 20px', borderRadius: '24px', backgroundColor: '#FF0000', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255,0,0,0.3)' }}
-              >
-                <Play size={16} fill="#fff" />
-                영상이 재생되지 않나요? 유튜브에서 직접 보기
-              </button>
-           </div>
-
-           {/* 모달 하단 상품 유도 바 */}
-           <div style={{ padding: '24px 20px', background: 'linear-gradient(to top, rgba(0,0,0,1), transparent)', display: 'flex', alignItems: 'center', gap: '16px', color: '#fff' }}>
-              <div style={{ flex: 1 }}>
-                 <div style={{ fontSize: '13px', fontWeight: '700', opacity: 0.8 }}>이 기술에 필요한 장비 구매하기</div>
-                 <div style={{ fontSize: '16px', fontWeight: '900', marginTop: '4px' }}>{selectedVideo.products[0].name} 외</div>
-              </div>
-              <button 
-                onClick={() => navigate('/shop')}
-                style={{ backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '16px', fontSize: '14px', fontWeight: '900' }}
-              >
-                쇼핑하러 가기
-              </button>
-           </div>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '24px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10001, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
+            <div style={{ color: '#fff', flex: 1, paddingRight: '12px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#60a5fa', marginBottom: '4px' }}>{selectedVideo.channelTitle || selectedVideo.category}</div>
+              <div style={{ fontSize: '16px', fontWeight: '900' }}>{selectedVideo.title}</div>
+            </div>
+            <button onClick={() => setSelectedVideo(null)} style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+              <X size={22} />
+            </button>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <iframe style={{ width: '100vw', height: '56.25vw', maxHeight: '85vh', border: 'none' }}
+              src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            <button onClick={() => window.open(`https://www.youtube.com/watch?v=${selectedVideo.youtubeId}`, '_blank')}
+              style={{ marginTop: '14px', padding: '10px 20px', borderRadius: '24px', backgroundColor: '#FF0000', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
+              <Play size={14} fill="#fff" /> YouTube에서 보기
+            </button>
+          </div>
+          <div style={{ padding: '20px', background: 'linear-gradient(to top, rgba(0,0,0,1), transparent)', display: 'flex', alignItems: 'center', gap: '16px', color: '#fff' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', opacity: 0.7 }}>이 기술에 필요한 장비</div>
+              <div style={{ fontSize: '15px', fontWeight: '900' }}>{selectedVideo.products?.[0]?.name} 외</div>
+            </div>
+            <button onClick={() => navigate('/shop')} style={{ backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '14px', fontSize: '14px', fontWeight: '900', whiteSpace: 'nowrap' }}>
+              쇼핑하기
+            </button>
+          </div>
         </div>
       )}
 
-      {/* 헤더 및 검색창 */}
+      {/* 헤더 */}
       <div style={{ backgroundColor: '#fff', padding: '30px 20px 10px', borderBottom: '1px solid #E5E5EA' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-             <div style={{ padding: '8px', backgroundColor: '#0056D2', borderRadius: '14px', color: '#fff' }}>
-                <Tv size={22} />
-             </div>
-             <h1 style={{ fontSize: '24px', fontWeight: '950', color: '#1C1C1E' }}>낚시채널</h1>
+            <div style={{ padding: '8px', backgroundColor: '#0056D2', borderRadius: '14px', color: '#fff' }}><Tv size={22} /></div>
+            <h1 style={{ fontSize: '24px', fontWeight: '950', color: '#1C1C1E', margin: 0 }}>낚시채널</h1>
           </div>
           <div style={{ padding: '6px 12px', backgroundColor: '#F2F2F7', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-             <Flame size={14} color="#FF5A5F" fill="#FF5A5F" />
-             <span style={{ fontSize: '11px', fontWeight: '900', color: '#1C1C1E' }}>프리미엄 세션</span>
+            <Flame size={13} color="#FF5A5F" fill="#FF5A5F" />
+            <span style={{ fontSize: '11px', fontWeight: '900', color: '#1C1C1E' }}>인기순</span>
           </div>
         </div>
-
         <div style={{ position: 'relative', marginBottom: '16px' }}>
-            <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#8E8E93' }} size={18} />
-            <input 
-              type="text" 
-              placeholder="검색어를 입력하고 Enter를 누르세요 (예: 돌돔 낚시)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearch}
-              style={{ width: '100%', padding: '16px 16px 16px 48px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '18px', fontSize: '15px', fontWeight: '700', outline: 'none' }}
-            />
+          <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#8E8E93' }} size={18} />
+          <input type="text" placeholder="검색어 입력 후 Enter (예: 돌돔 낚시)"
+            value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch}
+            style={{ width: '100%', padding: '16px 16px 16px 48px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '18px', fontSize: '15px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
         </div>
       </div>
 
-      {/* 카테고리 필터 */}
-      <div style={{ backgroundColor: '#fff', padding: '0 0 16px', borderBottom: '1px solid #E5E5EA', position: 'sticky', top: 0, zIndex: 100 }}>
+      {/* 카테고리 */}
+      <div style={{ backgroundColor: '#fff', padding: '0 0 14px', borderBottom: '1px solid #E5E5EA', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '0 20px', scrollbarWidth: 'none' }}>
-           {CATEGORIES.map(c => (
-              <button key={c} onClick={() => setActiveChip(c)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', fontSize: '14px', fontWeight: '800', backgroundColor: activeChip === c ? '#0056D2' : '#F2F2F7', color: activeChip === c ? '#fff' : '#8E8E93', whiteSpace: 'nowrap' }}>
-                {c}
-              </button>
-           ))}
+          {CATEGORIES.map(c => (
+            <button key={c} onClick={() => handleChipClick(c)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', fontSize: '14px', fontWeight: '800', backgroundColor: activeChip === c ? '#0056D2' : '#F2F2F7', color: activeChip === c ? '#fff' : '#8E8E93', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
+              {c}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 카테고리 로딩 및 빈 상태 */}
+      {/* 로딩 */}
       {loading && (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#8E8E93', fontSize: '15px' }}>
-          유튜브 채널 연동 중... 🐟
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 0', gap: '14px' }}>
+          <Loader2 size={32} style={{ animation: 'spin 0.8s linear infinite' }} color="#0056D2" />
+          <span style={{ fontSize: '14px', fontWeight: '700', color: '#8E8E93' }}>인기 낚시 영상 불러오는 중... 🐟</span>
         </div>
       )}
 
-      {/* 영상 카드 리스트 */}
+      {/* 카드 리스트 */}
       <div style={{ padding: '16px' }}>
-        {!loading && filteredVideos.map(video => (
-          <div key={video.id} className="card fade-up" style={{ marginBottom: '24px', backgroundColor: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}>
-             {/* 영상 썸네일 영역 - 클릭 시 전체화면 오버레이 */}
-             <div 
-               style={{ position: 'relative', paddingTop: '56.25%', backgroundColor: '#000', cursor: 'pointer' }}
-               onClick={() => setSelectedVideo(video)}
-             >
-               <img src={`https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
-               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.1)' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }}>
-                     <Play fill="#0056D2" color="#0056D2" size={28} />
+        {!loading && filteredVideos.map((video, i) => (
+          <div key={`${video.id}_${i}`} className="card fade-up" style={{ marginBottom: '24px', backgroundColor: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}>
+            {/* 썸네일 */}
+            <div style={{ position: 'relative', paddingTop: '56.25%', backgroundColor: '#000', cursor: 'pointer' }} onClick={() => setSelectedVideo(video)}>
+              <img src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`} alt={video.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} loading="lazy" />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.1)' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }}>
+                  <Play fill="#0056D2" color="#0056D2" size={28} />
+                </div>
+              </div>
+              <div style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '8px', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '5px', color: '#fff' }}>
+                <Maximize2 size={12} /><span style={{ fontSize: '10px', fontWeight: '900' }}>전체화면</span>
+              </div>
+              {video.channelTitle && (
+                <div style={{ position: 'absolute', top: '12px', left: '12px', backgroundColor: 'rgba(0,86,210,0.85)', borderRadius: '6px', padding: '4px 8px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: '900', color: '#fff' }}>{video.channelTitle}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 카드 본문 */}
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                {video.channelTitle && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#0056D2', fontWeight: '800' }}>
+                    <User2 size={12} />{video.channelTitle}
                   </div>
-               </div>
-               <div style={{ position: 'absolute', bottom: '16px', right: '16px', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: '8px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: '#fff' }}>
-                  <Maximize2 size={14} /> <span style={{ fontSize: '11px', fontWeight: '900' }}>전체화면 재생</span>
-               </div>
-             </div>
+                )}
+                {video.publishedAt && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: '#8E8E93', fontWeight: '700' }}>
+                    <Clock size={11} />{timeAgo(video.publishedAt)}
+                  </div>
+                )}
+              </div>
+              <h2 style={{ fontSize: '18px', fontWeight: '950', color: '#1C1C1E', marginBottom: '8px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h2>
+              <p style={{ fontSize: '14px', color: '#8E8E93', fontWeight: '600', marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.description}</p>
 
-             <div style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                   <div style={{ fontSize: '12px', fontWeight: '950', color: '#0056D2', letterSpacing: '0.05em' }}>{video.category} 프리미엄</div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>
-                      <Star size={14} fill="#FFD700" color="#FFD700" /> 4.9 실시간 만족도
-                   </div>
-                </div>
-                <h2 style={{ fontSize: '19px', fontWeight: '950', color: '#1C1C1E', marginBottom: '8px', lineHeight: 1.4 }}>{video.title}</h2>
-                <p style={{ fontSize: '14px', color: '#8E8E93', fontWeight: '600', marginBottom: '24px' }}>{video.description}</p>
-
-                {/* 🛒 상품 구매 유도 리스트 */}
-                <div style={{ borderTop: '1px solid #F2F2F7', paddingTop: '20px' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                      <BagIcon size={18} color="#FF5A5F" />
-                      <span style={{ fontSize: '14px', fontWeight: '950', color: '#1C1C1E' }}>마릿수를 보장하는 필수 제품 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span></span>
-                   </div>
-                   
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                     {video.products.map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#F8F9FA', padding: '12px', borderRadius: '24px', border: '1.5px solid #F2F2F7', transition: 'all 0.2s' }}>
-                           <div style={{ width: '64px', height: '64px', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                              <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                           </div>
-                           <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '14px', fontWeight: '900', color: '#1C1C1E', marginBottom: '4px' }}>{item.name}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                 <span style={{ fontSize: '16px', fontWeight: '950', color: '#1C1C1E' }}>{item.price}</span>
-                                 <span style={{ fontSize: '13px', fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 6px', borderRadius: '6px' }}>{item.discount} ↓</span>
-                              </div>
-                           </div>
-                           <button 
-                             onClick={() => navigate('/shop')}
-                             style={{ padding: '10px 18px', borderRadius: '14px', backgroundColor: '#0056D2', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '900', boxShadow: '0 4px 12px rgba(0,86,210,0.2)' }}
-                           >
-                             구매
-                           </button>
+              {/* 상품 */}
+              {video.products?.length > 0 && (
+                <div style={{ borderTop: '1px solid #F2F2F7', paddingTop: '18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '14px' }}>
+                    <BagIcon size={16} color="#FF5A5F" />
+                    <span style={{ fontSize: '14px', fontWeight: '950', color: '#1C1C1E' }}>필수 장비 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span>종</span>
+                  </div>
+                  {video.products.slice(0, 1).map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '14px', backgroundColor: '#F8F9FA', padding: '12px', borderRadius: '20px', border: '1.5px solid #F2F2F7' }}>
+                      <div style={{ width: '60px', height: '60px', borderRadius: '14px', overflow: 'hidden', flexShrink: 0 }}>
+                        <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '900', color: '#1C1C1E', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: '950' }}>{item.price}</span>
+                          <span style={{ fontSize: '12px', fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 6px', borderRadius: '6px' }}>{item.discount} ↓</span>
                         </div>
-                     ))}
-                   </div>
+                      </div>
+                      <button onClick={() => navigate('/shop')} style={{ padding: '10px 16px', borderRadius: '14px', backgroundColor: '#0056D2', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '900' }}>구매</button>
+                    </div>
+                  ))}
                 </div>
-             </div>
+              )}
+            </div>
           </div>
         ))}
+
+        {/* 무한스크롤 감지 영역 */}
+        <div ref={sentinelRef} style={{ height: '1px' }} />
+
+        {/* 추가 로딩 */}
+        {loadingMore && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px 0', gap: '10px' }}>
+            <Loader2 size={22} style={{ animation: 'spin 0.8s linear infinite' }} color="#0056D2" />
+            <span style={{ fontSize: '13px', fontWeight: '700', color: '#8E8E93' }}>더 불러오는 중...</span>
+          </div>
+        )}
+
+        {/* 영상 없음 */}
+        {!loading && !loadingMore && filteredVideos.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8E8E93' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎣</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '8px', color: '#1C1C1E' }}>영상을 불러오는 중입니다</div>
+            <div style={{ fontSize: '13px', fontWeight: '600' }}>잠시 후 다시 시도해주세요</div>
+          </div>
+        )}
+
+        {!loading && !loadingMore && !hasMore && filteredVideos.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '20px 0', color: '#C7C7CC', fontSize: '13px', fontWeight: '700' }}>
+            🎣 모든 영상을 불러왔습니다
+          </div>
+        )}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
+

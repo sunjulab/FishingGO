@@ -6,8 +6,8 @@ export const ALL_FISHING_POINTS = [
   { id: 4, name: '주문진항 방파제', type: '방파제', region: '강원', lat: 37.8912, lng: 128.8475, fish: '도다리, 학꽁치', score: 92, status: '활발', obsCode: 'DT_0001' },
   { id: 5, name: '울진 후포항 방파제', type: '방파제', region: '경북', lat: 36.6785, lng: 129.4589, fish: '뱅에돔, 감성돔', score: 94, status: '피딩중', obsCode: 'DT_0002' },
   { id: 6, name: '영덕 강구항 방파제', type: '방파제', region: '경북', lat: 36.3612, lng: 129.3874, fish: '삼치, 전어', score: 88, status: '보통', obsCode: 'DT_0002' },
-  { id: 7, name: '포항 영일만 신항방파제', type: '방파제', region: '경북', lat: 36.1154, lng: 129.4325, fish: '방어, 잿방어', score: 96, status: '최고', obsCode: 'DT_0021' },
-  { id: 26, name: '고성 거진항 방파제', type: '방파제', region: '강원', lat: 38.4412, lng: 128.4612, fish: '이면수, 도다리', score: 89, status: '보통', obsCode: 'DT_0001' },
+  { id: 7, name: '포항 영일만 신항방파제', type: '방파제', region: '경북', lat: 36.1154, lng: 129.4325, fish: '방어, 잿방어', score: 96, status: '최고', obsCode: 'DT_0036' },
+  { id: 26, name: '고성 거진항 방파제', type: '방파제', region: '강원', lat: 38.4412, lng: 128.4612, fish: '이면수, 도다리', score: 89, status: '보통', obsCode: 'DT_0021' },
   { id: 27, name: '삼척 임원항 방파제', type: '방파제', region: '강원', lat: 37.2312, lng: 129.3512, fish: '감성돔, 학꽁치', score: 91, status: '활발', obsCode: 'DT_0003' },
   { id: 28, name: '경주 읍천항 방파제', type: '방파제', region: '경북', lat: 35.6812, lng: 129.4712, fish: '농어, 무늬오징어', score: 93, status: '피딩중', obsCode: 'DT_0036' },
   { id: 41, name: '속초 영금정 갯바위', type: '갯바위', region: '강원', lat: 38.2121, lng: 128.5954, fish: '감성돔, 돌참돔', score: 92, status: '활발', obsCode: 'DT_0021' },
@@ -59,6 +59,81 @@ export const ALL_FISHING_POINTS = [
   { id: 40, name: '제주 위미항 방파제', type: '방파제', region: '제주', lat: 33.2712, lng: 126.6612, fish: '한치, 벵에돔', score: 90, status: '보통', obsCode: 'DT_0011' }
 ];
 
+// ── LITE 이상 회원 전용 비밀 포인트 (실제 낚시 명소 기반) ───────
+export const SECRET_FISHING_POINTS = [
+  // 동해권
+  { id: 9001, name: '⭐ 동해 어달 비밀 갯바위', type: '갯바위', region: '강원', lat: 37.5598, lng: 129.1281, fish: '대물 감성돔, 참돔, 벵에돔', score: 99, status: '피딩중', obsCode: 'DT_0033', secret: true, tip: '어달항 북쪽 300m 절벽 갯바위. 사리 전날 만조 1~2시간 후 황금타임. 크릴+집어제 흘림낚시.', access: '어달항(강원 동해시 일출로 230) 주차 후 북쪽 해안길 도보 15분' },
+  { id: 9002, name: '⭐ 삼척 장호만 비밀 갯바위', type: '갯바위', region: '강원', lat: 37.2892, lng: 129.3183, fish: '참돔, 부시리, 벵에돔', score: 98, status: '최고', obsCode: 'DT_0003', secret: true, tip: '장호항에서 도선 이용. 수심 15~20m 직벽. 타이라바 핑크 80~100g 중층 공략.', access: '장호항(강원 삼척시 근덕면 장호항길 103) 도선 이용' },
+  { id: 9003, name: '⭐ 속초 영금정 비밀 여밭', type: '갯바위', region: '강원', lat: 38.2121, lng: 128.5955, fish: '대물 우럭, 넙치, 감성돔', score: 96, status: '활발', obsCode: 'DT_0021', secret: true, tip: '영금정 등대 남쪽 해식절벽. 간조 시 드러나는 여밭 집중 공략. 지렁이+새우 바닥채비.', access: '속초 영금정(강원 속초시 동명항길 35) 공영주차장, 도보 5분' },
+  // 경남·남해권
+  { id: 9004, name: '⭐ 거제 해금강 비밀 갯바위', type: '갯바위', region: '경남', lat: 34.7570, lng: 128.6657, fish: '대물 돌돔, 참돔, 무늬오징어', score: 99, status: '최고', obsCode: 'DT_0034', secret: true, tip: '해금강 선착장에서 도선 이용. 국내 최상급 돌돔 포인트. 전복+성게 미끼 필수.', access: '도장포선착장(경남 거제시 남부면 도장포1길 55) 도선 이용' },
+  { id: 9005, name: '⭐ 거제 가조도 실전항 갯바위', type: '갯바위', region: '경남', lat: 34.8923, lng: 128.5498, fish: '감성돔, 벵에돔, 볼락', score: 97, status: '피딩중', obsCode: 'DT_0034', secret: true, tip: '가조도 실전항 북쪽 갯바위. 조류 합류점 노리기. 크릴 반마리+파래 혼합 채비.', access: '거제 가조연육교 통과 후 실전항 주차' },
+  { id: 9006, name: '⭐ 통영 추봉도 비밀 포인트', type: '갯바위', region: '경남', lat: 34.8398, lng: 128.4202, fish: '참돔, 감성돔, 삼치', score: 97, status: '활발', obsCode: 'DT_0016', secret: true, tip: '사리물때 3~7물 집중. 루어 삼치는 해 질 무렵 30분이 피크.', access: '통영항 여객선터미널(경남 통영시 통영해안로 234) 도선 이용' },
+  // 전남·여수권
+  { id: 9007, name: '⭐ 여수 화태도 문여 갯바위', type: '갯바위', region: '전남', lat: 34.6512, lng: 127.6423, fish: '감성돔, 벵에돔, 갈치', score: 98, status: '최고', obsCode: 'DT_0005', secret: true, tip: '화태대교 이용 접근 가능. 밤낚시 갈치 최고 명당.', access: '화태대교 통과 후 문여항 주차' },
+  { id: 9008, name: '⭐ 여수 금오도 비렁길 갯바위', type: '갯바위', region: '전남', lat: 34.5156, lng: 127.7621, fish: '대물 감성돔, 참돔', score: 99, status: '피딩중', obsCode: 'DT_0005', secret: true, tip: '금오도 비렁길 3코스 직벽. 조류 빠름 → 고부력 찌 필수. 새벽 4시 입질 집중.', access: '여수 백야도항 또는 돌산 신기항 도선' },
+  { id: 9009, name: '⭐ 완도 청산도 직벽 갯바위', type: '갯바위', region: '전남', lat: 34.1921, lng: 126.8745, fish: '돌돔, 감성돔, 긴꼬리벵에돔', score: 99, status: '최고', obsCode: 'DT_0018', secret: true, tip: '국내 최대급 돌돔 서식지. 성게+전복 미끼, 수심 8~12m 직벽 공략.', access: '완도항 청산도행 여객선 1일 3회' },
+  // 서해·전북·충남권
+  { id: 9010, name: '⭐ 군산 선유도 명사십리 갯바위', type: '갯바위', region: '전북', lat: 35.8271, lng: 126.4935, fish: '참돔, 돌돔, 농어', score: 96, status: '활발', obsCode: 'DT_0009', secret: true, tip: '선유도 서쪽 외해 갯바위. 간조 2시간 전 여밭 집중. 크릴+민물새우 혼합.', access: '군산 비응항 여객터미널 → 선유도 도선' },
+  { id: 9011, name: '⭐ 보령 무창포 외해 암초', type: '갯바위', region: '충남', lat: 36.3254, lng: 126.4489, fish: '광어, 우럭, 참돔', score: 95, status: '피딩중', obsCode: 'DT_0008', secret: true, tip: '무창포 신비의 바닷길 서쪽 암초군. 간조 전후 2시간이 황금타임.', access: '무창포 해수욕장 주차 후 도선 이용' },
+  // 부산권
+  { id: 9012, name: '⭐ 부산 태종대 절벽 갯바위', type: '갯바위', region: '부산', lat: 35.0506, lng: 129.0883, fish: '부시리, 전갱이, 참돔', score: 98, status: '최고', obsCode: 'DT_0004', secret: true, tip: '태종대 감지해변 선착장 인근 절벽 발판. 일출 30분 전 입장 필수. 지깅 메탈 30~40g.', access: '태종대 감지해변(부산 영도구 감지해변길 79) 공영주차장' },
+  { id: 9013, name: '⭐ 기장 공수항 외해 갯바위', type: '갯바위', region: '부산', lat: 35.2195, lng: 129.2301, fish: '감성돔, 벵에돔, 학꽁치', score: 96, status: '활발', obsCode: 'DT_0004', secret: true, tip: '봄가을 감성돔 시즌 최고. 크릴 반마리 흘림.', access: '기장 공수항 도선 이용 (새벽 5시 출발)' },
+  // 제주권
+  { id: 9014, name: '⭐ 제주 위미 비밀 갯바위', type: '갯바위', region: '제주', lat: 33.2603, lng: 126.6761, fish: '벵에돔, 긴꼬리벵에돔, 부시리', score: 99, status: '피딩중', obsCode: 'DT_0011', secret: true, tip: '제주 최고 벵에돔 포인트. 파도 2m 이하 출조, 3~4호 반유동 채비.', access: '위미항(제주 서귀포시 남원읍) 주차 후 동쪽 해안길 도보 20분' },
+  { id: 9015, name: '⭐ 제주 토산 흰동산 갯바위', type: '갯바위', region: '제주', lat: 33.3154, lng: 126.9198, fish: '참돔, 부시리, 방어 대형급', score: 98, status: '최고', obsCode: 'DT_0045', secret: true, tip: '표선면 숨겨진 비경. 수심 깊고 조용. 벵에돔 대어 명당. 진입로 험함 주의.', access: '표선 토산리 해안도로 주차 후 도보' },
+  { id: 9016, name: '⭐ 제주 새섬 갯바위', type: '갯바위', region: '제주', lat: 33.2438, lng: 126.5647, fish: '벵에돔, 독가시치, 무늬오징어', score: 97, status: '활발', obsCode: 'DT_0011', secret: true, tip: '서귀포항 새연교 도보 진입. 수심 깊고 조류 소통 최고. 일출~22시 이용 가능.', access: '서귀포항 새연교(제주 서귀포시 서홍동) 도보 입장 무료' },
+  { id: 9017, name: '⭐ 제주 대평포구 박수기정 갯바위', type: '갯바위', region: '제주', lat: 33.2278, lng: 126.4098, fish: '벵에돔, 돌돔, 무늬오징어', score: 97, status: '피딩중', obsCode: 'DT_0011', secret: true, tip: '박수기정 절벽 아래 에깅·돌돔 명당. 에기 3호 흰색 계열.', access: '대평포구 주차장 이용, 도보 접근' },
+  { id: 9018, name: '⭐ 제주 월령코지 에깅 포인트', type: '갯바위', region: '제주', lat: 33.4256, lng: 126.2378, fish: '무늬오징어, 갑오징어, 벵에돔', score: 95, status: '활발', obsCode: 'DT_0010', secret: true, tip: '한림읍 월령리 에깅 성지. 선인장 군락 옆 포인트. 저녁~야간이 피크.', access: '월령리 선인장 해변 주차장' },
+  // 거제·통영 추가
+  { id: 9019, name: '⭐ 거제 칠천도 옥계항 갯바위', type: '갯바위', region: '경남', lat: 34.8756, lng: 128.5412, fish: '전갱이, 볼락, 갑오징어', score: 95, status: '활발', obsCode: 'DT_0034', secret: true, tip: '칠천대교 차량 진입. 옥계항 방파제 외항 갯바위. 가족 낚시 최적.', access: '칠천대교 통과 후 옥계항 주차' },
+  { id: 9020, name: '⭐ 통영 미륵도 진송말 갯바위', type: '갯바위', region: '경남', lat: 34.7732, lng: 128.4156, fish: '감성돔, 참돔, 볼락', score: 97, status: '피딩중', obsCode: 'DT_0016', secret: true, tip: '수중여·침선 지형. 사전 지형 파악 필수. 크릴 반마리+파래 흘림 추천.', access: '통영 미륵도 도로 진입 후 도보' },
+  // 여수·전남 추가
+  { id: 9021, name: '⭐ 여수 금오열도 안도 칼바위', type: '갯바위', region: '전남', lat: 34.4623, lng: 127.8389, fish: '대물 감성돔, 벵에돔, 참돔', score: 99, status: '최고', obsCode: 'DT_0005', secret: true, tip: '여수 갯바위 낚시 성지. 씨알 굵은 감성돔 연중 조황. 겨울 대물 시즌이 절정.', access: '여수 신기항→안도행 도선 이용' },
+  // 부산 추가
+  { id: 9022, name: '⭐ 부산 암남공원 갯바위', type: '갯바위', region: '부산', lat: 35.0645, lng: 129.0145, fish: '농어, 감성돔, 전갱이', score: 96, status: '활발', obsCode: 'DT_0004', secret: true, tip: '암남공원 끝 갯바위. 도심 접근성 최고. 밤낚시 농어 명당.', access: '암남공원(부산 서구 암남공원로 185) 공영주차장 이용' },
+  { id: 9023, name: '⭐ 부산 영도 신방파제 갯바위', type: '방파제', region: '부산', lat: 35.0834, lng: 129.0689, fish: '감성돔, 볼락, 무늬오징어', score: 95, status: '피딩중', obsCode: 'DT_0004', secret: true, tip: '영도 해안도로 신방파제. 볼락 루어 야간 명당. LED 집어등 효과적.', access: '영도 해안도로 주차 후 도보' },
+  // 위도(부안) 추가
+  { id: 9024, name: '⭐ 부안 위도 칼바위 갯바위', type: '갯바위', region: '전북', lat: 35.6198, lng: 126.3028, fish: '감성돔, 농어, 우럭', score: 96, status: '활발', obsCode: 'DT_0009', secret: true, tip: '격포항에서 배로 진입. 서해 최고 감성돔 포인트. 발판 험함 → 펠트화 필수.', access: '부안 격포항 위도행 여객선 이용' },
+  // 울산 추가
+  { id: 9025, name: '⭐ 울산 주전 몽돌 갯바위', type: '갯바위', region: '울산', lat: 35.6053, lng: 129.4398, fish: '감성돔, 무늬오징어, 학꽁치', score: 95, status: '활발', obsCode: 'DT_0036', secret: true, tip: '주전 몽돌해변 북쪽 갯바위. 에깅 무늬오징어 포인트. 가을~겨울 감성돔 명당.', access: '주전해수욕장(울산 동구 주전동) 주차 후 북쪽 해안 도보' },
+  { id: 9002, name: '⭐ 삼척 장호만 비밀 갯바위', type: '갯바위', region: '강원', lat: 37.2892, lng: 129.3183, fish: '참돔, 부시리, 벵에돔', score: 98, status: '최고', obsCode: 'DT_0003', secret: true, tip: '장호항에서 도선 이용. 수심 15~20m 직벽. 타이라바 핑크 80~100g 중층 공략.', access: '장호항(강원 삼척시 근덕면 장호항길 103) 도선 이용' },
+  { id: 9003, name: '⭐ 속초 영금정 비밀 여밭', type: '갯바위', region: '강원', lat: 38.2121, lng: 128.5955, fish: '대물 우럭, 넙치, 감성돔', score: 96, status: '활발', obsCode: 'DT_0021', secret: true, tip: '영금정 등대 남쪽 해식절벽. 간조 시 드러나는 여밭 집중 공략. 지렁이+새우 바닥채비.', access: '속초 영금정(강원 속초시 동명항길 35) 공영주차장, 도보 5분' },
+  // 경남·남해권
+  { id: 9004, name: '⭐ 거제 해금강 비밀 갯바위', type: '갯바위', region: '경남', lat: 34.7570, lng: 128.6657, fish: '대물 돌돔, 참돔, 무늬오징어', score: 99, status: '최고', obsCode: 'DT_0034', secret: true, tip: '해금강 선착장에서 도선 이용. 국내 최상급 돌돔 포인트. 전복+성게 미끼 필수.', access: '도장포선착장(경남 거제시 남부면 도장포1길 55) 도선 이용' },
+  { id: 9005, name: '⭐ 거제 가조도 실전항 갯바위', type: '갯바위', region: '경남', lat: 34.9348, lng: 128.5241, fish: '감성돔, 벵에돔, 볼락', score: 97, status: '피딩중', obsCode: 'DT_0034', secret: true, tip: '가조도 실전항 북쪽 갯바위. 조류 합류점 노리기. 크릴 반마리+파래 혼합 채비.', access: '거제 가조연육교 통과 후 가조도 실전항 주차' },
+  { id: 9006, name: '⭐ 통영 추봉도 비밀 포인트', type: '갯바위', region: '경남', lat: 34.7680, lng: 128.4790, fish: '참돔, 감성돔, 삼치', score: 97, status: '활발', obsCode: 'DT_0016', secret: true, tip: '사리물때 3~7물 집중. 루어 삼치는 해 질 무렵 30분이 피크.', access: '통영항 여객선터미널(경남 통영시 통영해안로 234) 도선 이용' },
+  // 전남·여수권
+  { id: 9007, name: '⭐ 여수 화태도 문여 갯바위', type: '갯바위', region: '전남', lat: 34.6512, lng: 127.6423, fish: '감성돔, 벵에돔, 갈치', score: 98, status: '최고', obsCode: 'DT_0005', secret: true, tip: '화태대교 이용 접근 가능. 밤낚시 갈치 최고 명당.', access: '화태대교 통과 후 문여항 주차' },
+  { id: 9008, name: '⭐ 여수 금오도 비렁길 갯바위', type: '갯바위', region: '전남', lat: 34.5156, lng: 127.7621, fish: '대물 감성돔, 참돔', score: 99, status: '피딩중', obsCode: 'DT_0005', secret: true, tip: '금오도 비렁길 3코스 직벽. 조류 빠름 → 고부력 찌 필수. 새벽 4시 입질 집중.', access: '여수 백야도항 또는 돌산 신기항 도선' },
+  { id: 9009, name: '⭐ 완도 청산도 직벽 갯바위', type: '갯바위', region: '전남', lat: 34.1921, lng: 126.8745, fish: '돌돔, 감성돔, 긴꼬리벵에돔', score: 99, status: '최고', obsCode: 'DT_0018', secret: true, tip: '국내 최대급 돌돔 서식지. 성게+전복 미끼, 수심 8~12m 직벽 공략.', access: '완도항 청산도행 여객선 1일 3회' },
+  // 서해·전북·충남권
+  { id: 9010, name: '⭐ 군산 선유도 명사십리 갯바위', type: '갯바위', region: '전북', lat: 35.8271, lng: 126.4935, fish: '참돔, 돌돔, 농어', score: 96, status: '활발', obsCode: 'DT_0009', secret: true, tip: '선유도 서쪽 외해 갯바위. 간조 2시간 전 여밭 집중. 크릴+민물새우 혼합.', access: '군산 비응항 여객터미널 → 선유도 도선' },
+  { id: 9011, name: '⭐ 보령 무창포 외해 암초', type: '갯바위', region: '충남', lat: 36.3254, lng: 126.4489, fish: '광어, 우럭, 참돔', score: 95, status: '피딩중', obsCode: 'DT_0008', secret: true, tip: '무창포 신비의 바닷길 서쪽 암초군. 간조 전후 2시간이 황금타임.', access: '무창포 해수욕장 주차 후 도선 이용' },
+  // 부산권
+  { id: 9012, name: '⭐ 부산 태종대 절벽 갯바위', type: '갯바위', region: '부산', lat: 35.0506, lng: 129.0883, fish: '부시리, 전갱이, 참돔', score: 98, status: '최고', obsCode: 'DT_0004', secret: true, tip: '태종대 감지해변 선착장 인근 절벽 발판. 일출 30분 전 입장 필수. 지깅 메탈 30~40g.', access: '태종대 감지해변(부산 영도구 감지해변길 79) 공영주차장' },
+  { id: 9013, name: '⭐ 기장 공수항 외해 갯바위', type: '갯바위', region: '부산', lat: 35.2195, lng: 129.2301, fish: '감성돔, 벵에돔, 학꽁치', score: 96, status: '활발', obsCode: 'DT_0004', secret: true, tip: '봄가을 감성돔 시즌 최고. 크릴 반마리 흘림.', access: '기장 공수항 도선 이용 (새벽 5시 출발)' },
+  // 제주권
+  { id: 9014, name: '⭐ 제주 위미 비밀 갯바위', type: '갯바위', region: '제주', lat: 33.2603, lng: 126.6761, fish: '벵에돔, 긴꼬리벵에돔, 부시리', score: 99, status: '피딩중', obsCode: 'DT_0011', secret: true, tip: '제주 최고 벵에돔 포인트. 파도 2m 이하 출조, 3~4호 반유동 채비.', access: '위미항(제주 서귀포시 남원읍) 주차 후 동쪽 해안길 도보 20분' },
+  { id: 9015, name: '⭐ 제주 토산 흰동산 갯바위', type: '갯바위', region: '제주', lat: 33.3154, lng: 126.9198, fish: '참돔, 부시리, 방어 대형급', score: 98, status: '최고', obsCode: 'DT_0045', secret: true, tip: '표선면 숨겨진 비경. 수심 깊고 조용. 벵에돔 대어 명당. 진입로 험함 주의.', access: '표선 토산리 해안도로 주차 후 도보' },
+  { id: 9016, name: '⭐ 제주 새섬 갯바위', type: '갯바위', region: '제주', lat: 33.2438, lng: 126.5647, fish: '벵에돔, 독가시치, 무늬오징어', score: 97, status: '활발', obsCode: 'DT_0011', secret: true, tip: '서귀포항 새연교 도보 진입. 수심 깊고 조류 소통 최고. 일출~22시 이용 가능.', access: '서귀포항 새연교(제주 서귀포시 서홍동) 도보 입장 무료' },
+  { id: 9017, name: '⭐ 제주 대평포구 박수기정 갯바위', type: '갯바위', region: '제주', lat: 33.2278, lng: 126.4098, fish: '벵에돔, 돌돔, 무늬오징어', score: 97, status: '피딩중', obsCode: 'DT_0011', secret: true, tip: '박수기정 절벽 아래 에깅·돌돔 명당. 에기 3호 흰색 계열.', access: '대평포구 주차장 이용, 도보 접근' },
+  { id: 9018, name: '⭐ 제주 월령코지 에깅 포인트', type: '갯바위', region: '제주', lat: 33.4256, lng: 126.2378, fish: '무늬오징어, 갑오징어, 벵에돔', score: 95, status: '활발', obsCode: 'DT_0010', secret: true, tip: '한림읍 월령리 에깅 성지. 선인장 군락 옆 포인트. 저녁~야간이 피크.', access: '월령리 선인장 해변 주차장' },
+  // 거제·통영 추가
+  { id: 9019, name: '⭐ 거제 칠천도 옥계항 갯바위', type: '갯바위', region: '경남', lat: 34.8912, lng: 128.5089, fish: '전갱이, 볼락, 갑오징어', score: 95, status: '활발', obsCode: 'DT_0034', secret: true, tip: '칠천대교 차량 진입. 옥계항 방파제 외항 갯바위. 가족 낚시 최적.', access: '칠천대교 통과 후 칠천도 옥계항 주차' },
+  { id: 9020, name: '⭐ 통영 미륵도 진송말 갯바위', type: '갯바위', region: '경남', lat: 34.7732, lng: 128.4156, fish: '감성돔, 참돔, 볼락', score: 97, status: '피딩중', obsCode: 'DT_0016', secret: true, tip: '수중여·침선 지형. 사전 지형 파악 필수. 크릴 반마리+파래 흘림 추천.', access: '통영 미륵도 도로 진입 후 도보' },
+  // 여수·전남 추가
+  { id: 9021, name: '⭐ 여수 금오열도 안도 칼바위', type: '갯바위', region: '전남', lat: 34.4623, lng: 127.8389, fish: '대물 감성돔, 벵에돔, 참돔', score: 99, status: '최고', obsCode: 'DT_0005', secret: true, tip: '여수 갯바위 낚시 성지. 씨알 굵은 감성돔 연중 조황. 겨울 대물 시즌이 절정.', access: '여수 신기항→안도행 도선 이용' },
+  // 부산 추가
+  { id: 9022, name: '⭐ 부산 암남공원 갯바위', type: '갯바위', region: '부산', lat: 35.0645, lng: 129.0145, fish: '농어, 감성돔, 전갱이', score: 96, status: '활발', obsCode: 'DT_0004', secret: true, tip: '암남공원 끝 갯바위. 도심 접근성 최고. 밤낚시 농어 명당.', access: '암남공원(부산 서구 암남공원로 185) 공영주차장 이용' },
+  { id: 9023, name: '⭐ 부산 영도 신방파제 갯바위', type: '방파제', region: '부산', lat: 35.0834, lng: 129.0689, fish: '감성돔, 볼락, 무늬오징어', score: 95, status: '피딩중', obsCode: 'DT_0004', secret: true, tip: '영도 해안도로 신방파제. 볼락 루어 야간 명당. LED 집어등 효과적.', access: '영도 해안도로 주차 후 도보' },
+  // 위도(부안) 추가
+  { id: 9024, name: '⭐ 부안 위도 칼바위 갯바위', type: '갯바위', region: '전북', lat: 35.6198, lng: 126.3028, fish: '감성돔, 농어, 우럭', score: 96, status: '활발', obsCode: 'DT_0009', secret: true, tip: '격포항에서 배로 진입. 서해 최고 감성돔 포인트. 발판 험함 → 펠트화 필수.', access: '부안 격포항 위도행 여객선 이용' },
+  // 울산 추가
+  { id: 9025, name: '⭐ 울산 주전 몽돌 갯바위', type: '갯바위', region: '울산', lat: 35.6053, lng: 129.4398, fish: '감성돔, 무늬오징어, 학꽁치', score: 95, status: '활발', obsCode: 'DT_0036', secret: true, tip: '주전 몽돌해변 북쪽 갯바위. 에깅 무늬오징어 포인트. 가을~겨울 감성돔 명당.', access: '주전해수욕장(울산 동구 주전동) 주차 후 북쪽 해안 도보' },
+];
+
+
 export const getPointSpecificData = (point) => {
   if (!point) return null;
   const reg = point.region || '남해';
@@ -98,6 +173,17 @@ export const getPointSpecificData = (point) => {
   const tideNum = (pointSeed % 14) + 1;
   const tidePhase = tideNum === 7 ? '7물(사리)' : tideNum === 13 ? '13물(조금)' : tideNum === 14 ? '14물(무시)' : `${tideNum}물`;
 
+  // 만조/간조 시간 동적 계산 (물때 기준 매일 약 45분씩 지연되는 점 반영)
+  const baseHighMin = (tideNum * 45 + pointSeed * 7) % 1440;
+  const baseLowMin  = (baseHighMin + 375) % 1440; // 만조 약 6시간 15분 전후
+
+  const formatTime = (mins) => {
+    const m = ((mins % 1440) + 1440) % 1440;
+    const hh = Math.floor(m / 60).toString().padStart(2, '0');
+    const mm = (m % 60).toString().padStart(2, '0');
+    return `${hh}:${mm}`;
+  };
+
   return {
     stationId: point.obsCode || `LOC_${point.id}`,
     pointName: point.name,
@@ -112,8 +198,8 @@ export const getPointSpecificData = (point) => {
     },
     tide: {
       phase: tidePhase,
-      high:  '15:20',
-      low:   '08:42',
+      high:  formatTime(baseHighMin),
+      low:   formatTime(baseLowMin),
       current_level: `${(pointSeed * 3) % 200 + 40}cm`
     },
     fish: point.fish

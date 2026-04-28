@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
+// import { GoogleOAuthProvider } from '@react-oauth/google'; // 추후 구글 로그인 연동 시 활성화
 import { Home, Tv, Users, ShoppingBag, User, Anchor } from 'lucide-react';
 import Toast from './components/Toast';
 import { useToastStore } from './store/useToastStore';
@@ -22,6 +22,9 @@ const WeatherDashboard = lazy(() => import('./pages/WeatherDashboard'));
 const VVIPSubscribe = lazy(() => import('./pages/VVIPSubscribe'));
 const WriteBusinessPost = lazy(() => import('./pages/WriteBusinessPost'));
 const CctvAdmin = lazy(() => import('./pages/CctvAdmin'));
+const NoticeDetail = lazy(() => import('./pages/NoticeDetail'));
+const SecretPointAdmin = lazy(() => import('./pages/SecretPointAdmin'));
+
 import RealTimeAlert from './components/RealTimeAlert';
 
 // 스켈레톤 로딩 뼈대
@@ -46,7 +49,7 @@ function BottomNav() {
   ];
 
   // 상세/글쓰기 페이지에서는 내비게이션 숨김
-  const hideNav = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin'].some(path => location.pathname.includes(path));
+  const hideNav = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin'].some(path => location.pathname.includes(path));
   if (hideNav) return null;
 
   return (
@@ -79,7 +82,7 @@ function Header() {
   const userTier = useUserStore((state) => state.userTier);
   const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
   
-  const hideHeader = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin'].some(path => location.pathname !== '/' && location.pathname.includes(path)) || location.pathname === '/';
+  const hideHeader = ['/write', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/'].some(path => location.pathname !== '/' && location.pathname.includes(path)) || location.pathname === '/';
   if (hideHeader) return null;
 
   const currentTier = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
@@ -158,40 +161,67 @@ function SubscriptionExpiryChecker() {
   return null;
 }
 
-export default function App() {
-  const GOOGLE_CLIENT_ID = "779696124026-7dgp86dmo15jjsvm1dds31j2eim00pgb.apps.googleusercontent.com"; 
+// 사용자 정보 실시간 동기화 (5분 주기 + 포커스 복귀 시)
+function UserSyncChecker() {
+  const syncFromServer = useUserStore((s) => s.syncFromServer);
+  const user = useUserStore((s) => s.user);
 
+  useEffect(() => {
+    if (!user?.email) return;
+
+    // 즉시 1회 동기화
+    syncFromServer();
+
+    // 5분마다 주기적 동기화
+    const interval = setInterval(syncFromServer, 5 * 60 * 1000);
+
+    // 탭 포커스 복귀 시 즉시 동기화 (다른 기기에서 tier 변경 후 복귀)
+    const onVisibility = () => { if (document.visibilityState === 'visible') syncFromServer(); };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user?.email, syncFromServer]);
+
+  return null;
+}
+
+export default function App() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <BrowserRouter>
-        <Toast />
-        <RealTimeAlert />
-        <SubscriptionExpiryChecker />
-        <GlobalLevelUpListener />
-        <Header />
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <Suspense fallback={<PageLoading />}>
-            <Routes>
-              <Route path="/" element={<MapHome />} />
-              <Route path="/media" element={<MediaTab />} />
-              <Route path="/community" element={<CommunityTab />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/mypage" element={<MyPage />} />
-              <Route path="/write" element={<WritePost />} />
-              <Route path="/create-crew" element={<CreateCrew />} />
-              <Route path="/post/:id" element={<PostDetail />} />
-              <Route path="/catch/:id" element={<CatchDetail />} />
-              <Route path="/crew/:id/chat" element={<CrewChat />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/weather" element={<WeatherDashboard />} />
-              <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
-              <Route path="/write-business" element={<WriteBusinessPost />} />
-              <Route path="/cctv-admin" element={<CctvAdmin />} />
-            </Routes>
-          </Suspense>
-        </div>
-        <BottomNav />
-      </BrowserRouter>
-    </GoogleOAuthProvider>
+    <BrowserRouter>
+      <Toast />
+      <RealTimeAlert />
+      <SubscriptionExpiryChecker />
+      <UserSyncChecker />
+      <GlobalLevelUpListener />
+      <Header />
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Suspense fallback={<PageLoading />}>
+          <Routes>
+            <Route path="/" element={<MapHome />} />
+            <Route path="/media" element={<MediaTab />} />
+            <Route path="/community" element={<CommunityTab />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/mypage" element={<MyPage />} />
+            <Route path="/write" element={<WritePost />} />
+            <Route path="/create-crew" element={<CreateCrew />} />
+            <Route path="/post/:id" element={<PostDetail />} />
+            <Route path="/catch/:id" element={<CatchDetail />} />
+            <Route path="/crew/:id/chat" element={<CrewChat />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/weather" element={<WeatherDashboard />} />
+            <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
+            <Route path="/write-business" element={<WriteBusinessPost />} />
+            <Route path="/cctv-admin" element={<CctvAdmin />} />
+            <Route path="/notice/:id" element={<NoticeDetail />} />
+            <Route path="/secret-admin" element={<SecretPointAdmin />} />
+
+          </Routes>
+        </Suspense>
+      </div>
+      <BottomNav />
+    </BrowserRouter>
   );
 }

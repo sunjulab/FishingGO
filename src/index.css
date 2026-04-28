@@ -25,11 +25,41 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
 body {
-  background-color: var(--bg-gray);
+  background-color: #E8EBF0;  /* PC에서 보이는 바깥 배경 */
   color: var(--text-main);
   overflow-x: hidden;
   user-select: none;
+  display: flex;
+  justify-content: center;
+}
+
+#root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  background-color: var(--bg-gray);
+  position: relative;
+  overflow-x: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,0.15);
+}
+
+/* ── 모바일 컨테이너 내부 고정 바 (하단 툴바 / FAB 등) ── */
+/* position:fixed 요소를 앱 너비(480px) 안에 가두는 공통 유틸 */
+.fixed-inner-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 500;
 }
 
 .page-container {

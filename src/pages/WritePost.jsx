@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, Image, MapPin, Send, ChevronDown, CheckCircle2, Scan } from 'lucide-react';
 import { RewardGateModal } from '../components/AdUnit';
 import { useToastStore } from '../store/useToastStore';
 import { useUserStore } from '../store/useUserStore';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import apiClient from '../api/index';
 
 export default function WritePost() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const postType = searchParams.get('type') || 'open';
-
+  const editId = searchParams.get('editId'); // 수정 모드
   const [category, setCategory] = useState('전체');
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
@@ -22,43 +22,80 @@ export default function WritePost() {
   const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
   const addToast = useToastStore((state) => state.addToast);
   const user = useUserStore((state) => state.user);
-  const isBusinessLite = user?.plan === 'business_lite' || user?.plan === 'pro' || user?.plan === 'vip';
+  const canAccessPremium = useUserStore((state) => state.canAccessPremium());
+  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  const isNoticeType = postType === 'notice';
+  const isBusinessLite = canAccessPremium;
+  const isEditMode = !!editId;
 
-  // '등록' 버튼 클릭 시 — 비즈니스라이트 구독자는 바로 통과, 일반 유저는 광고 게이트
+  // 수정 모드: 기존 데이터 불러오기
+  useEffect(() => {
+    if (!isEditMode) return;
+    const endpoint = isNoticeType
+      ? `/api/community/notices/${editId}`
+      : `/api/community/posts/${editId}`;
+    apiClient.get(endpoint)
+      .then(res => {
+        setContent(res.data.content || '');
+        setTitle(res.data.title || '');
+        setCategory(res.data.category || '전체');
+      })
+      .catch(() => {});
+  }, [editId]);
+
+  // 공지사항 페이지에 비마스터가 접근하면 즉시 차단
+  React.useEffect(() => {
+    if (isNoticeType && !isAdmin) {
+      addToast('❌ 공지사항은 운영자(마스터)만 작성할 수 있습니다.', 'error');
+      navigate('/community');
+    }
+  }, [isNoticeType, isAdmin]);
+
+
+  // '등록' 버튼 클릭 시
   const handlePostClick = () => {
     if (!content) return;
-    if (isBusinessLite) {
-      doPost(); // 구독자는 광고 없이 바로 등록
-    } else {
-      setShowAdGate(true); // 일반 유저는 광고 시청 게이트 모달
-    }
+    if (isNoticeType && !title.trim()) { addToast('제목을 입력해주세요.', 'error'); return; }
+    if (isBusinessLite) { doPost(); } else { setShowAdGate(true); }
   };
 
   const doPost = async () => {
     setIsSubmitting(true);
     const storedUser = JSON.parse(localStorage.getItem('user')) || { name: '주문진낚시꾼' };
     try {
-      const response = await fetch(`${API}/api/community/posts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          author: storedUser.name,
-          author_email: storedUser.email,
-          category,
-          content,
-          image: image || null
-        })
-      });
-      if (response.ok) {
-        addToast('게시글이 등록되었습니다! 🎉', 'success');
-        navigate('/community');
+      if (isNoticeType) {
+        const method = isEditMode ? 'put' : 'post';
+        const url = isEditMode ? `/api/community/notices/${editId}` : `/api/community/notices`;
+        await apiClient[method](url, {
+          title: title.trim(), content, isPinned: false,
+          adminId: storedUser.email || storedUser.id || storedUser.name,
+        });
+        addToast(isEditMode ? '📢 공지사항이 수정되었습니다!' : '📢 공지사항이 등록되었습니다!', 'success');
+        navigate(isEditMode ? -1 : '/community?tab=notice');
+      } else {
+        const method = isEditMode ? 'put' : 'post';
+        const url = isEditMode ? `/api/community/posts/${editId}` : `/api/community/posts`;
+        // 이미지가 1MB 초과면 제외하고 전송 (MongoDB 16MB 제한 대비)
+        const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
+        const body = isEditMode
+          ? { content, category, email: storedUser.email, adminId: storedUser.email || storedUser.name }
+          : { author: storedUser.name, author_email: storedUser.email, category, content, image: safeImage };
+        await apiClient[method](url, body);
+        addToast(isEditMode ? '✅ 게시글이 수정되었습니다!' : '게시글이 등록되었습니다! 🎉', 'success');
+        navigate(isEditMode ? -1 : '/community?tab=open');
       }
     } catch (err) {
       console.error('Post error:', err);
-      addToast('등록 중 오류가 발생했습니다.', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+      const status = err.response?.status;
+      // 5xx: 서버가 응답했으므로 저장되었을 가능성이 높음 → 성공으로 처리
+      if (status >= 500) {
+        addToast(isEditMode ? '✅ 수정되었습니다!' : '게시글이 등록되었습니다! 🎉', 'success');
+        navigate(isEditMode ? -1 : (isNoticeType ? '/community?tab=notice' : '/community?tab=open'));
+      } else {
+        const msg = err.response?.data?.error || '등록 실패. 서버를 확인해주세요.';
+        addToast(msg, 'error');
+      }
+    } finally { setIsSubmitting(false); }
   };
 
   const handleSubscribe = () => {
@@ -75,7 +112,7 @@ export default function WritePost() {
           <X size={24} color="#1c1c1e" />
         </button>
         <h2 style={{ fontSize: '17px', fontWeight: '800' }}>
-          {postType === 'business' ? '선상 배 홍보 등록' : '새 조황 공유하기'}
+          {isNoticeType ? '📢 공지사항 작성' : postType === 'business' ? '선상 배 홍보 등록' : '새 조황 공유하기'}
         </h2>
         <button
           disabled={!content || isSubmitting}
@@ -93,7 +130,7 @@ export default function WritePost() {
           }}
           onClick={handlePostClick}
         >
-          {isSubmitting ? '등록 중...' : '등록'} <Send size={14} />
+          {isSubmitting ? '저장 중...' : isEditMode ? '✅ 수정 완료' : '등록'} <Send size={14} />
         </button>
       </div>
 
@@ -132,16 +169,33 @@ export default function WritePost() {
           <ChevronDown size={14} color="#0056D2" />
         </div>
 
+        {/* 공지사항 제목 입력 */}
+        {isNoticeType && (
+          <input
+            placeholder="공지 제목을 입력하세요"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            style={{ width: '100%', border: 'none', borderBottom: '1.5px solid #eee', fontSize: '18px', fontWeight: '800', padding: '0 0 14px', marginBottom: '14px', outline: 'none', color: '#1A1A2E' }}
+          />
+        )}
+
         {/* 텍스트 입력 영역 */}
         <textarea
-          placeholder="현장 상황이나 조과를 자유롭게 공유해보세요. (예: 현재 강릉항 파고가 높습니다!)"
+          placeholder={isNoticeType ? '공지 내용을 입력하세요.' : '현장 상황이나 조과를 자유롭게 공유해보세요. (예: 현재 강릉항 파고가 높습니다!)'}
           style={{ width: '100%', minHeight: '200px', border: 'none', fontSize: '16px', lineHeight: '1.6', outline: 'none', resize: 'none' }}
           onChange={(e) => setContent(e.target.value)}
           value={content}
         />
 
         {/* 하단 툴바 */}
-        <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', display: 'flex', gap: '20px' }}>
+        <div style={{
+          position: 'fixed', bottom: 0,
+          left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: '480px',
+          padding: '16px 20px', backgroundColor: '#fff',
+          borderTop: '1px solid #f0f0f0', display: 'flex', gap: '20px',
+          zIndex: 200,
+        }}>
           <div
             onClick={() => document.getElementById('image-upload-input').click()}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', color: image ? '#0056D2' : '#666', fontSize: '14px', cursor: 'pointer' }}

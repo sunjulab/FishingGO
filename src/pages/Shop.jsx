@@ -61,7 +61,10 @@ export default function Shop() {
       {/* 🟦 Dynamic Shop Header 🟦 */}
       <div style={{ backgroundColor: '#fff', padding: '32px 24px 24px', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.04em' }}>낚시 샵</h1>
+          <div>
+            <h1 style={{ fontSize: '26px', fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.04em', marginBottom: '2px' }}>🎣 지금 안 사면 후회해요</h1>
+            <p style={{ fontSize: '12px', fontWeight: '700', color: '#8E8E93', margin: 0 }}>고민은 배송만 늦출 뿐입니다</p>
+          </div>
           <ShoppingBag size={26} color="#0056D2" fill="#0056D2" style={{ opacity: 0.1 }} />
         </div>
         
@@ -74,7 +77,7 @@ export default function Shop() {
              style={{ width: '100%', padding: '18px 20px 18px 54px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '24px', fontSize: '15px', fontWeight: '700', outline: 'none' }} 
            />
            <Search size={20} color="#8E8E93" style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
-        </form>
+         </form>
       </div>
 
       {/* 🟦 Categories 🟦 */}
@@ -95,7 +98,7 @@ export default function Shop() {
       {/* 🟦 Product Grid 🟦 */}
       <div style={{ padding: '24px' }}>
          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e' }}>이달의 추천 상품 🌊</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e' }}>오늘의 찜 목록 🌊</h3>
             <SlidersHorizontal size={18} color="#8E8E93" />
          </div>
          

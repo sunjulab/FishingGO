@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { BellRing, X, ChevronRight, Zap } from 'lucide-react';
+import { useUserStore } from '../store/useUserStore';
 
 export default function RealTimeAlert() {
   const [alert, setAlert] = useState(null);
@@ -9,6 +10,11 @@ export default function RealTimeAlert() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 앱 푸쉬 권한 요청
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const socket = io(SOCKET_URL);
 
@@ -17,6 +23,27 @@ export default function RealTimeAlert() {
       setIsVisible(true);
       // 8초 후 자동 페이드 아웃
       setTimeout(() => setIsVisible(false), 8000);
+    });
+
+    socket.on('push_notification', (data) => {
+      const user = useUserStore.getState().user;
+      if (user && data.targetEmail === user.email) {
+        // 시스템 네이티브 푸쉬 알림 띄우기
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(data.title, {
+            body: data.message,
+            icon: '/favicon.ico' // 루트에 있는 파비콘 등을 아이콘으로 사용
+          });
+        }
+        
+        // 앱 내 인앱 알림창도 띄우기
+        setAlert({
+          message: data.message,
+          time: data.time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        });
+        setIsVisible(true);
+        setTimeout(() => setIsVisible(false), 8000);
+      }
     });
 
     return () => socket.disconnect();

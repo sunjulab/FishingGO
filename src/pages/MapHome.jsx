@@ -4,7 +4,7 @@ import {
   Map, Anchor, Droplets, Wind, Waves, Ship, Crown, Navigation,
   Search, Clock, Compass, BarChart2, Zap, ChevronRight, Bell,
   MapPin, Thermometer, Info, Fish, X, Tv, ArrowLeft, RefreshCw,
-  AlertCircle
+  AlertCircle, Star, Lock
 } from 'lucide-react';
 import { findNearestStation, calculateFishingIndex } from '../utils/weather';
 import { evaluateFishingCondition } from '../utils/evaluator';
@@ -12,8 +12,9 @@ import ReactPlayer from 'react-player';
 import FishingPointBottomSheet from '../components/FishingPointBottomSheet';
 import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
-import { ALL_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
+import { ALL_FISHING_POINTS, SECRET_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
 import { useUserStore, TIER_CONFIG } from '../store/useUserStore';
+import apiClient from '../api/index';
 
 const EMOJI_MAP = { '방파제': '⚓', '갯바위': '🪨', '선착장': '🚢', '항구': '🏖️' };
 const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#1565C0', '보통': '#8E8E93' };
@@ -23,6 +24,7 @@ export default function MapHome() {
   const addToast = useToastStore((state) => state.addToast);
   const user = useUserStore((state) => state.user);
   const userTier = useUserStore((state) => state.userTier);
+  const canAccessPremium = useUserStore((state) => state.canAccessPremium ? state.canAccessPremium() : (userTier === 'PRO' || userTier === 'VVIP' || userTier === 'BUSINESS' || userTier === 'BUSINESS_LITE' || userTier === 'MASTER'));
   const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
   const currentTier = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
   const [selectedPoint, setSelectedPoint]   = useState(null);
@@ -40,7 +42,17 @@ export default function MapHome() {
   const [cctvData, setCctvData]             = useState(null);  // { type, url, fallbackImg, areaName, label }
   const [cctvLoading, setCctvLoading]       = useState(false);
   const [sheetVisible, setSheetVisible]     = useState(false);
-  const [heatmapMode, setHeatmapMode]       = useState('sst'); // 'sst' | 'score' (향후 확장)
+  const [heatmapMode, setHeatmapMode]       = useState('sst');
+  const [effectiveSecretPoints, setEffectiveSecretPoints] = useState(SECRET_FISHING_POINTS);
+  const [currentTime, setCurrentTime]       = useState(new Date());
+  const [showSecretPoints, setShowSecretPoints] = useState(false);
+  const secretMarkersRef = useRef([]);
+
+  // 현재 시간 1분마다 업데이트
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const mapRef         = useRef(null);
   const clustererRef   = useRef(null);
@@ -48,6 +60,26 @@ export default function MapHome() {
   const heatmapRef     = useRef([]);
   const searchRef      = useRef(null);
   const mapInitialized = useRef(false);
+
+  /* ── 서버에서 비밀포인트 좌표 오버라이드 fetch ── */
+  useEffect(() => {
+    apiClient.get('/api/secret-point-overrides')
+      .then(res => {
+        const ov = res.data || {};
+        const applied = SECRET_FISHING_POINTS.map(p => {
+          const key = String(p.id);
+          return ov[key] ? { ...p, lat: ov[key].lat, lng: ov[key].lng } : p;
+        });
+        setEffectiveSecretPoints(applied);
+      })
+      .catch(() => {
+        // 서버 오프라인 시 localStorage fallback
+        try {
+          const ov = JSON.parse(localStorage.getItem('secretPointOverrides') || '{}');
+          setEffectiveSecretPoints(SECRET_FISHING_POINTS.map(p => ov[p.id] ? { ...p, lat: ov[p.id].lat, lng: ov[p.id].lng } : p));
+        } catch { /* 기본값 유지 */ }
+      });
+  }, []);
 
   /* ── 카카오맵 초기화 (viewMode=map 진입 시, kakao.maps.load 공식 콜백) ── */
   useEffect(() => {
@@ -154,7 +186,46 @@ export default function MapHome() {
     markersRef.current = newMarkers;
   }, [mapLoaded, filter]);
 
-  /* ── 수온 히트맵 렌더링 (Premium Feature) ── */
+  /* ── 비밀 포인트 마커 렌더링 (LITE 이상 전용) ── */
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current) return;
+
+    // 기존 비밀 마커 제거
+    secretMarkersRef.current.forEach(m => { if (m?.setMap) m.setMap(null); });
+    secretMarkersRef.current = [];
+
+    if (!showSecretPoints) return;
+
+    effectiveSecretPoints.forEach(point => {
+
+      if (!window.kakao?.maps) return;
+
+      // 황금 별 마커 (비밀포인트)
+      const el = document.createElement('div');
+      el.style.cssText = `
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px;
+        filter: drop-shadow(0 0 8px rgba(255,215,0,0.9)) drop-shadow(0 0 3px rgba(255,160,0,0.8));
+        cursor: pointer;
+        animation: secretPulse 1.5s ease-in-out infinite;
+        z-index: 9999;
+      `;
+      el.textContent = '⭐';
+      el.onclick = () => handlePointClick(point);
+
+      const overlay = new window.kakao.maps.CustomOverlay({
+        position: new window.kakao.maps.LatLng(point.lat, point.lng),
+        content: el,
+        zIndex: 9999
+      });
+      overlay.setMap(mapRef.current);
+      secretMarkersRef.current.push(overlay);
+    });
+  }, [mapLoaded, showSecretPoints, effectiveSecretPoints]);
+
+
+  /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
 
@@ -166,80 +237,104 @@ export default function MapHome() {
 
     if (!showHeatmap) return;
 
-    // 수온 → 색상 변환 (8단계 그라디언트)
-    // 한국 4월 실제 해황: 서해 9~11°C / 동해 11~14°C / 남해 13~17°C / 제주 17~19°C
     const getSstColor = (sst) => {
-      if (sst < 8)  return { fill: '#1a3c8f', text: '❄️ 극저',  opacity: 0.75 }; // 극저수온 - 짙은 남색
-      if (sst < 10) return { fill: '#1565C0', text: '🥶 저수온', opacity: 0.70 }; // 저수온 - 파랑
-      if (sst < 12) return { fill: '#29B6F6', text: '🌊 차가움', opacity: 0.65 }; // 약저수온 - 하늘
-      if (sst < 14) return { fill: '#26C6DA', text: '💧 서늘',   opacity: 0.60 }; // 서늘 - 청록
-      if (sst < 16) return { fill: '#66BB6A', text: '✅ 보통',   opacity: 0.60 }; // 적정 하단 - 연두
-      if (sst < 18) return { fill: '#FFCA28', text: '🎣 양호',   opacity: 0.65 }; // 적정 - 노랑
-      if (sst < 21) return { fill: '#FFA726', text: '🔥 적정',   opacity: 0.70 }; // 최적 - 주황
-      if (sst < 24) return { fill: '#FF7043', text: '♨️ 고수온', opacity: 0.70 }; // 고수온 - 적색
-      return              { fill: '#B71C1C', text: '🌡 고수온!', opacity: 0.75 }; // 위험 고수온
+      if (sst < 8)  return { fill: '#1a3c8f', text: '❄️ 극저',  opacity: 0.75 };
+      if (sst < 10) return { fill: '#1565C0', text: '🥶 저수온', opacity: 0.70 };
+      if (sst < 12) return { fill: '#29B6F6', text: '🌊 차가움', opacity: 0.65 };
+      if (sst < 14) return { fill: '#26C6DA', text: '💧 서늘',   opacity: 0.60 };
+      if (sst < 16) return { fill: '#66BB6A', text: '✅ 보통',   opacity: 0.60 };
+      if (sst < 18) return { fill: '#FFCA28', text: '🎣 양호',   opacity: 0.65 };
+      if (sst < 21) return { fill: '#FFA726', text: '🔥 적정',   opacity: 0.70 };
+      if (sst < 24) return { fill: '#FF7043', text: '♨️ 고수온', opacity: 0.70 };
+      return              { fill: '#B71C1C', text: '🌡 고수온!', opacity: 0.75 };
     };
 
-    // 수온에 따라 원 크기 결정 (적정 수온일수록 도드라짐)
-    const getRadius = (sst) => {
-      if (sst >= 16 && sst < 21) return 5000; // 최적 수온: 가장 크게
-      if (sst >= 14 && sst < 23) return 4000; // 양호
-      return 2800;                            // 차거나 너무 뜨거운 곳: 작게
+    const getScoreColor = (score) => {
+      if (score >= 90) return { fill: '#00E5A8', text: '🌟 황금물때', opacity: 0.85 };
+      if (score >= 75) return { fill: '#42A5F5', text: '🎣 최고조황', opacity: 0.75 };
+      if (score >= 50) return { fill: '#FFCA28', text: '👌 보통이상', opacity: 0.65 };
+      if (score >= 30) return { fill: '#FF7043', text: '⚠️ 추천안함', opacity: 0.65 };
+      return           { fill: '#D32F2F', text: '🛑 출조위험', opacity: 0.8 };
+    };
+
+    const getRadiusSst = (sst) => {
+      if (sst >= 16 && sst < 21) return 5500;
+      if (sst >= 14 && sst < 23) return 4000;
+      return 2800;
+    };
+
+    const getRadiusScore = (score) => {
+      if (score >= 90) return 6000;
+      if (score >= 75) return 4500;
+      if (score >= 50) return 3000;
+      return 2000;
     };
 
     ALL_FISHING_POINTS.forEach(point => {
       if (!window.kakao?.maps) return;
 
-      // 실제 SST 데이터 사용 (랜덤 제거)
       const weatherData = getPointSpecificData(point);
       const sst = parseFloat(weatherData?.sst || 13);
-      const { fill, text, opacity } = getSstColor(sst);
-      const radius = getRadius(sst);
+      const condition = evaluateFishingCondition(weatherData, point);
+      const score = condition.score;
 
-      // 수온 원 (배경)
-      const circle = new window.kakao.maps.Circle({
-        center:        new window.kakao.maps.LatLng(point.lat, point.lng),
-        radius,
-        strokeWeight:  1.5,
-        strokeColor:   fill,
-        strokeOpacity: 0.5,
-        fillColor:     fill,
-        fillOpacity:   opacity,
+      const { fill, text, opacity } = heatmapMode === 'sst' ? getSstColor(sst) : getScoreColor(score);
+      const baseRadius = heatmapMode === 'sst' ? getRadiusSst(sst) : getRadiusScore(score);
+
+      // 다중 레이어 원으로 히트맵(Radial Gradient 느낌) 구현 완성도 상향
+      const center = new window.kakao.maps.LatLng(point.lat, point.lng);
+      
+      const layers = [
+        { r: baseRadius,        op: opacity * 0.15 },
+        { r: baseRadius * 0.65, op: opacity * 0.35 },
+        { r: baseRadius * 0.3,  op: opacity * 0.7 }
+      ];
+      layers.forEach(layer => {
+        const circle = new window.kakao.maps.Circle({
+          center, radius: layer.r, strokeWeight: 0,
+          fillColor: fill, fillOpacity: layer.op,
+        });
+        circle.setMap(mapRef.current);
+        heatmapRef.current.push(circle);
       });
-      circle.setMap(mapRef.current);
-      heatmapRef.current.push(circle);
 
-      // 수온 라벨 CustomOverlay
+      // 포인트 라벨 CustomOverlay 고도화
       const mainFish = (point.fish || '').split(',')[0].trim();
+      const mainValue = heatmapMode === 'sst' ? `${sst.toFixed(1)}°C` : `${score}점`;
+      
       const content = [
         '<div style="',
-          'background:rgba(0,0,0,0.78);',
+          'background:rgba(0,0,0,0.85);',
           'color:#fff;',
-          'padding:4px 8px;',
-          'border-radius:10px;',
+          'padding:5px 10px;',
+          'border-radius:12px;',
           'font-size:11px;',
-          'font-weight:800;',
+          'font-weight:900;',
           'white-space:nowrap;',
-          'line-height:1.5;',
+          'line-height:1.4;',
           'border:1.5px solid ', fill, ';',
           'pointer-events:none;',
+          'box-shadow: 0 4px 12px ', fill, '40;',
+          'transform: translateY(-8px);',
         '">',
-          '<div style="color:', fill, ';font-size:13px">', sst.toFixed(1), '°C</div>',
-          '<div style="color:#ccc;font-size:9px">', text, '</div>',
-          '<div style="color:#aaa;font-size:9px">', mainFish || point.name.slice(0,5), '</div>',
+          '<div style="display:flex;align-items:center;gap:4px;">',
+            '<span style="color:', fill, ';font-size:14px">', mainValue, '</span>',
+            '<span style="font-size:10px;color:#eee">', text, '</span>',
+          '</div>',
+          '<div style="color:#aaa;font-size:9.5px;margin-top:2px;text-align:left;">', mainFish || point.name.slice(0,5), ' 포인트</div>',
         '</div>',
       ].join('');
 
       const overlay = new window.kakao.maps.CustomOverlay({
-        position: new window.kakao.maps.LatLng(point.lat, point.lng),
+        position: center,
         content,
-        yAnchor: 2.6,
+        yAnchor: 2.2,
         zIndex: 3,
       });
       overlay.setMap(mapRef.current);
       heatmapRef.current.push(overlay);
     });
-  }, [showHeatmap, mapLoaded]);
+  }, [showHeatmap, heatmapMode, mapLoaded]);
 
   /* ── 맵 리사이즈 (selectedPoint 변경 시 panTo) ── */
   useEffect(() => {
@@ -303,16 +398,11 @@ export default function MapHome() {
     const nearest = findNearestStation(point.lat, point.lng);
     try {
       const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
-      setPrecisionData({ ...res.data, pointName: point.name });
+      const dynamicTide = getPointSpecificData(point).tide;
+      setPrecisionData({ ...res.data, pointName: point.name, tide: dynamicTide });
     } catch {
-      setPrecisionData({
-        pointName: point.name,
-        name: '현장 측정(시뮬레이션)', sst: '14.2', temp: '15.2°C',
-        wind: { speed: 2.8, dir: 'W' },
-        wave: { coastal: 0.3 },
-        tide: { phase: '7물(사리)', low: '08:42', high: '15:20', current_level: '120cm' },
-        layers: { upper: 16.5, middle: 14.8, lower: 13.2 }
-      });
+      // API 실패 시 동적 데이터를 전체 사용
+      setPrecisionData(getPointSpecificData(point));
     } finally { setLoading(false); }
   };
 
@@ -352,6 +442,48 @@ export default function MapHome() {
   const mainAdvice  = adviceParts[0].trim();
   const alertAdvice = adviceParts[1]?.trim() || null;
 
+  /* ── 동적 미끼 팁 ── */
+  const getBaitTip = () => {
+    const now      = new Date();
+    const hour     = now.getHours();
+    const month    = now.getMonth() + 1; // 1~12
+    const isNight  = hour < 6 || hour >= 19;
+    const wind     = parseFloat(tideData.wind?.speed ?? 0);
+    const wave     = parseFloat(tideData.wave?.coastal ?? 0);
+    const sst      = parseFloat(tideData.sst ?? 14);
+    const isStrong = wind > 5 || wave > 0.7;
+    const isCold   = sst < 12;
+    const isWarm   = sst >= 18;
+    const fish     = (selectedPoint?.fish || '').split(',')[0].trim() || '';
+
+    // 야간
+    if (isNight) return { icon: '🌙', text: '야간엔 야광 지렁이·형광 루어가 최고! 수면 가까이 띄워 공략하세요.' };
+    // 풍랑 강함
+    if (isStrong) return { icon: '🌊', text: `파고 ${wave}m · 풍속 ${wind}m/s — 무거운 봉돌로 고정하고 크릴 밀봉 채비가 유리합니다.` };
+    // 조황 점수 위기
+    if (score < 40) return { icon: '⚠️', text: '활성도가 낮아요. 갯지렁이 + 크릴 혼합 미끼로 냄새를 강하게 유인하세요.' };
+    // 황금물때
+    if (score >= 90) return { icon: '🌟', text: '황금물때! 루어·지렁이 모두 효과 MAX. 참돔엔 핑크색 타이라바가 대박입니다.' };
+    // 어종별 팁
+    if (fish.includes('감성돔'))  return { icon: '🎣', text: '감성돔은 크릴+파래 혼합 미끼! 조류 방향 맞춰 흘림낚시가 효과적.' };
+    if (fish.includes('참돔'))    return { icon: '🔴', text: '참돔 시즌 — 타이라바(핑크/오렌지) 80~120g으로 중층 탐색 추천.' };
+    if (fish.includes('루어') || fish.includes('부시리') || fish.includes('방어'))
+      return { icon: '⚡', text: '회유어종 활성! 메탈지그 빠른 저킹 → 멈춤 콤보로 반사 입질 노리세요.' };
+    if (fish.includes('오징어') || fish.includes('한치'))
+      return { icon: '🦑', text: '오징어엔 에기(3.5호) 핑크/보라 계열! 착저 후 천천히 올리는 리프트&폴 액션.' };
+    if (fish.includes('우럭') || fish.includes('볼락'))
+      return { icon: '🐟', text: '저층 공략! 지렁이·새우 미끼로 바닥 천천히 끌어주세요. 갈색 루어도 효과적.' };
+    // 수온별
+    if (isCold)  return { icon: '❄️', text: `수온 ${sst.toFixed(1)}°C 저수온 — 활성 낮음. 크릴을 천천히 흘려 냄새로 유인하세요.` };
+    if (isWarm)  return { icon: '♨️', text: `수온 ${sst.toFixed(1)}°C 고수온 — 표층 가까이에 물고기 밀집. 탑워터 루어 효과 UP!` };
+    // 계절
+    if (month >= 3 && month <= 5)  return { icon: '🌸', text: '봄 시즌 — 산란 직전 감성돔 활성 최고조! 갯지렁이+집어제 조합 추천.' };
+    if (month >= 6 && month <= 8)  return { icon: '☀️', text: '여름 — 새벽 골든타임! 표층 포퍼·페더지그로 부시리·방어 공략.' };
+    if (month >= 9 && month <= 11) return { icon: '🍂', text: '가을 대물 시즌 — 크릴+밑밥 집중 투척. 참돔·방어 대형급 기대!' };
+    return { icon: '🎣', text: '크릴+지렁이 혼합 미끼로 다양한 어종을 공략해보세요!' };
+  };
+  const baitTip = getBaitTip();
+
   return (
     <div style={{ backgroundColor: '#F4F6FA', height: '100vh', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
       <div style={{
@@ -381,22 +513,37 @@ export default function MapHome() {
                 <button 
                   onClick={() => {
                     if (!canAccessPremium) {
-                      addToast('프리미엄 수온 히트맵은 PRO 또는 Business Lite 이상에서 제공됩니다.', 'error');
-                      navigate('/subscribe');
+                      addToast('프리미엄 스마트 히트맵은 LITE 플랜 이상에서 제공됩니다.', 'error');
                       return;
                     }
                     setShowHeatmap(!showHeatmap);
-                    if (!showHeatmap) addToast('🔥 프리미엄 표층 수온 히트맵 생성을 완료했습니다.', 'success');
+                    if (!showHeatmap) addToast('📡 실시간 해양 히트맵 분석을 완료했습니다.', 'success');
                   }} 
                   style={{
-                    padding: '5px 10px', borderRadius: '20px', border: '1.5px solid #FF3B30', cursor: 'pointer',
+                    padding: '5px 12px', borderRadius: '20px', border: '1.5px solid #FF3B30', cursor: 'pointer',
                     fontSize: '11px', fontWeight: '900', flexShrink: 0,
                     background: showHeatmap ? '#FF3B30' : '#fff',
                     color: showHeatmap ? '#fff' : '#FF3B30',
                     transition: 'all 0.2s',
                   }}>
-                  {showHeatmap ? '🔥 히트맵 끄기' : `🔥 수온 히트맵 (${isAdmin ? 'MASTER' : 'PRO / LITE'})`}
+                  {showHeatmap ? '🔥 히트맵 끄기' : `🔥 스마트 히트맵 (${isAdmin ? 'MASTER' : 'LITE+'})`}
                 </button>
+                {showHeatmap && (
+                  <button 
+                    onClick={() => {
+                      const mode = heatmapMode === 'sst' ? 'score' : 'sst';
+                      setHeatmapMode(mode);
+                      addToast(mode === 'sst' ? '🌡️ 표층 수온 모드로 변경되었습니다.' : '🎣 실시간 조황 점수 모드로 변경되었습니다.', 'success');
+                    }}
+                    style={{
+                      padding: '5px 12px', borderRadius: '20px', border: '1.5px solid #0056D2', cursor: 'pointer',
+                      fontSize: '11px', fontWeight: '900', flexShrink: 0,
+                      background: '#0056D2', color: '#fff',
+                      transition: 'all 0.2s',
+                    }}>
+                    {heatmapMode === 'sst' ? '🎣 조황 점수별 보기' : '🌡️ 표층 수온별 보기'}
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -411,6 +558,9 @@ export default function MapHome() {
                 )}
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: '#1565C0', letterSpacing: '-0.02em', marginRight: '-6px' }}>
+                  {currentTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </div>
                 <div style={{ position: 'relative', cursor: 'pointer' }}>
                   <Bell size={20} color="#333" strokeWidth={2} />
                   <span style={{ position: 'absolute', top: '-1px', right: '-1px', width: '6px', height: '6px', background: '#FF3B30', borderRadius: '50%', border: '1.5px solid #fff' }} />
@@ -437,31 +587,55 @@ export default function MapHome() {
         <div style={{ display: viewMode === 'map' ? 'flex' : 'none', flex: 1, flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             <div id="kakao-map" style={{ width: '100%', flex: 1, minHeight: '200px', background: '#e8edf5' }} />
             
-            {/* 수온 범례 (Legend) */}
+            {/* 수온/조황 범례 (Legend) 고도화 */}
             {showHeatmap && (
               <div style={{
-                position: 'absolute', bottom: '24px', left: '16px', zIndex: 10,
+                position: 'absolute', bottom: '16px', left: '12px', zIndex: 10,
                 background: 'rgba(255, 255, 255, 0.95)', border: '1.5px solid rgba(0,0,0,0.08)',
                 borderRadius: '16px', padding: '12px 14px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
                 backdropFilter: 'blur(10px)', width: '220px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '900', color: '#1A1A2E' }}>🌡 표층 수온(SST) 범례</span>
-                  <span style={{ fontSize: '9px', fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>{isAdmin ? 'MASTER' : 'PRO'}</span>
+                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#1A1A2E' }}>
+                    {heatmapMode === 'sst' ? '🌡 표층 수온(SST) 범례' : '🎣 AI 낚시지도 조황 점수'}
+                  </span>
+                  <span style={{ fontSize: '9px', fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>PRO</span>
                 </div>
-                <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
-                  <div style={{ flex: 1, background: '#1a3c8f' }} /><div style={{ flex: 1, background: '#1565C0' }} /><div style={{ flex: 1, background: '#29B6F6' }} />
-                  <div style={{ flex: 1, background: '#26C6DA' }} /><div style={{ flex: 1, background: '#66BB6A' }} /><div style={{ flex: 1, background: '#FFCA28' }} />
-                  <div style={{ flex: 1, background: '#FFA726' }} /><div style={{ flex: 1, background: '#FF7043' }} /><div style={{ flex: 1, background: '#B71C1C' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
-                  <span>&lt;8°C</span><span>(어종별 적정수온)</span><span>24°C&gt;</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
-                  <span style={{ color: '#1565C0' }}>극저/저수온</span>
-                  <span style={{ color: '#FFA726' }}>🔥 최상의 활성도</span>
-                  <span style={{ color: '#B71C1C' }}>고수온</span>
-                </div>
+                {heatmapMode === 'sst' ? (
+                  <>
+                    <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
+                      <div style={{ flex: 1, background: '#1a3c8f' }} /><div style={{ flex: 1, background: '#1565C0' }} /><div style={{ flex: 1, background: '#29B6F6' }} />
+                      <div style={{ flex: 1, background: '#26C6DA' }} /><div style={{ flex: 1, background: '#66BB6A' }} /><div style={{ flex: 1, background: '#FFCA28' }} />
+                      <div style={{ flex: 1, background: '#FFA726' }} /><div style={{ flex: 1, background: '#FF7043' }} /><div style={{ flex: 1, background: '#B71C1C' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
+                      <span>&lt;8°C</span><span>(어종별 적정수온)</span><span>24°C&gt;</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
+                      <span style={{ color: '#1565C0' }}>저수온</span>
+                      <span style={{ color: '#FFA726' }}>🔥 최적 활성도</span>
+                      <span style={{ color: '#B71C1C' }}>고수온</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '4px', overflow: 'hidden', marginBottom: '6px' }}>
+                      <div style={{ flex: 1, background: '#D32F2F' }} />
+                      <div style={{ flex: 1, background: '#FF7043' }} />
+                      <div style={{ flex: 1, background: '#FFCA28' }} />
+                      <div style={{ flex: 1, background: '#42A5F5' }} />
+                      <div style={{ flex: 1, background: '#00E5A8' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
+                      <span>0점</span><span>종합 낚시 점수</span><span>100점</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
+                      <span style={{ color: '#D32F2F' }}>출조 보류</span>
+                      <span style={{ color: '#FFCA28' }}>👌 무난함</span>
+                      <span style={{ color: '#00E5A8' }}>✨ 황금물때</span>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -625,20 +799,19 @@ export default function MapHome() {
                   <button 
                     onClick={async () => {
                       if (!canAccessPremium) {
-                        addToast('실시간 해양 CCTV는 PRO 또는 Business Lite 플랜 이상에서 제공됩니다.', 'error');
-                        navigate('/subscribe');
-                        return;
+                        addToast('📺 실시간 해양 CCTV는 LITE 플랜 이상에서 제공됩니다.', 'error');
+                        return; // 페이지 이동 없음 — 홈화면 유지
                       }
                       const sid = selectedPoint?.obsCode || 'DT_0001';
                       try {
                         const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
-                        setCctvData(res.data);  // { type, url, fallbackImg, areaName, label }
+                        setCctvData(res.data);
                         setShowCCTV(true);
                       } catch {
                         addToast('영상 데이터를 불러오는 데 실패했습니다.', 'error');
                       }
                     }}
-                    style={{ marginLeft: 'auto', background: 'rgba(255,215,0,0.9)', border: 'none', borderRadius: '30px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
+                    style={{ marginLeft: 'auto', background: canAccessPremium ? 'rgba(255,215,0,0.9)' : 'rgba(255,255,255,0.15)', border: canAccessPremium ? 'none' : '1px solid rgba(255,255,255,0.2)', borderRadius: '30px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
                   >
                     <Tv size={12} color="#1A1A2E" />
                     <span style={{ fontSize: '10px', fontWeight: '900', color: '#1A1A2E' }}>실시간 영상</span>
@@ -649,28 +822,74 @@ export default function MapHome() {
 
             {/* 퀵메뉴 */}
             <div style={{ padding: '16px 16px 4px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                 {[
-                  { Icon: Map,       label: '포인트',  color: '#1565C0', bg: '#EBF2FF', action: () => setViewMode('map') },
-                  { Icon: BarChart2, label: '날씨',    color: '#2E7D32', bg: '#EDF7EE', action: () => navigate('/weather') },
-                  { Icon: Ship,      label: '선상/크루', color: '#BF360C', bg: '#FFF3EE', action: () => navigate('/community') },
-                  { Icon: Crown,     label: '클럽',    color: '#6A1B9A', bg: '#F5EEFF', action: () => navigate('/community') },
+                  { Icon: Map,       label: '포인트',   color: '#1565C0', bg: '#EBF2FF',  action: () => setViewMode('map'),     locked: false },
+                  { Icon: BarChart2, label: '날씨',     color: '#2E7D32', bg: '#EDF7EE',  action: () => navigate('/weather'),   locked: false },
+                  { Icon: Ship,      label: '선상/크루', color: '#BF360C', bg: '#FFF3EE', action: () => navigate('/community'), locked: false },
+                  { Icon: Crown,     label: '클럽',     color: '#6A1B9A', bg: '#F5EEFF',  action: () => navigate('/community'), locked: false },
+                  {
+                    label: '비밀포인트',
+                    locked: !canAccessPremium,
+                    action: () => {
+                      if (!canAccessPremium) {
+                        addToast('🔒 LITE 플랜 이상에서 비밀 포인트를 확인할 수 있어요!', 'error');
+                        return;
+                      }
+                      setViewMode('map');
+                      setShowSecretPoints(true);
+                      addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');
+                    },
+                    customIcon: (
+                      <div style={{ position: 'relative', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{
+                          fontSize: '22px',
+                          filter: canAccessPremium
+                            ? 'drop-shadow(0 0 6px rgba(255,200,0,0.9)) drop-shadow(0 0 2px rgba(255,160,0,0.6))'
+                            : 'grayscale(1) opacity(0.5)',
+                          animation: canAccessPremium ? 'secretPulse 2s ease-in-out infinite' : 'none',
+                        }}>⭐</span>
+                        {!canAccessPremium && (
+                          <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '13px', height: '13px', background: '#8E8E93', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #fff' }}>
+                            <Lock size={7} color="#fff" />
+                          </div>
+                        )}
+                      </div>
+                    ),
+                  },
                 ].map((m, index) => (
                   <div key={index} onClick={m.action} style={{ textAlign: 'center', cursor: 'pointer' }}>
-                    <div style={{ width: '100%', aspectRatio: '1/1', backgroundColor: '#fff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #F0F2F7', transition: 'transform 0.15s', }}
-                      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.94)'}
+                    <div style={{
+                      width: '100%', aspectRatio: '1/1', backgroundColor: '#fff',
+                      borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      marginBottom: '5px',
+                      boxShadow: (!m.locked && m.label === '비밀포인트')
+                        ? '0 3px 14px rgba(255,200,0,0.25)'
+                        : '0 2px 8px rgba(0,0,0,0.05)',
+                      border: (!m.locked && m.label === '비밀포인트')
+                        ? '1.5px solid rgba(255,215,0,0.45)'
+                        : '1px solid #F0F2F7',
+                      transition: 'transform 0.15s',
+                    }}
+                      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.93)'}
                       onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                       onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      <div style={{ width: '40px', height: '40px', background: m.bg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <m.Icon size={20} color={m.color} />
-                      </div>
+                      {m.customIcon ? m.customIcon : (
+                        <div style={{ width: '36px', height: '36px', background: m.bg, borderRadius: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <m.Icon size={19} color={m.color} />
+                        </div>
+                      )}
                     </div>
-                    <span style={{ fontSize: '10px', fontWeight: '800', color: '#555' }}>{m.label}</span>
+                    <span style={{
+                      fontSize: '9px', fontWeight: '800',
+                      color: (!m.locked && m.label === '비밀포인트') ? '#B8860B' : '#555',
+                    }}>{m.label}</span>
                   </div>
                 ))}
               </div>
             </div>
+
 
             {/* 피딩 스케줄 */}
             <div style={{ padding: '10px 16px 6px' }}>
@@ -682,38 +901,168 @@ export default function MapHome() {
                     {isGolden ? '🌟 황금물때' : phase.split('(')[0]}
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {[
-                    { label: '새벽', time: tideData.tide?.low  || '06:10', active: false },
-                    { label: '황금 ✨', time: '14:20',                      active: true  },
-                    { label: '저녁', time: tideData.tide?.high || '19:30', active: false },
-                  ].map((ft, i) => (
-                    <div key={i} style={{
-                      flex: 1, padding: '8px 2px', borderRadius: '12px', textAlign: 'center',
-                      background: ft.active ? 'linear-gradient(135deg, #FFD700, #FFA000)' : '#F8F9FC',
-                      border: ft.active ? 'none' : '1px solid #F0F2F7',
-                    }}>
-                      <div style={{ fontSize: '8px', fontWeight: '900', color: ft.active ? '#5C3A00' : '#AAB0BE', marginBottom: '2px' }}>{ft.label}</div>
-                      <div style={{ fontSize: '11px', fontWeight: '950', color: ft.active ? '#1A1A00' : '#8E8E93' }}>{ft.time}</div>
+                {(() => {
+                  // 실시간 피딩 타임 동적 계산
+                  const now = new Date();
+                  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+                  // 물때 만조/간조 시각 파싱 (HH:MM)
+                  const parseTime = (str) => {
+                    if (!str) return null;
+                    const [h, m] = String(str).split(':').map(Number);
+                    return isNaN(h) ? null : h * 60 + (m || 0);
+                  };
+
+                  const highMin = parseTime(tideData.tide?.high);
+                  const lowMin  = parseTime(tideData.tide?.low);
+
+                  // 피딩 타임: 간조, 만조(황금), 다음 물때로 정확히 분류 후 시간순 정렬
+                  const goldenMin = highMin ?? 870;          // 만조 시각 (황금)
+                  const lowMinVal = lowMin ?? 360;           // 간조 시각
+                  const nextLowMin = (lowMinVal + 720) % 1440; // 다음 간조 시각
+
+                  const fmt = (m) => {
+                    const hh = Math.floor(((m % 1440) + 1440) % 1440 / 60);
+                    const mm = ((m % 1440) + 1440) % 1440 % 60;
+                    return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+                  };
+
+                  // 현재 시각이 피딩 윈도우 안에 있으면 active
+                  const isInWindow = (centerMin, windowMin = 40) =>
+                    Math.abs(nowMin - centerMin) <= windowMin ||
+                    Math.abs(nowMin - centerMin + 1440) <= windowMin ||
+                    Math.abs(nowMin - centerMin - 1440) <= windowMin;
+
+                  const slots = [
+                    { label: '간조 물때', time: fmt(lowMinVal),    active: isInWindow(lowMinVal, 35), val: lowMinVal },
+                    { label: '만조 (황금)✨', time: fmt(goldenMin), active: isInWindow(goldenMin, 40), val: goldenMin },
+                    { label: '다음 물때', time: fmt(nextLowMin),   active: isInWindow(nextLowMin, 35), val: nextLowMin },
+                  ];
+
+                  // 시간 순으로 정렬하여 표시 오류 해결 (새벽이 18시에 나오는 현상 방지)
+                  slots.sort((a, b) => a.val - b.val);
+
+                  // 아무것도 active가 아니면 가장 가까운 미래 슬롯을 active (다음) 표시
+                  const hasActive = slots.some(s => s.active);
+                  if (!hasActive) {
+                    const diffs = slots.map((s, i) => {
+                      const diff = ((s.val - nowMin) + 1440) % 1440;
+                      return { i, diff };
+                    });
+                    diffs.sort((a, b) => a.diff - b.diff);
+                    slots[diffs[0].i].next = true;
+                  }
+
+                  return (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {slots.map((ft, i) => (
+                        <div key={i} style={{
+                          flex: 1, padding: '8px 2px', borderRadius: '12px', textAlign: 'center',
+                          background: ft.active
+                            ? 'linear-gradient(135deg, #FFD700, #FFA000)'
+                            : ft.next
+                              ? 'linear-gradient(135deg, #E8F4FF, #D0E8FF)'
+                              : '#F8F9FC',
+                          border: ft.active ? 'none' : ft.next ? '1px solid #90CAF9' : '1px solid #F0F2F7',
+                        }}>
+                          <div style={{ fontSize: '8px', fontWeight: '900', color: ft.active ? '#5C3A00' : ft.next ? '#1565C0' : '#AAB0BE', marginBottom: '2px' }}>
+                            {ft.label}{ft.next ? ' (다음)' : ''}
+                          </div>
+                          <div style={{ fontSize: '11px', fontWeight: '950', color: ft.active ? '#1A1A00' : ft.next ? '#1565C0' : '#8E8E93' }}>
+                            {ft.time}
+                          </div>
+                          {ft.active && <div style={{ fontSize: '7px', color: '#5C3A00', fontWeight: '900', marginTop: '1px' }}>🔥 지금!</div>}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
             </div>
 
-            {/* 프리미엄 멤버십 */}
-            <div style={{ padding: '8px 16px 6px' }}>
-              <div style={{ background: '#1A1A2E', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Crown size={18} color="#5C3A00" fill="#5C3A00" />
+            {/* 프리미엄 멤버십 구독 */}
+            <div style={{ padding: '8px 16px 12px' }}>
+              {canAccessPremium ? (
+                /* ── 유료 회원: 현재 플랜 상태 카드 ── */
+                <div style={{
+                  position: 'relative', overflow: 'hidden',
+                  background: 'linear-gradient(135deg, #111218 0%, #1E1F2E 100%)',
+                  borderRadius: '20px', padding: '18px 20px',
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.2)',
+                  border: '1px solid rgba(255,215,0,0.2)',
+                }}>
+                  <div style={{ position: 'absolute', top: '-40%', right: '-10%', width: '120px', height: '120px', background: 'radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)', backgroundSize: '200% 100%', animation: 'shimmer 3s infinite linear', pointerEvents: 'none' }} />
+                  <div style={{ position: 'relative', width: '46px', height: '46px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 6px 20px rgba(255,215,0,0.3)' }}>
+                    <Crown size={24} color="#5C3A00" fill="#5C3A00" />
+                    <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '12px', height: '12px', background: '#00C48C', borderRadius: '50%', border: '2px solid #1E1F2E', animation: 'pulse 2s infinite' }} />
+                  </div>
+                  <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '950', color: '#fff' }}>{currentTier.label || 'LITE'} 구독 중</span>
+                      <span style={{ background: '#00C48C', fontSize: '8px', padding: '2px 6px', borderRadius: '10px', color: '#fff', fontWeight: '900' }}>활성</span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600' }}>비밀 포인트 25곳 · 히트맵 · CCTV 이용 가능</div>
+                  </div>
+                  <div onClick={() => { setViewMode('map'); setShowSecretPoints(true); addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success'); }}
+                    style={{ position: 'relative', zIndex: 1, background: 'rgba(255,255,255,0.1)', color: '#FFD700', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '30px', padding: '8px 12px', fontSize: '10px', fontWeight: '900', cursor: 'pointer', backdropFilter: 'blur(5px)', whiteSpace: 'nowrap' }}>
+                    비밀포인트 보기 ›
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>프리미엄 멤버십</div>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>비밀 포인트 대공개</div>
+              ) : (
+                /* ── 무료 회원: 멤버십 구독 카드 ── */
+                <div style={{ background: 'linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 100%)', borderRadius: '22px', padding: '20px 18px', border: '1px solid rgba(255,215,0,0.18)', boxShadow: '0 14px 40px rgba(0,0,0,0.25)', position: 'relative', overflow: 'hidden' }}>
+                  {/* 배경 글로우 */}
+                  <div style={{ position: 'absolute', top: '-30%', right: '-15%', width: '140px', height: '140px', background: 'radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)', filter: 'blur(25px)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', bottom: '-40%', left: '-10%', width: '100px', height: '100px', background: 'radial-gradient(circle, rgba(0,196,140,0.1) 0%, transparent 70%)', filter: 'blur(18px)', pointerEvents: 'none' }} />
+
+                  {/* 헤더 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', position: 'relative', zIndex: 1 }}>
+                    <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(255,215,0,0.35)', flexShrink: 0 }}>
+                      <Crown size={20} color="#5C3A00" fill="#5C3A00" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '950', color: '#fff', letterSpacing: '-0.02em' }}>프리미엄 멤버십</div>
+                      <div style={{ fontSize: '10px', color: 'rgba(255,215,0,0.7)', fontWeight: '700' }}>비밀 포인트 25곳 + 프리미엄 기능 전체 이용</div>
+                    </div>
+                  </div>
+
+                  {/* 플랜 카드 3종 */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', position: 'relative', zIndex: 1 }}>
+                    {[
+                      { name: 'LITE', price: '₩9,900', period: '/월', color: '#A0A0A0', bg: 'rgba(160,160,160,0.1)', border: 'rgba(160,160,160,0.25)', features: ['비밀포인트 25곳', '히트맵 이용', 'CCTV 이용'], badge: null },
+                      { name: 'PRO', price: '₩110,000', period: '/월', color: '#64B5F6', bg: 'rgba(21,101,192,0.15)', border: 'rgba(100,181,246,0.35)', features: ['LITE 전체 포함', '선상 홍보 게시', '우선 노출'], badge: '인기', hot: true },
+                      { name: 'VVIP', price: '₩550,000', period: '/월', color: '#FFD700', bg: 'rgba(255,215,0,0.1)', border: 'rgba(255,215,0,0.35)', features: ['PRO 전체 포함', '항구 독점 선점', '전용 뱃지'], badge: '독점' },
+                    ].map(plan => (
+                      <div key={plan.name} onClick={() => navigate('/vvip-subscribe')} style={{ flex: 1, background: plan.bg, border: `1.5px solid ${plan.border}`, borderRadius: '14px', padding: '12px 8px', textAlign: 'center', cursor: 'pointer', position: 'relative', transition: 'transform 0.15s' }}
+                        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+                        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        {plan.badge && (
+                          <div style={{ position: 'absolute', top: '-8px', left: '50%', transform: 'translateX(-50%)', background: plan.hot ? '#1565C0' : 'linear-gradient(135deg,#FFD700,#FFA000)', color: plan.hot ? '#fff' : '#5C3A00', fontSize: '8px', fontWeight: '900', padding: '2px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>{plan.badge}</div>
+                        )}
+                        <div style={{ fontSize: '11px', fontWeight: '900', color: plan.color, marginBottom: '4px' }}>{plan.name}</div>
+                        <div style={{ fontSize: '13px', fontWeight: '950', color: '#fff', lineHeight: 1 }}>{plan.price}</div>
+                        <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>{plan.period}</div>
+                        {plan.features.map((f, i) => (
+                          <div key={i} style={{ fontSize: '8px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', marginTop: '2px' }}>✓ {f}</div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 구독 CTA 버튼 */}
+                  <button onClick={() => navigate('/vvip-subscribe')} style={{ position: 'relative', zIndex: 1, width: '100%', padding: '13px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', border: 'none', borderRadius: '14px', fontSize: '13px', fontWeight: '950', color: '#1A1A2E', cursor: 'pointer', boxShadow: '0 6px 20px rgba(255,215,0,0.3)', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <Crown size={15} color="#5C3A00" fill="#5C3A00" />
+                    멤버십 구독하기
+                    <span style={{ fontSize: '12px' }}>›</span>
+                  </button>
                 </div>
-                <button style={{ background: 'linear-gradient(90deg, #FF5A5F, #FF3B40)', color: '#fff', border: 'none', borderRadius: '20px', padding: '7px 12px', fontSize: '10px', fontWeight: '900', cursor: 'pointer' }}>알아보기</button>
-              </div>
+              )}
             </div>
+
 
             {/* 우수 포인트 카드 */}
             <div style={{ marginTop: '14px' }}>
@@ -759,7 +1108,7 @@ export default function MapHome() {
               {recentPosts.length > 0 ? recentPosts.map(post => (
                 <div
                   key={post._id || post.id}
-                  onClick={() => navigate(`/post/${post._id || post.id}`)}
+                  onClick={() => navigate(`/community?tab=open&postId=${post._id || post.id}`)}
                   style={{
                     background: '#fff', borderRadius: '12px', padding: '10px 12px', marginBottom: '8px',
                     display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #F0F2F7',
@@ -790,12 +1139,16 @@ export default function MapHome() {
             {/* 미끼 팁 */}
             <div style={{ padding: '4px 16px 20px' }}>
               <div style={{ backgroundColor: '#1A1A2E', borderRadius: '16px', padding: '14px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Fish size={20} color="#5C3A00" />
+                <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                  {baitTip.icon}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '9px', fontWeight: '900', color: '#FFB300', marginBottom: '2px' }}>오늘의 미끼 팁</div>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#fff', lineHeight: 1.3 }}>물살 빠른 오늘엔 크릴 조합이 최적!</div>
+                  <div style={{ fontSize: '9px', fontWeight: '900', color: '#FFB300', marginBottom: '3px' }}>
+                    오늘의 미끼 팁 · {selectedPoint?.name?.slice(0, 8) || '현재 포인트'}
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#fff', lineHeight: 1.45 }}>
+                    {baitTip.text}
+                  </div>
                 </div>
               </div>
             </div>
@@ -884,9 +1237,12 @@ export default function MapHome() {
           </div>
         )}
 
-        {/* 스핀 애니메이션 */}
+        {/* 스핀 및 특수효과 애니메이션 */}
         <style>{`
           @keyframes spin { to { transform: rotate(360deg); } }
+          @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+          @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+          @keyframes secretPulse { 0% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255,215,0,0.9)); } 50% { transform: scale(1.25); filter: drop-shadow(0 0 16px rgba(255,215,0,1)) drop-shadow(0 0 6px rgba(255,160,0,1)); } 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255,215,0,0.9)); } }
           input::placeholder { color: #AAB0BE; }
           ::-webkit-scrollbar { display: none; }
         `}</style>

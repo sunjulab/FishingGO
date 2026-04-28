@@ -2,11 +2,11 @@ import { create } from 'zustand';
 
 // ── 구독 티어 설정 ──────────────────────────────────────────────
 export const TIER_CONFIG = {
-  FREE:           { label: null,         color: null,      bg: null,       price: 0        },
-  BUSINESS_LITE:  { label: 'LITE',       color: '#1A1A2E', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)', price: 9900   },
-  PRO:            { label: 'PRO',        color: '#fff',    bg: 'linear-gradient(135deg, #0056D2, #003fa3)', price: 29900  },
-  BUSINESS_VIP:   { label: '👑 VVIP',   color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FF9B26)', price: 550000 }, // 항구별 독점 1명, 월 단위
-  MASTER:         { label: 'MASTER',     color: '#fff',    bg: 'linear-gradient(135deg, #E60000, #990000)', price: null   },
+  FREE:           { label: null,       color: null,      bg: null,       price: 0        },
+  BUSINESS_LITE:  { label: 'LITE',     color: '#1A1A2E', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)', price: 9900   },
+  PRO:            { label: 'PRO',      color: '#fff',    bg: 'linear-gradient(135deg, #0056D2, #003fa3)', price: 110000 },
+  BUSINESS_VIP:   { label: '👑 VVIP', color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FF9B26)', price: 550000 },
+  MASTER:         { label: 'MASTER',   color: '#fff',    bg: 'linear-gradient(135deg, #E60000, #990000)', price: null   },
 };
 
 // ── 레벨 시스템 설정 ────────────────────────────────────────────
@@ -112,17 +112,24 @@ export const useUserStore = create((set, get) => ({
   updateUser: (newData) => set((state) => {
     const updatedUser = { ...state.user, ...newData };
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    return { user: updatedUser };
+    
+    const newState = { user: updatedUser };
+    if (newData.tier) {
+      localStorage.setItem('userTier', newData.tier);
+      newState.userTier = newData.tier;
+    }
+    return newState;
   }),
 
   setUser: (newUser) => set(() => {
     if (newUser) {
       localStorage.setItem('user', JSON.stringify(newUser));
       if (newUser.tier) localStorage.setItem('userTier', newUser.tier);
+      return { user: newUser, userTier: newUser.tier || 'FREE' };
     } else {
       localStorage.removeItem('user');
+      return { user: null };
     }
-    return { user: newUser };
   }),
 
   // ── EXP 추가 (로컬 즉시 반영) ──
@@ -193,6 +200,32 @@ export const useUserStore = create((set, get) => ({
     }
   },
 
+  // ── 서버에서 최신 사용자 정보 동기화 (재로그인 없이 tier/avatar 갱신) ──
+  syncFromServer: async () => {
+    const state = get();
+    const email = state.user?.email;
+    if (!email) return;
+
+    const API = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+    try {
+      const res = await fetch(`${API}/api/user/me?email=${encodeURIComponent(email)}`);
+      if (!res.ok) return;
+      const fresh = await res.json();
+
+      const current = get().user;
+      const tierChanged   = fresh.tier    !== (current?.tier    || 'FREE');
+      const avatarChanged = fresh.avatar  && fresh.avatar !== current?.avatar;
+
+      if (tierChanged || avatarChanged) {
+        const updated = { ...current, ...fresh };
+        localStorage.setItem('user', JSON.stringify(updated));
+        if (fresh.tier) localStorage.setItem('userTier', fresh.tier);
+        set({ user: updated, userTier: fresh.tier || get().userTier });
+        console.log('[syncFromServer] 사용자 정보 갱신:', { tierChanged, avatarChanged });
+      }
+    } catch (e) { /* 네트워크 오류 시 무시 */ }
+  },
+
   // ── 레벨 정보 헬퍼 ──
   getLevelInfo: () => getLevelInfo(get().user?.totalExp || 0),
 
@@ -204,7 +237,8 @@ export const useUserStore = create((set, get) => ({
   canAccessPremium:      () => {
     const state = get();
     if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab') return true;
-    return ['PRO', 'BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
+    // 유료 플랜: 게시글/크루 등록 시 광고 게이트 제거
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
   // 비즈니스 홍보글 작성: PRO 또는 VVIP만 허용 (Business Lite는 배제)
   canAccessBusinessPromo:() => {
@@ -215,11 +249,15 @@ export const useUserStore = create((set, get) => ({
   canAccessBusinessShop: () => {
     const state = get();
     if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab') return true;
-    return ['BUSINESS_LITE', 'BUSINESS_PRO', 'BUSINESS_VIP'].includes(state.userTier);
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
   canAccessVIP:          () => {
     const state = get();
     if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab') return true;
     return state.userTier === 'BUSINESS_VIP';
+  },
+  isAdmin: () => {
+    const state = get();
+    return (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab');
   },
 }));
