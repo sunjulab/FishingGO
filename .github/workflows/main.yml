@@ -1,41 +1,11 @@
-name: FishingGO Full Auto Deploy
+name: FishingGO Auto Deploy
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  # ── 1단계: 프론트엔드 빌드 & Vercel 배포 ──────────────────────────
-  deploy-frontend:
-    name: Build & Deploy Frontend (Vercel)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install Frontend Dependencies
-        run: npm ci
-
-      - name: Build Frontend (Production)
-        run: npm run build
-        env:
-          VITE_API_URL: https://fishing-go-backend.onrender.com
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./
-
-  # ── 2단계: Render 서버 자동 재배포 트리거 ─────────────────────────
+  # Render 서버 자동 재배포 (Vercel은 GitHub 연동으로 자동 처리됨)
   deploy-backend:
     name: Trigger Render Backend Redeploy
     runs-on: ubuntu-latest
