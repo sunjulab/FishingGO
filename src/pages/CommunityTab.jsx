@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2, Search } from 'lucide-react';
+import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
-import { NativeAd, BannerAd } from '../components/AdUnit';
+
 
 // ─── 디바운스 훅 (타이핑마다 API 호출 방지) ──────────────────────────────────
 function useDebounce(value, delay = 300) {
