@@ -499,6 +499,153 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ─── Cloudinary 조건부 이미지 업로드 ─────────────────────────────────────────
+// CLOUDINARY_URL 환경변수가 설정된 경우에만 CDN 업로드 활성화
+// 미설정 시: base64 그대로 반환 (기존 방식 유지, 하위 호환)
+app.post('/api/upload/image', async (req, res) => {
+  try {
+    const { base64, folder = 'fishinggo' } = req.body;
+    if (!base64) return res.status(400).json({ error: '이미지 데이터 필요' });
+
+    if (!process.env.CLOUDINARY_URL) {
+      // 환경변수 없으면 base64 그대로 반환 (기존 방식)
+      return res.json({ url: base64, type: 'base64' });
+    }
+
+    // Cloudinary 동적 require (패키지 없을 시 fallback)
+    let cloudinary;
+    try { cloudinary = require('cloudinary').v2; } catch(e) {
+      return res.json({ url: base64, type: 'base64' });
+    }
+
+    const result = await cloudinary.uploader.upload(base64, {
+      folder,
+      resource_type: 'auto',
+      transformation: [{ quality: 'auto:good', fetch_format: 'auto' }],
+    });
+    res.json({ url: result.secure_url, type: 'cloudinary', publicId: result.public_id });
+  } catch (err) {
+    console.error('[Cloudinary Upload 실패]', err.message);
+    // 업로드 실패 시 base64 폴백 (서비스 중단 방지)
+    res.json({ url: req.body.base64, type: 'base64' });
+  }
+});
+
+// ─── 포트원 결제 검증 + 구독 처리 ─────────────────────────────────────────────
+// 환경변수:
+//   PORTONE_API_KEY    : 포트원 REST API 키 (테스트: test_ak_...)
+//   PORTONE_API_SECRET : 포트원 API 시크릿  (테스트: test_sk_...)
+// 미설정 시: 테스트 모드 (금액 검증 생략, 구독만 즉시 처리)
+
+const PLAN_PRICES = { LITE: 9900, PRO: 110000, VVIP: 550000 };
+const PLAN_TIERS  = { LITE: 'BUSINESS_LITE', PRO: 'PRO', VVIP: 'BUSINESS_VIP' };
+
+app.post('/api/payment/verify', async (req, res) => {
+  try {
+    const { imp_uid, merchant_uid, planId, tier, harborId, userId, userName } = req.body;
+    if (!planId || !userId) return res.status(400).json({ error: '필수 항목 누락' });
+
+    const expectedAmount = PLAN_PRICES[planId];
+    const expectedTier   = tier || PLAN_TIERS[planId];
+    const isTestMode     = !process.env.PORTONE_API_KEY;
+
+    if (!isTestMode && imp_uid) {
+      // ─── 실서비스: 포트원 API로 결제 금액 검증 ──────────────────
+      try {
+        const axios = require('axios');
+
+        // 1) 액세스 토큰 발급
+        const tokenRes = await axios.post('https://api.iamport.kr/users/getToken', {
+          imp_key:    process.env.PORTONE_API_KEY,
+          imp_secret: process.env.PORTONE_API_SECRET,
+        });
+        const accessToken = tokenRes.data.response?.access_token;
+        if (!accessToken) throw new Error('포트원 토큰 발급 실패');
+
+        // 2) 결제 정보 조회
+        const payRes = await axios.get(`https://api.iamport.kr/payments/${imp_uid}`, {
+          headers: { Authorization: accessToken },
+        });
+        const payment = payRes.data.response;
+
+        // 3) 금액 검증 (위변조 방지)
+        if (payment.status !== 'paid') {
+          return res.status(400).json({ error: `결제 미완료 상태: ${payment.status}` });
+        }
+        if (payment.amount !== expectedAmount) {
+          // 금액 불일치 → 포트원에 환불 요청
+          await axios.post('https://api.iamport.kr/payments/cancel', {
+            imp_uid, reason: '결제 금액 불일치 (위변조 의심)',
+          }, { headers: { Authorization: accessToken } });
+          return res.status(400).json({ error: '결제 금액이 일치하지 않습니다.' });
+        }
+        console.log(`[결제검증] ✅ ${userName} / ${planId} / ${payment.amount}원 / ${imp_uid}`);
+      } catch (verifyErr) {
+        console.error('[포트원 검증 오류]', verifyErr.message);
+        return res.status(500).json({ error: '결제 검증 중 오류가 발생했습니다.' });
+      }
+    } else {
+      // ─── 테스트 모드: 검증 생략, 즉시 구독 처리 ────────────────
+      console.log(`[결제/테스트모드] ${userName} / ${planId} / ${expectedAmount}원`);
+    }
+
+    // ─── 구독 처리: DB 또는 인메모리 ────────────────────────────────
+    const expiresAt = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString(); // +31일
+
+    if (dbReady && User) {
+      await User.findOneAndUpdate(
+        { $or: [{ email: userId }, { id: userId }] },
+        { tier: expectedTier, subscriptionExpiresAt: expiresAt },
+        { new: true }
+      ).catch(e => console.warn('[결제] DB 업데이트 실패:', e.message));
+    } else {
+      const u = memUsers.find(u => u.email === userId || u.id === userId);
+      if (u) { u.tier = expectedTier; u.subscriptionExpiresAt = expiresAt; saveMemUsers(); }
+    }
+
+    // VVIP 항구 선점 처리
+    if (planId === 'VVIP' && harborId) {
+      try {
+        await apiClient?.post?.('/api/vvip/purchase', { harborId, userId, userName }).catch(() => {});
+      } catch(e) {}
+    }
+
+    res.json({
+      success:    true,
+      tier:       expectedTier,
+      expiresAt,
+      planId,
+      imp_uid:    imp_uid || 'test_mode',
+      testMode:   isTestMode,
+    });
+  } catch (err) {
+    console.error('[POST /api/payment/verify]', err.message);
+    res.status(500).json({ error: '서버 오류: ' + err.message });
+  }
+});
+
+// ─── 포트원 웹훅 (결제 완료 서버 측 이벤트) ──────────────────────────────────
+// Render 설정: 포트원 콘솔 → 웹훅 URL = https://[your-server].onrender.com/api/payment/webhook
+app.post('/api/payment/webhook', async (req, res) => {
+  try {
+    const { imp_uid, merchant_uid, status } = req.body;
+    console.log(`[Webhook] imp_uid=${imp_uid} status=${status}`);
+
+    if (status === 'paid') {
+      // merchant_uid 패턴: fishing_PLANID_harborId_timestamp
+      const parts   = (merchant_uid || '').split('_');
+      const planId  = parts[1] || null;
+      if (planId && PLAN_PRICES[planId]) {
+        console.log(`[Webhook] ✅ 결제 완료 확인 - ${planId} / ${imp_uid}`);
+      }
+    }
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error('[Webhook 오류]', err.message);
+    res.status(200).json({ ok: false }); // 포트원 웹훅은 200 반환 필수
+  }
+});
+
 // 레벨 설정 (서버와 프론트엔드를 자동 동기화)
 const LEVEL_CONFIG = [
   { level: 1,  title: '초보 낙시꿼',   expRequired: 0    },
@@ -1377,7 +1524,26 @@ app.post('/api/community/posts', async (req, res) => {
 // ── 오픈게시판 글 삭제 ────────────────────────────────────────────────────────
 app.delete('/api/community/posts/:id', async (req, res) => {
   try {
-    if (dbReady && Post) { await Post.findByIdAndDelete(req.params.id).catch(() => {}); }
+    const { email, adminId } = req.body;
+    const MASTER = (id) => id && (id === 'sunjulab' || String(id).startsWith('sunjulab'));
+
+    // ─── 서버사이드 권한 검증 ───────────────────────────────────
+    if (dbReady && Post) {
+      let post = null;
+      try { post = await Post.findById(req.params.id); } catch(e) {}
+      if (post) {
+        const isAuthor = post.author_email === email;
+        const isAdmin  = MASTER(adminId);
+        if (!isAuthor && !isAdmin)
+          return res.status(403).json({ error: '삭제 권한이 없습니다.' });
+        await post.deleteOne();
+      }
+    } else {
+      // 인메모리 fallback 권한 체크
+      const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
+      if (mem && !MASTER(adminId) && mem.author_email !== email)
+        return res.status(403).json({ error: '삭제 권한이 없습니다.' });
+    }
     memPosts = memPosts.filter(p => p._id !== req.params.id && p.id !== req.params.id);
     saveMemPosts();
     res.json({ success: true });

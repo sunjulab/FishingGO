@@ -123,21 +123,42 @@ export default function PostDetail() {
   };
 
   const handleShare = async () => {
-    const shareData = {
-      title: `낚시GO | ${post?.author}님의 조황`,
-      text: post?.content?.slice(0, 80) || '낚시GO에서 조황을 확인하세요!',
-      url: window.location.href,
-    };
-    if (navigator.share) {
-      try { await navigator.share(shareData); }
-      catch (e) { /* 사용자가 취소한 경우 무시 */ }
-    } else {
+    const title   = `낚시GO | ${post?.author}님의 조황`;
+    const text    = post?.content?.slice(0, 80) || '낚시GO에서 조황을 확인하세요!';
+    const pageUrl = window.location.href;
+    const imgUrl  = post?.image?.startsWith('http')
+      ? post.image
+      : 'https://fishing-go.vercel.app/og-image.png';
+
+    // ① 카카오 공유 (SDK 초기화 완료 시 우선 사용)
+    if (window.Kakao?.isInitialized()) {
       try {
-        await navigator.clipboard.writeText(window.location.href);
-        addToast('🔗 링크가 클립보드에 복사되었습니다!', 'success');
-      } catch {
-        addToast('링크 복사에 실패했습니다.', 'error');
-      }
+        window.Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title,
+            description: text,
+            imageUrl: imgUrl,
+            link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
+          },
+          buttons: [{ title: '조황 보러가기', link: { mobileWebUrl: pageUrl, webUrl: pageUrl } }],
+        });
+        return;
+      } catch(e) { /* 카카오 실패 시 폴백 */ }
+    }
+
+    // ② Web Share API (모바일 네이티브 공유 시트)
+    if (navigator.share) {
+      try { await navigator.share({ title, text, url: pageUrl }); return; }
+      catch (e) { /* 취소 무시 */ }
+    }
+
+    // ③ 클립보드 복사 폴백
+    try {
+      await navigator.clipboard.writeText(pageUrl);
+      addToast('🔗 링크가 클립보드에 복사되었습니다!', 'success');
+    } catch {
+      addToast('링크 복사에 실패했습니다.', 'error');
     }
   };
 

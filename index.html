@@ -33,8 +33,12 @@
     <meta name="apple-mobile-web-app-title" content="낚시GO" />
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-    <!-- 카카오맵 API (autoload=false: SPA에서 load 타이밍 직접 제어) -->
+    <!-- 카카오맵 API -->
     <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d353be56977b1c13b03d8981bcf8b5ba&libraries=services,clusterer&autoload=false"></script>
+    <!-- 카카오 JS SDK (공유/소셜) -->
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>
+    <!-- 포트원(구 아임포트) 결제 SDK - 카카오페이 + 토스페이먼츠 동시 지원 -->
+    <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
   </head>
   <body>
     <div id="root"></div>

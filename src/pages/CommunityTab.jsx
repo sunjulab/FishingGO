@@ -5,7 +5,7 @@ import { useUserStore } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
-
+import SkeletonCard from '../components/SkeletonCard';
 
 // ─── 디바운스 훅 (타이핑마다 API 호출 방지) ──────────────────────────────────
 function useDebounce(value, delay = 300) {
@@ -21,6 +21,7 @@ export default function CommunityTab() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('business');
   const highlightedPostId = useRef(null);
+  const sentinelRef = useRef(null); // 무한스크롤 감지 sentinel
 
   // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
   useEffect(() => {
@@ -206,6 +207,23 @@ export default function CommunityTab() {
     fetchPosts(1, false);
   }, [openCategory, debouncedSearch, location.search]);
 
+  // 무한스크롤: sentinel div가 뷰포트에 들어오면 다음 페이지 자동 로드
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore && page < totalPages) {
+          setLoadingMore(true);
+          fetchPosts(page + 1, true).finally(() => setLoadingMore(false));
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [page, totalPages, loadingMore, fetchPosts]);
+
   const handleLoadMore = async () => {
     if (page >= totalPages) return;
     setLoadingMore(true);
@@ -342,7 +360,7 @@ export default function CommunityTab() {
       {/* 탭 내용 렌더링 영역 */}
       <div style={{ padding: '16px' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>로딩 중...</div>
+          <div style={{ padding: '16px' }}><SkeletonCard count={5} /></div>
         ) : activeTab === 'notice' ? (
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {noticePosts.map(notice => (
@@ -572,22 +590,10 @@ export default function CommunityTab() {
                 )}
               </React.Fragment>
             ))}
-            {/* 더 불러오기 버튼 */}
-            {page < totalPages && (
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                style={{
-                  width: '100%', padding: '14px',
-                  backgroundColor: loadingMore ? '#f0f0f0' : '#fff',
-                  border: '1.5px solid #0056D2', borderRadius: '12px',
-                  color: '#0056D2', fontWeight: '700', fontSize: '14px',
-                  cursor: loadingMore ? 'not-allowed' : 'pointer',
-                  marginTop: '4px', marginBottom: '8px', transition: 'all 0.2s',
-                }}
-              >
-                {loadingMore ? '불러오는 중...' : `더 보기 (${page}/${totalPages}페이지)`}
-              </button>
+            {/* 무한스크롤 sentinel (더 보기 버튼 대체) */}
+            <div ref={sentinelRef} style={{ height: 20 }} />
+            {loadingMore && (
+              <div style={{ padding: '0 16px 12px' }}><SkeletonCard count={2} /></div>
             )}
             {page >= totalPages && posts.length > 0 && (
               <div style={{ textAlign: 'center', padding: '20px', fontSize: '13px', color: '#bbb' }}>

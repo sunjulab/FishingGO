@@ -6,6 +6,11 @@ import Toast from './components/Toast';
 import { useToastStore } from './store/useToastStore';
 import { useUserStore, TIER_CONFIG, LEVEL_CONFIG } from './store/useUserStore';
 
+// ─── 카카오 JS SDK 초기화 (공유/소셜 기능용) ─────────────────────────────────
+if (typeof window !== 'undefined' && window.Kakao && !window.Kakao.isInitialized()) {
+  window.Kakao.init('d353be56977b1c13b03d8981bcf8b5ba');
+}
+
 // 라우트 레이지 로딩 (코드 스플리팅)
 const MapHome = lazy(() => import('./pages/MapHome')); 
 const MediaTab = lazy(() => import('./pages/MediaTab'));
