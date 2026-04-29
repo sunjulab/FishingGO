@@ -29,9 +29,11 @@ const WriteBusinessPost = lazy(() => import('./pages/WriteBusinessPost'));
 const CctvAdmin = lazy(() => import('./pages/CctvAdmin'));
 const NoticeDetail = lazy(() => import('./pages/NoticeDetail'));
 const SecretPointAdmin = lazy(() => import('./pages/SecretPointAdmin'));
+const PaymentHistory   = lazy(() => import('./pages/PaymentHistory'));
 
 import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
+import SubscriptionFailBanner from './components/SubscriptionFailBanner';
 
 // 스켈레톤 로딩 뼈대
 function PageLoading() {
@@ -199,6 +201,7 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Toast />
+        <SubscriptionFailBanner />
         <RealTimeAlert />
         <SubscriptionExpiryChecker />
         <UserSyncChecker />
@@ -224,6 +227,7 @@ export default function App() {
               <Route path="/cctv-admin" element={<CctvAdmin />} />
               <Route path="/notice/:id" element={<NoticeDetail />} />
               <Route path="/secret-admin" element={<SecretPointAdmin />} />
+              <Route path="/payment-history" element={<PaymentHistory />} />
             </Routes>
           </Suspense>
         </div>

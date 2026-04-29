@@ -14,7 +14,7 @@ import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, SECRET_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
 import { useUserStore, TIER_CONFIG } from '../store/useUserStore';
-import apiClient from '../api/index';
+
 
 const EMOJI_MAP = { '방파제': '⚓', '갯바위': '🪨', '선착장': '🚢', '항구': '🏖️' };
 const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#1565C0', '보통': '#8E8E93' };

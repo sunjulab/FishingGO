@@ -260,9 +260,10 @@ export default function MyPage() {
   }
 
   const menuItems = [
-    { id: 'noti', icon: Bell, title: '알림 설정', color: '#0056D2', desc: '물때 및 커뮤니티 알림' },
-    { id: 'premium', icon: CreditCard, title: '프리미엄 구독 관리', color: '#FF9B26', desc: '포인트 및 구독권 요금' },
-    { id: 'security', icon: ShieldAlert, title: '보안 및 차단 설정', color: '#FF5A5F', desc: '계정 보안 및 차단 목록' }
+    { id: 'noti',    icon: Bell,       title: '알림 설정',        color: '#0056D2', desc: '물때 및 커뮤니티 알림' },
+    { id: 'premium', icon: CreditCard,  title: '프리미엄 구독 관리',  color: '#FF9B26', desc: '포인트 및 구독권 요금' },
+    { id: 'history', icon: CardIcon,    title: '결제 내역',        color: '#00C48C', desc: '자동청구 현황 및 구독 취소' },
+    { id: 'security', icon: ShieldAlert, title: '보안 및 차단 설정',   color: '#FF5A5F', desc: '계정 보안 및 차단 목록' },
   ];
 
   return (

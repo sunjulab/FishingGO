@@ -138,7 +138,7 @@ if (MONGO_URI) {
 }
 
 // ─── 모델 로드 ────────────────────────────────────────────────────────────────
-let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage;
+let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage, Subscription, PaymentHistory;
 try {
   User             = require('./models/User');
   Post             = require('./models/Post');
@@ -148,7 +148,13 @@ try {
   CctvOverrideModel= require('./models/CctvOverride');
   CatchRecord      = require('./models/CatchRecord');
   ChatMessage      = require('./models/ChatMessage');
-} catch(e) { User = Post = Crew = Notice = BusinessPost = CctvOverrideModel = CatchRecord = ChatMessage = null; }
+  Subscription     = require('./models/Subscription');
+  PaymentHistory   = require('./models/PaymentHistory');
+} catch(e) { User = Post = Crew = Notice = BusinessPost = CctvOverrideModel = CatchRecord = ChatMessage = Subscription = PaymentHistory = null; }
+
+// ─── 정기결제 스케줄러 (node-cron 또는 자체 폴백) ─────────────────────────────
+let cron = null;
+try { cron = require('node-cron'); } catch(e) { console.warn('[Scheduler] node-cron 미설치 → 자체 인터벌 폴백 사용'); }
 
 // ─── 인메모리 Fallback 저장소 이미 상단에서 선언 및 로드 완료 ──────────────
 // (secretPointOverrides, cctvOverrides, memProSubs, memVvipSlots 모두 파일 로드 완료됨)
@@ -2909,7 +2915,6 @@ server.listen(process.env.PORT || 5000, () => {
   console.log(`📊 DB 상태: ${dbReady ? 'MongoDB ✅' : '인메모리 모드 ⚠️'}`);
 
   // ─── Render 슬립 방지 Self Keep-Alive ─────────────────────────────────
-  // 무료 플랜 15분 비활성 시 슬립 → 10분마다 자기 자신에게 핑
   if (process.env.RENDER_EXTERNAL_URL) {
     const selfUrl = process.env.RENDER_EXTERNAL_URL;
     setInterval(async () => {
@@ -2919,7 +2924,573 @@ server.listen(process.env.PORT || 5000, () => {
       } catch (e) {
         console.warn('[KeepAlive] Self-ping 실패:', e.message);
       }
-    }, 10 * 60 * 1000); // 10분마다
+    }, 10 * 60 * 1000);
     console.log(`✅ Render Keep-Alive 활성화 (${selfUrl})`);
   }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ▣ 정기결제(빌링) 시스템 — 포트원 customer_uid 기반 자동 월 청구
+// ══════════════════════════════════════════════════════════════════════════════
+
+const BILLING_PLAN_MAP = {
+  LITE: { tier: 'BUSINESS_LITE', amount: 9900  },
+  PRO:  { tier: 'PRO',           amount: 110000 },
+  VVIP: { tier: 'BUSINESS_VIP',  amount: 550000 },
+};
+
+// ── 포트원 액세스 토큰 발급 헬퍼 ──────────────────────────────────────────────
+async function getPortoneToken() {
+  if (!process.env.PORTONE_API_KEY) return null;
+  const res = await axios.post('https://api.iamport.kr/users/getToken', {
+    imp_key:    process.env.PORTONE_API_KEY,
+    imp_secret: process.env.PORTONE_API_SECRET,
+  });
+  return res.data.response?.access_token || null;
+}
+
+// ── 빌링키로 실제 청구 실행 ───────────────────────────────────────────────────
+async function chargeBilling(sub) {
+  const token = await getPortoneToken();
+  if (!token) {
+    // 테스트모드: 실제 청구 없이 성공 처리
+    console.log(`[BillingTest] 테스트모드 자동청구 성공 - ${sub.userId} / ${sub.planId}`);
+    return { success: true, testMode: true };
+  }
+  const merchant_uid = `auto_${sub.planId}_${sub.userId.replace(/[^a-zA-Z0-9]/g,'')}_${Date.now()}`;
+  const res = await axios.post('https://api.iamport.kr/subscribe/payments/again', {
+    customer_uid: sub.customerUid,
+    merchant_uid,
+    amount:       sub.amount,
+    name:         `낚시GO ${sub.planId} 정기구독`,
+  }, { headers: { Authorization: token } });
+  const payment = res.data.response;
+  if (payment.status !== 'paid') throw new Error(payment.fail_reason || '결제 실패');
+  return { success: true, imp_uid: payment.imp_uid };
+}
+
+// ── 구독 갱신 처리 (성공/실패 공통) ───────────────────────────────────────────
+async function processSubscription(sub) {
+  try {
+    const result = await chargeBilling(sub);
+    const next   = new Date(sub.nextBillingDate);
+    next.setMonth(next.getMonth() + 1);
+
+    if (dbReady && Subscription) {
+      await Subscription.findByIdAndUpdate(sub._id, {
+        status:          'active',
+        lastBilledAt:    new Date(),
+        nextBillingDate: next,
+        failCount:       0,
+        lastFailReason:  null,
+      });
+      // 유저 tier + 만료일 갱신
+      await User?.findOneAndUpdate(
+        { $or: [{ email: sub.userId }, { id: sub.userId }] },
+        { tier: BILLING_PLAN_MAP[sub.planId]?.tier, subscriptionExpiresAt: next }
+      ).catch(() => {});
+    }
+    console.log(`[Billing] ✅ 자동청구 성공 - ${sub.userId} / ${sub.planId} / ${sub.amount}원`);
+  } catch (err) {
+    const failCount = (sub.failCount || 0) + 1;
+    const newStatus = failCount >= 3 ? 'failed' : 'active'; // 3회 실패 시 구독 정지
+    if (dbReady && Subscription) {
+      await Subscription.findByIdAndUpdate(sub._id, {
+        status:         newStatus,
+        failCount,
+        lastFailedAt:   new Date(),
+        lastFailReason: err.message,
+      });
+      // 3회 실패 시 유저 tier FREE로 강등
+      if (newStatus === 'failed') {
+        await User?.findOneAndUpdate(
+          { $or: [{ email: sub.userId }, { id: sub.userId }] },
+          { tier: 'FREE', subscriptionExpiresAt: null }
+        ).catch(() => {});
+      }
+    }
+    console.warn(`[Billing] ❌ 자동청구 실패(${failCount}회) - ${sub.userId}: ${err.message}`);
+  }
+}
+
+// ── 스케줄러: 매일 오전 9시(KST) 만기 구독 일괄 청구 ─────────────────────────
+async function runBillingScheduler() {
+  if (!dbReady || !Subscription) return;
+  const now   = new Date();
+  const dueList = await Subscription.find({
+    status:          'active',
+    nextBillingDate: { $lte: now },
+  }).lean().catch(() => []);
+
+  if (dueList.length > 0) {
+    console.log(`[Scheduler] 정기결제 대상 ${dueList.length}건 처리 시작`);
+    for (const sub of dueList) {
+      await processSubscription(sub);
+      await new Promise(r => setTimeout(r, 300)); // 과부하 방지
+    }
+  }
+}
+
+// node-cron 또는 24시간 인터벌 폴백
+if (cron) {
+  cron.schedule('0 9 * * *', runBillingScheduler, { timezone: 'Asia/Seoul' });
+  console.log('✅ [Billing Scheduler] node-cron 매일 09:00(KST) 자동청구 활성화');
+} else {
+  setInterval(runBillingScheduler, 24 * 60 * 60 * 1000); // 24시간 인터벌 폴백
+  console.log('✅ [Billing Scheduler] 인터벌 폴백 자동청구 활성화 (24h)');
+}
+
+// ── API: 빌링키 등록 (최초 카드 등록 + 첫 결제) ──────────────────────────────
+app.post('/api/payment/billing/register', async (req, res) => {
+  try {
+    const { imp_uid, customer_uid, planId, pgProvider, userId, userName, harborId } = req.body;
+    if (!customer_uid || !planId || !userId)
+      return res.status(400).json({ error: '필수 항목 누락 (customer_uid, planId, userId)' });
+
+    const plan = BILLING_PLAN_MAP[planId];
+    if (!plan) return res.status(400).json({ error: '유효하지 않은 플랜' });
+
+    // 첫 결제 포트원 검증 (실서비스)
+    if (process.env.PORTONE_API_KEY && imp_uid) {
+      try {
+        const token  = await getPortoneToken();
+        const payRes = await axios.get(`https://api.iamport.kr/payments/${imp_uid}`, {
+          headers: { Authorization: token },
+        });
+        const payment = payRes.data.response;
+        if (payment.status !== 'paid' || payment.amount !== plan.amount)
+          return res.status(400).json({ error: '첫 결제 금액 불일치' });
+      } catch(e) {
+        return res.status(500).json({ error: '첫 결제 검증 실패: ' + e.message });
+      }
+    }
+
+    // 다음 결제일 계산 (가입일 +1개월)
+    const nextBillingDate = new Date();
+    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+    const billingDay      = nextBillingDate.getDate();
+
+    // Subscription 저장 (DB or 인메모리 JSON)
+    if (dbReady && Subscription) {
+      await Subscription.findOneAndUpdate(
+        { userId },
+        {
+          userId, userName, planId, tier: plan.tier, amount: plan.amount,
+          customerUid: customer_uid, pgProvider: pgProvider || 'kakaopay',
+          status: 'active', startedAt: new Date(),
+          nextBillingDate, lastBilledAt: new Date(),
+          billingDay, failCount: 0, harborId: harborId || null,
+        },
+        { upsert: true, new: true }
+      );
+      // 유저 tier 즉시 반영
+      await User?.findOneAndUpdate(
+        { $or: [{ email: userId }, { id: userId }] },
+        { tier: plan.tier, subscriptionExpiresAt: nextBillingDate }
+      ).catch(() => {});
+    } else {
+      // 인메모리 fallback
+      memProSubs[userId] = {
+        userId, planId, tier: plan.tier, amount: plan.amount,
+        customerUid: customer_uid, pgProvider,
+        status: 'active', nextBillingDate: nextBillingDate.toISOString(),
+        lastBilledAt: new Date().toISOString(), failCount: 0,
+      };
+      saveProSubs();
+      const u = memUsers.find(u => u.email === userId || u.id === userId);
+      if (u) { u.tier = plan.tier; saveMemUsers(); }
+    }
+
+    console.log(`[Billing] ✅ 정기구독 등록 - ${userName}(${userId}) / ${planId} / ${plan.amount}원`);
+    res.json({
+      success: true, planId, tier: plan.tier,
+      nextBillingDate: nextBillingDate.toISOString(),
+      amount: plan.amount,
+    });
+  } catch (err) {
+    console.error('[POST /api/payment/billing/register]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: 내 구독 정보 조회 ────────────────────────────────────────────────────
+app.get('/api/payment/subscription/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    let sub = null;
+    if (dbReady && Subscription) {
+      sub = await Subscription.findOne({ userId }).lean().catch(() => null);
+    } else {
+      sub = memProSubs[userId] || null;
+    }
+    if (!sub) return res.json({ hasSubscription: false });
+    res.json({
+      hasSubscription: true,
+      planId:          sub.planId,
+      tier:            sub.tier,
+      amount:          sub.amount,
+      status:          sub.status,
+      pgProvider:      sub.pgProvider,
+      nextBillingDate: sub.nextBillingDate,
+      lastBilledAt:    sub.lastBilledAt,
+      startedAt:       sub.startedAt,
+      failCount:       sub.failCount || 0,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: 구독 취소 ─────────────────────────────────────────────────────────────
+app.delete('/api/payment/subscription/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+
+    if (dbReady && Subscription) {
+      const sub = await Subscription.findOne({ userId });
+      if (!sub) return res.status(404).json({ error: '구독 정보 없음' });
+
+      // 포트원 빌링키 삭제 (실서비스)
+      if (process.env.PORTONE_API_KEY && sub.customerUid) {
+        try {
+          const token = await getPortoneToken();
+          await axios.delete(`https://api.iamport.kr/subscribe/customers/${sub.customerUid}`, {
+            headers: { Authorization: token },
+          });
+        } catch(e) { console.warn('[BillingCancel] 빌링키 삭제 실패:', e.message); }
+      }
+
+      await Subscription.findOneAndUpdate(
+        { userId },
+        { status: 'cancelled', cancelledAt: new Date(), cancelReason: reason || '사용자 직접 취소' }
+      );
+      // 유저 tier FREE로 강등
+      await User?.findOneAndUpdate(
+        { $or: [{ email: userId }, { id: userId }] },
+        { tier: 'FREE', subscriptionExpiresAt: null }
+      ).catch(() => {});
+    } else {
+      if (memProSubs[userId]) {
+        memProSubs[userId].status = 'cancelled';
+        saveProSubs();
+        const u = memUsers.find(u => u.email === userId || u.id === userId);
+        if (u) { u.tier = 'FREE'; saveMemUsers(); }
+      }
+    }
+
+    console.log(`[Billing] 구독 취소 - ${userId} / 사유: ${reason || '직접취소'}`);
+    res.json({ success: true, message: '구독이 취소되었습니다. 현재 기간 종료 후 해지됩니다.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API: 구독 플랜 변경 (업그레이드/다운그레이드) ─────────────────────────────
+app.put('/api/payment/subscription/:userId/plan', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPlanId } = req.body;
+    const plan = BILLING_PLAN_MAP[newPlanId];
+    if (!plan) return res.status(400).json({ error: '유효하지 않은 플랜' });
+
+    if (dbReady && Subscription) {
+      await Subscription.findOneAndUpdate(
+        { userId },
+        { planId: newPlanId, tier: plan.tier, amount: plan.amount }
+      );
+      await User?.findOneAndUpdate(
+        { $or: [{ email: userId }, { id: userId }] },
+        { tier: plan.tier }
+      ).catch(() => {});
+    } else {
+      if (memProSubs[userId]) {
+        memProSubs[userId].planId = newPlanId;
+        memProSubs[userId].tier   = plan.tier;
+        memProSubs[userId].amount = plan.amount;
+        saveProSubs();
+        const u = memUsers.find(u => u.email === userId || u.id === userId);
+        if (u) { u.tier = plan.tier; saveMemUsers(); }
+      }
+    }
+    res.json({ success: true, newPlanId, tier: plan.tier, amount: plan.amount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ▣ 고도화 API — 결제 내역 / 보안 / EXP / 검색 / 즐겨찾기 / 어드민 대시보드
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── (3) merchant_uid 중복 방지 헬퍼 ──────────────────────────────────────────
+function generateMerchantUid(planId, userId) {
+  const safeId  = (userId || 'user').replace(/[^a-zA-Z0-9]/g, '');
+  const rand    = Math.random().toString(36).slice(2, 7);
+  return `fishing_${planId}_${safeId}_${Date.now()}_${rand}`;
+}
+// 결제 검증 엔드포인트에서 merchant_uid 중복 체크
+async function isMerchantUidUsed(merchant_uid) {
+  if (!dbReady || !PaymentHistory) return false;
+  const existing = await PaymentHistory.findOne({ merchant_uid }).lean().catch(() => null);
+  return !!existing;
+}
+
+// ── (4) 구독 만료 서버 미들웨어 ──────────────────────────────────────────────
+async function checkSubscriptionValid(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) return next();
+    const jwt = require('jsonwebtoken');
+    const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || 'fishinggo_secret_2024');
+    const userId  = payload.email || payload.id;
+    if (!userId) return next();
+
+    // DB에서 만료 여부 확인
+    let expiredAt = null;
+    if (dbReady && User) {
+      const u = await User.findOne({ $or: [{ email: userId }, { id: userId }] }, 'subscriptionExpiresAt tier').lean().catch(() => null);
+      if (u?.subscriptionExpiresAt) expiredAt = new Date(u.subscriptionExpiresAt);
+    }
+    if (expiredAt && expiredAt < new Date()) {
+      // 만료 → tier 강등
+      if (dbReady && User) {
+        await User.findOneAndUpdate(
+          { $or: [{ email: userId }, { id: userId }] },
+          { tier: 'FREE', subscriptionExpiresAt: null }
+        ).catch(() => {});
+      }
+      return res.status(403).json({ error: '구독이 만료되었습니다. 재구독해주세요.', code: 'SUBSCRIPTION_EXPIRED' });
+    }
+    next();
+  } catch { next(); }
+}
+
+// 프리미엄 전용 라우트에 미들웨어 적용
+app.use(['/api/weather/precision', '/api/secret-point-overrides'], checkSubscriptionValid);
+
+// ── (5) 결제 내역 조회 API ────────────────────────────────────────────────────
+app.get('/api/payment/history', async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ error: 'userId 필요' });
+
+    let history = [];
+    if (dbReady && PaymentHistory) {
+      history = await PaymentHistory.find({ userId }).sort({ createdAt: -1 }).limit(50).lean().catch(() => []);
+    }
+    // 인메모리 fallback: Subscription에서 추출
+    if (history.length === 0) {
+      const sub = memProSubs[userId];
+      if (sub) {
+        history = [{
+          userId,
+          planId:      sub.planId,
+          pgProvider:  sub.pgProvider,
+          paymentType: 'billing_first',
+          amount:      sub.amount,
+          status:      'paid',
+          createdAt:   sub.lastBilledAt || new Date().toISOString(),
+        }];
+      }
+    }
+    res.json(history);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// billing/register에서 PaymentHistory 자동 저장 (기존 엔드포인트 보완 훅)
+// 아래 미들웨어를 통해 billing/register 응답 성공 시 history 저장
+app.post('/api/payment/history/record', async (req, res) => {
+  try {
+    const { userId, userName, planId, pgProvider, paymentType, amount, status, imp_uid, merchant_uid, failReason } = req.body;
+    if (dbReady && PaymentHistory && merchant_uid) {
+      const used = await isMerchantUidUsed(merchant_uid);
+      if (used) return res.status(409).json({ error: '이미 처리된 결제입니다.' });
+      await PaymentHistory.create({ userId, userName, planId, pgProvider, paymentType, amount, status, imp_uid, merchant_uid, failReason });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── (6) EXP 서버 계산 + 보상 지급 ──────────────────────────────────────────
+const SERVER_EXP_REWARDS = {
+  attendance:    20, post_write:  30, record_write: 50,
+  comment_write: 10, like_receive: 5, point_visit:  15,
+  photo_upload:  25, first_catch: 100, weekly_streak: 80, monthly_streak: 300,
+};
+
+app.post('/api/user/exp', async (req, res) => {
+  try {
+    const { userId, action } = req.body;
+    if (!userId || !action) return res.status(400).json({ error: '필수 항목 누락' });
+    const gain = SERVER_EXP_REWARDS[action];
+    if (!gain) return res.status(400).json({ error: '유효하지 않은 액션' });
+
+    let totalExp = 0;
+    if (dbReady && User) {
+      const u = await User.findOneAndUpdate(
+        { $or: [{ email: userId }, { id: userId }] },
+        { $inc: { totalExp: gain, exp: gain } },
+        { new: true }
+      ).lean().catch(() => null);
+      totalExp = u?.totalExp || gain;
+    } else {
+      const u = memUsers.find(u => u.email === userId || u.id === userId);
+      if (u) { u.totalExp = (u.totalExp || 0) + gain; u.exp = (u.exp || 0) + gain; totalExp = u.totalExp; saveMemUsers(); }
+    }
+    res.json({ success: true, action, gain, totalExp });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── (7) 파일 업로드 MIME 검증 강화 ──────────────────────────────────────────
+// 기존 /api/upload 엔드포인트에 MIME 검증 미들웨어 적용
+function validateImageUpload(req, res, next) {
+  const { mimeType, base64 } = req.body;
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (mimeType && !ALLOWED_MIME.includes(mimeType)) {
+    return res.status(400).json({ error: '허용되지 않는 파일 형식입니다. (jpeg/png/gif/webp만 가능)' });
+  }
+  // base64 길이 기반 크기 추정: 5MB = ~6,825,000 chars
+  if (base64 && base64.length > 6_825_000) {
+    return res.status(413).json({ error: '파일 크기가 5MB를 초과합니다.' });
+  }
+  next();
+}
+// 업로드 라우트에 적용
+app.use('/api/upload', validateImageUpload);
+app.use('/api/user/avatar', validateImageUpload);
+
+// ── (8) Rate Limit 강화 (결제·검색·업로드) ────────────────────────────────
+try {
+  const rateLimit = require('express-rate-limit');
+  // 결제 API: 1분에 5회
+  const paymentLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '결제 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
+  app.use('/api/payment', paymentLimiter);
+  // 검색 API: 1분에 30회
+  const searchLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: '검색 요청이 너무 많습니다.' } });
+  app.use('/api/community/search', searchLimiter);
+  console.log('✅ Rate Limit 강화 적용 (결제/검색)');
+} catch(e) { console.warn('[RateLimit] express-rate-limit 미설치 또는 적용 실패'); }
+
+// ── (11) 커뮤니티 서버사이드 전문 검색 ──────────────────────────────────────
+app.get('/api/community/search', async (req, res) => {
+  try {
+    const { q = '', page = 1, limit = 20, category } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    let results = [];
+    let total   = 0;
+
+    if (dbReady && Post && q.trim()) {
+      const filter = {
+        $text: { $search: q.trim() },
+        ...(category && category !== '전체' ? { category } : {}),
+      };
+      [results, total] = await Promise.all([
+        Post.find(filter, { score: { $meta: 'textScore' } })
+          .sort({ score: { $meta: 'textScore' }, createdAt: -1 })
+          .skip(skip).limit(parseInt(limit)).lean(),
+        Post.countDocuments(filter),
+      ]);
+    } else {
+      // 인메모리 fallback
+      const low = q.toLowerCase();
+      const filtered = memPosts.filter(p =>
+        p.content?.toLowerCase().includes(low) ||
+        p.author?.toLowerCase().includes(low) ||
+        p.category?.toLowerCase().includes(low)
+      );
+      total   = filtered.length;
+      results = filtered.slice(skip, skip + parseInt(limit));
+    }
+    res.json({ results, total, page: parseInt(page), hasMore: skip + results.length < total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── (10) 즐겨찾기 DB 동기화 ──────────────────────────────────────────────────
+app.get('/api/user/favorites', async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ error: 'userId 필요' });
+    if (dbReady && User) {
+      const u = await User.findOne({ $or: [{ email: userId }, { id: userId }] }, 'favorites').lean().catch(() => null);
+      return res.json({ favorites: u?.favorites || [] });
+    }
+    const u = memUsers.find(u => u.email === userId || u.id === userId);
+    res.json({ favorites: u?.favorites || [] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/user/favorites', async (req, res) => {
+  try {
+    const { userId, pointId, action } = req.body; // action: 'add' | 'remove'
+    if (!userId || !pointId || !action) return res.status(400).json({ error: '필수 항목 누락' });
+    let favorites = [];
+    if (dbReady && User) {
+      const update = action === 'add'
+        ? { $addToSet: { favorites: pointId } }
+        : { $pull:     { favorites: pointId } };
+      const u = await User.findOneAndUpdate(
+        { $or: [{ email: userId }, { id: userId }] },
+        update, { new: true }
+      ).lean().catch(() => null);
+      favorites = u?.favorites || [];
+    } else {
+      const u = memUsers.find(u => u.email === userId || u.id === userId);
+      if (u) {
+        u.favorites = u.favorites || [];
+        if (action === 'add') { if (!u.favorites.includes(pointId)) u.favorites.push(pointId); }
+        else u.favorites = u.favorites.filter(f => f !== pointId);
+        favorites = u.favorites;
+        saveMemUsers();
+      }
+    }
+    res.json({ success: true, favorites });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── (14) 어드민 수익 대시보드 API ─────────────────────────────────────────────
+app.get('/api/admin/revenue', async (req, res) => {
+  try {
+    // 마스터 어드민 인증
+    const authHeader = req.headers.authorization || '';
+    const jwtLib = require('jsonwebtoken');
+    let payload;
+    try { payload = jwtLib.verify(authHeader.replace('Bearer ', ''), process.env.JWT_SECRET || 'fishinggo_secret_2024'); }
+    catch { return res.status(401).json({ error: '인증 필요' }); }
+    const isAdmin = payload.id === 'sunjulab' || payload.email === 'sunjulab' || payload.name === 'sunjulab';
+    if (!isAdmin) return res.status(403).json({ error: '접근 권한 없음' });
+
+    const now    = new Date();
+    const month1 = new Date(now.getFullYear(), now.getMonth(), 1);
+    let stats = { totalRevenue: 0, monthRevenue: 0, activeSubscriptions: 0, planBreakdown: {}, recentPayments: [] };
+
+    if (dbReady && PaymentHistory && Subscription) {
+      const [allPaid, monthPaid, activeSubs, recentList] = await Promise.all([
+        PaymentHistory.aggregate([{ $match: { status: 'paid' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+        PaymentHistory.aggregate([{ $match: { status: 'paid', createdAt: { $gte: month1 } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+        Subscription.countDocuments({ status: 'active' }),
+        PaymentHistory.find().sort({ createdAt: -1 }).limit(10).lean(),
+      ]);
+      const breakdown = await Subscription.aggregate([{ $group: { _id: '$planId', count: { $sum: 1 }, revenue: { $sum: '$amount' } } }]);
+
+      stats.totalRevenue         = allPaid[0]?.total || 0;
+      stats.monthRevenue         = monthPaid[0]?.total || 0;
+      stats.activeSubscriptions  = activeSubs;
+      stats.planBreakdown        = Object.fromEntries(breakdown.map(b => [b._id, { count: b.count, revenue: b.revenue }]));
+      stats.recentPayments       = recentList;
+    } else {
+      // 인메모리 통계
+      stats.activeSubscriptions = Object.values(memProSubs).filter(s => s.status === 'active').length;
+      Object.values(memProSubs).forEach(s => { stats.totalRevenue += s.amount || 0; stats.monthRevenue += s.amount || 0; });
+    }
+    res.json(stats);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });

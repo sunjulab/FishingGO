@@ -6,6 +6,7 @@ import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
+import { BannerAd } from '../components/AdUnit';
 
 // ─── 디바운스 훅 (타이핑마다 API 호출 방지) ──────────────────────────────────
 function useDebounce(value, delay = 300) {
