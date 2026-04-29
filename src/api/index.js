@@ -36,6 +36,18 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // 구독 만료 처리 (403 + SUBSCRIPTION_EXPIRED)
+    if (error.response?.status === 403 && error.response?.data?.code === 'SUBSCRIPTION_EXPIRED') {
+      try {
+        const { useUserStore } = await import('../store/useUserStore');
+        useUserStore.getState().setUserTier('FREE');
+        useUserStore.getState().updateUser({ tier: 'FREE', subscriptionExpiresAt: null });
+      } catch(e) {}
+      // 재구독 안내 토스트는 전역 이벤트로 발행
+      window.dispatchEvent(new CustomEvent('subscription_expired'));
+      return Promise.reject(error);
+    }
+
     // 401이고 아직 재시도 안 한 경우에만 토큰 갱신 시도
     if (error.response?.status === 401 && !originalRequest._retry) {
       const refreshToken = localStorage.getItem('refresh_token');

@@ -30,6 +30,7 @@ const CctvAdmin = lazy(() => import('./pages/CctvAdmin'));
 const NoticeDetail = lazy(() => import('./pages/NoticeDetail'));
 const SecretPointAdmin = lazy(() => import('./pages/SecretPointAdmin'));
 const PaymentHistory   = lazy(() => import('./pages/PaymentHistory'));
+const AdminDashboard   = lazy(() => import('./pages/AdminDashboard'));
 
 import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -160,10 +161,21 @@ function SubscriptionExpiryChecker() {
       }
     });
 
-    // 탭 포커스 복귀 시 재체크 (백그라운드 복귀)
+    // 탭 포커스 복귀 시 재체크
     const onFocus = () => checkSubscriptionExpiry();
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+
+    // 서버 미들웨어에서 SUBSCRIPTION_EXPIRED 응답 시 발행되는 이벤트 처리
+    const onExpired = () => {
+      addToast('⚠️ 구독이 만료되었습니다. 마이페이지에서 재구독해주세요.', 'error');
+      setTimeout(() => { window.location.href = '/vvip-subscribe'; }, 2000);
+    };
+    window.addEventListener('subscription_expired', onExpired);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('subscription_expired', onExpired);
+    };
   }, []);
 
   return null;
@@ -228,6 +240,7 @@ export default function App() {
               <Route path="/notice/:id" element={<NoticeDetail />} />
               <Route path="/secret-admin" element={<SecretPointAdmin />} />
               <Route path="/payment-history" element={<PaymentHistory />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
             </Routes>
           </Suspense>
         </div>

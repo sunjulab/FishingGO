@@ -77,7 +77,20 @@ export default function PostDetail() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ author: storedUser.name, text: comment.trim() })
       });
-      if (res.ok) { const updated = await res.json(); setPost(updated); setComment(''); }
+      if (res.ok) {
+        const updated = await res.json();
+        setPost(updated);
+        setComment('');
+        // EXP 서버 등록 (comment_write)
+        const userId = storedUser.email || storedUser.id;
+        if (userId) {
+          fetch(`${API}/api/user/exp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, action: 'comment_write' }),
+          }).catch(() => {});
+        }
+      }
     } catch {} finally { setSubmitting(false); }
   };
 

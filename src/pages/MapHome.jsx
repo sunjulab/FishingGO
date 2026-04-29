@@ -39,13 +39,17 @@ export default function MapHome() {
   const [showSearch, setShowSearch]         = useState(false);
   const [recentPosts, setRecentPosts]       = useState([]);
   const [showCCTV, setShowCCTV]             = useState(false);
-  const [cctvData, setCctvData]             = useState(null);  // { type, url, fallbackImg, areaName, label }
+  const [cctvData, setCctvData]             = useState(null);
   const [cctvLoading, setCctvLoading]       = useState(false);
   const [sheetVisible, setSheetVisible]     = useState(false);
   const [heatmapMode, setHeatmapMode]       = useState('sst');
   const [effectiveSecretPoints, setEffectiveSecretPoints] = useState(SECRET_FISHING_POINTS);
   const [currentTime, setCurrentTime]       = useState(new Date());
   const [showSecretPoints, setShowSecretPoints] = useState(false);
+  // ── 즐겨찾기 (로컬 + DB 이중 동기화) ─────────────────────────
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('fishing_favorites') || '[]'); } catch { return []; }
+  });
   const secretMarkersRef = useRef([]);
 
   // 현재 시간 1분마다 업데이트
@@ -53,6 +57,40 @@ export default function MapHome() {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // 즐겨찾기 DB 동기화 (로그인 시 서버에서 불러오기)
+  useEffect(() => {
+    if (!user) return;
+    const userId = user.email || user.id;
+    if (!userId || userId === 'GUEST') return;
+    apiClient.get(`/api/user/favorites?userId=${encodeURIComponent(userId)}`)
+      .then(res => {
+        if (res.data.favorites?.length > 0) {
+          setFavorites(res.data.favorites);
+          localStorage.setItem('fishing_favorites', JSON.stringify(res.data.favorites));
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
+  // 즐겨찾기 토글 함수 (로컬 + DB 동기화)
+  const toggleFavorite = (pointId) => {
+    const isFav = favorites.includes(pointId);
+    const next = isFav ? favorites.filter(f => f !== pointId) : [...favorites, pointId];
+    setFavorites(next);
+    localStorage.setItem('fishing_favorites', JSON.stringify(next));
+    addToast(isFav ? '즐겨찾기 해제' : '⭐ 즐겨찾기 추가!', isFav ? 'info' : 'success');
+    // 서버 동기화
+    const userId = user?.email || user?.id;
+    if (userId && userId !== 'GUEST') {
+      apiClient.post('/api/user/favorites', { userId, pointId, action: isFav ? 'remove' : 'add' }).catch(() => {});
+    }
+    // EXP (포인트 방문)
+    if (!isFav && userId && userId !== 'GUEST') {
+      apiClient.post('/api/user/exp', { userId, action: 'point_visit' }).catch(() => {});
+    }
+  };
+
 
   const mapRef         = useRef(null);
   const clustererRef   = useRef(null);

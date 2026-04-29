@@ -169,6 +169,17 @@ export default function VVIPSubscribe() {
         updateUser({ tier: plan.tier });
         addToast(`🎉 ${plan.label} 정기구독 등록 완료!`, 'success');
         addToast(`✅ 다음 결제일: ${new Date(res.data.nextBillingDate).toLocaleDateString('ko-KR')}`, 'info');
+        // 결제 내역 자동 저장
+        apiClient.post('/api/payment/history/record', {
+          userId:      user.email || user.id,
+          userName:    user.name,
+          planId:      plan.id,
+          pgProvider:  selectedPg,
+          paymentType: 'billing_first',
+          amount:      plan.price,
+          status:      'paid',
+          imp_uid,
+        }).catch(() => {});
         setShowLiteProConfirm(false);
         setTimeout(() => navigate('/'), 1200);
       }
@@ -211,6 +222,17 @@ export default function VVIPSubscribe() {
         setMySlot({ harborId: selectedHarbor.id, harborName: selectedHarbor.name, expiresAt: res.data.nextBillingDate });
         addToast(`🎉 ${selectedHarbor.name} VVIP 정기구독 등록 완료!`, 'success');
         addToast(`✅ 매월 ${new Date(res.data.nextBillingDate).getDate()}일 자동 청구됩니다.`, 'info');
+        // 결제 내역 자동 저장
+        apiClient.post('/api/payment/history/record', {
+          userId:      user.email || user.id,
+          userName:    user.name,
+          planId:      'VVIP',
+          pgProvider:  selectedPg,
+          paymentType: 'billing_first',
+          amount:      550000,
+          status:      'paid',
+          imp_uid,
+        }).catch(() => {});
         setShowConfirm(false);
       }
     } catch (err) {

@@ -83,6 +83,11 @@ export default function WritePost() {
           ? { content, category, email: storedUser.email, adminId: storedUser.email || storedUser.name }
           : { author: storedUser.name, author_email: storedUser.email, category, content, image: safeImage };
         await apiClient[method](url, body);
+        // EXP 서버 등록
+        if (!isEditMode) {
+          const userId = storedUser.email || storedUser.id;
+          if (userId) apiClient.post('/api/user/exp', { userId, action: 'post_write' }).catch(() => {});
+        }
         addToast(isEditMode ? '✅ 게시글이 수정되었습니다!' : '게시글이 등록되었습니다! 🎉', 'success');
         navigate(isEditMode ? -1 : '/community?tab=open');
       }

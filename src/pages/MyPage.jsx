@@ -427,11 +427,58 @@ export default function MyPage() {
          <div onClick={() => setActiveTab('posts')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'posts' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer' }}>
             나의 피드 {activeTab === 'posts' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
          </div>
+         <div onClick={() => setActiveTab('stats')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'stats' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer' }}>
+            조과통계 {activeTab === 'stats' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#FF9B26', borderRadius: '2px' }}></div>}
+         </div>
       </div>
 
       {/* 🟦 Tab Content 🟦 */}
       <div style={{ padding: '20px 24px' }}>
-         {activeTab === 'records' ? (
+         {activeTab === 'stats' ? (() => {
+           // 어종별 집계
+           const speciesMap = {};
+           realRecords.forEach(r => {
+             const sp = r.species || r.fish || (내용 관련: r.content?.match(/([감성|븐라맑|숙성|고등어|전백|요|게|문어|낙지|진래|옥돕])/))?.[0] || '기타';
+             speciesMap[sp] = (speciesMap[sp] || 0) + 1;
+           });
+           const entries = Object.entries(speciesMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+           const max = entries[0]?.[1] || 1;
+           const BAR_COLORS = ['#0056D2','#FF9B26','#FF5A5F','#00C48C','#7C3AED','#FFD700'];
+           return (
+             <div>
+               {/* 어종별 바 차트 */}
+               <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '14px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                 <div style={{ fontSize: '15px', fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>🐟 어종별 조과</div>
+                 {entries.length === 0 ? (
+                   <p style={{ color: '#8E8E93', fontSize: '13px', fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
+                 ) : entries.map(([sp, cnt], i) => (
+                   <div key={sp} style={{ marginBottom: '12px' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                       <span style={{ fontSize: '13px', fontWeight: '800', color: '#1c1c1e' }}>{sp}</span>
+                       <span style={{ fontSize: '13px', fontWeight: '950', color: BAR_COLORS[i] }}>{cnt}횟</span>
+                     </div>
+                     <div style={{ height: '8px', background: '#F2F2F7', borderRadius: '4px', overflow: 'hidden' }}>
+                       <div style={{ height: '100%', width: `${(cnt / max) * 100}%`, background: BAR_COLORS[i], borderRadius: '4px', transition: 'width 0.8s ease' }} />
+                     </div>
+                   </div>
+                 ))}
+               </div>
+               {/* 요약 통계 */}
+               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px' }}>
+                 {[{ label: '종 조과', val: realRecords.length, emoji: '📊', color: '#0056D2' },
+                   { label: '어종 수', val: entries.length, emoji: '🐟', color: '#FF9B26' },
+                   { label: '대박 어종', val: entries[0]?.[0] || '-', emoji: '🏆', color: '#FF5A5F' }
+                 ].map(s => (
+                   <div key={s.label} style={{ background: '#fff', borderRadius: '16px', padding: '14px 10px', textAlign: 'center', border: '1.5px solid #F2F2F7' }}>
+                     <div style={{ fontSize: '20px', marginBottom: '4px' }}>{s.emoji}</div>
+                     <div style={{ fontSize: '18px', fontWeight: '950', color: s.color }}>{s.val}</div>
+                     <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700', marginTop: '2px' }}>{s.label}</div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           );
+         })() : activeTab === 'records' ? (
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
               {realRecords.length > 0 ? realRecords.map(r => (
                 <div key={r.id} style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7' }}>
@@ -540,19 +587,22 @@ export default function MyPage() {
               </div>
               <ChevronRight size={16} color="#FFD700" />
             </button>
+            {/* 수익 대시보드 버튼 */}
+            <button
+              onClick={() => navigate('/admin-dashboard')}
+              style={{ width: '100%', padding: '14px 16px', background: 'rgba(0,196,140,0.1)', border: '1px solid rgba(0,196,140,0.3)', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: '#fff', textAlign: 'left', marginTop: '8px' }}
+            >
+              <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #00C48C, #00897B)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '18px' }}>📊</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '14px', fontWeight: '900', color: '#00C48C' }}>수익 대시보드</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>월 매출 · 플랜별 구독자 · 최근 결제내역</div>
+              </div>
+              <ChevronRight size={16} color="#00C48C" />
+            </button>
           </div>
         </div>
-      )}
-
-      <div style={{ padding: '10px 24px 40px' }}>
-         <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7' }}>
-            {menuItems.map((item, idx) => (
-              <div key={idx} onClick={() => setShowModal(item.id)} style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: idx === menuItems.length - 1 ? 'none' : '1px solid #F8F9FA', cursor: 'pointer' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div style={{ backgroundColor: `${item.color}15`, padding: '10px', borderRadius: '12px' }}><item.icon size={20} color={item.color} strokeWidth={2.5} /></div>
-                    <div>
-                        <div style={{ fontSize: '15px', fontWeight: '850', color: '#1c1c1e' }}>{item.title}</div>
-                        <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600' }}>{item.desc}</div>
                     </div>
                  </div>
                  <ChevronRight size={18} color="#C7C7CC" />
