@@ -63,14 +63,10 @@ export default function CommunityTab() {
   const [totalPages, setTotalPages] = useState(1);       // 전체 페이지 수
   const [loadingMore, setLoadingMore] = useState(false); // 더보기 로딩
   const OPEN_CATEGORIES = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
-  const [crews, setCrews] = useState([
-    { id: 'CREW_001', name: '동해 무늬 사냥단', members: 42, isPrivate: true }
-  ]);
-  const [businessPosts, setBusinessPosts] = useState([
-    { id: 'b3_vip', shipName: '남일호 VIP 크루즈', author: '남일해적선장', type: '선상/참돔', target: '참돔/방어', price: '인당 20만원', date: '이번 주 스페셜 야간', content: '👑 [VVIP 전용 배너] 특급 쉐프 승선, 초대형 넓은 갑판, 최고급 장비 100% 무상 렌탈.', likes: 832, comments: 142, cover: 'https://images.unsplash.com/photo-1544427920-549b6d60a5e5?auto=format&fit=crop&w=400&q=80', isPinned: true, expiresAt: null },
-    { id: 'b1', shipName: '강릉 에이스호', author: '강릉에이스선장', type: '선상낚시', target: '대구/문어', price: '인당 12만원', date: '이번 주 주말 출항', content: '초보자 환영! 몸만 오시면 됩니다. 장비 대여 가능. 점심(문어라면) 제공!', likes: 12, comments: 4, cover: 'https://images.unsplash.com/photo-1544551763-8dd44758c2dd?auto=format&fit=crop&w=400&q=80', isPinned: false },
-    { id: 'b2', shipName: '인천 나이스호', author: '인천씨호크', type: '야간선상', target: '쭈꾸미/갑오징어', price: '인당 8만원', date: '매일 야간', content: '쭈꾸미 낚시 시즌 오픈! 최신 시설 완비, 깨끗한 화장실. 가족 단위 대환영.', likes: 45, comments: 18, cover: 'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=400&q=80', isPinned: false }
-  ]);
+  const [crews, setCrews] = useState([]);
+
+  const [businessPosts, setBusinessPosts] = useState([]);
+
 
   // 오픈게시판 카테고리 필터 (서버 페이지네이션 사용으로 client 필터 제거)
   const filteredPosts = posts; // 서버에서 필터링된 결과 사용
@@ -116,21 +112,8 @@ export default function CommunityTab() {
     }
 
     if (activeTab === 'open') {
-      if (!canAccessPremium) {
-        if (AD_CONFIG.FREE_USER.SHOW_REWARD_AD_ON_POST) {
-          navigate('/write');
-        } else {
-          const confirmed = window.confirm("💡 오늘의 대박 조과로 '메인 상단'에 고정 노출하시겠습니까?\n(15초 짧은 영상 광고 시청 시 상단 노출 버프 지급!)\n\n※ [취소]를 누르면 광고 없이 일반 글로 등록됩니다.");
-          if (confirmed) {
-            addToast("15초 시청 완료! 상단 노출 버프 상태로 이동합니다.", "success");
-            navigate('/write?buff=true');
-          } else {
-            navigate('/write');
-          }
-        }
-      } else {
-        navigate('/write');
-      }
+        navigate('/write'); // 무료 사용자도 글쓰기 허용 (글 작성 화면에서 광고 게이트 처리)
+
     } else if (activeTab === 'crew') {
       if (!canAccessPremium) {
         addToast("무료(Free) 멤버쉽은 '크루 개설 방장 권한'이 없습니다. 업그레이드 후 이용해보세요!", "error");
@@ -235,29 +218,34 @@ export default function CommunityTab() {
 
   const handleDeletePost = async (e, id, type) => {
     e.stopPropagation();
-    const myEmail = JSON.parse(localStorage.getItem('user') || '{}').email;
-    const isAuthorDelete = 
+    const myEmail = user?.email || user?.id || null;
+    const myName  = user?.name || null;
+    const isAuthorDelete =
       (type === 'open'     && posts.find(p => (p._id||p.id) === id)?.author_email === myEmail) ||
       (type === 'business' && businessPosts.find(p => (p._id||p.id) === id)?.author_email === myEmail);
     if (!isAdmin && !isAuthorDelete) return;
-    if (!window.confirm('이 게시물을 삭제하시겠습니까?')) return;
+    // window.confirm 제거 — 권한 체크 통과 시 즉시 삭제 (PostDetail에 인앱 확인 모달 있음)
     try {
       const endpoint =
         type === 'open'     ? `/api/community/posts/${id}` :
         type === 'business' ? `/api/community/business/${id}` :
         type === 'notice'   ? `/api/community/notices/${id}` : null;
-      if (endpoint) await apiClient.delete(endpoint, { data: { adminId: 'sunjulab' } });
+      if (endpoint) await apiClient.delete(endpoint, {
+        data: {
+          email: myEmail,
+        }
+      });
       if (type === 'open')     setPosts(prev     => prev.filter(p => (p._id||p.id) !== id));
       if (type === 'business') setBusinessPosts(prev => prev.filter(p => (p._id||p.id) !== id));
       if (type === 'notice')   setNoticePosts(prev  => prev.filter(p => (p._id||p.id) !== id));
       addToast('게시물이 삭제되었습니다.', 'success');
     } catch (err) {
-      if (type === 'open')     setPosts(prev     => prev.filter(p => (p._id||p.id) !== id));
-      if (type === 'business') setBusinessPosts(prev => prev.filter(p => (p._id||p.id) !== id));
-      if (type === 'notice')   setNoticePosts(prev  => prev.filter(p => (p._id||p.id) !== id));
-      addToast('삭제 처리했습니다.', 'success');
+      const errMsg = err.response?.data?.error || '삭제에 실패했습니다. 다시 시도해주세요.';
+      addToast(errMsg, 'error');
     }
+
   };
+
 
 
   return (
@@ -429,7 +417,7 @@ export default function CommunityTab() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '12px', color: '#bbb' }}>{post.time}</span>
-                      {(isAdmin || post.author_email === (JSON.parse(localStorage.getItem('user') || '{}').email)) && (
+                      {(isAdmin || post.author_email === user?.email) && (
                         <div style={{ display: 'flex', gap: '4px' }}>
                           <button onClick={(e) => { e.stopPropagation(); navigate(`/write?editId=${postId}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}>
                             <Edit2 size={15} />
@@ -564,7 +552,7 @@ export default function CommunityTab() {
                           <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
                             <span style={{ fontSize: '9px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
                             <span style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.shipName}</span>
-                            {(isAdmin || post.author_email === (JSON.parse(localStorage.getItem('user') || '{}').email)) && (
+                            {(isAdmin || post.author_email === user?.email) && (
                               <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
                                 <button onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={14} /></button>
                                 <button onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={14} /></button>

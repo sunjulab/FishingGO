@@ -1256,8 +1256,15 @@ app.put('/api/user/nickname', async (req, res) => {
 // --- 비밀번호 변경 ---
 app.put('/api/user/password', async (req, res) => {
   try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ error: '비밀번호를 모두 입력해주세요.' });
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 계정만 변경 가능' });
 
     let user;
     if (dbReady && User) {
@@ -1286,8 +1293,14 @@ app.put('/api/user/password', async (req, res) => {
 // --- 사용자 차단 ---
 app.post('/api/user/block', async (req, res) => {
   try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, blockTargetName } = req.body;
     if (!blockTargetName) return res.status(400).json({ error: '차단할 사용자 닉네임을 입력해주세요.' });
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 조작만 가능' });
 
     // 자기 자신 차단 불가
     let currentUser;
@@ -1324,7 +1337,13 @@ app.post('/api/user/block', async (req, res) => {
 // --- 차단 해제 ---
 app.post('/api/user/unblock', async (req, res) => {
   try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, unblockTargetName } = req.body;
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 조작만 가능' });
     if (dbReady && User) {
       const user = await User.findOne({ email });
       if (user) {
@@ -1521,11 +1540,16 @@ app.post('/api/user/records', async (req, res) => {
 // ── 조과기록 삭제 ──────────────────────────────────────────────────────────────
 app.delete('/api/user/records/:id', async (req, res) => {
   try {
-    const { email, adminId } = req.body;
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const { email } = req.body;
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
     if (dbReady && CatchRecord) {
       const record = await CatchRecord.findById(req.params.id);
       if (!record) return res.status(404).json({ error: '기록 없음' });
-      if (adminId !== 'sunjulab' && record.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+      if (!isAdmin && record.author_email !== email) return res.status(403).json({ error: '권한 없음' });
       await CatchRecord.findByIdAndDelete(req.params.id);
       return res.json({ success: true });
     }
@@ -1634,24 +1658,26 @@ app.post('/api/community/posts', async (req, res) => {
 // ── 오픈게시판 글 삭제 ────────────────────────────────────────────────────────
 app.delete('/api/community/posts/:id', async (req, res) => {
   try {
-    const { email, adminId } = req.body;
-    const MASTER = (id) => id && (id === 'sunjulab' || String(id).startsWith('sunjulab'));
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const { email } = req.body;
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
 
     // ─── 서버사이드 권한 검증 ───────────────────────────────────
     if (dbReady && Post) {
       let post = null;
       try { post = await Post.findById(req.params.id); } catch(e) {}
       if (post) {
-        const isAuthor = post.author_email === email;
-        const isAdmin  = MASTER(adminId);
-        if (!isAuthor && !isAdmin)
+        if (!isAdmin && post.author_email !== email)
           return res.status(403).json({ error: '삭제 권한이 없습니다.' });
         await post.deleteOne();
       }
     } else {
       // 인메모리 fallback 권한 체크
       const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
-      if (mem && !MASTER(adminId) && mem.author_email !== email)
+      if (mem && !isAdmin && mem.author_email !== email)
         return res.status(403).json({ error: '삭제 권한이 없습니다.' });
     }
     memPosts = memPosts.filter(p => p._id !== req.params.id && p.id !== req.params.id);
@@ -1660,16 +1686,20 @@ app.delete('/api/community/posts/:id', async (req, res) => {
   } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
-// ── 오픈게시판 글 수정 (작성자 or 마스터) ────────────────────────────────────
+// ── 오픈게시판 글 수정 (작성자 or JWT 어드민) ────────────────────────────────
 app.put('/api/community/posts/:id', async (req, res) => {
   try {
-    const { content, category, image, email, adminId } = req.body;
-    const MASTER = (id) => id && id.startsWith('sunjulab');
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const { content, category, image, email } = req.body;
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
     if (dbReady && Post) {
       let post;
       try { post = await Post.findById(req.params.id); } catch(e) {}
       if (!post) return res.status(404).json({ error: '게시글 없음' });
-      if (!MASTER(adminId) && post.author_email !== email)
+      if (!isAdmin && post.author_email !== email)
         return res.status(403).json({ error: '권한 없음' });
       if (content !== undefined) post.content = content;
       if (category !== undefined) post.category = category;
@@ -1678,13 +1708,13 @@ app.put('/api/community/posts/:id', async (req, res) => {
       const idx = memPosts.findIndex(p => p._id === req.params.id || p.id === req.params.id);
       if (idx !== -1) {
         memPosts[idx] = { ...memPosts[idx], content: post.content, category: post.category, image: post.image };
-        saveMemPosts(); // DB 수정 후 파일에도 동기화
+        saveMemPosts();
       }
       return res.json(post);
     }
     const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
     if (!mem) return res.status(404).json({ error: '게시글 없음' });
-    if (!MASTER(adminId) && mem.author_email !== email)
+    if (!isAdmin && mem.author_email !== email)
       return res.status(403).json({ error: '권한 없음' });
     if (content !== undefined) mem.content = content;
     if (category !== undefined) mem.category = category;

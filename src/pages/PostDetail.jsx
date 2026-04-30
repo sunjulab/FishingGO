@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, X, Check } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
+import apiClient from '../api/index';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -41,55 +41,57 @@ export default function PostDetail() {
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const storedUser = (() => { try { return JSON.parse(localStorage.getItem('user')) || {}; } catch { return {}; } })();
   const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
-  const isAuthor = post && (post.author_email === storedUser.email || post.author === storedUser.name);
+  const effectiveUser = user; // 편의 alias — user가 정의되지 않은 경우 null
+  const isAuthor = post && user && (post.author_email === user.email || post.author === user.name);
   const canEdit = isAdmin || isAuthor;
+
 
   useEffect(() => { fetchPost(); }, [id]);
 
   const fetchPost = async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`${API}/api/community/posts/${id}`);
-      if (res.ok) { const data = await res.json(); setPost(data); }
-      else setError('게시글을 찾을 수 없습니다.');
-    } catch { setError('네트워크 오류가 발생했습니다.'); }
-    finally { setLoading(false); }
+      const res = await apiClient.get(`/api/community/posts/${id}`);
+      setPost(res.data);
+      // 이미 좋아요한 경우 liked 상태 초기화 (새로고침 중복 방지)
+      if (user?.email && Array.isArray(res.data.likedBy)) {
+        setLiked(res.data.likedBy.includes(user.email));
+      }
+    } catch (err) {
+      if (err.response?.status === 404) setError('게시글을 찾을 수 없습니다.');
+      else setError('네트워크 오류가 발생했습니다.');
+    } finally { setLoading(false); }
   };
 
   const handleLike = async () => {
     if (user?.id === 'GUEST') { addToast('로그인이 필요한 기능입니다.', 'error'); return; }
     if (liked) return;
     try {
-      const res = await fetch(`${API}/api/community/posts/${id}/like`, { method: 'POST' });
-      if (res.ok) { const updated = await res.json(); setPost(updated); setLiked(true); }
+      // email 파라미터 전송 — 서버 좋아요 중복방지 로직 활성화
+      const res = await apiClient.patch(`/api/community/posts/${id}/like`, { email: user?.email });
+      setPost(prev => ({ ...prev, likes: res.data.likes }));
+      setLiked(true);
     } catch {}
   };
 
   const submitComment = async () => {
     if (user?.id === 'GUEST') { addToast('로그인이 필요합니다.', 'error'); return; }
     if (!comment.trim() || submitting) return;
+    if (comment.trim().length > 500) { addToast('댓글은 500자 이내로 작성해주세요.', 'error'); return; }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API}/api/community/posts/${id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ author: storedUser.name, text: comment.trim() })
+      const res = await apiClient.post(`/api/community/posts/${id}/comments`, {
+        author: effectiveUser.name,
+        author_email: effectiveUser.email || '',
+        text: comment.trim()
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setPost(updated);
-        setComment('');
-        // EXP 서버 등록 (comment_write)
-        const userId = storedUser.email || storedUser.id;
-        if (userId) {
-          fetch(`${API}/api/user/exp`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, action: 'comment_write' }),
-          }).catch(() => {});
-        }
+
+      setPost(res.data);
+      setComment('');
+      const userId = effectiveUser.email || effectiveUser.id;
+      if (userId) {
+        apiClient.post('/api/user/exp', { userId, action: 'comment_write' }).catch(() => {});
       }
     } catch {} finally { setSubmitting(false); }
   };
@@ -102,37 +104,34 @@ export default function PostDetail() {
   };
 
   const saveEdit = async () => {
+    if (!editContent.trim()) { addToast('내용을 입력해주세요.', 'error'); return; }
     setSaving(true);
     try {
-      const res = await fetch(`${API}/api/community/posts/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: editContent,
-          category: editCategory,
-          email: storedUser.email,
-          adminId: storedUser.email || storedUser.name,
-        })
+      const res = await apiClient.put(`/api/community/posts/${id}`, {
+        content: editContent.trim(),
+        category: editCategory,
+        email: effectiveUser.email,
       });
-      const data = await res.json();
-      if (!res.ok) { addToast(data.error || '수정 실패.', 'error'); return; }
-      setPost(data);
+      setPost(res.data);
       setShowEditModal(false);
       addToast('✅ 게시글이 수정되었습니다.', 'success');
-    } catch { addToast('서버 오류.', 'error'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      addToast(err.response?.data?.error || '수정 실패.', 'error');
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`${API}/api/community/posts/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: storedUser.email, adminId: storedUser.email || storedUser.name })
+      await apiClient.delete(`/api/community/posts/${id}`, {
+        data: {
+          email: effectiveUser.email,
+        }
       });
-      if (res.ok) { addToast('삭제되었습니다.', 'success'); navigate('/community'); }
-      else { const d = await res.json(); addToast(d.error || '삭제 실패.', 'error'); }
-    } catch { addToast('서버 오류.', 'error'); }
+      addToast('삭제되었습니다.', 'success');
+      navigate('/community');
+    } catch (err) {
+      addToast(err.response?.data?.error || '삭제 실패.', 'error');
+    }
   };
 
   const handleShare = async () => {
