@@ -218,11 +218,23 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'https://fishing-go.vercel.app',
   'https://fishing-go-mbqp.vercel.app',
-  /\.vercel\.app$/,  // Vercel 프리븷 배포 URL
+  /\.vercel\.app$/,  // Vercel 프리덼 배포 URL
 ];
+
+// Render 헬스체크 전용 (사전 등록 — CORS 이전에 응답)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', db: dbReady ? 'mongodb' : 'memory', uptime: Math.floor(process.uptime()), time: new Date().toISOString() });
+});
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Postman/서버간 요청 허용
+    if (!origin) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('[CORS] Origin 없는 요청 차단 (프로덕션)');
+        return callback(new Error('직접 API 접근이 허용되지 않습니다.'));
+      }
+      return callback(null, true); // 개발환경: Postman/curl 허용
+    }
     const allowed = ALLOWED_ORIGINS.some(o =>
       typeof o === 'string' ? o === origin : o.test(origin)
     );
@@ -277,8 +289,14 @@ app.get('/api/secret-point-overrides', (req, res) => {
   res.json(secretPointOverrides);
 });
 
-// POST: 특정 포인트 좌표 저장 (마스터만 호출)
+// POST: 특정 포인트 좌표 저장 (어드민 JWT 인증 필수)
 app.post('/api/secret-point-overrides', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (p.id !== 'sunjulab' && p.email !== 'sunjulab') return res.status(403).json({ error: '관리자 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { id, lat, lng } = req.body;
   if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
   secretPointOverrides[String(id)] = { lat: parseFloat(lat), lng: parseFloat(lng) };
@@ -287,8 +305,14 @@ app.post('/api/secret-point-overrides', (req, res) => {
   res.json({ ok: true, overrides: secretPointOverrides });
 });
 
-// DELETE: 특정 포인트 초기화
+// DELETE: 특정 포인트 초기화 (어드민 JWT 인증 필수)
 app.delete('/api/secret-point-overrides/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (p.id !== 'sunjulab' && p.email !== 'sunjulab') return res.status(403).json({ error: '관리자 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { id } = req.params;
   delete secretPointOverrides[id];
   saveSecretPointOverrides();
@@ -296,6 +320,7 @@ app.delete('/api/secret-point-overrides/:id', (req, res) => {
 });
 
 app.get('/api/debug', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.status(403).json({ error: '접근 불가' });
   const uri = MONGO_URI ? MONGO_URI.replace(/:[^@]+@/, ':***@') : '미설정';
   res.json({
     dbReady,
@@ -314,7 +339,20 @@ app.get('/api/debug', async (req, res) => {
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin) {
+        if (process.env.NODE_ENV === 'production') return callback(new Error('CORS 차단'));
+        return callback(null, true);
+      }
+      const allowed = ALLOWED_ORIGINS.some(o =>
+        typeof o === 'string' ? o === origin : o.test(origin)
+      );
+      return allowed ? callback(null, true) : callback(new Error('CORS 차단'));
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+  }
 });
 
 // 실시간 크루 채팅 서버 로직 (chatHistories는 상단에서 선언되었습니다)
@@ -336,9 +374,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_msg', async (data) => {
+    // ── 서버 사이드 유효성 검증 ──────────────────────────────
+    const text = (data.text || '').toString().trim();
+    if (!text || text.length > 500) return; // 빈값/500자 초과 차단
+    if (!data.crewId || typeof data.crewId !== 'string') return;
+    const sender = (data.sender || 'Anonymous').toString().slice(0, 30);
+
     const msgData = {
-      sender: data.sender || 'Anonymous',
-      text: data.text,
+      sender,
+      text,
       time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
     };
     if (!chatHistories[data.crewId]) chatHistories[data.crewId] = [];
@@ -846,8 +890,20 @@ app.post('/api/user/avatar', async (req, res) => {
 // --- 현재 사용자 정보 조회 (재로그인 없이 tier/avatar 동기화용) ---
 app.get('/api/user/me', async (req, res) => {
   try {
+    // JWT 인증 — 본인 또는 어드민만 조회 가능
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
+
     const email = req.query.email || req.headers['x-user-email'];
     if (!email) return res.status(400).json({ error: 'email 필요' });
+
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) {
+      return res.status(403).json({ error: '본인 정보만 조회 가능합니다.' });
+    }
 
     let user;
     if (dbReady && User) {
@@ -865,9 +921,16 @@ app.get('/api/user/me', async (req, res) => {
 // --- 알림 설정 변경 ---
 app.post('/api/user/settings', async (req, res) => {
   try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, notiSettings } = req.body;
     if (!email || !notiSettings) return res.status(400).json({ error: '이메일과 설정 데이터가 필요합니다.' });
-    
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 설정만 변경 가능' });
+
     if (dbReady && User) {
       const user = await User.findOneAndUpdate({ email }, { notiSettings }, { new: true });
       if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
@@ -1163,8 +1226,15 @@ app.post('/api/auth/google', async (req, res) => {
 // --- 닉네임 변경 ---
 app.put('/api/user/nickname', async (req, res) => {
   try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, newName } = req.body;
     if (!newName) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
     
     if (dbReady && User) {
       const dup = await User.findOne({ name: newName });
@@ -1274,12 +1344,24 @@ app.post('/api/user/unblock', async (req, res) => {
   } catch(err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
-// --- 프리미엄 구독 (Tier) 변경 ---
+// --- 프리미엄 구독 (Tier) 변경 — 결제 서버 또는 어드민만 업그레이드 가능 ---
 app.put('/api/user/tier', async (req, res) => {
   try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, tier } = req.body;
     if (!email) return res.status(400).json({ error: '사용자 정보가 필요합니다.' });
     if (!tier)  return res.status(400).json({ error: '티어 정보가 필요합니다.' });
+    // 허용 tier 값 화이트리스트
+    const ALLOWED_TIERS = ['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+    if (!ALLOWED_TIERS.includes(tier)) return res.status(400).json({ error: '유효하지 않은 티어입니다.' });
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
+    // 일반 사용자는 FREE 다운그레이드만 허용 — 업그레이드는 결제 서버(어드민)만
+    if (!isAdmin && tier !== 'FREE') return res.status(403).json({ error: '프리미엄 업그레이드는 결제 후 자동 적용됩니다.' });
 
     if (dbReady && User) {
       // DB 모드: email 필드로만 조회 (id 필드 없음)
@@ -1306,11 +1388,18 @@ app.put('/api/user/tier', async (req, res) => {
 // --- 프로필 사진 변경 ---
 app.post('/api/user/avatar', async (req, res) => {
   try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, avatar } = req.body;
     if (!email) return res.status(400).json({ error: '사용자 이메일이 필요합니다.' });
     if (!avatar) return res.status(400).json({ error: '이미지 데이터가 필요합니다.' });
     // base64 크기 제한: 2MB 초과 시 거부
     if (avatar.length > 2 * 1024 * 1024) return res.status(413).json({ error: '이미지 크기가 너무 큽니다. (최대 약 1.5MB)' });
+    const isAdmin = tp.id === 'sunjulab' || tp.email === 'sunjulab';
+    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
 
     if (dbReady && User) {
       const updated = await User.findOneAndUpdate({ email }, { avatar }, { new: true });
@@ -1329,13 +1418,28 @@ app.post('/api/user/avatar', async (req, res) => {
   }
 });
 
-// --- 활동별 EXP 지급 ---
+// --- 활동별 EXP 지급 (일일 레이트 리밋 적용) ---
+const EXP_DAILY_LIMIT = {
+  comment: 5, post: 3, like_receive: 10, point_visit: 8,
+  photo_upload: 3, first_catch: 1, weekly_streak: 1, monthly_streak: 1,
+};
+const expDailyCount = new Map();
+setInterval(() => expDailyCount.clear(), 60 * 60 * 1000); // 매시간 초기화
+
 app.post('/api/user/exp', async (req, res) => {
   try {
     const { email, activity } = req.body;
     if (!email || !activity) return res.status(400).json({ error: 'email과 activity가 필요합니다.' });
     const expAmount = EXP_REWARDS[activity];
     if (!expAmount) return res.status(400).json({ error: '알 수 없는 활동입니다.' });
+
+    // ── 일일 레이트 리밋 체크 ──────────────────────────────────
+    const today = new Date().toISOString().split('T')[0];
+    const limitKey = `${email}:${activity}:${today}`;
+    const count = expDailyCount.get(limitKey) || 0;
+    const dailyMax = EXP_DAILY_LIMIT[activity] ?? 5;
+    if (count >= dailyMax) return res.status(429).json({ error: `오늘의 ${activity} EXP 한도 도달 (최대 ${dailyMax}회/일)`, code: 'EXP_LIMIT_REACHED' });
+    expDailyCount.set(limitKey, count + 1);
 
     let user;
     if (dbReady && User) {
@@ -3494,3 +3598,6 @@ app.get('/api/admin/revenue', async (req, res) => {
     res.json(stats);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ── CCTV 관리 어드민 API (JWT 인증 — 54차 보안 강화) ─────────────
+require('./cctv_admin_routes')(app);

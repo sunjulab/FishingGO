@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../api/index';
 import { evaluateFishingCondition } from '../utils/evaluator';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
@@ -16,10 +16,12 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
   const [cctvLoading, setCctvLoading] = useState(true);
   const [shoppingItems, setShoppingItems] = useState([]);
   const navigate = useNavigate();
+  const user = useUserStore(state => state.user);
   const canAccessPremium = useUserStore(state => state.canAccessPremium());
   const isAdmin = useUserStore(state => state.isAdmin?.() ?? false);
   const addToast = useToastStore(state => state.addToast);
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 
   const [isEditingCctv, setIsEditingCctv] = useState(false);
   const [editYoutubeId, setEditYoutubeId] = useState('');
@@ -47,25 +49,22 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
     const finalYoutubeId = extractYoutubeId(editYoutubeId.trim());
 
     const sid = selectedPoint.obsCode || 'DT_0001';
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     try {
       setIsSavingCctv(true);
-      const res = await axios.put(`${API}/api/admin/cctv/${sid}`, {
+      const res = await apiClient.put(`/api/admin/cctv/${sid}`, {
         type: 'youtube',
         youtubeId: finalYoutubeId,
-        label: cctvData?.label || `${selectedPoint.name} 수동업데이트`
-      }, {
-        headers: { 'x-admin-id': 'sunjulab' }
+        label: cctvData?.label || `${selectedPoint.name} \uc218\ub3d9\uc5c5\ub370\uc774\ud2b8`
       });
       if (res.data.success) {
-        addToast('✅ CCTV 링크가 정상적으로 수정되었습니다.', 'success');
+        addToast('\u2705 CCTV \ub9c1\ud06c\uac00 \uc815\uc0c1\uc801\uc73c\ub85c \uc218\uc815\ub418\uc5c8\uc2b5\ub2c8\ub2e4.', 'success');
         setIsEditingCctv(false);
-        // 수정한 링크로 즉시 다시 로드
+        // \uc218\uc815\ud55c \ub9c1\ud06c\ub85c \uc989\uc2dc \ub2e4\uc2dc \ub85c\ub4dc
         setCctvLoading(true);
-        const cctvResp = await axios.get(`${API}/api/weather/cctv?stationId=${sid}`);
+        const cctvResp = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
         setCctvData(cctvResp.data);
       } else {
-        addToast(res.data.error || '수정에 실패했습니다.', 'error');
+        addToast(res.data.error || '\uc218\uc815\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.', 'error');
       }
     } catch (err) {
       addToast('수정 중 오류가 발생했습니다.', 'error');
@@ -80,12 +79,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
 
     const loadData = async () => {
       setLoading(true);
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const sid = selectedPoint.obsCode || 'DT_0001';
 
       // 해양 날씨/수온 조회
       try {
-        const resp = await axios.get(`${API}/api/weather/precision?stationId=${sid}`);
+        const resp = await apiClient.get(`/api/weather/precision?stationId=${sid}`);
         setMarineData({ 
           ...resp.data,
           stationId: sid 
@@ -95,7 +93,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
         const reg = selectedPoint.region || '남해';
         const profile = { '제주': 18.2, '남해': 16.5, '동해': 14.2, '서해': 11.8 };
         const baseSst = profile[reg] || 16.0;
-        const seed = (selectedPoint.id % 10 - 5) / 10;
+        const seed = (parseInt(selectedPoint.id) % 10 - 5) / 10 || 0;
         const finalSst = (baseSst + seed).toFixed(1);
 
         setMarineData({
@@ -113,7 +111,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
       // 현장 CCTV/라이브 데이터 조회 (비동기 병렬)
       try {
         setCctvLoading(true);
-        const cctvResp = await axios.get(`${API}/api/weather/cctv?stationId=${sid}`);
+        const cctvResp = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
         setCctvData(cctvResp.data);
       } catch (err) {
         console.error('CCTV Load Error:', err);
@@ -123,8 +121,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
 
       // 쇼핑 아이템 조회 (비동기 병렬)
       try {
-        const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' 채비' : '낚시용품';
-        const shopResp = await axios.get(`${API}/api/commerce/coupang/search?keyword=${encodeURIComponent(keyword)}&limit=3`);
+        const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' \ucc44\ube44' : '\ub099\uc2dc\uc6a9\ud488';
+        const shopResp = await apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(keyword)}&limit=3`);
         if (shopResp.data && shopResp.data.products) {
           setShoppingItems(shopResp.data.products.slice(0, 3));
         }
@@ -134,7 +132,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
     };
 
     loadData();
-  }, [selectedPoint]);
+  }, [selectedPoint?.id]); // selectedPoint 변경 시에만 재조회 (user 의존성 제거)
 
   if (!selectedPoint) return null;
 
@@ -242,10 +240,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                 현장의 파도와 분위기를 1초 단위로 <br/> 파악할 수 있는 인라인 라이브 시스템입니다.
               </div>
               <button 
-                onClick={() => navigate('/subscribe')}
+                onClick={() => navigate('/vvip-subscribe')}
                 style={{ background: 'linear-gradient(135deg, #FF3B30, #D32F2F)', color: '#fff', border: 'none', borderRadius: '30px', padding: '10px 28px', fontSize: '13px', fontWeight: '950', cursor: 'pointer', boxShadow: '0 6px 20px rgba(255,59,48,0.4)' }}
               >
-                LITE 플랜 업그레이드
+                LITE \ud50c\ub79c \uc5c5\uadf8\ub808\uc774\ub4dc
               </button>
             </div>
           )}

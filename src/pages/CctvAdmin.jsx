@@ -4,7 +4,7 @@ import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { Tv, Edit3, Check, X, RotateCcw, ArrowLeft, Youtube, Image, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import apiClient from '../api/index';
 
 const REGION_COLORS = {
   '강원': '#1565C0',
@@ -26,9 +26,10 @@ export default function CctvAdmin() {
   const [loading, setLoading] = useState(true);
   const [editingCode, setEditingCode] = useState(null);
   const [editValues, setEditValues] = useState({ youtubeId: '', type: 'youtube', label: '' });
-  const [saving, setSaving] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [previewCode, setPreviewCode] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null); // { title, message, danger, onConfirm }
+  const [saving,       setSaving]       = useState(false);
+  const [syncing,      setSyncing]      = useState(false);
+  const [previewCode,  setPreviewCode]  = useState(null);
 
   // 마스터 권한 체크
   useEffect(() => {
@@ -40,13 +41,10 @@ export default function CctvAdmin() {
   const fetchList = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/api/admin/cctv`, {
-        headers: { 'x-admin-id': 'sunjulab' },
-      });
-      const data = await res.json();
-      setCctvList(data.list || []);
+      const res = await apiClient.get('/api/admin/cctv');
+      setCctvList(res.data.list || []);
     } catch (err) {
-      addToast('CCTV 목록 불러오기 실패', 'error');
+      addToast('CCTV \ubaa9\ub85d \ubd88\ub7ec\uc624\uae30 \uc2e4\ud328', 'error');
     } finally {
       setLoading(false);
     }
@@ -86,12 +84,8 @@ export default function CctvAdmin() {
         body.youtubeId = '';
       }
 
-      const res = await fetch(`${API}/api/admin/cctv/${obsCode}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-admin-id': 'sunjulab' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
+      const res = await apiClient.put(`/api/admin/cctv/${obsCode}`, body);
+      const data = res.data;
       if (data.success) {
         addToast(`✅ ${obsCode} 저장 완료!`, 'success');
         cancelEdit();
@@ -106,59 +100,66 @@ export default function CctvAdmin() {
     }
   };
 
-  const resetOverride = async (obsCode) => {
-    if (!window.confirm(`${obsCode}을 기본값으로 초기화할까요?`)) return;
-    try {
-      await fetch(`${API}/api/admin/cctv/${obsCode}`, {
-        method: 'DELETE',
-        headers: { 'x-admin-id': 'sunjulab' },
-      });
-      addToast(`${obsCode} 기본값으로 복원됨`, 'success');
-      fetchList();
-    } catch {
-      addToast('초기화 실패', 'error');
-    }
+  const resetOverride = (obsCode) => {
+    setConfirmModal({
+      title: '기본값으로 복원',
+      message: `${obsCode}의 설정을 초기화하고\n기본 해양수산부(MOF) 영상으로 복원할까요?`,
+      onConfirm: async () => {
+        try {
+          await apiClient.delete(`/api/admin/cctv/${obsCode}`);
+          addToast(`${obsCode} 기본값으로 복원됨`, 'success');
+          fetchList();
+        } catch {
+          addToast('초기화 실패', 'error');
+        }
+      },
+    });
   };
 
-  const autoSyncCctvs = async () => {
-    if (!window.confirm('유튜브 API를 사용하여 모든 지역의 라이브 URL을 최신화하시겠습니까?\n(YouTube Data API 쿼터가 소모됩니다)')) return;
-    try {
-      setSyncing(true);
-      const res = await fetch(`${API}/api/admin/cctv/auto-sync`, {
-        method: 'POST',
-        headers: { 'x-admin-id': 'sunjulab' },
-      });
-      const data = await res.json();
-      if (data.success) {
-        addToast(`✅ ${data.updatedCount}개 지역 실시간 영상 갱신 완료!`, 'success');
-        fetchList();
-      } else {
-        addToast(data.error || '자동 동기화에 실패했습니다.', 'error');
-      }
-    } catch (err) {
-      addToast('네트워크 오류', 'error');
-    } finally {
-      setSyncing(false);
-    }
+  const autoSyncCctvs = () => {
+    setConfirmModal({
+      title: 'YouTube 자동 갱신',
+      message: `유튜브 API를 사용하여 모든 지역의 라이브 URL을 최신화합니다.\nYouTube Data API 쿼터가 소모됩니다. 계속할까요?`,
+      onConfirm: async () => {
+        try {
+          setSyncing(true);
+          const res = await apiClient.post('/api/admin/cctv/auto-sync', {});
+          const data = res.data;
+          if (data.success) {
+            addToast(`✅ ${data.updatedCount}개 지역 실시간 영상 갱신 완료!`, 'success');
+            fetchList();
+          } else {
+            addToast(data.error || '자동 동기화에 실패했습니다.', 'error');
+          }
+        } catch {
+          addToast('네트워크 오류', 'error');
+        } finally {
+          setSyncing(false);
+        }
+      },
+    });
   };
 
-  const handleResetAll = async () => {
-    if (!window.confirm('모든 사용자 지정 CCTV 설정을 삭제하고 시스템 기본값(해양수산부 연안침식 모니터링)으로 복원하시겠습니까?')) return;
-    try {
-      const res = await fetch(`${API}/api/admin/cctv/reset-all`, {
-        method: 'POST',
-        headers: { 'x-admin-id': 'sunjulab' }
-      });
-      const data = await res.json();
-      if (data.success) {
-        addToast(data.message, 'success');
-        fetchList(); // 새로고침
-      } else {
-        addToast(data.error || '초기화 실패', 'error');
-      }
-    } catch (err) {
-      addToast('서버 오류로 초기화 실패', 'error');
-    }
+  const handleResetAll = () => {
+    setConfirmModal({
+      title: '⚠️ 전체 설정 초기화',
+      message: `모든 사용자 지정 CCTV 설정을 삭제하고\n해양수산부(MOF) 기본값으로 복원합니다.\n\n이 작업은 되돌릴 수 없습니다.`,
+      danger: true,
+      onConfirm: async () => {
+        try {
+          const res = await apiClient.post('/api/admin/cctv/reset-all', {});
+          const data = res.data;
+          if (data.success) {
+            addToast(data.message, 'success');
+            fetchList();
+          } else {
+            addToast(data.error || '초기화 실패', 'error');
+          }
+        } catch {
+          addToast('서버 오류로 초기화 실패', 'error');
+        }
+      },
+    });
   };
 
   const getEmbedUrl = (youtubeId) =>
@@ -168,7 +169,49 @@ export default function CctvAdmin() {
 
   return (
     <div className="page-container" style={{ backgroundColor: '#0A0F1C', minHeight: '100vh', paddingBottom: '40px' }}>
-      {/* 헤더 */}
+
+      {/* ── 커스텀 확인 모달 ── */}
+      {confirmModal && (
+        <div style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }}>
+          <div style={{
+            backgroundColor: '#141824', borderRadius: '24px', padding: '28px 24px',
+            width: '100%', maxWidth: '340px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
+            border: `1.5px solid ${confirmModal.danger ? 'rgba(255,59,48,0.4)' : 'rgba(255,215,0,0.25)'}`,
+          }}>
+            <div style={{ fontSize: '18px', fontWeight: '950', color: '#fff', marginBottom: '12px' }}>
+              {confirmModal.title}
+            </div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.7', whiteSpace: 'pre-line', marginBottom: '24px' }}>
+              {confirmModal.message}
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setConfirmModal(null)}
+                style={{ flex: 1, padding: '13px', background: 'rgba(255,255,255,0.07)', border: 'none', borderRadius: '14px', color: 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setConfirmModal(null); confirmModal.onConfirm(); }}
+                style={{
+                  flex: 1.5, padding: '13px', border: 'none', borderRadius: '14px',
+                  background: confirmModal.danger
+                    ? 'linear-gradient(135deg, #FF3B30, #C0392B)'
+                    : 'linear-gradient(135deg, #FFD700, #FFA000)',
+                  color: confirmModal.danger ? '#fff' : '#1A1A2E',
+                  fontSize: '14px', fontWeight: '900', cursor: 'pointer',
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'rgba(10,15,28,0.95)', backdropFilter: 'blur(20px)',
