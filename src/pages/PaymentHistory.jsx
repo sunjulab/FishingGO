@@ -1,23 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, CheckCircle2, XCircle, Clock, RefreshCw, TrendingUp } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
+// ✅ NEW-C4: 결제 관련 공유 상수 사용 (AdminDashboard와 중복 선언 제거)
+import { PG_LABEL_FULL as PG_LABEL, PLAN_LABEL } from '../constants/payment';
 
-const PG_LABEL = { kakaopay: '💛 카카오페이', naverpay: '🟢 네이버페이', tosspayments: '💙 토스페이먼츠', card: '💳 카드' };
+// STATUS_CONFIG: PaymentHistory 전용 상태별 표시 설정
 const STATUS_CONFIG = {
   paid:      { label: '결제 완료', color: '#00C48C', icon: CheckCircle2 },
   failed:    { label: '결제 실패', color: '#FF3B30', icon: XCircle     },
   refunded:  { label: '환불 완료', color: '#8E8E93', icon: RefreshCw   },
   cancelled: { label: '취소',      color: '#FF9B26', icon: XCircle     },
 };
-const PLAN_LABEL = { LITE: 'LITE 멤버십', PRO: 'PRO 멤버십', VVIP: 'VVIP 항구 독점' };
 
 export default function PaymentHistory() {
   const navigate = useNavigate();
-  const { user } = useUserStore();
+  const user = useUserStore((s) => s.user); // ✅ 15TH-B4: 전체 구독 → 선택적 구독 (8TH-A2 패턴)
   const addToast = useToastStore(s => s.addToast);
+
 
   const [history, setHistory] = useState([]);
   const [subscription, setSubscription] = useState(null);
@@ -25,14 +27,16 @@ export default function PaymentHistory() {
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
-  useEffect(() => {
-    if (!user) { navigate('/login'); return; }
-    fetchData();
-  }, [user]);
-
-  const fetchData = async () => {
+  // ✅ 6TH-B5: fetchData useCallback — useEffect보다 먼저 선언, deps에 안전하게 포함
+  const fetchData = useCallback(async () => {
     setLoading(true);
-    const userId = user.email || user.id;
+    const userId = user?.email || user?.id;
+    // ENH5-A3: userId 빈값 guard — 빈 userId로 API 호출 시 보안 위험 방지
+    if (!userId) {
+      addToast('사용자 정보를 확인할 수 없습니다.', 'error');
+      setLoading(false);
+      return;
+    }
     try {
       const [histRes, subRes] = await Promise.all([
         apiClient.get(`/api/payment/history?userId=${encodeURIComponent(userId)}`),
@@ -45,13 +49,22 @@ export default function PaymentHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.email, user?.id, addToast]);
+
+  useEffect(() => {
+    // ENH5-A2: user null 시 early return — 컴포넌트 렌더 전 navigate 코드패스 방지
+    if (!user) { navigate('/login', { replace: true }); return; }
+    fetchData();
+  }, [user?.email, fetchData]); // ✅ 6TH-B5: fetchData deps 추가
+
 
   const handleCancel = async () => {
     try {
-      const userId = user.email || user.id;
+      // ✅ 6TH-B6: user?.email 옵셔널 체이닝 — null guard 추가
+      const userId = user?.email || user?.id;
+      if (!userId) { addToast('사용자 정보를 확인할 수 없습니다.', 'error'); return; }
       await apiClient.delete(`/api/payment/subscription/${encodeURIComponent(userId)}`, {
-        data: { reason: cancelReason || '사용자 직접 취소' }
+        data: { reason: cancelReason.trim() || '사용자 직접 취소' } // ✅ 6TH-C5: trim() 추가
       });
       addToast('구독이 취소되었습니다. 현재 기간 종료 후 해지됩니다.', 'success');
       setSubscription(prev => ({ ...prev, status: 'cancelled' }));
@@ -61,7 +74,13 @@ export default function PaymentHistory() {
     }
   };
 
-  const totalPaid = history.filter(h => h.status === 'paid').reduce((s, h) => s + h.amount, 0);
+  // ENH5-B3: useMemo 메모이제이션 — 매 렌더마다 filter/reduce 반복 제거
+  const totalPaid = useMemo(
+    () => history.filter(h => h.status === 'paid').reduce((s, h) => s + h.amount, 0),
+    [history]
+  );
+  // ✅ NEW-B8: paidCount도 useMemo 로 연산 — L154 인라인 filter 반복 제거
+  const paidCount = useMemo(() => history.filter(h => h.status === 'paid').length, [history]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#0E0E1A', color: '#fff', fontFamily: 'Pretendard, sans-serif', paddingBottom: '40px' }}>
@@ -140,7 +159,7 @@ export default function PaymentHistory() {
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             {[
               { label: '총 결제', value: `${totalPaid.toLocaleString()}원`, icon: TrendingUp, color: '#00C48C' },
-              { label: '결제 횟수', value: `${history.filter(h=>h.status==='paid').length}회`, icon: CreditCard, color: '#64B5F6' },
+              { label: '결제 횟수', value: `${paidCount}회`, icon: CreditCard, color: '#64B5F6' },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <Icon size={16} color={color} style={{ marginBottom: '6px' }} />
@@ -151,8 +170,11 @@ export default function PaymentHistory() {
           </div>
         )}
 
-        {/* 내역 리스트 */}
-        <div style={{ marginBottom: '10px', fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)' }}>결제 내역</div>
+        {/* 내역 리스트 — 타임라인 스타일 */}
+        <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '3px', height: '16px', background: 'linear-gradient(180deg, #FFD700, #FF9B26)', borderRadius: '2px' }} />
+          <span style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)' }}>결제 타임라인</span>
+        </div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.3)' }}>
             <Clock size={32} style={{ marginBottom: '12px' }} /><br />불러오는 중...
@@ -163,31 +185,56 @@ export default function PaymentHistory() {
             <p style={{ margin: 0, fontWeight: '700' }}>결제 내역이 없습니다.</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {/* 타임라인 수직선 */}
+            <div style={{ position: 'absolute', left: '18px', top: '20px', bottom: '20px', width: '2px', background: 'linear-gradient(180deg, rgba(255,215,0,0.4), rgba(255,255,255,0.05))', borderRadius: '1px' }} />
             {history.map((item, i) => {
               const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.paid;
               const Icon = cfg.icon;
+              const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '-';
               return (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '14px', padding: '14px 16px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: `${cfg.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={18} color={cfg.color} />
+                <div key={item._id || item.merchant_uid || i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '14px', position: 'relative' }}>
+                  {/* 타임라인 점 */}
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                    background: `${cfg.color}20`, border: `2px solid ${cfg.color}60`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 1, boxShadow: `0 0 10px ${cfg.color}30`,
+                  }}>
+                    <Icon size={16} color={cfg.color} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff', marginBottom: '2px' }}>
-                      {PLAN_LABEL[item.planId] || item.planId || '구독 결제'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
-                      {PG_LABEL[item.pgProvider] || item.pgProvider} · {new Date(item.createdAt).toLocaleDateString('ko-KR')}
+                  {/* 카드 */}
+                  <div style={{
+                    flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: '16px',
+                    padding: '14px 16px', border: `1px solid ${cfg.color}20`,
+                    transition: 'background 0.15s',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff', marginBottom: '2px' }}>
+                          {PLAN_LABEL[item.planId] || item.planId || '구독 결제'}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>
+                          {PG_LABEL[item.pgProvider] || item.pgProvider} · {dateStr}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '950', color: item.status === 'paid' ? '#fff' : cfg.color }}>
+                          {item.status === 'refunded' ? '-' : ''}{item.amount?.toLocaleString()}원
+                        </div>
+                        <div style={{
+                          fontSize: '9px', fontWeight: '900', color: cfg.color,
+                          background: `${cfg.color}15`, padding: '2px 7px',
+                          borderRadius: '10px', border: `1px solid ${cfg.color}30`,
+                          display: 'inline-block', marginTop: '3px',
+                        }}>{cfg.label}</div>
+                      </div>
                     </div>
                     {item.failReason && (
-                      <div style={{ fontSize: '10px', color: '#FF5A5F', fontWeight: '700', marginTop: '2px' }}>사유: {item.failReason}</div>
+                      <div style={{ fontSize: '10px', color: '#FF5A5F', fontWeight: '700', marginTop: '4px', padding: '4px 8px', background: 'rgba(255,90,95,0.1)', borderRadius: '6px' }}>
+                        ⚠ 사유: {item.failReason}
+                      </div>
                     )}
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '15px', fontWeight: '950', color: item.status === 'paid' ? '#fff' : cfg.color }}>
-                      {item.status === 'refunded' ? '-' : ''}{item.amount?.toLocaleString()}원
-                    </div>
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: cfg.color, marginTop: '2px' }}>{cfg.label}</div>
                   </div>
                 </div>
               );

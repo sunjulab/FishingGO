@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react'; // ✅ 16TH-C1: useRef 추가
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, Image, MapPin, Send, ChevronDown, CheckCircle2, Scan } from 'lucide-react';
 import { RewardGateModal } from '../components/AdUnit';
 import { useToastStore } from '../store/useToastStore';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import apiClient from '../api/index';
 import { fileToCompressedBase64 } from '../utils/imageUtils';
 
@@ -20,17 +20,35 @@ export default function WritePost() {
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdGate, setShowAdGate] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false); // ✅ BUG-58: DOM 직접조작 → state 교체
+  const [showDraftBanner, setShowDraftBanner] = useState(false); // 임시저장 복원 배너
+  const imageInputRef = useRef(null); // ✅ 16TH-C1: DOM 직접 접근 제거 — useRef 패턴
 
   const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
   const addToast = useToastStore((state) => state.addToast);
+  const userTier = useUserStore((state) => state.userTier);
+  const storeUser = useUserStore((state) => state.user);
+  // ✅ 16TH-B1: canAccessPremium() 함수 셋렉터 호출 → userTier 기반 직접 판별 (Zustand memoization 정상 작동)
+  const canAccessPremium = useMemo(() => {
+    const u = storeUser;
+    if (u?.id === ADMIN_ID || u?.email === ADMIN_EMAIL) return true;
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
+  }, [userTier, storeUser?.id, storeUser?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ✅ 16TH-B1: user 전체 구독 제거 — user 객체를 별도 셀렉터로 분리
   const user = useUserStore((state) => state.user);
-  const canAccessPremium = useUserStore((state) => state.canAccessPremium());
-  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  // ✅ FIX-ADMIN: isAdmin 4중 보장 (id/email-gmail/email-id/tier)
+  const isAdmin = useUserStore((s) =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === ADMIN_ID ||
+    s.userTier === 'MASTER'
+  );
   const isNoticeType = postType === 'notice';
   const isBusinessLite = canAccessPremium;
   const isEditMode = !!editId;
 
   // 수정 모드: 기존 데이터 불러오기
+  // ✅ NEW-B2: isNoticeType deps 추가 — type 쿼리 변경 시 stale 데이터 방지
   useEffect(() => {
     if (!isEditMode) return;
     const endpoint = isNoticeType
@@ -42,73 +60,116 @@ export default function WritePost() {
         setTitle(res.data.title || '');
         setCategory(res.data.category || '전체');
       })
-      .catch(() => {});
-  }, [editId]);
+      .catch((err) => {
+        // ✅ 24TH-B3: silent catch → 에러 피드백 추가 (19TH-B1 패턴)
+        if (!import.meta.env.PROD) console.warn('[WritePost] 수정 데이터 로드 실패:', err?.message);
+        addToast('게시글 정보를 불러오지 못했습니다.', 'error');
+      });
+  }, [editId, isNoticeType]);
+
+  // ✅ 6TH-B3: DRAFT_KEY useMemo — 매 렌더마다 재정의 방지 (postType이 렌더 중 불변)
+  const DRAFT_KEY = useMemo(() => `draft_post_${postType}`, [postType]);
+
+  useEffect(() => {
+    if (isEditMode || isNoticeType) return; // 수정모드·공지는 draft 비활성화
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (saved && saved.trim().length > 0) setShowDraftBanner(true);
+  }, [DRAFT_KEY, isEditMode, isNoticeType]);
+
+  // ✅ DRAFT-2: 내용 변경 시 자동 저장 (500ms debounce)
+  useEffect(() => {
+    if (isEditMode || isNoticeType) return;
+    const timer = setTimeout(() => {
+      if (content.trim().length > 0) {
+        localStorage.setItem(DRAFT_KEY, content);
+      } else {
+        localStorage.removeItem(DRAFT_KEY);
+        setShowDraftBanner(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [content, isEditMode, isNoticeType]);
 
   // 공지사항 페이지에 비마스터가 접근하면 즉시 차단
-  React.useEffect(() => {
+  // ✅ 6TH-C3: React.useEffect → useEffect 통일 (L37, L60과 일관성)
+  useEffect(() => {
     if (isNoticeType && !isAdmin) {
       addToast('❌ 공지사항은 운영자(마스터)만 작성할 수 있습니다.', 'error');
       navigate('/community');
     }
-  }, [isNoticeType, isAdmin]);
+  }, [isNoticeType, isAdmin, addToast, navigate]);
 
 
   // '등록' 버튼 클릭 시
   const handlePostClick = () => {
-    if (!content) return;
+    // ✅ FIX: GUEST 비회원 최선단 차단 — doPost/AdGate 진입 전 방어
+    if (!user || user.id === 'GUEST') {
+      addToast('로그인이 필요합니다. 마이페이지에서 로그인해주세요.', 'error');
+      return;
+    }
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return addToast('내용을 입력해주세요.', 'error');
+    if (trimmedContent.length > 2000) return addToast('게시글은 2,000자 이하로 작성해주세요.', 'error');
     if (isNoticeType && !title.trim()) { addToast('제목을 입력해주세요.', 'error'); return; }
     if (isBusinessLite) { doPost(); } else { setShowAdGate(true); }
   };
 
+
   const doPost = async () => {
     setIsSubmitting(true);
-    const storedUser = JSON.parse(localStorage.getItem('user')) || { name: '주문진낚시꾼' };
+    const storedUser = user;
+    // ✅ FIX: 비회원(GUEST) 글쓰기 차단 — storedUser null 체크 + GUEST id 체크 이중 방어
+    if (!storedUser || storedUser.id === 'GUEST') {
+      addToast('로그인이 필요합니다. 마이페이지에서 로그인해주세요.', 'error');
+      setIsSubmitting(false);
+      return;
+    }
     try {
       if (isNoticeType) {
         const method = isEditMode ? 'put' : 'post';
         const url = isEditMode ? `/api/community/notices/${editId}` : `/api/community/notices`;
-        await apiClient[method](url, {
-          title: title.trim(), content, isPinned: false,
-          adminId: storedUser.email || storedUser.id || storedUser.name,
-        });
+        // ✅ POPUP: 공지 이미지를 payload에 포함 — 첫 이미지가 앱 시작 팝업 이미지로 자동 사용
+        // image는 1MB 이하로 제한 (base64 DB 저장 MongoDB 용량 대비)
+        const safeNoticeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
+        // ✅ BUG-41: 수정 모드에서 isPinned를 false로 덮어쓰지 않도록 제거
+        const noticePayload = isEditMode
+          ? { title: title.trim(), content, image: safeNoticeImage }
+          : { title: title.trim(), content, isPinned: false, image: safeNoticeImage };
+        await apiClient[method](url, noticePayload);
         addToast(isEditMode ? '📢 공지사항이 수정되었습니다!' : '📢 공지사항이 등록되었습니다!', 'success');
         navigate(isEditMode ? -1 : '/community?tab=notice');
+
       } else {
         const method = isEditMode ? 'put' : 'post';
         const url = isEditMode ? `/api/community/posts/${editId}` : `/api/community/posts`;
         // 이미지가 1MB 초과면 제외하고 전송 (MongoDB 16MB 제한 대비)
         const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
         const body = isEditMode
-          ? { content, category, email: storedUser.email, adminId: storedUser.email || storedUser.name }
+          ? { content, category, email: storedUser.email }
           : { author: storedUser.name, author_email: storedUser.email, category, content, image: safeImage };
         await apiClient[method](url, body);
+        // ✅ DRAFT-3: 등록 성공 시 draft 삭제
+        if (!isEditMode) localStorage.removeItem(DRAFT_KEY);
         // EXP 서버 등록
         if (!isEditMode) {
           const userId = storedUser.email || storedUser.id;
-          if (userId) apiClient.post('/api/user/exp', { userId, action: 'post_write' }).catch(() => {});
+          if (userId) apiClient.post('/api/user/exp', { userId, action: 'post_write' }).catch(() => { });
         }
         addToast(isEditMode ? '✅ 게시글이 수정되었습니다!' : '게시글이 등록되었습니다! 🎉', 'success');
         navigate(isEditMode ? -1 : '/community?tab=open');
       }
     } catch (err) {
-      console.error('Post error:', err);
-      const status = err.response?.status;
-      // 5xx: 서버가 응답했으므로 저장되었을 가능성이 높음 → 성공으로 처리
-      if (status >= 500) {
-        addToast(isEditMode ? '✅ 수정되었습니다!' : '게시글이 등록되었습니다! 🎉', 'success');
-        navigate(isEditMode ? -1 : (isNoticeType ? '/community?tab=notice' : '/community?tab=open'));
-      } else {
-        const msg = err.response?.data?.error || '등록 실패. 서버를 확인해주세요.';
-        addToast(msg, 'error');
-      }
+      // ENH3-A4: 프로덕션에서 콘솔 스택 트레이스 노출 방지
+      if (!import.meta.env.PROD) console.error('Post error:', err);
+      const msg = err.response?.data?.error || '등록 실패. 서버를 확인해주세요.';
+      addToast(msg, 'error');
     } finally { setIsSubmitting(false); }
   };
 
   const handleSubscribe = () => {
     setShowAdGate(false);
     addToast('비즈니스 라이트 구독 페이지로 이동합니다.', 'info');
-    navigate('/subscribe?plan=business_lite');
+    navigate('/vvip-subscribe');
   };
 
   return (
@@ -122,11 +183,11 @@ export default function WritePost() {
           {isNoticeType ? '📢 공지사항 작성' : postType === 'business' ? '선상 배 홍보 등록' : '새 조황 공유하기'}
         </h2>
         <button
-          disabled={!content || isSubmitting}
+          disabled={!content.trim() || isSubmitting}
           style={{
             border: 'none',
-            background: content ? '#0056D2' : '#f0f0f0',
-            color: content ? '#fff' : '#bbb',
+            background: content.trim() ? '#0056D2' : '#f0f0f0',
+            color: content.trim() ? '#fff' : '#bbb',
             padding: '6px 16px',
             borderRadius: '20px',
             fontSize: '13px',
@@ -160,6 +221,40 @@ export default function WritePost() {
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)' }}>광고 없이 무제한 등록 (홍보글 제외)</div>
             </div>
             <div style={{ marginLeft: 'auto', fontSize: '18px' }}>›</div>
+          </div>
+        )}
+
+        {/* ✅ DRAFT 임시저장 복원 배너 */}
+        {showDraftBanner && (
+          <div style={{
+            background: 'linear-gradient(135deg, #FFF3CD, #FFFBE6)',
+            border: '1.5px solid #FFD60A',
+            borderRadius: '14px', padding: '12px 16px',
+            display: 'flex', alignItems: 'center', gap: '10px',
+            marginBottom: '14px',
+          }}>
+            <div style={{ fontSize: '20px' }}>📝</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: '900', color: '#7A5900' }}>임시저장된 글이 있습니다</div>
+              <div style={{ fontSize: '11px', color: '#A07010', marginTop: '2px' }}>이전에 작성하다 중단된 내용을 복원할 수 있습니다.</div>
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => {
+                  const saved = localStorage.getItem(DRAFT_KEY);
+                  if (saved) { setContent(saved); addToast('✅ 임시저장 내용을 복원했습니다.', 'success'); }
+                  setShowDraftBanner(false);
+                }}
+                style={{ padding: '6px 12px', borderRadius: '10px', border: 'none', background: '#FFD60A', color: '#1A1A2E', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+              >복원</button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem(DRAFT_KEY);
+                  setShowDraftBanner(false);
+                }}
+                style={{ padding: '6px 10px', borderRadius: '10px', border: '1px solid #E5E5EA', background: '#fff', color: '#8E8E93', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+              >삭제</button>
+            </div>
           </div>
         )}
 
@@ -204,15 +299,16 @@ export default function WritePost() {
           zIndex: 200,
         }}>
           <div
-            onClick={() => document.getElementById('image-upload-input').click()}
+            onClick={() => imageInputRef.current?.click()} // ✅ 16TH-C1: document.getElementById → useRef
             style={{ display: 'flex', alignItems: 'center', gap: '8px', color: image ? '#0056D2' : '#666', fontSize: '14px', cursor: 'pointer' }}
           >
-            <input id="image-upload-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+            <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
               const file = e.target.files[0];
+              e.target.value = ''; // 동일 파일 재선택 가능하도록 초기화
               if (file) {
                 setImageLoading(true);
                 try {
-                  const compressed = await fileToCompressedBase64(file, { maxWidth: 800, maxHeight: 800, quality: 0.75 });
+                  const compressed = await fileToCompressedBase64(file, { maxWidth: 800, maxHeight: 800, quality: 0.80, preset: 'post' });
                   setImage(compressed);
                 } catch (err) {
                   const reader = new FileReader();
@@ -228,25 +324,40 @@ export default function WritePost() {
             </div>
             <span style={{ fontWeight: '600' }}>{imageLoading ? '사진 처리 중...' : image ? '사진 추가됨' : '사진 추가'}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '14px' }}>
+          {/* ENH3-B1: 위치 추가 준비 중 토스트 피드백 추가 */}
+          <div
+            onClick={() => addToast('📍 위치 추가 기능은 준비 중입니다.', 'info')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '14px', cursor: 'pointer' }}
+          >
             <div style={{ width: '36px', height: '36px', backgroundColor: '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MapPin size={20} /></div>
             <span style={{ fontWeight: '600' }}>위치 추가</span>
           </div>
           <div
-            onClick={() => {
-              if (!image) { alert('사진을 먼저 올려주세요.'); return; }
-              const btn = document.getElementById('ai-btn-text');
-              if (btn) btn.innerText = 'AI 판별 중...';
-              setTimeout(() => {
-                setContent((prev) => prev + '\n\n🤖 [AI 어종 판별 결과]\n- 어종: 감성돔 (확률 98%)\n- 예상 길이: 약 45~50cm\n- 기상 데이터 연동 매핑 완료');
-                setCategory('찌낚시');
-                if (btn) { btn.innerText = 'AI 분석 완료 ✨'; btn.style.color = '#00C48C'; }
-              }, 2000);
+            onClick={async () => {
+              if (!image) { addToast('사진을 먼저 올려주세요.', 'error'); return; }
+              setAiAnalyzing(true);
+              const sampleText = '\n\n🤖 [AI 샘플 분석 — 실제 연동 준비 중]\n- 어종: 감성돔 (참고용 예시)\n- 예상 길이: 약 45~50cm\n- 기상 데이터 연동 매핑 완료\n※ 현재 AI 기능은 샘플 모드입니다. 정확한 분석은 추후 업데이트됩니다.';
+              // ENH3-B2: 서버 /api/ai/analyze 우선 시도 — 실패 시 샘플 fallback
+              try {
+                const res = await apiClient.post('/api/ai/analyze', { image }, { timeout: 15000 });
+                if (res.data?.text) {
+                  setContent((prev) => prev + '\n\n🤖 [AI 자동 일지]\n' + res.data.text);
+                } else {
+                  setContent((prev) => prev + sampleText);
+                }
+              } catch {
+                // AI 서비스 미연동 또는 실패 시 샘플 텍스트 삽입
+                setContent((prev) => prev + sampleText);
+              } finally {
+                setAiAnalyzing(false);
+              }
             }}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1565C0', fontSize: '13px', cursor: 'pointer', background: 'rgba(21,101,192,0.1)', padding: '6px 12px', borderRadius: '16px', marginLeft: 'auto', border: '1px solid rgba(21,101,192,0.3)' }}
           >
             <Scan size={16} />
-            <span id="ai-btn-text" style={{ fontWeight: '800' }}>AI 자동 일지</span>
+            <span style={{ fontWeight: '800', color: aiAnalyzing ? '#FF9B26' : undefined }}>
+              {aiAnalyzing ? 'AI 판별 중...' : 'AI 자동 일지'}
+            </span>
           </div>
         </div>
 

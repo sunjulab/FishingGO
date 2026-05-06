@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, X, Check } from 'lucide-react';
 
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A3: ADMIN_ID/EMAIL import
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 60)  return '방금 전';
+  if (diff < 60) return '방금 전';
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
   return `${Math.floor(diff / 86400)}일 전`;
@@ -41,15 +41,31 @@ export default function PostDetail() {
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
-  const effectiveUser = user; // 편의 alias — user가 정의되지 않은 경우 null
-  const isAuthor = post && user && (post.author_email === user.email || post.author === user.name);
+  // ✅ 11TH-A3: state.isAdmin() 셉렉터 → ADMIN_ID/EMAIL 직접 비교 (3RD-A2 표준으로 통일)
+  const isAdmin = useUserStore((state) =>
+    state.user?.id === ADMIN_ID || state.user?.email === ADMIN_EMAIL
+  );
+  // ✅ NEW-C3: effectiveUser dead alias 제거 — user 직접 사용
+  const isAuthor = post && user && post.author_email === user.email;
   const canEdit = isAdmin || isAuthor;
 
+  // ENH4-C3: deleteComment 로컬 롤백 최적화 — fetchPost() 전체 재로드 제거
+  const deleteComment = async (commentId) => {
+    const originalComments = post?.comments ? [...post.comments] : [];
+    try {
+      // Optimistic UI: 즉시 제거
+      setPost(prev => ({ ...prev, comments: originalComments.filter(c => (c._id?.toString() || c.id) !== commentId) }));
+      await apiClient.delete(`/api/community/posts/${id}/comments/${commentId}`);
+    } catch (err) {
+      addToast(err.response?.data?.error || '삭제 실패했습니다.', 'error');
+      // ENH4-C3: 로컬 댓글 상태만 복원 (fetchPost() 전체 재로드 제거)
+      setPost(prev => ({ ...prev, comments: originalComments }));
+    }
+  };
 
-  useEffect(() => { fetchPost(); }, [id]);
 
-  const fetchPost = async () => {
+  // ✅ 24TH-B1: fetchPost를 useCallback으로 감싸 — eslint-disable-line 없이 useEffect deps에 안전하게 포함 (23TH-C4 NoticeDetail 패턴)
+  const fetchPost = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const res = await apiClient.get(`/api/community/posts/${id}`);
@@ -62,38 +78,65 @@ export default function PostDetail() {
       if (err.response?.status === 404) setError('게시글을 찾을 수 없습니다.');
       else setError('네트워크 오류가 발생했습니다.');
     } finally { setLoading(false); }
-  };
+  }, [id, user?.email, addToast]);
+
+  // ✅ NEW-A4: user?.email deps 추가 — 로그인 직후 likedBy stale 방지
+  // ✅ 24TH-B1: fetchPost가 useCallback으로 안정화되어 eslint-disable 없이 deps 포함
+  useEffect(() => { fetchPost(); }, [fetchPost]);
 
   const handleLike = async () => {
     if (user?.id === 'GUEST') { addToast('로그인이 필요한 기능입니다.', 'error'); return; }
-    if (liked) return;
+    if (liked) { addToast('이미 좋아요를 눌렀습니다. ❤️', 'info'); return; }
+
+    // ✅ Optimistic UI — 즉시 반영
+    setLiked(true);
+    setPost(prev => ({ ...prev, likes: (prev?.likes || 0) + 1 }));
+
     try {
-      // email 파라미터 전송 — 서버 좋아요 중복방지 로직 활성화
-      const res = await apiClient.patch(`/api/community/posts/${id}/like`, { email: user?.email });
-      setPost(prev => ({ ...prev, likes: res.data.likes }));
-      setLiked(true);
-    } catch {}
+      const res = await apiClient.patch(`/api/community/posts/${id}/like`);
+      // 서버 실제 likes 수로 정밀 동기화
+      if (typeof res.data?.likes === 'number') {
+        setPost(prev => ({ ...prev, likes: res.data.likes }));
+      }
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 409) {
+        // 서버 기준 이미 좋아요 → liked 상태 유지, likes 수 서버값으로 동기화
+        if (typeof err.response?.data?.likes === 'number') {
+          setPost(prev => ({ ...prev, likes: err.response.data.likes }));
+        }
+        return;
+      }
+      // 401 / 네트워크 오류 → Optimistic 롤백
+      setLiked(false);
+      setPost(prev => ({ ...prev, likes: Math.max((prev?.likes || 1) - 1, 0) }));
+      if (status === 401) addToast('로그인이 필요합니다.', 'error');
+    }
   };
 
   const submitComment = async () => {
+    if (!user) { addToast('로그인이 필요합니다.', 'error'); return; } // BUG-32: null 방어
     if (user?.id === 'GUEST') { addToast('로그인이 필요합니다.', 'error'); return; }
     if (!comment.trim() || submitting) return;
     if (comment.trim().length > 500) { addToast('댓글은 500자 이내로 작성해주세요.', 'error'); return; }
     setSubmitting(true);
     try {
       const res = await apiClient.post(`/api/community/posts/${id}/comments`, {
-        author: effectiveUser.name,
-        author_email: effectiveUser.email || '',
+        author: user.name,
+        author_email: user.email || '',
         text: comment.trim()
       });
 
       setPost(res.data);
       setComment('');
-      const userId = effectiveUser.email || effectiveUser.id;
+      const userId = user.email || user.id;
       if (userId) {
-        apiClient.post('/api/user/exp', { userId, action: 'comment_write' }).catch(() => {});
+        apiClient.post('/api/user/exp', { userId, action: 'comment_write' }).catch(() => { });
       }
-    } catch {} finally { setSubmitting(false); }
+    } catch (err) {
+      // ENH4-B2: 코멘트 등록 실패 시 에러 토스트 노출 (이전: 빈 catch)
+      addToast(err.response?.data?.error || '코멘트 등록에 실패했습니다.', 'error');
+    } finally { setSubmitting(false); }
   };
 
   const openEdit = () => {
@@ -110,7 +153,7 @@ export default function PostDetail() {
       const res = await apiClient.put(`/api/community/posts/${id}`, {
         content: editContent.trim(),
         category: editCategory,
-        email: effectiveUser.email,
+        email: user.email,
       });
       setPost(res.data);
       setShowEditModal(false);
@@ -123,9 +166,7 @@ export default function PostDetail() {
   const handleDelete = async () => {
     try {
       await apiClient.delete(`/api/community/posts/${id}`, {
-        data: {
-          email: effectiveUser.email,
-        }
+        data: { email: user.email }
       });
       addToast('삭제되었습니다.', 'success');
       navigate('/community');
@@ -134,15 +175,15 @@ export default function PostDetail() {
     }
   };
 
-  const handleShare = async () => {
-    const title   = `낚시GO | ${post?.author}님의 조황`;
-    const text    = post?.content?.slice(0, 80) || '낚시GO에서 조황을 확인하세요!';
+  // ✅ NEW-B3: useCallback 적용 — 매 렌더마다 함수 재생성 방지
+  const handleShare = useCallback(async () => {
+    const title = `낚시GO | ${post?.author}님의 조황`;
+    const text = post?.content?.slice(0, 80) || '낚시GO에서 조황을 확인하세요!';
     const pageUrl = window.location.href;
-    const imgUrl  = post?.image?.startsWith('http')
+    const imgUrl = post?.image?.startsWith('http')
       ? post.image
-      : 'https://fishing-go.vercel.app/og-image.png';
+      : `${window.location.origin}/og-image.png`;
 
-    // ① 카카오 공유 (SDK 초기화 완료 시 우선 사용)
     if (window.Kakao?.isInitialized()) {
       try {
         window.Kakao.Share.sendDefault({
@@ -156,23 +197,19 @@ export default function PostDetail() {
           buttons: [{ title: '조황 보러가기', link: { mobileWebUrl: pageUrl, webUrl: pageUrl } }],
         });
         return;
-      } catch(e) { /* 카카오 실패 시 폴백 */ }
+      } catch (e) { /* 카카오 실패 시 폴백 */ }
     }
-
-    // ② Web Share API (모바일 네이티브 공유 시트)
     if (navigator.share) {
       try { await navigator.share({ title, text, url: pageUrl }); return; }
       catch (e) { /* 취소 무시 */ }
     }
-
-    // ③ 클립보드 복사 폴백
     try {
       await navigator.clipboard.writeText(pageUrl);
       addToast('🔗 링크가 클립보드에 복사되었습니다!', 'success');
     } catch {
       addToast('링크 복사에 실패했습니다.', 'error');
     }
-  };
+  }, [post?.author, post?.content, post?.image, addToast]);
 
   if (loading) return (
     <div className="page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
@@ -243,7 +280,14 @@ export default function PostDetail() {
 
           {post.image && (
             <div style={{ width: '100%', maxHeight: '320px', overflow: 'hidden', marginBottom: '4px' }}>
-              <img src={post.image} alt="조황 사진" style={{ width: '100%', height: '320px', objectFit: 'cover', display: 'block' }} />
+              {/* ENH4-A3+B1: lazy loading + blur placeholder */}
+              <img
+                src={post.image}
+                alt="조황 사진"
+                loading="lazy"
+                style={{ width: '100%', height: '320px', objectFit: 'cover', display: 'block', filter: 'blur(4px)', transition: 'filter 0.3s ease' }}
+                onLoad={(e) => { e.target.style.filter = 'none'; }}
+              />
             </div>
           )}
 
@@ -274,7 +318,17 @@ export default function PostDetail() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <span style={{ fontWeight: '800', fontSize: '13px', color: '#1A1A2E' }}>{c.author}</span>
-                    <span style={{ fontSize: '11px', color: '#D0D5E0', fontWeight: '700' }}>{timeAgo(c.createdAt)}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#D0D5E0', fontWeight: '700' }}>{timeAgo(c.createdAt)}</span>
+                      {/* ✅ 본인 또는 어드민에게만 삭제 버튼 표시 */}
+                      {(isAdmin || (user && c.author_email === user.email)) && (
+                        <button
+                          onClick={() => deleteComment(c._id?.toString() || c.id || String(c.createdAt))}
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: '6px', color: '#FF3B30', fontSize: '11px', fontWeight: '900', lineHeight: 1 }}
+                          title="댓글 삭제"
+                        >×</button>
+                      )}
+                    </div>
                   </div>
                   <p style={{ fontSize: '14px', color: '#444', lineHeight: '1.5', margin: 0, fontWeight: '600' }}>{c.text}</p>
                 </div>
@@ -292,7 +346,7 @@ export default function PostDetail() {
           placeholder="칭찬과 응원의 댓글을 남겨주세요 🎣"
           style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', backgroundColor: '#F2F2F7', border: 'none', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#1A1A2E' }}
           value={comment} onChange={e => setComment(e.target.value)}
-          onKeyPress={e => e.key === 'Enter' && submitComment()}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && submitComment()}
         />
         <button onClick={submitComment} disabled={!comment.trim() || submitting}
           style={{ width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0, background: comment.trim() ? '#0056D2' : '#E5E5EA', border: 'none', cursor: comment.trim() ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>

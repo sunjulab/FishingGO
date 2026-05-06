@@ -1,15 +1,104 @@
 services:
+  # ══════════════════════════════════════════════════════════════
+  # 🖥️  프론트엔드 — Vite React (Static Site)
+  # VITE_* 환경변수는 빌드 타임에 번들에 포함됨 (런타임 X)
+  # Render 대시보드 → 해당 서비스 → [Environment] 탭에서 직접 입력
+  # ══════════════════════════════════════════════════════════════
+  - type: web
+    name: fishing-go-frontend
+    env: static
+    rootDir: .                   # 루트에서 vite build 실행
+    buildCommand: npm ci && npm run build  # ✅ 10TH-C4: npm install → npm ci (package-lock.json 기반 재현 가능한 빌드)
+    staticPublishPath: ./dist    # Vite 빌드 결과물 경로
+    pullRequestPreviewsEnabled: false
+    routes:
+      # SPA 라우터 — 모든 경로를 index.html로 폴백
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # ── 백엔드 API 주소 ──────────────────────────────────────
+      # ✅ 배포 후 반드시 실제 Render 백엔드 URL로 변경!
+      # 예: https://fishing-go-backend.onrender.com
+      - key: VITE_API_URL
+        sync: false              # Render 대시보드에서 직접 입력
+      # ── 카카오 SDK ───────────────────────────────────────────
+      # ✅ SEC-04: 하드코딩 제거 후 환경변수 필수화됨
+      # https://developers.kakao.com → 내 애플리케이션 → 앱 키 → JavaScript 키
+      - key: VITE_KAKAO_APP_KEY
+        sync: false
+      # ── 쿠팡 파트너스 ─────────────────────────────────────────
+      # ✅ BUG-59: 하드코딩 제거 후 환경변수 필수화됨
+      # https://partners.coupang.com → 마이페이지 → 파트너스 ID 확인
+      - key: VITE_COUPANG_PARTNERS_ID
+        sync: false
+      # ── KHOA 해양 API (조석/수온/낚시지수) ───────────────────────
+      # ✅ SEC-07: marineApi.js 하드코딩 제거 후 환경변수 필수화됨
+      # https://www.khoa.go.kr/api → 오픈 API → 발급 신청
+      - key: VITE_KHOA_API_KEY
+        sync: false
+      # ── 포트원 결제 (선택) ────────────────────────────────────
+      # https://portone.io → 가맹점 식별코드
+      - key: VITE_PORTONE_MERCHANT_ID
+        sync: false
+      # ── AdSense (선택) ────────────────────────────────────────
+      - key: VITE_ADSENSE_PUB_ID
+        sync: false
+      - key: VITE_ADSENSE_SLOT_BANNER
+        sync: false
+      - key: VITE_ADSENSE_SLOT_NATIVE
+        sync: false
+
+  # ══════════════════════════════════════════════════════════════
+  # ⚙️  백엔드 — Node.js Express API
+  # ══════════════════════════════════════════════════════════════
   - type: web
     name: fishing-go-backend
     env: node
     rootDir: server
-    buildCommand: npm install
-    startCommand: node index.js
-    plan: free
+    buildCommand: npm ci          # ✅ 10TH-C4: npm install → npm ci
+    startCommand: node --max-old-space-size=512 index.js  # ✅ 10TH-B5: 메모리 제한 512MB — 미처리 예외시 서버 다운 방지
+    healthCheckPath: /api/health   # ✅ ENH-B6: 실제 엔드포인트로 수정 (/api/status → /api/health)
+    plan: free          # ⚠️ 27TH-C3: Free 플랜 — 15분 비활동 시 슬립(cold start ~60초). 실서비스 전 plan: starter 이상으로 변경 권장
     envVars:
       - key: NODE_ENV
         value: production
+      - key: JWT_SECRET
+        sync: false          # 필수! Render 대시보드에서 직접 입력
       - key: MONGO_URI
-        sync: false # 유저가 Render 웹사이트 환경변수 설정에서 직접 넣도록 빈칸 처리
+        sync: false          # MongoDB Atlas 연결 문자열
+      - key: MONGO_PASS
+        sync: false          # MongoDB 비밀번호 (MONGO_URI 미사용 시)
+      - key: PORTONE_API_KEY
+        sync: false          # ✅ 28TH-C4: 포트원 콘솔(https://admin.portone.io) → 시스템 설정 → API 서비스 → API KEY
+      - key: PORTONE_API_SECRET
+        sync: false          # 포트원 콘솔 → 시스템 설정 → API 서비스 → API SECRET
+      - key: PORTONE_WEBHOOK_SECRET
+        sync: false          # 포트원 콘솔 → 결제연동 → 웹훅 → 시크릿키
+      - key: SMS_API_KEY
+        sync: false          # CoolSMS API Key
+      - key: SMS_API_SECRET
+        sync: false          # CoolSMS API Secret
+      - key: SMS_SENDER
+        sync: false          # 등록된 발신번호 (01000000000 형식)
       - key: KHOA_KEY
-        sync: false # 유저가 Render 웹사이트 환경변수 설정에서 직접 넣도록 빈칸 처리
+        sync: false          # KHOA 해양 API Key
+      - key: KHOA_CCTV_KEY
+        sync: false          # KHOA CCTV API Key
+      - key: YOUTUBE_API_KEY
+        sync: false          # YouTube API Key
+      - key: CLOUDINARY_URL
+        sync: false          # 선택사항 — 이미지 CDN 사용 시 입력
+      - key: COUPANG_ACCESS_KEY
+        sync: false          # 쿠팡 파트너스 Access Key (미설정 시 목업 데이터 사용)
+      - key: COUPANG_SECRET_KEY
+        sync: false          # 쿠팡 파트너스 Secret Key
+      - key: COUPANG_PARTNERS_ID
+        sync: false          # 쿠팡 파트너스 ID (예: AF0000000)
+      # ── CORS: 프론트엔드 도메인 허용 ─────────────────────────
+      # ✅ 10TH-A3: FRONTEND_URL → ALLOWED_ORIGIN 키 통일
+      # server/index.js가 process.env.ALLOWED_ORIGIN을 읽음 (불일치 버그 수정)
+      # Render Static Site 배포 후 자동 발급된 URL 또는 커스텀 도메인 입력
+      # 예: https://fishing-go-frontend.onrender.com
+      - key: ALLOWED_ORIGIN
+        sync: false

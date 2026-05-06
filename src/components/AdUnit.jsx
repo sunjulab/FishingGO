@@ -12,25 +12,29 @@
  * [키 교체 방법]
  * - 현재: 구글 공식 테스트 코드 (ca-pub-3940256099942544 / 테스트 슬롯)
  * - 실제 전환: VITE_ADSENSE_PUB_ID, VITE_ADSENSE_SLOT_BANNER 등 .env에 추가 후 아래 변수만 교체
+ * ✅ 2ND-C7: ⚠️ VITE_ADSENSE_PUB_ID 미설정 시 프로덕션에서도 테스트 광고 자동 실행 (수익 미발생)
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 29TH-B1: ADMIN_ID/ADMIN_EMAIL import — 3RD-A2 패턴 통일
 
 // ─── 광고 키 설정 (테스트 키 → 실제 키 교체 시 이곳만 수정) ───
 const PUB_ID   = import.meta.env.VITE_ADSENSE_PUB_ID   || 'ca-pub-3940256099942544'; // 구글 공식 테스트 퍼블리셔
 const SLOT_BANNER  = import.meta.env.VITE_ADSENSE_SLOT_BANNER  || '6300978111'; // 테스트 배너 슬롯
 const SLOT_NATIVE  = import.meta.env.VITE_ADSENSE_SLOT_NATIVE  || '2247696314'; // 테스트 인피드 슬롯
 
-// ─── 구글 애드센스 스크립트 1회 로드 유틸 (중복 방지) ───
-let adSenseLoaded = false;
+// ✅ INFO-BT1: 프로덕션에서 data-adtest="on" 제거 — 데브에서만 테스트 모드
+// 실제 키(VITE_ADSENSE_PUB_ID)를 설정하면 프로덕션 에서도 실제 광고 수익 발생
+const IS_TEST_AD = !import.meta.env.VITE_ADSENSE_PUB_ID; // 엔브 미설정 시만 테스트 모드
+
+// ENH5-C2: adSenseLoaded 모듈 스코프 변수 의존성 제거 — getElementById 체크만으로 중복 방지 (HMR 안전)
 function loadAdSense() {
-  if (adSenseLoaded || document.getElementById('adsense-script')) return;
+  if (document.getElementById('adsense-script')) return;
   const script = document.createElement('script');
   script.id = 'adsense-script';
   script.async = true;
   script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${PUB_ID}`;
   script.crossOrigin = 'anonymous';
   document.head.appendChild(script);
-  adSenseLoaded = true;
 }
 
 // ─── 공통 광고 렌더 훅 ───
@@ -46,7 +50,8 @@ function useAdPush(ref) {
           }
         }
       } catch (e) {
-        console.error('AdSense Push Error:', e);
+        // ENH5-A5: 프로덕션 console.error 노출 방지 — 애드센스 스택 트레이스 유옵
+        if (!import.meta.env.PROD) console.error('AdSense Push Error:', e);
       }
     }, 150);
     return () => clearTimeout(pushAd);
@@ -60,6 +65,9 @@ function useAdPush(ref) {
 export function BannerAd({ style = {} }) {
   const ref = useRef();
   useAdPush(ref);
+  // ✅ 29TH-B1: 하드코딩 'sunjulab' → ADMIN_ID/ADMIN_EMAIL 상수로 교체 (3RD-A2 패턴 통일)
+  const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
+  if (isPremium) return null;
 
   return (
     <div
@@ -80,7 +88,7 @@ export function BannerAd({ style = {} }) {
         data-ad-slot={SLOT_BANNER}
         data-ad-format="auto"
         data-full-width-responsive="true"
-        data-adtest="on"
+        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}  // ✅ INFO-BT1: 테스트 모드에서만 adtest=on
       />
     </div>
   );
@@ -93,6 +101,9 @@ export function BannerAd({ style = {} }) {
 export function NativeAd({ style = {} }) {
   const ref = useRef();
   useAdPush(ref);
+  // ✅ 29TH-B1: 하드코딩 'sunjulab' → ADMIN_ID/ADMIN_EMAIL 상수로 교체 (3RD-A2 패턴 통일)
+  const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
+  if (isPremium) return null;
 
   return (
     <div
@@ -116,7 +127,7 @@ export function NativeAd({ style = {} }) {
         data-ad-layout="in-article"
         data-ad-client={PUB_ID}
         data-ad-slot={SLOT_NATIVE}
-        data-adtest="on"
+        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}  // ✅ INFO-BT1
       />
     </div>
   );
@@ -137,14 +148,39 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
   };
   const ctx = CONTEXT_TEXT[context] || CONTEXT_TEXT.post;
 
+  const intervalRef = useRef(null); // ✅ 8TH-A3: React.useRef → useRef
+
+  // 언마운트 시 타이머 정리
+  useEffect(() => { // ✅ 8TH-A3: React.useEffect → useEffect
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, []);
+
   // [정지 방지] 광고 시청은 타이머 기반 시뮬레이션 (실제 애드몹 SDK 연동 시 교체)
   const handleWatchAd = () => {
     setAdWatching(true);
     setAdProgress(0);
-    const interval = setInterval(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current); // 중복 방지
+
+    // ✅ 광고 ins 슬롯 push (adWatching 전환 직후)
+    try {
+      loadAdSense();
+      setTimeout(() => {
+        try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {
+          if (!import.meta.env.PROD) console.warn('[AdUnit] adsbygoogle push 실패:', e); // ✅ 17TH-C1: silent catch → 개발 환경 경고
+        }
+      }, 200);
+    } catch (e) {
+      if (!import.meta.env.PROD) console.warn('[AdUnit] loadAdSense 실패:', e); // ✅ 17TH-C1: silent catch → 개발 환경 경고
+    }
+
+    const intervalId = setInterval(() => {
       setAdProgress(prev => {
         if (prev >= 100) {
-          clearInterval(interval);
+          // intervalId 클로저 변수로 직접 참조 — ref 변경에 무관하게 안전 정리
+          clearInterval(intervalId);
+          intervalRef.current = null;
+          // ✅ 2ND-B8: React 18 자동 배칭 — setInterval 내 복수 setState도 배치 처리됨
+          // setAdWatching(false) + setAdDone(true) 동시 적용, 불일치 상태 없음
           setAdWatching(false);
           setAdDone(true);
           return 100;
@@ -152,14 +188,18 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         return prev + (100 / 30); // 30초 광고
       });
     }, 1000);
+    intervalRef.current = intervalId; // ref에도 저장 (handleComplete에서 사용)
   };
 
+
   const handleComplete = () => {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     onRewardComplete();
     onClose();
     setAdDone(false);
     setAdProgress(0);
   };
+
 
   if (!isOpen) return null;
 
@@ -187,7 +227,8 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
 
         {/* 옵션 1: 비즈니스 라이트 구독 */}
         <div
-          onClick={onSubscribe}
+          // ✅ 2ND-A4: onSubscribe optional guard — prop undefined 시 런타임 에러 방지
+          onClick={() => onSubscribe?.()}
           style={{
             background: 'linear-gradient(135deg, #0056D2, #0096FF)',
             borderRadius: '18px', padding: '20px',

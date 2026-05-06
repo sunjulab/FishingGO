@@ -11,6 +11,10 @@
  */
 
 const MERCHANT_ID = import.meta.env.VITE_PORTONE_MERCHANT_ID || 'imp00000000';
+// ✅ 2ND-C4: 필수 환경변수 누락 경고 — 실환경에서 VITE_PORTONE_MERCHANT_ID 미설정 시 테스트 결제 ID 사용
+if (!import.meta.env.VITE_PORTONE_MERCHANT_ID) {
+  console.warn('[paymentUtils] ⚠️ VITE_PORTONE_MERCHANT_ID 미설정 — 포트원 테스트 ID로 실행 중. 실제 결제 불가.');
+}
 const TOSS_PG     = import.meta.env.VITE_TOSS_PG_CODE        || 'tosspayments';
 const NAVER_PG    = import.meta.env.VITE_NAVER_PG_CODE        || 'naverpay';
 
@@ -55,21 +59,26 @@ export { PG_CONFIG };
 
 /**
  * 단건 결제 요청 (기존 방식 — 호환 유지)
+ * @deprecated ✅ 2ND-B6: 현재 VVIPSubscribe는 requestBillingPayment만 사용
+ *             ✅ 23TH-C3: 실제 호출처 없음 (데드코드) — v1.0 릴리즈 안정화 후 제거 예정
  */
 export function requestPayment({ pgKey, planId, planLabel, amount, user, harborId }) {
   return new Promise((resolve, reject) => {
     const IMP = window.IMP;
     if (!IMP) { reject(new Error('결제 모듈이 로드되지 않았습니다. 페이지를 새로고침 해주세요.')); return; }
     IMP.init(MERCHANT_ID);
-    const rand = Math.random().toString(36).slice(2, 7);
-    const merchant_uid = `fishing_${planId}_${(user?.email||'u').replace(/[^a-zA-Z0-9]/g,'')}_${Date.now()}_${rand}`;
+    // ENH5-C1: Math.random() 충돌 가능성 제거 → crypto.randomUUID() 사용 (브라우저 지원 99%+)
+    const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+      : Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const merchant_uid = `fishing_${planId}_${(user?.email||'u').replace(/[^a-zA-Z0-9]/g,'')}_${uid}`;
     const cfg = PG_CONFIG[pgKey] || PG_CONFIG.toss;
     IMP.request_pay(
       {
         pg: cfg.pg, pay_method: cfg.pay_method, merchant_uid,
         name: `낚시GO ${planLabel} 구독`, amount,
         buyer_email: user?.email || '', buyer_name: user?.name || '낚시GO 회원',
-        buyer_tel: user?.phone || '010-0000-0000',
+        buyer_tel: user?.phone || '',
         m_redirect_url: window.location.origin + '/vvip-subscribe',
       },
       (rsp) => {
@@ -99,11 +108,16 @@ export function requestBillingPayment({ pgKey, planId, planLabel, amount, user, 
     if (!IMP) { reject(new Error('결제 모듈이 로드되지 않았습니다. 페이지를 새로고침 해주세요.')); return; }
     IMP.init(MERCHANT_ID);
 
-    // customer_uid: 사용자별 고유 빌링키 식별자 (email 기반)
-    const safeId      = (user?.email || user?.id || 'user').replace(/[^a-zA-Z0-9]/g, '_');
-    const customer_uid = `fishing_bill_${safeId}`;
-    const rand = Math.random().toString(36).slice(2, 7);
-    const merchant_uid = `fishing_first_${planId}_${Date.now()}_${rand}`;
+    // ✅ WARN-P1 수정: customer_uid에 planId 포함 — 플랜별 독립 빌링키 유지
+    // 동일 유저가 플랜 변경(예: LITE→PRO) 또는 취소 후 재구독 시 새 빌링키가 정상 발급됨
+    const safeId       = (user?.email || user?.id || 'user').replace(/[^a-zA-Z0-9]/g, '_');
+    const safePlanId   = (planId || 'PLAN').replace(/[^a-zA-Z0-9]/g, '_');
+    const customer_uid = `fishing_bill_${safeId}_${safePlanId}`;
+    // ✅ 2ND-A1: crypto.randomUUID() 적용 — requestPayment(L65)와 동일 패턴, Math.random() 충돌 방지
+    const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+      : Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const merchant_uid = `fishing_first_${planId}_${uid}`;
     const cfg          = PG_CONFIG[pgKey] || PG_CONFIG.toss;
 
     IMP.request_pay(
@@ -116,7 +130,7 @@ export function requestBillingPayment({ pgKey, planId, planLabel, amount, user, 
         amount,
         buyer_email:  user?.email || '',
         buyer_name:   user?.name  || '낚시GO 회원',
-        buyer_tel:    user?.phone || '010-0000-0000',
+        buyer_tel:    user?.phone || '',
         m_redirect_url: window.location.origin + '/vvip-subscribe',
       },
       (rsp) => {

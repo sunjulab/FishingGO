@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react'; // ✅ 8TH-C1: useCallback import 추가
 import { useNavigate } from 'react-router-dom';
 import { X, Lock, Users, ShieldCheck, ChevronRight, HelpCircle } from 'lucide-react';
 import { RewardGateModal } from '../components/AdUnit';
 import { useToastStore } from '../store/useToastStore';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 8TH-A1: ADMIN_ID/ADMIN_EMAIL import
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import apiClient from '../api/index';
 
 export default function CreateCrew() {
   const navigate = useNavigate();
@@ -16,41 +16,57 @@ export default function CreateCrew() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdGate, setShowAdGate] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
+  const userTier = useUserStore((state) => state.userTier);
   const user = useUserStore((state) => state.user);
-  const isBusinessLite = user?.plan === 'business_lite' || user?.plan === 'pro' || user?.plan === 'vip';
+  // ✅ 8TH-A1: isAdmin 직접 비교 — ADMIN_ID/ADMIN_EMAIL 패턴 통일 (전체 8번째 마지막 미통일 파일)
+  const isAdmin = useUserStore(s => s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
+  // BUSINESS_LITE 이상이면 광고 게이트 없이 바로 크루 생성
+  const isBusinessLite = isAdmin || ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
 
-  // 실제 크루 생성 API 구동
-  const doCreateCrew = async () => {
-    if (!name) return;
-    if (isPrivate && password.length !== 4) {
-      alert('프라이빗 크루는 4자리 비밀번호가 필수입니다.');
+  // \u2705 19TH-C2: doCreateCrew useCallback \uc801\uc6a9 \u2014 handleCreateCrew \uc6a9 \ud074\ub85c\uc800 \uc548\uc815\uc131 \ud5a5\uc0c1
+  const doCreateCrew = useCallback(async () => {
+    if (!name.trim()) return;
+    // GUEST \uc0ac\uc6a9\uc790 \ucc28\ub2e8
+    if (!user || user.id === 'GUEST') {
+      addToast('\ub85c\uadf8\uc778\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.', 'error');
       return;
     }
+    // ENH6-B3: \ube44\ubc00\ubc88\ud638 \uc720\ud6a8\uc131 \uc911\ubcf5 \uc81c\uac70 \u2014 handleCreateCrew\uc5d0\uc11c \uc774\ubbf8 \uc0ac\uc804 \uac80\uc99d \uc644\ub8cc
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API}/api/community/crews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, isPrivate, password: isPrivate ? password : null, members: 1, limit })
+      const res = await apiClient.post('/api/community/crews', {
+        name,
+        isPrivate,
+        password: isPrivate ? password : null,
+        members: 1,
+        limit,
+        owner: user?.email || user?.id || '',
+        ownerName: user?.name || user?.nickname || user?.id || '',
       });
-      if (response.ok) {
-        const data = await response.json();
-        addToast('크루가 성공적으로 개설되었습니다! 가조 온라인 하세요 가족', 'success');
-        navigate(`/crew/${data.id || 'CREW_001'}/chat`);
+      if (res.data) {
+        const data = res.data;
+        addToast('\ud06c\ub8e8\uac00 \uc131\uacf5\uc801\uc73c\ub85c \uac1c\uc124\ub418\uc5c8\uc2b5\ub2c8\ub2e4!', 'success');
+        navigate(`/crew/${data.id || data._id || 'CREW_001'}/chat`);
       }
     } catch (err) {
-      console.error('Create crew error:', err);
-      addToast('크루 생성 중 오류가 발생했습니다.', 'error');
+      // ENH6-A2: \ud504\ub85c\ub355\uc158 console.error \uc2a4\ud0dd \ud2b8\ub808\uc774\uc2a4 \ub178\ucd9c \ubc29\uc9c0
+      if (!import.meta.env.PROD) console.error('Create crew error:', err);
+      addToast('\ud06c\ub8e8 \uc0dd\uc131 \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.', 'error');
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [name, isPrivate, password, limit, user, addToast, navigate]); // \u2705 19TH-C2: \ud074\ub85c\uc800 \ubcc0\uc218 deps \uba85\uc2dc
 
   // '크루 생성하기' 클릭 → 비즈니스 라이트 구독자는 바로, 일반 유저는 광고 게이트
   const handleCreateCrew = () => {
-    if (!name) return;
-    if (isPrivate && password.length !== 4) {
-      alert('프라이빗 크루는 4자리 비밀번호가 필수입니다.');
+    if (!name.trim()) return;
+    if (name.trim().length < 2 || name.trim().length > 20) {
+      addToast('크루명은 2~20자 사이로 입력해주세요.', 'error');
+      return;
+    }
+    // ✅ 8TH-B5: password.length !== 4 → < 4 — 정확히 4자가 아닌 조건에서 장성중 에러 발생 방지
+    if (isPrivate && password.length < 4) {
+      addToast('프라이빗 크루는 4자리 비밀번호가 필수입니다.', 'error');
       return;
     }
     if (isBusinessLite) {
@@ -76,6 +92,7 @@ export default function CreateCrew() {
           <input 
             type="text"
             placeholder="예: 강원권 루어 정기출조 모임"
+            maxLength={20}
             style={{ 
               width: '100%', 
               padding: '16px', 
@@ -129,25 +146,26 @@ export default function CreateCrew() {
         <div style={{ marginBottom: '40px' }}>
            <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#8e8e93', marginBottom: '16px' }}>최대 인원 설정 (3 ~ 1000명)</label>
            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input type="range" min="3" max="1000" step="1" value={limit} onChange={(e) => setLimit(e.target.value)} style={{ flex: 1, accentColor: '#0056D2' }} />
+              {/* Number() 변환 — e.target.value는 항상 문자열 */}
+              <input type="range" min="3" max="1000" step="1" value={limit} onChange={(e) => setLimit(Number(e.target.value))} style={{ flex: 1, accentColor: '#0056D2' }} />
               <div style={{ fontSize: '16px', fontWeight: '800', color: '#0056D2', width: '45px', textAlign: 'right' }}>{limit}</div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: '#8e8e93' }}>명</div>
            </div>
         </div>
 
         <button 
-          disabled={!name || isSubmitting}
+          disabled={!name.trim() || isSubmitting}
           onClick={handleCreateCrew}
           style={{
             width: '100%',
             padding: '18px',
             borderRadius: '16px',
-            backgroundColor: name ? '#0056D2' : '#f0f0f0',
-            color: name ? '#fff' : '#bbb',
+            backgroundColor: name.trim() ? '#0056D2' : '#f0f0f0',
+            color: name.trim() ? '#fff' : '#bbb',
             border: 'none',
             fontSize: '16px',
             fontWeight: '800',
-            boxShadow: name ? '0 10px 20px rgba(0, 86, 210, 0.2)' : 'none'
+            boxShadow: name.trim() ? '0 10px 20px rgba(0, 86, 210, 0.2)' : 'none'
           }}
         >
           {isSubmitting ? '생성 중...' : '크루 생성하기'}
@@ -155,7 +173,7 @@ export default function CreateCrew() {
         
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', marginTop: '20px', color: '#bbb' }}>
           <HelpCircle size={14} />
-          <span style={{ fontSize: '12px' }}>크루 운영 정첵 자세히 보기</span>
+          <span style={{ fontSize: '12px' }}>크루 운영 정책 자세히 보기</span>
         </div>
       </div>
 
@@ -164,7 +182,7 @@ export default function CreateCrew() {
         isOpen={showAdGate}
         onClose={() => setShowAdGate(false)}
         onRewardComplete={doCreateCrew}
-        onSubscribe={() => { setShowAdGate(false); navigate('/subscribe?plan=business_lite'); }}
+        onSubscribe={() => { setShowAdGate(false); navigate('/vvip-subscribe'); }}
         context="crew"
       />
     </div>

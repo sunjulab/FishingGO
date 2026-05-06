@@ -70,7 +70,7 @@ const FISH_ALERTS = {
   '볼락':      { alert: '볼락은 야간 방파제 불빛 주변에 집결합니다. 해가 진 후를 노리세요.',      gear: '지그헤드 1~3g, 마이크로 웜' },
   '가자미':    { alert: '가자미는 모래 바닥층에 붙어 있습니다. 원투낚시가 최적입니다.',           gear: '원투낚시 50~80g 싱커, 청갯지렁이' },
   '학꽁치':    { alert: '학꽁치 떼가 표층 가까이 올라와 있습니다. 반층 채비를 노리세요.',         gear: '막대찌 전유동, 크릴 새우 미끼' },
-  '삼치':      { alert: '삼치는 현재 빠른 스피드의 루어에 반응이 좋습니다..',                    gear: '스피너베이트, 빠른 리트리브' },
+  '삼치':      { alert: '삼치는 현재 빠른 스피드의 루어에 반응이 좋습니다.',                     gear: '스피너베이트, 빠른 리트리브' }, // ✅ 18TH-B3: 마침표 2개 오타 수정
   '광어':      { alert: '광어는 바닥 레인지가 핵심입니다. 바닥을 긁는 느낌으로 리트리브 하세요.', gear: '플로팅 미노우+바닥 끌기, 지그헤드 21g' },
   '돌돔':      { alert: '돌돔은 갯바위 틈새 공략이 핵심입니다. 강한 채비가 필요합니다.',          gear: '돌돔 전용 채비 5~7호 목줄, 성게·소라' },
   '전갱이':    { alert: '전갱이 떼가 중층에 포진 중입니다. 사비키 채비가 가장 효과적입니다.',     gear: '사비키 4~6호, 집어등 필수' },
@@ -81,8 +81,9 @@ const FISH_ALERTS = {
   '전어':      { alert: '전어 시즌입니다. 방파제 인근에 떼가 몰려 있을 가능성이 높습니다.',       gear: '사비키 소형, 빵가루 집어제' },
   '도다리':    { alert: '도다리는 봄 산란기에 가장 활발합니다. 바닥 원투낚시로 공략하세요.',      gear: '원투낚시 3개 바늘, 청갯지렁이' },
   '고등어':    { alert: '고등어 떼가 표층을 유영 중입니다. 사비키나 루어로 쉽게 잡힙니다.',       gear: '사비키 6~8호, 루어 솔트웜' },
-  '뱅에돔':    { alert: '뱅에돔은 조류가 흐르는 여울목에 집중됩니다. 찌 흘림 기술이 관건.',       gear: '0~B호 구멍찌, 목줄 1~1.5호' },
+  // ✅ 2ND-A6: '뱅에돔' 중복 키 제거 — L64 '벵에돔'이 표준 표기, 오타성 중복 병합
   '이면수':    { alert: '이면수는 겨울 동해 얕은 여에서 주로 낚입니다. 바닥 채비 위주로.',        gear: '바닥 채비 2~3호, 오징어/밀웜' },
+
 };
 
 // ── 물때 점수표 ────────────────────────────────────────────────
@@ -107,7 +108,7 @@ const getSeasonalBonus = (sst) => {
     autumn: { min: 16, max: 22, months: [9,10,11] },
     winter: { min:  8, max: 14, months: [12,1,2] },
   };
-  for (const [, s] of Object.entries(seasons)) {
+  for (const s of Object.values(seasons)) { // ✅ 18TH-C3: 사용하지 않는 키 제거 — Object.values로 쿠린 (lint no-unused-vars 경고 제거)
     if (s.months.includes(month)) {
       if (sst >= s.min && sst <= s.max) return +8;
       if (sst < s.min - 4 || sst > s.max + 4) return -15;
@@ -146,6 +147,12 @@ const TAG_POOL = [
   '🌊 사리 물때', '😴 조금 물때', '🌃 야간 낚시 적기', '⚡ 피딩 30분 전',
 ];
 
+// ✅ 2ND-C5: 포인트 시드 계산 공유 유틸 — 두 함수에서 동일 로직 중복 제거
+const calcPointSeed = (point, data) => {
+  const key = `${point.id || '0'}-${point.name || 'default'}-${data?.stationId || 'DT_0001'}`;
+  return key.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+};
+
 /**
  * 낚시 점수 계산 (v2.0)
  * @param {Object} data - 날씨 데이터 (sst, wind, wave, tide 등)
@@ -155,9 +162,10 @@ export const calculateFishingScore = (data, point = {}) => {
   if (!data) return 45; // 데이터 없음 = 불확실 → 보수적으로
 
   // [1] 지점 고유 시드 (포인트마다 다른 특성)
-  const pointKey = `${point.id || '0'}-${point.name || 'default'}-${data.stationId || 'DT_0001'}`;
-  const seed = pointKey.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+  // ✅ 2ND-C5: calcPointSeed 유틸 사용 — evaluateFishingCondition과 공유
+  const seed = calcPointSeed(point, data);
   const microVar = ((seed % 14) - 7) / 10; // -0.7 ~ +0.7 (미세 변동 축소)
+
 
   // [2] 베이스 점수: 45 (중립 = NORMAL 하단)
   // 모든 날씨가 완벽해야 GOOD(75+) 도달, PERFECT(90+)는 극히 드물어야 함
@@ -199,8 +207,11 @@ export const calculateFishingScore = (data, point = {}) => {
 
   // [7] 물때 보정
   const tidePhase = data.tide?.phase || '';
-  const tideKey = Object.keys(TIDE_BONUS).find(k => tidePhase.includes(k.replace('물(사리)','').replace('물(조금)','').replace('물(무시)',''))) || tidePhase;
+  // ✅ 2ND-B7: 정규식 기반 물때 매핑 — replace 체인 취약점 보완 ('7물(사리)' → '7물' 추출)
+  const tideMatch = tidePhase.match(/(\d+물)/);
+  const tideKey = tideMatch ? tideMatch[1] : tidePhase;
   score += TIDE_BONUS[tidePhase] || TIDE_BONUS[tideKey] || 0;
+
 
   // [8] 야간 보정
   score += getNightBonus(point);
@@ -216,8 +227,9 @@ export const calculateFishingScore = (data, point = {}) => {
  */
 export const evaluateFishingCondition = (data, point = {}) => {
   const score = calculateFishingScore(data, point);
-  const pointKey = `${point.id || '0'}-${point.name || 'default'}-${data.stationId || 'DT_0001'}`;
-  const seed = pointKey.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+  // ✅ 2ND-C5: calcPointSeed 유틸 사용 — calculateFishingScore와 seed 공유
+  const seed = calcPointSeed(point, data);
+
 
   let result = { score, color: '#8e8e93', status: 'NORMAL', advice: '', tags: [], gear: '', fishAlert: null };
 
@@ -279,9 +291,19 @@ export const getScoreInfo = (score) => {
 /**
  * 포인트 동적 점수 계산 (정적 score 대체용)
  * fishingData.js의 하드코딩 score를 대체하여 실시간 점수 반환
+ * @param {Object} point - 낚시 포인트 정보
+ * @param {Function} [getPointSpecificDataFn] - fishingData.js의 getPointSpecificData 함수 (ESModule 호환 주입)
  */
-export const getDynamicPointScore = (point) => {
-  const { getPointSpecificData } = require('../constants/fishingData');
-  const data = getPointSpecificData(point);
+export const getDynamicPointScore = (point, getPointSpecificDataFn = null) => {
+  // Vite ESModule 환경에서 require() 사용 불가 → 함수 주입 방식으로 변경
+  if (!getPointSpecificDataFn) {
+    // fallback: 기본 데이터 구조 반환
+    const fallbackData = {
+      sst: 14, wind: { speed: 4 }, wave: { coastal: 0.8 },
+      tide: { phase: '' }, stationId: 'DT_0001',
+    };
+    return calculateFishingScore(fallbackData, point);
+  }
+  const data = getPointSpecificDataFn(point);
   return calculateFishingScore(data, point);
 };

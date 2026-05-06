@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/index';
 import { compressAvatar } from '../utils/imageUtils';
-import { useUserStore, TIER_CONFIG, getLevelInfo, EXP_REWARDS } from '../store/useUserStore';
+import { useUserStore, TIER_CONFIG, getLevelInfo, EXP_REWARDS, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { 
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
@@ -11,13 +11,49 @@ import {
   ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon
 } from 'lucide-react';
 
+// ✅ 6TH-C1: MENU_ITEMS 컴포넌트 외부 상수 — 불변 배열이므로 매 렌더마다 재생성 불필요
+// (아이콘은 모듈 레벨 import로 컴포넌트 외부에서 참조 가능)
+const MENU_ITEMS = [
+  { id: 'noti',     title: '알림 설정',         color: '#0056D2', desc: '물때 및 커뮤니티 알림',   icon: null /* 아이콘은 JSX 렌더 시 동적 연결 */ },
+  { id: 'premium',  title: '프리미엄 구독 관리',   color: '#FF9B26', desc: '포인트 및 구독권 요금',   icon: null },
+  { id: 'history',  title: '결제 내역',          color: '#00C48C', desc: '자동청구 현황 및 구독 취소', icon: null },
+  { id: 'security', title: '보안 및 차단 설정',    color: '#FF5A5F', desc: '계정 보안 및 차단 목록',  icon: null },
+];
+
+// ✅ 6TH-A2: MyPage 아바타 fallback — pravatar.cc 외부 의존 제거 (App.jsx 3RD-A1과 동일 패턴)
+const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
+
+// ✅ 6TH-B2: localStorage 안전 헬퍼 — 보안 예외를 조용히 실패 처리 (MyPage 내 중복 try/catch 통합)
+const safeLS = {
+  set: (key, val) => { try { localStorage.setItem(key, val); } catch { /* 저장 실패 무시 */ } },
+  remove: (key) => { try { localStorage.removeItem(key); } catch { /* 삭제 실패 무시 */ } },
+};
+
+// 알림 설정 기본값 (컴포넌트 외부 상수 — 렌더마다 새 객체 생성 방지)
+const DEFAULT_NOTI = { flow: true, bait: true, comm: true };
+
+
 export default function MyPage() {
   const navigate = useNavigate();
-  const { user, updateUser, logout, canAccessBusinessShop, userTier } = useUserStore();
-  const addToast = useToastStore((state) => state.addToast);
-  const canAccessPartnerCenter = canAccessBusinessShop();
+  // ✅ 6TH-B1: 셀렉터별 분리 구독 — 전체 store 구독 시 store 내 어떤 값 변경도 57KB MyPage 전체 리렌더 유발
+  const user              = useUserStore(s => s.user);
+  const updateUser        = useUserStore(s => s.updateUser);
+  const logout            = useUserStore(s => s.logout);
+  const userTier          = useUserStore(s => s.userTier);
+  const canAccessPartnerCenter = useUserStore(s => s.canAccessBusinessShop?.());
+  const addToast = useToastStore(s => s.addToast);
   const fileInputRef = useRef(null);
-  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  // ✅ FIX-ADMIN: isAdmin 4중 보장
+  // - user.id === 'sunjulab' (ID 로 로그인 시 서버가 id를 'sunjulab'으로 고정 반환 후)
+  // - user.email === 'sunjulab.k@gmail.com' (구글 소셜)
+  // - user.email === 'sunjulab' (이메일 필드를 ID로 사용하여 가입한 경우)
+  // - userTier === 'MASTER' (tier 서버에서 MASTER로 설정된 경우)
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === ADMIN_ID ||
+    s.userTier === 'MASTER'
+  );
   const tierBadge = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
   const levelInfo  = getLevelInfo(user?.totalExp || 0);
   
@@ -32,18 +68,23 @@ export default function MyPage() {
   const [newName, setNewName] = useState(user?.name || '');
   const [error, setError] = useState('');
 
-  // 설정 대시보드 상태
-  const [notiSetting, setNotiSetting] = useState(user?.notiSettings || { flow: true, bait: true, comm: true });
+  // 설정 대시보드 상태 — 안전한 기본값으로 초기화 후 user 로드 시 동기화
+  const [notiSetting, setNotiSetting] = useState(DEFAULT_NOTI);
+
+  // NEW-B3: 카메라 오버레이 hover 상태 — DOM 직접 조작 anti-pattern 제거
+  const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
 
   // 보안 대시보드 상태
   const [secTab, setSecTab] = useState(null); // 'pwd', 'block'
   const [currentPwd, setCurrentPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [blockName, setBlockName] = useState('');
-  const [blockedUsers, setBlockedUsers] = useState(user?.blockedUsers || []);
+  const [blockedUsers, setBlockedUsers] = useState([]);
 
   const handlePasswordChange = async () => {
-    if (!currentPwd || !newPwd) return addToast('비밀번호를 입력해주세요.', 'error');
+    if (!currentPwd || !newPwd.trim()) return addToast('비밀번호를 입력해주세요.', 'error');
+    if (newPwd.trim().length < 8) return addToast('새 비밀번호는 8자 이상이어야 합니다.', 'error'); // ✅ 6TH-C2: trim() 적용
+    if (currentPwd === newPwd.trim()) return addToast('새 비밀번호는 현재 비밀번호와 다른 것으로 설정해주세요.', 'error');
     try {
       const res = await apiClient.put('/api/user/password', { email: user.email, currentPassword: currentPwd, newPassword: newPwd });
       if (res.data.success) {
@@ -116,12 +157,13 @@ export default function MyPage() {
       const identifier = user.email || user.id;
       await apiClient.put('/api/user/tier', { email: identifier, tier });
     } catch (err) {
-      console.warn('[tierChange 서버 동기화 실패]', err.response?.data || err.message);
+      if (!import.meta.env.PROD) console.warn('[tierChange 서버 동기화 실패]', err.response?.data || err.message);
       // 서버 동기화 실패해도 로컬 변경은 이미 반영됨 — 토스트 없음
     }
   };
 
   const handleToggleNoti = async (key) => {
+    const prevSettings = { ...notiSetting }; // 롤백용 이전 상태 캡처 (클로저 안전)
     const newSettings = { ...notiSetting, [key]: !notiSetting[key] };
     setNotiSetting(newSettings);
     updateUser({ notiSettings: newSettings }); // 로컬 스토어 반영
@@ -134,49 +176,72 @@ export default function MyPage() {
       });
     } catch (err) {
       addToast('설정 저장 실패', 'error');
-      setNotiSetting(notiSetting); // 롤백
-      updateUser({ notiSettings: notiSetting });
+      setNotiSetting(prevSettings); // 캡처된 이전 상태로 안전하게 롤백
+      updateUser({ notiSettings: prevSettings });
     }
   };
 
-  const nextLevelExp = user?.level ? user.level * 100 : 100;
-  const expPercentage = user?.exp ? (user.exp / nextLevelExp) * 100 : 0;
 
+  // levelInfo.progressPct 활용 — LEVEL_CONFIG 기반 정확한 진행률 (레거시 level*100 공식 제거)
+  const expPercentage = levelInfo.progressPct ?? 0;
+
+  // user가 로드되거나 변경될 때 로컬 UI 상태 동기화
   useEffect(() => {
-    if (user) {
-      fetchUserData();
-    }
-  }, [user]);
+    if (!user) return;
+    if (user.notiSettings) setNotiSetting(user.notiSettings);
+    if (user.blockedUsers) setBlockedUsers(user.blockedUsers);
+    if (user.name) setNewName(user.name);
+  }, [user?.email]); // email 기준으로 실제 사용자 교체 시에만 동기화
 
-  const fetchUserData = async () => {
+  // ✅ 26TH-B3: fetchUserData를 useCallback으로 래핑 — stale closure 제거 및 useEffect deps 명시화
+  // useEffect 호출보다 반드시 먼저 선언해야 함
+  const fetchUserData = React.useCallback(async () => {
+    // 이메일 없는 GUEST/비로그인 사용자는 API 호출 불필요
+    if (!user?.email || user.email === 'guest@fishinggo.com') return;
     try {
       setLoading(true);
-      const [postsRes, recordsRes] = await Promise.all([
-        apiClient.get(`/api/user/posts?email=${user?.email || 'guest'}`),
-        apiClient.get(`/api/user/records?email=${user?.email || 'guest'}`)
+      // NEW-C2: Promise.all → Promise.allSettled — 하나 실패해도 나머지 탭 표시 가능
+      const [postsResult, recordsResult] = await Promise.allSettled([
+        apiClient.get(`/api/user/posts?email=${encodeURIComponent(user.email)}`),
+        apiClient.get(`/api/user/records?email=${encodeURIComponent(user.email)}`)
       ]);
-      setRealPosts(postsRes.data);
-      setRealRecords(recordsRes.data);
+      if (postsResult.status === 'fulfilled') setRealPosts(postsResult.value.data);
+      else if (!import.meta.env.PROD) console.warn('[MyPage] 게시글 로드 실패:', postsResult.reason?.message);
+      if (recordsResult.status === 'fulfilled') setRealRecords(recordsResult.value.data);
+      else if (!import.meta.env.PROD) console.warn('[MyPage] 조과 기록 로드 실패:', recordsResult.reason?.message);
     } catch (err) {
-      console.error('Failed to fetch my activity', err);
+      if (!import.meta.env.PROD) console.error('Failed to fetch my activity', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchUserData();
+    }
+  }, [user?.email, fetchUserData]); // ✅ 26TH-B3: fetchUserData deps에 명시적 포함
+
 
   const handleNicknameChange = async () => {
+    if (newName.trim().length < 2 || newName.trim().length > 12) {
+      addToast('닉네임은 2~12자 사이로 입력해주세요.', 'error');
+      return;
+    }
     const nicknameRegex = /^[a-zA-Z0-9가-힣]+$/;
     if (!nicknameRegex.test(newName)) {
       addToast('한글, 영어, 숫자만 사용 가능합니다.', 'error');
       return;
     }
     try {
-      const res = await apiClient.post(`/api/user/nickname`, {
-        email: user.email, newNickname: newName
+      const res = await apiClient.put(`/api/user/nickname`, {
+        email: user.email, newName
       });
       if (res.data.success) {
         updateUser({ name: res.data.name });
         setIsEditing(false);
+        // ✅ 6TH-B2: safeLS.remove 헬퍼 사용
+        try { safeLS.remove('community_liked_posts'); } catch { }
         addToast('닉네임이 성공적으로 변경되었습니다.', 'success');
       }
     } catch (err) {
@@ -184,9 +249,11 @@ export default function MyPage() {
     }
   };
 
+
   /* ── 프로필 사진 변경 ── */
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
+    e.target.value = ''; // 같은 파일 재선택 시 onChange 재발생
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       addToast('파일 크기는 5MB 이하만 가능합니다.', 'error');
@@ -201,32 +268,25 @@ export default function MyPage() {
         // 즉시 UI 반영 (서버 저장 전)
         updateUser({ avatar: base64, picture: base64 });
 
-        // email 기반 별도 키로 저장 → 로그아웃 후에도 유지됨
-        try {
-          const stored = JSON.parse(localStorage.getItem('user') || '{}');
-          stored.avatar = base64;
-          stored.picture = base64;
-          localStorage.setItem('user', JSON.stringify(stored));
-          if (user?.email) {
-            localStorage.setItem(`avatar_${user.email}`, base64);
-          }
-        } catch(e) {}
+        // ✅ 6TH-B2: safeLS.set 헬퍼 사용 — 빈 try/catch(e) {} 패턴 없애기
+        if (user?.email) safeLS.set(`avatar_${user.email}`, base64);
 
         try {
+          // NEW-A1: base64 아바타 업로드 timeout 30초 (기본 10초 시간초과 위험 방지)
           const res = await apiClient.post('/api/user/avatar', {
             email: user.email,
             avatar: base64
-          });
+          }, { timeout: 30000 });
           if (res.data.success) {
             addToast('프로필 사진이 저장되었습니다! 📸', 'success');
           }
         } catch (err) {
-          console.error('Avatar server error:', err);
+          if (!import.meta.env.PROD) console.error('Avatar server error:', err);
           // 서버 저장 실패해도 로컬은 이미 반영됨 → 성공 안내
           addToast('📸 프로필 사진이 변경되었습니다! (로컬 저장)', 'success');
         }
       } catch (compressErr) {
-        console.error('이미지 압축 실패:', compressErr);
+        if (!import.meta.env.PROD) console.error('이미지 압축 실패:', compressErr);
         addToast('이미지 처리 중 오류가 발생했습니다.', 'error');
       }
     };
@@ -259,12 +319,14 @@ export default function MyPage() {
     );
   }
 
-  const menuItems = [
-    { id: 'noti',    icon: Bell,       title: '알림 설정',        color: '#0056D2', desc: '물때 및 커뮤니티 알림' },
-    { id: 'premium', icon: CreditCard,  title: '프리미엄 구독 관리',  color: '#FF9B26', desc: '포인트 및 구독권 요금' },
-    { id: 'history', icon: CardIcon,    title: '결제 내역',        color: '#00C48C', desc: '자동청구 현황 및 구독 취소' },
-    { id: 'security', icon: ShieldAlert, title: '보안 및 차단 설정',   color: '#FF5A5F', desc: '계정 보안 및 차단 목록' },
-  ];
+  // ✅ 6TH-C1: MENU_ITEMS 외부 상수 사용 — 아이콘은 렌더 시 매핑
+  const menuItems = MENU_ITEMS.map(item => ({
+    ...item,
+    icon: item.id === 'noti' ? Bell :
+          item.id === 'premium' ? CreditCard :
+          item.id === 'history' ? CardIcon :
+          ShieldAlert,
+  }));
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '120px' }}>
@@ -272,33 +334,33 @@ export default function MyPage() {
       <div style={{ background: 'linear-gradient(180deg, #fff 0%, #F8F9FA 100%)', padding: '40px 24px 30px', borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           {/* 프로필 사진 + 수정 버튼 */}
+          {/* NEW-B3: onMouseEnter/onMouseLeave state로 호버 제어 — DOM 직접 조작 anti-pattern 제거 */}
           <div
             style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}
             onClick={() => fileInputRef.current?.click()}
             title="사진 변경"
+            onMouseEnter={() => setIsHoveringAvatar(true)}
+            onMouseLeave={() => setIsHoveringAvatar(false)}
           >
             <img
-              src={user.avatar || user.picture || 'https://i.pravatar.cc/150?img=11'}
+              src={user.avatar || user.picture || DEFAULT_AVATAR_SVG /* ✅ 6TH-A2: pravatar.cc 제거 */}
               alt="P"
-              style={{ width: '100px', height: '100px', borderRadius: '35px', objectFit: 'cover', border: '4px solid #fff', boxShadow: '0 15px 30px rgba(0,86,210,0.1)', transition: 'filter 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(0.75)'; }}
-              onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              style={{
+                width: '100px', height: '100px', borderRadius: '35px', objectFit: 'cover',
+                border: '4px solid #fff', boxShadow: '0 15px 30px rgba(0,86,210,0.1)',
+                transition: 'filter 0.2s',
+                filter: isHoveringAvatar ? 'brightness(0.75)' : 'brightness(1)',
+              }}
             />
-            {/* 카메라 오버레이 */}
+            {/* 카메라 오버레이 — isHoveringAvatar state로 제어 */}
             <div style={{
               position: 'absolute', inset: 0, borderRadius: '35px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(0,0,0,0)', transition: 'background 0.2s',
+              background: isHoveringAvatar ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0)',
+              transition: 'background 0.2s',
               pointerEvents: 'none',
             }}>
-              <Camera size={26} color="#fff" style={{ opacity: 0, transition: 'opacity 0.2s' }}
-                ref={el => {
-                  if (el) {
-                    el.closest('div[title="사진 변경"]')?.addEventListener('mouseenter', () => { el.style.opacity = '1'; el.parentElement.style.background = 'rgba(0,0,0,0.35)'; });
-                    el.closest('div[title="사진 변경"]')?.addEventListener('mouseleave', () => { el.style.opacity = '0'; el.parentElement.style.background = 'rgba(0,0,0,0)'; });
-                  }
-                }}
-              />
+              <Camera size={26} color="#fff" style={{ opacity: isHoveringAvatar ? 1 : 0, transition: 'opacity 0.2s' }} />
             </div>
             {/* 카메라 뱃지 (항상 표시) */}
             <div style={{
@@ -438,14 +500,83 @@ export default function MyPage() {
            // 어종별 집계
            const speciesMap = {};
            realRecords.forEach(r => {
-             const sp = r.species || r.fish || (내용 관련: r.content?.match(/([감성|븐라맑|숙성|고등어|전백|요|게|문어|낙지|진래|옥돕])/))?.[0] || '기타';
+             const sp = r.species || r.fish || (r.content?.match(/(감성돔|벵에돔|숭어|고등어|참돔|농어|갈치|볼락|우럭|학공치|삼치|방어|광어|도다리|붕어|잉어|배스|쏘가리|민어|청어)/)?.[0]) || '기타';
              speciesMap[sp] = (speciesMap[sp] || 0) + 1;
            });
            const entries = Object.entries(speciesMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
            const max = entries[0]?.[1] || 1;
            const BAR_COLORS = ['#0056D2','#FF9B26','#FF5A5F','#00C48C','#7C3AED','#FFD700'];
+
+           // 월별 조과 추이 집계 (최근 6개월)
+           const monthMap = {};
+           const now = new Date();
+           for (let i = 5; i >= 0; i--) {
+             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+             const key = `${d.getMonth() + 1}월`;
+             monthMap[key] = 0;
+           }
+           realRecords.forEach(r => {
+             if (!r.time && !r.createdAt) return;
+             const d = new Date(r.time || r.createdAt);
+             if (isNaN(d.getTime())) return;
+             const diff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+             if (diff >= 0 && diff < 6) {
+               const key = `${d.getMonth() + 1}월`;
+               if (key in monthMap) monthMap[key]++;
+             }
+           });
+           const monthEntries = Object.entries(monthMap);
+           const maxMonth = Math.max(...monthEntries.map(([, v]) => v), 1);
+
+           // 포인트별 TOP3
+           const spotMap = {};
+           realRecords.forEach(r => {
+             const spot = r.location || r.point || '기타';
+             spotMap[spot] = (spotMap[spot] || 0) + 1;
+           });
+           const topSpots = Object.entries(spotMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
            return (
              <div>
+               {/* 개인 하이라이트 카드 */}
+               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '14px' }}>
+                 {[
+                   { label: '총 조과', val: realRecords.length, emoji: '📊', color: '#0056D2' },
+                   { label: '어종 수', val: entries.length, emoji: '🐟', color: '#FF9B26' },
+                   { label: '대표 어종', val: entries[0]?.[0] || '-', emoji: '🏆', color: '#FF5A5F' },
+                 ].map(s => (
+                   <div key={s.label} style={{ background: '#fff', borderRadius: '16px', padding: '14px 10px', textAlign: 'center', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
+                     <div style={{ fontSize: '20px', marginBottom: '4px' }}>{s.emoji}</div>
+                     <div style={{ fontSize: '16px', fontWeight: '950', color: s.color, wordBreak: 'keep-all' }}>{s.val}</div>
+                     <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700', marginTop: '2px' }}>{s.label}</div>
+                   </div>
+                 ))}
+               </div>
+
+               {/* 월별 조과 추이 */}
+               <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '14px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                 <div style={{ fontSize: '15px', fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>📈 월별 조과 추이</div>
+                 {realRecords.length === 0 ? (
+                   <p style={{ color: '#8E8E93', fontSize: '13px', fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
+                 ) : (
+                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '80px' }}>
+                     {monthEntries.map(([month, cnt]) => (
+                       <div key={month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                         <div style={{ fontSize: '10px', fontWeight: '900', color: '#0056D2' }}>{cnt > 0 ? cnt : ''}</div>
+                         <div style={{
+                           width: '100%', borderRadius: '6px 6px 0 0',
+                           height: `${Math.max((cnt / maxMonth) * 60, cnt > 0 ? 8 : 2)}px`,
+                           background: cnt > 0 ? 'linear-gradient(180deg, #0056D2, #42A5F5)' : '#F2F2F7',
+                           transition: 'height 0.8s ease',
+                           minHeight: '2px',
+                         }} />
+                         <div style={{ fontSize: '9px', color: '#8E8E93', fontWeight: '700' }}>{month}</div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
+
                {/* 어종별 바 차트 */}
                <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '14px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
                  <div style={{ fontSize: '15px', fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>🐟 어종별 조과</div>
@@ -455,7 +586,7 @@ export default function MyPage() {
                    <div key={sp} style={{ marginBottom: '12px' }}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                        <span style={{ fontSize: '13px', fontWeight: '800', color: '#1c1c1e' }}>{sp}</span>
-                       <span style={{ fontSize: '13px', fontWeight: '950', color: BAR_COLORS[i] }}>{cnt}횟</span>
+                       <span style={{ fontSize: '13px', fontWeight: '950', color: BAR_COLORS[i] }}>{cnt}회</span>
                      </div>
                      <div style={{ height: '8px', background: '#F2F2F7', borderRadius: '4px', overflow: 'hidden' }}>
                        <div style={{ height: '100%', width: `${(cnt / max) * 100}%`, background: BAR_COLORS[i], borderRadius: '4px', transition: 'width 0.8s ease' }} />
@@ -463,26 +594,37 @@ export default function MyPage() {
                    </div>
                  ))}
                </div>
-               {/* 요약 통계 */}
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px' }}>
-                 {[{ label: '종 조과', val: realRecords.length, emoji: '📊', color: '#0056D2' },
-                   { label: '어종 수', val: entries.length, emoji: '🐟', color: '#FF9B26' },
-                   { label: '대박 어종', val: entries[0]?.[0] || '-', emoji: '🏆', color: '#FF5A5F' }
-                 ].map(s => (
-                   <div key={s.label} style={{ background: '#fff', borderRadius: '16px', padding: '14px 10px', textAlign: 'center', border: '1.5px solid #F2F2F7' }}>
-                     <div style={{ fontSize: '20px', marginBottom: '4px' }}>{s.emoji}</div>
-                     <div style={{ fontSize: '18px', fontWeight: '950', color: s.color }}>{s.val}</div>
-                     <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700', marginTop: '2px' }}>{s.label}</div>
-                   </div>
-                 ))}
-               </div>
+
+               {/* 단골 포인트 TOP3 */}
+               {topSpots.length > 0 && (
+                 <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                   <div style={{ fontSize: '15px', fontWeight: '950', marginBottom: '14px', color: '#1c1c1e' }}>⭐ 단골 포인트 TOP3</div>
+                   {topSpots.map(([spot, cnt], i) => (
+                     <div key={spot} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < topSpots.length - 1 ? '12px' : 0 }}>
+                       <div style={{
+                         width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                         background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32',
+                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                         fontSize: '12px', fontWeight: '900', color: '#fff',
+                       }}>{i + 1}</div>
+                       <div style={{ flex: 1 }}>
+                         <div style={{ fontSize: '13px', fontWeight: '900', color: '#1c1c1e' }}>{spot}</div>
+                       </div>
+                       <div style={{ fontSize: '13px', fontWeight: '950', color: '#0056D2' }}>{cnt}회</div>
+                     </div>
+                   ))}
+                 </div>
+               )}
              </div>
            );
          })() : activeTab === 'records' ? (
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
               {realRecords.length > 0 ? realRecords.map(r => (
                 <div key={r.id} style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7' }}>
-                   <img src={r.image} style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
+                   {r.image
+                     ? <img src={r.image} style={{ width: '100%', height: '140px', objectFit: 'cover' }} alt="" />
+                     : <div style={{ width: '100%', height: '140px', background: '#F2F2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🎣</div>
+                   }
                    <div style={{ padding: '14px' }}>
                       <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800' }}>{r.time}</div>
                       <div style={{ fontSize: '14px', fontWeight: '900', marginTop: '2px' }}>{r.content.substring(0,20)}...</div>
@@ -603,6 +745,17 @@ export default function MyPage() {
             </button>
           </div>
         </div>
+      )}
+
+      <div style={{ padding: '10px 24px 40px' }}>
+         <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7' }}>
+            {menuItems.map((item) => ( // ✅ 26TH-C3: key를 item.id로 교체 (17TH-B2 패턴 — MENU_ITEMS는 외부 상수로 인덱스 연속성 보장됨)
+              <div key={item.id} onClick={() => item.id === 'history' ? navigate('/payment-history') : setShowModal(item.id)} style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: item.id !== 'security' ? '1px solid #F8F9FA' : 'none', cursor: 'pointer' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ backgroundColor: `${item.color}15`, padding: '10px', borderRadius: '12px' }}><item.icon size={20} color={item.color} strokeWidth={2.5} /></div>
+                    <div>
+                        <div style={{ fontSize: '15px', fontWeight: '850', color: '#1c1c1e' }}>{item.title}</div>
+                        <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600' }}>{item.desc}</div>
                     </div>
                  </div>
                  <ChevronRight size={18} color="#C7C7CC" />

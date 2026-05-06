@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // ✅ 11TH-B1: useRef/useCallback 추가
 import { useNavigate } from 'react-router-dom';
 import { X, Crown, Lock, AlertTriangle, MapPin, Star, CheckCircle2 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
@@ -6,35 +6,54 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import { requestBillingPayment, PG_OPTIONS, PG_CONFIG } from '../utils/paymentUtils';
 
-// ── 23개 항구 정적 목록 (서버 독립) ──────────────────────────────
+// ── 36개 항구 목록 (HARBOR_DATA와 동기화) ─────────────────────────────────
 const HARBORS_STATIC = [
-  // 동해권 (8)
-  { id: 'sokcho',    name: '속초항',    region: '동해권', area: '강원', desc: '가자미·대구·명태 최대 어항' },
-  { id: 'gangneung', name: '강릉항',    region: '동해권', area: '강원', desc: '안목항 일대, 감성돔·방어' },
-  { id: 'donghae',   name: '동해항',    region: '동해권', area: '강원', desc: '묵호항, 오징어 야간 선상 유명' },
-  { id: 'samcheok',  name: '삼척항',    region: '동해권', area: '강원', desc: '돌돔·열기, 청정 어장' },
-  { id: 'uljin',     name: '울진항',    region: '동해권', area: '경북', desc: '후포항 일대, 볼락·방어' },
-  { id: 'pohang',    name: '포항항',    region: '동해권', area: '경북', desc: '구룡포·영일만, 참돔·대게' },
-  { id: 'gampo',     name: '감포항',    region: '동해권', area: '경북', desc: '경주 감포·양포, 붉바리·감성돔' },
-  { id: 'ulsan',     name: '울산항',    region: '동해권', area: '울산', desc: '방어진·주전, 방어·부시리 대형급' },
-  // 남해권 (8)
-  { id: 'gijang',    name: '기장항',    region: '남해권', area: '부산', desc: '대변항, 멸치·참돔 최대 어장' },
-  { id: 'geoje',     name: '거제도',    region: '남해권', area: '경남', desc: '장목·구조라, 감성돔·참돔 대물' },
-  { id: 'tongyeong', name: '통영항',    region: '남해권', area: '경남', desc: '한려수도 중심, 섬·선상낚시 천국' },
-  { id: 'goseong',   name: '고성항',    region: '남해권', area: '경남', desc: '자란만·당항포, 갑오징어·감성돔' },
-  { id: 'namhae',    name: '남해도',    region: '남해권', area: '경남', desc: '금산·노도, 참돔·삼치·방어' },
-  { id: 'yeosu',     name: '여수항',    region: '남해권', area: '전남', desc: '돌산·거문도, 붉바리·참돔 대물' },
-  { id: 'wando',     name: '완도항',    region: '남해권', area: '전남', desc: '보길도·청산도, 돌돔·참돔' },
-  { id: 'jindo',     name: '진도·해남', region: '남해권', area: '전남', desc: '명량수도, 부시리·방어 시즌' },
-  // 서해권 (5)
-  { id: 'incheon',   name: '인천항',    region: '서해권', area: '인천', desc: '소래·연평도, 우럭·광어 선상' },
-  { id: 'taean',     name: '태안항',    region: '서해권', area: '충남', desc: '안면도·몽산포, 주꾸미·꽃게' },
-  { id: 'boryeong',  name: '보령항',    region: '서해권', area: '충남', desc: '대천항·외연도, 광어·우럭' },
-  { id: 'gunsan',    name: '군산항',    region: '서해권', area: '전북', desc: '선유도·어청도, 벵에돔·참돔' },
-  { id: 'mokpo',     name: '목포항',    region: '서해권', area: '전남', desc: '흑산도·홍도 거점, 참돔·벵에돔' },
-  // 제주권 (2)
-  { id: 'jeju',      name: '제주시',    region: '제주권', area: '제주', desc: '한림·애월, 다금바리·벵에돔 성지' },
-  { id: 'seogwipo',  name: '서귀포시',  region: '제주권', area: '제주', desc: '마라도·가파도, 참돔·방어·다금바리' },
+  // 동해권 — 강원 (7)
+  { id: 'gangneung',  name: '강릉·강문',      region: '동해권', area: '강원', key: '강원 강릉',    desc: '안목·강문항, 감성돔·방어·가자미' },
+  { id: 'jumunjin',   name: '주문진',          region: '동해권', area: '강원', key: '강원 주문진',  desc: '오징어·대구 최대 어항, 야간선상 유명' },
+  { id: 'sokcho',     name: '속초',            region: '동해권', area: '강원', key: '강원 속초',    desc: '대구·명태·가자미, 동해 북부 거점' },
+  { id: 'goseong',    name: '고성(거진)',       region: '동해권', area: '강원', key: '강원 고성',    desc: '공현진·거진항, 도루묵·가자미' },
+  { id: 'yangyang',   name: '양양(낙산·남애)', region: '동해권', area: '강원', key: '강원 양양',    desc: '낙산·남애·동산항, 연어·명태·방어' },
+  { id: 'donghae',    name: '동해·묵호',       region: '동해권', area: '강원', key: '강원 동해',    desc: '묵호항, 오징어 야간선상 성지' },
+  { id: 'samcheok',   name: '삼척',            region: '동해권', area: '강원', key: '강원 삼척',    desc: '임원·장호항, 돌돔·열기 청정 어장' },
+  // 동해권 — 경북 (5)
+  { id: 'guryongpo',  name: '구룡포(포항)',    region: '동해권', area: '경북', key: '경북 구룡포',  desc: '구룡포·영일만, 참돔·대게 유명' },
+  { id: 'gampo',      name: '감포(경주)',      region: '동해권', area: '경북', key: '경북 감포',    desc: '감포·양포, 붉바리·감성돔' },
+  { id: 'ganggu',     name: '강구(영덕)',      region: '동해권', area: '경북', key: '경북 강구',    desc: '강구항, 대게·문어 선상낚시' },
+  { id: 'hupo',       name: '후포(울진)',      region: '동해권', area: '경북', key: '경북 후포',    desc: '후포항 일대, 볼락·방어' },
+  { id: 'jukbyeon',   name: '죽변(울진)',      region: '동해권', area: '경북', key: '경북 죽변',    desc: '죽변항, 대구·오징어·가자미' },
+  // 남해권 — 부산 (3)
+  { id: 'gijang',     name: '기장',            region: '남해권', area: '부산', key: '부산 기장',    desc: '대변항, 멸치·참돔 최대 어장' },
+  { id: 'dadaepo',    name: '다대포',          region: '남해권', area: '부산', key: '부산 다대포',  desc: '다대포항, 주꾸미·갑오징어' },
+  { id: 'yongho',     name: '용호부두',        region: '남해권', area: '부산', key: '부산 용호부두',desc: '용호부두, 참돔·삼치 루어' },
+  // 남해권 — 경남 (4)
+  { id: 'tongyeong',  name: '통영',            region: '남해권', area: '경남', key: '경남 통영',    desc: '한려수도 중심, 섬·선상낚시 천국' },
+  { id: 'geoje',      name: '거제(대포·금포)', region: '남해권', area: '경남', key: '경남 거제',    desc: '대포·금포항, 감성돔·참돔 대물' },
+  { id: 'namhae',     name: '남해(미조·상주)', region: '남해권', area: '경남', key: '경남 남해',    desc: '미조·상주항, 참돔·삼치·방어' },
+  { id: 'goseong_s',  name: '고성',            region: '남해권', area: '경남', key: '경남 고성',    desc: '자란만·당항포, 갑오징어·감성돔' },
+  // 남해권 — 전남 (5)
+  { id: 'yeosu',      name: '여수(국동)',      region: '남해권', area: '전남', key: '전남 여수',    desc: '돌산·거문도, 붉바리·참돔 대물' },
+  { id: 'wando',      name: '완도',            region: '남해권', area: '전남', key: '전남 완도',    desc: '보길도·청산도, 돌돔·참돔' },
+  { id: 'goheung',    name: '고흥(나로도)',    region: '남해권', area: '전남', key: '전남 고흥',    desc: '나로도항, 감성돔·참돔' },
+  { id: 'jindo',      name: '진도',            region: '남해권', area: '전남', key: '전남 진도',    desc: '명량수도, 부시리·방어 시즌' },
+  // 서해권 — 인천 (2)
+  { id: 'incheon_n',  name: '인천 남항부두',  region: '서해권', area: '인천', key: '인천 남항부두',desc: '남항부두, 우럭·광어 선상 중심지' },
+  { id: 'incheon_y',  name: '인천 연안부두',  region: '서해권', area: '인천', key: '인천 연안부두',desc: '연안부두, 소래·영종도 출항' },
+  // 서해권 — 충남 (3)
+  { id: 'taean',      name: '태안(안흥·마검포)', region: '서해권', area: '충남', key: '충남 태안',  desc: '안흥·마검포항, 주꾸미·꽃게' },
+  { id: 'boryeong',   name: '보령(무창포·오천)', region: '서해권', area: '충남', key: '충남 보령',  desc: '무창포·오천항, 광어·우럭' },
+  { id: 'seosan',     name: '서산(삼길포)',    region: '서해권', area: '충남', key: '충남 서산',    desc: '삼길포항, 광어·도다리' },
+  // 서해권 — 전북 (2)
+  { id: 'gunsan',     name: '군산(비응·야미도)', region: '서해권', area: '전북', key: '전북 군산',  desc: '비응·야미도, 벵에돔·참돔' },
+  { id: 'buan',       name: '부안(격포·위도)', region: '서해권', area: '전북', key: '전북 부안',    desc: '격포·위도, 우럭·도다리' },
+  // 서해권 — 전남 서해 (1)
+  { id: 'mokpo',      name: '목포',            region: '서해권', area: '전남', key: '전남 목포',    desc: '흑산도·홍도 거점, 참돔·벵에돔' },
+  // 제주권 (5)
+  { id: 'jeju_dodu',  name: '도두항(제주시)', region: '제주권', area: '제주', key: '제주 도두항',  desc: '도두항, 자리돔·갈치·방어' },
+  { id: 'jeju_aewol', name: '애월항(제주시)', region: '제주권', area: '제주', key: '제주 애월항',  desc: '애월항, 다금바리·벵에돔 성지' },
+  { id: 'seogwipo',   name: '서귀포',          region: '제주권', area: '제주', key: '제주 서귀포',  desc: '서귀포항, 참돔·방어·다금바리' },
+  { id: 'mosulpo',    name: '모슬포',          region: '제주권', area: '제주', key: '제주 모슬포',  desc: '마라도·가파도 거점, 방어·참돔' },
+  { id: 'sungsan',    name: '성산항',          region: '제주권', area: '제주', key: '제주 성산항',  desc: '성산일출봉 인근, 돌돔·감성돔' },
 ];
 
 const REGION_TABS = ['전체', '동해권', '남해권', '서해권', '제주권'];
@@ -57,6 +76,13 @@ export default function VVIPSubscribe() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLiteProConfirm, setShowLiteProConfirm] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
+  // ✅ 11TH-B1: navigate 타이머 ref — 언마운트 후 타이머 누수 방지 (5TH-A4 패턴)
+  const navTimerRef = useRef(null);
+  useEffect(() => () => { if (navTimerRef.current) clearTimeout(navTimerRef.current); }, []);
+  // ✅ 11TH-B5: takenMap 업데이트 useCallback 래핑
+  const markHarborTaken = useCallback((harborId, ownerName) => {
+    setTakenMap(prev => ({ ...prev, [harborId]: { takenBy: ownerName } }));
+  }, []);
 
   const PLANS = [
     {
@@ -75,8 +101,8 @@ export default function VVIPSubscribe() {
       color: '#64B5F6', border: 'rgba(100,181,246,0.45)', bg: 'rgba(21,101,192,0.12)',
       features: [
         'LITE 전체 포함',
-        '선상 홈보 게시 작성',
-        '커뮤니티 우선 노이',
+        '선상 홍보 게시 작성',
+        '커뮤니티 우선 노출',
         '조황 보고 무제한',
       ],
       badge: '인기', hot: true,
@@ -105,14 +131,21 @@ export default function VVIPSubscribe() {
         });
         setTakenMap(map);
       })
-      .catch(() => {}); // 실패해도 목록은 표시
+      .catch((err) => {
+        // ✅ 24TH-B2: silent catch → 개발 환경 에러 가시화 (23TH-B3 패턴)
+        if (!import.meta.env.PROD) console.warn('[VVIPSubscribe] /api/vvip/harbors 로드 실패:', err?.message);
+      }); // 실패해도 정적 목록은 표시
 
     if (user) {
-      apiClient.get(`/api/vvip/my-slot?userId=${encodeURIComponent(user.email || user.id)}`)
+      // ✅ NEW-BUG-09: userId 쿼리파라미터 제거 — 서버가 JWT에서 자동 추출
+      apiClient.get('/api/vvip/my-slot')
         .then(res => { if (res.data.hasSlot) setMySlot(res.data); })
-        .catch(() => {});
+        .catch((err) => {
+          // ✅ 24TH-B2: my-slot silent catch → 개발 환경 에러 가시화
+          if (!import.meta.env.PROD) console.warn('[VVIPSubscribe] /api/vvip/my-slot 로드 실패:', err?.message);
+        });
     }
-  }, [user]);
+  }, [user?.email]);
 
   const harbors = HARBORS_STATIC.map(h => ({
     ...h,
@@ -126,7 +159,8 @@ export default function VVIPSubscribe() {
     : harbors.filter(h => h.region === selectedRegion);
 
   const takenCount = Object.keys(takenMap).length;
-  const availableCount = 23 - takenCount;
+  // ✅ NEW-B6: 하드코딩 23 → HARBORS_STATIC.length — 항구 수 변경 시 자동 동기화
+  const availableCount = HARBORS_STATIC.length - takenCount;
 
   const handleSelect = (harbor) => {
     if (harbor.isTaken && !harbor.isMyHarbor) {
@@ -147,7 +181,7 @@ export default function VVIPSubscribe() {
     setPurchasing(true);
     try {
       // ① 포트원 빌링키 등록 + 첫 결제
-      const { imp_uid, customer_uid } = await requestBillingPayment({
+      const { imp_uid, customer_uid, merchant_uid } = await requestBillingPayment({
         pgKey:     selectedPg,
         planId:    plan.id,
         planLabel: plan.label,
@@ -176,12 +210,15 @@ export default function VVIPSubscribe() {
           planId:      plan.id,
           pgProvider:  selectedPg,
           paymentType: 'billing_first',
-          amount:      plan.price,
+          amount:      plan.priceNum,
           status:      'paid',
           imp_uid,
+          merchant_uid,
         }).catch(() => {});
         setShowLiteProConfirm(false);
-        setTimeout(() => navigate('/'), 1200);
+        // ✅ 11TH-B1: 이전 타이머 정리 후 재등록
+        if (navTimerRef.current) clearTimeout(navTimerRef.current);
+        navTimerRef.current = setTimeout(() => navigate('/', { replace: true }), 1200);
       }
     } catch (err) {
       addToast(err.message || '정기결제 등록에 실패했습니다. 다시 시도해주세요.', 'error');
@@ -196,7 +233,7 @@ export default function VVIPSubscribe() {
     setPurchasing(true);
     try {
       // ① 포트원 빌링키 등록 + 첫 결제
-      const { imp_uid, customer_uid } = await requestBillingPayment({
+      const { imp_uid, customer_uid, merchant_uid } = await requestBillingPayment({
         pgKey:     selectedPg,
         planId:    'VVIP',
         planLabel: `VVIP - ${selectedHarbor.name}`,
@@ -218,7 +255,8 @@ export default function VVIPSubscribe() {
       if (res.data.success) {
         setUserTier('BUSINESS_VIP');
         updateUser({ tier: 'BUSINESS_VIP' });
-        setTakenMap(prev => ({ ...prev, [selectedHarbor.id]: { takenBy: user.name } }));
+        // ✅ 11TH-B5: markHarborTaken useCallback
+        markHarborTaken(selectedHarbor.id, user.name);
         setMySlot({ harborId: selectedHarbor.id, harborName: selectedHarbor.name, expiresAt: res.data.nextBillingDate });
         addToast(`🎉 ${selectedHarbor.name} VVIP 정기구독 등록 완료!`, 'success');
         addToast(`✅ 매월 ${new Date(res.data.nextBillingDate).getDate()}일 자동 청구됩니다.`, 'info');
@@ -232,8 +270,12 @@ export default function VVIPSubscribe() {
           amount:      550000,
           status:      'paid',
           imp_uid,
+          merchant_uid,
         }).catch(() => {});
         setShowConfirm(false);
+        // ✅ 11TH-B1: 이전 타이머 정리 후 재등록
+        if (navTimerRef.current) clearTimeout(navTimerRef.current);
+        navTimerRef.current = setTimeout(() => navigate('/', { replace: true }), 1200);
       }
     } catch (err) {
       addToast(err.message || '정기결제 등록 실패. 다시 시도해주세요.', 'error');
@@ -261,7 +303,7 @@ export default function VVIPSubscribe() {
           <div style={{ fontSize: '12px', color: 'rgba(255,215,0,0.7)', fontWeight: '800', textAlign: 'right' }}>
             잔여<br />
             <span style={{ fontSize: '18px', color: availableCount > 0 ? '#00C48C' : '#FF5A5F', fontWeight: '900' }}>{availableCount}</span>
-            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>/23</span>
+            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>/{HARBORS_STATIC.length}</span>{/* ✅ 24TH-C4: 하드코딩 /23 → HARBORS_STATIC.length */}
           </div>
         )}
       </div>
@@ -273,7 +315,8 @@ export default function VVIPSubscribe() {
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <div style={{ fontSize: '28px', marginBottom: '8px' }}>🎣</div>
             <div style={{ fontSize: '20px', fontWeight: '950', color: '#fff', marginBottom: '6px' }}>멤버십 플랜 선택</div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>낚시GO 프리미엄 기능을 이용하세요<br />실제 결제는 선택 후 마스터가 안내드립니다</div>
+            {/* ✅ NEW-C5: 포트원 자동결제 구현 완료 — 기존 '마스터 안내' 문구 제거 */}
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>낚시GO 프리미엄 기능을 이용하세요<br />플랜 선택 후 즉시 정기구독이 시작됩니다</div>
           </div>
 
           {/* 플랜 카드 */}

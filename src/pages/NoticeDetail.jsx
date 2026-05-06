@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // ✅ 23TH-C4: useCallback 추가
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ChevronLeft, Edit2, Trash2, Bell, Calendar, Eye } from 'lucide-react';
 import apiClient from '../api/index';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A2: ADMIN_ID/EMAIL import
 import { useToastStore } from '../store/useToastStore';
+import LoadingSpinner from '../components/LoadingSpinner'; // ✅ 11TH-C2: LoadingSpinner import
 
 export default function NoticeDetail() {
   const navigate = useNavigate();
@@ -15,41 +16,49 @@ export default function NoticeDetail() {
   // navigate state로 넘어온 데이터 우선 사용
   const [notice, setNotice] = useState(location.state?.notice || null);
   const [loading, setLoading] = useState(!location.state?.notice);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
-  const [saving, setSaving] = useState(false);
+  // ✅ 2ND-B5: 수정 모달 state 4개 → 단일 객체 응집 (NEW-B7과 동일 패턴)
+  const [editState, setEditState] = useState({ show: false, title: '', content: '', saving: false });
+  const { show: showEditModal, title: editTitle, content: editContent, saving } = editState;
+  const setShowEditModal = (v) => setEditState(s => ({ ...s, show: v }));
+  const setEditTitle    = (v) => setEditState(s => ({ ...s, title: v }));
+  const setEditContent  = (v) => setEditState(s => ({ ...s, content: v }));
+  const setSaving       = (v) => setEditState(s => ({ ...s, saving: v }));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
-  const storedUser = (() => { try { return JSON.parse(localStorage.getItem('user')) || {}; } catch { return {}; } })();
+  // ✅ 11TH-A2: state.isAdmin() 셉렉터 → ADMIN_ID/EMAIL 직접 비교 (3RD-A2 표준으로 통일)
+  const isAdmin = useUserStore((state) =>
+    state.user?.id === ADMIN_ID || state.user?.email === ADMIN_EMAIL
+  );
+
+  // ✅ 23TH-C4: fetchNotice를 useCallback으로 감싸 — eslint-disable 없이 useEffect deps에 안전하게 포함 가능
+  const fetchNotice = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient.get(`/api/community/notices/${id}`);
+      setNotice(res.data);
+    } catch (err) {
+      // NEW-A4: 프로덕션에서 콘솔 스택 트레이스 노출 방지
+      if (!import.meta.env.PROD) console.error('Notice fetch error:', err.response?.status, err.message);
+      addToast('공지사항을 불러올 수 없습니다.', 'error');
+      // ENH5-B5: setTimeout 딜레이 제거 → 즉시 navigate (더 나은 UX)
+      navigate('/community?tab=notice', { replace: true });
+    } finally { setLoading(false); }
+  }, [id, addToast, navigate]);
 
   useEffect(() => {
     // state로 데이터가 이미 있으면 API 호출 불필요
     if (location.state?.notice) return;
     fetchNotice();
-  }, [id]);
-
-  const fetchNotice = async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get(`/api/community/notices/${id}`);
-      setNotice(res.data);
-    } catch(err) {
-      console.error('Notice fetch error:', err.response?.status, err.message);
-      // state에도 없고 API도 실패 → 목록으로
-      addToast('공지사항을 불러올 수 없습니다.', 'error');
-      setTimeout(() => navigate('/community?tab=notice'), 1200);
-    } finally { setLoading(false); }
-  };
+    // ✅ 2ND-A5: location.state?.notice는 navigate 시점에 고정 — deps 제외 안전
+    // ✅ 23TH-C4: fetchNotice가 useCallback으로 안정화되어 eslint-disable 없이 deps 포함
+  }, [fetchNotice, location.state?.notice]);
 
   const handleEdit = async () => {
     if (!editTitle.trim() || !editContent.trim()) { addToast('제목과 내용을 입력해주세요.', 'error'); return; }
     setSaving(true);
     try {
-      const adminId = storedUser.email || storedUser.id || storedUser.name;
       const res = await apiClient.put(`/api/community/notices/${id}`, {
-        title: editTitle.trim(), content: editContent.trim(), adminId
+        title: editTitle.trim(), content: editContent.trim()
       });
       setNotice(res.data);
       setShowEditModal(false);
@@ -61,8 +70,7 @@ export default function NoticeDetail() {
 
   const handleDelete = async () => {
     try {
-      const adminId = storedUser.email || storedUser.id || storedUser.name;
-      await apiClient.delete(`/api/community/notices/${id}`, { data: { adminId } });
+      await apiClient.delete(`/api/community/notices/${id}`);
       addToast('공지사항이 삭제되었습니다.', 'success');
       navigate('/community?tab=notice');
     } catch (err) {
@@ -70,10 +78,11 @@ export default function NoticeDetail() {
     }
   };
 
+  // ✅ 11TH-C2: 인라인 border 스피너 → LoadingSpinner 컴포넌트 교체
   if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#fff' }}>
-      <div style={{ width: '36px', height: '36px', border: '3px solid #FF3B30', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#fff', gap: '12px' }}>
+      <LoadingSpinner />
+      <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>로드 중...</span>
     </div>
   );
 

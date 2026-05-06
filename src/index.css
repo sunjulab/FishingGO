@@ -1,4 +1,6 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+/* ✅ 9TH-C1: Pretendard 폰트는 index.html <link> 태그로 로드 — CSS @import 중복 제거 */
+/* @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css'); */
+@font-face { font-family: 'Pretendard'; font-display: swap; }
 
 :root {
   --primary: #0056D2;
@@ -38,6 +40,12 @@ body {
   user-select: none;
   display: flex;
   justify-content: center;
+}
+
+/* ENH-A4: 댓글·메모·게시글 본문처럼 사용자가 복사해야 할 요소에 적용 */
+.selectable {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 #root {
@@ -172,6 +180,12 @@ body {
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
+/* ENH-C4: 데스크톱 hover 효과 */
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
 .card:active {
   transform: scale(0.98);
 }
@@ -204,12 +218,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 86, 210, 0.2);
 }
 
-/* --- Map Page Particulars --- */
-#naver-map {
-  width: 100%;
-  height: calc(100vh - 75px);
-  background-color: #f0f0f5;
-}
+/* ✅ 29TH-C3: #naver-map 제거 — 프로젝트는 카카오맵으로 전환 완료, 해당 ID는 dead code */
 
 .map-placeholder {
   height: 100%;
@@ -289,3 +298,62 @@ ins.adsbygoogle[data-ad-status="unfilled"]::after {
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
+
+/* ─── 좋아요 하트 버스트 애니메이션 ─────────────────────────────────────────── */
+@keyframes heartBurst {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  50%  { opacity: 0.9; transform: translateY(-16px) scale(1.4); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.8); }
+}
+
+/* ─── 바텀시트 슬라이드업 ────────────────────────────────────────────────────── */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ─── AI 낚시 지수 게이지 pulse ────────────────────────────────────────────── */
+@keyframes gaugePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 196, 140, 0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(0, 196, 140, 0); }
+}
+
+.gauge-pulse {
+  animation: gaugePulse 2s ease-in-out infinite;
+}
+
+/* ─── ✅ 5TH-A1: RealTimeAlert slideDown — 인라인 style 제거 후 전역 이관 ──── */
+@keyframes slideDown {
+  from { transform: translate(-50%, -100%); opacity: 0; }
+  to   { transform: translate(-50%, 0);     opacity: 1; }
+}
+.premium-alert-toast { transition: transform 0.2s; }
+.premium-alert-toast:hover { transform: translateX(-50%) scale(1.02); }
+
+/* ─── ✅ FIX: spin \ub204\ub77d \ucd94\uac00 \u2014 LoadingSpinner, \uc9c0\ub3c4 \ub85c\ub529 \ub4f1 animation: spin \ucc38\uc870 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─── \ube44\ubc00\ud3ec\uc778\ud2b8 \ubcc4 pulse \ub2e4\uc774\ub098\ubbf9 \u2014 MapHome secretPulse */
+@keyframes secretPulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px rgba(255,200,0,0.9)); }
+  50%       { transform: scale(1.15); filter: drop-shadow(0 0 14px rgba(255,200,0,1)) drop-shadow(0 0 4px rgba(255,160,0,0.8)); }
+}
+
+/* ─── \ud574\uc591 CCTV \ubaa8\ub2ec fade \u2014 CctvAdmin */
+@keyframes modalFade {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.modal-fade { animation: modalFade 0.25s ease-out forwards; }
+
+/* ─── \ucf54\uc778 \ub9ac\uc6cc\ub4dc \ubc14\uc6b4\uc2a4 \u2014 \ub808\ubca8\uc5c5 toast */
+@keyframes coinBounce {
+  0%   { transform: translateY(0) scale(1); }
+  30%  { transform: translateY(-8px) scale(1.15); }
+  60%  { transform: translateY(2px) scale(0.95); }
+  100% { transform: translateY(0) scale(1); }
+}
+

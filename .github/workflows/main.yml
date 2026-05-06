@@ -5,12 +5,23 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # Render 서버 자동 재배포 (Vercel은 GitHub 연동으로 자동 처리됨)
+  # ✅ 29TH-C2: 배포 경로 명시
+  # 프론트엔드(Vercel): GitHub 저장소 연동으로 main push 시 자동 배포
+  #   - Vercel 대시보드 → 프로젝트 → Settings → Git Integration 확인
+  #   - 연동 해제 시: vercel CLI(deploy_cli.cjs/.mjs)로 수동 배포 가능
+  # 백엔드(Render): 아래 deploy-backend job으로 Render Deploy Hook 트리거
   deploy-backend:
     name: Trigger Render Backend Redeploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # ✅ 21TH-C2: ubuntu-latest → 버전 고정 (major 업그레이드로 인한 빌드 불일치 방지)
     steps:
       - name: Trigger Render Deploy Hook
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-          echo "✅ Render 서버 재배포 트리거 완료"
+          # ✅ 13TH-B3: --fail 추가 — HTTP 오류 시 workflow 실패 처리 (이전: 무조건 성공)
+          response=$(curl --fail --silent --show-error -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          http_code="${response: -3}"
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ Render 서버 재배포 트리거 완료 (HTTP $http_code)"
+          else
+            echo "❌ Render 배포 트리거 실패 (HTTP $http_code)"
+            exit 1
+          fi

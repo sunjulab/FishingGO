@@ -4,8 +4,25 @@ import { useNavigate } from 'react-router-dom';
 import { SECRET_FISHING_POINTS } from '../constants/fishingData';
 import apiClient from '../api/index';
 
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+
+// ✅ 5TH-C6: localStorage 중복 패턴 헬퍼 함수 — handleSave/handleReset 두 곳
+const getLocalOverrides = () => { try { return JSON.parse(localStorage.getItem('secretPointOverrides') || '{}'); } catch { return {}; } };
+const setLocalOverrides = (ov) => localStorage.setItem('secretPointOverrides', JSON.stringify(ov));
+
 export default function SecretPointAdmin() {
   const navigate = useNavigate();
+  const user    = useUserStore(s => s.user);
+  // ✅ 5TH-B7: isAdmin 직접 비교 — App.jsx/MapHome(3RD-A2) 패턴 통일
+  const isAdmin = user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL;
+
+  // 클라이언트 이중 인증 가드 — App.jsx 라우트 보호에 추가
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate('/', { replace: true });
+    }
+  }, [isAdmin, navigate]);
+
   const markerRef       = useRef(null);
   const mapInstanceRef  = useRef(null);
   const clickListenerRef= useRef(null);
@@ -22,6 +39,7 @@ export default function SecretPointAdmin() {
   const [saved,         setSaved]         = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [serverOnline,  setServerOnline]  = useState(true);
+  const savedTimerRef   = useRef(null); // ✅ 5TH-A4: 저장 완료 타이머 ref — 언마운트 후 setState 방지
 
   /* ── 서버에서 오버라이드 불러오기 ── */
   const fetchOverrides = useCallback(async () => {
@@ -31,14 +49,15 @@ export default function SecretPointAdmin() {
       setServerOnline(true);
     } catch {
       setServerOnline(false);
-      // 서버 오프라인 시 localStorage fallback
-      try { setOverrides(JSON.parse(localStorage.getItem('secretPointOverrides') || '{}')); } catch {}
+      setOverrides(getLocalOverrides()); // ✅ 5TH-C6: getLocalOverrides 헬퍼 사용
     }
   }, []);
 
   useEffect(() => { fetchOverrides(); }, [fetchOverrides]);
 
   /* ── 지도 초기화: callback ref ── */
+  // ENH6-C5: window.kakao는 전역 객체 — React 의존성 추적 불필요, eslint 경고 억제
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const mapCallbackRef = useCallback((node) => {
     if (!node || initDoneRef.current) return;
     initDoneRef.current = true;
@@ -70,8 +89,7 @@ export default function SecretPointAdmin() {
       if (clickListenerRef.current && mapInstanceRef.current)
         window.kakao.maps.event.removeListener(mapInstanceRef.current, 'click', clickListenerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputMode, mapReady]);
+  }, [inputMode, mapReady, placeMarker]); // ✅ 19TH-B3: placeMarker useCallback 안정화 후 deps 추가, eslint-disable 제거
 
   /* ── 포인트 선택 → 지도 이동 ── */
   useEffect(() => {
@@ -85,11 +103,12 @@ export default function SecretPointAdmin() {
     if (markerRef.current) markerRef.current.setMap(null);
     markerRef.current = new window.kakao.maps.Marker({ position: latlng, map: mapInstanceRef.current });
     setPreviewCoords(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPoint, mapReady]);
+  // ✅ 19TH-B3: overrides는 포인트 선택 시점 스냅샷 참조 — deps 추가 시 오버라이드 변경마다 마커 재설정되므로 의도적 제외
+  }, [selectedPoint, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── 마커 놓기 ── */
-  const placeMarker = (lat, lng, label, source) => {
+  // ✅ 19TH-B3: useCallback 적용 — refs/setter만 참조하므로 deps 빈 배열 안전 (click listener eslint-disable 제거)
+  const placeMarker = useCallback((lat, lng, label, source) => {
     if (!mapInstanceRef.current) return;
     const latlng = new window.kakao.maps.LatLng(lat, lng);
     mapInstanceRef.current.setCenter(latlng);
@@ -101,7 +120,7 @@ export default function SecretPointAdmin() {
     iw.open(mapInstanceRef.current, marker);
     markerRef.current = marker;
     setPreviewCoords({ lat, lng, source });
-  };
+  }, []); // refs·setters만 참조 — stable
 
   /* ── 주소 검색 ── */
   const handleSearch = () => {
@@ -130,22 +149,23 @@ export default function SecretPointAdmin() {
     setSaving(true);
     try {
       await apiClient.post('/api/secret-point-overrides', {
-        id: selectedPoint.id,
-        lat: previewCoords.lat,
-        lng: previewCoords.lng,
+        id: selectedPoint.id, lat: previewCoords.lat, lng: previewCoords.lng,
       });
       setServerOnline(true);
     } catch {
-      // 서버 오프라인 시 localStorage fallback
+      // ✅ 5TH-C6: setLocalOverrides 헬퍼 사용
       setServerOnline(false);
-      const ov = JSON.parse(localStorage.getItem('secretPointOverrides') || '{}');
+      const ov = getLocalOverrides();
       ov[selectedPoint.id] = { lat: previewCoords.lat, lng: previewCoords.lng };
-      localStorage.setItem('secretPointOverrides', JSON.stringify(ov));
+      setLocalOverrides(ov);
+    } finally {
+      setSaving(false); // ✅ 30TH-C1: try/catch 중복 setSaving(false) → finally 블록으로 통합 (CreateCrew L55 패턴 통일)
     }
-    setSaving(false);
     await fetchOverrides();
+    // ✅ 5TH-A4: savedTimerRef로 타이머 관리 — 언마운트 후 setState 방지
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
     setSaved(true);
-    setTimeout(() => { window.location.reload(); }, 2200);
+    savedTimerRef.current = setTimeout(() => { setSaved(false); savedTimerRef.current = null; }, 2200);
   };
 
   /* ── 초기화 → 서버 DELETE ── */
@@ -153,8 +173,10 @@ export default function SecretPointAdmin() {
     try {
       await apiClient.delete(`/api/secret-point-overrides/${id}`);
     } catch {
-      const ov = JSON.parse(localStorage.getItem('secretPointOverrides') || '{}');
-      delete ov[id]; localStorage.setItem('secretPointOverrides', JSON.stringify(ov));
+      // ✅ 5TH-C6: getLocalOverrides/setLocalOverrides 헬퍼 사용
+      const ov = getLocalOverrides();
+      delete ov[id];
+      setLocalOverrides(ov);
     }
     await fetchOverrides();
   };
@@ -174,7 +196,7 @@ export default function SecretPointAdmin() {
           <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>{selectedPoint?.name?.replace('⭐ ', '')}</div>
           <div style={{ fontSize: '13px', color: '#00C48C', fontFamily: 'monospace' }}>{previewCoords?.lat.toFixed(5)}, {previewCoords?.lng.toFixed(5)}</div>
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>모든 사용자에게 실시간 반영됩니다 ✅</div>
-          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>잠시 후 자동 새로고침...</div>
+          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>2초 후 자동 닫힙니다...</div>{/* ✅ 5TH-C2: '자동 새로고침' 오기 수정 */}
         </div>
       )}
 
@@ -288,9 +310,9 @@ export default function SecretPointAdmin() {
             </div>
             {searchResults.length > 0 && (
               <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', overflow: 'hidden' }}>
-                {searchResults.map((r, i) => (
-                  <button key={i} onClick={() => { placeMarker(r.lat, r.lng, r.address, 'search'); setSearchResults([]); setAddressInput(r.address); setInputMode('click'); }}
-                    style={{ width: '100%', padding: '11px 14px', background: 'transparent', border: 'none', borderBottom: i < searchResults.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', color: '#fff', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '9px' }}>
+                {searchResults.map((r, idx) => ( // ✅ 19TH-C1: 인덱스 key → 주소 값 key
+                  <button key={r.address} onClick={() => { placeMarker(r.lat, r.lng, r.address, 'search'); setSearchResults([]); setAddressInput(r.address); setInputMode('click'); }}
+                    style={{ width: '100%', padding: '11px 14px', background: 'transparent', border: 'none', borderBottom: idx < searchResults.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', color: '#fff', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '9px' }}>
                     <MapPin size={13} color="#FFD700" style={{ marginTop: '2px', flexShrink: 0 }} />
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: '700' }}>{r.address}</div>

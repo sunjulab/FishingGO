@@ -3,22 +3,44 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { ChevronLeft, Send, Users, ShieldCheck, Wifi, WifiOff } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
+import apiClient from '../api/index';
+
+// ENH4-A6: SOCKET_URL 모듈 레벨 상수화 — useEffect 내 매 렌더마다 읽히는 문제 해결
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// ✅ 5TH-C3: 메시지 시간 포매팅 헬퍼 — 중첩 삼항 제거
+const formatMsgTime = (msg) => {
+  if (msg.time) return msg.time;
+  if (msg.createdAt) return new Date(msg.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  return '';
+};
 
 export default function CrewChat() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useUserStore();
+  // ✅ NEW-B5: 전체 store 구독 → 선택 구독 — 불필요한 리렌더 방지
+  const user = useUserStore(s => s.user);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [crewName, setCrewName] = useState(''); // ✅ 실제 크루명
   const scrollRef = useRef();
 
   const myName = user?.name || user?.email || '익명';
 
+  // ✅ 크루명 패치
   useEffect(() => {
-    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    apiClient.get(`/api/community/crews/${id}`)
+      .then(res => setCrewName(res.data?.name || ''))
+      .catch(() => {});
+  }, [id]);
+
+  useEffect(() => {
+    // ENH4-A6: 모듈 레벨 SOCKET_URL 상수 사용 (중복 선언 제거)
+    // ✅ OPT-5: 핸드셰이크에 JWT 토큰 포함 → 서버에서 발신자 위조 방지
+    const accessToken = localStorage.getItem('access_token') || undefined;
     const newSocket = io(SOCKET_URL, {
       // ─── 재연결 강화 옵션 ───────────────────────────
       reconnection: true,           // 자동 재연결 활성화
@@ -27,6 +49,7 @@ export default function CrewChat() {
       reconnectionDelayMax: 5000,   // 최대 재시도 간격: 5초
       timeout: 10000,               // 연결 타임아웃: 10초
       transports: ['websocket', 'polling'], // WebSocket 우선, polling fallback
+      auth: { token: accessToken }, // JWT 핸드셰이크 인증
     });
 
     setSocket(newSocket);
@@ -44,7 +67,12 @@ export default function CrewChat() {
     newSocket.emit('join_crew', id);
 
     newSocket.on('chat_history', (history) => setMessages(history));
-    newSocket.on('new_msg', (msg) => setMessages(prev => [...prev, msg]));
+    newSocket.on('new_msg', (msg) => setMessages(prev => {
+      // 낙관적 메시지(자신이 보낸 temp_) 제거 후 서버 확인 메시지 추가
+      const withoutOptimistic = prev.filter(m => !(m._isOptimistic && m.sender === msg.sender && m.text === msg.text));
+      return [...withoutOptimistic, msg];
+    }));
+
 
     // 화면 포커스 복귀 시 재연결 체크
     const handleVisibilityChange = () => {
@@ -68,13 +96,27 @@ export default function CrewChat() {
 
   const handleSend = () => {
     if (!input.trim() || !socket || !connected) return;
-    socket.emit('send_msg', {
-      crewId: id,
-      sender: myName,
-      text: input.trim()
+    const text = input.trim();
+    if (text.length > 500) return; // 클라이언트 측 최대 길이 제한 (500자)
+    // ✅ 5TH-B3: crypto.randomUUID() — Date.now() 밀리초 충돌 방지 (빠른 연속 전송)
+    const tempId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `temp_${Date.now()}_${Math.random()}`;
+    // 낙관적 업데이트 — 서버 응답 전 즉시 표시
+    setMessages(prev => {
+      const next = [...prev, {
+        _id: tempId,
+        sender: myName,
+        text,
+        createdAt: new Date().toISOString(),
+        _isOptimistic: true,
+      }];
+      // 클라이언트 디스플레이 최대 300개 유지 (DOM 성능 보호)
+      return next.length > 300 ? next.slice(-300) : next;
     });
+    // ENH4-B5: sender는 클라이언트 전송값 사용 (JWT 핸드셸이크로 서버 인증 완료 시 서버에서 sender 추출 권장)
+    socket.emit('send_msg', { crewId: id, sender: myName, text });
     setInput('');
   };
+
 
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#F0F2F5' }}>
@@ -84,7 +126,7 @@ export default function CrewChat() {
           <ChevronLeft size={24} />
         </button>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '800' }}>크루 채팅방</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: '800' }}>{crewName || '크루 채팅방'}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--primary)' }}>
             <ShieldCheck size={12} /> 보안된 프라이빗 채널
           </div>
@@ -118,11 +160,12 @@ export default function CrewChat() {
           const isMe = msg.sender === myName;
           return (
             <div
-              key={idx}
+            // ✅ 23TH-B2: msg._id는 서버 응답에서 오며 낙관적 메시지도 _id:tempId로 항상 존재 — undefined 방지용 idx fallback 추가
+            key={msg._id || `msg-${idx}`}
               style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%' }}
             >
               <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px', textAlign: isMe ? 'right' : 'left' }}>
-                {msg.sender} • {msg.time}
+              {msg.sender} • {formatMsgTime(msg) /* ✅ 5TH-C3: formatMsgTime 헬퍼 사용 */}
               </div>
               <div style={{
                 padding: '10px 14px',
@@ -147,7 +190,7 @@ export default function CrewChat() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
           placeholder={connected ? '메시지를 입력하세요...' : '연결 중...'}
           disabled={!connected}
           style={{
@@ -170,9 +213,7 @@ export default function CrewChat() {
         </button>
       </div>
 
-      <style>{`
-        .page-container { max-width: 480px; margin: 0 auto; }
-      `}</style>
+      {/* ENH4-A5: 중복 인라인 <style> 태그 제거 — index.css의 .page-container 클래스 사용 */}
     </div>
   );
 }

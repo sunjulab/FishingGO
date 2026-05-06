@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react'; // ✅ 17TH-B1: useCallback 추가
 import apiClient from '../api/index';
 import { evaluateFishingCondition } from '../utils/evaluator';
 import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 7TH-A3: ADMIN_ID/ADMIN_EMAIL import
 import { useToastStore } from '../store/useToastStore';
+
+// ENH3-B5: 환경변수는 불변 — 컴포넌트 외부 상수로 분리
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// ✅ 7TH-B4: extractYoutubeId 컴포넌트 외부 추출 — saveCctvOverride 호출마다 재정의 제거
+const YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+function extractYoutubeId(str) {
+  const match = str.match(YOUTUBE_REGEXP);
+  return (match && match[2].length === 11) ? match[2] : str;
+}
 
 export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
   const [marineData, setMarineData] = useState({
@@ -15,12 +25,25 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
   const [cctvData, setCctvData] = useState(null);
   const [cctvLoading, setCctvLoading] = useState(true);
   const [shoppingItems, setShoppingItems] = useState([]);
+  const [businessPosts, setBusinessPosts] = useState([]);
+  const [bizLoading, setBizLoading] = useState(false);
   const navigate = useNavigate();
   const user = useUserStore(state => state.user);
-  const canAccessPremium = useUserStore(state => state.canAccessPremium());
-  const isAdmin = useUserStore(state => state.isAdmin?.() ?? false);
+  const userTier = useUserStore(state => state.userTier);
+  // ✅ FIX-CCTV: isAdmin(MASTER tier 포함) → canAccessPremium에 MASTER tier 명시적 추가
+  const canAccessPremium = useMemo(() => {
+    if (user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL || user?.email === ADMIN_ID) return true;
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
+  }, [userTier, user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ✅ 7TH-A3: isAdmin 직접 비교 — ADMIN_ID/ADMIN_EMAIL/MASTER tier 4중 보장
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === ADMIN_ID ||
+    s.userTier === 'MASTER'
+  );
   const addToast = useToastStore(state => state.addToast);
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  // ENH3-B5: 모듈 레벨 API_BASE 상수 사용 (isEditingCctv 제거)
 
 
   const [isEditingCctv, setIsEditingCctv] = useState(false);
@@ -37,15 +60,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
     return () => clearInterval(interval);
   }, [cctvData?.type]);
 
-  const saveCctvOverride = async () => {
+  // ✅ 17TH-B1: saveCctvOverride useCallback 적용 — editYoutubeId/selectedPoint/cctvData stale closure 위험 제거
+  const saveCctvOverride = useCallback(async () => {
     if (!editYoutubeId.trim()) return;
 
-    // 유튜브 전체 URL을 복사/붙여넣기 해도 자동으로 11자리 ID만 추출
-    const extractYoutubeId = (str) => {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = str.match(regExp);
-      return (match && match[2].length === 11) ? match[2] : str;
-    };
+    // ✅ 7TH-B4: extractYoutubeId 컴포넌트 외부 함수로 이동 — 호출마다 재정의 제거
     const finalYoutubeId = extractYoutubeId(editYoutubeId.trim());
 
     const sid = selectedPoint.obsCode || 'DT_0001';
@@ -54,17 +73,17 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
       const res = await apiClient.put(`/api/admin/cctv/${sid}`, {
         type: 'youtube',
         youtubeId: finalYoutubeId,
-        label: cctvData?.label || `${selectedPoint.name} \uc218\ub3d9\uc5c5\ub370\uc774\ud2b8`
+        label: cctvData?.label || `${selectedPoint.name} 수동업데이트` // ✅ 7TH-C4: 한글 직접 표기
       });
       if (res.data.success) {
-        addToast('\u2705 CCTV \ub9c1\ud06c\uac00 \uc815\uc0c1\uc801\uc73c\ub85c \uc218\uc815\ub418\uc5c8\uc2b5\ub2c8\ub2e4.', 'success');
+        addToast('✅ CCTV 링크가 정상적으로 수정되었습니다.', 'success'); // ✅ 7TH-C4: 한글 직접 표기
         setIsEditingCctv(false);
-        // \uc218\uc815\ud55c \ub9c1\ud06c\ub85c \uc989\uc2dc \ub2e4\uc2dc \ub85c\ub4dc
+        // 수정한 링크로 즉시 다시 로드
         setCctvLoading(true);
         const cctvResp = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
         setCctvData(cctvResp.data);
       } else {
-        addToast(res.data.error || '\uc218\uc815\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.', 'error');
+        addToast(res.data.error || '수정에 실패했습니다.', 'error'); // ✅ 7TH-C4: 한글 직접 표기
       }
     } catch (err) {
       addToast('수정 중 오류가 발생했습니다.', 'error');
@@ -72,69 +91,75 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
       setIsSavingCctv(false);
       setCctvLoading(false);
     }
-  };
+  }, [editYoutubeId, selectedPoint, cctvData, addToast]); // ✅ 17TH-B1: 모든 클로저 변수 deps 적시
 
   useEffect(() => {
     if (!selectedPoint) return;
 
     const loadData = async () => {
       setLoading(true);
+      setCctvLoading(true);
       const sid = selectedPoint.obsCode || 'DT_0001';
+      const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' \uc77c\ub78c' : '\ub099\uc2dc\uc6a9\ud488';
 
-      // 해양 날씨/수온 조회
-      try {
-        const resp = await apiClient.get(`/api/weather/precision?stationId=${sid}`);
-        setMarineData({ 
-          ...resp.data,
-          stationId: sid 
-        });
-      } catch (err) {
-        console.error('Data Load Error:', err);
-        const reg = selectedPoint.region || '남해';
-        const profile = { '제주': 18.2, '남해': 16.5, '동해': 14.2, '서해': 11.8 };
-        const baseSst = profile[reg] || 16.0;
-        const seed = (parseInt(selectedPoint.id) % 10 - 5) / 10 || 0;
-        const finalSst = (baseSst + seed).toFixed(1);
+      // ENH3-C3: CCTV\uc640 \uc1fc\ud551\uc744 \ud574\uc591\ub0a0\uc528 \ub300\uae30 \uc911 \ubcd1\ub82c \uc2dc\uc791 \u2014 \ub85c\ub529 \uc2dc\uac04 \ub2e8\ucd95
+      const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}`)
+        .then(res => { setCctvData(res.data); })
+        .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
+        .finally(() => setCctvLoading(false));
 
-        setMarineData({
-          stationId: sid,
-          sst: finalSst,
-          temp: `${finalSst}°C`,
-          layers: { upper: finalSst, middle: (finalSst - 1.2).toFixed(1), lower: (finalSst - 3.4).toFixed(1) },
-          tide: { phase: '분석 중', high: '15:20', low: '08:42' },
-          tide_predictions: [{ time: '14:20', type: '고조', level: 180 }]
-        });
-      } finally {
-        setLoading(false);
-      }
+      const shopPromise = apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(keyword)}&limit=3`)
+        .then(res => { if (res.data?.products) setShoppingItems(res.data.products.slice(0, 3)); })
+        .catch(err => { if (!import.meta.env.PROD) console.error('Shop Load Error:', err); });
 
-      // 현장 CCTV/라이브 데이터 조회 (비동기 병렬)
-      try {
-        setCctvLoading(true);
-        const cctvResp = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
-        setCctvData(cctvResp.data);
-      } catch (err) {
-        console.error('CCTV Load Error:', err);
-      } finally {
-        setCctvLoading(false);
-      }
+      // ✅ 7TH-B5: 마린데이터도 병렬화 — CCTV/쇼핑과 함께 Promise.allSettled로 전체 벑렬 시작
+      const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}`)
+        .then(resp => {
+          setMarineData({ ...resp.data, stationId: sid });
+        })
+        .catch(err => {
+          if (!import.meta.env.PROD) console.error('Data Load Error:', err);
+          const reg = selectedPoint.region || '남해';
+          const profile = { '제주': 18.2, '남해': 16.5, '동해': 14.2, '서해': 11.8 };
+          const baseSst = profile[reg] || 16.0;
+          const seed = (parseInt(selectedPoint.id) % 10 - 5) / 10 || 0;
+          const finalSst = (baseSst + seed).toFixed(1);
+          setMarineData({
+            stationId: sid,
+            sst: finalSst,
+            temp: `${finalSst}°C`,
+            layers: { upper: finalSst, middle: (finalSst - 1.2).toFixed(1), lower: (finalSst - 3.4).toFixed(1) },
+            tide: { phase: '분석 중', high: '15:20', low: '08:42' },
+            tide_predictions: [{ time: '14:20', type: '고조', level: 180 }]
+          });
+        })
+        .finally(() => setLoading(false));
 
-      // 쇼핑 아이템 조회 (비동기 병렬)
-      try {
-        const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' \ucc44\ube44' : '\ub099\uc2dc\uc6a9\ud488';
-        const shopResp = await apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(keyword)}&limit=3`);
-        if (shopResp.data && shopResp.data.products) {
-          setShoppingItems(shopResp.data.products.slice(0, 3));
-        }
-      } catch (err) {
-        console.error('Shop Load Error:', err);
-      }
+      // 세 API 병렬 대기 — 어느 하나가 실패해도 나머지 콘텐츠는 정상 표시
+      await Promise.allSettled([marinePromise, cctvPromise, shopPromise]);
+
+      // 해당 구역 선상배 홍보글 조회
+      setBizLoading(true);
+      const regionKey = (selectedPoint.region || '').split(' ')[0]; // '남해', '제주' 등
+      apiClient.get(`/api/community/business?region=${encodeURIComponent(regionKey)}&limit=3`)
+        .then(res => { setBusinessPosts(Array.isArray(res.data) ? res.data : []); })
+        .catch(() => setBusinessPosts([]))
+        .finally(() => setBizLoading(false));
     };
 
     loadData();
-  }, [selectedPoint?.id]); // selectedPoint 변경 시에만 재조회 (user 의존성 제거)
+  }, [selectedPoint?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ✅ 3RD-B8: addToast는 store 함수로 안정적 — selectedPoint?.id만으로 deps 제한 안전
 
   if (!selectedPoint) return null;
+
+  // ✅ 3RD-B7: AI 낙시 컨디션 연산 IIFE → useMemo — 매 렌더마다 재계산 방지
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fishingCondition = useMemo(
+    () => evaluateFishingCondition(marineData, selectedPoint),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [marineData, selectedPoint]
+  );
 
   return (
     <div style={{ padding: '0', backgroundColor: '#fff', borderRadius: '24px 24px 0 0', height: '100%' }}>
@@ -165,8 +190,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
             <div style={{ marginBottom: '14px' }}>
               <div style={{ fontSize: '11px', color: '#B8860B', fontWeight: '900', marginBottom: '8px' }}>🎣 주요 조황 어종</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {(selectedPoint.fish || '').split(',').map((f, i) => (
-                  <span key={i} style={{ fontSize: '12px', fontWeight: '800', color: '#FFD700', background: 'rgba(255,215,0,0.12)', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(255,215,0,0.25)' }}>
+                {(selectedPoint.fish || '').split(',').map((f) => ( // ✅ 17TH-B2: 인덱스 key → 어종명 key
+                  <span key={f.trim()} style={{ fontSize: '12px', fontWeight: '800', color: '#FFD700', background: 'rgba(255,215,0,0.12)', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(255,215,0,0.25)' }}>
                     {f.trim()}
                   </span>
                 ))}
@@ -243,7 +268,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                 onClick={() => navigate('/vvip-subscribe')}
                 style={{ background: 'linear-gradient(135deg, #FF3B30, #D32F2F)', color: '#fff', border: 'none', borderRadius: '30px', padding: '10px 28px', fontSize: '13px', fontWeight: '950', cursor: 'pointer', boxShadow: '0 6px 20px rgba(255,59,48,0.4)' }}
               >
-                LITE \ud50c\ub79c \uc5c5\uadf8\ub808\uc774\ub4dc
+                LITE 플랜 업그레이드
               </button>
             </div>
           )}
@@ -328,9 +353,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* AI 낚시 컨디션 (냉정한 평가) */}
+            {/* AI 낙시 컨디션 (냉정한 평가) */}
             {(() => {
-              const cond = evaluateFishingCondition(marineData, selectedPoint);
+              const cond = fishingCondition; // ✅ 3RD-B7: useMemo 연산 결과 사용
               return (
                 <div style={{ backgroundColor: '#fff', border: `2px solid ${cond.color}`, borderRadius: '20px', padding: '20px', marginBottom: '10px', boxShadow: `0 8px 24px ${cond.color}20`, position: 'relative', overflow: 'hidden' }}>
                   {/* 상단 헤더 및 점수 */}
@@ -350,8 +375,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
 
                   {/* 신랄한 태그 리스트 */}
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                    {cond.tags.map((tag, i) => (
-                      <span key={i} style={{ fontSize: '11px', fontWeight: '800', color: cond.color, background: `${cond.color}10`, padding: '5px 10px', borderRadius: '10px', border: `1px solid ${cond.color}20` }}>
+                    {cond.tags.map((tag) => ( // ✅ 17TH-B3: 인덱스 key → tag 값 key
+                      <span key={tag} style={{ fontSize: '11px', fontWeight: '800', color: cond.color, background: `${cond.color}10`, padding: '5px 10px', borderRadius: '10px', border: `1px solid ${cond.color}20` }}>
                         {tag}
                       </span>
                     ))}
@@ -373,10 +398,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                         🛒 이 포인트 권장 채비 쇼핑
                       </div>
                       <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
-                        {shoppingItems.map((item) => (
-                          <div 
-                            key={item.productId}
-                            onClick={() => window.open(item.coupangUrl, '_blank')}
+                        {shoppingItems.map((item, idx) => (
+                          <div
+                            key={item.productId || item.link || idx}
+                            onClick={() => window.open(item.link || item.coupangUrl, '_blank')}
                             style={{ 
                               minWidth: '120px', width: '120px', 
                               backgroundColor: '#fff', borderRadius: '12px', padding: '8px',
@@ -455,21 +480,156 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
 
             {marineData.fishingIndex && (
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>바다 낚시지수</span>
-                <div style={{ fontSize: '0.9rem', color: '#555' }}>{JSON.stringify(marineData.fishingIndex)}</div>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>바다 낙시지수</span>
+                {/* ✅ 3RD-A4: JSON.stringify raw 제거 — key:value 일반어 표시 */}
+                <div style={{ fontSize: '0.9rem', color: '#555', lineHeight: 1.6 }}>
+                  {typeof marineData.fishingIndex === 'object'
+                    ? Object.entries(marineData.fishingIndex).map(([k, v]) => `${k}: ${v}`).join(' · ')
+                    : String(marineData.fishingIndex)}
+                </div>
               </div>
             )}
 
             {/* 3. B2B 로컬 입점 매장 광고 (지도 위치 기반 노른자위 광고 지면) */}
-            <div style={{ marginTop: '8px', backgroundColor: '#FFF4E5', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', border: '1px solid #FFE0B2', boxShadow: '0 4px 10px rgba(255, 152, 0, 0.1)' }}>
-              <div style={{ width: '48px', height: '48px', backgroundColor: '#FFB74D', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-                🏬
+            {/* ✅ 25TH-B3: /api/ads/local?stationId= 실 API 연동 전까지 더미 플레이스홀더 숨김 처리 (3RD-C8 TODO)
+                           실제 제휴 API 연동 완료 후 아래 false → localAd 조건으로 교체 */}
+            {false && (
+              <div style={{ marginTop: '8px', backgroundColor: '#FFF4E5', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', border: '1px solid #FFE0B2', boxShadow: '0 4px 10px rgba(255, 152, 0, 0.1)' }}>
+                <div style={{ width: '48px', height: '48px', backgroundColor: '#FFB74D', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
+                  🏬
+                </div>
+                <div>
+                  <span style={{ fontSize: '10px', color: '#E65100', fontWeight: '900', background: '#FFE0B2', padding: '2px 6px', borderRadius: '4px', marginBottom: '4px', display: 'inline-block' }}>로컬 제휴 할인</span>
+                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#E65100', marginBottom: '2px' }}>{selectedPoint.name} 도보 3분: 지역 낚시마트</div>
+                  <div style={{ fontSize: '12px', color: '#F57C00', fontWeight: '800' }}>살아있는 미끼 및 각크릴 10% 단독할인 쿠폰!</div>
+                </div>
               </div>
-              <div>
-                <span style={{ fontSize: '10px', color: '#E65100', fontWeight: '900', background: '#FFE0B2', padding: '2px 6px', borderRadius: '4px', marginBottom: '4px', display: 'inline-block' }}>로컬 제휴 할인</span>
-                <div style={{ fontSize: '15px', fontWeight: '900', color: '#E65100', marginBottom: '2px' }}>{selectedPoint.name} 도보 3분: 지역 낚시마트</div>
-                <div style={{ fontSize: '12px', color: '#F57C00', fontWeight: '800' }}>살아있는 미끼 및 각크릴 10% 단독할인 쿠폰!</div>
+            )}
+
+            {/* ── VIP 선상배 홍보 섹션 ── */}
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>🚢</span>
+                  <span style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E', letterSpacing: '-0.03em' }}>이 구역 선상배 예약</span>
+                  {selectedPoint.region && (
+                    <span style={{ fontSize: '10px', fontWeight: '800', background: '#EBF2FF', color: '#1565C0', padding: '3px 8px', borderRadius: '20px' }}>
+                      {(selectedPoint.region || '').split(' ')[0]}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: '800', color: '#8E8E93', cursor: 'pointer' }}>
+                  전체보기 →
+                </button>
               </div>
+
+              {bizLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '10px' }}>
+                  <div style={{ width: '20px', height: '20px', border: '2.5px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '700' }}>선상배 정보 불러오는 중...</span>
+                </div>
+              ) : businessPosts.length === 0 ? (
+                <div style={{ background: 'linear-gradient(135deg, #F8F9FC, #F0F4FF)', borderRadius: '16px', padding: '24px', textAlign: 'center', border: '1.5px dashed #D0D8F0' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>⚓</div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#8E8E93' }}>이 구역 등록된 선상배가 없습니다</div>
+                  <div style={{ fontSize: '11px', color: '#AAB0BE', fontWeight: '600', marginTop: '4px' }}>VVIP 구독 후 내 선상을 등록해보세요!</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {businessPosts.map((biz, idx) => (
+                    <div
+                      key={biz._id || biz.id || idx}
+                      style={{
+                        position: 'relative',
+                        background: biz.isPinned ? 'linear-gradient(135deg, #1a1200 0%, #2d1f00 50%, #1a1200 100%)' : '#fff',
+                        border: biz.isPinned ? '1.5px solid #B8860B' : '1.5px solid #F0F2F7',
+                        borderRadius: '18px', padding: '16px',
+                        boxShadow: biz.isPinned ? '0 8px 28px rgba(255,215,0,0.18)' : '0 4px 16px rgba(0,0,0,0.05)',
+                        overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.18s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                      onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                      onClick={() => navigate('/community')}
+                    >
+                      {biz.isPinned && (
+                        <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        {biz.isPinned ? (
+                          <span style={{ fontSize: '10px', fontWeight: '900', background: 'linear-gradient(135deg, #FFD700, #FFA000)', color: '#000', padding: '3px 10px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(255,215,0,0.4)' }}>
+                            👑 VVIP 협력 선상
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '10px', fontWeight: '800', background: '#EBF2FF', color: '#1565C0', padding: '3px 10px', borderRadius: '20px' }}>
+                            🚢 선상배 홍보
+                          </span>
+                        )}
+                        {biz.region && (
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: biz.isPinned ? '#FFD700' : '#8E8E93' }}>
+                            📍 {biz.region}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        {biz.cover ? (
+                          <img src={biz.cover} alt={biz.shipName}
+                            style={{ width: '72px', height: '72px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, border: biz.isPinned ? '2px solid #B8860B' : '1px solid #F0F2F7' }}
+                            onError={e => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div style={{ width: '72px', height: '72px', borderRadius: '12px', flexShrink: 0, background: biz.isPinned ? 'rgba(255,215,0,0.12)' : '#F4F6FA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', border: biz.isPinned ? '2px solid rgba(255,215,0,0.3)' : '1.5px solid #F0F2F7' }}>
+                            ⛵
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '15px', fontWeight: '950', color: biz.isPinned ? '#FFE066' : '#1A1A2E', marginBottom: '4px', letterSpacing: '-0.03em' }}>
+                            {biz.shipName}
+                          </div>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: biz.isPinned ? '#B8860B' : '#8E8E93', marginBottom: '8px' }}>
+                            {biz.type} · {biz.target}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                            {biz.date && (
+                              <span style={{ fontSize: '10px', fontWeight: '800', background: biz.isPinned ? 'rgba(255,215,0,0.12)' : '#F4F6FA', color: biz.isPinned ? '#FFD700' : '#555', padding: '3px 8px', borderRadius: '8px' }}>
+                                📅 {biz.date}
+                              </span>
+                            )}
+                            {biz.price && (
+                              <span style={{ fontSize: '10px', fontWeight: '900', background: biz.isPinned ? 'rgba(255,165,0,0.15)' : '#FFF4E5', color: biz.isPinned ? '#FFA500' : '#E65100', padding: '3px 8px', borderRadius: '8px' }}>
+                                💰 {typeof biz.price === 'number' ? `${biz.price.toLocaleString()}원` : biz.price}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {biz.content && (
+                        <div style={{ marginTop: '10px', fontSize: '12px', color: biz.isPinned ? 'rgba(255,230,100,0.8)' : '#666', fontWeight: '600', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {biz.content}
+                        </div>
+                      )}
+                      {biz.phone && (
+                        <div
+                          onClick={e => {
+                            e.stopPropagation();
+                            window.location.href = `sms:${biz.phone.replace(/-/g,'')}?body=${encodeURIComponent(`[낚시GO] ${biz.shipName} 선상 예약 문의합니다.`)}`;
+                          }}
+                          style={{
+                            marginTop: '12px',
+                            background: biz.isPinned ? 'linear-gradient(135deg, #FFD700, #FFA000)' : 'linear-gradient(135deg, #1565C0, #0D47A1)',
+                            color: biz.isPinned ? '#000' : '#fff',
+                            borderRadius: '12px', padding: '10px 0',
+                            textAlign: 'center', fontSize: '12px', fontWeight: '950',
+                            cursor: 'pointer', letterSpacing: '-0.02em',
+                            boxShadow: biz.isPinned ? '0 4px 16px rgba(255,215,0,0.35)' : '0 4px 16px rgba(21,101,192,0.3)',
+                          }}
+                        >
+                          📲 {biz.phone} · 문자로 예약하기
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -24,6 +24,8 @@ export const LEVEL_CONFIG = [
 ];
 
 // ── EXP 활동 보상표 ─────────────────────────────────────────────
+// ENH4-B7: 향후 운영 유연성을 위해 서버 /api/config/exp에서 동적 수신 고려
+// (현재 하드코딩 수용 가능, 운영 중 보상값 조정 시 배포 없이 적용 가능해짐)
 export const EXP_REWARDS = {
   attendance:       { exp: 20,  label: '출석 체크',         icon: '📅' },
   post_write:       { exp: 30,  label: '게시글 작성',       icon: '📝' },
@@ -36,6 +38,11 @@ export const EXP_REWARDS = {
   weekly_streak:    { exp: 80,  label: '7일 연속 출석',     icon: '🔥' },
   monthly_streak:   { exp: 300, label: '30일 연속 출석',    icon: '⭐' },
 };
+
+// ✅ 3RD-A3: 관리자 판별 상수 — 5중 중복 하드코딩 → 단일 지점 관리
+// sunjulab.k = 마스터 계정 이메일 (DB 필드값), sunjulab = resolved-id
+export const ADMIN_ID    = 'sunjulab';       // 서버가 어드민 로그인 시 반환하는 resolved id
+export const ADMIN_EMAIL = 'sunjulab.k';     // ✅ 마스터 계정 이메일 (sunjulab.k@gmail.com도 호환)
 
 /**
  * 현재 레벨 정보 반환
@@ -101,12 +108,31 @@ export const getLevelInfo = (totalExp = 0) => {
   };
 };
 
+// localStorage 안전 파서 — JSON.parse 실패/localStorage 미지원 환경 대응
+function safeParseUser() {
+  try {
+    const raw = localStorage.getItem('user');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function safeGetTier(parsedUser) {
+  try {
+    // user.tier와 userTier 키 중 user.tier를 우선하여 불일치 방지
+    const fromUser = parsedUser?.tier;
+    const fromKey  = localStorage.getItem('userTier');
+    return fromUser || fromKey || 'FREE';
+  } catch { return 'FREE'; }
+}
+
+// ✅ 3RD-C3: safeParseUser() 2회 호출 → 단일 변수 공유
+const _initialUser = safeParseUser();
+
 export const useUserStore = create((set, get) => ({
   // 사용자 데이터
-  user: JSON.parse(localStorage.getItem('user')) || null,
+  user: _initialUser,
 
-  // 구독 티어
-  userTier: localStorage.getItem('userTier') || 'FREE',
+  // 구독 티어 — user.tier와 항상 일치하도록 초기화
+  userTier: safeGetTier(_initialUser),
 
   // ── 기본 유저 업데이트 ──
   updateUser: (newData) => set((state) => {
@@ -127,8 +153,13 @@ export const useUserStore = create((set, get) => ({
       if (newUser.tier) localStorage.setItem('userTier', newUser.tier);
       return { user: newUser, userTier: newUser.tier || 'FREE' };
     } else {
+      // ENH5-A4: 'token' 키도 정리 — LoginPage에서 저장하는 중복 키 누수 방지
       localStorage.removeItem('user');
-      return { user: null };
+      localStorage.removeItem('userTier');
+      localStorage.removeItem('token');       // ENH5-A4
+      localStorage.removeItem('access_token'); // 토큰도 함께 정리
+      localStorage.removeItem('refresh_token');
+      return { user: null, userTier: 'FREE' };
     }
   }),
 
@@ -160,71 +191,94 @@ export const useUserStore = create((set, get) => ({
   },
 
   logout: () => {
+    const state = get();
+    const email = state.user?.email;
     localStorage.removeItem('user');
     localStorage.removeItem('userTier');
     localStorage.removeItem('token');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    // ✅ WARN-US1: 아바타 캐시 정리 — 다중 계정 사용 기기에서 이전 유저 아바타 노출 방지
+    if (email) {
+      try { localStorage.removeItem(`avatar_${email}`); } catch (e) {}
+    }
     set({ user: null, userTier: 'FREE', lastExpGain: null });
   },
 
   // ── PRO/VVIP 구독 만료 자동 체크 (앱 시작 시 호출) ──
   checkSubscriptionExpiry: async () => {
     const state = get();
-    const userId = state.user?.id || state.user?.email;
-    if (!userId || state.user?.id === 'sunjulab') return; // 마스터는 스킵
+    const userId = state.user?.email || state.user?.id;
+    if (!userId) return;
+    // MASTER 어드민은 서버 관리자 계정으로 구독 체크 불필요 — ✅ 23TH-C2: 구조분해 제거, 직접 호출로 closure 혼동 방지
+    if (get().isAdmin()) return;
+    // ✅ BUG-60: 유료 구독자가 아니면 API 호출 불필요
+    const paidTiers = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'];
+    if (!paidTiers.includes(state.userTier)) return;
 
-    const API = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+    try {
+      const { default: apiClient } = await import('../api/index');
+      const res = await apiClient.get(`/api/payment/subscription/${encodeURIComponent(userId)}`);
+      const data = res.data;
 
-    // PRO 만료 체크
-    if (state.userTier === 'PRO') {
-      try {
-        const res = await fetch(`${API}/api/pro/status?userId=${encodeURIComponent(userId)}`);
-        const data = await res.json();
-        if (!data.isActive) {
-          localStorage.setItem('userTier', 'FREE');
-          set({ userTier: 'FREE' });
-          console.log('[PRO 만료] 자동 FREE 다운그레이드');
+      // ✅ 3RD-B3: hasSubscription:false와 status:'failed' 동일 처리 — 단일 분기 통합
+      if (!data.hasSubscription || data.status === 'failed') {
+        if (!import.meta.env.PROD && data.status === 'failed') {
+          console.log(`[구독 만료] ${state.userTier} → FREE (결제실패)`);
         }
-      } catch (e) { /* 네트워크 오류 시 무시 */ }
-    }
-
-    // VVIP 만료 체크
-    if (state.userTier === 'BUSINESS_VIP') {
-      try {
-        const res = await fetch(`${API}/api/vvip/my-slot?userId=${encodeURIComponent(userId)}`);
-        const data = await res.json();
-        if (!data.hasSlot) {
-          localStorage.setItem('userTier', 'FREE');
+        localStorage.setItem('userTier', 'FREE');
+        // ✅ 23TH-B1: user.tier와 userTier 동시 갱신 — 불일치로 인한 프리미엄 잠금 해제 버그 방지
+        const currentUser = get().user;
+        if (currentUser) {
+          const updated = { ...currentUser, tier: 'FREE' };
+          localStorage.setItem('user', JSON.stringify(updated));
+          set({ userTier: 'FREE', user: updated });
+        } else {
           set({ userTier: 'FREE' });
-          console.log('[VVIP 만료] 자동 FREE 다운그레이드');
         }
-      } catch (e) { /* 네트워크 오류 시 무시 */ }
-    }
+        return;
+      }
+      if (data.status === 'cancelled') {
+        const expiry = data.nextBillingDate ? new Date(data.nextBillingDate) : null;
+        if (!expiry || expiry < new Date()) {
+          localStorage.setItem('userTier', 'FREE');
+          // ✅ 23TH-B1: 취소 후 만료 케이스도 user.tier 동시 갱신
+          const currentUser = get().user;
+          if (currentUser) {
+            const updated = { ...currentUser, tier: 'FREE' };
+            localStorage.setItem('user', JSON.stringify(updated));
+            set({ userTier: 'FREE', user: updated });
+          } else {
+            set({ userTier: 'FREE' });
+          }
+          if (!import.meta.env.PROD) console.log(`[구독 만료] ${state.userTier} → FREE (취소 후 기간 종료)`);
+        }
+      }
+    } catch (e) { /* 네트워크 오류 시 무시 */ }
   },
 
   // ── 서버에서 최신 사용자 정보 동기화 (재로그인 없이 tier/avatar 갱신) ──
   syncFromServer: async () => {
     const state = get();
     const email = state.user?.email;
-    if (!email) return;
+    // GUEST 또는 미로그인 사용자는 동기화 불필요
+    if (!email || state.user?.id === 'GUEST') return;
 
-    const API = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
     try {
-      const res = await fetch(`${API}/api/user/me?email=${encodeURIComponent(email)}`);
-      if (!res.ok) return;
-      const fresh = await res.json();
+      const { default: apiClient } = await import('../api/index');
+      const res = await apiClient.get(`/api/user/me?email=${encodeURIComponent(email)}`);
+      const fresh = res.data;
 
       const current = get().user;
-      const tierChanged   = fresh.tier    !== (current?.tier    || 'FREE');
-      const avatarChanged = fresh.avatar  && fresh.avatar !== current?.avatar;
+      const tierChanged   = fresh.tier   !== (current?.tier   || 'FREE');
+      const avatarChanged = fresh.avatar && fresh.avatar !== current?.avatar;
 
       if (tierChanged || avatarChanged) {
         const updated = { ...current, ...fresh };
         localStorage.setItem('user', JSON.stringify(updated));
         if (fresh.tier) localStorage.setItem('userTier', fresh.tier);
         set({ user: updated, userTier: fresh.tier || get().userTier });
-        console.log('[syncFromServer] 사용자 정보 갱신:', { tierChanged, avatarChanged });
+        if (!import.meta.env.PROD) console.log('[syncFromServer] 사용자 정보 갱신:', { tierChanged, avatarChanged });
       }
     } catch (e) { /* 네트워크 오류 시 무시 */ }
   },
@@ -237,30 +291,43 @@ export const useUserStore = create((set, get) => ({
   clearLastExpGain: () => set({ lastExpGain: null }),
 
   // ── 권한 헬퍼 ──
+  // ✅ WARN-US2: name 필드 체크 제거 — 닉네임은 사용자가 직접 설정하므로 위조 가능
+  // 어드민 판별은 반드시 id(서버 지정) 또는 email(고유값)만 사용
+  // ✅ 3RD-A3: ADMIN_ID/ADMIN_EMAIL 상수 사용 — 5중 코드 중복 통합
   canAccessPremium:      () => {
     const state = get();
-    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab') return true;
-    // 유료 플랜: 게시글/크루 등록 시 광고 게이트 제거
-    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].includes(state.userTier);
+    if (state.user?.id === ADMIN_ID || state.user?.email === ADMIN_EMAIL || state.user?.email === 'sunjulab.k@gmail.com') return true;
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(state.userTier);
   },
   // 비즈니스 홍보글 작성: PRO 또는 VVIP만 허용 (Business Lite는 배제)
   canAccessBusinessPromo:() => {
     const state = get();
-    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab') return true;
+    if (state.user?.id === ADMIN_ID || state.user?.email === ADMIN_EMAIL) return true;
     return ['PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
   canAccessBusinessShop: () => {
     const state = get();
-    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab') return true;
+    if (state.user?.id === ADMIN_ID || state.user?.email === ADMIN_EMAIL) return true;
     return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].includes(state.userTier);
   },
   canAccessVIP:          () => {
     const state = get();
-    if (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab') return true;
+    if (state.user?.id === ADMIN_ID || state.user?.email === ADMIN_EMAIL) return true;
     return state.userTier === 'BUSINESS_VIP';
   },
   isAdmin: () => {
     const state = get();
-    return (state.user?.id === 'sunjulab' || state.user?.email === 'sunjulab' || state.user?.name === 'sunjulab');
+    // ✅ FIX-ADMIN: 어드민 판별 3중 보장
+    // 1) user.id === 'sunjulab'               (서버가 반환하는 resolved-id)
+    // 2) user.email === 'sunjulab.k'          (마스터 계정 이메일)
+    // 3) user.email === 'sunjulab.k@gmail.com' (Gmail OAuth)
+    // 4) userTier === 'MASTER'                (서버 설정 티어)
+    // ⚠️ email===ADMIN_ID 체크 제거 — 'sunjulab' 이메일은 VIP 테스트 계정이므로 제외
+    return (
+      state.user?.id === ADMIN_ID ||
+      state.user?.email === ADMIN_EMAIL ||
+      state.user?.email === 'sunjulab.k@gmail.com' ||
+      state.userTier === 'MASTER'
+    );
   },
 }));

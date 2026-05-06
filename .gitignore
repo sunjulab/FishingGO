@@ -29,7 +29,15 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production          # ✅ SEC-06: 실제 배포 URL 등 민감 정보 포함 가능 — Git 제외
 server/.env
+
+# ✅ 13TH-C1: 서버 데이터 파일 — 게시글 샘플 등 개인정보 노출 방지
+server/data/
+
+# ✅ 13TH-C3: 로컈 Windows 전용 Vercel 배포 스크립트 — 하드코딩 경로가 포함된 로컈 정보 파일
+deploy_cli.cjs
+deploy_cli.mjs
 
 # 서버 데이터 파일 (사용자 정보 보안 - 공개 저장소 노출 방지)
 server/users.json
@@ -39,8 +47,9 @@ server/crews.json
 server/chats.json
 server/proSubscriptions.json
 server/vvipSlots.json
-# 아래는 마스터 설정으로 공유 가능 (선택적)
-# server/notices.json
-# server/business.json
-# server/cctvOverrides.json
-# server/secretPointOverrides.json
+# ✅ WARN-GI1: 인메모리 fallback 파일 — 운영 서버에만 존재, 저장소 제외
+server/notices.json
+server/business.json
+# OPT-1: CCTV 오버라이드는 운영 서버에만 존재 — 저장소 제외
+server/cctv_overrides.json
+server/secretPointOverrides.json

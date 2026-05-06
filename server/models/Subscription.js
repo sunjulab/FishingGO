@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const subscriptionSchema = new mongoose.Schema({
   userId:          { type: String, required: true, unique: true }, // user email or id
   userName:        { type: String, default: '' },
-  planId:          { type: String, enum: ['LITE', 'PRO', 'VVIP'], required: true },
+  planId:          { type: String, enum: ['LITE', 'BUSINESS_LITE', 'PRO', 'VVIP', 'BUSINESS_VIP'], required: true }, // ✅ 27TH-B1: BUSINESS_LITE 추가 — 25TH-C4 payment.js PLAN_LABEL 동기화 (누락 시 ValidationError 발생)
   tier:            { type: String, required: true },
   amount:          { type: Number, required: true },            // 월 청구 금액(원)
 

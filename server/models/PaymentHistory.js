@@ -13,7 +13,7 @@ const paymentHistorySchema = new mongoose.Schema({
   amount:       { type: Number, required: true },
   status:       { type: String, enum: ['paid', 'failed', 'refunded', 'cancelled'], default: 'paid' },
   imp_uid:      { type: String },
-  merchant_uid: { type: String, unique: true, sparse: true },
+  merchant_uid: { type: String, unique: true, sparse: true }, // ✅ 10TH-C3: sparse 의도적 — 테스트모드(null)는 중복 허용, 실결제시에만 unique 강제
   failReason:   { type: String },
   refundedAt:   { type: Date },
   createdAt:    { type: Date, default: Date.now },

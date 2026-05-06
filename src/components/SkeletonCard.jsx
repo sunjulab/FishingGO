@@ -1,13 +1,17 @@
+import React, { useMemo } from 'react'; // ✅ 16TH-C3: useMemo 추가
+
 /**
  * SkeletonCard - 게시글 로딩 중 shimmer 애니메이션 뼈대 UI
  * CSS .skeleton 클래스는 index.css에 정의됨
  */
 export default function SkeletonCard({ count = 5 }) {
+  // ✅ 16TH-C3: [...Array(count)] 매 렌더마다 새로운 배열 생성 막기 — count 변경 시에만 재생성
+  const items = useMemo(() => Array.from({ length: count }, (_, i) => i), [count]);
   return (
     <>
-      {[...Array(count)].map((_, i) => (
+      {items.map((i) => (
         <div
-          key={i}
+          key={`skeleton-${i}`}
           className="fade-in"
           style={{
             background: '#fff',
@@ -32,7 +36,8 @@ export default function SkeletonCard({ count = 5 }) {
           <div className="skeleton" style={{ height: 13, width: '88%',  borderRadius: 6, marginBottom: 7 }} />
           <div className="skeleton" style={{ height: 13, width: '65%',  borderRadius: 6, marginBottom: 14 }} />
 
-          {/* 이미지 자리 (랜덤으로 일부만 표시) */}
+          {/* ✅ 8TH-B7: i % 3 패턴 — 전체 카드의 약 33%에 이미지 스켈레톤 표시
+               Virtualized List 도입 시 i가 재정렬될 수 있으니 count 비율 기반 조정 고려 */}
           {i % 3 === 0 && (
             <div className="skeleton" style={{ height: 160, width: '100%', borderRadius: 12, marginBottom: 14 }} />
           )}

@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // ✅ 16TH-B3: useCallback 추가
 import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
-import { Tv, Edit3, Check, X, RotateCcw, ArrowLeft, Youtube, Image, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Tv, Edit3, Check, X, RotateCcw, ArrowLeft, Youtube, Image, AlertCircle, ChevronDown, ChevronUp, Link } from 'lucide-react';
 
 import apiClient from '../api/index';
+
+// ✅ 25TH-B1: extractYoutubeId 모듈 레벨 상수로 추출 — saveEdit 호출마다 재정의 제거 (7TH-B4 FishingPointBottomSheet 패턴 통일)
+const YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+function extractYoutubeId(str) {
+  const match = str.match(YOUTUBE_REGEXP);
+  return (match && match[2].length === 11) ? match[2] : str;
+}
 
 const REGION_COLORS = {
   '강원': '#1565C0',
@@ -19,26 +26,36 @@ const REGION_COLORS = {
 
 export default function CctvAdmin() {
   const navigate = useNavigate();
-  const isAdmin = useUserStore(s => s.isAdmin?.() ?? false);
+  // ✅ 6TH-A3: isAdmin 직접 비교 — ADMIN_ID/ADMIN_EMAIL 패턴 통일
+  const isAdmin = useUserStore(s => s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
   const addToast = useToastStore(s => s.addToast);
 
   const [cctvList, setCctvList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCode, setEditingCode] = useState(null);
   const [editValues, setEditValues] = useState({ youtubeId: '', type: 'youtube', label: '' });
-  const [confirmModal, setConfirmModal] = useState(null); // { title, message, danger, onConfirm }
+  const [confirmModal, setConfirmModal] = useState(null);
   const [saving,       setSaving]       = useState(false);
   const [syncing,      setSyncing]      = useState(false);
   const [previewCode,  setPreviewCode]  = useState(null);
+  // ENH6-B6: Zustand hydrate 완료 여부 플래그 — 초기 렌더에서 isAdmin=false 오판 방지
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // 마스터 권한 체크
+  // ENH6-B6: hydration guard — 1 tick 후 getState()로 최신 상태 확인 (초기 렌더에서 isAdmin=false 오판 방지)
   useEffect(() => {
-    if (!isAdmin) {
-      navigate('/mypage');
-    }
-  }, [isAdmin]);
+    const timer = setTimeout(() => {
+      setAuthChecked(true);
+      // ✅ 6TH-A4: ADMIN_ID/ADMIN_EMAIL 직접 비교 — isAdmin?.() 옵셔널 호출 방식 통일
+      const { user: currentUser } = useUserStore.getState();
+      if (!(currentUser?.id === ADMIN_ID || currentUser?.email === ADMIN_EMAIL)) {
+        navigate('/mypage', { replace: true });
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchList = async () => {
+  // ✅ 16TH-B3: fetchList useCallback 적용 — 매 렌더마다 재생성 방지 및 stale closure 제거
+  const fetchList = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiClient.get('/api/admin/cctv');
@@ -48,11 +65,29 @@ export default function CctvAdmin() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]); // ✅ 16TH-C2: addToast를 deps에 직접 포함
 
-  useEffect(() => { fetchList(); }, []);
+  useEffect(() => { if (authChecked && isAdmin) fetchList(); }, [authChecked, isAdmin, fetchList]); // ✅ 16TH-C2: fetchList deps 추가
 
+  // ENH-B4: 저장 안 한 상태에서 다른 항목 클릭 시 경고 제시
   const startEdit = (item) => {
+    if (editingCode && editingCode !== item.obsCode && !saving) {
+      setConfirmModal({
+        title: '편집 중인 내용이 있습니다',
+        message: `[${editingCode}] 대한 변경사항이 저장되지 않았습니다.\n다른 항목으로 이동하면 변경사항이 사라집니다.`, // ✅ 6TH-C4: 한글 직접 표기
+        danger: false,
+        onConfirm: () => {
+          setEditingCode(item.obsCode);
+          setEditValues({
+            youtubeId: item.youtubeId || '',
+            type: item.type || 'youtube',
+            label: item.label || '',
+          });
+          setPreviewCode(null);
+        },
+      });
+      return;
+    }
     setEditingCode(item.obsCode);
     setEditValues({
       youtubeId: item.youtubeId || '',
@@ -74,12 +109,11 @@ export default function CctvAdmin() {
 
       // URL 파싱 로직 추가 (전체 주소가 들어오더라도 11자리 ID만 저장)
       if (body.type === 'youtube' && body.youtubeId) {
-        const extractYoutubeId = (str) => {
-          const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-          const match = str.match(regExp);
-          return (match && match[2].length === 11) ? match[2] : str;
-        };
+        // ✅ YouTube: 11자리 ID만 추출
         body.youtubeId = extractYoutubeId(body.youtubeId.trim());
+      } else if (body.type === 'iframe') {
+        // ✅ iframe: URL 그대로 저장 (youtubeId 필드 재활용)
+        body.youtubeId = body.youtubeId.trim();
       } else if (body.type === 'image') {
         body.youtubeId = '';
       }
@@ -337,15 +371,24 @@ export default function CctvAdmin() {
                 <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(255,215,0,0.15)' }}>
                   {/* 타입 선택 */}
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', marginTop: '14px' }}>
-                    {['youtube', 'image'].map(t => (
+                    {['youtube', 'iframe', 'image'].map(t => (
                       <button key={t} onClick={() => setEditValues(v => ({ ...v, type: t }))} style={{
-                        flex: 1, padding: '10px', background: editValues.type === t ? (t === 'youtube' ? 'rgba(255,107,107,0.2)' : 'rgba(100,181,246,0.2)') : 'rgba(255,255,255,0.04)',
-                        border: editValues.type === t ? `1.5px solid ${t === 'youtube' ? '#FF6B6B' : '#64B5F6'}` : '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px', color: editValues.type === t ? (t === 'youtube' ? '#FF6B6B' : '#64B5F6') : 'rgba(255,255,255,0.4)',
-                        fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                        flex: 1, padding: '10px',
+                        background: editValues.type === t
+                          ? (t === 'youtube' ? 'rgba(255,107,107,0.2)' : t === 'iframe' ? 'rgba(100,220,100,0.2)' : 'rgba(100,181,246,0.2)')
+                          : 'rgba(255,255,255,0.04)',
+                        border: editValues.type === t
+                          ? `1.5px solid ${t === 'youtube' ? '#FF6B6B' : t === 'iframe' ? '#64DC64' : '#64B5F6'}`
+                          : '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        color: editValues.type === t
+                          ? (t === 'youtube' ? '#FF6B6B' : t === 'iframe' ? '#64DC64' : '#64B5F6')
+                          : 'rgba(255,255,255,0.4)',
+                        fontSize: '11px', fontWeight: '800', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                       }}>
-                        {t === 'youtube' ? <Youtube size={13} /> : <Image size={13} />}
-                        {t === 'youtube' ? 'YouTube 라이브' : '이미지 방식'}
+                        {t === 'youtube' ? <Youtube size={12} /> : t === 'iframe' ? <Link size={12} /> : <Image size={12} />}
+                        {t === 'youtube' ? 'YouTube' : t === 'iframe' ? '커스텀 URL' : '이미지'}
                       </button>
                     ))}
                   </div>
@@ -354,12 +397,12 @@ export default function CctvAdmin() {
                   {editValues.type === 'youtube' && (
                     <div style={{ marginBottom: '10px' }}>
                       <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
-                        YouTube 영상 ID (URL의 ?v= 뒤 11자리)
+                        YouTube 영상 ID (URL의 ?v= 뒤 11자리 또는 전체 URL)
                       </label>
                       <input
                         value={editValues.youtubeId}
                         onChange={e => setEditValues(v => ({ ...v, youtubeId: e.target.value.trim() }))}
-                        placeholder="예: iCGFbFulG3Y"
+                        placeholder="예: iCGFbFulG3Y 또는 youtube.com/watch?v=iCGFbFulG3Y"
                         style={{
                           width: '100%', padding: '12px 14px',
                           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)',
@@ -372,6 +415,30 @@ export default function CctvAdmin() {
                           미리보기: youtube.com/watch?v={editValues.youtubeId}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* 커스텀 URL 입력 (iframe 타입) */}
+                  {editValues.type === 'iframe' && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '10px', color: '#64DC64', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
+                        🔗 커스텀 스트림 URL (iframe 임베드 가능한 모든 주소)
+                      </label>
+                      <input
+                        value={editValues.youtubeId}
+                        onChange={e => setEditValues(v => ({ ...v, youtubeId: e.target.value.trim() }))}
+                        placeholder="예: https://www.daum.net/embed/... 또는 https://cctv.example.com/stream"
+                        style={{
+                          width: '100%', padding: '12px 14px',
+                          background: 'rgba(100,220,100,0.06)', border: '1px solid rgba(100,220,100,0.3)',
+                          borderRadius: '12px', color: '#fff', fontSize: '12px', fontWeight: '700',
+                          outline: 'none', boxSizing: 'border-box'
+                        }}
+                      />
+                      <div style={{ fontSize: '10px', color: 'rgba(100,220,100,0.6)', marginTop: '6px', lineHeight: '1.5' }}>
+                        ⚠️ iframe 임베드를 허용하는 URL만 작동합니다.<br />
+                        YouTube, HLS 스트림, 지자체 CCTV 포털 등 가능
+                      </div>
                     </div>
                   )}
 

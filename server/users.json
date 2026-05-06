@@ -1,1 +1,56 @@
-[]
+[
+  {
+    "id": "1777909433425",
+    "email": "sunjulab.a1",
+    "password": "$2b$10$rSxOlAgacYc46Altri55jORX5jH4s2YfWl500HYtpFOP8R.kaAmzO",
+    "name": "낚시GO 운영진",
+    "realName": "김승철",
+    "phone": "01066618089",
+    "level": 1,
+    "exp": 0,
+    "tier": "PRO",
+    "avatar": null,
+    "followers": [],
+    "following": [],
+    "lastAttendance": "2026-05-04",
+    "totalAttendance": 1,
+    "totalExp": 20,
+    "streak": 1
+  },
+  {
+    "id": "1777909718174",
+    "email": "sunjulab.a2",
+    "password": "$2b$10$DSGM2kEn90rIOIe5HoKTrOf3nTC6s233krX8Ysb6scGfmamNTp6ue",
+    "name": "낚시GO 스탭",
+    "realName": "김승철",
+    "phone": "01066618089",
+    "level": 1,
+    "exp": 0,
+    "tier": "BUSINESS_LITE",
+    "avatar": null,
+    "followers": [],
+    "following": [],
+    "lastAttendance": "2026-05-04",
+    "totalAttendance": 1,
+    "totalExp": 20,
+    "streak": 1
+  },
+  {
+    "id": "sunjulab_vip",
+    "email": "sunjulab",
+    "password": "$2b$10$rSxOlAgacYc46Altri55jORX5jH4s2YfWl500HYtpFOP8R.kaAmzO",
+    "name": "낚시GO VIP",
+    "realName": "김승철",
+    "phone": "01066618089",
+    "level": 5,
+    "exp": 0,
+    "tier": "BUSINESS_VIP",
+    "avatar": null,
+    "followers": [],
+    "following": [],
+    "lastAttendance": "2026-05-04",
+    "totalAttendance": 10,
+    "totalExp": 500,
+    "streak": 5
+  }
+]

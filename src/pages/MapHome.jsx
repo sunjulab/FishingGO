@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Map, Anchor, Droplets, Wind, Waves, Ship, Crown, Navigation,
@@ -13,23 +13,37 @@ import FishingPointBottomSheet from '../components/FishingPointBottomSheet';
 import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, SECRET_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
-import { useUserStore, TIER_CONFIG } from '../store/useUserStore';
+import { useUserStore, TIER_CONFIG, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+
+// ✅ 5TH-C4: EMOJI_MAP — WeatherDashboard와 동일 객체; 향후 constants/ui.js 추출 검토 권장
 
 
 const EMOJI_MAP = { '방파제': '⚓', '갯바위': '🪨', '선착장': '🚢', '항구': '🏖️' };
 const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#1565C0', '보통': '#8E8E93' };
+// ✅ 26TH-B2: DEFAULT_AVATAR_SVG 모듈 레벨 상수 — pravatar.cc 외부 의존 제거 (6TH-A2 MyPage 패턴)
+const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
 
 export default function MapHome() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
   const user = useUserStore((state) => state.user);
   const userTier = useUserStore((state) => state.userTier);
-  const canAccessPremium = useUserStore((state) => state.canAccessPremium ? state.canAccessPremium() : (userTier === 'PRO' || userTier === 'VVIP' || userTier === 'BUSINESS' || userTier === 'BUSINESS_LITE' || userTier === 'MASTER'));
-  const isAdmin = user?.id === 'sunjulab' || user?.email === 'sunjulab' || user?.name === 'sunjulab';
+  // ✅ 26TH-B1: canAccessPremium 셀렉터 함수 호출 → userTier + useMemo 직접 판별 (25TH-B2 CommunityTab 패턴 통일)
+  const canAccessPremium = useMemo(() => {
+    if (user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL || user?.email === ADMIN_ID) return true;
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
+  }, [userTier, user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ✅ FIX-ADMIN: isAdmin 4중 보장 — id/email(gmail)/email(ID)/tier
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === ADMIN_ID ||
+    s.userTier === 'MASTER'
+  );
   const currentTier = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
   const [selectedPoint, setSelectedPoint]   = useState(null);
   const [mapLoaded, setMapLoaded]           = useState(false);
-  const [precisionData, setPrecisionData]   = useState(null);
+  const [mapLoadError, setMapLoadError]     = useState(false); // SDK 미설정 시 에러 표시
   const [loading, setLoading]               = useState(false);
   const [filter, setFilter]                 = useState('전체');
   const [showHeatmap, setShowHeatmap]       = useState(false);
@@ -44,19 +58,18 @@ export default function MapHome() {
   const [sheetVisible, setSheetVisible]     = useState(false);
   const [heatmapMode, setHeatmapMode]       = useState('sst');
   const [effectiveSecretPoints, setEffectiveSecretPoints] = useState(SECRET_FISHING_POINTS);
-  const [currentTime, setCurrentTime]       = useState(new Date());
+  // ✅ 5TH-A5: currentTime 상태 제거 — 매분 전체 리렌더 방지, useClock hook으로 분리
+  // 시간 표시는 컴포넌트 내 LiveClock 컴포넌트가 도맡
   const [showSecretPoints, setShowSecretPoints] = useState(false);
+  const [precisionData, setPrecisionData]       = useState(null);
   // ── 즐겨찾기 (로컬 + DB 이중 동기화) ─────────────────────────
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('fishing_favorites') || '[]'); } catch { return []; }
   });
   const secretMarkersRef = useRef([]);
 
-  // 현재 시간 1분마다 업데이트
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
+  // ✅ 5TH-A5: currentTime setInterval 제거 — LiveClock 컴포넌트가 도맡하므로 MapHome 리렌더 불필요
+  // 기존: setInterval(() => setCurrentTime(new Date()), 60000) 제거
 
   // 즐겨찾기 DB 동기화 (로그인 시 서버에서 불러오기)
   useEffect(() => {
@@ -70,8 +83,11 @@ export default function MapHome() {
           localStorage.setItem('fishing_favorites', JSON.stringify(res.data.favorites));
         }
       })
-      .catch(() => {});
-  }, [user]);
+      .catch((err) => {
+        // ✅ 26TH-C1: silent catch → 개발 환경 에러 가시화 (23TH-B3 패턴)
+        if (!import.meta.env.PROD) console.warn('[MapHome] 즐겨찾기 로드 실패:', err?.message);
+      });
+  }, [user?.email]);
 
   // 즐겨찾기 토글 함수 (로컬 + DB 동기화)
   const toggleFavorite = (pointId) => {
@@ -80,13 +96,16 @@ export default function MapHome() {
     setFavorites(next);
     localStorage.setItem('fishing_favorites', JSON.stringify(next));
     addToast(isFav ? '즐겨찾기 해제' : '⭐ 즐겨찾기 추가!', isFav ? 'info' : 'success');
-    // 서버 동기화
+    // ENH6-C1: isGuest 변수 추출 — GUEST 체크 중복 제거
     const userId = user?.email || user?.id;
-    if (userId && userId !== 'GUEST') {
+    // ✅ 5TH-B8: isGuest 3중 중복 체크 단순화 — userId === 'GUEST'이면 user.id === 'GUEST'와 동일
+    const isGuest = !userId || userId === 'GUEST';
+    // 서버 동기화
+    if (!isGuest) {
       apiClient.post('/api/user/favorites', { userId, pointId, action: isFav ? 'remove' : 'add' }).catch(() => {});
     }
     // EXP (포인트 방문)
-    if (!isFav && userId && userId !== 'GUEST') {
+    if (!isFav && !isGuest) {
       apiClient.post('/api/user/exp', { userId, action: 'point_visit' }).catch(() => {});
     }
   };
@@ -99,8 +118,10 @@ export default function MapHome() {
   const searchRef      = useRef(null);
   const mapInitialized = useRef(false);
 
-  /* ── 서버에서 비밀포인트 좌표 오버라이드 fetch ── */
+  /* ── 서버에서 비밀포인트 좌표 오버라이드 fetch (프리미엄 이상만 호출) ── */
   useEffect(() => {
+    // 무료/GUEST 사용자는 401 발생 — 서버 미들웨어와 클라이언트 권한 일치
+    if (!canAccessPremium && !isAdmin) return;
     apiClient.get('/api/secret-point-overrides')
       .then(res => {
         const ov = res.data || {};
@@ -117,7 +138,7 @@ export default function MapHome() {
           setEffectiveSecretPoints(SECRET_FISHING_POINTS.map(p => ov[p.id] ? { ...p, lat: ov[p.id].lat, lng: ov[p.id].lng } : p));
         } catch { /* 기본값 유지 */ }
       });
-  }, []);
+  }, [canAccessPremium, isAdmin]);
 
   /* ── 카카오맵 초기화 (viewMode=map 진입 시, kakao.maps.load 공식 콜백) ── */
   useEffect(() => {
@@ -148,18 +169,27 @@ export default function MapHome() {
         mapInitialized.current = true;
         setMapLoaded(true);
         if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition((pos) => {
-            if (!mapRef.current) return;
-            const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-            mapRef.current.panTo(cp);
-            new window.kakao.maps.CustomOverlay({
-              position: cp, map: mapRef.current,
-              content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
-            });
-          });
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (!mapRef.current) return;
+              const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+              mapRef.current.panTo(cp);
+              new window.kakao.maps.CustomOverlay({
+                position: cp, map: mapRef.current,
+                content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
+              });
+            },
+            // ENH6-A1/B2: 위치 거부 시 PROD 가드 + 사용자 toast 피드백
+            () => {
+              if (!import.meta.env.PROD) console.warn('[MapHome] 위치 권한이 거부되었습니다.');
+              addToast('현위치를 가져올 수 없습니다. 지도에서 직접 포인트를 타앱해 주세요.', 'info');
+            },
+            { timeout: 8000 }
+          );
         }
       } catch (err) {
-        console.error('카카오맵 Map 생성 오류:', err);
+        // ENH6-A1: 지도 생성 오류 PROD 가드
+        if (!import.meta.env.PROD) console.error('카카오맵 Map 생성 오류:', err);
       }
     };
 
@@ -167,17 +197,55 @@ export default function MapHome() {
     if (window.kakao && window.kakao.maps) {
       window.kakao.maps.load(createMap);
     } else {
-      // SDK 스크립트 자체가 아직 로드 안 된 경우 폴백
-      let retry = 0;
-      const id = setInterval(() => {
-        if (window.kakao?.maps) { clearInterval(id); window.kakao.maps.load(createMap); }
-        else if (retry > 60) clearInterval(id);
-        retry++;
-      }, 200);
-      return () => clearInterval(id);
+      // SDK 스크립트가 로드되면 즉시 감지 (폴링 대신 script onload 이벤트)
+      const existingScript = document.querySelector('script[src*="dapi.kakao.com"]');
+      if (existingScript) {
+        // 스크립트가 이미 주입됐으나 아직 실행 전 → onload 대기
+        const onSdkLoad = () => {
+          if (window.kakao?.maps) window.kakao.maps.load(createMap);
+        };
+        existingScript.addEventListener('load', onSdkLoad, { once: true });
+        // 폴백: 이미 실행됐을 수도 있으므로 즉시 체크도 병행
+        if (window.kakao?.maps) { window.kakao.maps.load(createMap); }
+        // 5초 내 로드 없으면 에러 표시
+        const errTimer = setTimeout(() => { if (!mapInitialized.current) setMapLoadError(true); }, 5000);
+        return () => { existingScript.removeEventListener('load', onSdkLoad); clearTimeout(errTimer); };
+      } else {
+        // 스크립트 자체가 없는 경우 (KAKAO_KEY 미설정) — 3초 후 에러 표시
+        const errTimer = setTimeout(() => { if (!mapInitialized.current) setMapLoadError(true); }, 3000);
+        let retry = 0;
+        const id = setInterval(() => {
+          if (window.kakao?.maps) { clearInterval(id); clearTimeout(errTimer); window.kakao.maps.load(createMap); }
+          else if (retry >= 5) { clearInterval(id); if (!import.meta.env.PROD) console.warn('[MapHome] 카카오맵 SDK 없음 — VITE_KAKAO_APP_KEY 확인 필요'); }
+          retry++;
+        }, 500);
+        return () => { clearInterval(id); clearTimeout(errTimer); };
+      }
     }
   }, [viewMode]);
 
+
+  /* ── 포인트 클릭 ── */
+  // ✅ 5TH-B1: useCallback — 마커 useEffect 업데이트 시 매 렌더마다 새 함수 생성 방지
+  // ✅ FIX-TDZ: 마커 렌더링 useEffect보다 먼저 선언해야 TDZ(Cannot access before initialization) 방지
+  const handlePointClick = useCallback(async (point, fromDashboard = false) => {
+    setSelectedPoint(point);
+    setPrecisionData(null);
+    setLoading(true);
+    if (!fromDashboard) {
+      setSheetVisible(true);
+      if (mapRef.current) mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
+    }
+    const nearest = findNearestStation(point.lat, point.lng);
+    try {
+      const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
+      const dynamicTide = getPointSpecificData(point).tide;
+      setPrecisionData({ ...res.data, pointName: point.name, tide: dynamicTide });
+    } catch {
+      setPrecisionData(getPointSpecificData(point));
+    } finally { setLoading(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── 마커 렌더링 (최적화) ── */
   useEffect(() => {
@@ -222,7 +290,8 @@ export default function MapHome() {
       clustererRef.current.addMarkers(newMarkers);
     }
     markersRef.current = newMarkers;
-  }, [mapLoaded, filter]);
+  // ✅ 26TH-C2: handlePointClick이 useCallback으로 안정화됨 — eslint-disable 제거 후 deps에 명시적 포함
+  }, [mapLoaded, filter, handlePointClick]);
 
   /* ── 비밀 포인트 마커 렌더링 (LITE 이상 전용) ── */
   useEffect(() => {
@@ -264,6 +333,17 @@ export default function MapHome() {
 
 
   /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
+  // ✅ 5TH-B2: heatmapData useMemo 캐싱 — showHeatmap/heatmapMode 변경 시 60+ 재계산 방지
+  // ✅ FIX-TDZ: useEffect deps에 heatmapData 포함되므로 useEffect보다 먼저 선언 필수
+  const heatmapData = useMemo(() =>
+    ALL_FISHING_POINTS.map(point => {
+      const weatherData = getPointSpecificData(point);
+      const sst = parseFloat(weatherData?.sst || 13);
+      const condition = evaluateFishingCondition(weatherData, point);
+      return { point, sst, score: condition.score };
+    })
+  , []); // 포인트 데이터는 앱 생명주기 내 불변
+
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
 
@@ -308,20 +388,14 @@ export default function MapHome() {
       return 2000;
     };
 
-    ALL_FISHING_POINTS.forEach(point => {
+    // ✅ 5TH-B2: heatmapData useMemo 사용 — getPointSpecificData 60+ 포인트 매 재계산 제거
+    heatmapData.forEach(({ point, sst, score }) => {
       if (!window.kakao?.maps) return;
-
-      const weatherData = getPointSpecificData(point);
-      const sst = parseFloat(weatherData?.sst || 13);
-      const condition = evaluateFishingCondition(weatherData, point);
-      const score = condition.score;
 
       const { fill, text, opacity } = heatmapMode === 'sst' ? getSstColor(sst) : getScoreColor(score);
       const baseRadius = heatmapMode === 'sst' ? getRadiusSst(sst) : getRadiusScore(score);
 
-      // 다중 레이어 원으로 히트맵(Radial Gradient 느낌) 구현 완성도 상향
       const center = new window.kakao.maps.LatLng(point.lat, point.lng);
-      
       const layers = [
         { r: baseRadius,        op: opacity * 0.15 },
         { r: baseRadius * 0.65, op: opacity * 0.35 },
@@ -336,43 +410,28 @@ export default function MapHome() {
         heatmapRef.current.push(circle);
       });
 
-      // 포인트 라벨 CustomOverlay 고도화
       const mainFish = (point.fish || '').split(',')[0].trim();
       const mainValue = heatmapMode === 'sst' ? `${sst.toFixed(1)}°C` : `${score}점`;
-      
       const content = [
         '<div style="',
-          'background:rgba(0,0,0,0.85);',
-          'color:#fff;',
-          'padding:5px 10px;',
-          'border-radius:12px;',
-          'font-size:11px;',
-          'font-weight:900;',
-          'white-space:nowrap;',
-          'line-height:1.4;',
-          'border:1.5px solid ', fill, ';',
-          'pointer-events:none;',
-          'box-shadow: 0 4px 12px ', fill, '40;',
-          'transform: translateY(-8px);',
-        '">',
+          'background:rgba(0,0,0,0.85);color:#fff;',
+          'padding:5px 10px;border-radius:12px;',
+          'font-size:11px;font-weight:900;white-space:nowrap;line-height:1.4;',
+          'border:1.5px solid ', fill, ';pointer-events:none;',
+          'box-shadow: 0 4px 12px ', fill, '40;transform: translateY(-8px);">',
           '<div style="display:flex;align-items:center;gap:4px;">',
             '<span style="color:', fill, ';font-size:14px">', mainValue, '</span>',
             '<span style="font-size:10px;color:#eee">', text, '</span>',
           '</div>',
-          '<div style="color:#aaa;font-size:9.5px;margin-top:2px;text-align:left;">', mainFish || point.name.slice(0,5), ' 포인트</div>',
+          '<div style="color:#aaa;font-size:9.5px;margin-top:2px;">', mainFish || point.name.slice(0,5), ' 포인트</div>',
         '</div>',
       ].join('');
-
-      const overlay = new window.kakao.maps.CustomOverlay({
-        position: center,
-        content,
-        yAnchor: 2.2,
-        zIndex: 3,
-      });
+      const overlay = new window.kakao.maps.CustomOverlay({ position: center, content, yAnchor: 2.2, zIndex: 3 });
       overlay.setMap(mapRef.current);
       heatmapRef.current.push(overlay);
     });
-  }, [showHeatmap, heatmapMode, mapLoaded]);
+  }, [showHeatmap, heatmapMode, mapLoaded, heatmapData]);
+
 
   /* ── 맵 리사이즈 (selectedPoint 변경 시 panTo) ── */
   useEffect(() => {
@@ -386,17 +445,17 @@ export default function MapHome() {
     }
   }, [selectedPoint]);
 
-
-
   /* ── 커뮤니티 최신글 ── */
+  // ENH6-B1: fetch_ 비표준명 → fetchRecentPosts 리팩토링
   useEffect(() => {
-    const fetch_ = async () => {
+    const fetchRecentPosts = async () => {
       try {
-        const res  = await apiClient.get('/api/community/posts');
-        setRecentPosts(res.data.slice(0, 3));
+        const res  = await apiClient.get('/api/community/posts?limit=3&page=1');
+        const arr = Array.isArray(res.data) ? res.data : (res.data.posts || []);
+        setRecentPosts(arr.slice(0, 3));
       } catch { /* 서버 미응답 시 빈 상태 유지 */ }
     };
-    fetch_();
+    fetchRecentPosts();
   }, []);
 
   /* ── 검색 외부 클릭 닫기 ── */
@@ -425,30 +484,6 @@ export default function MapHome() {
     setShowSearch(true);
   };
 
-  /* ── 포인트 클릭 ── */
-  const handlePointClick = async (point, fromDashboard = false) => {
-    setSelectedPoint(point);
-    setPrecisionData(null);
-    if (!fromDashboard) {
-      setSheetVisible(true);
-      if (mapRef.current) mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
-    }
-    const nearest = findNearestStation(point.lat, point.lng);
-    try {
-      const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
-      const dynamicTide = getPointSpecificData(point).tide;
-      setPrecisionData({ ...res.data, pointName: point.name, tide: dynamicTide });
-    } catch {
-      // API 실패 시 동적 데이터를 전체 사용
-      setPrecisionData(getPointSpecificData(point));
-    } finally { setLoading(false); }
-  };
-
-  /* ── CCTV 열기 ── */
-  const handleCCTVOpen = (point) => {
-    setShowCCTV(true);
-    setCctvUrl(point.cctvUrl || null);
-  };
 
   /* ── 바텀시트 닫기 ── */
   const closeSheet = () => {
@@ -588,7 +623,7 @@ export default function MapHome() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Anchor size={22} color="#1565C0" strokeWidth={2.5} />
-                <span style={{ fontSize: '19px', fontWeight: '950', color: '#1A1A2E', letterSpacing: '-0.04em' }}>낚시GO</span>
+                <span style={{ fontSize: '19px', fontWeight: '950', color: '#0056D2', letterSpacing: '-0.04em' }}>낚시GO</span>
                 {currentTier.label && (
                   <span style={{ background: currentTier.bg, fontSize: '8px', padding: '2px 7px', borderRadius: '20px', color: currentTier.color || '#fff', fontWeight: '900', marginLeft: '2px' }}>
                     {currentTier.label}
@@ -596,8 +631,9 @@ export default function MapHome() {
                 )}
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                {/* ✅ 26TH-B2: currentTime 미정의 참조 → new Date() 직접 사용 (5TH-A5: LiveClock이 없는 헤더에서 정적 표시) */}
                 <div style={{ fontSize: '13px', fontWeight: '800', color: '#1565C0', letterSpacing: '-0.02em', marginRight: '-6px' }}>
-                  {currentTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </div>
                 <div style={{ position: 'relative', cursor: 'pointer' }}>
                   <Bell size={20} color="#333" strokeWidth={2} />
@@ -608,7 +644,7 @@ export default function MapHome() {
                   style={{ position: 'relative', cursor: 'pointer' }}
                 >
                   <img
-                    src={user?.avatar || user?.picture || 'https://i.pravatar.cc/150?img=11'}
+                    src={user?.avatar || user?.picture || DEFAULT_AVATAR_SVG}
                     alt="profile"
                     style={{ width: '34px', height: '34px', borderRadius: '50%', border: '2px solid #E8F0FE', objectFit: 'cover', transition: 'transform 0.2s' }}
                     onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
@@ -678,9 +714,28 @@ export default function MapHome() {
             )}
 
             {!mapLoaded && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F4F6FA', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>지도 로딩 중…</span>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F4F6FA', gap: '12px', zIndex: 10 }}>
+                {mapLoadError ? (
+                  <>
+                    <div style={{ fontSize: '40px' }}>🗺️</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#1A1A2E' }}>카카오맵 API 키 필요</div>
+                    <div style={{ fontSize: '12px', color: '#888', fontWeight: '700', textAlign: 'center', lineHeight: 1.7, padding: '0 32px' }}>
+                      .env.local 파일에 카카오 JavaScript 키를 입력하세요.<br />
+                      <code style={{ background: '#F0F0F0', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', color: '#0056D2' }}>VITE_KAKAO_APP_KEY=여기에_키_입력</code>
+                    </div>
+                    <button
+                      onClick={() => { window.open('https://developers.kakao.com', '_blank'); }}
+                      style={{ marginTop: '8px', padding: '10px 22px', background: '#FAE100', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', color: '#1A1A2E' }}
+                    >
+                      카카오 개발자 콘솔 →
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ width: '40px', height: '40px', border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>지도 로딩 중…</span>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -854,6 +909,68 @@ export default function MapHome() {
                     <Tv size={12} color="#1A1A2E" />
                     <span style={{ fontSize: '10px', fontWeight: '900', color: '#1A1A2E' }}>실시간 영상</span>
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── AI 낚시 적합도 게이지 카드 ── */}
+            <div style={{ padding: '12px 16px 0' }}>
+              <div style={{
+                background: '#fff', borderRadius: '20px', padding: '16px 18px',
+                border: '1.5px solid #F0F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '15px' }}>🎯</span>
+                    <span style={{ fontSize: '13px', fontWeight: '900', color: '#1A1A2E' }}>AI 낚시 적합도</span>
+                  </div>
+                  <div style={{
+                    background: score >= 90 ? 'linear-gradient(135deg, #00C48C, #00897B)' : score >= 75 ? 'linear-gradient(135deg, #1565C0, #1E88E5)' : score >= 50 ? 'linear-gradient(135deg, #FF9B26, #F57F17)' : 'linear-gradient(135deg, #FF5A5F, #D32F2F)',
+                    borderRadius: '20px', padding: '4px 12px',
+                  }}>
+                    <span style={{ fontSize: '10px', fontWeight: '900', color: '#fff' }}>
+                      {score >= 90 ? '🔥 피딩 중!' : score >= 75 ? '✅ 출조 추천' : score >= 50 ? '🙂 보통' : '⚠ 재고 필요'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 게이지 바 */}
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <div style={{ height: '10px', background: '#F0F2F7', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${score}%`,
+                      background: score >= 90 ? 'linear-gradient(90deg, #00C48C, #00E5A8)' : score >= 75 ? 'linear-gradient(90deg, #1565C0, #42A5F5)' : score >= 50 ? 'linear-gradient(90deg, #FF9B26, #FFD54F)' : 'linear-gradient(90deg, #FF5A5F, #FF8A80)',
+                      borderRadius: '6px',
+                      transition: 'width 1s cubic-bezier(0.25, 1, 0.5, 1)',
+                      boxShadow: score >= 90 ? '0 0 8px rgba(0,196,140,0.6)' : 'none',
+                    }} className={score >= 90 ? 'gauge-pulse' : ''} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
+                    <span style={{ fontSize: '9px', color: '#C7C7CC', fontWeight: '700' }}>0</span>
+                    <span style={{ fontSize: '12px', fontWeight: '950', color: score >= 90 ? '#00C48C' : score >= 75 ? '#1565C0' : score >= 50 ? '#FF9B26' : '#FF5A5F' }}>{score}점</span>
+                    <span style={{ fontSize: '9px', color: '#C7C7CC', fontWeight: '700' }}>100</span>
+                  </div>
+                </div>
+
+                {/* 세부 지표 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
+                  {[
+                    { label: '수온', val: `${parseFloat(tideData.sst || 14).toFixed(1)}°C`, ok: parseFloat(tideData.sst || 14) >= 12 && parseFloat(tideData.sst || 14) <= 22 },
+                    { label: '파고', val: `${tideData.wave?.coastal || '0.4'}m`, ok: parseFloat(tideData.wave?.coastal || 0.4) <= 1.0 },
+                    { label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s`, ok: parseFloat(tideData.wind?.speed || 2.1) <= 5 },
+                    { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('사리') },
+                  ].map(item => (
+                    <div key={item.label} style={{
+                      background: item.ok ? 'rgba(0,196,140,0.08)' : 'rgba(255,90,95,0.08)',
+                      border: `1px solid ${item.ok ? 'rgba(0,196,140,0.25)' : 'rgba(255,90,95,0.25)'}`,
+                      borderRadius: '10px', padding: '7px 4px', textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: '9px', color: '#8E8E93', fontWeight: '700' }}>{item.label}</div>
+                      <div style={{ fontSize: '11px', fontWeight: '950', color: item.ok ? '#00C48C' : '#FF5A5F', marginTop: '2px' }}>{item.val}</div>
+                      <div style={{ fontSize: '8px', color: item.ok ? '#00C48C' : '#FF5A5F', fontWeight: '800' }}>{item.ok ? '✓ 양호' : '✗ 주의'}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1159,7 +1276,7 @@ export default function MapHome() {
                     🎣
                   </div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.content}</div>
+                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(post.content || '').slice(0, 80)}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                       <span style={{ fontSize: '10px', color: '#AAB0BE', fontWeight: '700' }}>@{post.author}</span>
                       <span style={{ fontSize: '9px', background: '#F0F5FF', color: '#0056D2', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
@@ -1237,7 +1354,7 @@ export default function MapHome() {
 
             {/* 영상/이미지 */}
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-              {cctvData.type === 'youtube' && cctvData.url ? (
+              {(cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
                 <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
                   <iframe
                     src={cctvData.url}
@@ -1269,7 +1386,7 @@ export default function MapHome() {
             {/* 하단 안내 */}
             <div style={{ padding: '12px 20px 30px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
               <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: '700', textAlign: 'center' }}>
-                {cctvData.type === 'youtube' ? '📺 YouTube 라이브 스트리밍 연동 (지자체 공식 채널)' : '📡 지역 대표 해안 이미지 · 실시간 스트리밍 추가 예정'}
+                {cctvData.type === 'youtube' ? '📺 YouTube 라이브 스트리밍 연동 (지자체 공식 채널)' : cctvData.type === 'iframe' ? '🔗 커스텀 스트림 연동 (관리자 직접 설정)' : '📡 지역 대표 해안 이미지 · 실시간 스트리밍 추가 예정'}
               </div>
             </div>
           </div>
