@@ -28,14 +28,23 @@ const userSchema = new mongoose.Schema({
   },
   favorites:           [{ type: String }],          // 즐겨찾기 낚시 포인트 ID 목록
   subscriptionExpiresAt: { type: Date, default: null }, // 구독 만료일 (checkSubscriptionValid 미들웨어 사용)
+  // ✅ FREE-LIMIT: 무료 플랜 하루 포인트 입장 카운터 (KST 자정 기준 리셋)
+  dailyPointVisit: {
+    count: { type: Number, default: 0 },
+    date:  { type: String, default: '' }, // 'YYYY-MM-DD' KST 기준
+  },
+  // ✅ CREW-ENH: 가입한 크루 목록 (crewId 배열)
+  joinedCrews: [{
+    crewId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Crew' },
+    joinedAt: { type: Date, default: Date.now },
+  }],
   createdAt:      { type: Date, default: Date.now },
+  lastSeen:       { type: Date, default: null },       // ✅ STAT: 최근 API 요청 시각 — 접속자 통계용
+
 });
 
 // ✅ BUG-47: 쿼리 성능 인덱스 명시적 추가
-// email: unique 인덱스는 스키마 레벨 설정으로 자동 생성되나, 명시적 선언 추가
-userSchema.index({ email: 1 }, { unique: true });
-// name: 중복불가 인덱스 명시 (관리되는 인덱스 수 줄이기 위해 schema unique만 사용)
-userSchema.index({ name: 1 }, { unique: true });
+// email, name: 스키마 레벨 unique: true로 이미 자동 생성되므로 schema.index() 중복 선언 제거 (경고 해결)
 // tier + subscriptionExpiresAt: 구독 만료 배치 쿼리 최적화 (복합)
 userSchema.index({ tier: 1, subscriptionExpiresAt: 1 });
 // ✅ 10TH-B2: subscriptionExpiresAt 단독 인덱스 — 만료 전용 체크 쿼리 (WHERE subscriptionExpiresAt < now) 시 full-scan 방지

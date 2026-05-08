@@ -14,6 +14,12 @@ const postSchema = new mongoose.Schema({
   category:     { type: String, required: true },
   content:      { type: String, required: true },
   image:        { type: String, default: null },
+  // ✅ LOC: 위치 정보 필드 — { address, lat, lng }
+  location:     {
+    address: { type: String, default: '' },
+    lat:     { type: Number, default: null },
+    lng:     { type: Number, default: null },
+  },
   likes:        { type: Number, default: 0 },
   likedBy:      { type: [String], default: [] },  // 좋아요 중복방지: 유저 이메일 목록
   comments:     { type: [commentSchema], default: [] },

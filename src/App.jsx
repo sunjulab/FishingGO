@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef } from 'react'; // ✅ 30TH-B1 보너스: useRef named import 추가
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, Navigate } from 'react-router-dom';
 
 // import { GoogleOAuthProvider } from '@react-oauth/google'; // 추후 구글 로그인 연동 시 활성화
@@ -8,6 +8,10 @@ import { useToastStore } from './store/useToastStore';
 import { useUserStore, TIER_CONFIG, LEVEL_CONFIG, ADMIN_ID, ADMIN_EMAIL } from './store/useUserStore';
 import LoadingSpinner from './components/LoadingSpinner';
 import KakaoLoader from './components/KakaoLoader';
+import { initAdMob } from './services/AdMobService'; // ✅ ADMOB: 앱 시작 시 AdMob SDK 초기화
+
+// ✅ ADMOB: 앱 시작 시 AdMob 초기화 (Capacitor 네이티브 환경에서만 동작)
+initAdMob().catch(() => {}); // 웹 환경 실패는 무시
 
 // ─── 카카오 JS SDK 초기화 (공유/소셜 기능용) ─────────────────────────────────
 if (typeof window !== 'undefined' && window.Kakao && !window.Kakao.isInitialized()) {
@@ -20,7 +24,7 @@ if (typeof window !== 'undefined' && window.Kakao && !window.Kakao.isInitialized
 const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
 
 // ✅ 3RD-B2: hideNav/hideHeader 경로 배열 통합 — 한 곳에서 관리 (✅ 3RD-B1: /media 제거 — MediaTab 네비게이션 정상 노출)
-const HIDE_OVERLAY_PATHS = ['/write', '/write-business', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin', '/payment-history', '/vvip-subscribe', '/admin-dashboard', '/weather'];
+const HIDE_OVERLAY_PATHS = ['/write', '/write-business', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin', '/payment-history', '/vvip-subscribe', '/admin-dashboard', '/weather', '/user/'];
 
 // 라우트 레이지 로딩 (코드 스플리팅)
 const MapHome = lazy(() => import('./pages/MapHome')); 
@@ -42,6 +46,7 @@ const NoticeDetail = lazy(() => import('./pages/NoticeDetail'));
 const SecretPointAdmin = lazy(() => import('./pages/SecretPointAdmin'));
 const PaymentHistory   = lazy(() => import('./pages/PaymentHistory'));
 const AdminDashboard   = lazy(() => import('./pages/AdminDashboard'));
+const UserProfile      = lazy(() => import('./pages/UserProfile'));
 
 import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -309,6 +314,7 @@ export default function App() {
               <Route path="/secret-admin" element={<AdminRoute><SecretPointAdmin /></AdminRoute>} />
               <Route path="/payment-history" element={<PaymentHistory />} />
               <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/user/:name" element={<UserProfile />} />
             </Routes>
           </Suspense>
         </div>

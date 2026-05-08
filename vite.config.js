@@ -15,10 +15,12 @@ export default defineConfig(({ mode }) => {
   },
   plugins: [
     react(),
-    VitePWA({
+    // ✅ APK 빌드 시 VITE_DISABLE_PWA=true 환경변수로 PWA 비활성화 가능
+    ...(env.VITE_DISABLE_PWA === 'true' ? [] : [VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp}'], // ENH-C2: webp 확장자 사전캐시 추가
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2,webp}'], // PNG 아이콘은 별도 관리 (대용량 precache 오류 방지)
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB 제한
         // ─── 오프라인 캐시 전략 ───────────────────────────────
         runtimeCaching: [
           {
@@ -73,8 +75,8 @@ export default defineConfig(({ mode }) => {
         name: '낚시GO Premium',
         short_name: '낚시GO',
         description: '국내 최고 프리미엄 해양 낚시 인텔리전스 — 실시간 물때·날씨·포인트·커뮤니티',
-        theme_color: '#0056D2',
-        background_color: '#F4F6FA',
+        theme_color: '#0B1F3A',
+        background_color: '#0B1F3A',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
@@ -86,7 +88,7 @@ export default defineConfig(({ mode }) => {
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-    }),
+    })]),  // ← conditional VitePWA end
   ],
   build: {
     // ─── 청크 스플리팅 최적화 ────────────────────────────────

@@ -82,6 +82,17 @@ try {
   console.log('[Fallback] 로컬 JSON 로드 실패, 빈 배열로 시작합니다.', e.message);
 }
 
+// ✅ ADMIN-FIX: 인메모리 sunjulab 계정 tier BUSINESS_VIP 강제 패치 (시작 시 항상 적용)
+{
+  const sunjulabIdx = memUsers.findIndex(u => u.id === 'sunjulab' || u.name === 'sunjulab');
+  if (sunjulabIdx !== -1 && memUsers[sunjulabIdx].tier !== 'BUSINESS_VIP') {
+    memUsers[sunjulabIdx].tier = 'BUSINESS_VIP';
+    try { fs.writeFileSync(USERS_FILE, JSON.stringify(memUsers, null, 2)); } catch (_) {}
+    console.log('[Bootstrap] 인메모리 sunjulab 계정 tier → BUSINESS_VIP');
+  }
+}
+
+
 // ✅ 9TH-B6: save* 함수 silent catch → 개발 환경 경고 추가 — 파일 저장 실패 시 무음 데이터 유실 방지
 function _saveFile(file, data) {
   try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
@@ -210,14 +221,15 @@ function censorText(str) {
 }
 
 // ✅ ENH-C5: 어드민 판별 헬퍼 — 전체 서버에서 단일 함수로 관리
-// sunjulab.k = 마스터 계정, sunjulab.k@gmail.com = Gmail 로그인 시
-// 'sunjulab' 이메일은 VIP 테스트 계정이므로 어드민에서 제외
+// sunjulab.k = 마스터 계정 이메일, sunjulab.k@gmail.com = Gmail 로그인 시
+// ✅ ADMIN-FIX: sunjulab ID는 VIP 일반 계정이므로 MASTER 판별에서 제거
 function isAdminToken(tp) {
   if (!tp) return false;
-  return tp.id === 'sunjulab'              // 레거시 resolved-id 호환
-    || tp.email === 'sunjulab.k'           // ✅ 마스터 계정 이메일
-    || tp.email === 'sunjulab.k@gmail.com'; // Gmail OAuth 로그인
+  return tp.email === 'sunjulab.k'           // ✅ 마스터 계정 이메일
+    || tp.email === 'sunjulab.k@gmail.com'   // Gmail OAuth 로그인
+    || tp.tier === 'MASTER';                  // ✅ 티어 기반 판별 (JWT에 tier 포함된 경우)
 }
+
 
 // ─── MongoDB 연결 ─────────────────────────────────────────────────────────────
 const buildMongoUri = () => {
@@ -234,16 +246,34 @@ const buildMongoUri = () => {
 };
 
 const MONGO_URI = buildMongoUri();
+// ✅ DB-FIX: dbConnecting 플래그 — 서버 시작 직후 연결 진행 중 여부 추적
+let dbConnecting = false;
 if (MONGO_URI) {
+  dbConnecting = true;
   console.log('MongoDB 연결 시도 중...');
   mongoose.connect(MONGO_URI, {
     serverSelectionTimeoutMS: 10000,
     family: 4, // IPv4 강제 (DNS SRV 에러 방지용)
     heartbeatFrequencyMS: 10000, // 10초마다 heartbeat
   })
-    .then(() => { dbReady = true; console.log('✅ MongoDB 연결 성공! 영구저장 모드 활성화'); })
+    .then(async () => {
+      dbReady = true; dbConnecting = false;
+      console.log('✅ MongoDB 연결 성공! 영구저장 모드 활성화');
+      // ✅ ADMIN-FIX: sunjulab 계정 tier BUSINESS_VIP 강제 마이그레이션 (ID 기반 MASTER 제거)
+      try {
+        const UModel = require('./models/User');
+        const result = await UModel.findOneAndUpdate(
+          { $or: [{ email: 'sunjulab' }, { name: 'sunjulab' }, { id: 'sunjulab' }] },
+          { $set: { tier: 'BUSINESS_VIP' } },
+          { new: true }
+        );
+        if (result) console.log(`[Bootstrap] sunjulab 계정 tier → BUSINESS_VIP (email: ${result.email})`);
+        else console.log('[Bootstrap] sunjulab 계정 MongoDB 미발견 — 인메모리에서 처리');
+      } catch (e) { console.warn('[Bootstrap] sunjulab tier 마이그레이션 실패:', e.message); }
+    })
+
     .catch(err => {
-      dbReady = false;
+      dbReady = false; dbConnecting = false;
       console.log('⚠️ MongoDB 연결실패 → 인메모리 모드 전환');
       console.log('원인:', err.message);
     });
@@ -263,6 +293,18 @@ if (MONGO_URI) {
   });
 } else {
   console.log('⚠️ MONGO_URI/MONGO_PASS 미설정 → 인메모리 모드.');
+}
+
+// ✅ DB-FIX: waitForDb — 서버 시작 직후 DB 연결 중일 때 최대 maxMs 대기 후 dbReady 반환
+// 사용처: 로그인/구글 로그인 엔드포인트 — 초기화 직후 로그인 실패 방지
+async function waitForDb(maxMs = 8000) {
+  if (dbReady) return true;
+  if (!dbConnecting) return false; // 연결 시도조차 없으면 즉시 false
+  const start = Date.now();
+  while (!dbReady && dbConnecting && Date.now() - start < maxMs) {
+    await new Promise(r => setTimeout(r, 300)); // 300ms 간격으로 폴링
+  }
+  return dbReady;
 }
 
 // ─── 모델 로드 ────────────────────────────────────────────────────────────────
@@ -360,6 +402,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', db: dbReady ? 'mongodb' : 'memory', uptime: Math.floor(process.uptime()), time: new Date().toISOString() });
 });
 
+
 // NEW-C1: 채널 튜토리얼 영상 목록 — 서버에서 관리하여 어드민 없이 영상 추가/수정 가능
 // 향후 MongoDB 모델로 확장 예정 (현재는 정적 배열 반환)
 let channelVideos = [
@@ -404,6 +447,102 @@ app.use(cors({
   credentials: true,
 }));
 
+// ── 접속자 추적 미들웨어 (CORS 이후 — JWT 보유 요청에서 lastSeen 갱신) ──────────
+const lastSeenCache = new Map();
+app.use(async (req, res, next) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return next();
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return next(); }
+    const email = tp.email || tp.id;
+    if (!email) return next();
+    const now = Date.now();
+    const last = lastSeenCache.get(email) || 0;
+    if (now - last < 60_000) return next();
+    lastSeenCache.set(email, now);
+    const nowDate = new Date(now);
+    if (dbReady && User) {
+      User.updateOne({ email }, { $set: { lastSeen: nowDate } }).exec().catch(() => {});
+    } else {
+      const mu = memUsers.find(u => u.email === email || u.id === email);
+      if (mu) mu.lastSeen = nowDate.toISOString();
+    }
+  } catch { /* 무시 */ }
+  next();
+});
+
+// ── GET /api/admin/user-stats — 사용자 통계 (마스터 전용, CORS 이후) ─────────────
+app.get('/api/admin/user-stats', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자만 접근 가능합니다.' });
+
+    // ✅ 티어 정규화 맵 — 변형 이름을 표준 이름으로 매핑
+    const TIER_NORMALIZE = {
+      'FREE': 'FREE', 'free': 'FREE',
+      'LITE': 'BUSINESS_LITE', 'lite': 'BUSINESS_LITE', 'BUSINESS_LITE': 'BUSINESS_LITE',
+      'PRO': 'PRO', 'pro': 'PRO',
+      'VIP': 'BUSINESS_VIP', 'vip': 'BUSINESS_VIP', 'VVIP': 'BUSINESS_VIP',
+      'BUSINESS_VIP': 'BUSINESS_VIP', 'VVIP_VIP': 'BUSINESS_VIP',
+      'MASTER': 'MASTER', 'master': 'MASTER', 'ADMIN': 'MASTER',
+    };
+    const STANDARD_TIERS = ['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+
+    const now = new Date();
+    const online5m  = new Date(now - 5 * 60 * 1000);
+    const online24h = new Date(now - 24 * 60 * 60 * 1000);
+    const week7     = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    let s = {
+      totalUsers: 0, onlineNow: 0, onlineToday: 0, offlineUsers: 0, newUsers7d: 0,
+      tierBreakdown: { FREE: 0, BUSINESS_LITE: 0, PRO: 0, BUSINESS_VIP: 0, MASTER: 0 },
+      rawTiers: {}, // DB에 실제 저장된 티어 원시값 (디버그용)
+    };
+
+    if (dbReady && User) {
+      const [total, onlineNow, onlineToday, newUsers7d, tierCounts] = await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ lastSeen: { $gte: online5m } }),
+        User.countDocuments({ lastSeen: { $gte: online24h } }),
+        User.countDocuments({ createdAt: { $gte: week7 } }),
+        User.aggregate([{ $group: { _id: { $ifNull: ['$tier', 'FREE'] }, count: { $sum: 1 } } }]),
+      ]);
+      s.totalUsers = total; s.onlineNow = onlineNow; s.onlineToday = onlineToday;
+      s.offlineUsers = total - onlineToday; s.newUsers7d = newUsers7d;
+      tierCounts.forEach(t => {
+        const raw = t._id || 'FREE';
+        s.rawTiers[raw] = (s.rawTiers[raw] || 0) + (t.count || 0);
+        const norm = TIER_NORMALIZE[raw] || 'FREE'; // 알 수 없는 티어 → FREE로 귀속
+        s.tierBreakdown[norm] = (s.tierBreakdown[norm] || 0) + (t.count || 0);
+      });
+    } else {
+      const all = memUsers;
+      s.totalUsers  = all.length;
+      s.onlineNow   = all.filter(u => u.lastSeen && new Date(u.lastSeen) >= online5m).length;
+      s.onlineToday = all.filter(u => u.lastSeen && new Date(u.lastSeen) >= online24h).length;
+      s.offlineUsers = all.length - s.onlineToday;
+      s.newUsers7d  = all.filter(u => u.createdAt && new Date(u.createdAt) >= week7).length;
+      all.forEach(u => {
+        const raw = u.tier || 'FREE';
+        s.rawTiers[raw] = (s.rawTiers[raw] || 0) + 1;
+        const norm = TIER_NORMALIZE[raw] || 'FREE';
+        s.tierBreakdown[norm] = (s.tierBreakdown[norm] || 0) + 1;
+      });
+    }
+    res.json(s);
+  } catch (err) {
+    console.error('[GET /api/admin/user-stats]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+
+
+
 // ─── Rate Limiter ────────────────────────────────────────────────────
 try {
   const rateLimit = require('express-rate-limit');
@@ -430,12 +569,7 @@ try {
     message: { error: '검색 요청이 너무 많습니다. 1분 후 다시 시도해주세요.', code: 'YT_SEARCH_RATE_LIMIT' },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
-    skip: (req) => {
-      // 캐시 히트 시는 API 호출 없으므로 rate limit 제외 불가 (서버 내부 처리)
-      // 단, 동일 쿼리 연속 요청은 캐시로 처리되어 실제 API 미호출
-      return false;
-    },
+    // ✅ IPv6 호환: 커스텀 keyGenerator 제거 → 기본 IP 처리 사용 (ERR_ERL_KEY_GEN_IPV6 해결)
   });
 
   // ✅ YouTube 통합 피드 전용 Rate Limit — IP당 분당 10회
@@ -561,7 +695,30 @@ const io = new Server(server, {
   }
 });
 
-// 실시간 크루 채팅 서버 로직 (chatHistories는 상단에서 선언되었습니다)
+// ✅ CREW-ENH: 서버사이드 레벨 시스템 (유저스토어와 동일 기준)
+const LEVEL_CONFIG_SV = [
+  { level: 1, title: '\uCD08\uBCF4 \uB099\uC2DC\uAFBC',   emoji: '\uD83E\uDEB1', expRequired: 0    },
+  { level: 2, title: '\uACAC\uC2B5 \uB099\uC2DC\uAFBC',   emoji: '\uD83C\uDFA3', expRequired: 100  },
+  { level: 3, title: '\uB099\uC2DC \uC785\uBB38\uC790',   emoji: '\uD83D\uDC1F', expRequired: 250  },
+  { level: 4, title: '\uB099\uC2DC \uC560\uD638\uAC00',   emoji: '\uD83D\uDC20', expRequired: 500  },
+  { level: 5, title: '\uBCA0\uD14C\uB791 \uB099\uC2DC\uC778', emoji: '\uD83D\uDC21', expRequired: 850  },
+  { level: 6, title: '\uC911\uAE09 \uB099\uC2DC\uAFBC',   emoji: '\uD83E\uDD88', expRequired: 1300 },
+  { level: 7, title: '\uACE0\uC218 \uB099\uC2DC\uC778',   emoji: '\uD83C\uDFAF', expRequired: 1900 },
+  { level: 8, title: '\uB099\uC2DC \uC7A5\uC778',         emoji: '\u2693',       expRequired: 2700 },
+  { level: 9, title: '\uC804\uC124\uC758 \uB099\uC2DC\uC778', emoji: '\uD83D\uDC51', expRequired: 3700 },
+];
+function getServerLevel(totalExp = 0) {
+  if (totalExp >= 5000) return { level: 'LV.??', emoji: '\uD83C\uDF0C', title: '\uCD08\uC6D4 \uB099\uC2DC\uC2E0' };
+  for (let i = LEVEL_CONFIG_SV.length - 1; i >= 0; i--) {
+    if (totalExp >= LEVEL_CONFIG_SV[i].expRequired) {
+      const lv = LEVEL_CONFIG_SV[i];
+      return { level: `LV.${lv.level}`, emoji: lv.emoji, title: lv.title };
+    }
+  }
+  return { level: 'LV.1', emoji: '\uD83E\uDEB1', title: '\uCD08\uBCF4 \uB099\uC2DC\uAFBC' };
+}
+
+// 실시간 낙시 인원 서버 로직 (chatHistories는 상단에서 선언되었습니다)
 
 io.on('connection', (socket) => {
   // ✅ OPT-5: 연결 시 핸드셰이크 토큰 검증 (발신자 위조 방지)
@@ -578,6 +735,34 @@ io.on('connection', (socket) => {
 
   // ✅ 21TH-B1: console.log → logger.info (Winston 통일)
   logger.info(`[Socket] User connected: ${socket.id} ${verifiedUser ? `(${verifiedUser.name || verifiedUser.email})` : '(미인증)'}`);
+
+  // ✅ NICK-FIX: 소켓 세션 단위 레벨 + 닉네임 캐시 (경쟁조건 없이 즉시 초기화)
+  let cachedLevel = { level: 'LV.1', emoji: '🪱', title: '초보 낚시꾼' };
+  // 1순위: JWT에 포함된 name (로그인/재로그인 후 즉시 유효)
+  // 2순위: 인메모리 memUsers에서 즉시 동기 조회 (경쟁조건 없음)
+  // 3순위: DB 비동기 조회 완료 후 갱신
+  let cachedNickname = verifiedUser?.name
+    || memUsers.find(u => u.email === verifiedUser?.email)?.name
+    || null;
+  if (verifiedUser?.email) {
+    if (dbReady && User) {
+      User.findOne({ email: verifiedUser.email }).select('totalExp name').lean()
+        .then(u => {
+          if (u) {
+            cachedLevel = getServerLevel(u.totalExp || 0);
+            if (u.name) cachedNickname = u.name; // DB 닉네임 최종 확정 (아이디 노출 차단)
+          }
+        })
+        .catch(() => {});
+    } else {
+      // 인메모리 모드: memUsers에서 레벨도 계산
+      const memU = memUsers.find(u => u.email === verifiedUser.email);
+      if (memU) {
+        cachedLevel = getServerLevel(memU.totalExp || 0);
+        if (memU.name) cachedNickname = memU.name;
+      }
+    }
+  }
 
   socket.on('join_crew', async (crewId) => {
     if (!crewId || typeof crewId !== 'string') return;
@@ -599,16 +784,39 @@ io.on('connection', (socket) => {
     if (!text || text.length > 500) return; // 빈값/500자 초과 차단
     if (!data.crewId || typeof data.crewId !== 'string') return;
 
-    // ✅ OPT-5: JWT 검증된 발신자 이름 우선 사용, 미인증 시 클라이언트 제공값 사용 (익명 허용)
-    const senderRaw = verifiedUser
-      ? (verifiedUser.name || verifiedUser.email || 'Anonymous')
-      : (data.sender || 'Anonymous');
+    // ✅ NICK-FIX (완전체): 닉네임 우선 결정 — 모든 유저/신규가입자 동일 보장
+    // 우선순위: 소켓 캐시 → memUsers 동기 → DB await → JWT name → 익명
+    let resolvedNickname = cachedNickname;
+    if (!resolvedNickname && verifiedUser?.email) {
+      // 2순위: 인메모리에서 즉시 동기 조회
+      const memU = memUsers.find(u => u.email === verifiedUser.email);
+      if (memU?.name) {
+        resolvedNickname = memU.name;
+        cachedNickname = memU.name;
+      } else if (dbReady && User) {
+        // 3순위: DB await 조회 (DB 모드 신규 가입자 대응 — 경쟁조건 완전 제거)
+        try {
+          const dbU = await User.findOne({ email: verifiedUser.email }).select('name totalExp').lean();
+          if (dbU?.name) {
+            resolvedNickname = dbU.name;
+            cachedNickname = dbU.name;
+            if (dbU.totalExp !== undefined) cachedLevel = getServerLevel(dbU.totalExp);
+          }
+        } catch { /* DB 조회 실패 시 다음 fallback */ }
+      }
+    }
+    // 최종 fallback: JWT name → 익명 (절대 이메일/아이디 노출 없음)
+    const senderRaw = resolvedNickname || verifiedUser?.name || '익명';
     const sender = senderRaw.toString().slice(0, 30);
 
     const msgData = {
       sender,
       text,
-      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      socketId: socket.id,  // ✅ BUG-DUP: 발신자 소켓ID — 클라이언트 본인 메시지 판별용
+      senderLevel: cachedLevel.level,
+      senderEmoji: cachedLevel.emoji,
+      senderTitle: cachedLevel.title,
     };
     if (!chatHistories[data.crewId]) chatHistories[data.crewId] = [];
     chatHistories[data.crewId].push(msgData);
@@ -931,6 +1139,70 @@ app.post('/api/payment/verify', async (req, res) => {
   }
 });
 
+// ─── 구독 상태 조회 — GET /api/payment/subscription/:userId ────────────────────
+// checkSubscriptionExpiry()가 앱 시작 시 호출하는 엔드포인트
+// DB 또는 인메모리에서 현재 tier/만료일을 읽어 반환
+app.get('/api/payment/subscription/:userId', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
+
+    const userId = decodeURIComponent(req.params.userId);
+    const isAdmin = isAdminToken(tp);
+    // 본인 또는 어드민만 조회 가능
+    if (!isAdmin && tp.email !== userId && tp.id !== userId) {
+      return res.status(403).json({ error: '본인 정보만 조회 가능합니다.' });
+    }
+
+    let user;
+    if (dbReady && User) {
+      user = await User.findOne({ $or: [{ email: userId }, { id: userId }] }, 'tier subscriptionExpiresAt email').lean();
+    } else {
+      user = memUsers.find(u => u.email === userId || u.id === userId);
+    }
+
+    if (!user) return res.status(404).json({ error: '사용자 없음' });
+
+    const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+    const tier = user.tier || 'FREE';
+    const isPaid = PAID_TIERS.includes(tier);
+
+    // 만료일 체크
+    if (isPaid && user.subscriptionExpiresAt) {
+      const expiry = new Date(user.subscriptionExpiresAt);
+      if (expiry < new Date()) {
+        // 만료됨 — DB에서도 FREE로 초기화
+        if (dbReady && User) {
+          await User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }] }, { tier: 'FREE' });
+        } else {
+          const u = memUsers.find(u => u.email === userId || u.id === userId);
+          if (u) { u.tier = 'FREE'; saveMemUsers(); }
+        }
+        return res.json({ hasSubscription: false, status: 'expired', tier: 'FREE' });
+      }
+      return res.json({
+        hasSubscription: true,
+        status: 'active',
+        tier,
+        nextBillingDate: user.subscriptionExpiresAt,
+      });
+    }
+
+    if (isPaid) {
+      // 만료일 없는 유료 플랜 = 유효한 것으로 간주
+      return res.json({ hasSubscription: true, status: 'active', tier });
+    }
+
+    return res.json({ hasSubscription: false, status: 'free', tier: 'FREE' });
+  } catch (err) {
+    console.error('[GET /api/payment/subscription]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 // ─── 포트원 웹훅 (결제 완료 서버 측 이벤트) ──────────────────────────────────
 // Render 설정: 포트원 콘솔 → 웹훅 URL = https://[your-server].onrender.com/api/payment/webhook
 app.post('/api/payment/webhook', async (req, res) => {
@@ -1043,13 +1315,16 @@ function getLevelFromExp(totalExp) {
 function buildUserResponse(user) {
   const totalExp = user.totalExp || 0;
   const levelInfo = getLevelFromExp(totalExp);
-  // ✅ FIX-ADMIN: 어드민 계정 판별 — id('sunjulab'), email('sunjulab' or 'sunjulab.k@gmail.com')
+  // ✅ FIX-ADMIN: 어드민 계정 판별 — 이메일 기반(sunjulab.k)
   const rawId = user._id || user.id;
-  const isAdminUser = isAdminToken({ id: String(rawId), email: user.email });
-  // ✅ id를 'sunjulab'으로 고정 — MongoDB ObjectId로는 프론트 isAdmin 비교 실패
-  const resolvedId = isAdminUser ? 'sunjulab' : String(rawId);
-  // ✅ tier를 'MASTER'로 고정 — DB에 'FREE'로 저장되어 있어도 어드민은 항상 MASTER
-  const resolvedTier = isAdminUser ? 'MASTER' : (user.tier || 'FREE');
+  const isAdminUser = isAdminToken({ email: user.email, tier: user.tier });
+  // ✅ ADMIN-FIX: sunjulab(email='sunjulab') 계정은 BUSINESS_VIP — 이메일로만 판별 (name 제외: 타인이 같은 닉네임 사용 가능)
+  const isSunjulabVip = user.email === 'sunjulab';
+  // id: 어드민은 'sunjulab.k'로, sunjulab VIP는 MongoDB ObjectId 그대로
+  const resolvedId = isAdminUser ? 'sunjulab.k' : String(rawId);
+  // tier: 어드민=MASTER, sunjulab VIP계정=BUSINESS_VIP, 나머지=DB값
+  const resolvedTier = isAdminUser ? 'MASTER' : isSunjulabVip ? 'BUSINESS_VIP' : (user.tier || 'FREE');
+
   return {
     id: resolvedId,
     email: user.email,
@@ -1073,18 +1348,28 @@ function buildUserResponse(user) {
 
 
 function applyAttendance(user) {
+  // ✅ LOGIN-FIX-3: lastAttendance가 MongoDB Date 객체일 때 string 비교 오류 수정
+  // User 스키마에서 lastAttendance: Date 타입 → DB에서 Date 객체로 반환됨
+  // → 'YYYY-MM-DD' string으로 정규화 후 비교해야 정확한 출석 처리 가능
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   let justAttended = false;
   let leveledUp = false;
   let expGained = 0;
 
-  if (user.lastAttendance !== today) {
+  // lastAttendance가 Date 객체 또는 string 모두 처리
+  const lastStr = user.lastAttendance
+    ? (user.lastAttendance instanceof Date
+        ? user.lastAttendance.toISOString().split('T')[0]
+        : String(user.lastAttendance).split('T')[0])
+    : '';
+
+  if (lastStr !== today) {
     // 연속 출석 스트릭
-    if (user.lastAttendance === yesterday) {
+    if (lastStr === yesterday) {
       user.streak = (user.streak || 0) + 1;
     } else {
-      user.streak = 1; // 출석 끄김 시 리셋
+      user.streak = 1; // 출석 끊김 시 리셋
     }
 
     user.lastAttendance = today;
@@ -1171,6 +1456,313 @@ app.get('/api/user/me', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// ─── 고객센터 1:1 문의 API ──────────────────────────────────────────────
+// 비밀글 정책: 작성자 본인과 MASTER 어드민만 열람 가능
+// ═══════════════════════════════════════════════════════════════════════
+
+// 인메모리 저장소 + 파일 persist
+const CS_FILE = path.join(__dirname, 'cs_inquiries.json');
+let memCsInquiries = [];
+try {
+  if (fs.existsSync(CS_FILE)) {
+    memCsInquiries = JSON.parse(fs.readFileSync(CS_FILE, 'utf8'));
+  }
+} catch { memCsInquiries = []; }
+
+function saveCsInquiries() {
+  try { fs.writeFileSync(CS_FILE, JSON.stringify(memCsInquiries, null, 2)); } catch {}
+}
+
+// POST /api/cs/inquiry — 문의 등록 (로그인 필수)
+app.post('/api/cs/inquiry', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰이 유효하지 않습니다.' }); }
+
+    const { realName, nickname, phone, category, title, content } = req.body;
+    if (!content || content.trim().length < 5) {
+      return res.status(400).json({ error: '문의 내용을 5자 이상 입력해주세요.' });
+    }
+    if (!title || title.trim().length < 2) {
+      return res.status(400).json({ error: '제목을 2자 이상 입력해주세요.' });
+    }
+
+    const inquiry = {
+      id: `CS-${Date.now()}`,
+      authorEmail: tp.email || tp.id,
+      authorId: tp.id || tp.email,
+      realName: (realName || '').trim(),
+      nickname: (nickname || tp.name || '').trim(),
+      phone: (phone || '').trim(),
+      category: category || '일반 문의',
+      title: title.trim(),
+      content: content.trim(),
+      status: 'pending',   // pending | answered | closed
+      reply: null,
+      repliedAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // DB 저장 시도
+    if (dbReady && mongoose.connection.readyState === 1) {
+      try {
+        // MongoDB에 직접 저장 (별도 모델 없이 generic collection 사용)
+        await mongoose.connection.db.collection('cs_inquiries').insertOne(inquiry);
+      } catch { memCsInquiries.push(inquiry); saveCsInquiries(); }
+    } else {
+      memCsInquiries.push(inquiry);
+      saveCsInquiries();
+    }
+
+    console.log(`[CS] 새 문의 등록: ${inquiry.id} / ${inquiry.authorEmail}`);
+    res.json({ success: true, id: inquiry.id, message: '문의가 접수되었습니다. 빠른 시일 내에 답변드리겠습니다.' });
+  } catch (err) {
+    console.error('[POST /api/cs/inquiry]', err.message);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// GET /api/cs/inquiries — 내 문의 목록 조회 (본인) / 전체 조회 (마스터)
+app.get('/api/cs/inquiries', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰이 유효하지 않습니다.' }); }
+
+    const isAdmin = isAdminToken(tp);
+    let items = [];
+
+    if (dbReady && mongoose.connection.readyState === 1) {
+      try {
+        const coll = mongoose.connection.db.collection('cs_inquiries');
+        const query = isAdmin ? {} : { authorEmail: tp.email || tp.id };
+        items = await coll.find(query).sort({ createdAt: -1 }).toArray();
+      } catch {
+        items = isAdmin ? memCsInquiries : memCsInquiries.filter(i => i.authorEmail === (tp.email || tp.id));
+      }
+    } else {
+      items = isAdmin ? memCsInquiries : memCsInquiries.filter(i => i.authorEmail === (tp.email || tp.id));
+    }
+
+    // 비밀글 정책: 마스터가 아니면 본인 글만
+    if (!isAdmin) {
+      items = items.filter(i => i.authorEmail === (tp.email || tp.id) || i.authorId === (tp.email || tp.id));
+    }
+
+    res.json(items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+  } catch (err) {
+    console.error('[GET /api/cs/inquiries]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// PUT /api/cs/inquiry/:id/reply — 마스터 답변 등록
+app.put('/api/cs/inquiry/:id/reply', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '로그인이 필요합니다.' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰이 유효하지 않습니다.' }); }
+
+    if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자만 답변할 수 있습니다.' });
+
+    const { id } = req.params;
+    const { reply } = req.body;
+    if (!reply || reply.trim().length < 2) return res.status(400).json({ error: '답변 내용을 입력해주세요.' });
+
+    const now = new Date().toISOString();
+
+    if (dbReady && mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.db.collection('cs_inquiries').updateOne(
+          { id },
+          { $set: { reply: reply.trim(), repliedAt: now, status: 'answered', updatedAt: now } }
+        );
+      } catch {
+        const item = memCsInquiries.find(i => i.id === id);
+        if (item) { item.reply = reply.trim(); item.repliedAt = now; item.status = 'answered'; item.updatedAt = now; saveCsInquiries(); }
+      }
+    } else {
+      const item = memCsInquiries.find(i => i.id === id);
+      if (!item) return res.status(404).json({ error: '문의를 찾을 수 없습니다.' });
+      item.reply = reply.trim(); item.repliedAt = now; item.status = 'answered'; item.updatedAt = now;
+      saveCsInquiries();
+    }
+
+    res.json({ success: true, message: '답변이 등록되었습니다.' });
+  } catch (err) {
+    console.error('[PUT /api/cs/inquiry/reply]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+
+// PUT /api/user/tier — 다운그레이드 방지 포함
+// 유료 구독 중인 사용자는 하위 플랜으로 변경 불가 (결제 내역 보호)
+const TIER_RANK = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
+// 다운그레이드 불가 티어 (BUSINESS_VIP, PRO는 명시적 해지 API 없이 변경 불가)
+const PROTECTED_TIERS = ['PRO', 'BUSINESS_VIP', 'MASTER'];
+
+app.put('/api/user/tier', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { email, tier } = req.body;
+    if (!email || !tier) return res.status(400).json({ error: '이메일과 티어가 필요합니다.' });
+    if (!TIER_RANK.hasOwnProperty(tier)) return res.status(400).json({ error: '유효하지 않은 플랜입니다.' });
+
+    const isAdmin = isAdminToken(tp);
+    if (!isAdmin && tp.email !== email && tp.id !== email)
+      return res.status(403).json({ error: '본인 정보만 변경 가능합니다.' });
+
+    // 현재 DB tier 조회
+    let currentTier = 'FREE';
+    let user;
+    if (dbReady && User) {
+      user = await User.findOne({ email });
+      if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      currentTier = user.tier || 'FREE';
+    } else {
+      user = memUsers.find(u => u.email === email);
+      if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      currentTier = user.tier || 'FREE';
+    }
+
+    // ✅ TIER-PROTECT: 어드민이 아닌 경우 다운그레이드 차단
+    if (!isAdmin) {
+      // sunjulab 계정은 항상 BUSINESS_VIP 이상 유지
+      const isSunjulabVip = email === 'sunjulab';
+      if (isSunjulabVip && (TIER_RANK[tier] || 0) < TIER_RANK['BUSINESS_VIP']) {
+        return res.status(403).json({ error: '이 계정은 BUSINESS_VIP 구독이 유지됩니다.', currentTier: 'BUSINESS_VIP' });
+      }
+      // 유료 구독 중인 계정 → 하위 플랜으로 변경 불가
+      if (PROTECTED_TIERS.includes(currentTier) && (TIER_RANK[tier] || 0) < (TIER_RANK[currentTier] || 0)) {
+        return res.status(403).json({
+          error: `현재 ${currentTier} 구독 중입니다. 구독 해지는 고객센터를 통해 진행해주세요.`,
+          currentTier,
+        });
+      }
+    }
+
+    // tier 업데이트
+    if (dbReady && User) {
+      await User.findOneAndUpdate({ email }, { $set: { tier } });
+    } else {
+      user.tier = tier;
+      saveMemUsers();
+    }
+    return res.json({ success: true, tier });
+  } catch (err) {
+    console.error('[PUT /api/user/tier]', err.message);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// ─── FREE 플랜 포인트 입장 일일 3회 제한 체크 ─────────────────────────────────
+// POST /api/user/point-visit-check
+// - 로그인 사용자 전용 (GUEST는 클라이언트 sessionStorage로 처리)
+// - KST(UTC+9) 자정 기준으로 일일 카운트 리셋
+// - 유료플랜(LITE/PRO/VVIP/MASTER) 및 어드민은 항상 allowed:true 반환
+// - 서버 오류 시 fail-open (allowed:true) 반환하여 UX 보호
+const FREE_DAILY_LIMIT = 3;
+// KST 기준 오늘 날짜 'YYYY-MM-DD' 반환 (Render 서버 UTC 환경 대응)
+function getKstDateString() {
+  const now = new Date();
+  // UTC+9 오프셋 적용
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
+  return new Date(kstMs).toISOString().split('T')[0]; // 'YYYY-MM-DD'
+}
+app.post('/api/user/point-visit-check', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
+
+    // 어드민은 무제한
+    if (isAdminToken(tp)) {
+      return res.json({ allowed: true, remaining: 999, total: FREE_DAILY_LIMIT, unlimited: true });
+    }
+
+    const todayKst = getKstDateString();
+    const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+
+    // ─── DB 모드 ─────────────────────────────────────────────────────
+    if (dbReady && User) {
+      // ✅ BUG-FIX: _id: tp.id 제거 — tp.id가 MongoDB ObjectId가 아닌 문자열일 때 CastError throw 방지
+      // email은 항상 존재하며 unique하모로 단독 조회로 충분
+      const user = await User.findOne(
+        { email: tp.email },
+        'tier dailyPointVisit'
+      ).lean();
+
+      if (!user) return res.json({ allowed: true, remaining: FREE_DAILY_LIMIT, total: FREE_DAILY_LIMIT });
+
+      // 유료 플랜이면 무제한
+      if (PAID_TIERS.includes(user.tier)) {
+        return res.json({ allowed: true, remaining: 999, total: FREE_DAILY_LIMIT, unlimited: true });
+      }
+
+      const dpv = user.dailyPointVisit || { count: 0, date: '' };
+      // 날짜가 바뀌었으면 카운트 리셋
+      const count = dpv.date === todayKst ? (dpv.count || 0) : 0;
+
+      if (count >= FREE_DAILY_LIMIT) {
+        return res.json({ allowed: false, remaining: 0, total: FREE_DAILY_LIMIT });
+      }
+
+      // 카운트 증가 및 저장
+      await User.findOneAndUpdate(
+        { email: tp.email },
+        { 'dailyPointVisit.count': count + 1, 'dailyPointVisit.date': todayKst }
+      );
+
+      return res.json({ allowed: true, remaining: FREE_DAILY_LIMIT - (count + 1), total: FREE_DAILY_LIMIT });
+    }
+
+    // ─── 인메모리 모드 ────────────────────────────────────────────────
+    const memUser = memUsers.find(u => u.email === tp.email || u.id === tp.id);
+    if (!memUser) return res.json({ allowed: true, remaining: FREE_DAILY_LIMIT, total: FREE_DAILY_LIMIT });
+
+    // 유료 플랜이면 무제한
+    if (PAID_TIERS.includes(memUser.tier)) {
+      return res.json({ allowed: true, remaining: 999, total: FREE_DAILY_LIMIT, unlimited: true });
+    }
+
+    if (!memUser.dailyPointVisit) memUser.dailyPointVisit = { count: 0, date: '' };
+    const dpv = memUser.dailyPointVisit;
+    const count = dpv.date === todayKst ? (dpv.count || 0) : 0;
+
+    if (count >= FREE_DAILY_LIMIT) {
+      return res.json({ allowed: false, remaining: 0, total: FREE_DAILY_LIMIT });
+    }
+
+    dpv.count = count + 1;
+    dpv.date = todayKst;
+    saveMemUsers();
+
+    return res.json({ allowed: true, remaining: FREE_DAILY_LIMIT - dpv.count, total: FREE_DAILY_LIMIT });
+
+  } catch (err) {
+    // ✅ fail-open: 서버 오류 시 UX 보호를 위해 허용 처리
+    logger.error('[point-visit-check] 서버 오류:', err.message);
+    return res.json({ allowed: true, remaining: FREE_DAILY_LIMIT, total: FREE_DAILY_LIMIT, error: 'fallback' });
+  }
+});
+
 // --- 알림 설정 변경 ---
 app.post('/api/user/settings', async (req, res) => {
   try {
@@ -1209,7 +1801,7 @@ app.post('/api/user/settings', async (req, res) => {
 // --- 닉네임 중복 확인 ---
 app.post('/api/auth/check-name', async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, excludeEmail } = req.body; // ✅ NICK-SELF: 닉네임 수정 시 본인 제외 옵션
     if (!name || !name.trim()) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
     const nm = name.trim();
     // ✅ FIX-BAN: 금지 닉네임 검사 — 중복확인 단계에서 선제 차단
@@ -1220,6 +1812,10 @@ app.post('/api/auth/check-name', async (req, res) => {
     if (dbReady && User) {
       try {
         const existing = await User.findOne({ name: nm });
+        // excludeEmail이 있으면 본인 계정이면 사용 가능으로 처리
+        if (existing && excludeEmail && existing.email === excludeEmail) {
+          return res.json({ available: true });
+        }
         return res.json({ available: !existing });
       } catch (dbErr) {
         console.error('[check-name] DB 조회 실패, 인메모리 fallback:', dbErr.message);
@@ -1227,12 +1823,16 @@ app.post('/api/auth/check-name', async (req, res) => {
     }
     // 인메모리 fallback
     const existing = memUsers.find(u => u.name === nm);
+    if (existing && excludeEmail && existing.email === excludeEmail) {
+      return res.json({ available: true });
+    }
     return res.json({ available: !existing });
   } catch (err) {
     console.error('[check-name] 오류:', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
+
 
 // ─── SMS 본인인증 (CoolSMS) ───────────────────────────────────────────────────
 // OTP 임시 저장소: { phone: { otp, expiresAt } }
@@ -1422,41 +2022,82 @@ app.post('/api/auth/register', async (req, res) => {
 // --- 이메일 로그인 ---
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // ✅ AUTH-FIX-8: 이메일 공백 trim — 복사-붙여넣기 시 앞뒤 공백 포함 케이스 방어
+    const email = (req.body.email || '').trim();
+    const password = req.body.password || '';
+    if (!email || !password) return res.status(400).json({ error: '이메일과 비밀번호를 입력해주세요.' });
 
     let user;
-    if (dbReady && User) {
-      user = await User.findOne({ email });
+    // ✅ DB-FIX: 서버 시작 직후 DB 연결 중이면 최대 8초 대기 (서버 재시작 직후 로그인 실패 방지)
+    const dbAvailable = await waitForDb(8000);
+
+    if (dbAvailable && User) {
+      try {
+        user = await User.findOne({ email });
+      } catch (dbErr) {
+        logger.warn('[login] DB 조회 실패 → memUsers fallback:', dbErr.message);
+        user = memUsers.find(u => u.email === email);
+      }
     } else {
       user = memUsers.find(u => u.email === email);
+      // DB가 없고 memUsers에도 없으면 — DB 연결 실패 상태임을 안내
+      if (!user && MONGO_URI && !dbAvailable) {
+        return res.status(503).json({ error: '서버가 초기화 중입니다. 잠시 후 다시 시도해주세요. (DB 연결 중)' });
+      }
     }
     if (!user) return res.status(400).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+
+
+    // ✅ AUTH-FIX-9: password 필드 null 가드 — 구글 OAuth 전용 계정에 이메일 로그인 시도 시 bcrypt 크래시 방어
+    if (!user.password) return res.status(400).json({ error: '이 계정은 소셜 로그인 전용입니다. 구글 로그인을 이용해주세요.' });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
 
+    // ✅ LOGIN-FIX-2: 출석 저장 실패가 로그인 자체를 막지 않도록 try-catch 분리
     const { justAttended, leveledUp, expGained, streak } = applyAttendance(user);
-    if (dbReady && User) {
-      await user.save();
-    } else {
-      saveMemUsers(); // 출석 및 경험치 갱신 보존
+    try {
+      if (dbReady && User) {
+        await user.save();
+      } else {
+        saveMemUsers();
+      }
+    } catch (saveErr) {
+      // 출석/EXP 저장 실패는 경고만 — 로그인은 계속 진행
+      logger.warn('[login] 출석 데이터 저장 실패 (로그인은 정상 처리):', saveErr.message);
     }
 
-    const accessToken = jwt.sign({ id: user._id || user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    const userTier = user.tier || 'FREE';
+    const accessToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier }, JWT_SECRET, { expiresIn: '1h' });
+    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
+  } catch (err) { logger.error('[login] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
 // --- 토큰 갱신 (Refresh Token) ---
-app.post('/api/auth/refresh', (req, res) => {
+// ✅ AUTH-FIX-4: tier 복원 — 기존 코드는 tier 누락으로 갱신 후 항상 FREE 처리
+// tier를 refresh 토큰에서 읽어 새 accessToken에 포함시켜 구독 상태 유지
+app.post('/api/auth/refresh', async (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken) return res.status(401).json({ error: 'Refresh Token이 없습니다.' });
   try {
     const decoded = jwt.verify(refreshToken, JWT_SECRET);
     if (decoded.type !== 'refresh') return res.status(401).json({ error: '유효하지 않은 Refresh Token입니다.' });
-    // 새 Access Token 발급 (1시간) — email 페이로드 유지
-    const accessToken = jwt.sign({ id: decoded.id, email: decoded.email }, JWT_SECRET, { expiresIn: '1h' });
+
+    // tier를 최신 DB 값으로 동기화 (구독 만료/업그레이드 반영)
+    let freshTier = decoded.tier || 'FREE';
+    try {
+      if (dbReady && User && decoded.email) {
+        const u = await User.findOne({ email: decoded.email }, 'tier').lean();
+        if (u?.tier) freshTier = u.tier;
+      }
+    } catch { /* DB 조회 실패 시 토큰 내 tier 사용 */ }
+
+    const accessToken = jwt.sign(
+      { id: decoded.id, email: decoded.email, name: decoded.name || '', tier: freshTier },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
     res.json({ accessToken });
   } catch (err) {
     return res.status(401).json({ error: 'Refresh Token이 만료되었습니다. 다시 로그인해주세요.' });
@@ -1470,43 +2111,63 @@ app.post('/api/auth/google', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Google 정보를 가져올 수 없습니다.' });
 
     let user;
-    if (dbReady && User) {
-      user = await User.findOne({ email });
-      if (!user) {
-        let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
-        if (!safeName) safeName = 'Fisher';
-        const dup = await User.findOne({ name: safeName });
-        if (dup) safeName = safeName + Math.floor(Math.random() * 9999);
-        const hashedPw = await bcrypt.hash('google_oauth_' + Date.now(), 10);
-        user = new User({ email, name: safeName, password: hashedPw, avatar: picture || 'https://i.pravatar.cc/150?img=11' });
-        await user.save();
+    // ✅ DB-FIX: 구글 로그인도 서버 시작 직후 DB 연결 대기
+    const dbAvailable = await waitForDb(8000);
+    if (dbAvailable && User) {
+
+      try {
+        user = await User.findOne({ email });
+        if (!user) {
+          let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
+          if (!safeName) safeName = 'Fisher';
+          const dup = await User.findOne({ name: safeName });
+          if (dup) safeName = safeName + Math.floor(Math.random() * 9999);
+          const hashedPw = await bcrypt.hash('google_oauth_' + Date.now(), 10);
+          user = new User({ email, name: safeName, password: hashedPw, picture: picture || null });
+          await user.save();
+        }
+      } catch (dbErr) {
+        logger.warn('[google-auth] DB 조회/생성 실패 → memUsers fallback:', dbErr.message);
+        user = memUsers.find(u => u.email === email);
+        if (!user) {
+          let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '') || 'Fisher';
+          if (memUsers.find(u => u.name === safeName)) safeName = safeName + Math.floor(Math.random() * 9999);
+          const hashedPw = await bcrypt.hash('google_oauth_' + Date.now(), 10);
+          user = { id: Date.now().toString(), email, password: hashedPw, name: safeName, level: 1, exp: 0, tier: 'FREE', picture: picture || null, followers: [], following: [], lastAttendance: null, totalAttendance: 0, totalExp: 0 };
+          memUsers.push(user);
+          saveMemUsers();
+        }
       }
     } else {
-      // 인메모리 fallback
       user = memUsers.find(u => u.email === email);
       if (!user) {
-        let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
-        if (!safeName) safeName = 'Fisher';
+        let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '') || 'Fisher';
         if (memUsers.find(u => u.name === safeName)) safeName = safeName + Math.floor(Math.random() * 9999);
         const hashedPw = await bcrypt.hash('google_oauth_' + Date.now(), 10);
-        user = { id: Date.now().toString(), email, password: hashedPw, name: safeName, level: 1, exp: 0, tier: 'FREE', avatar: picture || 'https://i.pravatar.cc/150?img=11', followers: [], following: [], lastAttendance: null, totalAttendance: 0, totalExp: 0 };
+        user = { id: Date.now().toString(), email, password: hashedPw, name: safeName, level: 1, exp: 0, tier: 'FREE', picture: picture || null, followers: [], following: [], lastAttendance: null, totalAttendance: 0, totalExp: 0 };
         memUsers.push(user);
-        saveMemUsers(); // 영구 보존
+        saveMemUsers();
       }
     }
 
+    // ✅ AUTH-FIX-6: 구글 출석 저장 실패가 로그인을 막지 않도록 분리
     const { justAttended, leveledUp } = applyAttendance(user);
-    if (dbReady && User) {
-      await user.save();
-    } else {
-      saveMemUsers(); // 로그인 시 출석 보존
+    try {
+      if (dbReady && User && user.save) {
+        await user.save();
+      } else {
+        saveMemUsers();
+      }
+    } catch (saveErr) {
+      logger.warn('[google-auth] 출석 저장 실패 (로그인 정상 처리):', saveErr.message);
     }
 
-    // ✅ BUG-37: 구글 로그인 JWT에도 email 포함 — 이메일 로그인과 동일한 인증 페이로드 유지
-    const accessToken = jwt.sign({ id: user._id || user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    // ✅ AUTH-FIX-7: 구글 로그인 JWT에도 tier 포함 (기존 누락)
+    const userTier = user.tier || 'FREE';
+    const accessToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier }, JWT_SECRET, { expiresIn: '1h' });
+    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp });
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
+  } catch (err) { logger.error('[google-auth] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
 // --- 닉네임 변경 ---
@@ -1522,22 +2183,33 @@ app.put('/api/user/nickname', async (req, res) => {
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
 
+    // ✅ NICK-VAL: 서버사이드 닉네임 검증 (클라이언트 우회 방지)
+    const trimmed = newName.trim();
+    if (trimmed.length < 2 || trimmed.length > 12)
+      return res.status(400).json({ error: '닉네임은 2~12자 사이로 입력해주세요.' });
+    if (!/^[a-zA-Z0-9가-힣]+$/.test(trimmed))
+      return res.status(400).json({ error: '한글, 영어, 숫자만 사용 가능합니다.' });
+    // ✅ NICK-BAN: 금지 닉네임 검사 (어드민은 예외)
+    if (!isAdmin && isBannedName(trimmed))
+      return res.status(400).json({ error: '이 닉네임은 사용할 수 없습니다. (운영 정책상 금지된 표현 포함)' });
+
     if (dbReady && User) {
-      const dup = await User.findOne({ name: newName });
-      if (dup) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
-      const user = await User.findOneAndUpdate({ email }, { name: newName }, { new: true });
-      if (Post) await Post.updateMany({ author_email: email }, { author: newName });
+      const dup = await User.findOne({ name: trimmed });
+      if (dup && dup.email !== email) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
+      const user = await User.findOneAndUpdate({ email }, { name: trimmed }, { new: true });
+      if (Post) await Post.updateMany({ author_email: email }, { author: trimmed });
       return res.json({ success: true, name: user.name });
     } else {
       const userIdx = memUsers.findIndex(u => u.email === email);
       if (userIdx === -1) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
-      if (memUsers.find(u => u.name === newName)) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
-      memUsers[userIdx].name = newName;
-      saveMemUsers(); // 영구 보존
-      return res.json({ success: true, name: newName });
+      if (memUsers.find(u => u.name === trimmed && u.email !== email)) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
+      memUsers[userIdx].name = trimmed;
+      saveMemUsers();
+      return res.json({ success: true, name: trimmed });
     }
   } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
+
 
 // --- 비밀번호 변경 (JWT 인증 필수) ---
 app.put('/api/user/password', async (req, res) => {
@@ -1661,45 +2333,343 @@ app.post('/api/user/unblock', async (req, res) => {
   } catch (err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
-// --- 프리미엄 구독 (Tier) 변경 — 결제 서버 또는 어드민만 업그레이드 가능 ---
-app.put('/api/user/tier', async (req, res) => {
+// =================================================================
+//  팔로우 시스템 API
+// =================================================================
+
+// --- 팔로우 ---
+app.post('/api/user/follow', async (req, res) => {
   try {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { email, tier } = req.body;
-    if (!email) return res.status(400).json({ error: '사용자 정보가 필요합니다.' });
-    if (!tier) return res.status(400).json({ error: '티어 정보가 필요합니다.' });
-    // 허용 tier 값 화이트리스트
-    const ALLOWED_TIERS = ['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
-    if (!ALLOWED_TIERS.includes(tier)) return res.status(400).json({ error: '유효하지 않은 티어입니다.' });
+
+    const { email, targetEmail, targetName } = req.body;
+    if (!email || (!targetEmail && !targetName)) return res.status(400).json({ error: 'email, targetEmail 또는 targetName 필수' });
+    if (email === targetEmail) return res.status(400).json({ error: '자기 자신을 팔로우할 수 없습니다.' });
     const isAdmin = isAdminToken(tp);
-    if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
-    // 일반 사용자는 FREE 다운그레이드만 허용 — 업그레이드는 결제 서버(어드민)만
-    if (!isAdmin && tier !== 'FREE') return res.status(403).json({ error: '프리미엄 업그레이드는 결제 후 자동 적용됩니다.' });
+    if (!isAdmin && tp.email !== email && tp.id !== email) return res.status(403).json({ error: '본인만 팔로우 가능합니다.' });
 
     if (dbReady && User) {
-      // DB 모드: email 필드로만 조회 (id 필드 없음)
-      const updated = await User.findOneAndUpdate({ email }, { tier }, { new: true });
-      if (!updated) return res.status(404).json({ error: '사용자를 찾을 수 없습니다. 다시 로그인해주세요.' });
-      return res.json({ success: true, tier: updated.tier });
-    } else {
-      // 인메모리 fallback: email 또는 id 필드로 조회
-      const user = memUsers.find(u => u.email === email || u.id === email);
-      if (user) {
-        user.tier = tier;
-        saveMemUsers();
-        return res.json({ success: true, tier: user.tier });
-      }
-      // 인메모리에도 없으면 로컬 업데이트 허용 (오프라인 시뮬레이션)
-      return res.json({ success: true, tier });
+      const me = await User.findOne({ email });
+      // targetEmail 또는 name으로 대상 조회
+      const target = targetEmail
+        ? await User.findOne({ email: targetEmail })
+        : await User.findOne({ name: targetName });
+      if (!me || !target) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      const tEmail = target.email; // 실제 이메일로 팔로잉 목록 관리
+      if (!me.following) me.following = [];
+      if (!target.followers) target.followers = [];
+      if (me.following.includes(tEmail)) return res.status(409).json({ error: '이미 팔로우 중입니다.' });
+      me.following.push(tEmail);
+      target.followers.push(email);
+      await Promise.all([me.save(), target.save()]);
+      return res.json({ success: true, followingCount: me.following.length, followerCount: target.followers.length });
     }
+    // 인메모리 fallback — targetEmail 또는 targetName으로 대상 조회
+    const me = memUsers.find(u => u.email === email);
+    const target = targetEmail
+      ? memUsers.find(u => u.email === targetEmail)
+      : memUsers.find(u => u.name === targetName);
+    if (!me || !target) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    const tEmail = target.email;
+    if (!me.following) me.following = [];
+    if (!target.followers) target.followers = [];
+    if (me.following.includes(tEmail)) return res.status(409).json({ error: '이미 팔로우 중입니다.' });
+    me.following.push(tEmail);
+    target.followers.push(email);
+    saveMemUsers();
+    return res.json({ success: true, followingCount: me.following.length, followerCount: target.followers.length });
+  } catch (err) { console.error('[follow]', err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// --- 언팔로우 ---
+app.post('/api/user/unfollow', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { email, targetEmail, targetName } = req.body;
+    if (!email || (!targetEmail && !targetName)) return res.status(400).json({ error: 'email, targetEmail 또는 targetName 필수' });
+    const isAdmin = isAdminToken(tp);
+    if (!isAdmin && tp.email !== email && tp.id !== email) return res.status(403).json({ error: '본인만 언팔로우 가능합니다.' });
+
+    if (dbReady && User) {
+      const me = await User.findOne({ email });
+      const target = targetEmail
+        ? await User.findOne({ email: targetEmail })
+        : await User.findOne({ name: targetName });
+      if (!me) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      const tEmail = target?.email || targetEmail;
+      me.following = (me.following || []).filter(e => e !== tEmail);
+      if (target) target.followers = (target.followers || []).filter(e => e !== email);
+      await Promise.all([me.save(), target ? target.save() : Promise.resolve()]);
+      return res.json({ success: true, followingCount: me.following.length });
+    }
+    // 인메모리 fallback — targetEmail 또는 targetName으로 대상 조회
+    const me = memUsers.find(u => u.email === email);
+    const target = targetEmail
+      ? memUsers.find(u => u.email === targetEmail)
+      : memUsers.find(u => u.name === targetName);
+    if (!me) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    const tEmail = target?.email || targetEmail;
+    me.following = (me.following || []).filter(e => e !== tEmail);
+    if (target) target.followers = (target.followers || []).filter(e => e !== email);
+    saveMemUsers();
+    return res.json({ success: true, followingCount: me.following.length });
+  } catch (err) { console.error('[unfollow]', err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// --- 팔로워 목록 조회 ---
+app.get('/api/user/followers', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
+
+    if (dbReady && User) {
+      const user = await User.findOne({ email }, 'followers name');
+      if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      const followerEmails = user.followers || [];
+      // 팔로워 이름/아바타 조회
+      const profiles = await User.find({ email: { $in: followerEmails } }, 'email name avatar picture').lean();
+      return res.json({ followers: profiles, count: followerEmails.length });
+    }
+    const user = memUsers.find(u => u.email === email);
+    const followerEmails = user?.followers || [];
+    const profiles = memUsers.filter(u => followerEmails.includes(u.email)).map(u => ({ email: u.email, name: u.name, avatar: u.avatar || null }));
+    return res.json({ followers: profiles, count: followerEmails.length });
+  } catch (err) { console.error('[followers]', err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// --- 팔로잉 목록 조회 ---
+app.get('/api/user/following', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
+
+    if (dbReady && User) {
+      const user = await User.findOne({ email }, 'following');
+      if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      const followingEmails = user.following || [];
+      const profiles = await User.find({ email: { $in: followingEmails } }, 'email name avatar picture').lean();
+      return res.json({ following: profiles, count: followingEmails.length });
+    }
+    const user = memUsers.find(u => u.email === email);
+    const followingEmails = user?.following || [];
+    const profiles = memUsers.filter(u => followingEmails.includes(u.email)).map(u => ({ email: u.email, name: u.name, avatar: u.avatar || null }));
+    return res.json({ following: profiles, count: followingEmails.length });
+  } catch (err) { console.error('[following]', err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ─── 공개 사용자 프로필 조회 (닉네임 기반) ──────────────────────────────────────
+// GET /api/user/profile/:name — 인증 불필요, 민감정보 제외 공개 프로필 반환
+app.get('/api/user/profile/:name', async (req, res) => {
+  try {
+    const targetName = decodeURIComponent(req.params.name);
+    if (!targetName) return res.status(400).json({ error: '닉네임이 필요합니다.' });
+
+    // 요청자 토큰 파싱 (선택적 — isFollowing 판별용)
+    let myEmail = null;
+    const auth = req.headers.authorization || '';
+    if (auth.startsWith('Bearer ')) {
+      try { const tp = jwt.verify(auth.slice(7), JWT_SECRET); myEmail = tp.email || tp.id; }
+      catch { /* 비로그인 허용 */ }
+    }
+
+    if (dbReady && User) {
+      const u = await User.findOne({ name: targetName },
+        'name avatar picture tier level totalExp streak followers following createdAt'
+      ).lean();
+      if (!u) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+
+      // 게시글 수 집계
+      let postCount = 0;
+      try { if (Post) postCount = await Post.countDocuments({ author: targetName }); } catch {}
+
+      // 조과 기록 수 집계
+      let recordCount = 0;
+      try { if (CatchRecord) recordCount = await CatchRecord.countDocuments({ author: targetName }); } catch {}
+
+      const isFollowing = myEmail ? (u.followers || []).includes(myEmail) : false;
+
+      return res.json({
+        name: u.name,
+        avatar: u.avatar || u.picture || null,
+        tier: u.tier || 'FREE',
+        level: u.level || 1,
+        totalExp: u.totalExp || 0,
+        streak: u.streak || 0,
+        followerCount: (u.followers || []).length,
+        followingCount: (u.following || []).length,
+        postCount,
+        recordCount,
+        isFollowing,
+        joinedAt: u.createdAt,
+      });
+    }
+
+    // 인메모리 fallback
+    const u = memUsers.find(mu => mu.name === targetName);
+    if (!u) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    const isFollowing = myEmail ? (u.followers || []).includes(myEmail) : false;
+    const postCount = memPosts.filter(p => p.author === targetName).length;
+    const recordCount = (memRecords || []).filter(r => r.author === targetName).length;
+    return res.json({
+      name: u.name,
+      avatar: u.avatar || null,
+      tier: u.tier || 'FREE',
+      level: u.level || 1,
+      totalExp: u.totalExp || 0,
+      streak: u.streak || 0,
+      followerCount: (u.followers || []).length,
+      followingCount: (u.following || []).length,
+      postCount,
+      recordCount,
+      isFollowing,
+      joinedAt: u.createdAt || null,
+    });
   } catch (err) {
-    console.error('[PUT /api/user/tier]', err.message);
+    console.error('[GET /api/user/profile/:name]', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
+});
+
+// ─── 비즈니스 파트너 센터 API ────────────────────────────────────────────────
+
+// GET /api/business/my-posts — 내 비즈니스(선상홍보) 게시글 목록
+app.get('/api/business/my-posts', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const email = tp.email || tp.id;
+    if (dbReady && BusinessPost) {
+      const posts = await BusinessPost.find({ author_email: email }).sort({ createdAt: -1 }).lean();
+      return res.json(posts);
+    }
+    const posts = memBusinessPosts.filter(p => p.author_email === email);
+    return res.json(posts);
+  } catch (err) { console.error('[business/my-posts]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// GET /api/business/my-phone — 파트너 본인 전화번호 조회 (연락처 확인 팝업용)
+// 비즈니스 게시글에 등록된 phone 필드 반환 (계정 phone 필드 활용)
+app.get('/api/business/my-phone', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const email = tp.email || tp.id;
+    let phone = '';
+    let shipName = '';
+    if (dbReady && User) {
+      const u = await User.findOne({ email }, 'phone realName name').lean();
+      phone = u?.phone || '';
+      // 가장 최근 비즈니스 포스트에서 shipName/phone 가져오기
+      if (BusinessPost) {
+        const bp = await BusinessPost.findOne({ author_email: email }).sort({ createdAt: -1 }).lean();
+        if (bp?.phone) phone = bp.phone;
+        if (bp?.shipName) shipName = bp.shipName;
+      }
+    } else {
+      const u = memUsers.find(u => u.email === email);
+      phone = u?.phone || '';
+      const bp = memBusinessPosts.filter(p => p.author_email === email).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      if (bp?.phone) phone = bp.phone;
+      if (bp?.shipName) shipName = bp.shipName;
+    }
+    return res.json({ phone, shipName });
+  } catch (err) { console.error('[business/my-phone]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// POST /api/business/gallery-post — 조과 갤러리를 오픈게시판 선상 카테고리에 자동 등록
+app.post('/api/business/gallery-post', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const email = tp.email || tp.id;
+
+    const { author, fish, size, weight, location, memo, image, shipName, phone } = req.body;
+    if (!author) return res.status(400).json({ error: 'author 필수' });
+
+    // 게시글 내용 자동 생성
+    const fishLine = fish ? `🐟 어종: ${fish}` : '';
+    const sizeLine = size ? ` | 사이즈: ${size}cm` : '';
+    const weightLine = weight ? ` | 무게: ${weight}kg` : '';
+    const locationLine = location ? `📍 포인트: ${location}` : '';
+    const memoLine = memo ? `\n💬 ${memo}` : '';
+    const shipLine = shipName ? `\n🚢 선박: ${shipName}` : '';
+    const phoneLine = phone ? `\n📞 문의: ${phone}` : '';
+    const content = `${fishLine}${sizeLine}${weightLine}\n${locationLine}${memoLine}${shipLine}${phoneLine}\n\n🎣 #낚시GO #선상낚시 #조과공유 #대박선박`;
+
+    const postData = {
+      author,
+      author_email: email,
+      category: '선상',
+      content: content.trim(),
+      image: image || null,
+      location: { address: location || '', lat: null, lng: null },
+      likes: 0,
+      likedBy: [],
+      comments: [],
+      createdAt: new Date(),
+    };
+
+    if (dbReady && Post) {
+      const post = new Post(postData);
+      await post.save();
+      return res.json({ success: true, postId: post._id, message: '오픈게시판 선상 카테고리에 등록되었습니다! 🎣' });
+    }
+    const newPost = { ...postData, id: Date.now().toString(), _id: Date.now().toString() };
+    memPosts.push(newPost);
+    saveMemPosts();
+    return res.json({ success: true, postId: newPost._id, message: '오픈게시판 선상 카테고리에 등록되었습니다! 🎣' });
+  } catch (err) { console.error('[business/gallery-post]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// DELETE /api/business/posts/:id — 내 비즈니스 게시글 삭제
+app.delete('/api/business/posts/:id', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const email = tp.email || tp.id;
+    const isAdmin = isAdminToken(tp);
+    const { id } = req.params;
+    if (dbReady && BusinessPost) {
+      const post = await BusinessPost.findById(id);
+      if (!post) return res.status(404).json({ error: '게시글 없음' });
+      if (!isAdmin && post.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+      await BusinessPost.findByIdAndDelete(id);
+      return res.json({ success: true });
+    }
+    const idx = memBusinessPosts.findIndex(p => p._id === id || p.id === id);
+    if (idx === -1) return res.status(404).json({ error: '게시글 없음' });
+    if (!isAdmin && memBusinessPosts[idx].author_email !== email) return res.status(403).json({ error: '권한 없음' });
+    memBusinessPosts.splice(idx, 1);
+    saveMemBusinessPosts();
+    return res.json({ success: true });
+  } catch (err) { console.error('[business/posts/delete]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 프로필 사진 변경 ---
@@ -1846,6 +2816,25 @@ app.get('/api/user/records', async (req, res) => {
   } catch (err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
+// ── 조과기록 단건 조회 (CatchDetail.jsx 사용) — GET /api/records/:id ──────────
+app.get('/api/records/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (dbReady && CatchRecord) {
+      let record = null;
+      try { record = await CatchRecord.findById(id); } catch (castErr) { /* ObjectId 캐스팅 오류 무시 */ }
+      if (record) return res.json(record);
+      return res.status(404).json({ error: '조과 기록을 찾을 수 없습니다.' });
+    }
+    const record = (memRecords || []).find(r => r._id === id || r.id === id);
+    if (!record) return res.status(404).json({ error: '조과 기록을 찾을 수 없습니다.' });
+    return res.json(record);
+  } catch (err) {
+    console.error('[GET /api/records/:id]', err.message);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
 // ── 조과기록 작성 (JWT 인증 필수) ──────────────────────────────────────────────
 app.post('/api/user/records', async (req, res) => {
   try {
@@ -1968,20 +2957,23 @@ app.post('/api/community/posts', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    let { author, author_email, category, content, image } = req.body;
+    let { author, author_email, category, content, image, location } = req.body;
     if (!author || !category || !content) return res.status(400).json({ error: '필수 항목 누락' });
     if (!author_email) author_email = 'guest@fishinggo.kr';
     // ✅ CENSOR: 게시글 내용 비속어 * 치환
     content = censorText(content.trim());
+    // ✅ LOC: location 안전 정규화 — { address, lat, lng } 또는 null
+    const safeLocation = (location && location.address) ? { address: location.address, lat: location.lat || null, lng: location.lng || null } : null;
     // 이미지 크기 제한: base64 1MB(≒750KB 실제) 초과 시 null 처리
     const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
 
+
     if (dbReady && Post) {
       try {
-        const post = new Post({ author, author_email, category, content, image: safeImage });
+        const post = new Post({ author, author_email, category, content, image: safeImage, location: safeLocation });
         await post.save();
         try {
-          memPosts.unshift({ _id: post._id.toString(), id: post._id.toString(), author, author_email, category, content, image: safeImage, likes: 0, comments: [], createdAt: post.createdAt });
+          memPosts.unshift({ _id: post._id.toString(), id: post._id.toString(), author, author_email, category, content, image: safeImage, location: safeLocation, likes: 0, comments: [], createdAt: post.createdAt });
           if (memPosts.length > 200) memPosts.splice(200);
         } catch (syncErr) { /* memPosts 동기화 실패는 무시 */ }
         return res.json(post);
@@ -1991,7 +2983,7 @@ app.post('/api/community/posts', async (req, res) => {
       }
     }
     const uid = Date.now().toString();
-    const post = { _id: uid, id: uid, author, author_email, category, content, image: safeImage, likes: 0, comments: [], createdAt: new Date().toISOString() };
+    const post = { _id: uid, id: uid, author, author_email, category, content, image: safeImage, location: safeLocation, likes: 0, comments: [], createdAt: new Date().toISOString() };
     memPosts.unshift(post);
     if (memPosts.length > 200) memPosts.splice(200);
     saveMemPosts();
@@ -2250,23 +3242,49 @@ app.post('/api/community/crews', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { name, region, isPrivate, password, owner, ownerName } = req.body;
+    const { name, region, isPrivate, password, owner, ownerName, limit } = req.body;
     if (!name || !owner || !ownerName) return res.status(400).json({ error: '필수 항목 누락' });
+    // limit 유효성 검증: 3~1000 범위 강제
+    const safeLimit = Math.min(1000, Math.max(3, parseInt(limit) || 100));
     // ✅ BUG-39: 비밀번호 bcrypt 해싱 저장 (프라이빗 크루인 경우만)
     const hashedPwd = (isPrivate && password) ? await bcrypt.hash(String(password), 10) : null;
     if (dbReady && Crew) {
-      const crew = new Crew({ name, region: region || '전국', isPrivate: !!isPrivate, password: hashedPwd, owner, ownerName });
+      const crew = new Crew({ name, region: region || '전국', isPrivate: !!isPrivate, password: hashedPwd, owner, ownerName, limit: safeLimit });
       await crew.save();
       const obj = crew.toObject();
       delete obj.password; // ✅ BUG-38: 응답에서 해싱된 비밀번호도 제거
       return res.json(obj);
     }
-    const crew = { id: Date.now().toString(), _id: Date.now().toString(), name, region: region || '전국', isPrivate: !!isPrivate, password: hashedPwd, owner, ownerName, members: 1, createdAt: new Date() };
+    const crew = { id: Date.now().toString(), _id: Date.now().toString(), name, region: region || '전국', isPrivate: !!isPrivate, password: hashedPwd, owner, ownerName, members: 1, limit: safeLimit, createdAt: new Date() };
     memCrews.unshift(crew);
     saveMemCrews();
     const { password: _pw, ...safeCrewResp } = crew;
     res.json(safeCrewResp);
   } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── [ADMIN] 기존 크루 limit 일괄 수정 (임시 마이그레이션) ───────────────────────
+// 사용법: POST /api/admin/crews/fix-limit  { "defaultLimit": 1000 }
+// 완료 후 이 엔드포인트를 삭제하세요.
+app.post('/api/admin/crews/fix-limit', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' });
+  const newLimit = parseInt(req.body.defaultLimit) || 1000;
+  try {
+    if (dbReady && Crew) {
+      // limit이 100 이하인 크루만 업데이트 (신규 생성된 올바른 크루 제외)
+      const result = await Crew.updateMany({ limit: { $lte: 100 } }, { $set: { limit: newLimit } });
+      return res.json({ ok: true, updated: result.modifiedCount, newLimit, message: `${result.modifiedCount}개 크루의 정원을 ${newLimit}명으로 업데이트했습니다.` });
+    }
+    // 인메모리 fallback
+    let count = 0;
+    memCrews.forEach(c => { if (!c.limit || c.limit <= 100) { c.limit = newLimit; count++; } });
+    saveMemCrews();
+    return res.json({ ok: true, updated: count, newLimit, message: `[인메모리] ${count}개 크루 업데이트` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── 크루 입장코드 서버 검증 (BUG-38: 클라이언트 평문 비교 제거) ─────────────────
@@ -2303,13 +3321,311 @@ app.delete('/api/community/crews/:id', async (req, res) => {
       if (!crew) return res.status(404).json({ error: '크루 없음' });
       if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '권한 없음' });
       await Crew.findByIdAndDelete(req.params.id);
+      // 소켓으로 크루 해산 알림
+      io.to(req.params.id).emit('crew_dissolved', { message: '크루장이 크루를 해산했습니다.' });
       return res.json({ success: true });
     }
-    memCrews = memCrews.filter(c => c.id !== req.params.id);
+    // ✅ 인메모리: id/_id 양쪽 체크 (버그 수정)
+    memCrews = memCrews.filter(c => c.id !== req.params.id && c._id !== req.params.id);
     saveMemCrews();
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: '서버 오류' }); }
 });
+
+// ── ✅ 크루장 위임 (현 크루장 → 다른 멤버) ──────────────────────────────────
+// PATCH /api/community/crews/:id/transfer
+// body: { email: 현크루장이메일, newOwnerEmail: 위임받을멤버이메일 }
+app.patch('/api/community/crews/:id/transfer', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { email, newOwnerEmail } = req.body;
+    if (!email || !newOwnerEmail) return res.status(400).json({ error: 'email, newOwnerEmail 필수' });
+    if (email === newOwnerEmail) return res.status(400).json({ error: '자기 자신에게 위임할 수 없습니다.' });
+
+    const isAdmin = isAdminToken(tp);
+
+    if (dbReady && Crew) {
+      const crew = await Crew.findById(req.params.id);
+      if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 위임할 수 있습니다.' });
+
+      const newOwnerMember = crew.memberList.find(m => m.email === newOwnerEmail);
+      if (!newOwnerMember) return res.status(404).json({ error: '위임할 멤버가 크루에 없습니다.' });
+
+      // 기존 크루장 → member 강등
+      crew.memberList = crew.memberList.map(m => {
+        if (m.email === email) return { ...m.toObject(), role: 'member' };
+        if (m.email === newOwnerEmail) return { ...m.toObject(), role: 'owner' };
+        return m;
+      });
+      crew.owner = newOwnerEmail;
+      crew.ownerName = newOwnerMember.name;
+      await crew.save();
+
+      // 소켓으로 위임 알림
+      io.to(req.params.id).emit('crew_transferred', {
+        newOwnerEmail,
+        newOwnerName: newOwnerMember.name,
+        message: `👑 ${newOwnerMember.name}님이 새 크루장이 되었습니다.`
+      });
+
+      const obj = crew.toObject(); delete obj.password;
+      return res.json({ success: true, crew: obj });
+    }
+    // 인메모리 fallback
+    const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
+    if (!mem) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+    if (!isAdmin && mem.owner !== email) return res.status(403).json({ error: '크루장만 위임할 수 있습니다.' });
+    const newOwnerMem = (mem.memberList || []).find(m => m.email === newOwnerEmail);
+    if (!newOwnerMem) return res.status(404).json({ error: '위임할 멤버가 크루에 없습니다.' });
+    mem.memberList = (mem.memberList || []).map(m => ({
+      ...m,
+      role: m.email === email ? 'member' : m.email === newOwnerEmail ? 'owner' : m.role
+    }));
+    mem.owner = newOwnerEmail;
+    mem.ownerName = newOwnerMem.name;
+    saveMemCrews();
+    res.json({ success: true });
+  } catch (err) { console.error('[CREW TRANSFER]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+
+// ── 크루 단건 조회 ────────────────────────────────────────────────────────────
+app.get('/api/community/crews/:id', async (req, res) => {
+  try {
+    if (dbReady && Crew) {
+      const crew = await Crew.findById(req.params.id).catch(() => null);
+      if (crew) { const obj = crew.toObject(); delete obj.password; return res.json(obj); }
+    }
+    const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
+    if (mem) { const { password: _pw, ...safe } = mem; return res.json(safe); }
+    return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+  } catch (err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── ✅ CREW-ENH: 크루 가입 (비번 검증 + 멤버 DB 저장) ──────────────────────────
+app.post('/api/community/crews/:id/join', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { password, email, name } = req.body;
+    if (!email || !name) return res.status(400).json({ error: '사용자 정보가 필요합니다.' });
+
+    if (dbReady && Crew) {
+      const crew = await Crew.findById(req.params.id);
+      if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+
+      // 이미 가입된 경우 → 중복 방지 (성공 반환)
+      const alreadyIn = crew.memberList.some(m => m.email === email);
+      if (alreadyIn) return res.json({ success: true, already: true, crew: (() => { const o = crew.toObject(); delete o.password; return o; })() });
+
+      // 비공개 크루 비밀번호 검증
+      if (crew.isPrivate && crew.password) {
+        if (!password) return res.status(400).json({ error: '입장 코드를 입력해주세요.' });
+        const isMatch = await bcrypt.compare(String(password), crew.password);
+        if (!isMatch) return res.status(401).json({ error: '입장 코드가 일치하지 않습니다.' });
+      }
+
+      // 정원 초과 확인
+      if (crew.members >= (crew.limit || 1000)) return res.status(400).json({ error: '크루 정원이 가득 찼습니다.' });
+
+      // 크루 멤버 추가
+      crew.memberList.push({ email, name, role: 'member', joinedAt: new Date() });
+      crew.members = crew.memberList.length;
+      crew.lastActive = new Date();
+      await crew.save();
+
+      // 유저 joinedCrews 업데이트
+      await User.findOneAndUpdate(
+        { email },
+        { $addToSet: { joinedCrews: { crewId: crew._id, joinedAt: new Date() } } }
+      ).catch(() => {});
+
+      const obj = crew.toObject(); delete obj.password;
+      return res.json({ success: true, crew: obj });
+    }
+    // 인메모리 fallback
+    const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
+    if (!mem) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+    if (!Array.isArray(mem.memberList)) mem.memberList = [];
+    const alreadyIn = mem.memberList.some(m => m.email === email);
+    if (alreadyIn) return res.json({ success: true, already: true });
+    if (mem.isPrivate && mem.password) {
+      if (!password) return res.status(400).json({ error: '입장 코드를 입력해주세요.' });
+      const isMatch = await bcrypt.compare(String(password), mem.password);
+      if (!isMatch) return res.status(401).json({ error: '입장 코드가 일치하지 않습니다.' });
+    }
+    // ✅ 인메모리 모드 정원 초과 체크 추가
+    if (mem.members >= (mem.limit || 1000)) return res.status(400).json({ error: '크루 정원이 가득 찼습니다.' });
+    mem.memberList.push({ email, name, role: 'member', joinedAt: new Date() });
+    mem.members = mem.memberList.length;
+    saveMemCrews();
+    res.json({ success: true });
+  } catch (err) { console.error('[CREW JOIN]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── ✅ CREW-ENH: 크루 탈퇴 ───────────────────────────────────────────────────
+app.post('/api/community/crews/:id/leave', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: '이메일이 필요합니다.' });
+
+    if (dbReady && Crew && User) {
+      const crew = await Crew.findById(req.params.id);
+      if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+      if (crew.owner === email) return res.status(400).json({ error: '크루장은 크루를 탈퇴할 수 없습니다. 크루를 삭제하거나 크루장을 위임하세요.' });
+
+      crew.memberList = crew.memberList.filter(m => m.email !== email);
+      crew.members = Math.max(1, crew.memberList.length);
+      await crew.save();
+
+      await User.findOneAndUpdate(
+        { email },
+        { $pull: { joinedCrews: { crewId: crew._id } } }
+      ).catch(() => {});
+
+      return res.json({ success: true });
+    }
+    const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
+    if (mem && Array.isArray(mem.memberList)) {
+      mem.memberList = mem.memberList.filter(m => m.email !== email);
+      mem.members = Math.max(1, mem.memberList.length);
+      saveMemCrews();
+    }
+    res.json({ success: true });
+  } catch (err) { console.error('[CREW LEAVE]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── ✅ CREW-ENH: 크루원 목록 조회 ───────────────────────────────────────────
+app.get('/api/community/crews/:id/members', async (req, res) => {
+  try {
+    if (dbReady && Crew) {
+      const crew = await Crew.findById(req.params.id).catch(() => null);
+      if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+      return res.json({ members: crew.memberList || [], owner: crew.owner, ownerName: crew.ownerName });
+    }
+    const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
+    if (!mem) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+    res.json({ members: mem.memberList || [], owner: mem.owner, ownerName: mem.ownerName });
+  } catch (err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── ✅ CREW-ENH: 크루원 강퇴 (크루장 전용) ──────────────────────────────────
+app.delete('/api/community/crews/:id/members/:targetEmail', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { email } = req.body; // 요청자 이메일
+    const targetEmail = decodeURIComponent(req.params.targetEmail);
+    const isAdmin = isAdminToken(tp);
+
+    if (dbReady && Crew && User) {
+      const crew = await Crew.findById(req.params.id);
+      if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 강퇴할 수 있습니다.' });
+      if (targetEmail === crew.owner) return res.status(400).json({ error: '크루장은 강퇴할 수 없습니다.' });
+
+      crew.memberList = crew.memberList.filter(m => m.email !== targetEmail);
+      crew.members = Math.max(1, crew.memberList.length);
+      await crew.save();
+
+      // 강퇴된 유저의 joinedCrews에서도 제거
+      await User.findOneAndUpdate(
+        { email: targetEmail },
+        { $pull: { joinedCrews: { crewId: crew._id } } }
+      ).catch(() => {});
+
+      // ✅ 소켓으로 강퇴 알림 — room명은 crewId 그대로 (클라이언트 join_crew(id)와 일치)
+      io.to(req.params.id).emit('member_kicked', { email: targetEmail });
+
+      return res.json({ success: true, members: crew.memberList });
+    }
+    res.json({ success: true });
+  } catch (err) { console.error('[CREW KICK]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── ✅ 간부 설정/해제 (크루장 전용) ────────────────────────────────────────────
+// PATCH /api/community/crews/:id/members/:targetEmail/role
+// body: { email: 요청자이메일, role: 'officer' | 'member' }
+app.patch('/api/community/crews/:id/members/:targetEmail/role', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { email, role } = req.body; // 요청자 이메일, 부여할 역할
+    const targetEmail = decodeURIComponent(req.params.targetEmail);
+    const isAdmin = isAdminToken(tp);
+
+    if (!['officer', 'member'].includes(role)) return res.status(400).json({ error: '역할은 officer 또는 member만 허용됩니다.' });
+
+    if (dbReady && Crew) {
+      const crew = await Crew.findById(req.params.id);
+      if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 간부를 설정할 수 있습니다.' });
+      if (targetEmail === crew.owner) return res.status(400).json({ error: '크루장의 역할은 변경할 수 없습니다.' });
+
+      const member = crew.memberList.find(m => m.email === targetEmail);
+      if (!member) return res.status(404).json({ error: '해당 크루원을 찾을 수 없습니다.' });
+      member.role = role;
+      await crew.save();
+
+      // 소켓으로 역할 변경 알림
+      io.to(req.params.id).emit('member_role_changed', { email: targetEmail, role, name: member.name });
+
+      const obj = crew.toObject(); delete obj.password;
+      return res.json({ success: true, crew: obj });
+    }
+    // 인메모리 fallback
+    const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
+    if (!mem) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+    if (!isAdmin && mem.owner !== email) return res.status(403).json({ error: '크루장만 간부를 설정할 수 있습니다.' });
+    const memMember = (mem.memberList || []).find(m => m.email === targetEmail);
+    if (memMember) memMember.role = role;
+    saveMemCrews();
+    res.json({ success: true });
+  } catch (err) { console.error('[CREW ROLE]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── ✅ CREW-ENH: 내가 가입한 크루 목록 ──────────────────────────────────────
+app.get('/api/user/crews', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const email = tp.email || tp.id;
+    if (dbReady && Crew) {
+      // memberList에 해당 email이 포함된 크루 조회
+      const crews = await Crew.find({ 'memberList.email': email }).sort({ lastActive: -1, createdAt: -1 });
+      const safe = crews.map(c => { const o = c.toObject(); delete o.password; return o; });
+      return res.json(safe);
+    }
+    // 인메모리 fallback
+    const myCrews = memCrews
+      .filter(c => Array.isArray(c.memberList) && c.memberList.some(m => m.email === email))
+      .map(c => { const { password: _pw, ...safe } = c; return safe; });
+    res.json(myCrews);
+  } catch (err) { console.error('[USER CREWS]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
 
 // ── 공지사항 전체 조회 ────────────────────────────────────────────────────────
 app.get('/api/community/notices', async (req, res) => {
@@ -2350,22 +3666,56 @@ app.post('/api/community/notices', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
-    const { title, content, isPinned, image } = req.body;
+    const { title, content, isPinned, isPopup, image } = req.body;
     if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
     // ✅ POPUP: image 필드 저장 — 1MB 초과 시 null 처리
     const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
     if (dbReady && Notice) {
-      const notice = new Notice({ title, content, isPinned: !!isPinned, author: 'MASTER', image: safeImage });
+      const notice = new Notice({ title, content, isPinned: !!isPinned, isPopup: !!isPopup, author: 'MASTER', image: safeImage });
       await notice.save();
       return res.json({ ...notice.toObject(), _id: notice._id.toString(), id: notice._id.toString() });
     }
-    const notice = { id: Date.now().toString(), _id: Date.now().toString(), title, content, isPinned: !!isPinned, author: 'MASTER', views: 0, image: safeImage, date: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() };
+    const notice = { id: Date.now().toString(), _id: Date.now().toString(), title, content, isPinned: !!isPinned, isPopup: !!isPopup, author: 'MASTER', views: 0, image: safeImage, date: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() };
     memNotices.unshift(notice);
     saveMemNotices();
     res.json(notice);
   } catch (err) { res.status(500).json({ error: '서버 오류' }); }
 });
 
+// ── 공지사항 수정 (JWT 어드민 전용) ──────────────────────────────────────────────
+// ✅ BUG-NOTICE-IMG: PUT 핸들러 부재로 수정 시 이미지가 저장되지 않던 버그 수정
+app.put('/api/community/notices/:id', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
+    const { title, content, image, isPopup } = req.body;
+    if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
+    // ✅ BUG-41: isPinned를 false로 덮어쓰지 않도록 — 수정 시 image만 교체
+    const safeImage = (image && image.length > 1024 * 1024) ? null : (image !== undefined ? image : undefined);
+    const updateFields = { title: title.trim(), content };
+    if (safeImage !== undefined) updateFields.image = safeImage;
+    // ✅ POPUP-CTRL: isPopup이 payload에 있을 때만 업데이트 (수정 시 명시적 체크박스 제어를 위해)
+    if (isPopup !== undefined) updateFields.isPopup = !!isPopup;
+    if (dbReady && Notice) {
+      const updated = await Notice.findByIdAndUpdate(
+        req.params.id,
+        { $set: updateFields },
+        { new: true }
+      );
+      if (!updated) return res.status(404).json({ error: '공지사항을 찾을 수 없습니다.' });
+      return res.json({ ...updated.toObject(), _id: updated._id.toString(), id: updated._id.toString() });
+    }
+    // 인메모리 fallback
+    const idx = memNotices.findIndex(n => n.id === req.params.id || n._id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: '공지사항을 찾을 수 없습니다.' });
+    memNotices[idx] = { ...memNotices[idx], ...updateFields };
+    saveMemNotices();
+    res.json(memNotices[idx]);
+  } catch (err) { console.error('[PUT /notices/:id]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
 
 
 // ── 공지사항 삭제 (JWT 어드민 전용) ──────────────────────────────────────────────
@@ -2439,9 +3789,18 @@ app.post('/api/community/business', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { author, author_email, shipName, type, target, region, date, price, phone, content, cover, isPinned, harborId, expiresAt } = req.body;
+    const { author, author_email, shipName, type, target, region, date, price, phone, content, cover, isPinned, harborId, expiresAt, capacity } = req.body;
     if (!author || !author_email || !shipName || !content)
       return res.status(400).json({ error: '필수 항목 누락' });
+    // ✅ 서버 인원 검증 — 마스터는 1~1000, 일반 유저는 1~200
+    if (capacity !== undefined) {
+      const isAdm = isAdminToken(tp); // ✅ 이미 디코딩된 tp 재사용
+      const maxCap = isAdm ? 1000 : 200;
+      const capNum = Number(capacity);
+      if (isNaN(capNum) || capNum < 1 || capNum > maxCap) {
+        return res.status(400).json({ error: `인원은 1~${maxCap}사이의 숫자로 입력해주세요.` });
+      }
+    }
     // ✅ CENSOR: 선상배 홍보글 비속어 * 치환
     const censoredContent = censorText(content.trim());
     const censoredShipName = censorText(shipName.trim());
@@ -2484,9 +3843,14 @@ app.post('/api/community/business', async (req, res) => {
         const u = memUsers.find(u => u.email === author_email || u.id === author_email);
         if (u?.tier === 'BUSINESS_VIP' && u.vvipHarborId) vvipHarborId = u.vvipHarborId;
       }
+      // ✅ '전국 (전체)' 지역은 마스터만 사용 가능 (일반 유저 차단)
+      if (region === '전국 (전체)') {
+        return res.status(403).json({ error: "'전국 (전체)' 지역은 마스터 전용입니다.", code: 'GLOBAL_REGION_FORBIDDEN' });
+      }
       if (vvipHarborId) {
         const harborKey = HARBOR_KEY_MAP[vvipHarborId];
-        if (harborKey && region && !region.startsWith(harborKey)) {
+        // ✅ '전국 (전체)'는 VVIP 지역 검증 제외 (마스터 전용이므로 이미 위에서 처리)
+        if (harborKey && region && region !== '전국 (전체)' && !region.startsWith(harborKey)) {
           const harborInfo = HARBOR_LIST.find(h => h.id === vvipHarborId);
           return res.status(403).json({
             error: `VVIP 구독 지역(${harborInfo?.name || vvipHarborId})에서만 홍보글을 작성할 수 있습니다.`,
@@ -2528,17 +3892,29 @@ app.delete('/api/community/business/:id', async (req, res) => {
     const { email } = req.body;
     const isAdmin = isAdminToken(tp);
     if (dbReady && BusinessPost) {
-      const post = await BusinessPost.findById(req.params.id);
-      if (!post) return res.status(404).json({ error: '게시글 없음' });
+      // ✅ CastError 방지: _id 검색 실패 시 id 필드로 재검색
+      let post = null;
+      try { post = await BusinessPost.findById(req.params.id); } catch (_) {}
+      if (!post) { post = await BusinessPost.findOne({ id: req.params.id }).catch(() => null); }
+      if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
       if (!isAdmin && post.author_email !== email) return res.status(403).json({ error: '권한 없음' });
-      await BusinessPost.findByIdAndDelete(req.params.id);
+      await post.deleteOne();
       return res.json({ success: true });
     }
-    memBusinessPosts = memBusinessPosts.filter(p => p.id !== req.params.id);
+    // 인메모리: id/_id 양쪽 체크 + ✅ 권한 체크 추가
+    const memPost = memBusinessPosts.find(p =>
+      p.id === req.params.id || p._id === req.params.id ||
+      String(p.id) === req.params.id || String(p._id) === req.params.id
+    );
+    if (!memPost) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    if (!isAdmin && memPost.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+    memBusinessPosts = memBusinessPosts.filter(p => p !== memPost);
     saveMemBusinessPosts();
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { console.error('[BUSINESS DELETE]', err.message); res.status(500).json({ error: '서버 오류: ' + err.message }); }
 });
+
+
 
 // ── 공지사항 수정 (마스터 전용) ───────────────────────────────────────────────
 app.put('/api/community/notices/:id', async (req, res) => {

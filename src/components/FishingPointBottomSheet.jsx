@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'; // ✅ 17TH-B1: useCallback 추가
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; // ✅ 17TH-B1: useCallback 추가
 import apiClient from '../api/index';
 import { evaluateFishingCondition } from '../utils/evaluator';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,203 @@ const YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]
 function extractYoutubeId(str) {
   const match = str.match(YOUTUBE_REGEXP);
   return (match && match[2].length === 11) ? match[2] : str;
+}
+
+// 🎣 조과 기록 입력 모달 (FishingPointBottomSheet 전용)
+function CatchRecordModal({ point, user, onClose, onSuccess }) {
+  const addToast = useToastStore(s => s.addToast);
+  const fileRef = useRef(null);
+  const [form, setForm] = useState({
+    fish: (point?.fish || '').split(',')[0].trim(),
+    size: '', weight: '', bait: '', weather: '', wind: '', wave: '', memo: '', image: null,
+    date: new Date().toISOString().split('T')[0],
+    shareToBoard: false, // ✅ SHARE-OPT: 오픈게시판 동시 공유 옵션
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { fileToCompressedBase64 } = await import('../utils/imageUtils');
+      const b64 = await fileToCompressedBase64(file);
+      setForm(p => ({ ...p, image: b64 }));
+    } catch { addToast('이미지 처리 실패', 'error'); }
+  };
+
+  const handleSubmit = async () => {
+    if (!form.fish.trim()) { addToast('어종을 입력해주세요.', 'error'); return; }
+    setSubmitting(true);
+    try {
+      // ① 조과 기록 저장
+      await apiClient.post('/api/user/records', {
+        author: user.name,
+        author_email: user.email,
+        fish: form.fish.trim(),
+        size: form.size,
+        weight: form.weight,
+        location: point?.name || '',
+        bait: form.bait,
+        weather: form.weather,
+        wind: form.wind,
+        wave: form.wave,
+        memo: form.memo,
+        image: form.image,
+        date: form.date,
+        pointId: String(point?.id || ''),
+      });
+
+      // ② 오픈게시판 동시 공유 (옵션 체크 시)
+      if (form.shareToBoard) {
+        const sizeStr  = form.size   ? `${form.size}cm`    : '';
+        const weightStr = form.weight ? `${form.weight}kg` : '';
+        const specLine = [sizeStr, weightStr].filter(Boolean).join(' / ');
+        const weatherLine = [form.weather, form.wind && `풍속 ${form.wind}`, form.wave && `파고 ${form.wave}`].filter(Boolean).join(' · ');
+        const boardContent =
+          `🌊 [조과 공유] ${point?.name || ''} — ${form.date}\n` +
+          `🐟 어종: ${form.fish.trim()}` + (specLine ? `  ${specLine}` : '') + '\n' +
+          (form.bait    ? `🎯 미끼/루어: ${form.bait}\n`   : '') +
+          (weatherLine  ? `🌤 날씨: ${weatherLine}\n`       : '') +
+          (form.memo    ? `\n💬 ${form.memo}` : '');
+        await apiClient.post('/api/community/posts', {
+          author: user.name,
+          author_email: user.email,
+          category: '조황 공유',
+          content: boardContent.trim(),
+          image: form.image || null,
+        });
+        addToast('🌊 조과 기록 + 오픈게시판 동시 등록 완료!', 'success');
+      } else {
+        addToast('🎣 조과 기록이 저장되었습니다!', 'success');
+      }
+
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      addToast(err.response?.data?.error || '저장 실패. 다시 시도해주세요.', 'error');
+    } finally { setSubmitting(false); }
+  };
+
+  const WEATHER_OPTIONS = ['맑음', '흐림', '비', '강풍', '안개'];
+  const set = (key, val) => setForm(p => ({ ...p, [key]: val }));
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '28px 28px 0 0', padding: '28px 20px 48px', width: '100%', maxWidth: '480px', maxHeight: '92vh', overflowY: 'auto' }}>
+        <div style={{ width: '40px', height: '4px', background: '#E5E5EA', borderRadius: '2px', margin: '0 auto 20px' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <div style={{ fontSize: '18px', fontWeight: '950', color: '#1c1c1e' }}>🎣 조과 기록 남기기</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#8E8E93' }}>✕</button>
+        </div>
+        <div style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '600', marginBottom: '20px' }}>
+          📍 {point?.name} · 기록은 마이페이지 조과통계에 반영됩니다
+        </div>
+
+        {/* 사진 업로드 */}
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImage} />
+        <div onClick={() => fileRef.current?.click()} style={{ width: '100%', height: '140px', background: '#F8F9FA', borderRadius: '16px', border: '2px dashed #D1D1D6', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '16px', overflow: 'hidden' }}>
+          {form.image
+            ? <img src={form.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }} />
+            : <div style={{ textAlign: 'center', color: '#8E8E93' }}>
+                <div style={{ fontSize: '28px', marginBottom: '6px' }}>📷</div>
+                <div style={{ fontSize: '12px', fontWeight: '700' }}>사진 추가 (선택)</div>
+              </div>
+          }
+        </div>
+
+        {/* 어종 */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#444', marginBottom: '6px' }}>어종 *</div>
+          <input value={form.fish} onChange={e => set('fish', e.target.value)} placeholder="예: 감성돔" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+
+        {/* 사이즈 / 무게 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#444', marginBottom: '6px' }}>사이즈 (cm)</div>
+            <input value={form.size} onChange={e => set('size', e.target.value)} placeholder="예: 45" type="number" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#444', marginBottom: '6px' }}>무게 (kg)</div>
+            <input value={form.weight} onChange={e => set('weight', e.target.value)} placeholder="예: 2.3" type="number" step="0.1" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+        </div>
+
+        {/* 미끼 */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#444', marginBottom: '6px' }}>미끼/루어</div>
+          <input value={form.bait} onChange={e => set('bait', e.target.value)} placeholder="예: 크릴, 갯지렁이, 타이라바" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+
+        {/* 날씨 선택 */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#444', marginBottom: '8px' }}>날씨</div>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {WEATHER_OPTIONS.map(w => (
+              <button key={w} onClick={() => set('weather', form.weather === w ? '' : w)}
+                style={{ padding: '7px 14px', borderRadius: '20px', border: form.weather === w ? '2px solid #0056D2' : '1.5px solid #E5E5EA', background: form.weather === w ? '#EBF5FF' : '#fff', color: form.weather === w ? '#0056D2' : '#555', fontWeight: '800', fontSize: '12px', cursor: 'pointer' }}>
+                {w}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 날짜 */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#444', marginBottom: '6px' }}>출조 날짜</div>
+          <input value={form.date} onChange={e => set('date', e.target.value)} type="date" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+
+        {/* 메모 */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '800', color: '#444', marginBottom: '6px' }}>한마디 메모</div>
+          <textarea value={form.memo} onChange={e => set('memo', e.target.value)} placeholder="예: 새벽 4시 물때 맞춰 대박! 다음엔 타이라바 도전" rows={3} style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '14px', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+        </div>
+
+        {/* ✅ SHARE-OPT: 오픈게시판 동시 공유 체크 옵션 */}
+        <div
+          onClick={() => set('shareToBoard', !form.shareToBoard)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
+            marginBottom: '16px',
+            background: form.shareToBoard ? 'linear-gradient(135deg, #EBF5FF, #F0FFF8)' : '#F8F9FA',
+            border: `1.5px solid ${form.shareToBoard ? '#0056D2' : '#E5E5EA'}`,
+            transition: 'all 0.15s',
+          }}
+        >
+          {/* 커스텀 체크박스 */}
+          <div style={{
+            width: '22px', height: '22px', borderRadius: '7px', flexShrink: 0,
+            border: `2px solid ${form.shareToBoard ? '#0056D2' : '#C7C7CC'}`,
+            background: form.shareToBoard ? '#0056D2' : '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.15s',
+          }}>
+            {form.shareToBoard && (
+              <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                <path d="M1 4.5L4 7.5L10 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: '900', color: form.shareToBoard ? '#0056D2' : '#1c1c1e' }}>
+              🌊 오픈게시판에도 공유하기
+            </div>
+            <div style={{ fontSize: '11px', color: '#8E8E93', marginTop: '2px', fontWeight: '600' }}>
+              체크 시 조과 내용이 오픈게시판 '조황 공유' 카테고리에 자동 등록됩니다
+            </div>
+          </div>
+          <span style={{ fontSize: '18px' }}>{form.shareToBoard ? '🌊' : '🔒'}</span>
+        </div>
+
+        <button onClick={handleSubmit} disabled={submitting}
+          style={{ width: '100%', padding: '16px', background: submitting ? '#ccc' : 'linear-gradient(135deg, #0056D2, #0096FF)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: '950', fontSize: '15px', cursor: submitting ? 'not-allowed' : 'pointer', letterSpacing: '-0.02em' }}>
+          {submitting ? '저장 중...' : form.shareToBoard ? '🌊 기록 저장 + 게시판 공유' : '🎣 조과 기록 저장하기'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
@@ -49,6 +246,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
   const [isEditingCctv, setIsEditingCctv] = useState(false);
   const [editYoutubeId, setEditYoutubeId] = useState('');
   const [isSavingCctv, setIsSavingCctv] = useState(false);
+  // ✅ CATCH-ENH: 조과 기록 작성 모달
+  const [showCatchModal, setShowCatchModal] = useState(false);
 
   // 실시간 연속 재생(스트리밍) 효과를 위한 타임스탬프
   const [mofTimestamp, setMofTimestamp] = useState(Date.now());
@@ -631,9 +830,52 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                 </div>
               )}
             </div>
+
+            {/* ✅ CATCH-ENH: 조과 기록 남기기 버튼 */}
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F0F0F5' }}>
+              <div style={{ fontSize: '13px', fontWeight: '950', color: '#1c1c1e', marginBottom: '10px' }}>
+                🎣 이 포인트에서 잡으셨나요?
+              </div>
+              <button
+                onClick={() => {
+                  if (!user || user.email === 'guest@fishinggo.com') {
+                    addToast('조과 기록은 로그인 후 이용 가능합니다.', 'error');
+                    navigate('/login');
+                    return;
+                  }
+                  setShowCatchModal(true);
+                }}
+                style={{
+                  width: '100%', padding: '15px',
+                  background: 'linear-gradient(135deg, #00C48C, #00897B)',
+                  color: '#fff', border: 'none', borderRadius: '16px',
+                  fontWeight: '950', fontSize: '15px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  boxShadow: '0 6px 20px rgba(0,196,140,0.35)',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>🎣</span>
+                조과 기록 남기기
+              </button>
+              <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', textAlign: 'center', marginTop: '8px' }}>
+                기록은 마이페이지 조과통계에 자동 반영됩니다
+              </div>
+            </div>
+
           </div>
         )}
       </div>
+
+      {/* ✅ CATCH-ENH: 조과 기록 작성 모달 */}
+      {showCatchModal && (
+        <CatchRecordModal
+          point={selectedPoint}
+          user={user}
+          onClose={() => setShowCatchModal(false)}
+          onSuccess={() => { /* 저장 후 토스트는 모달 내부에서 표시 */ }}
+        />
+      )}
     </div>
   );
 }

@@ -22,9 +22,16 @@ export default function WritePost() {
   const [showAdGate, setShowAdGate] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false); // ✅ BUG-58: DOM 직접조작 → state 교체
   const [showDraftBanner, setShowDraftBanner] = useState(false); // 임시저장 복원 배너
+  const [isPopup, setIsPopup] = useState(false); // ✅ POPUP-CTRL: 홈화면 팝업 노출 여부
+  // ✅ LOC-1: 위치 상태 — { lat, lng, address }
+  const [location, setLocation] = useState(null);
+  const [locLoading, setLocLoading] = useState(false);
+  const [locEditMode, setLocEditMode] = useState(false); // ✅ LOC-EDIT: 주소 직접수정 모드
+  const [locDraft, setLocDraft] = useState('');           // ✅ LOC-EDIT: 수정 중 임시 주소
+  const locInputRef = useRef(null);                       // ✅ LOC-EDIT: input ref (JSX ref={locInputRef})
   const imageInputRef = useRef(null); // ✅ 16TH-C1: DOM 직접 접근 제거 — useRef 패턴
 
-  const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
+  const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅', '조황 공유'];
   const addToast = useToastStore((state) => state.addToast);
   const userTier = useUserStore((state) => state.userTier);
   const storeUser = useUserStore((state) => state.user);
@@ -59,6 +66,11 @@ export default function WritePost() {
         setContent(res.data.content || '');
         setTitle(res.data.title || '');
         setCategory(res.data.category || '전체');
+        // ✅ BUG-NOTICE-IMG: 수정 모드에서 기존 이미지 복원 — 누락 시 저장 시 image:null로 덮어써짐
+        if (res.data.image) setImage(res.data.image);
+        // ✅ POPUP-CTRL: 수정 모드에서 기존 isPopup 상태 복원
+        if (res.data.isPopup !== undefined) setIsPopup(!!res.data.isPopup);
+
       })
       .catch((err) => {
         // ✅ 24TH-B3: silent catch → 에러 피드백 추가 (19TH-B1 패턴)
@@ -66,6 +78,7 @@ export default function WritePost() {
         addToast('게시글 정보를 불러오지 못했습니다.', 'error');
       });
   }, [editId, isNoticeType]);
+
 
   // ✅ 6TH-B3: DRAFT_KEY useMemo — 매 렌더마다 재정의 방지 (postType이 렌더 중 불변)
   const DRAFT_KEY = useMemo(() => `draft_post_${postType}`, [postType]);
@@ -133,8 +146,8 @@ export default function WritePost() {
         const safeNoticeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
         // ✅ BUG-41: 수정 모드에서 isPinned를 false로 덮어쓰지 않도록 제거
         const noticePayload = isEditMode
-          ? { title: title.trim(), content, image: safeNoticeImage }
-          : { title: title.trim(), content, isPinned: false, image: safeNoticeImage };
+          ? { title: title.trim(), content, image: safeNoticeImage, isPopup }
+          : { title: title.trim(), content, isPinned: false, image: safeNoticeImage, isPopup };
         await apiClient[method](url, noticePayload);
         addToast(isEditMode ? '📢 공지사항이 수정되었습니다!' : '📢 공지사항이 등록되었습니다!', 'success');
         navigate(isEditMode ? -1 : '/community?tab=notice');
@@ -146,7 +159,7 @@ export default function WritePost() {
         const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
         const body = isEditMode
           ? { content, category, email: storedUser.email }
-          : { author: storedUser.name, author_email: storedUser.email, category, content, image: safeImage };
+          : { author: storedUser.name, author_email: storedUser.email, category, content, image: safeImage, location: location || null };
         await apiClient[method](url, body);
         // ✅ DRAFT-3: 등록 성공 시 draft 삭제
         if (!isEditMode) localStorage.removeItem(DRAFT_KEY);
@@ -273,12 +286,51 @@ export default function WritePost() {
 
         {/* 공지사항 제목 입력 */}
         {isNoticeType && (
-          <input
-            placeholder="공지 제목을 입력하세요"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            style={{ width: '100%', border: 'none', borderBottom: '1.5px solid #eee', fontSize: '18px', fontWeight: '800', padding: '0 0 14px', marginBottom: '14px', outline: 'none', color: '#1A1A2E' }}
-          />
+          <>
+            <input
+              placeholder="공지 제목을 입력하세요"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              style={{ width: '100%', border: 'none', borderBottom: '1.5px solid #eee', fontSize: '18px', fontWeight: '800', padding: '0 0 14px', marginBottom: '10px', outline: 'none', color: '#1A1A2E' }}
+            />
+            {/* ✅ POPUP-CTRL: 홈화면 팝업 지정 체크박스 */}
+            <div
+              onClick={() => setIsPopup(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', marginBottom: '14px',
+                borderRadius: '12px', cursor: 'pointer', userSelect: 'none',
+                background: isPopup ? 'rgba(255,59,48,0.06)' : '#F8F9FA',
+                border: `1.5px solid ${isPopup ? '#FF3B30' : '#E5E5EA'}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              {/* 커스텀 체크박스 */}
+              <div style={{
+                width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
+                border: `2px solid ${isPopup ? '#FF3B30' : '#C7C7CC'}`,
+                background: isPopup ? '#FF3B30' : '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}>
+                {isPopup && (
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: '900', color: isPopup ? '#FF3B30' : '#1c1c1e' }}>
+                  🔔 홈화면 팝업으로 노출
+                </div>
+
+                <div style={{ fontSize: '11px', color: '#8E8E93', marginTop: '2px' }}>
+                  체크 시 홈화면 시작 시 팝업으로 표시됩니다 (이미지 첨부 권장)
+                </div>
+              </div>
+              <span style={{ fontSize: '18px' }}>{isPopup ? '🔔' : '🔕'}</span>
+            </div>
+          </>
         )}
 
         {/* 텍스트 입력 영역 */}
@@ -288,6 +340,127 @@ export default function WritePost() {
           onChange={(e) => setContent(e.target.value)}
           value={content}
         />
+
+        {/* ✅ LOC-2: 위치 UI — 3상태: [없음|순수입력], [수정중], [확정] */}
+        {/* ── 직접 텍스트 입력 모드 (GPS 없이 주소 타이핑) ── */}
+        {!location && !locEditMode && null /* 직접입력은 툴바 버튼으로 진입 */}
+
+        {/* ── 직접 입력 모드 (locEditMode=true, location=null) ── */}
+        {locEditMode && !location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
+              background: 'rgba(0,86,210,0.06)', border: '1.5px solid #0056D2',
+              borderRadius: '20px', padding: '6px 12px',
+            }}>
+              <MapPin size={13} color="#0056D2" style={{ flexShrink: 0 }} />
+              <input
+                ref={locInputRef}
+                type="text"
+                value={locDraft}
+                onChange={e => setLocDraft(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const addr = locDraft.trim();
+                    if (addr) { setLocation({ lat: null, lng: null, address: addr }); setLocEditMode(false); addToast(`📍 위치 저장: ${addr}`, 'success'); }
+                    else { setLocEditMode(false); }
+                  }
+                  if (e.key === 'Escape') { setLocEditMode(false); setLocDraft(''); }
+                }}
+                placeholder="낚시 위치를 입력하세요 (ex. 강릉항 방파제)"
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: '12px', fontWeight: '700', color: '#0056D2', background: 'transparent' }}
+                autoFocus
+              />
+            </div>
+            {/* 확인 버튼 */}
+            <button
+              onClick={() => {
+                const addr = locDraft.trim();
+                if (addr) { setLocation({ lat: null, lng: null, address: addr }); setLocEditMode(false); addToast(`📍 위치 저장: ${addr}`, 'success'); }
+                else { setLocEditMode(false); }
+              }}
+              style={{ flexShrink: 0, padding: '5px 12px', borderRadius: '16px', border: 'none', background: '#0056D2', color: '#fff', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+            >확인</button>
+            {/* 취소 버튼 */}
+            <button
+              onClick={() => { setLocEditMode(false); setLocDraft(''); }}
+              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            ><X size={14} /></button>
+          </div>
+        )}
+
+        {/* ── 위치 확정 상태 (locEditMode=true, location 있음) ── 수정중 */}
+        {locEditMode && location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: '6px',
+              background: 'rgba(0,86,210,0.06)', border: '1.5px solid #0056D2',
+              borderRadius: '20px', padding: '6px 12px',
+            }}>
+              <MapPin size={13} color="#0056D2" style={{ flexShrink: 0 }} />
+              <input
+                ref={locInputRef}
+                type="text"
+                value={locDraft}
+                onChange={e => setLocDraft(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const addr = locDraft.trim();
+                    if (addr) { setLocation(prev => ({ ...prev, address: addr })); }
+                    setLocEditMode(false);
+                    if (addr) addToast(`📍 수정 완료: ${addr}`, 'success');
+                  }
+                  if (e.key === 'Escape') { setLocEditMode(false); }
+                }}
+                placeholder="낚시 위치를 수정하세요"
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: '12px', fontWeight: '700', color: '#0056D2', background: 'transparent' }}
+                autoFocus
+              />
+            </div>
+            {/* 확인 */}
+            <button
+              onClick={() => {
+                const addr = locDraft.trim();
+                if (addr) { setLocation(prev => ({ ...prev, address: addr })); addToast(`📍 수정 완료: ${addr}`, 'success'); }
+                setLocEditMode(false);
+              }}
+              style={{ flexShrink: 0, padding: '5px 12px', borderRadius: '16px', border: 'none', background: '#0056D2', color: '#fff', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+            >확인</button>
+            {/* 취소 */}
+            <button
+              onClick={() => setLocEditMode(false)}
+              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            ><X size={14} /></button>
+          </div>
+        )}
+
+        {/* ── 위치 확정 배지 (수정 모드 아닐 때) ── */}
+        {location && !locEditMode && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '10px', maxWidth: '100%' }}>
+            <div
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                background: 'rgba(0,86,210,0.08)', border: '1.5px solid rgba(0,86,210,0.25)',
+                borderRadius: '20px', padding: '6px 12px',
+                fontSize: '12px', fontWeight: '700', color: '#0056D2',
+                maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}
+            >
+              <MapPin size={13} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{location.address}</span>
+            </div>
+            {/* ✏️ 수정 버튼 */}
+            <button
+              onClick={() => { setLocDraft(location.address); setLocEditMode(true); }}
+              style={{ flexShrink: 0, padding: '4px 10px', borderRadius: '14px', border: '1px solid rgba(0,86,210,0.3)', background: 'rgba(0,86,210,0.06)', color: '#0056D2', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+            >✏️ 수정</button>
+            {/* ❌ 제거 버튼 */}
+            <button
+              onClick={() => { setLocation(null); setLocDraft(''); addToast('📍 위치가 제거되었습니다.', 'info'); }}
+              style={{ flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            ><X size={12} /></button>
+          </div>
+        )}
 
         {/* 하단 툴바 */}
         <div style={{
@@ -324,30 +497,80 @@ export default function WritePost() {
             </div>
             <span style={{ fontWeight: '600' }}>{imageLoading ? '사진 처리 중...' : image ? '사진 추가됨' : '사진 추가'}</span>
           </div>
-          {/* ENH3-B1: 위치 추가 준비 중 토스트 피드백 추가 */}
+          {/* ENH3-B1: 위치 추가 버튼 — GPS 획득 + 카카오 역지오코딩 + 직접입력 */}
           <div
-            onClick={() => addToast('📍 위치 추가 기능은 준비 중입니다.', 'info')}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '14px', cursor: 'pointer' }}
+            onClick={async () => {
+              // 이미 위치 있는 경우: 수정 모드 진입 (취소 대신)
+              if (location) { setLocDraft(location.address); setLocEditMode(true); return; }
+              if (locEditMode) { setLocEditMode(false); setLocDraft(''); return; }
+              // GPS 지원 안 하는 경우: 직접 입력 모드
+              if (!navigator.geolocation) { setLocEditMode(true); return; }
+              setLocLoading(true);
+              navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                  const { latitude: lat, longitude: lng } = pos.coords;
+                  let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                  // 카카오 역지오코딩으로 주소 변환 시도
+                  try {
+                    await new Promise((resolve) => {
+                      if (window.kakao?.maps?.services?.Geocoder) { resolve(); return; }
+                      window.kakao.maps.load(resolve);
+                    });
+                    const geocoder = new window.kakao.maps.services.Geocoder();
+                    await new Promise((resolve) => {
+                      geocoder.coord2Address(lng, lat, (result, status) => {
+                        if (status === window.kakao.maps.services.Status.OK && result[0]) {
+                          const road = result[0].road_address?.address_name;
+                          const jibun = result[0].address?.address_name;
+                          address = road || jibun || address;
+                        }
+                        resolve();
+                      });
+                    });
+                  } catch { /* 역지오코딩 실패 시 좌표 문자열 사용 */ }
+                  setLocation({ lat, lng, address });
+                  setLocLoading(false);
+                  addToast(`📍 위치 추가: ${address}`, 'success');
+                },
+                (err) => {
+                  setLocLoading(false);
+                  if (err.code === 1) {
+                    // 권한 거부 시 직접입력 모드로 진입
+                    addToast('📍 GPS 권한이 없습니다. 직접 입력해주세요.', 'info');
+                    setLocEditMode(true);
+                  } else {
+                    addToast('위치를 가져올 수 없습니다. 직접 입력해주세요.', 'info');
+                    setLocEditMode(true);
+                  }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+              );
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: (location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666', fontSize: '14px', cursor: locLoading ? 'not-allowed' : 'pointer' }}
           >
-            <div style={{ width: '36px', height: '36px', backgroundColor: '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MapPin size={20} /></div>
-            <span style={{ fontWeight: '600' }}>위치 추가</span>
+            <div style={{ width: '36px', height: '36px', backgroundColor: (location || locEditMode) ? 'rgba(0,86,210,0.08)' : '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: (location || locEditMode) ? '1.5px solid #0056D2' : 'none' }}>
+              <MapPin size={20} color={(location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666'} />
+            </div>
+            <span style={{ fontWeight: '600' }}>
+              {locLoading ? '위치 가져오는 중...' : location ? '위치 수정' : locEditMode ? '입력 중...' : '위치 추가'}
+            </span>
           </div>
           <div
             onClick={async () => {
               if (!image) { addToast('사진을 먼저 올려주세요.', 'error'); return; }
               setAiAnalyzing(true);
-              const sampleText = '\n\n🤖 [AI 샘플 분석 — 실제 연동 준비 중]\n- 어종: 감성돔 (참고용 예시)\n- 예상 길이: 약 45~50cm\n- 기상 데이터 연동 매핑 완료\n※ 현재 AI 기능은 샘플 모드입니다. 정확한 분석은 추후 업데이트됩니다.';
-              // ENH3-B2: 서버 /api/ai/analyze 우선 시도 — 실패 시 샘플 fallback
+              // ✅ AI-TEMPLATE: API 비용 0원 — 실용적 조황 작성 템플릿 자동 삽입
+              const template = `\n\n🤖 AI 조황 일지\n\n📍 낚시 장소: \n🐟 어종: \n📏 씨알 / 마릿수: \n🎣 채비 / 미끼: \n🌊 날씨 / 파고: \n💬 현장 메모: `;
+              // 서버 /api/ai/analyze 우선 시도 — 미연동 시 템플릿 fallback
               try {
                 const res = await apiClient.post('/api/ai/analyze', { image }, { timeout: 15000 });
                 if (res.data?.text) {
                   setContent((prev) => prev + '\n\n🤖 [AI 자동 일지]\n' + res.data.text);
                 } else {
-                  setContent((prev) => prev + sampleText);
+                  setContent((prev) => prev + template);
                 }
               } catch {
-                // AI 서비스 미연동 또는 실패 시 샘플 텍스트 삽입
-                setContent((prev) => prev + sampleText);
+                setContent((prev) => prev + template);
               } finally {
                 setAiAnalyzing(false);
               }

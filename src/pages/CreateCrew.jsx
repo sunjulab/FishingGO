@@ -12,7 +12,7 @@ export default function CreateCrew() {
   const [name, setName] = useState('');
   const [isPrivate, setIsPrivate] = useState(true);
   const [password, setPassword] = useState('');
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(100);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdGate, setShowAdGate] = useState(false);
   const addToast = useToastStore((state) => state.addToast);

@@ -1,14 +1,21 @@
 {
   "name": "fishing-go",
   "private": true,
-  "version": "1.0.0", 
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "node --max-old-space-size=4096 node_modules/vite/bin/vite.js build",
+    "preview": "vite preview",
+    "cap:sync": "npx cap sync android",
+    "cap:android": "npx cap open android",
+    "apk": "npm run build && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^8.0.0",
+    "@capacitor/android": "^8.3.2",
+    "@capacitor/cli": "^8.3.2",
+    "@capacitor/core": "^8.3.2",
     "@react-oauth/google": "^0.13.4",
     "axios": "^1.14.0",
     "lucide-react": "^0.344.0",

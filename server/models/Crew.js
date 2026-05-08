@@ -9,9 +9,16 @@ const crewSchema = new mongoose.Schema({
   ownerName: { type: String, required: true },
   members:   { type: Number, default: 1 },
   // ✅ BUG-52: limit 필드 추가 (CreateCrew.jsx에서 이미 전송 중이었지만 모델에 누락 → 저장 안 됨 버그)
-  limit:     { type: Number, default: 20 },         // 최대 인원 (기본 20명)
-  lastActive:{ type: Date,   default: null }, // ✅ 28TH-B3: String → Date 타입 교체 — User.lastAttendance 10TH-C2 패턴 통일 (날짜 범위 쿼리·정렬 정확성 확보)
+  limit:     { type: Number, default: 100 },        // 최대 인원 (기본 100명)
+  lastActive:{ type: Date,   default: null },
   createdAt: { type: Date, default: Date.now },
+  // ✅ CREW-ENH: 실제 멤버 목록 — 기존 members(숫자)는 카운트 캐시로 유지
+  memberList: [{
+    email:    { type: String, required: true },
+    name:     { type: String, required: true },
+    role:     { type: String, enum: ['owner', 'officer', 'member'], default: 'member' }, // ✅ officer(간부) 추가
+    joinedAt: { type: Date, default: Date.now },
+  }],
 });
 
 // ✅ 쿼리 성능 인덱스

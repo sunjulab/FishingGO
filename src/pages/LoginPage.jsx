@@ -94,15 +94,28 @@ export default function LoginPage() {
   };
 
   // ─── 로그인 ──────────────────────────────────────────────────────────────
-  const handleLogin = async () => {
+  const handleLogin = async (isRetry = false) => {
     setLoading(true);
+    let retrying = false;
     try {
       const res = await apiClient.post('/api/auth/login', { email: userId.trim(), password });
       onLoginSuccess(res.data);
     } catch (err) {
-      addToast(err.response?.data?.error || err.message || '오류가 발생했습니다.', 'error');
-    } finally { setLoading(false); }
+      const status = err.response?.status;
+      const msg = err.response?.data?.error || err.message || '오류가 발생했습니다.';
+      // ✅ DB-FIX: 503 = 서버 초기화 중 — 3초 후 1회 자동 재시도
+      if (status === 503 && !isRetry) {
+        addToast('⏳ 서버가 초기화 중입니다. 잠시 후 자동 재시도...', 'info');
+        retrying = true;
+        setTimeout(() => handleLogin(true), 3000);
+        return;
+      }
+      addToast(msg, 'error');
+    } finally {
+      if (!retrying) setLoading(false);
+    }
   };
+
 
   // ─── 회원가입 ────────────────────────────────────────────────────────────
   const handleRegister = async () => {

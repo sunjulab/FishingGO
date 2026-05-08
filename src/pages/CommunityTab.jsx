@@ -29,7 +29,7 @@ function InFeedAd() {
 }
 
 // ✅ 7TH-B1: OPEN_CATEGORIES 컴포넌트 외부 상수 — 불변 배열, 매 렌더마다 재생성 불필요
-const OPEN_CATEGORIES = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
+const OPEN_CATEGORIES = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅', '조황 공유'];
 
 // ✅ 전국 실제 낚시배 출항지 — 동일 도시 항구 통합 (label: 표시명, key: 필터 prefix)
 const HARBOR_DATA = [
@@ -166,6 +166,9 @@ export default function CommunityTab() {
   const [crewPassInput, setCrewPassInput]  = useState('');
   const [crewPassLoading, setCrewPassLoading] = useState(false);
   const [crews, setCrews] = useState([]);
+  // ✅ CREW-ENH: 내가 가입한 크루 ID Set — 배지 표시 및 비번 스킵용
+  const [myCrewIds, setMyCrewIds] = useState(new Set());
+  const [crewSearch, setCrewSearch] = useState(''); // ✅ 크루명 검색어
 
   const [businessPosts, setBusinessPosts] = useState([]);
   const [selectedBusinessRegion, setSelectedBusinessRegion] = useState('전체'); // 시도 필터
@@ -188,14 +191,19 @@ export default function CommunityTab() {
       })
       .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
     // 1단계: 시도 필터
+    // ✅ '전국 (전체)' 게시글은 '전체' 탭에서만 노출, 지역 탭 선택 시에는 숨김
     if (selectedBusinessRegion === '전체') {
-      if (!selectedHarbor) return withPinCheck;
-      return withPinCheck.filter(p => (p.region || '') === selectedHarbor);
+      const base = !selectedHarbor
+        ? withPinCheck  // 전체 탭 + 항구 미선택: '전국 (전체)' 포함 전체 노출
+        : withPinCheck.filter(p => (p.region || '') === selectedHarbor); // 항구 선택: 정확히 일치하는 항구만 (전국 제외)
+      return base;
     }
-    const byRegion = withPinCheck.filter(p => (p.region || '').startsWith(selectedBusinessRegion));
+    // 지역 탭 선택 시: '전국 (전체)' 게시글 허쟁 제외
+    const byRegion = withPinCheck.filter(p =>
+      p.region !== '전국 (전체)' && (p.region || '').startsWith(selectedBusinessRegion)
+    );
     // 2단계: 항구 필터
     if (!selectedHarbor) return byRegion;
-    // key prefix로 매칭 (거제 → 경남 거제(대포), 경남 거제(금포) 모두 포함)
     return byRegion.filter(p => (p.region || '').startsWith(selectedHarbor));
   }, [businessPosts, selectedBusinessRegion, selectedHarbor]);
 
@@ -206,10 +214,11 @@ export default function CommunityTab() {
     return found ? found.harbors : [];
   }, [selectedBusinessRegion]);
 
-  // 시도별 게시글 수
   const regionCounts = useMemo(() => {
+    // '전국 (전체)' 게시글은 '전체' 카운트에만 포함
     const counts = { '전체': businessPosts.length };
     businessPosts.forEach(p => {
+      if (p.region === '전국 (전체)') return; // 지역 별 카운트에는 제외
       const r = (p.region || '').split(' ')[0];
       if (r) counts[r] = (counts[r] || 0) + 1;
     });
@@ -231,6 +240,16 @@ export default function CommunityTab() {
 
   const [noticePosts, setNoticePosts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ✅ 크루 검색 필터 — 이름·오너명 부분일치 (대소문자 무시)
+  const filteredCrews = useMemo(() => {
+    const q = crewSearch.trim().toLowerCase();
+    if (!q) return crews;
+    return crews.filter(c =>
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.ownerName || '').toLowerCase().includes(q)
+    );
+  }, [crews, crewSearch]);
 
   // ✅ 7TH-A4: 내부 InFeedAd 화살표 함수 제거 — 파일 상단(L12) 외부 정의 사용
   // (렌더마다 새 함수 생성 제거 + 상단 정의는 dead code였음)
@@ -305,15 +324,25 @@ export default function CommunityTab() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [crewsRes, noticesRes, businessRes] = await Promise.all([
+        const requests = [
           apiClient.get('/api/community/crews'),
           apiClient.get('/api/community/notices'),
           apiClient.get('/api/community/business'),
-        ]);
+        ];
+        // ✅ CREW-ENH: 로그인 유저면 내 크루 목록도 함께 로드
+        if (user?.email && user.email !== 'guest@fishinggo.com') {
+          requests.push(apiClient.get('/api/user/crews').catch(() => ({ data: [] })));
+        }
+        const [crewsRes, noticesRes, businessRes, myCrewsRes] = await Promise.all(requests);
         const blocked = user?.blockedUsers || [];
         if (crewsRes.data?.length) setCrews(crewsRes.data.filter(c => !blocked.includes(c.ownerName)));
         if (noticesRes.data?.length) setNoticePosts(noticesRes.data);
         if (businessRes.data?.length) setBusinessPosts(businessRes.data.filter(p => !blocked.includes(p.author)));
+        // ✅ CREW-ENH: 내 크루 ID Set 구성
+        if (myCrewsRes?.data?.length) {
+          const ids = new Set(myCrewsRes.data.map(c => String(c._id || c.id)));
+          setMyCrewIds(ids);
+        }
       } catch (err) {
         // ENH4-A2: 프로덕션 console.error 노출 방지
         if (!import.meta.env.PROD) console.error('Fetch error:', err);
@@ -323,7 +352,7 @@ export default function CommunityTab() {
     };
     fetchData();
     // fetchPosts는 아래 useEffect가 마운트 시에도 실행하므로 여기서 중복 호출 제거
-  }, [location.search]);
+  }, [location.search, user?.email]);
 
   // 마운트·카테고리·검색어 변경 시 1페이지부터 재로드 (단 한 번만 실행됨)
   // ENH4-C2: location.search 변화 시 fetchPosts 중복 호출 가능성 업음 (openCategory/debouncedSearch가 파생 커버)
@@ -364,8 +393,8 @@ export default function CommunityTab() {
     const myEmail = user?.email || user?.id || null;
     const myName = user?.name || null;
     const isAuthorDelete =
-      (type === 'open' && posts.find(p => (p._id || p.id) === id)?.author_email === myEmail) ||
-      (type === 'business' && businessPosts.find(p => (p._id || p.id) === id)?.author_email === myEmail);
+      (type === 'open' && posts.find(p => String(p._id || p.id) === String(id))?.author_email === myEmail) ||
+      (type === 'business' && businessPosts.find(p => String(p._id || p.id) === String(id))?.author_email === myEmail);
     if (!isAdmin && !isAuthorDelete) return;
     // window.confirm 제거 — 권한 체크 통과 시 즉시 삭제 (PostDetail에 인앱 확인 모달 있음)
     try {
@@ -390,6 +419,18 @@ export default function CommunityTab() {
   };
 
 
+
+  // ✅ MASTER 전용: 크루 강제 삭제
+  const handleAdminDeleteCrew = async (crewId, crewName) => {
+    if (!window.confirm(`[MASTER] '${crewName}' 크루를 강제 삭제하시겠습니까?`)) return;
+    try {
+      await apiClient.delete(`/api/community/crews/${crewId}`, { data: { email: user?.email } });
+      setCrews(prev => prev.filter(c => String(c._id || c.id) !== crewId));
+      addToast(`[MASTER] '${crewName}' 크루가 삭제되었습니다.`, 'success');
+    } catch (err) {
+      addToast(err.response?.data?.error || '삭제에 실패했습니다.', 'error');
+    }
+  };
 
   const handleLike = async (e, postId) => {
     e.stopPropagation();
@@ -599,7 +640,7 @@ export default function CommunityTab() {
                 <React.Fragment key={postId}>
                   <div
                     id={`post-${postId}`}
-                    onClick={() => navigate(`/post/${postId}`)}
+                    onClick={() => navigate(`/post/${postId}`, { state: { fromTab: 'open' } })}
                     style={{
                       backgroundColor: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '12px',
                       boxShadow: highlightedPostId === postId ? '0 0 0 3px #0056D2' : '0 2px 10px rgba(0,0,0,0.03)',
@@ -610,13 +651,16 @@ export default function CommunityTab() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {post.author === ADMIN_ID ? ( // ✅ 29TH-B1 보너스: 'sunjulab' → ADMIN_ID 상수로 교체
+                        {(post.author === ADMIN_ID || post.author === 'sunjulab') ? ( // ✅ ADMIN_ID 상수 + 레거시 닉네임 호환
                           <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #E60000, #990000)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>MASTER</span>
                         ) : post.author_email === 'premium_user@fishinggo.com' ? (
                           <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #FFD700, #F57F17)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>PRO</span>
                         ) : null}
                         <span style={{ fontSize: '11px', backgroundColor: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '4px 8px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
-                        <strong style={{ fontSize: '14px', color: '#333' }}>{post.author}</strong>
+                        <strong
+                          onClick={(e) => { e.stopPropagation(); navigate(`/user/${encodeURIComponent(post.author)}`); }}
+                          style={{ fontSize: '14px', color: '#333', cursor: 'pointer' }}
+                        >{post.author}</strong>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '12px', color: '#bbb' }}>{post.time}</span>
@@ -683,46 +727,91 @@ export default function CommunityTab() {
         ) : activeTab === 'crew' ? (
           // [프라이빗 크루 뷰]
           <div className="fade-in">
-            {crews.map(crew => (
-              <div key={crew.id} style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '16px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', border: '1px solid #f0f0f0' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '700', color: '#1c1c1e' }}>{crew.name}</h3>
-                  <div style={{ display: 'flex', gap: '12px', color: '#8e8e93', fontSize: '13px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} /> 인원 {crew.members}</span>
-                    {crew.lastActive && <span style={{ color: '#bbb' }}>활동 {crew.lastActive}</span>}
+            {/* 크루 검색창 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff', borderRadius: '14px', padding: '10px 16px', marginBottom: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #F0F0F0' }}>
+              <span style={{ fontSize: '16px', flexShrink: 0 }}>🔍</span>
+              <input
+                value={crewSearch}
+                onChange={e => setCrewSearch(e.target.value)}
+                placeholder="크루명 검색"
+                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', color: '#1c1c1e', fontWeight: '600' }}
+              />
+              {crewSearch && (
+                <button onClick={() => setCrewSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#bbb', fontSize: '16px', padding: 0, lineHeight: 1 }}>✕</button>
+              )}
+            </div>
+            {/* 검색 결과 없음 */}
+            {filteredCrews.length === 0 && crews.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#aaa' }}>
+                <div style={{ fontSize: '32px', marginBottom: '10px' }}>🔍</div>
+                <div style={{ fontSize: '15px', fontWeight: '800', color: '#555', marginBottom: '4px' }}>검색 결과가 없습니다</div>
+                <div style={{ fontSize: '13px' }}>'{crewSearch}' 에 해당하는 크루가 없습니다</div>
+              </div>
+            )}
+            {filteredCrews.map(crew => {
+              const crewId = String(crew._id || crew.id);
+              const isMyCrew = myCrewIds.has(crewId);
+              return (
+              <div key={crewId} style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '16px', marginBottom: '12px', flexDirection: 'column', boxShadow: isMyCrew ? '0 2px 10px rgba(0,86,210,0.12)' : '0 2px 10px rgba(0,0,0,0.03)', border: isMyCrew ? '1.5px solid #0056D2' : '1px solid #f0f0f0' }}>
+                {/* 상단: 정보 + 입장 버튼 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      {isMyCrew && <span style={{ fontSize: '9px', fontWeight: '900', background: '#0056D2', color: '#fff', padding: '2px 7px', borderRadius: '8px', flexShrink: 0 }}>내 크루</span>}
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{crew.name}</h3>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', color: '#8e8e93', fontSize: '13px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} /> 인원 {crew.members}/{crew.limit != null ? crew.limit : 1000}</span>
+                      {crew.region && crew.region !== '전국' && <span style={{ color: '#bbb' }}>📍 {crew.region}</span>}
+                    </div>
                   </div>
+                  {/* 입장 버튼 */}
+                  {isMyCrew ? (
+                    <button onClick={() => navigate(`/crew/${crewId}/chat`)} style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)', flexShrink: 0, marginLeft: '8px' }}>
+                      채팅 입장
+                    </button>
+                  ) : crew.isPrivate ? (
+                    <button
+                      onClick={() => {
+                        if (user?.id === 'GUEST') { addToast('로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.', 'error'); return; }
+                        setCrewPassInput(''); setCrewPassModal({ crew });
+                      }}
+                      style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '12px', borderRadius: '50%', color: '#0056D2', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0, marginLeft: '8px' }}
+                    >
+                      <Lock size={20} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        if (user?.id === 'GUEST') { addToast('로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.', 'error'); return; }
+                        try {
+                          await apiClient.post(`/api/community/crews/${crewId}/join`, { email: user.email, name: user.name });
+                          setMyCrewIds(prev => new Set([...prev, crewId]));
+                        } catch { /* 실패해도 채팅 진입은 허용 */ }
+                        navigate(`/crew/${crewId}/chat`);
+                      }}
+                      style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)', flexShrink: 0, marginLeft: '8px' }}
+                    >
+                      입장하기
+                    </button>
+                  )}
                 </div>
-                {crew.isPrivate ? (
-                  <button
-                    onClick={() => {
-                      if (user?.id === 'GUEST') {
-                        addToast("로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.", "error");
-                        return;
-                      }
-                      // ✅ OPT-4: window.prompt 완전 제거 → 인앱 모달로 교체
-                      setCrewPassInput('');
-                      setCrewPassModal({ crew });
-                    }}
-                    style={{ backgroundColor: '#f5f5f7', border: 'none', padding: '12px', borderRadius: '50%', color: '#0056D2', cursor: 'pointer', transition: 'background 0.2s' }}
-                  >
-                    <Lock size={20} />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (user?.id === 'GUEST') {
-                        addToast("로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.", "error");
-                        return;
-                      }
-                      navigate(`/crew/${crew.id}/chat`);
-                    }}
-                    style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)' }}
-                  >
-                    입장하기
-                  </button>
+                {/* ✅ MASTER 전용: 강제 삭제 영역 */}
+                {isAdmin && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #FFE0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#FF3B30', fontWeight: '900', background: 'rgba(255,59,48,0.08)', padding: '2px 8px', borderRadius: '6px' }}>MASTER 관리</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAdminDeleteCrew(crewId, crew.name); }}
+                      style={{ border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '5px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <Trash2 size={12} /> 강제 삭제
+                    </button>
+                  </div>
                 )}
               </div>
-            ))}
+              );
+            })}
+
           </div>
         ) : (
           // [비즈니스: 선상 배 홍보 뷰]
@@ -838,13 +927,25 @@ export default function CommunityTab() {
 
 
             {effectiveBusinessPosts.map((post) => (
-              <React.Fragment key={post.id}>
+              <React.Fragment key={post._id || post.id}>
                 {post.isPinned ? (
                   /* VVIP 프리미엄 대형 카드 */
                   <div style={{ backgroundColor: '#FEFCF5', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 12px 40px rgba(255,215,0,0.25)', border: '2.5px solid #FFD700', overflow: 'hidden' }}>
                     <div style={{ background: 'linear-gradient(90deg, #FFD700, #FF9B26)', color: '#5C3A00', padding: '10px 16px', fontSize: '12px', fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Award size={14} fill="#5C3A00" /> VVIP 프리미엄 스폰서 — 해당 항구 1위 독점</span>
-                      {isAdmin && <button onClick={(e) => handleDeletePost(e, post.id, 'business')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5C3A00' }}><Trash2 size={14} /></button>}
+                      {/* ✅ VVIP 카드: 작성자 or 마스터만 수정/삭제 */}
+                      {(isAdmin || post.author_email === user?.email) && (
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }}
+                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
+                          ><Edit2 size={11} /> 수정</button>
+                          <button
+                            onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')}
+                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
+                          ><Trash2 size={11} /> 삭제</button>
+                        </div>
+                      )}
                     </div>
                     <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
                       <img src={post.cover} style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} alt="배" />
@@ -877,15 +978,55 @@ export default function CommunityTab() {
                 {post.isPinned && <BannerAd style={{ marginBottom: '16px' }} />}
                 {!post.isPinned && (
 
-                  <div style={{ backgroundColor: '#fff', borderRadius: '16px', marginBottom: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #F0F2F7', overflow: 'hidden' }}>
+                  <div style={{
+                    backgroundColor: '#fff', borderRadius: '16px', marginBottom: '12px',
+                    boxShadow: post.region === '전국 (전체)'
+                      ? '0 4px 16px rgba(0,86,210,0.15)'
+                      : '0 2px 8px rgba(0,0,0,0.04)',
+                    border: post.region === '전국 (전체)'
+                      ? '1.5px solid #0056D2'
+                      : '1px solid #F0F2F7',
+                    overflow: 'hidden'
+                  }}>
+                    {/* ✅ 전국(전체) 게시글: 상단 MASTER 배지 헤더 */}
+                    {post.region === '전국 (전체)' && (
+                      <div style={{
+                        background: 'linear-gradient(90deg, #0056D2, #0096FF)',
+                        color: '#fff', padding: '7px 14px',
+                        fontSize: '11px', fontWeight: '900',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                      }}>
+                        <span>🌐 MASTER 공식 전국 홍보 &mdash; 모든 지역 출항 정보</span>
+                        {/* ✅ 전국 게시글은 마스터만 작성 가능 → 작성자 or 관리자 수정/삭제 */}
+                        {(isAdmin || post.author_email === user?.email) && (
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }}
+                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
+                            ><Edit2 size={10} /> 수정</button>
+                            <button
+                              onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')}
+                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
+                            ><Trash2 size={10} /> 삭제</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div style={{ padding: '12px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
                       <div style={{ display: 'flex', gap: '12px' }}>
                         <img src={post.cover} style={{ width: '76px', height: '76px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} alt="배" />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
                             <span style={{ fontSize: '9px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
+                            {/* ✅ 지역 배지 */}
+                            {post.region === '전국 (전체)' ? (
+                              <span style={{ fontSize: '9px', background: 'rgba(0,86,210,0.12)', color: '#0056D2', padding: '2px 7px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>🌐 전국</span>
+                            ) : post.region ? (
+                              <span style={{ fontSize: '9px', background: '#F0F0F5', color: '#555', padding: '2px 7px', borderRadius: '5px', fontWeight: '800', flexShrink: 0 }}>📍 {post.region}</span>
+                            ) : null}
                             <span style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.shipName}</span>
-                            {(isAdmin || post.author_email === user?.email) && (
+                            {/* ✅ 작성자 or 마스터: 수정/삭제 (region 제한 없이 모든 카드에 표시) */}
+                            {(isAdmin || post.author_email === user?.email) && post.region !== '전국 (전체)' && (
                               <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
                                 <button onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={14} /></button>
                                 <button onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={14} /></button>
@@ -905,7 +1046,7 @@ export default function CommunityTab() {
                       <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '950', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                         <Phone size={13} fill="#fff" /> 즉시 전화
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}` ; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낙시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}` ; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <MessageSquare size={13} /> 문자
                       </button>
                     </div>
@@ -1092,9 +1233,12 @@ export default function CommunityTab() {
                     setCrewPassLoading(true);
                     try {
                       const crew = crewPassModal.crew;
-                      await apiClient.post(`/api/community/crews/${crew.id || crew._id}/verify`, { password: crewPassInput });
+                      const crewId = String(crew._id || crew.id);
+                      // ✅ CREW-ENH: /verify 대신 /join API 호출 — 비번 검증 + DB 저장 동시 처리
+                      await apiClient.post(`/api/community/crews/${crewId}/join`, { password: crewPassInput, email: user.email, name: user.name });
+                      setMyCrewIds(prev => new Set([...prev, crewId]));
                       setCrewPassModal(null);
-                      navigate(`/crew/${crew.id || crew._id}/chat`);
+                      navigate(`/crew/${crewId}/chat`);
                     } catch (err) {
                       addToast(err.response?.data?.error || '입장 코드가 일치하지 않습니다.', 'error');
                     } finally { setCrewPassLoading(false); }
@@ -1119,9 +1263,12 @@ export default function CommunityTab() {
                   setCrewPassLoading(true);
                   try {
                     const crew = crewPassModal.crew;
-                    await apiClient.post(`/api/community/crews/${crew.id || crew._id}/verify`, { password: crewPassInput });
+                    const crewId = String(crew._id || crew.id);
+                    // ✅ CREW-ENH: /join API로 비번 검증 + 멤버 DB 저장 통합
+                    await apiClient.post(`/api/community/crews/${crewId}/join`, { password: crewPassInput, email: user.email, name: user.name });
+                    setMyCrewIds(prev => new Set([...prev, crewId]));
                     setCrewPassModal(null);
-                    navigate(`/crew/${crew.id || crew._id}/chat`);
+                    navigate(`/crew/${crewId}/chat`);
                   } catch (err) {
                     addToast(err.response?.data?.error || '입장 코드가 일치하지 않습니다.', 'error');
                   } finally { setCrewPassLoading(false); }

@@ -35,8 +35,9 @@ export default function AnnouncementPopup() {
       .then(res => {
         const all = Array.isArray(res.data) ? res.data : [];
         const popups = all
-          .filter(n => n.image && !isHiddenToday(String(n._id || n.id)))
+          .filter(n => n.isPopup && !isHiddenToday(String(n._id || n.id))) // ✅ POPUP-CTRL: image 자동 → isPopup 명시적 체크박스로 변경
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
         if (popups.length > 0) {
           setNotices(popups);
           setVisible(true);

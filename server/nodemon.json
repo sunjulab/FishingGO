@@ -1,0 +1,11 @@
+{
+  "watch": ["index.js", "models", "cctv_admin_routes.js", "coupangService.js", "cctvMapping.js"],
+  "ext": "js",
+  "ignore": [
+    "*.json",
+    "*.log",
+    "node_modules/*",
+    "data/*"
+  ],
+  "delay": "500"
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, X, Check } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, MapPin } from 'lucide-react';
 
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A3: ADMIN_ID/EMAIL import
 import { useToastStore } from '../store/useToastStore';
@@ -19,11 +19,17 @@ const CATEGORY_COLORS = {
   '찌낚시': '#0056D2', '루어': '#FF5A5F', '선상': '#FF9B26',
   '에깅': '#7C3AED', '원투': '#059669', '갯바위': '#DC2626', '민물': '#0891B2',
 };
-const CATEGORIES = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅'];
+
 
 export default function PostDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const goBack = () => {
+    const fromTab = location.state?.fromTab;
+    if (fromTab) navigate(`/community?tab=${fromTab}`);
+    else navigate(-1);
+  };
   const user = useUserStore((state) => state.user);
   const addToast = useToastStore((state) => state.addToast);
   const [post, setPost] = useState(null);
@@ -35,10 +41,6 @@ export default function PostDetail() {
 
   // 수정/삭제 상태
   const [showMenu, setShowMenu] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editContent, setEditContent] = useState('');
-  const [editCategory, setEditCategory] = useState('');
-  const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ✅ 11TH-A3: state.isAdmin() 셉렉터 → ADMIN_ID/EMAIL 직접 비교 (3RD-A2 표준으로 통일)
@@ -139,28 +141,10 @@ export default function PostDetail() {
     } finally { setSubmitting(false); }
   };
 
+  // ✅ EDIT-FULL: 인라인 모달 → WritePost 전체화면 수정으로 교체
   const openEdit = () => {
-    setEditContent(post.content);
-    setEditCategory(post.category);
-    setShowEditModal(true);
     setShowMenu(false);
-  };
-
-  const saveEdit = async () => {
-    if (!editContent.trim()) { addToast('내용을 입력해주세요.', 'error'); return; }
-    setSaving(true);
-    try {
-      const res = await apiClient.put(`/api/community/posts/${id}`, {
-        content: editContent.trim(),
-        category: editCategory,
-        email: user.email,
-      });
-      setPost(res.data);
-      setShowEditModal(false);
-      addToast('✅ 게시글이 수정되었습니다.', 'success');
-    } catch (err) {
-      addToast(err.response?.data?.error || '수정 실패.', 'error');
-    } finally { setSaving(false); }
+    navigate(`/write?type=open&editId=${id}`);
   };
 
   const handleDelete = async () => {
@@ -222,7 +206,7 @@ export default function PostDetail() {
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center', gap: '16px' }}>
       <div style={{ fontSize: '48px' }}>🎣</div>
       <div style={{ fontSize: '16px', color: '#666', fontWeight: '700' }}>{error || '게시글을 찾을 수 없습니다.'}</div>
-      <button onClick={() => navigate(-1)} style={{ padding: '12px 28px', backgroundColor: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '15px', cursor: 'pointer' }}>뒤로 가기</button>
+      <button onClick={goBack} style={{ padding: '12px 28px', backgroundColor: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '15px', cursor: 'pointer' }}>뒤로 가기</button>
     </div>
   );
 
@@ -233,7 +217,7 @@ export default function PostDetail() {
     <div className="page-container" style={{ backgroundColor: '#F2F2F7', height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {/* 헤더 */}
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff', borderBottom: '1px solid #F0F2F7', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
+        <button onClick={goBack} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
           <ChevronLeft size={20} color="#1A1A2E" />
         </button>
         <span style={{ flex: 1, fontSize: '16px', fontWeight: '950', color: '#1A1A2E', textAlign: 'center' }}>조황 게시글</span>
@@ -266,17 +250,25 @@ export default function PostDetail() {
         {/* 게시글 카드 */}
         <div style={{ backgroundColor: '#fff', margin: '12px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
           <div style={{ padding: '18px 18px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '950', fontSize: '18px', flexShrink: 0 }}>
+            {/* ✅ FOLLOW-ENH: 작성자 아바타+닉네임 클릭 → 프로필 페이지 이동 */}
+            <div
+              onClick={() => navigate(`/user/${encodeURIComponent(post.author)}`)}
+              style={{ width: '46px', height: '46px', borderRadius: '14px', background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '950', fontSize: '18px', flexShrink: 0, cursor: 'pointer' }}
+            >
               {post.author?.[0] || '?'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: '950', fontSize: '15px', color: '#1A1A2E' }}>{post.author}</span>
+                <span
+                  onClick={() => navigate(`/user/${encodeURIComponent(post.author)}`)}
+                  style={{ fontWeight: '950', fontSize: '15px', color: '#1A1A2E', cursor: 'pointer' }}
+                >{post.author}</span>
                 <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '6px', background: `${categoryColor}18`, color: categoryColor }}>{post.category}</span>
               </div>
               <div style={{ fontSize: '11px', color: '#AAB0BE', fontWeight: '700', marginTop: '2px' }}>{timeAgo(post.createdAt)}</div>
             </div>
           </div>
+
 
           {post.image && (
             <div style={{ width: '100%', maxHeight: '320px', overflow: 'hidden', marginBottom: '4px' }}>
@@ -293,6 +285,28 @@ export default function PostDetail() {
 
           <div style={{ padding: '16px 18px' }}>
             <p style={{ fontSize: '15px', lineHeight: '1.75', color: '#1A1A2E', fontWeight: '600', whiteSpace: 'pre-wrap', margin: 0 }}>{post.content}</p>
+            {/* ✅ LOC-3: 위치 배지 — post.location이 있을 때만 표시 */}
+            {post.location?.address && (
+              <div
+                onClick={() => {
+                  if (post.location.lat && post.location.lng) {
+                    window.open(`https://map.kakao.com/link/map/${encodeURIComponent(post.location.address)},${post.location.lat},${post.location.lng}`, '_blank');
+                  }
+                }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  marginTop: '12px',
+                  background: 'rgba(0,86,210,0.07)', border: '1px solid rgba(0,86,210,0.2)',
+                  borderRadius: '20px', padding: '5px 11px',
+                  fontSize: '12px', fontWeight: '700', color: '#0056D2',
+                  cursor: post.location.lat ? 'pointer' : 'default',
+                  maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}
+              >
+                <MapPin size={12} />
+                <span>{post.location.address}</span>
+              </div>
+            )}
           </div>
 
           <div style={{ padding: '12px 18px 16px', display: 'flex', gap: '20px', borderTop: '1px solid #F8F8F8' }}>
@@ -312,12 +326,18 @@ export default function PostDetail() {
           {Array.isArray(post.comments) && post.comments.length > 0 ? (
             post.comments.map((c, idx) => (
               <div key={c._id || idx} style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'flex-start' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #F0F5FF, #E0ECFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '900', color: '#0056D2' }}>
+                <div
+                  onClick={() => navigate(`/user/${encodeURIComponent(c.author)}`)}
+                  style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #F0F5FF, #E0ECFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '900', color: '#0056D2', cursor: 'pointer' }}
+                >
                   {c.author ? c.author[0] : <User size={16} />}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: '800', fontSize: '13px', color: '#1A1A2E' }}>{c.author}</span>
+                    <span
+                      onClick={() => navigate(`/user/${encodeURIComponent(c.author)}`)}
+                      style={{ fontWeight: '800', fontSize: '13px', color: '#1A1A2E', cursor: 'pointer' }}
+                    >{c.author}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '11px', color: '#D0D5E0', fontWeight: '700' }}>{timeAgo(c.createdAt)}</span>
                       {/* ✅ 본인 또는 어드민에게만 삭제 버튼 표시 */}
@@ -354,34 +374,6 @@ export default function PostDetail() {
         </button>
       </div>
 
-      {/* 수정 모달 */}
-      {showEditModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-          <div style={{ width: '100%', maxWidth: '480px', background: '#fff', borderRadius: '24px 24px 0 0', padding: '20px 20px 36px', boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '16px', fontWeight: '900', color: '#1A1A2E' }}>게시글 수정</span>
-              <button onClick={() => setShowEditModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={22} color="#666" /></button>
-            </div>
-            {/* 카테고리 선택 */}
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-              {CATEGORIES.filter(c => c !== '전체').map(c => (
-                <button key={c} onClick={() => setEditCategory(c)}
-                  style={{ padding: '6px 12px', borderRadius: '16px', border: 'none', fontSize: '12px', fontWeight: '800', cursor: 'pointer', background: editCategory === c ? '#0056D2' : '#F2F2F7', color: editCategory === c ? '#fff' : '#555' }}>
-                  {c}
-                </button>
-              ))}
-            </div>
-            <textarea
-              value={editContent} onChange={e => setEditContent(e.target.value)}
-              style={{ width: '100%', minHeight: '160px', border: '1.5px solid #E5E5EA', borderRadius: '14px', padding: '14px', fontSize: '14px', fontWeight: '600', lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
-            />
-            <button onClick={saveEdit} disabled={saving || !editContent.trim()}
-              style={{ marginTop: '12px', width: '100%', padding: '15px', background: editContent.trim() ? '#0056D2' : '#E5E5EA', color: editContent.trim() ? '#fff' : '#bbb', border: 'none', borderRadius: '14px', fontSize: '15px', fontWeight: '900', cursor: editContent.trim() ? 'pointer' : 'default' }}>
-              {saving ? '저장 중...' : '✅ 수정 완료'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 삭제 확인 다이얼로그 */}
       {showDeleteConfirm && (

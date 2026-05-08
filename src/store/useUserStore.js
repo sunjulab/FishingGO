@@ -39,10 +39,12 @@ export const EXP_REWARDS = {
   monthly_streak:   { exp: 300, label: '30일 연속 출석',    icon: '⭐' },
 };
 
-// ✅ 3RD-A3: 관리자 판별 상수 — 5중 중복 하드코딩 → 단일 지점 관리
-// sunjulab.k = 마스터 계정 이메일 (DB 필드값), sunjulab = resolved-id
-export const ADMIN_ID    = 'sunjulab';       // 서버가 어드민 로그인 시 반환하는 resolved id
-export const ADMIN_EMAIL = 'sunjulab.k';     // ✅ 마스터 계정 이메일 (sunjulab.k@gmail.com도 호환)
+// ✅ 3RD-A3: 관리자 판별 상수 — 단일 지점 관리
+// ✅ ADMIN-FIX: 서버 buildUserResponse가 MASTER 계정 id='sunjulab.k'로 반환하도록 변경됨
+export const ADMIN_ID    = 'sunjulab.k';  // 서버가 MASTER 로그인 시 반환하는 resolved id
+export const ADMIN_EMAIL = 'sunjulab.k';  // ✅ 마스터 계정 이메일 (sunjulab.k@gmail.com도 호환)
+
+
 
 /**
  * 현재 레벨 정보 반환
@@ -254,7 +256,12 @@ export const useUserStore = create((set, get) => ({
           if (!import.meta.env.PROD) console.log(`[구독 만료] ${state.userTier} → FREE (취소 후 기간 종료)`);
         }
       }
-    } catch (e) { /* 네트워크 오류 시 무시 */ }
+    } catch (e) {
+      // ✅ TIER-PROTECT: 404/네트워크 오류 시 현재 tier 유지 — API 미존재 또는 서버 오프라인시도 다운그레이드 하지 않음
+      if (!import.meta.env.PROD && e?.response?.status !== 404) {
+        console.warn('[구독 체크] 네트워크 오류, 현재 tier 유지:', state.userTier, e?.message);
+      }
+    }
   },
 
   // ── 서버에서 최신 사용자 정보 동기화 (재로그인 없이 tier/avatar 갱신) ──
@@ -264,20 +271,46 @@ export const useUserStore = create((set, get) => ({
     // GUEST 또는 미로그인 사용자는 동기화 불필요
     if (!email || state.user?.id === 'GUEST') return;
 
+    // ✅ TIER-PROTECT: MASTER/ADMIN은 서버 동기화 불필요 (하드코딩된 티어 보호)
+    if (get().isAdmin()) return;
+
+    // ✅ TIER-RANK: 현재 tier 업그레이드 순서 정의 (다운그레이드 방지용)
+    const TIER_RANK = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
+    const currentTierRank = TIER_RANK[state.userTier] ?? 0;
+
     try {
       const { default: apiClient } = await import('../api/index');
       const res = await apiClient.get(`/api/user/me?email=${encodeURIComponent(email)}`);
       const fresh = res.data;
 
       const current = get().user;
-      const tierChanged   = fresh.tier   !== (current?.tier   || 'FREE');
+      const serverTier = fresh.tier || 'FREE';
+      const serverTierRank = TIER_RANK[serverTier] ?? 0;
+
+      // ✅ TIER-PROTECT: 서버가 현재보다 낙은 tier를 반환하면 무시
+      // (일시적 네트워크 오류, DB 지연 반영 등으로 VIP 플랜이 FREE로 플리커 방지)
+      if (serverTierRank < currentTierRank) {
+        if (!import.meta.env.PROD) {
+          console.warn('[syncFromServer] 서버 tier가 현재보다 낙음 — 업데이트 스킵 (', state.userTier, '->', serverTier, ')');
+        }
+        // tier만 제외하고 avatar 등 다른 필드는 반영
+        const avatarChanged = fresh.avatar && fresh.avatar !== current?.avatar;
+        if (avatarChanged) {
+          const updated = { ...current, avatar: fresh.avatar };
+          localStorage.setItem('user', JSON.stringify(updated));
+          set({ user: updated });
+        }
+        return;
+      }
+
+      const tierChanged = serverTier !== (current?.tier || 'FREE');
       const avatarChanged = fresh.avatar && fresh.avatar !== current?.avatar;
 
       if (tierChanged || avatarChanged) {
-        const updated = { ...current, ...fresh };
+        const updated = { ...current, ...fresh, tier: serverTier };
         localStorage.setItem('user', JSON.stringify(updated));
-        if (fresh.tier) localStorage.setItem('userTier', fresh.tier);
-        set({ user: updated, userTier: fresh.tier || get().userTier });
+        if (serverTier) localStorage.setItem('userTier', serverTier);
+        set({ user: updated, userTier: serverTier });
         if (!import.meta.env.PROD) console.log('[syncFromServer] 사용자 정보 갱신:', { tierChanged, avatarChanged });
       }
     } catch (e) { /* 네트워크 오류 시 무시 */ }
@@ -317,12 +350,11 @@ export const useUserStore = create((set, get) => ({
   },
   isAdmin: () => {
     const state = get();
-    // ✅ FIX-ADMIN: 어드민 판별 3중 보장
-    // 1) user.id === 'sunjulab'               (서버가 반환하는 resolved-id)
-    // 2) user.email === 'sunjulab.k'          (마스터 계정 이메일)
+    // ✅ FIX-ADMIN: 어드민 판별 4중 보장
+    // 1) user.id === 'sunjulab.k'              (서버 buildUserResponse가 MASTER 계정에 반환하는 resolved-id)
+    // 2) user.email === 'sunjulab.k'           (마스터 계정 이메일)
     // 3) user.email === 'sunjulab.k@gmail.com' (Gmail OAuth)
-    // 4) userTier === 'MASTER'                (서버 설정 티어)
-    // ⚠️ email===ADMIN_ID 체크 제거 — 'sunjulab' 이메일은 VIP 테스트 계정이므로 제외
+    // 4) userTier === 'MASTER'                 (서버 설정 티어)
     return (
       state.user?.id === ADMIN_ID ||
       state.user?.email === ADMIN_EMAIL ||

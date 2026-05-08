@@ -14,6 +14,7 @@ import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, SECRET_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
 import { useUserStore, TIER_CONFIG, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+import CsInquirySection from '../components/CsInquirySection';
 
 // ✅ 5TH-C4: EMOJI_MAP — WeatherDashboard와 동일 객체; 향후 constants/ui.js 추출 검토 권장
 
@@ -62,6 +63,9 @@ export default function MapHome() {
   // 시간 표시는 컴포넌트 내 LiveClock 컴포넌트가 도맡
   const [showSecretPoints, setShowSecretPoints] = useState(false);
   const [precisionData, setPrecisionData]       = useState(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  // ✅ REALTIME-FIX: 실시간 점수 갱신 용 tick (10분마다 증가 → useMemo 재계산 트리거)
+  const [rankTick, setRankTick] = useState(0);
   // ── 즐겨찾기 (로컬 + DB 이중 동기화) ─────────────────────────
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('fishing_favorites') || '[]'); } catch { return []; }
@@ -70,6 +74,12 @@ export default function MapHome() {
 
   // ✅ 5TH-A5: currentTime setInterval 제거 — LiveClock 컴포넌트가 도맡하므로 MapHome 리렌더 불필요
   // 기존: setInterval(() => setCurrentTime(new Date()), 60000) 제거
+
+  // ✅ REALTIME-FIX: 10분마다 rankTick 증가 → PREMIUM_POINTS 점수 재계산 유도
+  useEffect(() => {
+    const id = setInterval(() => setRankTick(t => t + 1), 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // 즐겨찾기 DB 동기화 (로그인 시 서버에서 불러오기)
   useEffect(() => {
@@ -225,10 +235,54 @@ export default function MapHome() {
   }, [viewMode]);
 
 
+  /* ── FREE 플랜 포인트 입장 일일 제한 체크 ── */
+  // 로그인 사용자: 서버 API 기준 (DB 이중 기록, KST 자정 리셋)
+  // GUEST: sessionStorage 기준 하루 1회 제한 (시크릿탭 우회 최소화)
+  const checkDailyPointVisit = useCallback(async () => {
+    const userId = user?.email || user?.id;
+    const isGuest = !userId || userId === 'GUEST';
+
+    if (isGuest) {
+      // GUEST: sessionStorage 기반 — 탭 종료 시 리셋 (시크릿탭 어뷰징 차단 강화)
+      const GUEST_LIMIT = 1;
+      const KEY = 'fg_guest_pv'; // { count, date }
+      const todayKst = (() => {
+        const kstMs = Date.now() + 9 * 60 * 60 * 1000;
+        return new Date(kstMs).toISOString().split('T')[0];
+      })();
+      let rec = { count: 0, date: '' };
+      try { rec = JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch { rec = { count: 0, date: '' }; }
+      if (rec.date !== todayKst) rec = { count: 0, date: todayKst };
+      if (rec.count >= GUEST_LIMIT) return false;
+      rec.count += 1;
+      try { sessionStorage.setItem(KEY, JSON.stringify(rec)); } catch { /* 스토리지 차단 시 허용 */ }
+      return true;
+    }
+
+    // 로그인 사용자: 서버 API 호출
+    try {
+      const res = await apiClient.post('/api/user/point-visit-check');
+      return res.data?.allowed !== false;
+    } catch {
+      // 서버 오류 시 fail-open (UX 보호 우선)
+      return true;
+    }
+  }, [user?.email, user?.id]);
+
   /* ── 포인트 클릭 ── */
   // ✅ 5TH-B1: useCallback — 마커 useEffect 업데이트 시 매 렌더마다 새 함수 생성 방지
   // ✅ FIX-TDZ: 마커 렌더링 useEffect보다 먼저 선언해야 TDZ(Cannot access before initialization) 방지
   const handlePointClick = useCallback(async (point, fromDashboard = false) => {
+    // ✅ FREE-LIMIT: 무료 플랜 일일 3회 제한 게이팅
+    if (!canAccessPremium && !isAdmin) {
+      const allowed = await checkDailyPointVisit();
+      if (!allowed) {
+        addToast('🔒 오늘 무료 입장 횟수를 모두 사용했습니다. LITE 플랜에서 무제한 입장!', 'error');
+        setShowUpgradeModal(true);
+        return;
+      }
+    }
+
     setSelectedPoint(point);
     setPrecisionData(null);
     setLoading(true);
@@ -245,7 +299,7 @@ export default function MapHome() {
       setPrecisionData(getPointSpecificData(point));
     } finally { setLoading(false); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [canAccessPremium, isAdmin, checkDailyPointVisit]);
 
   /* ── 마커 렌더링 (최적화) ── */
   useEffect(() => {
@@ -329,7 +383,9 @@ export default function MapHome() {
       overlay.setMap(mapRef.current);
       secretMarkersRef.current.push(overlay);
     });
-  }, [mapLoaded, showSecretPoints, effectiveSecretPoints]);
+  // \u2705 BUG-FIX: handlePointClick\uc744 deps\uc5d0 \ud3ec\ud568 \u2014 \ud074\ub85c\uc800 stale \ubc29\uc9c0 (canAccessPremium \ubcc0\uacbd \ud6c4 \uac31\uc2e0 \ubcf4\uc7a5)
+  }, [mapLoaded, showSecretPoints, effectiveSecretPoints, handlePointClick]);
+
 
 
   /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
@@ -498,7 +554,18 @@ export default function MapHome() {
   const isGolden    = score >= 90;
   const tideData    = currentData;
   const phase       = tideData.tide?.phase || '7물(사리)';
-  const PREMIUM_POINTS = ALL_FISHING_POINTS.filter(p => p.score >= 90).slice(0, 8);
+  // ✅ SORT-FIX: getPointSpecificData(p)로 실제 날씨(wind/wave/sst/tide) 전달 — 가짜 {sst:p.score/6} 제거
+  // 이전 코드는 wind/wave/tide 없이 가짜 데이터를 전달해 모든 포인트가 거의 동일한 점수를 받았음
+  const PREMIUM_POINTS = useMemo(() =>
+    [...ALL_FISHING_POINTS]
+      .map(p => {
+        const weatherData = getPointSpecificData(p);      // 실제 캐시된 날씨 데이터
+        const liveScore = evaluateFishingCondition(weatherData, p).score;
+        return { ...p, _liveScore: liveScore };
+      })
+      .sort((a, b) => b._liveScore - a._liveScore)        // 높은 점수 → 낮은 점수 내림차순
+      .slice(0, 8)                                        // 상위 8개만 표시
+  , [rankTick]); // ✅ REALTIME-FIX: 10분 주기로 날씨기반 점수 재계산
 
   /* ── 낚시점수 원 색상 계산 ── */
   const getScoreCircleStyle = (s) => {
@@ -1166,54 +1233,40 @@ export default function MapHome() {
                   </div>
                 </div>
               ) : (
-                /* ── 무료 회원: 멤버십 구독 카드 ── */
-                <div style={{ background: 'linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 100%)', borderRadius: '22px', padding: '20px 18px', border: '1px solid rgba(255,215,0,0.18)', boxShadow: '0 14px 40px rgba(0,0,0,0.25)', position: 'relative', overflow: 'hidden' }}>
+                /* ── 무료 회원: 심플 구독 유도 카드 (가격/플랜 최소화) ── */
+                <div
+                  onClick={() => navigate('/vvip-subscribe')}
+                  style={{
+                    background: 'linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 100%)',
+                    borderRadius: '22px', padding: '18px 20px',
+                    border: '1px solid rgba(255,215,0,0.22)',
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.22)',
+                    position: 'relative', overflow: 'hidden', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    transition: 'transform 0.15s',
+                  }}
+                  onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+                  onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
                   {/* 배경 글로우 */}
-                  <div style={{ position: 'absolute', top: '-30%', right: '-15%', width: '140px', height: '140px', background: 'radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)', filter: 'blur(25px)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', bottom: '-40%', left: '-10%', width: '100px', height: '100px', background: 'radial-gradient(circle, rgba(0,196,140,0.1) 0%, transparent 70%)', filter: 'blur(18px)', pointerEvents: 'none' }} />
-
-                  {/* 헤더 */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', position: 'relative', zIndex: 1 }}>
-                    <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(255,215,0,0.35)', flexShrink: 0 }}>
-                      <Crown size={20} color="#5C3A00" fill="#5C3A00" />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '15px', fontWeight: '950', color: '#fff', letterSpacing: '-0.02em' }}>프리미엄 멤버십</div>
-                      <div style={{ fontSize: '10px', color: 'rgba(255,215,0,0.7)', fontWeight: '700' }}>비밀 포인트 25곳 + 프리미엄 기능 전체 이용</div>
-                    </div>
+                  <div style={{ position: 'absolute', top: '-40%', right: '-10%', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(255,215,0,0.14) 0%, transparent 70%)', filter: 'blur(22px)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', bottom: '-40%', left: '-5%', width: '90px', height: '90px', background: 'radial-gradient(circle, rgba(0,196,140,0.1) 0%, transparent 70%)', filter: 'blur(16px)', pointerEvents: 'none' }} />
+                  {/* 왕관 아이콘 */}
+                  <div style={{ position: 'relative', width: '48px', height: '48px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 6px 18px rgba(255,215,0,0.35)', zIndex: 1 }}>
+                    <Crown size={24} color="#5C3A00" fill="#5C3A00" />
+                    <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '11px', height: '11px', background: '#00C48C', borderRadius: '50%', border: '2px solid #1A1A2E', animation: 'pulse 2s infinite' }} />
                   </div>
-
-                  {/* 플랜 카드 3종 */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', position: 'relative', zIndex: 1 }}>
-                    {[
-                      { name: 'LITE', price: '₩9,900', period: '/월', color: '#A0A0A0', bg: 'rgba(160,160,160,0.1)', border: 'rgba(160,160,160,0.25)', features: ['비밀포인트 25곳', '히트맵 이용', 'CCTV 이용'], badge: null },
-                      { name: 'PRO', price: '₩110,000', period: '/월', color: '#64B5F6', bg: 'rgba(21,101,192,0.15)', border: 'rgba(100,181,246,0.35)', features: ['LITE 전체 포함', '선상 홍보 게시', '우선 노출'], badge: '인기', hot: true },
-                      { name: 'VVIP', price: '₩550,000', period: '/월', color: '#FFD700', bg: 'rgba(255,215,0,0.1)', border: 'rgba(255,215,0,0.35)', features: ['PRO 전체 포함', '항구 독점 선점', '전용 뱃지'], badge: '독점' },
-                    ].map(plan => (
-                      <div key={plan.name} onClick={() => navigate('/vvip-subscribe')} style={{ flex: 1, background: plan.bg, border: `1.5px solid ${plan.border}`, borderRadius: '14px', padding: '12px 8px', textAlign: 'center', cursor: 'pointer', position: 'relative', transition: 'transform 0.15s' }}
-                        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-                        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        {plan.badge && (
-                          <div style={{ position: 'absolute', top: '-8px', left: '50%', transform: 'translateX(-50%)', background: plan.hot ? '#1565C0' : 'linear-gradient(135deg,#FFD700,#FFA000)', color: plan.hot ? '#fff' : '#5C3A00', fontSize: '8px', fontWeight: '900', padding: '2px 8px', borderRadius: '10px', whiteSpace: 'nowrap' }}>{plan.badge}</div>
-                        )}
-                        <div style={{ fontSize: '11px', fontWeight: '900', color: plan.color, marginBottom: '4px' }}>{plan.name}</div>
-                        <div style={{ fontSize: '13px', fontWeight: '950', color: '#fff', lineHeight: 1 }}>{plan.price}</div>
-                        <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>{plan.period}</div>
-                        {plan.features.map((f, i) => (
-                          <div key={i} style={{ fontSize: '8px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', marginTop: '2px' }}>✓ {f}</div>
-                        ))}
-                      </div>
-                    ))}
+                  {/* 텍스트 */}
+                  <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+                    <div style={{ fontSize: '15px', fontWeight: '950', color: '#fff', letterSpacing: '-0.02em', marginBottom: '4px' }}>프리미엄 멤버십</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,215,0,0.75)', fontWeight: '700' }}>비밀 포인트 · CCTV · 히트맵 이용</div>
                   </div>
-
-                  {/* 구독 CTA 버튼 */}
-                  <button onClick={() => navigate('/vvip-subscribe')} style={{ position: 'relative', zIndex: 1, width: '100%', padding: '13px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', border: 'none', borderRadius: '14px', fontSize: '13px', fontWeight: '950', color: '#1A1A2E', cursor: 'pointer', boxShadow: '0 6px 20px rgba(255,215,0,0.3)', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <Crown size={15} color="#5C3A00" fill="#5C3A00" />
-                    멤버십 구독하기
-                    <span style={{ fontSize: '12px' }}>›</span>
-                  </button>
+                  {/* CTA 화살표 버튼 */}
+                  <div style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '30px', padding: '9px 16px', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, boxShadow: '0 4px 14px rgba(255,215,0,0.4)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap' }}>구독하러 가기</span>
+                    <span style={{ fontSize: '13px', color: '#1A1A2E', fontWeight: '900' }}>›</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1226,23 +1279,25 @@ export default function MapHome() {
                 <span onClick={() => setViewMode('map')} style={{ fontSize: '11px', color: '#1565C0', fontWeight: '800', cursor: 'pointer' }}>지도보기 →</span>
               </div>
               <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', padding: '2px 16px 10px', scrollbarWidth: 'none' }}>
-                {PREMIUM_POINTS.map(point => {
-                  const cond = evaluateFishingCondition({ stationId: point.obsCode, sst: point.score / 6 }, point);
+                {PREMIUM_POINTS.map((point, rank) => {
+                  // ✅ SORT-ENH: _liveScore는 useMemo에서 미리 계산됨
+                  const liveScore = point._liveScore ?? 0;
+                  const scoreColor = liveScore >= 90 ? '#00C48C' : liveScore >= 75 ? '#1565C0' : liveScore >= 50 ? '#FF9B26' : '#FF5A5F';
+                  const statusLabel = liveScore >= 90 ? '최고' : liveScore >= 75 ? '활발' : liveScore >= 50 ? '보통' : 'POOR';
                   return (
                     <div key={point.id}
                       onClick={() => { setViewMode('map'); handlePointClick(point); }}
-                      style={{ minWidth: '140px', background: '#fff', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(0,0,0,0.06)', border: '1px solid #F0F2F7', cursor: 'pointer', transition: 'transform 0.15s' }}
+                      style={{ minWidth: '140px', background: '#fff', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(0,0,0,0.06)', border: `1px solid ${rank === 0 ? 'rgba(0,196,140,0.35)' : '#F0F2F7'}`, cursor: 'pointer', transition: 'transform 0.15s' }}
                       onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
                       onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                       onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      <div style={{ width: '100%', height: '90px', background: 'linear-gradient(135deg, #E8F0FE, #D2E3FC)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '100%', height: '90px', background: rank === 0 ? 'linear-gradient(135deg, #E0F7EF, #C8F0E0)' : 'linear-gradient(135deg, #E8F0FE, #D2E3FC)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ fontSize: '32px' }}>{EMOJI_MAP[point.type] || '⚓'}</span>
-                        <div style={{ position: 'absolute', top: '6px', left: '6px', background: cond.color || '#8E8E93', borderRadius: '6px', padding: '2px 6px' }}>
-                          <span style={{ fontSize: '8px', fontWeight: '900', color: '#fff' }}>{cond.status}</span>
-                        </div>
-                        <div style={{ position: 'absolute', top: '6px', right: '6px', background: '#FFD700', borderRadius: '6px', padding: '2px 6px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                          <span style={{ fontSize: '9px', fontWeight: '900', color: '#1A1A2E' }}>{cond.score}점</span>
+                        {rank === 0 && <div style={{ position: 'absolute', top: '6px', left: '6px', background: 'linear-gradient(135deg,#00C48C,#00897B)', borderRadius: '6px', padding: '2px 7px' }}><span style={{ fontSize: '8px', fontWeight: '900', color: '#fff' }}>🏆 1위</span></div>}
+                        {rank > 0 && <div style={{ position: 'absolute', top: '6px', left: '6px', background: scoreColor, borderRadius: '6px', padding: '2px 6px' }}><span style={{ fontSize: '8px', fontWeight: '900', color: '#fff' }}>{statusLabel}</span></div>}
+                        <div style={{ position: 'absolute', top: '6px', right: '6px', background: liveScore >= 75 ? '#FFD700' : 'rgba(0,0,0,0.55)', borderRadius: '6px', padding: '2px 6px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                          <span style={{ fontSize: '9px', fontWeight: '900', color: liveScore >= 75 ? '#1A1A2E' : '#fff' }}>{liveScore}점</span>
                         </div>
                       </div>
                       <div style={{ padding: '8px 10px' }}>
@@ -1307,8 +1362,59 @@ export default function MapHome() {
                 </div>
               </div>
             </div>
+
+            {/* ── 1:1 고객센터 문의 ─────────────────────────────────── */}
+            <CsInquirySection user={user} isAdmin={isAdmin} />
+
+
           </div>
         </div>
+
+        {/* ── FREE 플랜 업그레이드 유도 모달 ── */}
+
+        {showUpgradeModal && (
+          <div
+            onClick={() => setShowUpgradeModal(false)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1200, backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'linear-gradient(160deg, #0a0a1a 0%, #0d1b3e 100%)', borderRadius: '28px', padding: '32px 28px', width: '100%', maxWidth: '380px', border: '1.5px solid rgba(100,160,255,0.25)', boxShadow: '0 24px 80px rgba(0,86,210,0.35)' }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ fontSize: '48px', marginBottom: '14px' }}>🔒</div>
+                <div style={{ fontSize: '18px', fontWeight: '950', color: '#fff', letterSpacing: '-0.04em', marginBottom: '8px' }}>오늘 무료 입장 3회 완료</div>
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: 1.6 }}>
+                  무료 플랜은 포인트 상세를 하루 3회까지 열람할 수 있어요.<br/>
+                  <strong style={{ color: '#64B5F6' }}>LITE 이상 플랜에서 무제한 입장</strong> 가능합니다.
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(100,160,255,0.08)', borderRadius: '16px', padding: '16px', marginBottom: '20px', border: '1px solid rgba(100,160,255,0.15)' }}>
+                <div style={{ fontSize: '11px', fontWeight: '900', color: '#64B5F6', marginBottom: '10px', letterSpacing: '0.04em' }}>⭐ LITE 플랜 혜택</div>
+                {[['🗺️ 포인트 상세', '무제한 입장'], ['📡 실시간 CCTV', '라이브 영상'], ['⭐ 비밀포인트', '황금 포인트 공개'], ['🔥 스마트 히트맵', '수온·조황 분석']].map(([icon, desc]) => (
+                  <div key={icon} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>
+                    <span>{icon}</span>
+                    <span style={{ color: '#00C48C' }}>✓ {desc}</span>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => { setShowUpgradeModal(false); navigate('/vvip-subscribe'); }}
+                style={{ width: '100%', padding: '15px', background: 'linear-gradient(135deg, #1565C0, #0D47A1)', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '14px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px', boxShadow: '0 8px 24px rgba(21,101,192,0.5)', letterSpacing: '-0.03em' }}
+              >
+                🚀 LITE 플랜으로 업그레이드
+              </button>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                style={{ width: '100%', padding: '12px', background: 'transparent', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                내일 다시 방문하기
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── 바텀 시트 (포인트 상세) ── */}
         {/* 배경 오버레이 */}

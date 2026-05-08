@@ -16,13 +16,6 @@ export default function NoticeDetail() {
   // navigate state로 넘어온 데이터 우선 사용
   const [notice, setNotice] = useState(location.state?.notice || null);
   const [loading, setLoading] = useState(!location.state?.notice);
-  // ✅ 2ND-B5: 수정 모달 state 4개 → 단일 객체 응집 (NEW-B7과 동일 패턴)
-  const [editState, setEditState] = useState({ show: false, title: '', content: '', saving: false });
-  const { show: showEditModal, title: editTitle, content: editContent, saving } = editState;
-  const setShowEditModal = (v) => setEditState(s => ({ ...s, show: v }));
-  const setEditTitle    = (v) => setEditState(s => ({ ...s, title: v }));
-  const setEditContent  = (v) => setEditState(s => ({ ...s, content: v }));
-  const setSaving       = (v) => setEditState(s => ({ ...s, saving: v }));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ✅ 11TH-A2: state.isAdmin() 셉렉터 → ADMIN_ID/EMAIL 직접 비교 (3RD-A2 표준으로 통일)
@@ -53,19 +46,9 @@ export default function NoticeDetail() {
     // ✅ 23TH-C4: fetchNotice가 useCallback으로 안정화되어 eslint-disable 없이 deps 포함
   }, [fetchNotice, location.state?.notice]);
 
-  const handleEdit = async () => {
-    if (!editTitle.trim() || !editContent.trim()) { addToast('제목과 내용을 입력해주세요.', 'error'); return; }
-    setSaving(true);
-    try {
-      const res = await apiClient.put(`/api/community/notices/${id}`, {
-        title: editTitle.trim(), content: editContent.trim()
-      });
-      setNotice(res.data);
-      setShowEditModal(false);
-      addToast('📢 공지사항이 수정되었습니다!', 'success');
-    } catch (err) {
-      addToast(err.response?.data?.error || '수정 실패', 'error');
-    } finally { setSaving(false); }
+  // ✅ EDIT-FULL: 인라인 모달 → WritePost 전체화면 수정으로 교체
+  const handleEditNavigate = () => {
+    navigate(`/write?type=notice&editId=${id}`);
   };
 
   const handleDelete = async () => {
@@ -102,7 +85,7 @@ export default function NoticeDetail() {
         {isAdmin ? (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={() => { setEditTitle(notice.title); setEditContent(notice.content); setShowEditModal(true); }}
+              onClick={handleEditNavigate}
               style={{ background: 'rgba(0,86,210,0.08)', border: 'none', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', color: '#0056D2', fontWeight: '800', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}
             >
               <Edit2 size={14} /> 수정
@@ -165,33 +148,6 @@ export default function NoticeDetail() {
         </button>
       </div>
 
-      {/* 수정 모달 */}
-      {showEditModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '24px 24px 0 0', padding: '24px', width: '100%', maxWidth: '430px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '900', marginBottom: '16px' }}>📢 공지사항 수정</h3>
-            <input
-              value={editTitle}
-              onChange={e => setEditTitle(e.target.value)}
-              placeholder="제목"
-              style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '15px', fontWeight: '700', marginBottom: '12px', boxSizing: 'border-box', outline: 'none' }}
-            />
-            <textarea
-              value={editContent}
-              onChange={e => setEditContent(e.target.value)}
-              rows={6}
-              placeholder="내용"
-              style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '15px', lineHeight: '1.6', resize: 'none', boxSizing: 'border-box', outline: 'none' }}
-            />
-            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-              <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: '1.5px solid #E5E5EA', background: '#fff', fontSize: '15px', fontWeight: '800', cursor: 'pointer', color: '#555' }}>취소</button>
-              <button onClick={handleEdit} disabled={saving} style={{ flex: 2, padding: '14px', borderRadius: '14px', border: 'none', background: '#0056D2', color: '#fff', fontSize: '15px', fontWeight: '900', cursor: 'pointer' }}>
-                {saving ? '저장 중...' : '수정 완료'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 삭제 확인 다이얼로그 */}
       {showDeleteConfirm && (

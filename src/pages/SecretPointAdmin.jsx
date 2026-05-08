@@ -73,6 +73,23 @@ export default function SecretPointAdmin() {
     else window.kakao.maps.load(doInit);
   }, []);
 
+  /* ── 마커 놓기 ── */
+  // ✅ FIX-TDZ: 클릭 리스너 useEffect보다 반드시 먼저 선언 — const는 선언 전 참조 시 TDZ ReferenceError 발생
+  // ✅ 19TH-B3: useCallback 적용 — refs/setter만 참조하므로 deps 빈 배열 안전
+  const placeMarker = useCallback((lat, lng, label, source) => {
+    if (!mapInstanceRef.current) return;
+    const latlng = new window.kakao.maps.LatLng(lat, lng);
+    mapInstanceRef.current.setCenter(latlng);
+    if (markerRef.current) markerRef.current.setMap(null);
+    const marker = new window.kakao.maps.Marker({ position: latlng, map: mapInstanceRef.current });
+    const iw = new window.kakao.maps.InfoWindow({
+      content: `<div style="padding:5px 9px;font-size:11px;font-weight:700">${label}<br/><span style="font-size:10px;color:#555;font-family:monospace">${lat.toFixed(5)}, ${lng.toFixed(5)}</span></div>`,
+    });
+    iw.open(mapInstanceRef.current, marker);
+    markerRef.current = marker;
+    setPreviewCoords({ lat, lng, source });
+  }, []); // refs·setters만 참조 — stable
+
   /* ── 클릭 모드 리스너 ── */
   useEffect(() => {
     if (!mapInstanceRef.current || !mapReady) return;
@@ -89,7 +106,7 @@ export default function SecretPointAdmin() {
       if (clickListenerRef.current && mapInstanceRef.current)
         window.kakao.maps.event.removeListener(mapInstanceRef.current, 'click', clickListenerRef.current);
     };
-  }, [inputMode, mapReady, placeMarker]); // ✅ 19TH-B3: placeMarker useCallback 안정화 후 deps 추가, eslint-disable 제거
+  }, [inputMode, mapReady, placeMarker]); // ✅ 19TH-B3: placeMarker useCallback 안정화 후 deps 추가
 
   /* ── 포인트 선택 → 지도 이동 ── */
   useEffect(() => {
@@ -106,23 +123,9 @@ export default function SecretPointAdmin() {
   // ✅ 19TH-B3: overrides는 포인트 선택 시점 스냅샷 참조 — deps 추가 시 오버라이드 변경마다 마커 재설정되므로 의도적 제외
   }, [selectedPoint, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── 마커 놓기 ── */
-  // ✅ 19TH-B3: useCallback 적용 — refs/setter만 참조하므로 deps 빈 배열 안전 (click listener eslint-disable 제거)
-  const placeMarker = useCallback((lat, lng, label, source) => {
-    if (!mapInstanceRef.current) return;
-    const latlng = new window.kakao.maps.LatLng(lat, lng);
-    mapInstanceRef.current.setCenter(latlng);
-    if (markerRef.current) markerRef.current.setMap(null);
-    const marker = new window.kakao.maps.Marker({ position: latlng, map: mapInstanceRef.current });
-    const iw = new window.kakao.maps.InfoWindow({
-      content: `<div style="padding:5px 9px;font-size:11px;font-weight:700">${label}<br/><span style="font-size:10px;color:#555;font-family:monospace">${lat.toFixed(5)}, ${lng.toFixed(5)}</span></div>`,
-    });
-    iw.open(mapInstanceRef.current, marker);
-    markerRef.current = marker;
-    setPreviewCoords({ lat, lng, source });
-  }, []); // refs·setters만 참조 — stable
 
   /* ── 주소 검색 ── */
+
   const handleSearch = () => {
     if (!addressInput.trim()) return;
     setSearching(true); setSearchResults([]);

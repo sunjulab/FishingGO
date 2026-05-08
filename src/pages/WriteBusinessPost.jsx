@@ -17,7 +17,9 @@ import { fileToCompressedBase64 } from '../utils/imageUtils';
 const FISH_TYPES = ['감성돔', '참돔', '방어', '광어', '대구', '문어', '쭈꾸미', '갑오징어', '우럭', '농어', '삼치', '고등어', '장어'];
 const BOAT_TYPES = ['선상낚시', '야간선상', '에깅/문어', '선상루어', '캐스팅', '심해낚시', '갯바위 투어'];
 const REGIONS = [
-  // 강원 (동해) — 강릉·강문은 '강원 강릉'으로 통합
+  // ✅ 마스터 전용: 전국 공지
+  '전국 (전체)',
+  // 강원 (동해)
   '강원 강릉', '강원 주문진', '강원 속초', '강원 고성(거진)', '강원 양양(낙산)', '강원 양양(남애)', '강원 동해(묵호)', '강원 삼척',
   // 경북 (동해)
   '경북 구룡포(포항)', '경북 감포(경주)', '경북 강구(영덕)', '경북 후포(울진)', '경북 죽변(울진)',
@@ -40,7 +42,8 @@ const REGIONS = [
 // ✅ 7TH-B6: Math.random() 홍보문구 템플릿 선택 → 페이로드 해시 기반 결정론적 선택
 // (shipName + region + boatType의 코드포인트 합산으로 일관된 템플릿 선택)
 function generatePromoText({ shipName, region, boatType, targetFish, price, schedule, capacity, phone, extraMsg }) {
-  const fishList = targetFish.join(', ');
+  // targetFish: string (직접 입력 텍스트)
+  const fishList = targetFish || '미정';
   const templates = [
     `🚢 ${region}에서 출발하는 ${shipName}과 함께 ${boatType}을 즐겨보세요! ${fishList} 전문 포인트를 직접 안내해 드립니다.\n\n초보자부터 고수까지 모두 환영! 장비 대여 완비, 친절한 가이드로 최고의 하루를 만들어 드리겠습니다.\n\n📅 일정: ${schedule}\n👥 모집 인원: ${capacity}명\n💰 가격: ${price}\n📞 문의: ${phone}`,
     `✨ [${shipName}] ${boatType} — ${region} 출항\n\n타겟 어종: ${fishList}\n현지 베테랑 선장이 비밀 포인트로 직접 안내합니다. ${extraMsg || '여러분의 첫 대물을 저희와 함께 만나보세요.'}\n\n출조 일정: ${schedule} | 정원: ${capacity}명\n인당 요금: ${price} (미끼·음료 기본 제공)\n즉시 예약: ${phone}`,
@@ -60,7 +63,12 @@ export default function WriteBusinessPost() {
   const user = useUserStore((s) => s.user);
   const userTier = useUserStore((s) => s.userTier);
 
-  const isAdmin = useUserStore(s => s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL); // ✅ 7TH-A2: ADMIN_ID/ADMIN_EMAIL 직접 비교
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === 'sunjulab.k@gmail.com' || // Gmail OAuth
+    s.userTier === 'MASTER'
+  );
   const isPRO = userTier === 'PRO';
   const isVVIP = userTier === 'BUSINESS_VIP';
 
@@ -70,7 +78,7 @@ export default function WriteBusinessPost() {
   const [shipName, setShipName] = useState('');
   const [region, setRegion] = useState('');
   const [boatType, setBoatType] = useState('');
-  const [targetFish, setTargetFish] = useState([]);
+  const [targetFish, setTargetFish] = useState(''); // ✅ LOC-FISH: string 직접 입력
   const [price, setPrice] = useState('');
   const [schedule, setSchedule] = useState('');
   const [capacity, setCapacity] = useState('');
@@ -84,7 +92,7 @@ export default function WriteBusinessPost() {
   const [showAdGate, setShowAdGate] = useState(false);
   const generateTimerRef = useRef(null); // ✅ 19TH-B2: AI 생성 타이머 ref — 언마운트 후 setState 방지
 
-  const isReady = shipName && region && boatType && targetFish.length > 0 && price && schedule && capacity && phone;
+  const isReady = shipName && region && boatType && targetFish.trim() && price && schedule && capacity && phone;
 
   // 수정 모드: 기존 데이터 불러오기
   useEffect(() => {
@@ -95,7 +103,7 @@ export default function WriteBusinessPost() {
         setShipName(data.shipName || '');
         setRegion(data.region || '');
         setBoatType(data.type || '');
-        setTargetFish(data.target ? data.target.split('/').filter(Boolean) : []); // ✅ BUG-64: null guard + empty string 방어
+        setTargetFish(data.target || ''); // ✅ LOC-FISH: 문자열 그대로 로드
         setPrice(data.price || '');
         setSchedule(data.date || '');
         setCapacity(String(data.capacity || ''));
@@ -108,10 +116,14 @@ export default function WriteBusinessPost() {
       .catch((e) => { if (!import.meta.env.PROD) console.warn('[WriteBusinessPost] 수정 데이터 로드 실패:', e); }); // ✅ 19TH-B1: silent catch → 개발 환경 경고
   }, [editId]);
 
-  const toggleFish = (fish) => {
-    setTargetFish(prev =>
-      prev.includes(fish) ? prev.filter(f => f !== fish) : (prev.length < 4 ? [...prev, fish] : prev)
-    );
+  // ✅ LOC-FISH: 칩 클릭 → 텍스트에 어종명 추가 (중복 방지)
+  const appendFish = (fish) => {
+    setTargetFish(prev => {
+      const parts = prev.split('/').map(s => s.trim()).filter(Boolean);
+      if (parts.includes(fish)) return prev; // 중복 방지
+      if (parts.length >= 4) return prev;    // 최대 4종
+      return prev.trim() ? `${prev.trim()} / ${fish}` : fish;
+    });
   };
 
   // ✅ 19TH-B2: 언마운트 시 AI 생성 타이머 정리
@@ -141,10 +153,11 @@ export default function WriteBusinessPost() {
       return;
     }
     if (!isReady || !content.trim()) { addToast('모든 항목을 입력하고 홍보 문구를 생성해주세요.', 'error'); return; }
-    // 인원 숫자 검증
+    // ✅ 인원 숫자 검증 — 마스터는 1~1000, 일반유저는 1~200
     const cap = Number(capacity);
-    if (!cap || isNaN(cap) || cap < 1 || cap > 200) {
-      addToast('인원은 1~200사이의 숫자로 입력해주세요.', 'error');
+    const maxCap = isAdmin ? 1000 : 200;
+    if (!capacity || isNaN(cap) || cap < 1 || cap > maxCap) {
+      addToast(`인원은 1~${maxCap}사이의 숫자로 입력해주세요.`, 'error');
       return;
     }
     // 전화번호 형식 검증
@@ -166,7 +179,7 @@ export default function WriteBusinessPost() {
         author_email: storedUser.email,
         shipName, region,
         type: boatType,
-        target: targetFish.join('/'),
+        target: targetFish.trim() || '미정',
         price, date: schedule,
         capacity: Number(capacity),
         phone, content,
@@ -260,7 +273,16 @@ export default function WriteBusinessPost() {
             <input value={shipName} onChange={e => setShipName(e.target.value)} placeholder="배 이름 (예: 강릉 에이스호)" style={INPUT_STYLE} />
             <select value={region} onChange={e => setRegion(e.target.value)} style={INPUT_STYLE}>
               <option value="">📍 출항 지역 / 항구 선택</option>
-              {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+              {/* ✅ 전국(전체)는 마스터만 선택 가능 */}
+              <option
+                value="전국 (전체)"
+                disabled={!isAdmin}
+                style={{ fontWeight: '900', color: isAdmin ? '#0056D2' : '#ccc', background: isAdmin ? '#EFF7FF' : '#fafafa' }}
+              >
+                {isAdmin ? '🌐 전국 (전체) — MASTER 전용' : '🔒 전국 (전체) — 마스터 전용'}
+              </option>
+              <option disabled style={{ color: '#ccc', fontSize: '11px' }}>────────────────</option>
+              {REGIONS.filter(r => r !== '전국 (전체)').map(r => <option key={r} value={r}>{r}</option>)}
             </select>
             <select value={boatType} onChange={e => setBoatType(e.target.value)} style={INPUT_STYLE}>
               <option value="">🎣 출조 타입 선택</option>
@@ -271,17 +293,48 @@ export default function WriteBusinessPost() {
 
         {/* 목표어종 */}
         <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '8px' }}>🐟 목표 어종 (최대 4종)</div>
+          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '8px' }}>🐟 목표 어종 (직접입력 또는 아래 선택)</div>
+          {/* ── 직접 입력창 ── */}
+          <input
+            value={targetFish}
+            onChange={e => setTargetFish(e.target.value)}
+            placeholder="예: 감성돔 / 우럭 / 방어  (최대 4종, / 로 구분)"
+            style={{ ...INPUT_STYLE, marginBottom: '10px' }}
+          />
+          {/* ── 어종 칩 빠른 선택 ── */}
+          <div style={{ fontSize: '10px', color: '#aaa', fontWeight: '700', marginBottom: '6px' }}>빠른 선택 (클릭 시 자동 추가)</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {FISH_TYPES.map(fish => {
-              const selected = targetFish.includes(fish);
+              const parts = targetFish.split('/').map(s => s.trim()).filter(Boolean);
+              const selected = parts.includes(fish);
+              const maxed = parts.length >= 4 && !selected;
               return (
-                <button key={fish} onClick={() => toggleFish(fish)} style={{ padding: '6px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '800', backgroundColor: selected ? '#0056D2' : '#F2F2F7', color: selected ? '#fff' : '#555', transition: 'all 0.15s' }}>
+                <button
+                  key={fish}
+                  onClick={() => appendFish(fish)}
+                  disabled={maxed}
+                  style={{
+                    padding: '6px 12px', borderRadius: '20px', border: 'none',
+                    cursor: maxed ? 'not-allowed' : 'pointer',
+                    fontSize: '12px', fontWeight: '800',
+                    backgroundColor: selected ? '#0056D2' : maxed ? '#F8F8F8' : '#F2F2F7',
+                    color: selected ? '#fff' : maxed ? '#ccc' : '#555',
+                    transition: 'all 0.15s',
+                    opacity: maxed ? 0.5 : 1,
+                  }}
+                >
                   {selected && '✓ '}{fish}
                 </button>
               );
             })}
           </div>
+          {/* 초기화 버튼 */}
+          {targetFish && (
+            <button
+              onClick={() => setTargetFish('')}
+              style={{ marginTop: '8px', padding: '4px 10px', borderRadius: '10px', border: '1px solid #E5E5EA', background: '#fff', color: '#FF3B30', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+            >✕ 초기화</button>
+          )}
         </section>
 
         {/* 출조 상세 */}
@@ -290,7 +343,15 @@ export default function WriteBusinessPost() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <input value={price} onChange={e => setPrice(e.target.value)} placeholder="💰 인당 가격 (예: 인당 12만원)" style={INPUT_STYLE} />
             <input value={schedule} onChange={e => setSchedule(e.target.value)} placeholder="📅 출조 일정 (예: 매주 주말 오전 5시 출항)" style={INPUT_STYLE} />
-            <input value={capacity} onChange={e => setCapacity(e.target.value.replace(/[^0-9]/g, ''))} placeholder="👥 모집 인원 (숫자만, 예: 8)" style={INPUT_STYLE} type="number" />
+            <input
+              value={capacity}
+              onChange={e => setCapacity(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder={isAdmin ? '👥 모집 인원 (1~1000명, 전국 공지용)' : '👥 모집 인원 (숫자만, 최대 200명)'}
+              style={INPUT_STYLE}
+              type="number"
+              min="1"
+              max={isAdmin ? 1000 : 200}
+            />
           </div>
         </section>
 
@@ -417,7 +478,7 @@ export default function WriteBusinessPost() {
                   </div>
                   <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#555', lineHeight: '1.5' }}>{(content || '').slice(0, 52)}...</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
-                    <span style={{ background: '#F4F6FA', padding: '4px 10px', borderRadius: '8px', color: '#333' }}>{targetFish.join('/')}</span>
+                    <span style={{ background: '#F4F6FA', padding: '4px 10px', borderRadius: '8px', color: '#333' }}>{targetFish || '미정'}</span>
                     <span style={{ background: '#F4F6FA', padding: '4px 10px', borderRadius: '8px', color: '#333' }}>{schedule}</span>
                     <span style={{ background: '#FFF3E0', padding: '4px 10px', borderRadius: '8px', color: '#E65100', fontWeight: '900' }}>인당 {price}</span>
                   </div>

@@ -8,7 +8,7 @@ import {
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
   ShieldAlert, ChevronRight, LayoutGrid, Edit3, Check, X, 
   Trophy, Star, Heart, MessageSquare, Camera, History,
-  ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon
+  ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon, Users
 } from 'lucide-react';
 
 // ✅ 6TH-C1: MENU_ITEMS 컴포넌트 외부 상수 — 불변 배열이므로 매 렌더마다 재생성 불필요
@@ -32,6 +32,10 @@ const safeLS = {
 // 알림 설정 기본값 (컴포넌트 외부 상수 — 렌더마다 새 객체 생성 방지)
 const DEFAULT_NOTI = { flow: true, bait: true, comm: true };
 
+// ✅ TIER-PROTECT: 티어 우선순위 맵 (0=무료, 4=마스터) — 컨포넌트 외부 상수
+const TIER_RANK_CLIENT = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
+const PROTECTED_TIERS_CLIENT = ['PRO', 'BUSINESS_VIP', 'MASTER'];
+
 
 export default function MyPage() {
   const navigate = useNavigate();
@@ -44,16 +48,17 @@ export default function MyPage() {
   const addToast = useToastStore(s => s.addToast);
   const fileInputRef = useRef(null);
   // ✅ FIX-ADMIN: isAdmin 4중 보장
-  // - user.id === 'sunjulab' (ID 로 로그인 시 서버가 id를 'sunjulab'으로 고정 반환 후)
-  // - user.email === 'sunjulab.k@gmail.com' (구글 소셜)
-  // - user.email === 'sunjulab' (이메일 필드를 ID로 사용하여 가입한 경우)
+  // - user.id === 'sunjulab.k' (서버 buildUserResponse가 MASTER 계정에 반환하는 resolved id)
+  // - user.email === 'sunjulab.k' (마스터 계정 이메일)
+  // - user.email === 'sunjulab.k@gmail.com' (구글 소셜 로그인)
   // - userTier === 'MASTER' (tier 서버에서 MASTER로 설정된 경우)
   const isAdmin = useUserStore(s =>
     s.user?.id === ADMIN_ID ||
     s.user?.email === ADMIN_EMAIL ||
-    s.user?.email === ADMIN_ID ||
+    s.user?.email === 'sunjulab.k@gmail.com' ||
     s.userTier === 'MASTER'
   );
+
   const tierBadge = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
   const levelInfo  = getLevelInfo(user?.totalExp || 0);
   
@@ -62,7 +67,27 @@ export default function MyPage() {
   
   const [realPosts, setRealPosts] = useState([]);
   const [realRecords, setRealRecords] = useState([]);
+  // ✅ CREW-ENH: 내 크루 목록
+  const [myCrews, setMyCrews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [leavingCrewId, setLeavingCrewId] = useState(null); // 탈퇴 로딩 크루 ID
+
+  // ✅ FOLLOW-ENH: 팔로워/팔로잉 모달 상태
+  const [followModal, setFollowModal] = useState(null);
+  const [followList, setFollowList]   = useState([]);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  // ✅ BIZ-ENH: 비즈니스 파트너 센터 상태
+  const [bizPhoneModal, setBizPhoneModal]       = useState(false);  // 연락처 확인 모달
+  const [bizPhone, setBizPhone]                 = useState({ phone: '', shipName: '' });
+  const [galleryModal, setGalleryModal]         = useState(false);  // 조과 갤러리 등록 모달
+  const [galleryForm, setGalleryForm]           = useState({ fish: '', size: '', weight: '', location: '', memo: '', image: null });
+  const [gallerySubmitting, setGallerySubmitting] = useState(false);
+  const [myBizPosts, setMyBizPosts]             = useState([]);     // 내 선박 홍보글 목록
+  const [bizPostsModal, setBizPostsModal]       = useState(false);  // 내 선박 홍보글 모달
+  const [bizPostsLoading, setBizPostsLoading]   = useState(false);
+  const [deletingBizId, setDeletingBizId]       = useState(null);
+  const galleryFileRef = useRef(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
@@ -126,6 +151,8 @@ export default function MyPage() {
     }
   };
 
+  // ✅ TIER-PROTECT: TIER_RANK_CLIENT / PROTECTED_TIERS_CLIENT는 파일 상단 외부 상수 사용 (중복 선언 제거)
+
   const handleTierChange = async (tier, name) => {
     // VIP 플랜은 항구 선택 페이지로 이동
     if (tier === 'BUSINESS_VIP') {
@@ -146,23 +173,132 @@ export default function MyPage() {
       return;
     }
 
-    // 로컬 즉시 반영 (UX)
-    useUserStore.getState().setUserTier(tier);
-    updateUser({ tier });
-    addToast(`${name} 플랜으로 변경됐습니다.`, 'success');
-    setShowModal(null);
+    // ✅ TIER-PROTECT: 유료 구독 중 다운그레이드 차단
+    const currentRank = TIER_RANK_CLIENT[userTier] ?? 0;
+    const targetRank  = TIER_RANK_CLIENT[tier] ?? 0;
+    if (PROTECTED_TIERS_CLIENT.includes(userTier) && targetRank < currentRank) {
+      addToast(
+        `현재 ${userTier === 'BUSINESS_VIP' ? 'Business VIP' : userTier} 구독 중입니다.\n구독 해지는 고객센터를 통해 진행해주세요.`,
+        'error'
+      );
+      return;
+    }
 
-    // 서버 동기화 (백그라운드, 실패해도 로컬은 유지)
+    // 서버에 변경 요청 (먼저 서버 확인, 성공 시 로컬 반영)
     try {
       const identifier = user.email || user.id;
-      await apiClient.put('/api/user/tier', { email: identifier, tier });
+      const res = await apiClient.put('/api/user/tier', { email: identifier, tier });
+      if (res.data.success) {
+        const confirmedTier = res.data.tier || tier;
+        useUserStore.getState().setUserTier(confirmedTier);
+        updateUser({ tier: confirmedTier });
+        addToast(`${name} 플랜으로 변경됐습니다.`, 'success');
+        setShowModal(null);
+      }
     } catch (err) {
-      if (!import.meta.env.PROD) console.warn('[tierChange 서버 동기화 실패]', err.response?.data || err.message);
-      // 서버 동기화 실패해도 로컬 변경은 이미 반영됨 — 토스트 없음
+      const serverMsg = err.response?.data?.error;
+      const serverTier = err.response?.data?.currentTier;
+      if (err.response?.status === 403) {
+        // 서버가 다운그레이드 거부 → 로컬 tier를 서버 기준으로 강제 복원
+        if (serverTier) {
+          useUserStore.getState().setUserTier(serverTier);
+          updateUser({ tier: serverTier });
+        }
+        addToast(serverMsg || '구독 변경이 차단되었습니다.', 'error');
+      } else {
+        addToast(serverMsg || '플랜 변경 중 오류가 발생했습니다.', 'error');
+      }
+      if (!import.meta.env.PROD) console.warn('[tierChange 실패]', err.response?.data || err.message);
     }
   };
 
+  // ✅ FOLLOW-ENH: 팔로워/팔로잉 목록 모달 열기
+  const handleOpenFollowModal = async (type) => {
+    if (!user?.email) return;
+    setFollowList([]);
+    setFollowModal(type);
+    setFollowLoading(true);
+    try {
+      const endpoint = type === 'followers' ? '/api/user/followers' : '/api/user/following';
+      const res = await apiClient.get(`${endpoint}?email=${encodeURIComponent(user.email)}`);
+      const list = type === 'followers' ? (res.data.followers || []) : (res.data.following || []);
+      setFollowList(list);
+    } catch (err) {
+      addToast('목록을 불러오는 데 실패했습니다.', 'error');
+      setFollowModal(null);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  // ✅ BIZ-ENH: 연락처 확인 — 내 선박 등록 전화번호 조회
+  const handleOpenBizPhone = async () => {
+    try {
+      const res = await apiClient.get('/api/business/my-phone');
+      setBizPhone(res.data);
+      setBizPhoneModal(true);
+    } catch { addToast('연락처 정보를 불러오지 못했습니다.', 'error'); }
+  };
+
+  // ✅ BIZ-ENH: 내 선박 홍보글 목록 조회
+  const handleOpenBizPosts = async () => {
+    setBizPostsLoading(true);
+    setBizPostsModal(true);
+    try {
+      const res = await apiClient.get('/api/business/my-posts');
+      setMyBizPosts(Array.isArray(res.data) ? res.data : []);
+    } catch { addToast('홍보글을 불러오지 못했습니다.', 'error'); }
+    finally { setBizPostsLoading(false); }
+  };
+
+  // ✅ BIZ-ENH: 비즈니스 게시글 삭제
+  const handleDeleteBizPost = async (id) => {
+    if (!window.confirm('홍보글을 삭제하시겠습니까?')) return;
+    setDeletingBizId(id);
+    try {
+      await apiClient.delete(`/api/business/posts/${id}`);
+      setMyBizPosts(prev => prev.filter(p => (p._id || p.id) !== id));
+      addToast('홍보글이 삭제되었습니다.', 'success');
+    } catch (err) { addToast(err.response?.data?.error || '삭제 실패', 'error'); }
+    finally { setDeletingBizId(null); }
+  };
+
+  // ✅ BIZ-ENH: 조과 갤러리 → 오픈게시판 선상 카테고리 자동 등록
+  const handleGalleryImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { fileToCompressedBase64 } = await import('../utils/imageUtils');
+      const b64 = await fileToCompressedBase64(file);
+      setGalleryForm(prev => ({ ...prev, image: b64 }));
+    } catch { addToast('이미지 처리 실패', 'error'); }
+  };
+
+  const handleGallerySubmit = async () => {
+    if (!galleryForm.fish) { addToast('어종을 입력해주세요.', 'error'); return; }
+    setGallerySubmitting(true);
+    try {
+      // 내 선박 정보 가져오기
+      let shipInfo = bizPhone;
+      if (!shipInfo.phone) {
+        try { const r = await apiClient.get('/api/business/my-phone'); shipInfo = r.data; }
+        catch { /* 무시 */ }
+      }
+      const res = await apiClient.post('/api/business/gallery-post', {
+        author: user.name,
+        ...galleryForm,
+        shipName: shipInfo.shipName,
+        phone: shipInfo.phone,
+      });
+      addToast(res.data.message || '오픈게시판 선상에 등록되었습니다! 🎣', 'success');
+      setGalleryModal(false);
+      setGalleryForm({ fish: '', size: '', weight: '', location: '', memo: '', image: null });
+    } catch (err) { addToast(err.response?.data?.error || '등록 실패', 'error'); }
+    finally { setGallerySubmitting(false); }
+  };
+
   const handleToggleNoti = async (key) => {
+
     const prevSettings = { ...notiSetting }; // 롤백용 이전 상태 캡처 (클로저 안전)
     const newSettings = { ...notiSetting, [key]: !notiSetting[key] };
     setNotiSetting(newSettings);
@@ -201,14 +337,16 @@ export default function MyPage() {
     try {
       setLoading(true);
       // NEW-C2: Promise.all → Promise.allSettled — 하나 실패해도 나머지 탭 표시 가능
-      const [postsResult, recordsResult] = await Promise.allSettled([
+      const [postsResult, recordsResult, crewsResult] = await Promise.allSettled([
         apiClient.get(`/api/user/posts?email=${encodeURIComponent(user.email)}`),
-        apiClient.get(`/api/user/records?email=${encodeURIComponent(user.email)}`)
+        apiClient.get(`/api/user/records?email=${encodeURIComponent(user.email)}`),
+        apiClient.get('/api/user/crews'),
       ]);
       if (postsResult.status === 'fulfilled') setRealPosts(postsResult.value.data);
       else if (!import.meta.env.PROD) console.warn('[MyPage] 게시글 로드 실패:', postsResult.reason?.message);
       if (recordsResult.status === 'fulfilled') setRealRecords(recordsResult.value.data);
       else if (!import.meta.env.PROD) console.warn('[MyPage] 조과 기록 로드 실패:', recordsResult.reason?.message);
+      if (crewsResult.status === 'fulfilled') setMyCrews(crewsResult.value.data || []);
     } catch (err) {
       if (!import.meta.env.PROD) console.error('Failed to fetch my activity', err);
     } finally {
@@ -224,18 +362,34 @@ export default function MyPage() {
 
 
   const handleNicknameChange = async () => {
-    if (newName.trim().length < 2 || newName.trim().length > 12) {
+    const trimmed = newName.trim();
+    if (trimmed.length < 2 || trimmed.length > 12) {
       addToast('닉네임은 2~12자 사이로 입력해주세요.', 'error');
       return;
     }
     const nicknameRegex = /^[a-zA-Z0-9가-힣]+$/;
-    if (!nicknameRegex.test(newName)) {
+    if (!nicknameRegex.test(trimmed)) {
       addToast('한글, 영어, 숫자만 사용 가능합니다.', 'error');
       return;
     }
+    // ✅ NICK-CHK: 중복 사전 확인 (서버 API 사용, 본인 제외)
+    try {
+      const dupCheck = await apiClient.post('/api/auth/check-name', { name: trimmed, excludeEmail: user.email });
+      if (!dupCheck.data.available) {
+        if (dupCheck.data.banned) {
+          addToast('이 닉네임은 사용할 수 없습니다. (운영 정책상 금지된 표현 포함)', 'error');
+        } else {
+          addToast('이미 사용 중인 닉네임입니다.', 'error');
+        }
+        return;
+      }
+    } catch {
+      // 중복 확인 실패 시 서버에서 최종 처리
+    }
+
     try {
       const res = await apiClient.put(`/api/user/nickname`, {
-        email: user.email, newName
+        email: user.email, newName: trimmed
       });
       if (res.data.success) {
         updateUser({ name: res.data.name });
@@ -248,6 +402,7 @@ export default function MyPage() {
       addToast(err.response?.data?.error || '서버 연결 실패', 'error');
     }
   };
+
 
 
   /* ── 프로필 사진 변경 ── */
@@ -465,12 +620,12 @@ export default function MyPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', backgroundColor: '#F2F2F7', borderRadius: '24px', overflow: 'hidden', marginTop: '24px', border: '1.5px solid #F2F2F7' }}>
            {[
-             { label: '조과기록', val: realRecords.length, icon: Trophy, color: '#FF9B26' },
-             { label: '팔로워', val: user.followers?.length || 0, icon: Star, color: '#0056D2' },
-             { label: '활동픽드', val: realPosts.length, icon: Heart, color: '#FF5A5F' },
-             { label: '연속출석', val: `${user.streak || 0}일`, icon: Calendar, color: '#00C48C' },
+             { label: '조과기록', val: realRecords.length, icon: Trophy, color: '#FF9B26', onClick: () => setActiveTab('records') },
+             { label: '팔로워', val: user.followers?.length || 0, icon: Star, color: '#0056D2', onClick: () => handleOpenFollowModal('followers') },
+             { label: '팔로잉', val: user.following?.length || 0, icon: Heart, color: '#FF5A5F', onClick: () => handleOpenFollowModal('following') },
+             { label: '연속출석', val: `${user.streak || 0}일`, icon: Calendar, color: '#00C48C', onClick: null },
            ].map(s => (
-             <div key={s.label} style={{ backgroundColor: '#fff', padding: '14px 6px', textAlign: 'center' }}>
+             <div key={s.label} onClick={s.onClick} style={{ backgroundColor: '#fff', padding: '14px 6px', textAlign: 'center', cursor: s.onClick ? 'pointer' : 'default' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}>
                    <s.icon size={11} color={s.color} fill={s.color} />
                    <span style={{ fontSize: '16px', fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
@@ -482,15 +637,19 @@ export default function MyPage() {
       </div>
 
       {/* 🟦 Tabs Switcher 🟦 */}
-      <div style={{ display: 'flex', padding: '20px 24px 10px', gap: '24px' }}>
-         <div onClick={() => setActiveTab('records')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'records' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer' }}>
+      <div style={{ display: 'flex', padding: '20px 24px 10px', gap: '24px', overflowX: 'auto' }}>
+         <div onClick={() => setActiveTab('records')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'records' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             기록부 {activeTab === 'records' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
          </div>
-         <div onClick={() => setActiveTab('posts')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'posts' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer' }}>
+         <div onClick={() => setActiveTab('posts')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'posts' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             나의 피드 {activeTab === 'posts' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
          </div>
-         <div onClick={() => setActiveTab('stats')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'stats' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer' }}>
+         <div onClick={() => setActiveTab('stats')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'stats' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             조과통계 {activeTab === 'stats' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#FF9B26', borderRadius: '2px' }}></div>}
+         </div>
+         {/* ✅ CREW-ENH: 내 크루 탭 */}
+         <div onClick={() => setActiveTab('crews')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'crews' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Users size={16} /> 내 크루 {myCrews.length > 0 && <span style={{ fontSize: '11px', background: '#0056D2', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontWeight: '900' }}>{myCrews.length}</span>} {activeTab === 'crews' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
          </div>
       </div>
 
@@ -620,27 +779,84 @@ export default function MyPage() {
          })() : activeTab === 'records' ? (
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
               {realRecords.length > 0 ? realRecords.map(r => (
-                <div key={r.id} style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7' }}>
+                <div key={r._id || r.id}
+                  onClick={() => navigate(`/catch/${r._id || r.id}`)}
+                  style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7', cursor: 'pointer' }}
+                >
                    {r.image
                      ? <img src={r.image} style={{ width: '100%', height: '140px', objectFit: 'cover' }} alt="" />
-                     : <div style={{ width: '100%', height: '140px', background: '#F2F2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🎣</div>
+                     : <div style={{ width: '100%', height: '140px', background: 'linear-gradient(135deg,#EBF5FF,#F0FFF8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🎣</div>
                    }
                    <div style={{ padding: '14px' }}>
-                      <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800' }}>{r.time}</div>
-                      <div style={{ fontSize: '14px', fontWeight: '900', marginTop: '2px' }}>{r.content.substring(0,20)}...</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '12px', background: '#EBF5FF', color: '#0056D2', padding: '2px 8px', borderRadius: '8px', fontWeight: '800' }}>{r.fish || '어종 미입력'}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#555', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.location || r.memo || '장소 미입력'}</div>
+                      <div style={{ fontSize: '10px', color: '#AEAEB2', fontWeight: '600', marginTop: '2px' }}>{r.date || (r.createdAt ? String(r.createdAt).slice(0,10) : '')}</div>
                    </div>
                 </div>
               )) : (
                 <div style={{ gridColumn: 'span 2', padding: '40px', textAlign: 'center', color: '#8E8E93' }}>
+                   <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎣</div>
                    <p style={{ fontSize: '14px', fontWeight: '700' }}>아직 등록된 조과 기록이 없습니다.</p>
+                   <p style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: '600', marginTop: '4px' }}>첫 번째 조과를 등록해보세요!</p>
                 </div>
               )}
-              <div onClick={() => navigate('/write')} style={{ height: '190px', borderRadius: '28px', border: '2px dashed #D1D1D6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#8E8E93', cursor: 'pointer' }}>
-                 <Camera size={24} /><span style={{ fontSize: '13px', fontWeight: '800' }}>기록 추가</span>
+              <div
+                onClick={() => { addToast('지도에서 낚시 포인트를 선택하면 조과 기록을 남길 수 있습니다! 🎣', 'info'); navigate('/'); }}
+                style={{ height: '190px', borderRadius: '28px', border: '2px dashed #00C48C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#00C48C', cursor: 'pointer', background: 'rgba(0,196,140,0.03)' }}
+              >
+                 <Camera size={28} color="#00C48C" />
+                 <span style={{ fontSize: '14px', fontWeight: '900', color: '#00C48C' }}>조과 기록 추가하기</span>
+                 <span style={{ fontSize: '11px', fontWeight: '700', color: '#8E8E93', textAlign: 'center' }}>낚시 포인트 선택 → 조과 기록 남기기</span>
               </div>
            </div>
-         ) : (
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          ) : activeTab === 'crews' ? (
+           <div>
+             {myCrews.length === 0 ? (
+               <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+                 <div style={{ fontSize: '48px', marginBottom: '12px' }}>⚓</div>
+                 <p style={{ fontSize: '15px', fontWeight: '800', color: '#555', marginBottom: '6px' }}>아직 가입한 크루가 없습니다</p>
+                 <p style={{ fontSize: '13px', color: '#8E8E93', marginBottom: '20px' }}>커뮤니티에서 크루에 참여해보세요!</p>
+                 <button onClick={() => navigate('/community?tab=crew')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#0056D2,#0096FF)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>크루 찾아보기 🎣</button>
+               </div>
+             ) : myCrews.map(crew => {
+               const crewId = String(crew._id || crew.id);
+               const isOwner = crew.owner === user?.email;
+               return (
+                 <div key={crewId} style={{ background: '#fff', borderRadius: '20px', padding: '18px 20px', border: '1.5px solid #F2F2F7', marginBottom: '12px' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isOwner ? 0 : '10px' }}>
+                     <div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                         {isOwner && <span style={{ fontSize: '9px', background: '#FFD700', color: '#1c1c1e', padding: '2px 6px', borderRadius: '6px', fontWeight: '900' }}>크루장</span>}
+                         <span style={{ fontSize: '16px', fontWeight: '900', color: '#1c1c1e' }}>{crew.name}</span>
+                       </div>
+                       <div style={{ display: 'flex', gap: '10px', fontSize: '12px', color: '#8e8e93' }}>
+                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Users size={12} /> {crew.members}/{crew.limit || 20}명</span>
+                         {crew.region && crew.region !== '전국' && <span>📍 {crew.region}</span>}
+                       </div>
+                     </div>
+                     <button onClick={() => navigate(`/crew/${crewId}/chat`)} style={{ padding: '8px 16px', background: 'linear-gradient(135deg,#0056D2,#0096FF)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', flexShrink: 0 }}>채팅 입장</button>
+                   </div>
+                   {!isOwner && (
+                     <button disabled={leavingCrewId === crewId} onClick={async () => {
+                       setLeavingCrewId(crewId);
+                       try {
+                         await apiClient.post(`/api/community/crews/${crewId}/leave`, { email: user.email });
+                         setMyCrews(prev => prev.filter(c => String(c._id || c.id) !== crewId));
+                         addToast('크루에서 탈퇴했습니다.', 'success');
+                       } catch (err) { addToast(err.response?.data?.error || '탈퇴 실패', 'error'); }
+                       finally { setLeavingCrewId(null); }
+                     }} style={{ width: '100%', padding: '8px', border: '1.5px solid #FFE5E5', borderRadius: '10px', background: '#FFF0F0', color: '#FF3B30', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+                       {leavingCrewId === crewId ? '탈퇴 중...' : '크루 나가기'}
+                     </button>
+                   )}
+                 </div>
+               );
+             })}
+           </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {realPosts.length > 0 ? realPosts.map(p => (
                 <div key={p.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '28px', border: '1.5px solid #F2F2F7' }}>
                    <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', marginBottom: '8px' }}>{p.time}</div>
@@ -666,29 +882,48 @@ export default function MyPage() {
             <span style={{ fontSize: '20px' }}>👑</span> 비즈니스 파트너 센터
           </h3>
           <div style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #2A2A4A 100%)', borderRadius: '28px', padding: '24px', color: '#fff', boxShadow: '0 12px 30px rgba(26,26,46,0.2)' }}>
-            
-            {/* 1. 예약 현황 */}
+
+            {/* 1. 연락처 확인 */}
             <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '18px', borderRadius: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.1)' }}>
               <div>
-                <div style={{ fontSize: '11.5px', color: '#FFD700', fontWeight: '900', marginBottom: '6px', letterSpacing: '0.02em' }}>실시간 예약 현황</div>
-                <div style={{ fontSize: '17px', fontWeight: '950', letterSpacing: '-0.02em' }}>신규 예약 문의 <span style={{ color: '#00C48C' }}>3건</span></div>
+                <div style={{ fontSize: '11.5px', color: '#FFD700', fontWeight: '900', marginBottom: '6px', letterSpacing: '0.02em' }}>📞 문의 연락처 관리</div>
+                <div style={{ fontSize: '15px', fontWeight: '950', letterSpacing: '-0.02em' }}>전화·문자 연락처 확인</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', marginTop: '4px', fontWeight: '600' }}>예약 문의 시 노출되는 번호입니다</div>
               </div>
-              <button style={{ backgroundColor: '#FFD700', color: '#1A1A2E', border: 'none', padding: '12px 18px', borderRadius: '14px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,215,0,0.3)', transition: 'transform 0.15s' }}>
-                연락처 확인
-              </button>
+              <button
+                onClick={handleOpenBizPhone}
+                style={{ backgroundColor: '#FFD700', color: '#1A1A2E', border: 'none', padding: '12px 16px', borderRadius: '14px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,215,0,0.3)', whiteSpace: 'nowrap' }}
+              >연락처 확인</button>
             </div>
 
-            {/* 2. 조과 타임라인 & 상품 관리 액션 버튼 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-              <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '18px', borderRadius: '20px', cursor: 'pointer' }}>
-                <Camera size={26} color="#00C48C" style={{ marginBottom: '10px' }} />
-                <div style={{ fontSize: '14.5px', fontWeight: '900', marginBottom: '6px' }}>조과 갤러리 등록</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4', fontWeight: '600' }}>홈 화면 '대박 선박'에 자동 노출되어 홍보됩니다.</div>
+            {/* 2. 액션 버튼 3개 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              {/* 조과 갤러리 등록 */}
+              <div
+                onClick={() => setGalleryModal(true)}
+                style={{ backgroundColor: 'rgba(0,196,140,0.12)', border: '1px solid rgba(0,196,140,0.3)', padding: '16px 10px', borderRadius: '18px', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s' }}
+              >
+                <Camera size={24} color="#00C48C" style={{ marginBottom: '8px' }} />
+                <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>조과 갤러리</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>선상 게시판에<br/>자동 노출</div>
               </div>
-              <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '18px', borderRadius: '20px', cursor: 'pointer' }}>
-                <CardIcon size={26} color="#FFD700" style={{ marginBottom: '10px' }} />
-                <div style={{ fontSize: '14.5px', fontWeight: '900', marginBottom: '6px' }}>승선권/상품 관리</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4', fontWeight: '600' }}>승선권 스케줄 조정 및 판매 비품을 추가합니다.</div>
+              {/* 내 선박 홍보글 관리 */}
+              <div
+                onClick={handleOpenBizPosts}
+                style={{ backgroundColor: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.25)', padding: '16px 10px', borderRadius: '18px', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s' }}
+              >
+                <BookOpen size={24} color="#FFD700" style={{ marginBottom: '8px' }} />
+                <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>내 홍보글</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>등록 게시글<br/>확인·삭제</div>
+              </div>
+              {/* 선박 홍보글 신규 등록 */}
+              <div
+                onClick={() => navigate('/write-business')}
+                style={{ backgroundColor: 'rgba(0,86,210,0.15)', border: '1px solid rgba(0,86,210,0.3)', padding: '16px 10px', borderRadius: '18px', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s' }}
+              >
+                <MapPin size={24} color="#4A9EFF" style={{ marginBottom: '8px' }} />
+                <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>홍보글 등록</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>선박 홍보글<br/>새로 작성</div>
               </div>
             </div>
 
@@ -867,23 +1102,35 @@ export default function MyPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
                       {PLANS.map(plan => {
                         const isActive = userTier === plan.tier;
+                        const currentRankUI = TIER_RANK_CLIENT[userTier] ?? 0;
+                        const planRankUI    = TIER_RANK_CLIENT[plan.tier] ?? 0;
+                        // 현재 유료 구독 중이고 이 플랜이 하위 플랜이면 잠금
+                        const isLocked = PROTECTED_TIERS_CLIENT.includes(userTier) && planRankUI < currentRankUI;
                         return (
                           <div key={plan.tier}
                             onClick={() => handleTierChange(plan.tier, plan.name)}
                             style={{
-                              padding: '16px 18px', borderRadius: '18px', cursor: 'pointer',
-                              border: isActive ? '2px solid #0056D2' : plan.highlight ? '2px solid #0056D230' : '1.5px solid #F0F0F0',
-                              background: isActive ? '#EBF2FF' : plan.highlight ? 'linear-gradient(135deg, #F0F5FF, #E8F0FF)' : '#fff',
+                              padding: '16px 18px', borderRadius: '18px',
+                              cursor: isLocked ? 'not-allowed' : 'pointer',
+                              border: isActive ? '2px solid #0056D2' : isLocked ? '1.5px solid #E5E5EA' : plan.highlight ? '2px solid #0056D230' : '1.5px solid #F0F0F0',
+                              background: isActive ? '#EBF2FF' : isLocked ? '#F8F8FA' : plan.highlight ? 'linear-gradient(135deg, #F0F5FF, #E8F0FF)' : '#fff',
                               transition: 'all 0.15s',
                               position: 'relative',
+                              opacity: isLocked ? 0.55 : 1,
                             }}
                           >
-                            {plan.highlight && !isActive && (
+                            {/* 잠금 배지 — 하위 플랜 */}
+                            {isLocked && (
+                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#8E8E93', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '3px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                                🔒 구독 유지 중
+                              </div>
+                            )}
+                            {plan.highlight && !isActive && !isLocked && (
                               <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '3px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                                 인기 플랜
                               </div>
                             )}
-                            {plan.exclusive && !isActive && (
+                            {plan.exclusive && !isActive && !isLocked && (
                               <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #FFD700, #FF9B26)', color: '#5C3A00', fontSize: '10px', fontWeight: '900', padding: '3px 14px', borderRadius: '20px', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(255,215,0,0.5)' }}>
                                 항구 · 지역별 선착순 1명
                               </div>
@@ -897,26 +1144,27 @@ export default function MyPage() {
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
                                   {plan.badge && (
-                                    <span style={{ fontSize: '9px', fontWeight: '900', padding: '2px 7px', borderRadius: '8px', background: plan.badgeBg, color: plan.badgeColor }}>{plan.badge}</span>
+                                    <span style={{ fontSize: '9px', fontWeight: '900', padding: '2px 7px', borderRadius: '8px', background: isLocked ? '#C0C0C0' : plan.badgeBg, color: isLocked ? '#fff' : plan.badgeColor }}>{plan.badge}</span>
                                   )}
-                                  <span style={{ fontSize: '15px', fontWeight: '900', color: '#1c1c1e' }}>{plan.name}</span>
+                                  <span style={{ fontSize: '15px', fontWeight: '900', color: isLocked ? '#AEAEB2' : '#1c1c1e' }}>{plan.name}</span>
                                   {isActive && <span style={{ fontSize: '10px', color: '#0056D2', fontWeight: '800' }}>✓ 현재</span>}
                                 </div>
                                 <ul style={{ margin: 0, padding: '0 0 0 4px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                   {plan.features.map((f, i) => (
-                                    <li key={i} style={{ fontSize: '11px', color: '#555', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                      <span style={{ color: '#0056D2', fontSize: '10px' }}>✓</span> {f}
+                                    <li key={i} style={{ fontSize: '11px', color: isLocked ? '#C0C0C0' : '#555', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                      <span style={{ color: isLocked ? '#C0C0C0' : '#0056D2', fontSize: '10px' }}>✓</span> {f}
                                     </li>
                                   ))}
                                 </ul>
                               </div>
                               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
-                                <div style={{ fontSize: '14px', fontWeight: '900', color: isActive ? '#0056D2' : '#1c1c1e', whiteSpace: 'nowrap' }}>{plan.price}</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: isActive ? '#0056D2' : isLocked ? '#AEAEB2' : '#1c1c1e', whiteSpace: 'nowrap' }}>{plan.price}</div>
                               </div>
                             </div>
                           </div>
                         );
                       })}
+
                     </div>
 
                     <p style={{ fontSize: '11px', color: '#AEAEB2', textAlign: 'center', fontWeight: '600' }}>
@@ -960,6 +1208,7 @@ export default function MyPage() {
                           <ChevronRight size={18} color="#C7C7CC" style={{ transform: secTab === 'block' ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
                         </div>
                     </div>
+
                     {secTab === 'block' && (
                       <div style={{ padding: '16px', background: '#F8F9FA', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -985,6 +1234,180 @@ export default function MyPage() {
            </div>
         </div>
       )}
+
+      {/* 🟦 팔로워 / 팔로잉 목록 모달 🟦 */}
+      {followModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={() => setFollowModal(null)}
+        >
+          <div
+            style={{ width: '100%', maxWidth: '480px', backgroundColor: '#fff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '28px 24px 48px', animation: 'slideUp 0.3s ease-out' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: '40px', height: '5px', background: '#E5E5EA', borderRadius: '3px', margin: '0 auto 20px' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '900', margin: 0 }}>
+                {followModal === 'followers' ? '팔로워' : '팔로잉'}
+                <span style={{ fontSize: '14px', color: '#0056D2', fontWeight: '800', marginLeft: '8px' }}>
+                  {followList.length}명
+                </span>
+              </h3>
+              <button onClick={() => setFollowModal(null)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#8E8E93' }}>✕</button>
+            </div>
+
+            {followLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8E8E93', fontSize: '14px', fontWeight: '700' }}>불러오는 중...</div>
+            ) : followList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <div style={{ fontSize: '36px', marginBottom: '10px' }}>👤</div>
+                <p style={{ fontSize: '14px', fontWeight: '700', color: '#8E8E93' }}>
+                  {followModal === 'followers' ? '아직 팔로워가 없습니다.' : '팔로잉 중인 사용자가 없습니다.'}
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '60vh', overflowY: 'auto' }}>
+                {followList.map(u => (
+                  <div
+                    key={u.email}
+                    onClick={() => { setFollowModal(null); navigate(`/user/${encodeURIComponent(u.name)}`); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', background: '#F8F9FA', borderRadius: '16px', cursor: 'pointer' }}
+                  >
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                      background: 'linear-gradient(135deg, #0056D2, #00C48C)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '900', fontSize: '16px',
+                    }}>
+                      {u.avatar || u.picture
+                        ? <img src={u.avatar || u.picture} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        : (u.name?.[0] || '?')
+                      }
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '15px', fontWeight: '800', color: '#1c1c1e' }}>{u.name || '이름 없음'}</div>
+                      <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{u.email}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
+      {/* BIZ-ENH: 연락처 확인 모달 */}
+      {bizPhoneModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setBizPhoneModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px' }}>
+            <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
+            <div style={{ fontSize:'18px', fontWeight:'950', marginBottom:'6px' }}>📞 내 연락처 정보</div>
+            <div style={{ fontSize:'13px', color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>예약 문의 고객에게 노출되는 번호입니다</div>
+            {bizPhone.shipName && (
+              <div style={{ background:'#F8F9FA', borderRadius:'16px', padding:'14px 18px', marginBottom:'12px' }}>
+                <div style={{ fontSize:'11px', color:'#8E8E93', fontWeight:'700', marginBottom:'4px' }}>선박명</div>
+                <div style={{ fontSize:'17px', fontWeight:'900', color:'#1c1c1e' }}>🚢 {bizPhone.shipName}</div>
+              </div>
+            )}
+            <div style={{ background:'#EBF5FF', borderRadius:'16px', padding:'18px', marginBottom:'20px', textAlign:'center' }}>
+              {bizPhone.phone ? (
+                <>
+                  <div style={{ fontSize:'26px', fontWeight:'950', color:'#0056D2', letterSpacing:'0.02em', marginBottom:'12px' }}>{bizPhone.phone}</div>
+                  <div style={{ display:'flex', gap:'10px' }}>
+                    <a href={`tel:${bizPhone.phone}`} style={{ flex:1, padding:'13px', background:'#0056D2', color:'#fff', borderRadius:'14px', fontWeight:'900', fontSize:'14px', textDecoration:'none', textAlign:'center', display:'block' }}>📞 전화하기</a>
+                    <a href={`sms:${bizPhone.phone}`} style={{ flex:1, padding:'13px', background:'#34C759', color:'#fff', borderRadius:'14px', fontWeight:'900', fontSize:'14px', textDecoration:'none', textAlign:'center', display:'block' }}>💬 문자하기</a>
+                  </div>
+                </>
+              ) : (
+                <div style={{ color:'#8E8E93', fontSize:'14px', fontWeight:'700', padding:'10px 0' }}>
+                  <div style={{ fontSize:'28px', marginBottom:'8px' }}>📵</div>
+                  등록된 연락처가 없습니다.<br/>선박 홍보글 등록 시 연락처를 입력해주세요.
+                  <button onClick={() => { setBizPhoneModal(false); navigate('/write-business'); }} style={{ display:'block', width:'100%', marginTop:'14px', padding:'12px', background:'#0056D2', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>홍보글 등록하기</button>
+                </div>
+              )}
+            </div>
+            <button onClick={() => setBizPhoneModal(false)} style={{ width:'100%', padding:'14px', border:'1.5px solid #E5E5EA', borderRadius:'14px', background:'#fff', fontWeight:'800', cursor:'pointer', color:'#666' }}>닫기</button>
+          </div>
+        </div>
+      )}
+
+      {/* BIZ-ENH: 내 선박 홍보글 목록 모달 */}
+      {bizPostsModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setBizPostsModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px', maxHeight:'80vh', overflowY:'auto' }}>
+            <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
+              <div style={{ fontSize:'18px', fontWeight:'950', color:'#1c1c1e' }}>🚢 내 선박 홍보글</div>
+              <button onClick={() => setBizPostsModal(false)} style={{ background:'none', border:'none', fontSize:'22px', cursor:'pointer', color:'#8E8E93' }}>✕</button>
+            </div>
+            {bizPostsLoading ? <div style={{ textAlign:'center', padding:'40px 0', color:'#8E8E93' }}>불러오는 중...</div>
+            : myBizPosts.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'40px 0' }}>
+                <div style={{ fontSize:'36px', marginBottom:'10px' }}>🚢</div>
+                <p style={{ fontSize:'14px', fontWeight:'700', color:'#8E8E93' }}>등록된 홍보글이 없습니다.</p>
+                <button onClick={() => { setBizPostsModal(false); navigate('/write-business'); }} style={{ marginTop:'14px', padding:'12px 24px', background:'#0056D2', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>홍보글 등록하기</button>
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+                {myBizPosts.map(p => (
+                  <div key={p._id || p.id} style={{ background:'#F8F9FA', borderRadius:'18px', padding:'16px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
+                      <div>
+                        <div style={{ fontSize:'15px', fontWeight:'900', color:'#1c1c1e' }}>{p.shipName || '선박명 미입력'}</div>
+                        <div style={{ fontSize:'11px', color:'#8E8E93', fontWeight:'600', marginTop:'2px' }}>{p.region} · {p.boatType}</div>
+                      </div>
+                      <div style={{ display:'flex', gap:'6px' }}>
+                        <button onClick={() => { setBizPostsModal(false); navigate(`/write-business?editId=${p._id || p.id}`); }} style={{ padding:'6px 10px', background:'#EBF5FF', color:'#0056D2', border:'none', borderRadius:'8px', fontWeight:'800', fontSize:'12px', cursor:'pointer' }}>수정</button>
+                        <button onClick={() => handleDeleteBizPost(p._id || p.id)} disabled={deletingBizId === (p._id || p.id)} style={{ padding:'6px 10px', background:'#FFF0F0', color:'#FF3B30', border:'none', borderRadius:'8px', fontWeight:'800', fontSize:'12px', cursor:'pointer' }}>{deletingBizId === (p._id || p.id) ? '...' : '삭제'}</button>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:'12px', color:'#555', fontWeight:'600', lineHeight:'1.5', overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{p.content}</div>
+                    {p.phone && <div style={{ fontSize:'12px', color:'#0056D2', fontWeight:'800', marginTop:'8px' }}>📞 {p.phone}</div>}
+                  </div>
+                ))}
+                <button onClick={() => { setBizPostsModal(false); navigate('/write-business'); }} style={{ width:'100%', padding:'14px', background:'linear-gradient(135deg,#0056D2,#0096FF)', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>+ 새 홍보글 등록</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* BIZ-ENH: 조과 갤러리 등록 모달 */}
+      <input ref={galleryFileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleGalleryImageChange} />
+      {galleryModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setGalleryModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px', maxHeight:'90vh', overflowY:'auto' }}>
+            <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
+              <div style={{ fontSize:'18px', fontWeight:'950', color:'#1c1c1e' }}>🎣 조과 갤러리 등록</div>
+              <button onClick={() => setGalleryModal(false)} style={{ background:'none', border:'none', fontSize:'22px', cursor:'pointer', color:'#8E8E93' }}>✕</button>
+            </div>
+            <div style={{ fontSize:'13px', color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>오픈게시판 선상 카테고리에 자동으로 등록됩니다 🚢</div>
+            <div onClick={() => galleryFileRef.current?.click()} style={{ width:'100%', height:'150px', background:'#F8F9FA', borderRadius:'18px', border:'2px dashed #D1D1D6', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', marginBottom:'16px', overflow:'hidden' }}>
+              {galleryForm.image
+                ? <img src={galleryForm.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'16px' }} />
+                : <div style={{ textAlign:'center', color:'#8E8E93' }}><Camera size={32} style={{ marginBottom:'8px' }} /><div style={{ fontSize:'13px', fontWeight:'700' }}>사진 추가 (선택)</div></div>
+              }
+            </div>
+            {[
+              { key:'fish', label:'어종 *', placeholder:'예: 감성돔, 광어' },
+              { key:'size', label:'사이즈 (cm)', placeholder:'예: 45' },
+              { key:'weight', label:'무게 (kg)', placeholder:'예: 2.3' },
+              { key:'location', label:'포인트/장소', placeholder:'예: 통영 욕지도' },
+              { key:'memo', label:'한마디', placeholder:'예: 새벽 출조 대박조과!' },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key} style={{ marginBottom:'12px' }}>
+                <div style={{ fontSize:'12px', fontWeight:'800', color:'#444', marginBottom:'6px' }}>{label}</div>
+                <input value={galleryForm[key]} onChange={e => setGalleryForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={placeholder} style={{ width:'100%', padding:'12px 14px', borderRadius:'12px', border:'1.5px solid #E5E5EA', fontSize:'14px', fontWeight:'600', outline:'none', boxSizing:'border-box' }} />
+              </div>
+            ))}
+            <button onClick={handleGallerySubmit} disabled={gallerySubmitting} style={{ width:'100%', padding:'15px', background: gallerySubmitting ? '#ccc' : 'linear-gradient(135deg,#00C48C,#00897B)', color:'#fff', border:'none', borderRadius:'16px', fontWeight:'900', fontSize:'15px', cursor: gallerySubmitting ? 'not-allowed' : 'pointer', marginTop:'4px' }}>
+              {gallerySubmitting ? '등록 중...' : '🎣 오픈게시판에 등록하기'}
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
