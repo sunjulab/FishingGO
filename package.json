@@ -28,7 +28,11 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@rollup/wasm-node": "*",
     "@vitejs/plugin-react": "^4.2.1",
     "vite": "^5.1.4"
+  },
+  "overrides": {
+    "rollup": "npm:@rollup/wasm-node@*"
   }
 }

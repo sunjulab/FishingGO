@@ -3,20 +3,18 @@
   "appName": "낚시GO",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https",
+    "url": "https://fishing-go.vercel.app",
     "cleartext": false
   },
   "android": {
-    "buildOptions": {
-      "keystorePath": null,
-      "keystoreAlias": null
-    }
+    "buildOptions": {}
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 2000,
+      "launchShowDuration": 3000,
       "backgroundColor": "#0B1F3A",
-      "showSpinner": false
+      "showSpinner": false,
+      "autoHide": true
     },
     "StatusBar": {
       "style": "Dark",

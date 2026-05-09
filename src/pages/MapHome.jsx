@@ -625,7 +625,7 @@ export default function MapHome() {
   const baitTip = getBaitTip();
 
   return (
-    <div style={{ backgroundColor: '#F4F6FA', height: '100vh', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+    <div style={{ backgroundColor: '#F4F6FA', height: 'calc(100dvh - env(safe-area-inset-top, 0px))', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
       <div style={{
         width: '100%', maxWidth: '480px', backgroundColor: '#fff', height: '100%',
         display: 'flex', flexDirection: 'column', position: 'relative',
@@ -810,7 +810,7 @@ export default function MapHome() {
         {/* ── 대시보드 뷰 ── */}
         <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
 
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px', scrollbarWidth: 'none' }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))', scrollbarWidth: 'none' }}>
 
             {/* 검색바 + 드롭다운 (최상단 이동) */}
             <div style={{ padding: '16px 16px 0', position: 'relative', zIndex: 50 }} ref={searchRef}>
@@ -943,24 +943,28 @@ export default function MapHome() {
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '2px', alignItems: 'center' }}>
-                  {[
-                    { Icon: Waves, label: '파고', val: `${tideData.wave?.coastal || '0.4'}m` },
-                    { Icon: Wind,  label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s` },
-                    { Icon: Clock, label: '만조', val: tideData.tide?.high || '15:20' },
-                  ].map(chip => (
-                    <div key={chip.label} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, background: 'rgba(255,255,255,0.14)', borderRadius: '30px', padding: '6px 12px', border: '1px solid rgba(255,255,255,0.15)' }}>
-                      <chip.Icon size={11} color="rgba(255,255,255,0.8)" />
-                      <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>{chip.label}</span>
-                      <span style={{ fontSize: '11px', color: '#fff', fontWeight: '950' }}>{chip.val}</span>
-                    </div>
-                  ))}
-                  {/* CCTV 링크 버튼 추가 */}
-                  <button 
+                {/* ✅ FIX-BTN: 실시간 영상 버튼을 스크롤 영역 밖으로 분리 — marginLeft:auto + overflowX:auto 세로 변형 방지 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* 좌측: 스크롤 가능한 날씨 칩 */}
+                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '2px', flex: 1, alignItems: 'center' }}>
+                    {[
+                      { Icon: Waves, label: '파고', val: `${tideData.wave?.coastal || '0.4'}m` },
+                      { Icon: Wind,  label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s` },
+                      { Icon: Clock, label: '만조', val: tideData.tide?.high || '15:20' },
+                    ].map(chip => (
+                      <div key={chip.label} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, background: 'rgba(255,255,255,0.14)', borderRadius: '30px', padding: '6px 12px', border: '1px solid rgba(255,255,255,0.15)' }}>
+                        <chip.Icon size={11} color="rgba(255,255,255,0.8)" />
+                        <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>{chip.label}</span>
+                        <span style={{ fontSize: '11px', color: '#fff', fontWeight: '950' }}>{chip.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* 우측: 고정 CCTV 버튼 — div로 교체하여 Android WebView button flex 무시 문제 완전 해결 */}
+                  <div
                     onClick={async () => {
                       if (!canAccessPremium) {
                         addToast('📺 실시간 해양 CCTV는 LITE 플랜 이상에서 제공됩니다.', 'error');
-                        return; // 페이지 이동 없음 — 홈화면 유지
+                        return;
                       }
                       const sid = selectedPoint?.obsCode || 'DT_0001';
                       try {
@@ -971,11 +975,22 @@ export default function MapHome() {
                         addToast('영상 데이터를 불러오는 데 실패했습니다.', 'error');
                       }
                     }}
-                    style={{ marginLeft: 'auto', background: canAccessPremium ? 'rgba(255,215,0,0.9)' : 'rgba(255,255,255,0.15)', border: canAccessPremium ? 'none' : '1px solid rgba(255,255,255,0.2)', borderRadius: '30px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
+                    style={{
+                      flexShrink: 0,
+                      background: canAccessPremium ? 'rgba(255,215,0,0.9)' : 'rgba(255,255,255,0.15)',
+                      border: canAccessPremium ? 'none' : '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '30px', padding: '6px 14px',
+                      display: 'inline-flex', flexDirection: 'row',
+                      alignItems: 'center', flexWrap: 'nowrap', gap: '5px',
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                      userSelect: 'none', WebkitUserSelect: 'none',
+                    }}
                   >
-                    <Tv size={12} color="#1A1A2E" />
-                    <span style={{ fontSize: '10px', fontWeight: '900', color: '#1A1A2E' }}>실시간 영상</span>
-                  </button>
+                    <Tv size={13} color="#1A1A2E" style={{ flexShrink: 0, display: 'block' }} />
+                    <span style={{ fontSize: '10px', fontWeight: '900', color: '#1A1A2E', lineHeight: 1, flexShrink: 0, whiteSpace: 'nowrap' }}>실시간 영상</span>
+                  </div>
+
                 </div>
               </div>
             </div>

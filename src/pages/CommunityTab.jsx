@@ -486,7 +486,7 @@ export default function CommunityTab() {
   };
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F2F2F7', paddingBottom: '100px' }}>
+    <div className="page-container" style={{ backgroundColor: '#F2F2F7' }}>
       {/* 프리미엄 헤더 */}
       <div style={{ backgroundColor: '#fff', padding: '24px 20px 0', borderBottom: '1px solid #F0F0F0' }}>
         <h1 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '20px' }}>커뮤니티</h1>

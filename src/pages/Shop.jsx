@@ -68,9 +68,9 @@ export default function Shop() {
   };
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '120px' }}>
+    <div className="page-container" style={{ backgroundColor: '#F8F9FA' }}>
       {/* 🟦 Dynamic Shop Header 🟦 */}
-      <div style={{ backgroundColor: '#fff', padding: '32px 24px 24px', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
+      <div style={{ backgroundColor: '#fff', padding: '32px 24px 24px', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
             <h1 style={{ fontSize: '26px', fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.04em', marginBottom: '2px' }}>🎣 지금 안 사면 후회해요</h1>

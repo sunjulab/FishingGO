@@ -59,6 +59,34 @@ function PageLoading() {
   return <LoadingSpinner />;
 }
 
+// ✅ STATUS-SHIELD: 스크롤 시 콘텐츠가 상태바 영역(y=0~safe-top)으로 올라오는 문제 방지
+// 맵 페이지(/)는 full-screen 지도이므로 제외, 나머지 모든 페이지에 적용
+function StatusBarShield() {
+  const location = useLocation();
+  // 맵 홈은 immersive full-screen 지도 → 차단 불필요
+  if (location.pathname === '/') return null;
+  // 상태바 영역을 glass 배경으로 완전히 덮어 콘텐츠 노출 방지
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '100%',
+        maxWidth: '480px',
+        height: 'var(--safe-top)',
+        background: 'rgba(255, 255, 255, 0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        zIndex: 950, /* premium-header(900)보다 높게 */
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
 function BottomNav() {
   const location = useLocation();
   const navItems = [
@@ -75,7 +103,7 @@ function BottomNav() {
   if (hideNav) return null;
 
   return (
-    <nav className="bottom-nav" style={{ height: '70px', paddingBottom: '10px' }}>
+    <nav className="bottom-nav">
       {navItems.map((item) => {
         const Icon = item.icon;
         return (
@@ -290,6 +318,7 @@ export default function App() {
         <GlobalLevelUpListener />
         {/* ✅ POPUP: 이미지 있는 공지 → 앱 시작 시 carousel 팝업 — useNavigate 사용으로 BrowserRouter 내부에 배치 */}
         <AnnouncementPopup />
+        <StatusBarShield />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<PageLoading />}>

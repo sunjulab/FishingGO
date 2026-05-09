@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- 낚시GO 브랜드 색상: 딥 네이비 -->
+    <color name="ic_launcher_background">#0B1F3A</color>
 </resources>

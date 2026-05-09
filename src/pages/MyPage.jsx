@@ -484,7 +484,7 @@ export default function MyPage() {
   }));
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '120px' }}>
+    <div className="page-container" style={{ backgroundColor: '#F8F9FA' }}>
       {/* 🟦 Top Profile Card 🟦 */}
       <div style={{ background: 'linear-gradient(180deg, #fff 0%, #F8F9FA 100%)', padding: '40px 24px 30px', borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>

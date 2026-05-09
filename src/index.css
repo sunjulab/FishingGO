@@ -87,6 +87,14 @@ body {
   min-height: 100dvh;
   position: relative;
   background-color: #fff;
+  /* ✅ SAFE-AREA: 하단 네비게이션바 뒤로 콘텐츠가 숨지 않도록 자동 여백 */
+  padding-bottom: var(--nav-height);
+}
+
+/* ✅ SAFE-AREA: 스크롤 컨테이너 공통 유틸 — 모든 페이지의 스크롤 영역에서사용 */
+.app-scroll-content {
+  padding-bottom: var(--nav-height);
+  overflow-y: auto;
 }
 
 /* --- Premium Animations --- */
@@ -151,7 +159,8 @@ body {
 /* --- Header --- */
 .premium-header {
   position: sticky;
-  top: 0;
+  /* ✅ SAFE-AREA: top:0 → var(--safe-top) — 상태바가 WebView 위에 겹쳐도 헤더가 상태바 아래에 고정 */
+  top: var(--safe-top);
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
