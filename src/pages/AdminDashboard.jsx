@@ -379,16 +379,22 @@ function CsAdminPanel({ addToast }) {
   const [sendingId, setSendingId] = useState(null);
   const [showFilter, setShowFilter] = useState(false);
 
+  const [csError, setCsError] = useState(false); // ✅ FIX-CS: 토스트 대신 인라인 에러 상태
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const res = await apiClient.get('/api/cs/inquiries');
       setItems(Array.isArray(res.data) ? res.data : []);
-    } catch { addToast('문의 목록 로드 실패', 'error'); }
+      setCsError(false);
+    } catch {
+      // ✅ FIX-CS: 60초 폴링 실패 시 매번 토스트 대신 인라인 표시
+      setCsError(true);
+    }
     finally { setLoading(false); }
-  }, [addToast]);
+  }, []);
 
-  // ✅ REALTIME-FIX: 마운트 시 즉시 fetch + 60초 자동 폴링 (신규 문의 자동 반영)
+  // ✅ REALTIME-FIX: 마운트 시 즉시 fetch + 60초 자동 폴링
   useEffect(() => {
     fetchAll();
     const id = setInterval(fetchAll, 60_000);
@@ -471,7 +477,12 @@ function CsAdminPanel({ addToast }) {
       {/* 목록 */}
       <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {loading && <div style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>불러오는 중...</div>}
-        {!loading && filtered.length === 0 && (
+        {!loading && csError && (
+          <div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,90,95,0.7)', fontSize: '12px', border: '1px dashed rgba(255,90,95,0.2)', borderRadius: '12px', fontWeight: '700' }}>
+            ⚠️ 문의 목록을 불러오지 못했습니다. <button onClick={fetchAll} style={{ background: 'none', border: 'none', color: '#64B5F6', cursor: 'pointer', fontWeight: '800', fontSize: '12px' }}>재시도</button>
+          </div>
+        )}
+        {!loading && !csError && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.3)', fontSize: '13px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>문의 내역이 없습니다.</div>
         )}
         {filtered.map(item => {
