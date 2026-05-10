@@ -4803,10 +4803,14 @@ function buildYtVideoList(items) {
  */
 function sortVideos(videos, order) {
   if (order === 'date') {
-    // ✅ publishedAt 내림차순 (최신 업로드 순) — YouTube API order=date 미작동 보완
-    return [...videos].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+    // ✅ publishedAt 내림차순 (최신순) — 누락/Invalid Date 방어 처리
+    return [...videos].sort((a, b) => {
+      const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return isNaN(tb) || isNaN(ta) ? 0 : tb - ta;
+    });
   }
-  // viewCount는 YouTube API가 이미 정렬해서 반환
+  // viewCount: YouTube API가 이미 정렬해서 반환
   return videos;
 }
 

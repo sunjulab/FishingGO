@@ -112,7 +112,14 @@ export default function MediaTab() {
         addToast(`검색 오류: ${res.data.error}`, 'error');
         setSearchResults([]);
       } else {
-        setSearchResults(res.data.videos || []);
+        // ✅ 검색결과 최신순 보장: 서버 캐시 미정렬 방어 + publishedAt 내림차순 재정렬
+        const raw = res.data.videos || [];
+        const sorted = [...raw].sort((a, b) => {
+          const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+          const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+          return tb - ta;
+        });
+        setSearchResults(sorted);
         setSearchChannelId(res.data.channelId || null); // 채널 특정 검색 여부
       }
     } catch (err) {
