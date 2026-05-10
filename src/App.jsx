@@ -99,17 +99,33 @@ function BackButtonHandler() {
 
     let cleanup = null;
 
-    // ✅ FIX: @capacitor/app 직접 import — registerPlugin('App') 제거
+    // ✅ FIX: @capacitor/app 직접 import 우선, 실패 시 @capacitor/core registerPlugin 폴백
     import('@capacitor/app')
       .then(({ App: CapApp }) => {
         const listenerP = CapApp.addListener('backButton', handleBack);
         cleanup = () => listenerP.then(l => l?.remove?.()).catch(() => {});
       })
       .catch(() => {
-        // 브라우저/폴백: document backbutton 이벤트
-        const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
-        document.addEventListener('backbutton', domBack, false);
-        cleanup = () => document.removeEventListener('backbutton', domBack, false);
+        // 폴백 1: @capacitor/core의 registerPlugin 사용
+        import('@capacitor/core')
+          .then(({ registerPlugin }) => {
+            try {
+              const CapApp = registerPlugin('App');
+              const listenerP = CapApp.addListener('backButton', handleBack);
+              cleanup = () => listenerP?.then?.(l => l?.remove?.()).catch(() => {});
+            } catch {
+              // 폴백 2: 브라우저/Cordova document 이벤트
+              const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
+              document.addEventListener('backbutton', domBack, false);
+              cleanup = () => document.removeEventListener('backbutton', domBack, false);
+            }
+          })
+          .catch(() => {
+            // 폴백 2: 브라우저/Cordova document 이벤트
+            const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
+            document.addEventListener('backbutton', domBack, false);
+            cleanup = () => document.removeEventListener('backbutton', domBack, false);
+          });
       });
 
     return () => cleanup?.();
