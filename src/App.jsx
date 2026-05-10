@@ -59,11 +59,13 @@ function PageLoading() {
   return <LoadingSpinner />;
 }
 
+
 // ✅ BACK-BUTTON: Android 하드웨어 뒤로가기 인터셉터
 // - 이전 화면이 있으면 navigate(-1)
-// - 앱 첫 화면(history idx=0)이면 2초 내 재클릭 시 종료 토스트
+// - 앱 첫 화면이면 2초 내 재클릭 시 종료
 function BackButtonHandler() {
   const navigate    = useNavigate();
+  const location    = useLocation();
   const addToast    = useToastStore(s => s.addToast);
   const lastBackRef = useRef(0);
 
@@ -71,8 +73,8 @@ function BackButtonHandler() {
     const EXIT_MS = 2000;
 
     const handleBack = () => {
-      // React Router는 history.state.idx로 네비게이션 깊이를 추적
-      const idx = window.history.state?.idx ?? 0;
+      // history.state.idx: React Router가 관리하는 스택 깊이
+      const idx = window.history.state?.idx ?? window.history.length - 1;
 
       if (idx > 0) {
         // 이전 화면이 있으면 뒤로 이동
@@ -80,13 +82,13 @@ function BackButtonHandler() {
         return;
       }
 
-      // 더 이상 뒤로 갈 수 없음 (앱 시작 화면)
+      // 더 이상 뒤로 갈 수 없음 (앱 시작 화면) — 더블탭 종료
       const now = Date.now();
       if (now - lastBackRef.current < EXIT_MS) {
-        // 앱 종료 (Capacitor exitApp)
-        import('@capacitor/core')
-          .then(({ registerPlugin }) => {
-            try { registerPlugin('App').exitApp(); } catch {}
+        // ✅ FIX: @capacitor/app 직접 import로 exitApp 호출
+        import('@capacitor/app')
+          .then(({ App: CapApp }) => {
+            CapApp.exitApp().catch(() => {});
           })
           .catch(() => {});
       } else {
@@ -97,10 +99,9 @@ function BackButtonHandler() {
 
     let cleanup = null;
 
-    // Capacitor App 플러그인으로 backButton 이벤트 리스닝
-    import('@capacitor/core')
-      .then(({ registerPlugin }) => {
-        const CapApp    = registerPlugin('App');
+    // ✅ FIX: @capacitor/app 직접 import — registerPlugin('App') 제거
+    import('@capacitor/app')
+      .then(({ App: CapApp }) => {
         const listenerP = CapApp.addListener('backButton', handleBack);
         cleanup = () => listenerP.then(l => l?.remove?.()).catch(() => {});
       })
@@ -112,7 +113,7 @@ function BackButtonHandler() {
       });
 
     return () => cleanup?.();
-  }, [navigate, addToast]);
+  }, [navigate, addToast, location.pathname]);
 
   return null;
 }
