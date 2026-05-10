@@ -625,7 +625,7 @@ export default function MapHome() {
   const baitTip = getBaitTip();
 
   return (
-    <div style={{ backgroundColor: '#F4F6FA', height: 'calc(100dvh - env(safe-area-inset-top, 0px))', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+    <div style={{ backgroundColor: '#F4F6FA', height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
       <div style={{
         width: '100%', maxWidth: '480px', backgroundColor: '#fff', height: '100%',
         display: 'flex', flexDirection: 'column', position: 'relative',

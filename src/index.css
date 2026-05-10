@@ -64,8 +64,7 @@ body {
   position: relative;
   overflow-x: hidden;
   box-shadow: 0 0 60px rgba(0,0,0,0.15);
-  /* ✅ SAFE-AREA: 상단 상태바 겹침 방지 */
-  padding-top: var(--safe-top);
+  /* ✅ SAFE-AREA: padding 제거 — premium-header가 y=0부터 직접 커버 */
 }
 
 /* ── 모바일 컨테이너 내부 고정 바 (하단 툴바 / FAB 등) ── */
@@ -159,18 +158,23 @@ body {
 /* --- Header --- */
 .premium-header {
   position: sticky;
-  /* ✅ SAFE-AREA: top:0 → var(--safe-top) — 상태바가 WebView 위에 겹쳐도 헤더가 상태바 아래에 고정 */
-  top: var(--safe-top);
+  /* ✅ SAFE-AREA: top:0 고정 — 상태바 영역(y=0~safe-top)까지 헤더 배경으로 완전 커버 */
+  top: 0;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  height: 60px;
+  /* 전체 높이 = 상태바 + 헤더 콘텐츠 60px */
+  height: calc(60px + var(--safe-top));
+  /* 내부 콘텐츠는 상태바 아래에 배치 */
+  padding-top: var(--safe-top);
+  padding-left: 20px;
+  padding-right: 20px;
   background: var(--glass);
   backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
   z-index: 900;
   border-bottom: 1px solid var(--border);
 }
