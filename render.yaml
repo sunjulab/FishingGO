@@ -56,7 +56,7 @@ services:
     name: fishing-go-backend
     env: node
     rootDir: server
-    buildCommand: npm ci          # ✅ 10TH-C4: npm install → npm ci
+    buildCommand: npm install      # ✅ FIX-DEPLOY: npm ci → npm install (package-lock.json 불일치로 4일간 배포 실패 수정)
     startCommand: node --max-old-space-size=512 index.js  # ✅ 10TH-B5: 메모리 제한 512MB — 미처리 예외시 서버 다운 방지
     healthCheckPath: /api/health   # ✅ ENH-B6: 실제 엔드포인트로 수정 (/api/status → /api/health)
     plan: free          # ⚠️ 27TH-C3: Free 플랜 — 15분 비활동 시 슬립(cold start ~60초). 실서비스 전 plan: starter 이상으로 변경 권장
