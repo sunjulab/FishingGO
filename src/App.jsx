@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, 
 import { Home, Tv, Users, ShoppingBag, User, Anchor } from 'lucide-react';
 import Toast from './components/Toast';
 import { useToastStore } from './store/useToastStore';
-import { useUserStore, TIER_CONFIG, LEVEL_CONFIG, ADMIN_ID, ADMIN_EMAIL } from './store/useUserStore';
+import { useUserStore, TIER_CONFIG, LEVEL_CONFIG } from './store/useUserStore';
 import LoadingSpinner from './components/LoadingSpinner';
 import KakaoLoader from './components/KakaoLoader';
 import { initAdMob } from './services/AdMobService'; // ✅ ADMOB: 앱 시작 시 AdMob SDK 초기화
@@ -158,13 +158,8 @@ function Header() {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const userTier = useUserStore((state) => state.userTier);
-  // ✅ FIX-ADMIN: isAdmin 4중 보장 (id/email-gmail/email-id/tier)
-  const isAdmin = useUserStore(s =>
-    s.user?.id === ADMIN_ID ||
-    s.user?.email === ADMIN_EMAIL ||
-    s.user?.email === ADMIN_ID ||
-    s.userTier === 'MASTER'
-  );
+  // ✅ FIX-ADMIN: useUserStore.isAdmin() 직접 사용 — 단일 소스로 통합
+  const isAdmin = useUserStore(s => s.isAdmin());
 
   // ✅ 3RD-B2: HIDE_OVERLAY_PATHS 상수 사용
   const hideHeader = HIDE_OVERLAY_PATHS.some(path => location.pathname !== '/' && location.pathname.includes(path)) || location.pathname === '/';
@@ -316,14 +311,9 @@ function AuthExpiredChecker() {
 }
 
 // ENH3-C1: 어드민 라우트 보호 컴포넌트 분리 — App() 에서 불필요한 리렌더 방지
+// ✅ FIX-ADMIN: useUserStore.isAdmin() 직접 사용 — 4중 보장(id/email/gmail/MASTER tier) 단일 소스로 통합
 function AdminRoute({ children }) {
-  // ✅ FIX-ADMIN: id/email(gmail)/email(ID)/MASTER tier 4중 보장
-  const isAdmin = useUserStore((s) =>
-    s.user?.id === ADMIN_ID ||
-    s.user?.email === ADMIN_EMAIL ||
-    s.user?.email === ADMIN_ID ||
-    s.userTier === 'MASTER'
-  );
+  const isAdmin = useUserStore((s) => s.isAdmin());
   return isAdmin ? children : <Navigate to="/" replace />;
 }
 

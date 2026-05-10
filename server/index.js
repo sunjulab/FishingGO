@@ -605,25 +605,25 @@ function verifyToken(req, res, next) {
   }
 }
 
-// ─── 진단용 디버그 엔드포인트 ────────────────────────────────────────────────
 // ─── 비밀포인트 좌표 오버라이드 API (MASTER 전용) ──────────────────────────────
-// GET: 비밀포인트 좌표 조회 — JWT 인증 + LITE 이상 티어 필요
+// GET: 비밀포인트 좌표 조회 — JWT 인증 + MASTER 또는 LITE 이상 티어 필요
 app.get('/api/secret-point-overrides', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
   const isAdmin = isAdminToken(tp);
   if (!isAdmin) {
-    // LITE+ 이상 티어 확인
+    // LITE+ 이상 티어 확인 (JWT tier 우선, DB fallback)
     const allowedTiers = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
-    let userTier = 'FREE';
+    // ✅ FIX-DB-FALLBACK: DB 조회 실패 시 JWT 내 tier를 사용 (이전: 항상 FREE → 마스터 차단)
+    let userTier = tp.tier || 'FREE';
     try {
       if (dbReady && User) {
         const u = await User.findOne({ $or: [{ email: tp.email }, { id: tp.id }] }, 'tier').lean();
-        userTier = u?.tier || 'FREE';
+        if (u?.tier) userTier = u.tier; // DB 조회 성공 시에만 덮어쓰기
       }
-    } catch { /* DB 조회 실패 시 허용 안 함 */ }
+    } catch { /* DB 조회 실패 시 JWT tier 유지 */ }
     if (!allowedTiers.includes(userTier)) return res.status(403).json({ error: 'LITE 이상 구독이 필요합니다.' });
   }
   res.json(secretPointOverrides);
@@ -636,7 +636,7 @@ app.post('/api/secret-point-overrides', (req, res) => {
   try {
     const p = jwt.verify(auth.slice(7), JWT_SECRET);
     if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
-  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
   const { id, lat, lng } = req.body;
   if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
   secretPointOverrides[String(id)] = { lat: parseFloat(lat), lng: parseFloat(lng) };
@@ -652,7 +652,7 @@ app.delete('/api/secret-point-overrides/:id', (req, res) => {
   try {
     const p = jwt.verify(auth.slice(7), JWT_SECRET);
     if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
-  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
   const { id } = req.params;
   delete secretPointOverrides[id];
   saveSecretPointOverrides();
@@ -4758,6 +4758,22 @@ app.get('/api/commerce/coupang/status', (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 const YT_API_KEY = process.env.YOUTUBE_API_KEY || '';
 const YT_BASE = 'https://www.googleapis.com/youtube/v3';
+
+// ✅ 낚시 채널 검색 결과에서 제외할 블랙리스트 키워드 (소문자)
+// 제목(title) + 채널명(channelTitle) 양쪽에서 체크
+const YT_BLACKLIST = [
+  '알리',          // AliExpress, 알리바바 등
+  'aliexpress',
+  'alibaba',
+  '알리바바',
+  '알리익스프레스',
+  '직구',          // 해외직구 상품 리뷰 (광고성)
+  '최저가',
+  '공구',          // 공동구매 광고
+  '협찬',
+  '광고',          // 노골적 광고 영상
+];
+
 const ytCache = new Map();
 const YT_CACHE_TTL_MS = 4 * 60 * 60 * 1000; // ✅ 4시간 캐시 (30분→4시간: 일일 쿼터 초과 방지)
 // 30분 TTL: 48회/일 × 201 units = 9,648 units → 쿼터 초과 위험
@@ -4790,8 +4806,13 @@ function buildYtVideoList(items) {
       thumbnail: `https://img.youtube.com/vi/${id}/mqdefault.jpg`,
     };
   })
-  // ✅ Shorts 이중 필터: videoDuration=medium + 제목에 #shorts 태그 포함 시 제외
-  .filter(v => v.youtubeId && !v.title.toLowerCase().includes('#shorts'));
+  // ✅ Shorts 이중 필터
+  .filter(v => v.youtubeId && !v.title.toLowerCase().includes('#shorts'))
+  // ✅ 블랙리스트 키워드 필터: 광고성·쇼핑몰 관련 영상 제외 (제목 + 채널명 체크)
+  .filter(v => {
+    const text = (v.title + ' ' + v.channelTitle).toLowerCase();
+    return !YT_BLACKLIST.some(kw => text.includes(kw));
+  });
 }
 
 

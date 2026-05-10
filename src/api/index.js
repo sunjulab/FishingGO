@@ -61,8 +61,9 @@ apiClient.interceptors.response.use(
     }
 
     // 구독 미보유/인증 없는 401은 refresh 없이 에러 전파 (자동 로그아웃 방지)
-    // checkSubscriptionValid 미들웨어의 AUTH_REQUIRED, TOKEN_INVALID 코드 처리
-    const subscriptionCodes = ['AUTH_REQUIRED', 'TOKEN_INVALID', 'USER_UNKNOWN', 'SUBSCRIPTION_REQUIRED'];
+    // ✅ FIX-TOKEN: TOKEN_INVALID는 토큰 만료 시 발생 → refresh 재시도 허용
+    // AUTH_REQUIRED(Bearer 헤더 자체 없음), USER_UNKNOWN, SUBSCRIPTION_REQUIRED만 차단
+    const subscriptionCodes = ['AUTH_REQUIRED', 'USER_UNKNOWN', 'SUBSCRIPTION_REQUIRED'];
     if (error.response?.status === 401 && subscriptionCodes.includes(error.response?.data?.code)) {
       return Promise.reject(error);
     }

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { SECRET_FISHING_POINTS } from '../constants/fishingData';
 import apiClient from '../api/index';
 
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+import { useUserStore } from '../store/useUserStore';
 
 // ✅ 5TH-C6: localStorage 중복 패턴 헬퍼 함수 — handleSave/handleReset 두 곳
 const getLocalOverrides = () => { try { return JSON.parse(localStorage.getItem('secretPointOverrides') || '{}'); } catch { return {}; } };
@@ -12,11 +12,10 @@ const setLocalOverrides = (ov) => localStorage.setItem('secretPointOverrides', J
 
 export default function SecretPointAdmin() {
   const navigate = useNavigate();
-  const user    = useUserStore(s => s.user);
-  // ✅ 5TH-B7: isAdmin 직접 비교 — App.jsx/MapHome(3RD-A2) 패턴 통일
-  const isAdmin = user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL;
+  // ✅ FIX-ADMIN: useUserStore.isAdmin() 직접 사용 — 4중 보장(id/email/gmail/MASTER tier) 단일 소스
+  const isAdmin = useUserStore(s => s.isAdmin());
 
-  // 클라이언트 이중 인증 가드 — App.jsx 라우트 보호에 추가
+  // 클라이언트 이중 인증 가드 — App.jsx 라우트 보호와 이중 방어
   useEffect(() => {
     if (!isAdmin) {
       navigate('/', { replace: true });
@@ -39,6 +38,7 @@ export default function SecretPointAdmin() {
   const [saved,         setSaved]         = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [serverOnline,  setServerOnline]  = useState(true);
+  const [saveError,     setSaveError]     = useState(null); // ✅ FIX-ERR: 저장 오류 메세지 상태
   const savedTimerRef   = useRef(null); // ✅ 5TH-A4: 저장 완료 타이머 ref — 언마운트 후 setState 방지
 
   /* ── 서버에서 오버라이드 불러오기 ── */
@@ -47,9 +47,18 @@ export default function SecretPointAdmin() {
       const res = await apiClient.get('/api/secret-point-overrides');
       setOverrides(res.data || {});
       setServerOnline(true);
-    } catch {
-      setServerOnline(false);
-      setOverrides(getLocalOverrides()); // ✅ 5TH-C6: getLocalOverrides 헬퍼 사용
+      setSaveError(null);
+    } catch (err) {
+      // ✅ FIX-ERR: 401/403 권한 오류는 명확히 안내
+      const status = err?.response?.status;
+      if (status === 401) {
+        setSaveError('토큰이 만료되었습니다. 다시 로그인해주세요.');
+      } else if (status === 403) {
+        setSaveError('관리자 권한이 필요합니다.');
+      } else {
+        setServerOnline(false);
+        setOverrides(getLocalOverrides()); // ✅ 5TH-C6: 네트워크 오류 시만 localStorage fallback
+      }
     }
   }, []);
 
@@ -150,19 +159,31 @@ export default function SecretPointAdmin() {
   const handleSave = async () => {
     if (!selectedPoint || !previewCoords) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await apiClient.post('/api/secret-point-overrides', {
         id: selectedPoint.id, lat: previewCoords.lat, lng: previewCoords.lng,
       });
       setServerOnline(true);
-    } catch {
-      // ✅ 5TH-C6: setLocalOverrides 헬퍼 사용
+    } catch (err) {
+      // ✅ FIX-ERR: 401/403 권한 오류는 명확히 에러 표시, 네트워크 오류만 localStorage fallback
+      const status = err?.response?.status;
+      if (status === 401) {
+        setSaveError('⚠️ 토큰 만료. 로그아웃 후 다시 로그인해주세요.');
+        setSaving(false);
+        return;
+      } else if (status === 403) {
+        setSaveError('⚠️ 관리자 권한이 필요합니다.');
+        setSaving(false);
+        return;
+      }
+      // 네트워크 오류 시만 로컀 fallback
       setServerOnline(false);
       const ov = getLocalOverrides();
       ov[selectedPoint.id] = { lat: previewCoords.lat, lng: previewCoords.lng };
       setLocalOverrides(ov);
     } finally {
-      setSaving(false); // ✅ 30TH-C1: try/catch 중복 setSaving(false) → finally 블록으로 통합 (CreateCrew L55 패턴 통일)
+      setSaving(false); // ✅ 30TH-C1: finally 블록으로 통합
     }
     await fetchOverrides();
     // ✅ 5TH-A4: savedTimerRef로 타이머 관리 — 언마운트 후 setState 방지
@@ -175,8 +196,14 @@ export default function SecretPointAdmin() {
   const handleReset = async (id) => {
     try {
       await apiClient.delete(`/api/secret-point-overrides/${id}`);
-    } catch {
-      // ✅ 5TH-C6: getLocalOverrides/setLocalOverrides 헬퍼 사용
+      setSaveError(null);
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        setSaveError('⚠️ 권한 오류로 초기화에 실패했습니다.');
+        return;
+      }
+      // 네트워크 오류만 localStorage fallback
       const ov = getLocalOverrides();
       delete ov[id];
       setLocalOverrides(ov);
@@ -188,6 +215,14 @@ export default function SecretPointAdmin() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A0F1C', color: '#fff', fontFamily: 'Pretendard, sans-serif' }}>
+
+      {/* ✅ FIX-ERR: 오류 배너 (토큰 만료/권한 오류 안내) */}
+      {saveError && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10000, background: 'rgba(220,38,38,0.95)', backdropFilter: 'blur(8px)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <span style={{ color: '#fff', fontSize: '14px', fontWeight: '800' }}>{saveError}</span>
+          <button onClick={() => setSaveError(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', color: '#fff', padding: '4px 10px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>닫기</button>
+        </div>
+      )}
 
       {/* 저장 완료 오버레이 */}
       {saved && (
