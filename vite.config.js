@@ -91,26 +91,20 @@ export default defineConfig(({ mode }) => {
     })]),  // ← conditional VitePWA end
   ],
   build: {
-    // ─── 청크 스플리팅 최적화 ────────────────────────────────
+    // ✅ ROLLUP-FIX: Windows에서 네이티브 모듈 크래시(-1073740791) 방지 — JS 폴백 강제
     rollupOptions: {
+      native: false,
       output: {
         manualChunks: {
-          // React 코어 분리
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // 상태 관리
           'vendor-store': ['zustand'],
-          // 소켓
           'vendor-socket': ['socket.io-client'],
-          // lucide 아이콘 (크기가 큼)
           'vendor-icons': ['lucide-react'],
-          // axios
           'vendor-http': ['axios'],
-          // ✅ 15TH-A2: recharts 패키지 제거(12TH-B1) 이후 dead chunk 선언 제거 — 빌드 시 모듈 없음 오류 방지
-          // 'vendor-charts': ['recharts'], // recharts uninstalled
         },
       },
     },
-    chunkSizeWarningLimit: 1000, // 1MB 이상만 경고
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     proxy: {
