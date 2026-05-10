@@ -25,10 +25,12 @@ function StatCard({ label, value, icon: Icon, color, sub }) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  // ✅ 11TH-A1: 전체 store 구독 제거 — user가 직접 사용되지 않으므로 제거
-  // isAdmin: state.isAdmin() 셉렉터 → ADMIN_ID/EMAIL 직접 비교 (3RD-A2 표준으로 통일)
+  // ✅ FIX-ADMIN: 4중 보장 (id/email/gmail/MASTER tier) — 이전 2중체크로 인해 Gmail 로그인 시 리다이렉트 버그 수정
   const isAdmin = useUserStore((state) =>
-    state.user?.id === ADMIN_ID || state.user?.email === ADMIN_EMAIL
+    state.user?.id === ADMIN_ID ||
+    state.user?.email === ADMIN_EMAIL ||
+    state.user?.email === 'sunjulab.k@gmail.com' ||
+    state.userTier === 'MASTER'
   );
 
   const addToast = useToastStore((s) => s.addToast);
@@ -134,102 +136,102 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {stats && !loading && (
-          <>
-            {/* ── 사용자 현황 통계 (userStats 독립 조건) ── */}
-            {userStats && (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>👥 사용자 현황</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button onClick={() => setAutoRefresh(r => !r)} style={{ background: autoRefresh ? 'rgba(0,196,140,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: autoRefresh ? '#00C48C' : 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '800' }}>
-                      {autoRefresh ? '🔴 자동갱신 중' : '⏸ 자동갱신'}
-                    </button>
-                    <button onClick={fetchUserStats} disabled={userStatsLoading} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <RefreshCw size={11} />{userStatsLoading ? '...' : '갱신'}
-                    </button>
-                  </div>
+        {/* ── 사용자 현황 통계 (userStats 독립 조건 — stats 실패해도 표시) ── */}
+        {userStats && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>👥 사용자 현황</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button onClick={() => setAutoRefresh(r => !r)} style={{ background: autoRefresh ? 'rgba(0,196,140,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: autoRefresh ? '#00C48C' : 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '800' }}>
+                  {autoRefresh ? '🔴 자동갱신 중' : '⏸ 자동갱신'}
+                </button>
+                <button onClick={fetchUserStats} disabled={userStatsLoading} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <RefreshCw size={11} />{userStatsLoading ? '...' : '갱신'}
+                </button>
+              </div>
+            </div>
+            {/* 주요 지표 3개 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ background: 'rgba(100,181,246,0.08)', border: '1px solid rgba(100,181,246,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
+                <Users size={18} color="#64B5F6" style={{ marginBottom: '6px' }} />
+                <div style={{ fontSize: '22px', fontWeight: '950', color: '#fff', lineHeight: 1 }}>{(userStats.totalUsers || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>전체 가입자</div>
+              </div>
+              <div style={{ background: 'rgba(0,196,140,0.08)', border: '1px solid rgba(0,196,140,0.25)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '6px', right: '8px', width: '7px', height: '7px', borderRadius: '50%', background: '#00C48C', boxShadow: '0 0 0 2px rgba(0,196,140,0.3)', animation: 'pulse 2s infinite' }} />
+                <Wifi size={18} color="#00C48C" style={{ marginBottom: '6px' }} />
+                <div style={{ fontSize: '22px', fontWeight: '950', color: '#00C48C', lineHeight: 1 }}>{userStats.onlineNow || 0}</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>현재 접속 중</div>
+                <div style={{ fontSize: '9px', color: 'rgba(0,196,140,0.6)', fontWeight: '600' }}>5분 이내 활동</div>
+              </div>
+              <div style={{ background: 'rgba(255,90,95,0.08)', border: '1px solid rgba(255,90,95,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
+                <WifiOff size={18} color="#FF5A5F" style={{ marginBottom: '6px' }} />
+                <div style={{ fontSize: '22px', fontWeight: '950', color: '#FF5A5F', lineHeight: 1 }}>{(userStats.offlineUsers || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>미접속 (24h)</div>
+              </div>
+            </div>
+            {/* 보조 지표 2개 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Activity size={16} color="#FFD700" />
+                <div>
+                  <div style={{ fontSize: '18px', fontWeight: '950', color: '#FFD700' }}>{userStats.onlineToday || 0}</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>오늘 접속자</div>
                 </div>
-                {/* 주요 지표 3개 */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ background: 'rgba(100,181,246,0.08)', border: '1px solid rgba(100,181,246,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
-                    <Users size={18} color="#64B5F6" style={{ marginBottom: '6px' }} />
-                    <div style={{ fontSize: '22px', fontWeight: '950', color: '#fff', lineHeight: 1 }}>{(userStats.totalUsers || 0).toLocaleString()}</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>전체 가입자</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,196,140,0.08)', border: '1px solid rgba(0,196,140,0.25)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: '6px', right: '8px', width: '7px', height: '7px', borderRadius: '50%', background: '#00C48C', boxShadow: '0 0 0 2px rgba(0,196,140,0.3)', animation: 'pulse 2s infinite' }} />
-                    <Wifi size={18} color="#00C48C" style={{ marginBottom: '6px' }} />
-                    <div style={{ fontSize: '22px', fontWeight: '950', color: '#00C48C', lineHeight: 1 }}>{userStats.onlineNow || 0}</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>현재 접속 중</div>
-                    <div style={{ fontSize: '9px', color: 'rgba(0,196,140,0.6)', fontWeight: '600' }}>5분 이내 활동</div>
-                  </div>
-                  <div style={{ background: 'rgba(255,90,95,0.08)', border: '1px solid rgba(255,90,95,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
-                    <WifiOff size={18} color="#FF5A5F" style={{ marginBottom: '6px' }} />
-                    <div style={{ fontSize: '22px', fontWeight: '950', color: '#FF5A5F', lineHeight: 1 }}>{(userStats.offlineUsers || 0).toLocaleString()}</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>미접속 (24h)</div>
-                  </div>
+              </div>
+              <div style={{ background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(255,155,38,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <UserPlus size={16} color="#FF9B26" />
+                <div>
+                  <div style={{ fontSize: '18px', fontWeight: '950', color: '#FF9B26' }}>{userStats.newUsers7d || 0}</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>신규 가입 (7일)</div>
                 </div>
-                {/* 보조 지표 2개 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Activity size={16} color="#FFD700" />
-                    <div>
-                      <div style={{ fontSize: '18px', fontWeight: '950', color: '#FFD700' }}>{userStats.onlineToday || 0}</div>
-                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>오늘 접속자</div>
-                    </div>
-                  </div>
-                  <div style={{ background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(255,155,38,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <UserPlus size={16} color="#FF9B26" />
-                    <div>
-                      <div style={{ fontSize: '18px', fontWeight: '950', color: '#FF9B26' }}>{userStats.newUsers7d || 0}</div>
-                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>신규 가입 (7일)</div>
-                    </div>
-                  </div>
-                </div>
-                {/* 티어별 분포 미니 바 */}
-                {userStats.tierBreakdown && (
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px 14px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>플랜별 가입자</div>
-                    {[
-                      ['FREE',          '무료',           '#8E8E93'],
-                      ['BUSINESS_LITE', '라이트',         '#64B5F6'],
-                      ['PRO',           '프로',           '#00C48C'],
-                      ['BUSINESS_VIP',  'VIP',            '#FFD700'],
-                      ['MASTER',        '마스터',         '#FF9B26'],
-                    ].map(([tier, label, color]) => {
-                      const cnt = userStats.tierBreakdown[tier] || 0;
-                      const pct = userStats.totalUsers > 0 ? Math.round(cnt / userStats.totalUsers * 100) : 0;
-                      return (
-                        <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                          <div style={{ width: '68px', flexShrink: 0 }}>
-                            <div style={{ fontSize: '10px', fontWeight: '900', color }}>{label}</div>
-                            <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.25)', fontWeight: '600' }}>{tier}</div>
-                          </div>
-                          <div style={{ flex: 1, height: '5px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
-                          </div>
-                          <span style={{ fontSize: '11px', color: cnt > 0 ? color : 'rgba(255,255,255,0.3)', fontWeight: '900', minWidth: '28px', textAlign: 'right' }}>{cnt}명</span>
-                        </div>
-                      );
-                    })}
-                    {/* DB 원시 티어 디버그 — 예상 밖의 티어명 발견 시 표시 */}
-                    {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r)) && (
-                      <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                        <div style={{ fontSize: '9px', fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ DB 원시 티어 (정규화 필요)</div>
-                        {Object.entries(userStats.rawTiers)
-                          .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r))
-                          .map(([raw, cnt]) => (
-                            <div key={raw} style={{ fontSize: '9px', color: 'rgba(255,100,100,0.7)', fontWeight: '700' }}>{raw}: {cnt}명</div>
-                          ))
-                        }
+              </div>
+            </div>
+            {/* 티어별 분포 미니 바 */}
+            {userStats.tierBreakdown && (
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px 14px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>플랜별 가입자</div>
+                {[
+                  ['FREE',          '무료',           '#8E8E93'],
+                  ['BUSINESS_LITE', '라이트',         '#64B5F6'],
+                  ['PRO',           '프로',           '#00C48C'],
+                  ['BUSINESS_VIP',  'VIP',            '#FFD700'],
+                  ['MASTER',        '마스터',         '#FF9B26'],
+                ].map(([tier, label, color]) => {
+                  const cnt = userStats.tierBreakdown[tier] || 0;
+                  const pct = userStats.totalUsers > 0 ? Math.round(cnt / userStats.totalUsers * 100) : 0;
+                  return (
+                    <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <div style={{ width: '68px', flexShrink: 0 }}>
+                        <div style={{ fontSize: '10px', fontWeight: '900', color }}>{label}</div>
+                        <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.25)', fontWeight: '600' }}>{tier}</div>
                       </div>
-                    )}
+                      <div style={{ flex: 1, height: '5px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
+                      </div>
+                      <span style={{ fontSize: '11px', color: cnt > 0 ? color : 'rgba(255,255,255,0.3)', fontWeight: '900', minWidth: '28px', textAlign: 'right' }}>{cnt}명</span>
+                    </div>
+                  );
+                })}
+                {/* DB 원시 티어 디버그 — 예상 밖의 티어명 발견 시 표시 */}
+                {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r)) && (
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ fontSize: '9px', fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ DB 원시 티어 (정규화 필요)</div>
+                    {Object.entries(userStats.rawTiers)
+                      .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r))
+                      .map(([raw, cnt]) => (
+                        <div key={raw} style={{ fontSize: '9px', color: 'rgba(255,100,100,0.7)', fontWeight: '700' }}>{raw}: {cnt}명</div>
+                      ))
+                    }
                   </div>
                 )}
-
               </div>
             )}
+          </div>
+        )}
+
+        {stats && !loading && (
+          <>
 
             {/* 주요 지표 */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '20px' }}>
