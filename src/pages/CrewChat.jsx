@@ -221,7 +221,7 @@ export default function CrewChat() {
   };
 
   return (
-    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#F0F2F5' }}>
+    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#F0F2F5', paddingBottom: 0 }}>
       {/* Header — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>

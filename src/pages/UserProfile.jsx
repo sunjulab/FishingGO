@@ -97,8 +97,8 @@ export default function UserProfile() {
 
   return (
     <div style={{ minHeight: '100dvh', background: '#F2F2F7', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif" }}>
-      {/* 헤더 */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: '#fff', borderBottom: '1px solid #F0F2F7', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: '#fff', borderBottom: '1px solid #F0F2F7', padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
           <ChevronLeft size={20} color="#1A1A2E" />
         </button>
@@ -106,7 +106,7 @@ export default function UserProfile() {
         <div style={{ width: '36px' }} />
       </div>
 
-      <div style={{ padding: '20px 20px 100px' }}>
+      <div style={{ padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
         {/* 프로필 카드 */}
         <div style={{ background: '#fff', borderRadius: '28px', padding: '28px 24px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', marginBottom: '16px' }}>
           {/* 아바타 + 정보 */}

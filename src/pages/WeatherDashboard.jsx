@@ -259,8 +259,8 @@ export default function WeatherDashboard() {
     <div style={{ backgroundColor: '#F4F6FA', height: '100vh', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#F4F6FA', height: '100%', position: 'relative', overflowY: 'auto', paddingBottom: '30px', fontFamily: 'Pretendard, sans-serif', boxShadow: '0 0 40px rgba(0,0,0,0.05)' }}>
 
-        {/* 헤더 */}
-        <div style={{ background: '#fff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F5', position: 'sticky', top: 0, zIndex: 100 }}>
+        {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
+        <div style={{ background: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F5', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate(-1)}>
             <ChevronLeft size={24} color="#1A1A2E" />
             <span style={{ fontSize: '18px', fontWeight: '900', color: '#1A1A2E' }}>전국 해양 기상</span>

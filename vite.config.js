@@ -19,54 +19,35 @@ export default defineConfig(({ mode }) => {
     ...(env.VITE_DISABLE_PWA === 'true' ? [] : [VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,svg,woff2,webp}'], // PNG 아이콘은 별도 관리 (대용량 precache 오류 방지)
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB 제한
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'], // webp 제거 — 대용량 파일 캐시 방지
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB (5MB → 3MB 강화)
+        skipWaiting: true,
+        clientsClaim: true,
         // ─── 오프라인 캐시 전략 ───────────────────────────────
         runtimeCaching: [
           {
-            // API 요청: NetworkFirst (온라인이면 서버 데이터, 오프라인이면 캐시)
             urlPattern: /\/api\//,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 }, // 1시간
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 },
             },
           },
           {
-            // 카카오맵 타일: CacheFirst (자주 바뀌지 않음)
             urlPattern: /dapi\.kakao\.com/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'kakao-map-cache',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7일
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
             },
           },
           {
-            // ✅ 15TH-C1: unsplash 대신 picsum.photos로 대체 완료 — 향후 자체 서버 이미지 API 연동 시 업데이트
-            urlPattern: /picsum\.photos/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'external-assets',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 }, // 30일
-            },
-          },
-          {
-            // ✅ 9TH-B5: Pretendard CDN 폰트 전용 CacheFirst — 폰트는 거의 변경되지 않으므로 StaleWhileRevalidate 불필요
             urlPattern: /cdn\.jsdelivr\.net/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'font-cache',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }, // 1년
-            },
-          },
-          {
-            // ENH-B5: YouTube 썬네일 오프라인 캐시 — MediaTab 오프라인 시 깨집 방지
-            urlPattern: /i\.ytimg\.com|img\.youtube\.com/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'youtube-thumbnails',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 3 }, // 3일
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
         ],
@@ -83,17 +64,14 @@ export default defineConfig(({ mode }) => {
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-          // ✅ 28TH-C2: maskable 아이콘 활성화 — icon-512.png 겸용 등록 (Lighthouse installability 경고 해소)
-          // 전용 maskable 이미지(icon-512-maskable.png) 생성 시 아래 src 경로 교체 권장
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     })]),  // ← conditional VitePWA end
   ],
   build: {
-    // ✅ ROLLUP-FIX: Windows에서 네이티브 모듈 크래시(-1073740791) 방지 — JS 폴백 강제
+    // ✅ ROLLUP-FIX: @rollup/wasm-node 오버라이드는 package.json overrides에서 처리
     rollupOptions: {
-      native: false,
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],

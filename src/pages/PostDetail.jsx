@@ -214,7 +214,7 @@ export default function PostDetail() {
   const commentCount = Array.isArray(post.comments) ? post.comments.length : (post.comments || 0);
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F2F2F7', height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <div className="page-container" style={{ backgroundColor: '#F2F2F7', height: '100dvh', display: 'flex', flexDirection: 'column', paddingBottom: 0 }}>
       {/* 헤더 — ✅ SAFE-AREA: 노치/다이나믹아일랜드 자동 회피 */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff', borderBottom: '1px solid #F0F2F7', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={goBack} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>

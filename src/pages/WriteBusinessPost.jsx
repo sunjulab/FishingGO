@@ -214,8 +214,8 @@ export default function WriteBusinessPost() {
 
   return (
     <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: '80px', maxWidth: '430px', margin: '0 auto', position: 'relative' }}>
-      {/* 헤더 */}
-      <div style={{ backgroundColor: '#fff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
+      {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
+      <div style={{ backgroundColor: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={22} color="#1c1c1e" /></button>
         <h2 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>{isEditMode ? '홍보글 수정' : '선상 배 홍보 등록'}</h2>
         <button

@@ -73,8 +73,8 @@ export default function NoticeDetail() {
 
   return (
     <div style={{ backgroundColor: '#fff', minHeight: '100dvh' }}>
-      {/* 헤더 */}
-      <div style={{ backgroundColor: '#fff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F0', position: 'sticky', top: 0, zIndex: 100 }}>
+      {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
+      <div style={{ backgroundColor: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F0', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: '#1c1c1e' }}>
           <ChevronLeft size={26} />
         </button>
