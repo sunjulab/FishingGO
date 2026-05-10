@@ -136,6 +136,18 @@ export const useUserStore = create((set, get) => ({
   // 구독 티어 — user.tier와 항상 일치하도록 초기화
   userTier: safeGetTier(_initialUser),
 
+  // ✅ FIX-ADMIN: isAdmin 선택자 메서드 — 4중 보장 (id/email/gmail/MASTER tier)
+  // App.jsx AdminRoute, SecretPointAdmin 등에서 s.isAdmin() 형태로 호출
+  isAdmin: () => {
+    const s = get();
+    return (
+      s.user?.id === ADMIN_ID ||
+      s.user?.email === ADMIN_EMAIL ||
+      s.user?.email === 'sunjulab.k@gmail.com' ||
+      s.userTier === 'MASTER'
+    );
+  },
+
   // ── 기본 유저 업데이트 ──
   updateUser: (newData) => set((state) => {
     const updatedUser = { ...state.user, ...newData };

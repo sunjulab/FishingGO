@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { SECRET_FISHING_POINTS } from '../constants/fishingData';
 import apiClient from '../api/index';
 
-import { useUserStore } from '../store/useUserStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 
 // ✅ 5TH-C6: localStorage 중복 패턴 헬퍼 함수 — handleSave/handleReset 두 곳
 const getLocalOverrides = () => { try { return JSON.parse(localStorage.getItem('secretPointOverrides') || '{}'); } catch { return {}; } };
@@ -12,8 +12,13 @@ const setLocalOverrides = (ov) => localStorage.setItem('secretPointOverrides', J
 
 export default function SecretPointAdmin() {
   const navigate = useNavigate();
-  // ✅ FIX-ADMIN: useUserStore.isAdmin() 직접 사용 — 4중 보장(id/email/gmail/MASTER tier) 단일 소스
-  const isAdmin = useUserStore(s => s.isAdmin());
+  // ✅ FIX-ADMIN: id/email/gmail/MASTER tier 4중 보장 (App.jsx AdminRoute와 동일한 로직)
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === 'sunjulab.k@gmail.com' ||
+    s.userTier === 'MASTER'
+  );
 
   // 클라이언트 이중 인증 가드 — App.jsx 라우트 보호와 이중 방어
   useEffect(() => {
