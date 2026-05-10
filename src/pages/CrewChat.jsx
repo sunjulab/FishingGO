@@ -221,7 +221,7 @@ export default function CrewChat() {
   };
 
   return (
-    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#F0F2F5', paddingBottom: 0 }}>
+    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#fff', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {/* Header — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>
@@ -263,7 +263,7 @@ export default function CrewChat() {
       )}
 
       {/* Chat Area */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#F0F2F5' }}>
         {messages.map((msg, idx) => {
           const isMe =
             (msg.socketId && msg.socketId === mySocketId.current) ||
@@ -299,8 +299,8 @@ export default function CrewChat() {
         })}
       </div>
 
-      {/* Input Area — ✅ SAFE-AREA: 하단 시스템 UI 자동 회피 */}
-      <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px)', background: '#fff', borderTop: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}>
+      {/* Input Area — 컨테이너 safe-area padding이 이미 하단 처리 */}
+      <div style={{ padding: '12px 16px', background: '#fff', borderTop: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}>
         {/* 크루장: 삭제 버튼 / 일반: 나가기 버튼 */}
         {isOwner ? (
           <button

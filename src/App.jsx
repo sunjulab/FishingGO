@@ -1,4 +1,9 @@
 import React, { Suspense, lazy, useEffect, useRef } from 'react';
+import { registerPlugin, Capacitor } from '@capacitor/core';
+
+// ✅ BACK-FIX: 모듈 로드 시점(React 마운트 전)에 App 플러그인 등록 — 타이밍 문제 완전 해결
+// registerPlugin은 @capacitor/core(이미 의존성)에서 제공 — @capacitor/app 패키지 불필요
+const CapApp = Capacitor.isNativePlatform() ? registerPlugin('App') : null;
 import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, Navigate } from 'react-router-dom';
 
 // import { GoogleOAuthProvider } from '@react-oauth/google'; // 추후 구글 로그인 연동 시 활성화
@@ -61,10 +66,7 @@ function PageLoading() {
 
 
 // ✅ BACK-BUTTON: Android 하드웨어 뒤로가기 인터셉터
-// - 이전 화면이 있으면 navigate(-1)
-// - 앱 첫 화면이면 2초 내 재클릭 시 종료
-// ✅ CAPACITOR-FIX: import('@capacitor/app') 제거 — window.Capacitor.Plugins.App 전역 사용
-//    (Capacitor 네이티브 앱 로드 시 window.Capacitor가 자동 주입됨)
+// ✅ BACK-FIX: registerPlugin('App')으로 Capacitor 네이티브 backButton 이벤트 안정적 인터셉트
 function BackButtonHandler() {
   const navigate    = useNavigate();
   const location    = useLocation();
@@ -75,19 +77,18 @@ function BackButtonHandler() {
     const EXIT_MS = 2000;
 
     const handleBack = () => {
-      // history.state.idx: React Router가 관리하는 스택 깊이
-      const idx = window.history.state?.idx ?? window.history.length - 1;
-
-      if (idx > 0) {
+      // ✅ history.state.idx: React Router 스택 깊이 (v6/v7 모두 지원)
+      // 보조 체크: window.history.length > 1 (React Router idx가 없을 경우)
+      const idx = window.history.state?.idx ?? 0;
+      if (idx > 0 || window.history.length > 1) {
         navigate(-1);
         return;
       }
 
-      // 더 이상 뒤로 갈 수 없음 (앱 시작 화면) — 더블탭 종료
+      // 홈화면에서 더블탭 종료
       const now = Date.now();
       if (now - lastBackRef.current < EXIT_MS) {
-        // window.Capacitor.Plugins.App: 네이티브 앱 실행 시 자동 주입
-        try { window.Capacitor?.Plugins?.App?.exitApp?.(); } catch {}
+        try { CapApp?.exitApp?.(); } catch {}
       } else {
         lastBackRef.current = now;
         addToast('뒤로가기를 한 번 더 누르면 종료됩니다', 'info');
@@ -96,14 +97,12 @@ function BackButtonHandler() {
 
     let cleanup = null;
 
-    // Capacitor 네이티브 환경 감지 — import 없이 전역 객체 사용
-    const capApp = window.Capacitor?.Plugins?.App;
-    if (capApp) {
-      // ✅ 네이티브 Capacitor 환경
-      const listenerP = capApp.addListener('backButton', handleBack);
+    if (CapApp) {
+      // ✅ 네이티브 Capacitor: registerPlugin('App') 기반 — 가장 안정적
+      const listenerP = CapApp.addListener('backButton', handleBack);
       cleanup = () => listenerP?.then?.(l => l?.remove?.()).catch?.(() => {});
     } else {
-      // ✅ 브라우저 / Cordova document 이벤트 폴백
+      // ✅ 브라우저 폴백: document backbutton 이벤트 (Cordova / 테스트용)
       const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
       document.addEventListener('backbutton', domBack, false);
       cleanup = () => document.removeEventListener('backbutton', domBack, false);

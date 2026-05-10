@@ -214,7 +214,7 @@ export default function PostDetail() {
   const commentCount = Array.isArray(post.comments) ? post.comments.length : (post.comments || 0);
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F2F2F7', height: '100dvh', display: 'flex', flexDirection: 'column', paddingBottom: 0 }}>
+    <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {/* 헤더 — ✅ SAFE-AREA: 노치/다이나믹아일랜드 자동 회피 */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff', borderBottom: '1px solid #F0F2F7', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={goBack} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
@@ -360,8 +360,8 @@ export default function PostDetail() {
         </div>
       </div>
 
-      {/* 댓글 입력창 — ✅ SAFE-AREA: 하단 제스처바/홈버튼 자동 회피 */}
-      <div style={{ padding: '10px 16px calc(env(safe-area-inset-bottom, 0px) + 10px)', backgroundColor: '#fff', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 -4px 16px rgba(0,0,0,0.06)' }}>
+      {/* 댓글 입력창 — 컨테이너 safe-area padding이 이미 하단 처리 */}
+      <div style={{ padding: '10px 16px', backgroundColor: '#fff', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 -4px 16px rgba(0,0,0,0.06)' }}>
         <input
           placeholder="칭찬과 응원의 댓글을 남겨주세요 🎣"
           style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', backgroundColor: '#F2F2F7', border: 'none', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#1A1A2E' }}

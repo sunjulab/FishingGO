@@ -324,22 +324,29 @@ export default function CommunityTab() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const requests = [
-          apiClient.get('/api/community/crews'),
-          apiClient.get('/api/community/notices'),
-          apiClient.get('/api/community/business'),
+        // ✅ FIX-COMMUNITY: Promise.all → Promise.allSettled
+        // 하나의 API 실패가 나머지 크루/공지/사업글 로딩을 막지 않도록 독립 처리
+        const baseRequests = [
+          apiClient.get('/api/community/crews').catch(() => ({ data: [] })),
+          apiClient.get('/api/community/notices').catch(() => ({ data: [] })),
+          apiClient.get('/api/community/business').catch(() => ({ data: [] })),
         ];
         // ✅ CREW-ENH: 로그인 유저면 내 크루 목록도 함께 로드
-        if (user?.email && user.email !== 'guest@fishinggo.com') {
-          requests.push(apiClient.get('/api/user/crews').catch(() => ({ data: [] })));
-        }
-        const [crewsRes, noticesRes, businessRes, myCrewsRes] = await Promise.all(requests);
+        const myCrewsPromise = (user?.email && user.email !== 'guest@fishinggo.com')
+          ? apiClient.get('/api/user/crews').catch(() => ({ data: [] }))
+          : Promise.resolve({ data: [] });
+
+        const [crewsRes, noticesRes, businessRes, myCrewsRes] = await Promise.all([...baseRequests, myCrewsPromise]);
         const blocked = user?.blockedUsers || [];
-        if (crewsRes.data?.length) setCrews(crewsRes.data.filter(c => !blocked.includes(c.ownerName)));
-        if (noticesRes.data?.length) setNoticePosts(noticesRes.data);
-        if (businessRes.data?.length) setBusinessPosts(businessRes.data.filter(p => !blocked.includes(p.author)));
+
+        // ✅ FIX-EMPTY: ?.length 조건 제거 — 빈 배열([])도 항상 setState 호출
+        // 이전: [].length === 0 (falsy) → setCrews 미호출 → 구버전 state 유지 버그
+        if (Array.isArray(crewsRes.data)) setCrews(crewsRes.data.filter(c => !blocked.includes(c.ownerName)));
+        if (Array.isArray(noticesRes.data)) setNoticePosts(noticesRes.data);
+        if (Array.isArray(businessRes.data)) setBusinessPosts(businessRes.data.filter(p => !blocked.includes(p.author)));
+
         // ✅ CREW-ENH: 내 크루 ID Set 구성
-        if (myCrewsRes?.data?.length) {
+        if (Array.isArray(myCrewsRes?.data) && myCrewsRes.data.length > 0) {
           const ids = new Set(myCrewsRes.data.map(c => String(c._id || c.id)));
           setMyCrewIds(ids);
         }
