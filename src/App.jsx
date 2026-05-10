@@ -63,6 +63,8 @@ function PageLoading() {
 // ✅ BACK-BUTTON: Android 하드웨어 뒤로가기 인터셉터
 // - 이전 화면이 있으면 navigate(-1)
 // - 앱 첫 화면이면 2초 내 재클릭 시 종료
+// ✅ CAPACITOR-FIX: import('@capacitor/app') 제거 — window.Capacitor.Plugins.App 전역 사용
+//    (Capacitor 네이티브 앱 로드 시 window.Capacitor가 자동 주입됨)
 function BackButtonHandler() {
   const navigate    = useNavigate();
   const location    = useLocation();
@@ -77,7 +79,6 @@ function BackButtonHandler() {
       const idx = window.history.state?.idx ?? window.history.length - 1;
 
       if (idx > 0) {
-        // 이전 화면이 있으면 뒤로 이동
         navigate(-1);
         return;
       }
@@ -85,12 +86,8 @@ function BackButtonHandler() {
       // 더 이상 뒤로 갈 수 없음 (앱 시작 화면) — 더블탭 종료
       const now = Date.now();
       if (now - lastBackRef.current < EXIT_MS) {
-        // ✅ FIX: @capacitor/app 직접 import로 exitApp 호출
-        import('@capacitor/app')
-          .then(({ App: CapApp }) => {
-            CapApp.exitApp().catch(() => {});
-          })
-          .catch(() => {});
+        // window.Capacitor.Plugins.App: 네이티브 앱 실행 시 자동 주입
+        try { window.Capacitor?.Plugins?.App?.exitApp?.(); } catch {}
       } else {
         lastBackRef.current = now;
         addToast('뒤로가기를 한 번 더 누르면 종료됩니다', 'info');
@@ -99,34 +96,18 @@ function BackButtonHandler() {
 
     let cleanup = null;
 
-    // ✅ FIX: @capacitor/app 직접 import 우선, 실패 시 @capacitor/core registerPlugin 폴백
-    import('@capacitor/app')
-      .then(({ App: CapApp }) => {
-        const listenerP = CapApp.addListener('backButton', handleBack);
-        cleanup = () => listenerP.then(l => l?.remove?.()).catch(() => {});
-      })
-      .catch(() => {
-        // 폴백 1: @capacitor/core의 registerPlugin 사용
-        import('@capacitor/core')
-          .then(({ registerPlugin }) => {
-            try {
-              const CapApp = registerPlugin('App');
-              const listenerP = CapApp.addListener('backButton', handleBack);
-              cleanup = () => listenerP?.then?.(l => l?.remove?.()).catch(() => {});
-            } catch {
-              // 폴백 2: 브라우저/Cordova document 이벤트
-              const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
-              document.addEventListener('backbutton', domBack, false);
-              cleanup = () => document.removeEventListener('backbutton', domBack, false);
-            }
-          })
-          .catch(() => {
-            // 폴백 2: 브라우저/Cordova document 이벤트
-            const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
-            document.addEventListener('backbutton', domBack, false);
-            cleanup = () => document.removeEventListener('backbutton', domBack, false);
-          });
-      });
+    // Capacitor 네이티브 환경 감지 — import 없이 전역 객체 사용
+    const capApp = window.Capacitor?.Plugins?.App;
+    if (capApp) {
+      // ✅ 네이티브 Capacitor 환경
+      const listenerP = capApp.addListener('backButton', handleBack);
+      cleanup = () => listenerP?.then?.(l => l?.remove?.()).catch?.(() => {});
+    } else {
+      // ✅ 브라우저 / Cordova document 이벤트 폴백
+      const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
+      document.addEventListener('backbutton', domBack, false);
+      cleanup = () => document.removeEventListener('backbutton', domBack, false);
+    }
 
     return () => cleanup?.();
   }, [navigate, addToast, location.pathname]);

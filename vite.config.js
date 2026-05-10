@@ -72,8 +72,6 @@ export default defineConfig(({ mode }) => {
   build: {
     // ✅ ROLLUP-FIX: @rollup/wasm-node 오버라이드는 package.json overrides에서 처리
     rollupOptions: {
-      // ✅ CAPACITOR-FIX: @capacitor/app은 런타임에 Capacitor 브리지가 제공 — 빌드 시 번들 제외
-      external: ['@capacitor/app'],
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
