@@ -59,7 +59,63 @@ function PageLoading() {
   return <LoadingSpinner />;
 }
 
+// ✅ BACK-BUTTON: Android 하드웨어 뒤로가기 인터셉터
+// - 이전 화면이 있으면 navigate(-1)
+// - 앱 첫 화면(history idx=0)이면 2초 내 재클릭 시 종료 토스트
+function BackButtonHandler() {
+  const navigate    = useNavigate();
+  const addToast    = useToastStore(s => s.addToast);
+  const lastBackRef = useRef(0);
 
+  useEffect(() => {
+    const EXIT_MS = 2000;
+
+    const handleBack = () => {
+      // React Router는 history.state.idx로 네비게이션 깊이를 추적
+      const idx = window.history.state?.idx ?? 0;
+
+      if (idx > 0) {
+        // 이전 화면이 있으면 뒤로 이동
+        navigate(-1);
+        return;
+      }
+
+      // 더 이상 뒤로 갈 수 없음 (앱 시작 화면)
+      const now = Date.now();
+      if (now - lastBackRef.current < EXIT_MS) {
+        // 앱 종료 (Capacitor exitApp)
+        import('@capacitor/core')
+          .then(({ registerPlugin }) => {
+            try { registerPlugin('App').exitApp(); } catch {}
+          })
+          .catch(() => {});
+      } else {
+        lastBackRef.current = now;
+        addToast('뒤로가기를 한 번 더 누르면 종료됩니다', 'info');
+      }
+    };
+
+    let cleanup = null;
+
+    // Capacitor App 플러그인으로 backButton 이벤트 리스닝
+    import('@capacitor/core')
+      .then(({ registerPlugin }) => {
+        const CapApp    = registerPlugin('App');
+        const listenerP = CapApp.addListener('backButton', handleBack);
+        cleanup = () => listenerP.then(l => l?.remove?.()).catch(() => {});
+      })
+      .catch(() => {
+        // 브라우저/폴백: document backbutton 이벤트
+        const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
+        document.addEventListener('backbutton', domBack, false);
+        cleanup = () => document.removeEventListener('backbutton', domBack, false);
+      });
+
+    return () => cleanup?.();
+  }, [navigate, addToast]);
+
+  return null;
+}
 function BottomNav() {
   const location = useLocation();
   const navItems = [
@@ -291,6 +347,7 @@ export default function App() {
         <GlobalLevelUpListener />
         {/* ✅ POPUP: 이미지 있는 공지 → 앱 시작 시 carousel 팝업 — useNavigate 사용으로 BrowserRouter 내부에 배치 */}
         <AnnouncementPopup />
+        <BackButtonHandler />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<PageLoading />}>
