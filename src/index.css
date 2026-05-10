@@ -88,6 +88,7 @@ body {
   background-color: #fff;
   /* ✅ SAFE-AREA: 하단 네비게이션바 뒤로 콘텐츠가 숨지 않도록 자동 여백 */
   padding-bottom: var(--nav-height);
+  /* ✅ SAFE-AREA: 서브페이지는 헤더에서 직접 padding-top 적용 (AdminDashboard/CrewChat/PostDetail 참고) */
 }
 
 /* ✅ SAFE-AREA: 스크롤 컨테이너 공통 유틸 — 모든 페이지의 스크롤 영역에서사용 */

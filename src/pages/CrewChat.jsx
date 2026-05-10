@@ -222,8 +222,8 @@ export default function CrewChat() {
 
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#F0F2F5' }}>
-      {/* Header */}
-      <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', borderBottom: '1px solid #eee' }}>
+      {/* Header — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
+      <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <ChevronLeft size={24} />
         </button>
@@ -299,8 +299,8 @@ export default function CrewChat() {
         })}
       </div>
 
-      {/* Input Area */}
-      <div style={{ padding: '12px 16px 16px', background: '#fff', borderTop: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}>
+      {/* Input Area — ✅ SAFE-AREA: 하단 시스템 UI 자동 회피 */}
+      <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px)', background: '#fff', borderTop: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}>
         {/* 크루장: 삭제 버튼 / 일반: 나가기 버튼 */}
         {isOwner ? (
           <button

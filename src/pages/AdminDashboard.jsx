@@ -107,9 +107,9 @@ export default function AdminDashboard() {
   const maxPlanRevenue = Math.max(...Object.values(planBreakdown).map(p => p.revenue || 0), 1);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#070B14', color: '#fff', fontFamily: 'Pretendard, sans-serif', paddingBottom: '40px' }}>
-      {/* 헤더 */}
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+    <div style={{ minHeight: '100dvh', background: '#070B14', color: '#fff', fontFamily: 'Pretendard, sans-serif', paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))' }}>
+      {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
+      <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', background: '#070B14', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <ArrowLeft size={22} color="#fff" />
