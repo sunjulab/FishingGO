@@ -5,6 +5,7 @@ import { SECRET_FISHING_POINTS } from '../constants/fishingData';
 import apiClient from '../api/index';
 
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+import { useToastStore } from '../store/useToastStore';
 
 // ✅ 5TH-C6: localStorage 중복 패턴 헬퍼 함수 — handleSave/handleReset 두 곳
 const getLocalOverrides = () => { try { return JSON.parse(localStorage.getItem('secretPointOverrides') || '{}'); } catch { return {}; } };
@@ -20,10 +21,11 @@ export default function SecretPointAdmin() {
     s.user?.email === 'sunjulab.k@gmail.com' ||
     s.userTier === 'MASTER'
   );
+  const addToast = useToastStore(s => s.addToast);
   const [authChecked, setAuthChecked] = useState(false);
+  const [debugMsg, setDebugMsg] = useState(null); // ✅ DEBUG: 인증 실패 원인 표시
 
   // ✅ HYDRATION-GUARD: setTimeout(0)으로 1tick 후 getState()로 최신 상태 확인
-  //    CctvAdmin.jsx와 동일한 패턴
   useEffect(() => {
     const timer = setTimeout(() => {
       setAuthChecked(true);
@@ -33,7 +35,21 @@ export default function SecretPointAdmin() {
         currentUser?.email === ADMIN_EMAIL ||
         currentUser?.email === 'sunjulab.k@gmail.com' ||
         userTier === 'MASTER';
-      if (!isAdm) navigate('/', { replace: true });
+
+      if (!isAdm) {
+        // ✅ DEBUG: 실제 user 상태를 광고례로 표시하여 원인 파악
+        const info = JSON.stringify({
+          id: currentUser?.id,
+          email: currentUser?.email,
+          tier: userTier,
+          ADMIN_ID,
+          ADMIN_EMAIL,
+        }, null, 2);
+        setDebugMsg(info);
+        addToast(`❗ 권한없음: ${currentUser?.id || '미로그인'} / ${currentUser?.email || '-'}`, 'error');
+        // 4초 후 홈으로
+        setTimeout(() => navigate('/', { replace: true }), 4000);
+      }
     }, 0);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -231,7 +247,42 @@ export default function SecretPointAdmin() {
   const overrideCount = Object.keys(overrides).length;
 
   // ✅ HYDRATION-GUARD: 인증 확인 완료 전 렌더링 방지
-  if (!authChecked) return null;
+  // 인증 실패 시 디버그 정보를 하단에 표시 후 4초 후 홈 이동
+  if (!authChecked || debugMsg) return (
+    <div style={{ minHeight: '100vh', background: '#0A0F1C', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      {debugMsg ? (
+        <>
+          <div style={{ fontSize: '22px', marginBottom: '12px' }}>🔐 권한 확인 실패</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }}>4초 후 홈으로 이동합니다</div>
+          {/* ✅ 하단 디버그 오버레이 — 실제 인증 상태 표시 */}
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            background: 'rgba(220,38,38,0.97)', backdropFilter: 'blur(12px)',
+            padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 20px)',
+            borderRadius: '20px 20px 0 0',
+            boxShadow: '0 -8px 32px rgba(220,38,38,0.4)',
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff', marginBottom: '10px' }}>
+              ❗ 오류 보기 — 인증 실패 상세
+            </div>
+            <pre style={{
+              fontSize: '11px', color: 'rgba(255,255,255,0.85)',
+              background: 'rgba(0,0,0,0.3)', borderRadius: '10px',
+              padding: '12px', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+              fontFamily: 'monospace', lineHeight: '1.6',
+            }}>
+              {debugMsg}
+            </pre>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '10px' }}>
+              위 값이 ADMIN_ID / ADMIN_EMAIL과 다르면 로그인 계정을 확인하세요
+            </div>
+          </div>
+        </>
+      ) : (
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '14px' }}>인증 확인 중...</div>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A0F1C', color: '#fff', fontFamily: 'Pretendard, sans-serif' }}>
