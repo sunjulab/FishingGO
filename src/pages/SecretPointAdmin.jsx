@@ -111,8 +111,27 @@ export default function SecretPointAdmin() {
       mapInstanceRef.current = map;
       setMapReady(true);
     };
-    if (window.kakao?.maps?.Map) doInit();
-    else window.kakao.maps.load(doInit);
+
+    // ✅ KAKAO-FIX: window.kakao 자체가 undefined일 수 있음 (SDK 로드 전 마운트 경쟁조건)
+    // 3단계 안전 체크:
+    //   1) maps.Map 이미 있음 → 즉시 초기화
+    //   2) kakao.maps 있지만 Map 없음 → load 콜백 대기
+    //   3) window.kakao 자체 미로드 → 200ms 폴링으로 SDK 로드 대기
+    if (window.kakao?.maps?.Map) {
+      doInit();
+    } else if (window.kakao?.maps) {
+      window.kakao.maps.load(doInit);
+    } else {
+      const retry = setInterval(() => {
+        if (window.kakao?.maps?.Map) {
+          clearInterval(retry);
+          doInit();
+        } else if (window.kakao?.maps) {
+          clearInterval(retry);
+          window.kakao.maps.load(doInit);
+        }
+      }, 200);
+    }
   }, []);
 
   /* ── 마커 놓기 ── */
