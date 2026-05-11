@@ -15,6 +15,7 @@ import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, SECRET_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
 import { useUserStore, TIER_CONFIG, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import CsInquirySection from '../components/CsInquirySection';
+import { NativeAd } from '../components/AdUnit';
 
 // ✅ 5TH-C4: EMOJI_MAP — WeatherDashboard와 동일 객체; 향후 constants/ui.js 추출 검토 권장
 
@@ -994,6 +995,9 @@ export default function MapHome() {
                 </div>
               </div>
             </div>
+
+            {/* ✅ ADMOB-NATIVE: AI 낙시 적합도 위 네이티브광고 (릴유 플랜 무료, 유료플랜은 NativeAd 내장 isPremium체크로 자동 숨김) */}
+            <NativeAd style={{ margin: '0 16px 4px' }} />
 
             {/* ── AI 낚시 적합도 게이지 카드 ── */}
             <div style={{ padding: '12px 16px 0' }}>
