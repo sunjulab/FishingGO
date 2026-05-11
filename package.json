@@ -30,6 +30,7 @@
   "devDependencies": {
     "@rollup/wasm-node": "*",
     "@vitejs/plugin-react": "^4.2.1",
+    "jimp": "^1.6.1",
     "vite": "^5.1.4"
   },
   "overrides": {
