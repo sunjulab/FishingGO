@@ -15,7 +15,8 @@
  * ✅ 2ND-C7: ⚠️ VITE_ADSENSE_PUB_ID 미설정 시 프로덕션에서도 테스트 광고 자동 실행 (수익 미발생)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 29TH-B1: ADMIN_ID/ADMIN_EMAIL import — 3RD-A2 패턴 통일
+import { Capacitor } from '@capacitor/core'; // ✅ ADMOB: 신뢰성 높은 네이티브 감지
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 
 // ─── 광고 키 설정 (테스트 키 → 실제 키 교체 시 이곳만 수정) ───
 const PUB_ID   = import.meta.env.VITE_ADSENSE_PUB_ID   || 'ca-pub-3940256099942544'; // 구글 공식 테스트 퍼블리셔
@@ -26,9 +27,17 @@ const SLOT_NATIVE  = import.meta.env.VITE_ADSENSE_SLOT_NATIVE  || '2247696314'; 
 // 실제 키(VITE_ADSENSE_PUB_ID)를 설정하면 프로덕션 에서도 실제 광고 수익 발생
 const IS_TEST_AD = !import.meta.env.VITE_ADSENSE_PUB_ID; // 엔브 미설정 시만 테스트 모드
 
-// Capacitor 네이티브 WebView 환경 감지 (AdSense는 웹 전용 — WebView 금지)
-const isCapacitorNative = () =>
-  typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
+// Capacitor 네이티브 WebView 환경 감지 (애드센스는 웹 전용 — WebView 금지)
+// @capacitor/core 임포트로 window.Capacitor 타이밍 문제 해소 + Android WebView UA 3중 감지
+const isCapacitorNative = () => {
+  // 1순위: @capacitor/core 공식 API (window.Capacitor 주입 전에도 동작)
+  try { if (Capacitor.isNativePlatform()) return true; } catch (_) {}
+  // 2순위: window.Capacitor 폴백
+  if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) return true;
+  // 3순위: Android WebView UA 감지 (미리 주입 실패 시 안전망)
+  if (typeof navigator !== 'undefined' && /wv/.test(navigator.userAgent) && /Android/.test(navigator.userAgent)) return true;
+  return false;
+};
 
 // ENH5-C2: adSenseLoaded 모듈 스코프 변수 의존성 제거 — getElementById 체크만으로 중복 방지 (HMR 안전)
 function loadAdSense() {

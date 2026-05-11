@@ -7,14 +7,11 @@
  *   VITE_PORTONE_CHANNEL_KEY  : 포트원 채널키
  */
 
-const MERCHANT_ID = import.meta.env.VITE_PORTONE_MERCHANT_ID || 'imp00000000';
-const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY || '';
+const MERCHANT_ID = import.meta.env.VITE_PORTONE_MERCHANT_ID || 'imp31403032';
+const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY || 'channel-key-7adcd18e-3aa6-4938-8029-48f0f9943d55';
 
-if (!import.meta.env.VITE_PORTONE_MERCHANT_ID) {
-  console.warn('[paymentUtils] ⚠️ VITE_PORTONE_MERCHANT_ID 미설정 — 테스트 ID로 실행 중.');
-}
-if (!import.meta.env.VITE_PORTONE_CHANNEL_KEY) {
-  console.warn('[paymentUtils] ⚠️ VITE_PORTONE_CHANNEL_KEY 미설정 — 결제 불가.');
+if (import.meta.env.DEV && !import.meta.env.VITE_PORTONE_MERCHANT_ID) {
+  console.info('[paymentUtils] 개발 환경: 기본 테스트 결제 ID 사용 중.');
 }
 
 /**

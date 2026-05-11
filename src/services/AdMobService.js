@@ -13,11 +13,10 @@ const isNative = () =>
   typeof window !== 'undefined' &&
   window.Capacitor?.isNativePlatform?.();
 
-// AdMob 테스트 모드:
-// - VITE_ADMOB_TESTING=true (Vercel 환경변수) → 테스트 광고 (플레이스토어 출시 전)
-// - VITE_ADMOB_TESTING=false 또는 미설정 + PROD=true → 실 광고
-const IS_ADMOB_TESTING =
-  import.meta.env.VITE_ADMOB_TESTING === 'true' || !import.meta.env.PROD;
+// AdMob 테스트 모드 (기본값: 테스트 ON — 플레이스토어 출시 후 VITE_ADMOB_TESTING=false 설정):
+// - 미설정 또는 'true' → 테스트 광고 (개발·심사·내부테스트 단계)
+// - VITE_ADMOB_TESTING=false → 실 광고 (플레이스토어 공식 출시 후)
+const IS_ADMOB_TESTING = import.meta.env.VITE_ADMOB_TESTING !== 'false';
 
 let AdMob = null;
 
