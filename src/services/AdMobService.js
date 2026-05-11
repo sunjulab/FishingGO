@@ -54,7 +54,7 @@ export async function showRewardedAd(onRewarded, onFailed) {
   try {
     const options = {
       adId: ADMOB_CONFIG.REWARDED_ID,
-      isTesting: !import.meta.env.PROD,
+      isTesting: IS_ADMOB_TESTING,
     };
 
     // 광고 로드
