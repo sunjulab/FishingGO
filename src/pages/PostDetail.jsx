@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, MapPin } from 'lucide-react';
+import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, MapPin, ShoppingBag, ChevronRight, ExternalLink } from 'lucide-react';
 
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A3: ADMIN_ID/EMAIL import
 import { useToastStore } from '../store/useToastStore';
@@ -38,6 +38,20 @@ export default function PostDetail() {
   const [error, setError] = useState(null);
   const [liked, setLiked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [coupangProducts, setCoupangProducts] = useState([]);
+
+  // 게시글 키워드 추출 함수
+  const extractKeyword = (p) => {
+    if (!p) return '낚시 채비';
+    const cat = p.category || '';
+    const content = p.content || '';
+    const fishMatch = content.match(/(감성돔|벵에돔|참돔|방어|광어|대구|우럭|농어|삼치|고등어|갈치|볼락|도다리|문어|쭈꾸미|갑오징어|배스|붕어|잉어|쏘가리|민어|돌돔|청어|숭어|학공치)/);
+    const fish = fishMatch ? fishMatch[0] : '';
+    if (fish && cat) return `${cat} ${fish} 채비`;
+    if (cat) return `${cat} 낚시 장비`;
+    if (fish) return `${fish} 낚시 채비`;
+    return '낚시 채비 추천';
+  };
 
   // 수정/삭제 상태
   const [showMenu, setShowMenu] = useState(false);
@@ -85,6 +99,15 @@ export default function PostDetail() {
   // ✅ NEW-A4: user?.email deps 추가 — 로그인 직후 likedBy stale 방지
   // ✅ 24TH-B1: fetchPost가 useCallback으로 안정화되어 eslint-disable 없이 deps 포함
   useEffect(() => { fetchPost(); }, [fetchPost]);
+
+  // 게시글 로드 완료 후 쿠팡 상품 검색
+  useEffect(() => {
+    if (!post) return;
+    const kw = extractKeyword(post);
+    apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(kw)}`)
+      .then(res => { if (res.data.products?.length) setCoupangProducts(res.data.products.slice(0, 5)); })
+      .catch(() => {}); // 실패해도 UI에 영향 없음
+  }, [post?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLike = async () => {
     if (user?.id === 'GUEST') { addToast('로그인이 필요한 기능입니다.', 'error'); return; }
@@ -319,6 +342,78 @@ export default function PostDetail() {
             </div>
           </div>
         </div>
+
+        {/* ──────────────────────────────────────────
+            🛒 추천 낚시용품 (쿠팡) — 게시글 키워드 기반
+        ────────────────────────────────────────── */}
+        {coupangProducts.length > 0 && (
+          <div style={{ margin: '8px 12px', backgroundColor: '#fff', borderRadius: '20px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+            {/* 섹션 헤더 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '3px', height: '18px', background: '#FF5A5F', borderRadius: '2px' }} />
+                <ShoppingBag size={15} color="#FF5A5F" />
+                <span style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E' }}>이 낚시에 어울리는 용품</span>
+              </div>
+              <button
+                onClick={() => navigate('/shop')}
+                style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '800', color: '#0056D2', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                전체보기 <ChevronRight size={13} />
+              </button>
+            </div>
+
+            {/* 상품 가로 스크롤 */}
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
+              {coupangProducts.map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => navigate('/shop')}
+                  style={{
+                    flexShrink: 0, width: '130px', background: '#F8F9FA',
+                    borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
+                    border: '1.5px solid #F0F2F7', transition: 'transform 0.15s',
+                  }}
+                  onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+                  onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  {/* 상품 이미지 */}
+                  <div style={{ width: '130px', height: '100px', overflow: 'hidden', background: '#eee' }}>
+                    <img
+                      src={item.img}
+                      alt={item.name}
+                      loading="lazy"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => { e.target.style.display = 'none'; }}
+                    />
+                  </div>
+                  {/* 상품 정보 */}
+                  <div style={{ padding: '8px 8px 10px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1A1A2E', lineHeight: '1.35', marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {item.name}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '950', color: '#1A1A2E' }}>{item.price}</span>
+                      {item.discount && (
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#FF5A5F', background: 'rgba(255,90,95,0.1)', padding: '1px 5px', borderRadius: '4px' }}>
+                          {item.discount}↓
+                        </span>
+                      )}
+                    </div>
+                    {/* 쿠팡 구매 버튼 */}
+                    <div style={{ marginTop: '6px', padding: '5px 0', background: 'linear-gradient(135deg,#FF5A5F,#FF3B30)', borderRadius: '8px', textAlign: 'center', fontSize: '10px', fontWeight: '900', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                      <ExternalLink size={9} /> 쿠팡 구매
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '10px', color: '#AEAEB2', fontWeight: '600', textAlign: 'right', marginTop: '8px', margin: '8px 0 0' }}>
+              이 포스팅은 쿠팡 파트너스 활동의 일환으로 수수료를 받을 수 있습니다
+            </p>
+          </div>
+        )}
 
         {/* 댓글 목록 */}
         <div style={{ margin: '0 12px', backgroundColor: '#fff', borderRadius: '20px', padding: '16px 18px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
