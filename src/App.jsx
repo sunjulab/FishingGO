@@ -65,51 +65,43 @@ function PageLoading() {
 }
 
 
-// ✅ BACK-BUTTON: Android 하드웨어 뒤로가기 인터셉터
-// ✅ BACK-FIX: registerPlugin('App')으로 Capacitor 네이티브 backButton 이벤트 안정적 인터셉트
+// ✅ BACK-BUTTON: 홈화면 더블탭 종료 처리
+// ✅ BACK-FIX v3: 네이티브 onBackPressed가 navigate(-1) 담당
+//   JS는 최상위 화면에서 Capacitor 'backButton' 이벤트 수신 → 더블탭 종료 토스트만
+//   - location.pathname deps 제거 → 리스너 1번만 등록, 재등록 경쟁조건 완전 해소
+//   - ref 패턴으로 stale closure 방지
 function BackButtonHandler() {
-  const navigate    = useNavigate();
-  const location    = useLocation();
-  const addToast    = useToastStore(s => s.addToast);
+  const addToast = useToastStore(s => s.addToast);
   const lastBackRef = useRef(0);
 
+  // addToast ref: 빈 deps에서도 항상 최신 함수 참조
+  const addToastRef = useRef(addToast);
+  useEffect(() => { addToastRef.current = addToast; }, [addToast]);
+
   useEffect(() => {
-    const EXIT_MS = 2000;
-
-    const handleBack = () => {
-      // ✅ history.state.idx: React Router 스택 깊이 (v6/v7 모두 지원)
-      // 보조 체크: window.history.length > 1 (React Router idx가 없을 경우)
-      const idx = window.history.state?.idx ?? 0;
-      if (idx > 0 || window.history.length > 1) {
-        navigate(-1);
-        return;
-      }
-
-      // 홈화면에서 더블탭 종료
+    // 네이티브 onBackPressed가 webView.canGoBack() 체크 후 goBack() 처리
+    // JS는 canGoBack()=false(최상위)일 때만 호출됨 → 더블탭 종료만 담당
+    const handleRootBack = () => {
       const now = Date.now();
-      if (now - lastBackRef.current < EXIT_MS) {
-        try { CapApp?.exitApp?.(); } catch {}
+      if (now - lastBackRef.current < 2000) {
+        try { CapApp?.exitApp?.(); } catch (_) { window.close?.(); }
       } else {
         lastBackRef.current = now;
-        addToast('뒤로가기를 한 번 더 누르면 종료됩니다', 'info');
+        addToastRef.current('뒤로가기를 한 번 더 누르면 종료됩니다', 'info');
       }
     };
 
-    let cleanup = null;
-
     if (CapApp) {
-      // ✅ 네이티브 Capacitor: registerPlugin('App') 기반 — 가장 안정적
-      const listenerP = CapApp.addListener('backButton', handleBack);
-      cleanup = () => listenerP?.then?.(l => l?.remove?.()).catch?.(() => {});
+      // ✅ 빈 deps: 앱 생명주기 동안 리스너 1번만 등록 (재등록 타이밍 버그 원천 차단)
+      const listenerP = CapApp.addListener('backButton', handleRootBack);
+      return () => { listenerP?.then?.(l => l?.remove?.()).catch?.(() => {}); };
     } else {
-      // ✅ 브라우저 폴백: document backbutton 이벤트 (Cordova / 테스트용)
-      const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
+      // 브라우저 폴백
+      const domBack = (e) => { e?.preventDefault?.(); handleRootBack(); };
       document.addEventListener('backbutton', domBack, false);
-      cleanup = () => document.removeEventListener('backbutton', domBack, false);
+      return () => document.removeEventListener('backbutton', domBack, false);
     }
-
-    return () => cleanup?.();
-  }, [navigate, addToast, location.pathname]);
+  }, []); // ✅ 빈 deps: 마운트 1회만 실행
 
   return null;
 }
@@ -313,15 +305,32 @@ function AuthExpiredChecker() {
 }
 
 // ENH3-C1: 어드민 라우트 보호 컴포넌트 분리 — App() 에서 불필요한 리렌더 방지
-// ✅ FIX-ADMIN: id/email/gmail/MASTER tier 4중 보장
+// ✅ HYDRATION-FIX: Zustand 미수화 시 즉시 <Navigate to="/" /> 렌더 방지
+//    (모바일 앱 시작 직후 localStorage 미수화 → isAdmin=false → 홈 redirect 버그)
 function AdminRoute({ children }) {
-  const isAdmin = useUserStore((s) =>
-    s.user?.id === ADMIN_ID ||
-    s.user?.email === ADMIN_EMAIL ||
-    s.user?.email === 'sunjulab.k@gmail.com' ||
-    s.userTier === 'MASTER'
-  );
-  return isAdmin ? children : <Navigate to="/" replace />;
+  const [checked, setChecked] = useState(false);
+  const [allowed, setAllowed] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // setTimeout(0): 1tick 후 getState()로 수화 완료된 최신 상태 확인
+    const t = setTimeout(() => {
+      const { user, userTier } = useUserStore.getState();
+      const ok =
+        user?.id === ADMIN_ID ||
+        user?.email === ADMIN_EMAIL ||
+        user?.email === 'sunjulab.k@gmail.com' ||
+        userTier === 'MASTER';
+      setAllowed(ok);
+      setChecked(true);
+      if (!ok) navigate('/', { replace: true });
+    }, 0);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 수화 확인 전: 빈 화면 (깜빡임 방지)
+  if (!checked) return null;
+  return allowed ? children : null;
 }
 
 
