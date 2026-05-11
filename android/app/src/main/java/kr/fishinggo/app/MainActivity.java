@@ -1,24 +1,18 @@
 package kr.fishinggo.app;
 
 import com.getcapacitor.BridgeActivity;
-import android.webkit.WebView;
 
 public class MainActivity extends BridgeActivity {
 
     /**
-     * ✅ BACK-FIX: 하드웨어 뒤로가기 완전 제어
-     * - WebView에 히스토리가 있으면(React Router pushState 포함) → webView.goBack()
-     * - 홈 화면(최상위)이면 → super.onBackPressed() → Capacitor JS 'backButton' 이벤트 발생
-     *   → JS에서 "한 번 더 누르면 종료" 토스트 처리
+     * ✅ BACK-LOCK: 하드웨어 뒤로가기 완전 비활성화
+     * - onBackPressed()를 빈 메서드로 오버라이드 → 아무 동작 없이 이벤트 소비
+     * - WebView goBack() 미호출 → 내부 네비게이션 차단
+     * - super.onBackPressed() 미호출 → Capacitor JS 이벤트도 미발생
+     * - 앱 종료 불가 (홈 버튼으로만 홈 화면 이동 가능)
      */
     @Override
     public void onBackPressed() {
-        WebView webView = (getBridge() != null) ? getBridge().getWebView() : null;
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();   // React Router popstate 자동 반응 → navigate 불필요
-        } else {
-            super.onBackPressed();  // Capacitor → JS backButton 이벤트 발생
-        }
+        // 뒤로가기 완전 잠금 — 의도적으로 비워둠 (do nothing)
     }
 }
-

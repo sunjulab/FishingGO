@@ -65,53 +65,22 @@ function PageLoading() {
 }
 
 
-// ✅ BACK-BUTTON: Android 하드웨어 뒤로가기 완전 처리
-// ✅ BACK-FIX v4: ref 패턴 + navigate(-1) 복원
-//   - 빈 deps: 리스너 1번만 등록, 경쟁조건 원천 차단
-//   - navigateRef: stale closure 없이 항상 최신 navigate 함수 참조
-//   - 신버전 APK: native onBackPressed가 webView.goBack() 처리 → JS 이벤트 미발생(중복 없음)
-//   - 구버전 APK: native 없음 → JS가 navigate(-1) 직접 처리 (완전 호환)
+// ✅ BACK-LOCK: 기기 뒤로가기 완전 잠금 (네비게이션 차단, 앱 종료 차단)
+// MainActivity.java onBackPressed()가 1차 차단, JS 리스너가 2차 소비
 function BackButtonHandler() {
-  const navigate = useNavigate();
-  const addToast = useToastStore(s => s.addToast);
-  const lastBackRef = useRef(0);
-
-  // ref: 빈 deps에서도 항상 최신 함수 참조 (stale closure 방지)
-  const navigateRef = useRef(navigate);
-  const addToastRef = useRef(addToast);
-  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
-  useEffect(() => { addToastRef.current = addToast; }, [addToast]);
-
   useEffect(() => {
-    const handleBack = () => {
-      // ✅ React Router 히스토리 체크
-      const idx = window.history.state?.idx ?? 0;
-      if (idx > 0) {
-        // 서브페이지 → 이전 화면으로 이동
-        navigateRef.current(-1);
-        return;
-      }
-
-      // ✅ 홈화면 → 더블탭 2초 내 재클릭 시 종료
-      const now = Date.now();
-      if (now - lastBackRef.current < 2000) {
-        try { CapApp?.exitApp?.(); } catch (_) { window.close?.(); }
-      } else {
-        lastBackRef.current = now;
-        addToastRef.current('뒤로가기를 한 번 더 누르면 종료됩니다', 'info');
-      }
-    };
+    // 이벤트 소비만 — 아무 동작 없음 (navigate 없음, exitApp 없음)
+    const handleBack = () => { /* 뒤로가기 잠금: 이벤트 소비 */ };
 
     if (CapApp) {
-      // ✅ 빈 deps: 생명주기 동안 리스너 1번만 등록
       const listenerP = CapApp.addListener('backButton', handleBack);
       return () => { listenerP?.then?.(l => l?.remove?.()).catch?.(() => {}); };
     } else {
-      const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
+      const domBack = (e) => { e?.preventDefault?.(); };
       document.addEventListener('backbutton', domBack, false);
       return () => document.removeEventListener('backbutton', domBack, false);
     }
-  }, []); // ✅ 빈 deps 유지: ref로 최신값 접근하므로 재등록 불필요
+  }, []);
 
   return null;
 }
