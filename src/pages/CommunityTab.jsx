@@ -7,6 +7,7 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
 import { BannerAd, NativeAd } from '../components/AdUnit';
+import { showInterstitialAd } from '../services/AdMobService'; // ✅ ADMOB: 전면광고 트리거
 
 // ✅ 3RD-B5: InFeedAd 컴포넌트 함수 내부 인라인 정의 → 외부 추출 — 렌더마다 재생성 방지
 function InFeedAd() {
@@ -107,6 +108,19 @@ export default function CommunityTab() {
   const sentinelRef = useRef(null); // 무한스크롤 감지 sentinel
   // ✅ 25TH-C3: 하트 애니메이션 타이머 누수 방지 ref (5TH-A4 패턴)
   const likeTimerRef = useRef({});
+  const interstitialCountRef = useRef(0); // ✅ ADMOB: 전면광고 트리거 카운터
+
+  // ✅ ADMOB: 게시글 클릭 시 AdMob 전면광고 트리거 (5번마다 1회, 유료 사용자 제외)
+  const handlePostNavigate = useCallback((postId, options = {}) => {
+    const TRIGGER_INTERVAL = 5; // 5번 클릭마다 전면광고
+    interstitialCountRef.current += 1;
+    const shouldShowAd = !canAccessPremium && interstitialCountRef.current % TRIGGER_INTERVAL === 0;
+    if (shouldShowAd) {
+      showInterstitialAd(() => navigate(`/post/${postId}`, options));
+    } else {
+      navigate(`/post/${postId}`, options);
+    }
+  }, [navigate, canAccessPremium]);
 
   // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
   useEffect(() => {
@@ -647,7 +661,7 @@ export default function CommunityTab() {
                 <React.Fragment key={postId}>
                   <div
                     id={`post-${postId}`}
-                    onClick={() => navigate(`/post/${postId}`, { state: { fromTab: 'open' } })}
+                    onClick={() => handlePostNavigate(postId, { state: { fromTab: 'open' } })}
                     style={{
                       backgroundColor: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '12px',
                       boxShadow: highlightedPostId === postId ? '0 0 0 3px #0056D2' : '0 2px 10px rgba(0,0,0,0.03)',

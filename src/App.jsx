@@ -13,7 +13,7 @@ import { useToastStore } from './store/useToastStore';
 import { useUserStore, TIER_CONFIG, LEVEL_CONFIG, ADMIN_ID, ADMIN_EMAIL } from './store/useUserStore';
 import LoadingSpinner from './components/LoadingSpinner';
 import KakaoLoader from './components/KakaoLoader';
-import { initAdMob } from './services/AdMobService'; // ✅ ADMOB: 앱 시작 시 AdMob SDK 초기화
+import { initAdMob, showBannerAd, removeBannerAd } from './services/AdMobService'; // ✅ ADMOB: 앱 시작 시 AdMob SDK 초기화
 
 // ✅ ADMOB: 앱 시작 시 AdMob 초기화 (Capacitor 네이티브 환경에서만 동작)
 initAdMob().catch(() => {}); // 웹 환경 실패는 무시
@@ -84,6 +84,33 @@ function BackButtonHandler() {
 
   return null;
 }
+
+// ✅ ADMOB-BANNER: 앱 시작 후 네이티브 AdMob 배너 광고 노출
+// - 유료 사용자 제외
+// - Capacitor 네이티브 환경에서만 동작 (웹 브라우저 환경에서는 AdSense 배너가 CommunityTab에서 노출)
+// - 앱 시작 2초 후 배너 로드 (WebView 렌더링 완료 후)
+const PREMIUM_AD_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+function AdMobBannerController() {
+  const userTier = useUserStore((s) => s.userTier);
+  const isPremium = PREMIUM_AD_TIERS.includes(userTier);
+
+  useEffect(() => {
+    if (isPremium) return; // 유료 사용자: 광고 없음
+
+    // 앱 시작 2초 후 배너 표시 (Capacitor 네이티브만 동작, 웹은 AdMobService 내부에서 자동 무시)
+    const timer = setTimeout(() => {
+      showBannerAd().catch(() => {});
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      removeBannerAd().catch(() => {});
+    };
+  }, [isPremium]);
+
+  return null;
+}
+
 function BottomNav() {
   const location = useLocation();
   const navItems = [
@@ -330,6 +357,7 @@ export default function App() {
         {/* ✅ POPUP: 이미지 있는 공지 → 앱 시작 시 carousel 팝업 — useNavigate 사용으로 BrowserRouter 내부에 배치 */}
         <AnnouncementPopup />
         <BackButtonHandler />
+        <AdMobBannerController />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<PageLoading />}>

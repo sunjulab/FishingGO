@@ -20,6 +20,12 @@
       "style": "Dark",
       "backgroundColor": "#00000000",
       "overlaysWebView": true
+    },
+    "AdMob": {
+      "appId": "ca-app-pub-9774243773523817~7409873309",
+      "initialize": true,
+      "requestTrackingAuthorization": false,
+      "testingDevices": []
     }
   }
 }

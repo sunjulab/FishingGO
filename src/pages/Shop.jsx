@@ -69,85 +69,85 @@ export default function Shop() {
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F8F9FA' }}>
-      {/* 🟦 Dynamic Shop Header 🟦 */}
-      <div style={{ backgroundColor: '#fff', padding: '32px 24px 24px', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div>
-            <h1 style={{ fontSize: '26px', fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.04em', marginBottom: '2px' }}>🎣 지금 안 사면 후회해요</h1>
-            <p style={{ fontSize: '12px', fontWeight: '700', color: '#8E8E93', margin: 0 }}>고민은 배송만 늦출 뿐입니다</p>
-          </div>
-          <ShoppingBag size={26} color="#0056D2" fill="#0056D2" style={{ opacity: 0.1 }} />
+      {/* 🟦 Compact Shop Header 🟦 */}
+      <div style={{ backgroundColor: '#fff', padding: '10px 16px 8px', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <ShoppingBag size={16} color="#0056D2" />
+          <h1 style={{ fontSize: '15px', fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.03em', margin: 0 }}>지금 안 사면 후회해요</h1>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#8E8E93', marginLeft: 'auto' }}>고민은 배송만 늦출 뿐 🎣</span>
         </div>
         
         <form onSubmit={handleSearchSubmit} style={{ position: 'relative' }}>
-           <input 
-             type="text" 
-             placeholder="찾고 있는 낚시 장비를 입력하세요" 
-             value={search}
-             onChange={(e) => setSearch(e.target.value)}
-             style={{ width: '100%', padding: '18px 20px 18px 54px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '24px', fontSize: '15px', fontWeight: '700', outline: 'none' }} 
-           />
-           <Search size={20} color="#8E8E93" style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)' }} />
-         </form>
+          <input 
+            type="text" 
+            placeholder="찾고 있는 낚시 장비 검색" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: '100%', padding: '10px 14px 10px 40px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '14px', fontSize: '13px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} 
+          />
+          <Search size={16} color="#8E8E93" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+        </form>
       </div>
 
       {/* 🟦 Categories 🟦 */}
-      <div style={{ backgroundColor: '#fff', padding: '0 24px 20px' }}>
-         <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-            {categories.map((c) => (
-              <div 
-                key={c.name} 
-                onClick={() => handleCategoryClick(c)}
-                style={{ padding: '10px 18px', backgroundColor: activeCat === c.name ? '#1c1c1e' : '#F2F2F7', borderRadius: '16px', color: activeCat === c.name ? '#fff' : '#8E8E93', fontSize: '14px', fontWeight: '850', whiteSpace: 'nowrap', cursor: 'pointer' }}
-              >
-                {c.name}
-              </div>
-            ))}
-         </div>
+      <div style={{ backgroundColor: '#fff', padding: '6px 16px 8px', borderBottom: '1px solid #F0F0F0' }}>
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
+          {categories.map((c) => (
+            <div 
+              key={c.name} 
+              onClick={() => handleCategoryClick(c)}
+              style={{ padding: '6px 12px', backgroundColor: activeCat === c.name ? '#1c1c1e' : '#F2F2F7', borderRadius: '10px', color: activeCat === c.name ? '#fff' : '#8E8E93', fontSize: '12px', fontWeight: '850', whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0 }}
+            >
+              {c.name}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 🟦 Product Grid 🟦 */}
-      <div style={{ padding: '24px' }}>
-         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e' }}>오늘의 찜 목록 🌊</h3>
-            <SlidersHorizontal size={18} color="#8E8E93" />
-         </div>
-         
-         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            {loading ? [1,2,3,4].map(n => (
-                <div key={n} style={{ height: '240px', backgroundColor: '#eee', borderRadius: '32px', animation: 'pulse 1.5s infinite' }}></div>
-            )) : products.length === 0 ? (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: '#8E8E93' }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🎣</div>
-                <div style={{ fontSize: '15px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px' }}>상품을 불러오지 못했습니다</div>
-                <div style={{ fontSize: '13px' }}>잠시 후 다시 시도해주세요</div>
+      <div style={{ padding: '12px 12px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingLeft: '4px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '900', color: '#1c1c1e', margin: 0 }}>오늘의 찜 목록 🌊</h3>
+          <SlidersHorizontal size={15} color="#8E8E93" />
+        </div>
+        
+        {/* 3열 그리드 — 한 화면에 더 많은 상품 표시 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+          {loading ? [1,2,3,4,5,6].map(n => (
+            <div key={n} style={{ height: '180px', backgroundColor: '#eee', borderRadius: '16px', animation: 'pulse 1.5s infinite' }}></div>
+          )) : products.length === 0 ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: '#8E8E93' }}>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>🎣</div>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1c1c1e', marginBottom: '4px' }}>상품을 불러오지 못했습니다</div>
+              <div style={{ fontSize: '12px' }}>잠시 후 다시 시도해주세요</div>
+            </div>
+          ) : products.map(p => (
+            <div 
+              key={p.id} 
+              onClick={() => handleProductClick(p.link)}
+              style={{ backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #F2F2F7', cursor: 'pointer' }}
+            >
+              {/* 상품 이미지 */}
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
+                <img src={p.img} alt={p.name || '상품 이미지'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {p.discount !== '0%' && (
+                  <div style={{ position: 'absolute', top: '6px', left: '6px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>{p.discount}</div>
+                )}
               </div>
-            ) : products.map(p => (
-              <div 
-                key={p.id} 
-                onClick={() => handleProductClick(p.link)}
-                style={{ backgroundColor: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 8px 25px rgba(0,0,0,0.03)', border: '1.5px solid #F2F2F7', cursor: 'pointer' }}
-              >
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
-                  <img src={p.img} alt={p.name || '상품 이미지'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  {p.discount !== '0%' && (
-                    <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: '#FF5A5F', color: '#fff', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '900' }}>{p.discount}</div>
-                  )}
-                </div>
-                
-                <div style={{ padding: '18px' }}>
-                   <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '900', marginBottom: '4px' }}>{p.badge}</div>
-                   <h3 style={{ fontSize: '15px', fontWeight: '850', color: '#1c1c1e', height: '40px', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', margin: 0 }}>
-                     {p.name}
-                   </h3>
-                   <div style={{ marginTop: '14px', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                      <span style={{ fontSize: '18px', fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
-                      <span style={{ fontSize: '13px', fontWeight: '800', color: '#1c1c1e' }}>원</span>
-                   </div>
+              {/* 상품 정보 */}
+              <div style={{ padding: '8px' }}>
+                <div style={{ fontSize: '9px', color: '#0056D2', fontWeight: '900', marginBottom: '2px' }}>{p.badge}</div>
+                <h3 style={{ fontSize: '11px', fontWeight: '850', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', margin: '0 0 4px' }}>
+                  {p.name}
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
+                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#1c1c1e' }}>원</span>
                 </div>
               </div>
-            ))}
-         </div>
+            </div>
+          ))}
+        </div>
       </div>
       
       {/* 🟦 Partners Policy Disclosure 🟦 */}

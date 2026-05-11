@@ -114,3 +114,38 @@ export async function removeBannerAd() {
     await AdMob.removeBanner();
   } catch (e) {}
 }
+
+// ─── 전면(인터스티셜) 광고 ─────────────────────────────────────
+/**
+ * 전면 광고 표시 (게시글 클릭 시 등 자연스러운 전환 지점에 삽입)
+ * @param {function} [onClosed] - 광고 닫힌 후 콜백
+ */
+export async function showInterstitialAd(onClosed) {
+  if (!isNative() || !AdMob) {
+    // 웹 환경 — 즉시 콜백 실행 (광고 없이 다음 동작 진행)
+    onClosed?.();
+    return;
+  }
+  try {
+    const options = {
+      adId: ADMOB_CONFIG.NATIVE_ID, // 피드용 광고 단위 재사용
+      isTesting: !import.meta.env.PROD,
+    };
+
+    await AdMob.prepareInterstitial(options);
+
+    // 닫힘 리스너
+    const closeListener = await AdMob.addListener(
+      'interstitialDidDismissScreen',
+      () => {
+        closeListener.remove();
+        onClosed?.();
+      }
+    );
+
+    await AdMob.showInterstitial();
+  } catch (e) {
+    console.warn('[AdMob] 전면광고 오류:', e.message);
+    onClosed?.(); // 실패해도 다음 동작 진행
+  }
+}

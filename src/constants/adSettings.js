@@ -15,7 +15,7 @@ export const ADMOB_CONFIG = {
 export const AD_CONFIG = {
   // 무료 사용자라도 쾌적하게! (UX 최적화 모드)
   FREE_USER: {
-    FEED_AD_INTERVAL: 10, // 10개 게시글마다 광고 1회 삽입
+    FEED_AD_INTERVAL: 5, // 5개 게시글마다 광고 1회 삽입 (기존 10)
     SHOW_REWARD_AD_ON_POST: false,
     BOTTOM_SHEET_AD: true,
   },

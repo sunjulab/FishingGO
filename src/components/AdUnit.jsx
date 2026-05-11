@@ -26,8 +26,15 @@ const SLOT_NATIVE  = import.meta.env.VITE_ADSENSE_SLOT_NATIVE  || '2247696314'; 
 // 실제 키(VITE_ADSENSE_PUB_ID)를 설정하면 프로덕션 에서도 실제 광고 수익 발생
 const IS_TEST_AD = !import.meta.env.VITE_ADSENSE_PUB_ID; // 엔브 미설정 시만 테스트 모드
 
+// Capacitor 네이티브 WebView 환경 감지 (AdSense는 웹 전용 — WebView 금지)
+const isCapacitorNative = () =>
+  typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
+
 // ENH5-C2: adSenseLoaded 모듈 스코프 변수 의존성 제거 — getElementById 체크만으로 중복 방지 (HMR 안전)
 function loadAdSense() {
+  // ✅ ADMOB-FIX: Capacitor 네이티브 앱에서는 AdSense 스킵 (Google 정책: WebView 금지)
+  // 네이티브 앱은 AdMobService.js의 showBannerAd()가 담당
+  if (isCapacitorNative()) return;
   if (document.getElementById('adsense-script')) return;
   const script = document.createElement('script');
   script.id = 'adsense-script';
@@ -67,7 +74,8 @@ export function BannerAd({ style = {} }) {
   useAdPush(ref);
   // ✅ 29TH-B1: 하드코딩 'sunjulab' → ADMIN_ID/ADMIN_EMAIL 상수로 교체 (3RD-A2 패턴 통일)
   const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
-  if (isPremium) return null;
+  // ✅ ADMOB: 네이티브 앱에서는 AdSense 불가 — AdMob 배너가 하단에서 대신 노출
+  if (isPremium || isCapacitorNative()) return null;
 
   return (
     <div
@@ -103,7 +111,8 @@ export function NativeAd({ style = {} }) {
   useAdPush(ref);
   // ✅ 29TH-B1: 하드코딩 'sunjulab' → ADMIN_ID/ADMIN_EMAIL 상수로 교체 (3RD-A2 패턴 통일)
   const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
-  if (isPremium) return null;
+  // ✅ ADMOB: 네이티브 앱에서는 AdSense 불가 — AdMob 전면광고가 피드에서 대신 트리거됨
+  if (isPremium || isCapacitorNative()) return null;
 
   return (
     <div
