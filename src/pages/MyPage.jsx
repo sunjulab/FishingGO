@@ -654,7 +654,7 @@ export default function MyPage() {
       </div>
 
       {/* 🟦 Tab Content 🟦 */}
-      <div style={{ padding: '20px 24px' }}>
+      <div style={{ padding: '20px 24px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}>
          {activeTab === 'stats' ? (() => {
            // 어종별 집계
            const speciesMap = {};
@@ -1376,7 +1376,7 @@ export default function MyPage() {
       <input ref={galleryFileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleGalleryImageChange} />
       {galleryModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setGalleryModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px', maxHeight:'90vh', overflowY:'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px', paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 40px)', width:'100%', maxWidth:'480px', maxHeight:'90vh', overflowY:'auto' }}>
             <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
               <div style={{ fontSize:'18px', fontWeight:'950', color:'#1c1c1e' }}>🎣 조과 갤러리 등록</div>

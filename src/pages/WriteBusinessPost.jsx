@@ -213,7 +213,7 @@ export default function WriteBusinessPost() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: '80px', maxWidth: '430px', margin: '0 auto', position: 'relative' }}>
+    <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', maxWidth: '430px', margin: '0 auto', position: 'relative' }}>
       {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ backgroundColor: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={22} color="#1c1c1e" /></button>
@@ -499,7 +499,7 @@ export default function WriteBusinessPost() {
       </div>
 
       {/* 하단 고정 등록 버튼 */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', padding: '12px 16px', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', boxSizing: 'border-box' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', padding: '12px 16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)', backgroundColor: '#fff', borderTop: '1px solid #f0f0f0', boxSizing: 'border-box' }}>
         <button
           disabled={!isReady || !content || isSubmitting || !canWrite}
           onClick={handlePostClick}

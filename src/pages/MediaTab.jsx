@@ -232,7 +232,7 @@ export default function MediaTab() {
       {/* 전체화면 모달 */}
       {selectedVideo && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '24px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10001, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10001, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
             <div style={{ color: '#fff', flex: 1, paddingRight: '12px' }}>
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#60a5fa', marginBottom: '4px' }}>{selectedVideo.channelTitle}</div>
               <div style={{ fontSize: '16px', fontWeight: '900' }}>{selectedVideo.title}</div>
@@ -250,7 +250,7 @@ export default function MediaTab() {
               <Play size={14} fill="#fff" /> YouTube에서 보기
             </button>
           </div>
-          <div style={{ padding: '20px', background: 'linear-gradient(to top, rgba(0,0,0,1), transparent)', display: 'flex', alignItems: 'center', gap: '16px', color: '#fff' }}>
+          <div style={{ padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)', background: 'linear-gradient(to top, rgba(0,0,0,1), transparent)', display: 'flex', alignItems: 'center', gap: '16px', color: '#fff' }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '12px', opacity: 0.7 }}>이 기술에 필요한 장비</div>
               <div style={{ fontSize: '15px', fontWeight: '900' }}>{selectedVideo.products?.[0]?.name || '관련 장비'} 외</div>
@@ -307,7 +307,7 @@ export default function MediaTab() {
 
       {/* 카드 리스트 */}
       {!loading && (
-        <div style={{ padding: '16px' }}>
+        <div style={{ padding: '16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}>
 
           {/* 검색 결과 */}
           {searchResults !== null ? (
