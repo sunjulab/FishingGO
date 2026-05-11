@@ -1,51 +1,49 @@
 /**
- * usePayment — 포트원(구 아임포트) 기반 결제 유틸
- * 카카오페이 + 토스페이먼츠 + 네이버페이 + 신용카드 동시 지원
+ * usePayment — 포트원(구 아임포트) V1 기반 결제 유틸
+ * KG이니시스 단일 채널 → 카드 + 카카오페이 + 네이버페이 + 토스페이 모두 지원
  *
- * 환경변수 설정:
- *   VITE_PORTONE_MERCHANT_ID  : 포트원 가맹점 식별코드 (기본: imp00000000 테스트)
- *   VITE_TOSS_PG_CODE         : 토스 PG 코드          (기본: tosspayments 테스트)
- *   VITE_NAVER_PG_CODE        : 네이버페이 PG 코드     (기본: naverpay 테스트)
- *
- * 실서비스 전환 시: .env에 실제 값만 교체하면 됩니다.
+ * 환경변수:
+ *   VITE_PORTONE_MERCHANT_ID  : 포트원 가맹점 식별코드 (imp코드)
+ *   VITE_PORTONE_CHANNEL_KEY  : 포트원 채널키
  */
 
 const MERCHANT_ID = import.meta.env.VITE_PORTONE_MERCHANT_ID || 'imp00000000';
-// ✅ 2ND-C4: 필수 환경변수 누락 경고 — 실환경에서 VITE_PORTONE_MERCHANT_ID 미설정 시 테스트 결제 ID 사용
-if (!import.meta.env.VITE_PORTONE_MERCHANT_ID) {
-  console.warn('[paymentUtils] ⚠️ VITE_PORTONE_MERCHANT_ID 미설정 — 포트원 테스트 ID로 실행 중. 실제 결제 불가.');
-}
-const TOSS_PG     = import.meta.env.VITE_TOSS_PG_CODE        || 'tosspayments';
-const NAVER_PG    = import.meta.env.VITE_NAVER_PG_CODE        || 'naverpay';
+const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY || '';
 
-/** PG별 설정 */
-const PG_CONFIG = {
+if (!import.meta.env.VITE_PORTONE_MERCHANT_ID) {
+  console.warn('[paymentUtils] ⚠️ VITE_PORTONE_MERCHANT_ID 미설정 — 테스트 ID로 실행 중.');
+}
+if (!import.meta.env.VITE_PORTONE_CHANNEL_KEY) {
+  console.warn('[paymentUtils] ⚠️ VITE_PORTONE_CHANNEL_KEY 미설정 — 결제 불가.');
+}
+
+/**
+ * 결제수단별 표시 설정
+ * KG이니시스 단일 채널 → pay_method로 결제창 분기
+ */
+export const PG_CONFIG = {
   kakao: {
-    pg:         'kakaopay',
-    pay_method: 'card',
+    pay_method: 'kakaopay',
     label:      '카카오페이',
     emoji:      '💛',
     color:      '#FEE500',
     textColor:  '#3C1E1E',
   },
   naver: {
-    pg:         NAVER_PG,
-    pay_method: 'card',
+    pay_method: 'naverpay',
     label:      '네이버페이',
     emoji:      '🟢',
     color:      '#03C75A',
     textColor:  '#fff',
   },
   toss: {
-    pg:         TOSS_PG,
-    pay_method: 'card',
-    label:      '토스페이먼츠',
+    pay_method: 'tosspay',
+    label:      '토스페이',
     emoji:      '💙',
     color:      '#0064FF',
     textColor:  '#fff',
   },
   card: {
-    pg:         TOSS_PG,
     pay_method: 'card',
     label:      '신용/체크카드',
     emoji:      '💳',
@@ -55,30 +53,33 @@ const PG_CONFIG = {
 };
 
 export const PG_OPTIONS = ['kakao', 'naver', 'toss', 'card'];
-export { PG_CONFIG };
 
 /**
- * 단건 결제 요청 (기존 방식 — 호환 유지)
- * @deprecated ✅ 2ND-B6: 현재 VVIPSubscribe는 requestBillingPayment만 사용
- *             ✅ 23TH-C3: 실제 호출처 없음 (데드코드) — v1.0 릴리즈 안정화 후 제거 예정
+ * 단건 결제 요청
+ * @deprecated 현재 VVIPSubscribe는 requestBillingPayment만 사용
  */
-export function requestPayment({ pgKey, planId, planLabel, amount, user, harborId }) {
+export function requestPayment({ pgKey, planId, planLabel, amount, user }) {
   return new Promise((resolve, reject) => {
     const IMP = window.IMP;
     if (!IMP) { reject(new Error('결제 모듈이 로드되지 않았습니다. 페이지를 새로고침 해주세요.')); return; }
     IMP.init(MERCHANT_ID);
-    // ENH5-C1: Math.random() 충돌 가능성 제거 → crypto.randomUUID() 사용 (브라우저 지원 99%+)
+
     const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
       ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
       : Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const merchant_uid = `fishing_${planId}_${(user?.email||'u').replace(/[^a-zA-Z0-9]/g,'')}_${uid}`;
-    const cfg = PG_CONFIG[pgKey] || PG_CONFIG.toss;
+    const merchant_uid = `fishing_${planId}_${(user?.email || 'u').replace(/[^a-zA-Z0-9]/g, '')}_${uid}`;
+    const cfg = PG_CONFIG[pgKey] || PG_CONFIG.card;
+
     IMP.request_pay(
       {
-        pg: cfg.pg, pay_method: cfg.pay_method, merchant_uid,
-        name: `낚시GO ${planLabel} 구독`, amount,
-        buyer_email: user?.email || '', buyer_name: user?.name || '낚시GO 회원',
-        buyer_tel: user?.phone || '',
+        channelKey:    CHANNEL_KEY,          // ✅ pg(deprecated) 대체
+        pay_method:    cfg.pay_method,
+        merchant_uid,
+        name:          `낚시GO ${planLabel} 구독`,
+        amount,
+        buyer_email:   user?.email || '',
+        buyer_name:    user?.name  || '낚시GO 회원',
+        buyer_tel:     user?.phone || '01000000000',
         m_redirect_url: window.location.origin + '/vvip-subscribe',
       },
       (rsp) => {
@@ -98,7 +99,7 @@ export function requestPayment({ pgKey, planId, planLabel, amount, user, harborI
  * @param {string} options.planId      - 'LITE' | 'PRO' | 'VVIP'
  * @param {string} options.planLabel   - 표시 이름
  * @param {number} options.amount      - 첫 결제 금액 (이후 매월 동일)
- * @param {object} options.user        - { name, email }
+ * @param {object} options.user        - { name, email, phone }
  * @param {string} [options.harborId]  - VVIP 항구 ID
  * @returns {Promise<{imp_uid, customer_uid, merchant_uid}>}
  */
@@ -108,29 +109,27 @@ export function requestBillingPayment({ pgKey, planId, planLabel, amount, user, 
     if (!IMP) { reject(new Error('결제 모듈이 로드되지 않았습니다. 페이지를 새로고침 해주세요.')); return; }
     IMP.init(MERCHANT_ID);
 
-    // ✅ WARN-P1 수정: customer_uid에 planId 포함 — 플랜별 독립 빌링키 유지
-    // 동일 유저가 플랜 변경(예: LITE→PRO) 또는 취소 후 재구독 시 새 빌링키가 정상 발급됨
     const safeId       = (user?.email || user?.id || 'user').replace(/[^a-zA-Z0-9]/g, '_');
     const safePlanId   = (planId || 'PLAN').replace(/[^a-zA-Z0-9]/g, '_');
     const customer_uid = `fishing_bill_${safeId}_${safePlanId}`;
-    // ✅ 2ND-A1: crypto.randomUUID() 적용 — requestPayment(L65)와 동일 패턴, Math.random() 충돌 방지
+
     const uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
       ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
       : Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const merchant_uid = `fishing_first_${planId}_${uid}`;
-    const cfg          = PG_CONFIG[pgKey] || PG_CONFIG.toss;
+    const cfg          = PG_CONFIG[pgKey] || PG_CONFIG.card;
 
     IMP.request_pay(
       {
-        pg:           cfg.pg,
-        pay_method:   cfg.pay_method,
+        channelKey:    CHANNEL_KEY,          // ✅ pg(deprecated) 대체
+        pay_method:    cfg.pay_method,
         merchant_uid,
-        customer_uid, // ← 이 값이 있으면 포트원이 빌링키 자동 발급
-        name:         `낚시GO ${planLabel} 정기구독 (첫 결제)`,
+        customer_uid,                        // ← 빌링키 자동 발급
+        name:          `낚시GO ${planLabel} 정기구독 (첫 결제)`,
         amount,
-        buyer_email:  user?.email || '',
-        buyer_name:   user?.name  || '낚시GO 회원',
-        buyer_tel:    user?.phone || '',
+        buyer_email:   user?.email || '',
+        buyer_name:    user?.name  || '낚시GO 회원',
+        buyer_tel:     user?.phone || '01000000000',
         m_redirect_url: window.location.origin + '/vvip-subscribe',
       },
       (rsp) => {
