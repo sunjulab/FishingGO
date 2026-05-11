@@ -1,32 +1,67 @@
 package kr.fishinggo.app;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebView;
+
 import androidx.activity.OnBackPressedCallback;
+
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
 
 public class MainActivity extends BridgeActivity {
 
-    /**
-     * ✅ BACK-LOCK v2: Android 전 버전 뒤로가기 완전 차단
-     *
-     * [Android 12+ / API 33+]
-     * - onBackPressed()는 deprecated → 호출되지 않음
-     * - OnBackPressedDispatcher가 LIFO(Last In First Out)로 콜백 실행
-     * - super.onCreate() 이후 콜백 등록 → Capacitor 콜백보다 나중 등록 → 먼저 실행
-     * - enabled=true + handleOnBackPressed()에서 아무것도 안 함 → 이벤트 소비, 전파 중단
-     *
-     * [Android 11 이하 / API 32-]
-     * - onBackPressed() 오버라이드로 처리
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); // Capacitor 콜백 등록됨
+        super.onCreate(savedInstanceState);
 
-        // Capacitor 콜백보다 나중에 등록 → LIFO에 의해 먼저 실행 → 이벤트 소비
+        // ✅ 결제 연동: intent:// / market:// URL 처리 (카카오페이, 네이버페이, 토스 등)
+        // BridgeWebViewClient 상속 → Capacitor 기본 동작 유지 + 결제 앱 전환 추가
+        getBridge().getWebView().setWebViewClient(new BridgeWebViewClient(getBridge()) {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+
+                // intent:// URL — 네이티브 결제 앱으로 전환 (카카오, 네이버, 토스 등)
+                if (url.startsWith("intent://")) {
+                    try {
+                        Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                        startActivity(intent);
+                        return true;
+                    } catch (ActivityNotFoundException e) {
+                        // 결제 앱 미설치 시 browser_fallback_url로 폴백
+                        String fallback = request.getUrl().getQueryParameter("browser_fallback_url");
+                        if (fallback != null && !fallback.isEmpty()) {
+                            view.loadUrl(fallback);
+                        }
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+
+                // market:// URL — Play Store 이동
+                if (url.startsWith("market://")) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+
+                return super.shouldOverrideUrlLoading(view, request);
+            }
+        });
+
+        // ✅ BACK-LOCK v2: 뒤로가기 완전 잠금 (Capacitor 콜백보다 나중 등록 → LIFO 우선)
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                // 뒤로가기 완전 잠금: 아무 동작 없이 이벤트 소비 (앱 내 전파 없음)
+                // 이벤트 소비, 전파 없음
             }
         });
     }
