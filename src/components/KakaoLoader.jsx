@@ -12,9 +12,9 @@ export default function KakaoLoader() {
     if (sdkLoaded) return;
     if (window.kakao?.maps) { sdkLoaded = true; return; }
 
-    const KAKAO_KEY = import.meta.env.VITE_KAKAO_APP_KEY;
+    const KAKAO_KEY = import.meta.env.VITE_KAKAO_APP_KEY || 'd353be56977b1c13b03d8981bcf8b5ba';
     if (!KAKAO_KEY) {
-      console.warn('[낚시GO] VITE_KAKAO_APP_KEY 미설정 — .env.local을 확인하세요.');
+      console.warn('[낚시GO] VITE_KAKAO_APP_KEY 미설정');
       return;
     }
 

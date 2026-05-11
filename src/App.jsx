@@ -20,9 +20,8 @@ initAdMob().catch(() => {}); // 웹 환경 실패는 무시
 
 // ─── 카카오 JS SDK 초기화 (공유/소셜 기능용) ─────────────────────────────────
 if (typeof window !== 'undefined' && window.Kakao && !window.Kakao.isInitialized()) {
-  const kakaoKey = import.meta.env.VITE_KAKAO_APP_KEY; // ✅ SEC-04: 하드코딩 Kakao 키 제거
+  const kakaoKey = import.meta.env.VITE_KAKAO_APP_KEY || 'd353be56977b1c13b03d8981bcf8b5ba';
   if (kakaoKey) window.Kakao.init(kakaoKey);
-  else if (!import.meta.env.PROD) console.warn('[Kakao] VITE_KAKAO_APP_KEY 환경변수가 설정되지 않았습니다. 공유 기능이 비활성화됩니다.');
 }
 
 // ✅ 3RD-A1: Header 프로필 fallback — pravatar.cc 외부 의존 제거 (LoginPage NEW-A2와 동일 패턴)
