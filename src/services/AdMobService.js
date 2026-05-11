@@ -85,40 +85,6 @@ export async function showRewardedAd(onRewarded, onFailed) {
   }
 }
 
-// ─── 네이티브 광고 (배너형 대체) ─────────────────────────────────
-/**
- * 배너 광고 표시 (하단 고정)
- * 네이티브 광고는 Android SDK 레벨에서 처리 — 별도 View 불필요
- */
-export async function showBannerAd() {
-  if (!isNative() || !AdMob) return;
-  try {
-    const { BannerAdSize, BannerAdPosition } = await import('@capacitor-community/admob');
-    await AdMob.showBanner({
-      adId: ADMOB_CONFIG.NATIVE_ID,
-      adSize: BannerAdSize.ADAPTIVE_BANNER,
-      position: BannerAdPosition.BOTTOM_CENTER,
-      margin: 0,
-      isTesting: IS_ADMOB_TESTING,
-    });
-  } catch (e) {
-    console.warn('[AdMob] 배너 광고 오류:', e);
-  }
-}
-
-export async function hideBannerAd() {
-  if (!isNative() || !AdMob) return;
-  try {
-    await AdMob.hideBanner();
-  } catch (e) {}
-}
-
-export async function removeBannerAd() {
-  if (!isNative() || !AdMob) return;
-  try {
-    await AdMob.removeBanner();
-  } catch (e) {}
-}
 
 // ─── 전면(인터스티셜) 광고 ─────────────────────────────────────
 /**
