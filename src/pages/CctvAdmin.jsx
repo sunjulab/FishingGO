@@ -246,11 +246,12 @@ export default function CctvAdmin() {
         </div>
       )}
 
+      {/* ✅ SAFE-AREA: 상단 상태바(알림바) 겹침 방지 */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'rgba(10,15,28,0.95)', backdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
-        padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px'
+        padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', gap: '12px'
       }}>
         <button onClick={() => navigate('/mypage')} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <ArrowLeft size={18} color="#fff" />
