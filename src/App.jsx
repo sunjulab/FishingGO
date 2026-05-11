@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { registerPlugin, Capacitor } from '@capacitor/core';
 
 // ✅ BACK-FIX: 모듈 로드 시점(React 마운트 전)에 App 플러그인 등록 — 타이밍 문제 완전 해결
@@ -65,23 +65,34 @@ function PageLoading() {
 }
 
 
-// ✅ BACK-BUTTON: 홈화면 더블탭 종료 처리
-// ✅ BACK-FIX v3: 네이티브 onBackPressed가 navigate(-1) 담당
-//   JS는 최상위 화면에서 Capacitor 'backButton' 이벤트 수신 → 더블탭 종료 토스트만
-//   - location.pathname deps 제거 → 리스너 1번만 등록, 재등록 경쟁조건 완전 해소
-//   - ref 패턴으로 stale closure 방지
+// ✅ BACK-BUTTON: Android 하드웨어 뒤로가기 완전 처리
+// ✅ BACK-FIX v4: ref 패턴 + navigate(-1) 복원
+//   - 빈 deps: 리스너 1번만 등록, 경쟁조건 원천 차단
+//   - navigateRef: stale closure 없이 항상 최신 navigate 함수 참조
+//   - 신버전 APK: native onBackPressed가 webView.goBack() 처리 → JS 이벤트 미발생(중복 없음)
+//   - 구버전 APK: native 없음 → JS가 navigate(-1) 직접 처리 (완전 호환)
 function BackButtonHandler() {
+  const navigate = useNavigate();
   const addToast = useToastStore(s => s.addToast);
   const lastBackRef = useRef(0);
 
-  // addToast ref: 빈 deps에서도 항상 최신 함수 참조
+  // ref: 빈 deps에서도 항상 최신 함수 참조 (stale closure 방지)
+  const navigateRef = useRef(navigate);
   const addToastRef = useRef(addToast);
+  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
   useEffect(() => { addToastRef.current = addToast; }, [addToast]);
 
   useEffect(() => {
-    // 네이티브 onBackPressed가 webView.canGoBack() 체크 후 goBack() 처리
-    // JS는 canGoBack()=false(최상위)일 때만 호출됨 → 더블탭 종료만 담당
-    const handleRootBack = () => {
+    const handleBack = () => {
+      // ✅ React Router 히스토리 체크
+      const idx = window.history.state?.idx ?? 0;
+      if (idx > 0) {
+        // 서브페이지 → 이전 화면으로 이동
+        navigateRef.current(-1);
+        return;
+      }
+
+      // ✅ 홈화면 → 더블탭 2초 내 재클릭 시 종료
       const now = Date.now();
       if (now - lastBackRef.current < 2000) {
         try { CapApp?.exitApp?.(); } catch (_) { window.close?.(); }
@@ -92,16 +103,15 @@ function BackButtonHandler() {
     };
 
     if (CapApp) {
-      // ✅ 빈 deps: 앱 생명주기 동안 리스너 1번만 등록 (재등록 타이밍 버그 원천 차단)
-      const listenerP = CapApp.addListener('backButton', handleRootBack);
+      // ✅ 빈 deps: 생명주기 동안 리스너 1번만 등록
+      const listenerP = CapApp.addListener('backButton', handleBack);
       return () => { listenerP?.then?.(l => l?.remove?.()).catch?.(() => {}); };
     } else {
-      // 브라우저 폴백
-      const domBack = (e) => { e?.preventDefault?.(); handleRootBack(); };
+      const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
       document.addEventListener('backbutton', domBack, false);
       return () => document.removeEventListener('backbutton', domBack, false);
     }
-  }, []); // ✅ 빈 deps: 마운트 1회만 실행
+  }, []); // ✅ 빈 deps 유지: ref로 최신값 접근하므로 재등록 불필요
 
   return null;
 }

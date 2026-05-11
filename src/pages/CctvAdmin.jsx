@@ -27,7 +27,12 @@ const REGION_COLORS = {
 export default function CctvAdmin() {
   const navigate = useNavigate();
   // ✅ 6TH-A3: isAdmin 직접 비교 — ADMIN_ID/ADMIN_EMAIL 패턴 통일
-  const isAdmin = useUserStore(s => s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === 'sunjulab.k@gmail.com' ||
+    s.userTier === 'MASTER'
+  );
   const addToast = useToastStore(s => s.addToast);
 
   const [cctvList, setCctvList] = useState([]);
