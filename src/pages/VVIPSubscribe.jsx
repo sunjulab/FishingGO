@@ -285,9 +285,9 @@ export default function VVIPSubscribe() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0A0F1C', minHeight: '100dvh', paddingBottom: '40px' }}>
+    <div style={{ backgroundColor: '#0A0F1C', minHeight: '100dvh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 40px)' }}>
       {/* 헤더 */}
-      <div style={{ backgroundColor: 'rgba(10,15,28,0.97)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid rgba(255,215,0,0.12)' }}>
+      <div style={{ backgroundColor: 'rgba(10,15,28,0.97)', padding: '16px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid rgba(255,215,0,0.12)' }}>
         <button onClick={() => selectedPlan ? setSelectedPlan(null) : navigate(-1)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
           <X size={24} color="#FFD700" />
         </button>

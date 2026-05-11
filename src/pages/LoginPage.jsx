@@ -223,6 +223,8 @@ export default function LoginPage() {
         flexDirection: 'column',
         alignItems: 'center',
         padding: '24px 16px',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
         boxSizing: 'border-box',
       }}>
         <div style={{

@@ -83,9 +83,9 @@ export default function PaymentHistory() {
   const paidCount = useMemo(() => history.filter(h => h.status === 'paid').length, [history]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0E0E1A', color: '#fff', fontFamily: 'Pretendard, sans-serif', paddingBottom: '40px' }}>
+    <div style={{ minHeight: '100vh', background: '#0E0E1A', color: '#fff', fontFamily: 'Pretendard, sans-serif', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 40px)' }}>
       {/* 헤더 */}
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ padding: '16px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <ArrowLeft size={22} color="#fff" />
         </button>

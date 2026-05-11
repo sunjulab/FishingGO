@@ -82,14 +82,14 @@ export default function CatchDetail() {
 
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
-      <div style={{ padding: '16px', display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f0f0', backgroundColor: '#fff' }}>
+      <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f0f0', backgroundColor: '#fff' }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none', padding: '8px' }}>
           <ChevronLeft size={24} color="#1c1c1e" />
         </button>
         <h2 style={{ fontSize: '17px', fontWeight: '800', flex: 1, textAlign: 'center', marginRight: '40px' }}>나의 조과 기록</h2>
       </div>
 
-      <div style={{ overflowY: 'auto', height: 'calc(100dvh - 57px)' }}>
+      <div style={{ overflowY: 'auto', height: 'calc(100dvh - 57px - env(safe-area-inset-top, 0px))' }}>
         {loading ? (
           // ENH5-A6: 인라인 spinner → 공통 LoadingSpinner 컴포넌트로 통일
           <LoadingSpinner style={{ height: '50vh' }} />
@@ -102,7 +102,7 @@ export default function CatchDetail() {
             </button>
           </div>
         ) : (
-          <div style={{ paddingBottom: '40px' }}>
+          <div style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 40px)' }}>
             {/* ENH-A1: blur placeholder — 로드 전 흐린 상태 → 로드 완료 시 선명 전환 */}
             {record.image && (
               <img

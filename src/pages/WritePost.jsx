@@ -188,7 +188,7 @@ export default function WritePost() {
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
       {/* 고정 헤더 */}
-      <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+      <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
         <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <X size={24} color="#1c1c1e" />
         </button>
@@ -467,7 +467,8 @@ export default function WritePost() {
           position: 'fixed', bottom: 0,
           left: '50%', transform: 'translateX(-50%)',
           width: '100%', maxWidth: '480px',
-          padding: '16px 20px', backgroundColor: '#fff',
+          padding: '16px 20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          backgroundColor: '#fff',
           borderTop: '1px solid #f0f0f0', display: 'flex', gap: '20px',
           zIndex: 200,
         }}>
