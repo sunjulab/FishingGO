@@ -1190,7 +1190,7 @@ export default function CommunityTab() {
           onClick={handleFabClick}
           style={{
             position: 'fixed',
-            bottom: '90px',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
             right: 'max(20px, calc(50% - 220px))',
             backgroundColor: activeTab === 'notice' ? '#FF3B30' : '#0056D2',
             color: '#fff',
