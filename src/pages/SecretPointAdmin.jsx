@@ -12,20 +12,31 @@ const setLocalOverrides = (ov) => localStorage.setItem('secretPointOverrides', J
 
 export default function SecretPointAdmin() {
   const navigate = useNavigate();
-  // ✅ FIX-ADMIN: id/email/gmail/MASTER tier 4중 보장 (App.jsx AdminRoute와 동일한 로직)
+  // ✅ ENH6-B6: Zustand hydrate guard — 브라우저/모바일 초기 렌더에서 isAdmin=false 오판 방지
+  // 특히 모바일(Capacitor)에서 앱 시작 직후 localStorage 미수화 상태를 변별하여 즉시 홈 리다이렉트
   const isAdmin = useUserStore(s =>
     s.user?.id === ADMIN_ID ||
     s.user?.email === ADMIN_EMAIL ||
     s.user?.email === 'sunjulab.k@gmail.com' ||
     s.userTier === 'MASTER'
   );
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // 클라이언트 이중 인증 가드 — App.jsx 라우트 보호와 이중 방어
+  // ✅ HYDRATION-GUARD: setTimeout(0)으로 1tick 후 getState()로 최신 상태 확인
+  //    CctvAdmin.jsx와 동일한 패턴
   useEffect(() => {
-    if (!isAdmin) {
-      navigate('/', { replace: true });
-    }
-  }, [isAdmin, navigate]);
+    const timer = setTimeout(() => {
+      setAuthChecked(true);
+      const { user: currentUser, userTier } = useUserStore.getState();
+      const isAdm =
+        currentUser?.id === ADMIN_ID ||
+        currentUser?.email === ADMIN_EMAIL ||
+        currentUser?.email === 'sunjulab.k@gmail.com' ||
+        userTier === 'MASTER';
+      if (!isAdm) navigate('/', { replace: true });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const markerRef       = useRef(null);
   const mapInstanceRef  = useRef(null);
@@ -67,7 +78,8 @@ export default function SecretPointAdmin() {
     }
   }, []);
 
-  useEffect(() => { fetchOverrides(); }, [fetchOverrides]);
+  // ✅ authChecked 전에는 데이터 fetch 불필요
+  useEffect(() => { if (authChecked && isAdmin) fetchOverrides(); }, [authChecked, isAdmin, fetchOverrides]);
 
   /* ── 지도 초기화: callback ref ── */
   // ENH6-C5: window.kakao는 전역 객체 — React 의존성 추적 불필요, eslint 경고 억제
@@ -217,6 +229,9 @@ export default function SecretPointAdmin() {
   };
 
   const overrideCount = Object.keys(overrides).length;
+
+  // ✅ HYDRATION-GUARD: 인증 확인 완료 전 렌더링 방지
+  if (!authChecked) return null;
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A0F1C', color: '#fff', fontFamily: 'Pretendard, sans-serif' }}>
