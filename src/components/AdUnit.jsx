@@ -15,8 +15,9 @@
  * ✅ 2ND-C7: ⚠️ VITE_ADSENSE_PUB_ID 미설정 시 프로덕션에서도 테스트 광고 자동 실행 (수익 미발생)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core'; // ✅ ADMOB: 신뢰성 높은 네이티브 감지
+import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+import { showRewardedAd } from '../services/AdMobService';
 
 // ─── 광고 키 설정 (테스트 키 → 실제 키 교체 시 이곳만 수정) ───
 const PUB_ID   = import.meta.env.VITE_ADSENSE_PUB_ID   || 'ca-pub-3940256099942544'; // 구글 공식 테스트 퍼블리셔
@@ -175,9 +176,24 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
 
   // [정지 방지] 광고 시청은 타이머 기반 시뮬레이션 (실제 애드몹 SDK 연동 시 교체)
   const handleWatchAd = () => {
+    // ✅ ADMOB: 네이티브 앱에서는 실제 AdMob 보상형 광고 실행
+    const isNativeApp = (() => {
+      try { return Capacitor.isNativePlatform(); } catch { return false; }
+    })();
+
+    if (isNativeApp) {
+      setAdWatching(true);
+      showRewardedAd(
+        () => { setAdWatching(false); setAdDone(true); },  // 보상 수령
+        () => { setAdWatching(false); }                   // 실패/취소
+      );
+      return;
+    }
+
+    // 웹 환경 — 30초 타이머 시뮬레이션
     setAdWatching(true);
     setAdProgress(0);
-    if (intervalRef.current) clearInterval(intervalRef.current); // 중복 방지
+    if (intervalRef.current) clearInterval(intervalRef.current);
 
     // ✅ 광고 ins 슬롯 push (adWatching 전환 직후)
     try {

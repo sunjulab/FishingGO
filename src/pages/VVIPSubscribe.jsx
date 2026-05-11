@@ -76,13 +76,59 @@ export default function VVIPSubscribe() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLiteProConfirm, setShowLiteProConfirm] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
-  // ✅ 11TH-B1: navigate 타이머 ref — 언마운트 후 타이머 누수 방지 (5TH-A4 패턴)
   const navTimerRef = useRef(null);
   useEffect(() => () => { if (navTimerRef.current) clearTimeout(navTimerRef.current); }, []);
-  // ✅ 11TH-B5: takenMap 업데이트 useCallback 래핑
   const markHarborTaken = useCallback((harborId, ownerName) => {
     setTakenMap(prev => ({ ...prev, [harborId]: { takenBy: ownerName } }));
   }, []);
+
+  // ✅ MOBILE-PAY: m_redirect_url 처리 — 모바일 결제 완료 후 redirect 파라미터 처리
+  const redirectParams = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const impUid = p.get('imp_uid');
+    const merchantUid = p.get('merchant_uid');
+    if (impUid && merchantUid) {
+      window.history.replaceState({}, '', window.location.pathname);
+      return { impUid, merchantUid, success: p.get('imp_success'), errMsg: p.get('error_msg') };
+    }
+    return null;
+  })[0];
+  const redirectDone = useRef(false);
+
+  useEffect(() => {
+    if (!redirectParams || redirectDone.current || !user) return;
+    redirectDone.current = true;
+    if (redirectParams.success !== 'true') {
+      addToast(redirectParams.errMsg || '결제가 취소되었습니다.', 'error');
+      return;
+    }
+    const ctx = (() => { try { return JSON.parse(sessionStorage.getItem('pg_ctx') || 'null'); } catch { return null; } })();
+    sessionStorage.removeItem('pg_ctx');
+    const planId = ctx?.planId || redirectParams.merchantUid.split('_')[2];
+    const harborId = ctx?.harborId || null;
+    const pgProvider = ctx?.pgProvider || 'redirect';
+    const plan = [{ id: 'LITE', tier: 'BUSINESS_LITE', label: 'LITE' }, { id: 'PRO', tier: 'PRO', label: 'PRO' }, { id: 'VVIP', tier: 'BUSINESS_VIP', label: 'VVIP' }].find(p => p.id === planId);
+    const safeId = (user?.email || user?.id || 'user').replace(/[^a-zA-Z0-9]/g, '_');
+    const customerUid = `fishing_bill_${safeId}_${(planId || 'PLAN').replace(/[^a-zA-Z0-9]/g, '_')}`;
+    setPurchasing(true);
+    apiClient.post('/api/payment/billing/register', {
+      imp_uid: redirectParams.impUid, customer_uid: customerUid,
+      merchant_uid: redirectParams.merchantUid,
+      planId, pgProvider, userId: user.email || user.id, userName: user.name,
+      ...(harborId && { harborId }),
+    }).then(res => {
+      if (res.data.success) {
+        setUserTier(plan?.tier || 'BUSINESS_LITE');
+        updateUser({ tier: plan?.tier || 'BUSINESS_LITE' });
+        if (harborId) markHarborTaken(harborId, user.name);
+        addToast(`🎉 ${plan?.label || planId} 구독 등록 완료!`, 'success');
+        if (navTimerRef.current) clearTimeout(navTimerRef.current);
+        navTimerRef.current = setTimeout(() => navigate('/', { replace: true }), 1500);
+      }
+    }).catch(err => {
+      addToast(err?.response?.data?.message || '결제 검증 실패. 고객센터 문의 바랍니다.', 'error');
+    }).finally(() => setPurchasing(false));
+  }, [user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PLANS = [
     {
@@ -180,6 +226,8 @@ export default function VVIPSubscribe() {
     if (!user) { addToast('로그인이 필요합니다.', 'error'); return; }
     setPurchasing(true);
     try {
+      // 모바일 redirect 복귀 시 컨텍스트 복원용
+      sessionStorage.setItem('pg_ctx', JSON.stringify({ planId: plan.id, pgProvider: selectedPg }));
       // ① 포트원 빌링키 등록 + 첫 결제
       const { imp_uid, customer_uid, merchant_uid } = await requestBillingPayment({
         pgKey:     selectedPg,
@@ -232,6 +280,8 @@ export default function VVIPSubscribe() {
     if (!user) { addToast('로그인이 필요합니다.', 'error'); return; }
     setPurchasing(true);
     try {
+      // 모바일 redirect 복귀 시 컨텍스트 복원용 (harborId 포함)
+      sessionStorage.setItem('pg_ctx', JSON.stringify({ planId: 'VVIP', pgProvider: selectedPg, harborId: selectedHarbor.id }));
       // ① 포트원 빌링키 등록 + 첫 결제
       const { imp_uid, customer_uid, merchant_uid } = await requestBillingPayment({
         pgKey:     selectedPg,

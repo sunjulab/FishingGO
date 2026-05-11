@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'; // ✅ 17TH-B1: useCallback 추가
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import apiClient from '../api/index';
 import { evaluateFishingCondition } from '../utils/evaluator';
 import { useNavigate } from 'react-router-dom';
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 7TH-A3: ADMIN_ID/ADMIN_EMAIL import
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
+import { NativeAd } from './AdUnit';
+import { showInterstitialAd } from '../services/AdMobService';
+import { Capacitor } from '@capacitor/core';
 
 // ENH3-B5: 환경변수는 불변 — 컴포넌트 외부 상수로 분리
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -246,8 +249,15 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
   const [isEditingCctv, setIsEditingCctv] = useState(false);
   const [editYoutubeId, setEditYoutubeId] = useState('');
   const [isSavingCctv, setIsSavingCctv] = useState(false);
-  // ✅ CATCH-ENH: 조과 기록 작성 모달
   const [showCatchModal, setShowCatchModal] = useState(false);
+
+  // ✅ ADMOB: 네이티브 앱 전면광고 — 무료 사용자 한해 선상배 섹션 열릴 시 1회 노웈
+  useEffect(() => {
+    const isNative = (() => { try { return Capacitor.isNativePlatform(); } catch { return false; } })();
+    if (!isNative || canAccessPremium) return; // 네이티브 + 무료 사용자만
+    const t = setTimeout(() => { showInterstitialAd(() => {}); }, 800);
+    return () => clearTimeout(t);
+  }, [selectedPoint?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 실시간 연속 재생(스트리밍) 효과를 위한 타임스탬프
   const [mofTimestamp, setMofTimestamp] = useState(Date.now());
@@ -830,6 +840,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                 </div>
               )}
             </div>
+
+            {/* ✅ ADMOB-NATIVE: VIP 선상배 세션 아래 네이티브광고 (웹 AdSense 인피드형) */}
+            <NativeAd style={{ marginTop: '4px', marginBottom: '0' }} />
 
             {/* ✅ CATCH-ENH: 조과 기록 남기기 버튼 */}
             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F0F0F5' }}>

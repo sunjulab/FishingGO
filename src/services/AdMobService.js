@@ -99,8 +99,8 @@ export async function showInterstitialAd(onClosed) {
   }
   try {
     const options = {
-      adId: ADMOB_CONFIG.NATIVE_ID, // 피드용 광고 단위 재사용
-      isTesting: !import.meta.env.PROD,
+      adId: ADMOB_CONFIG.NATIVE_ID,
+      isTesting: IS_ADMOB_TESTING, // ✅ FIX: !import.meta.env.PROD → IS_ADMOB_TESTING 통일
     };
 
     await AdMob.prepareInterstitial(options);
