@@ -305,32 +305,29 @@ function AuthExpiredChecker() {
 }
 
 // ENH3-C1: 어드민 라우트 보호 컴포넌트 분리 — App() 에서 불필요한 리렌더 방지
-// ✅ HYDRATION-FIX: Zustand 미수화 시 즉시 <Navigate to="/" /> 렌더 방지
-//    (모바일 앱 시작 직후 localStorage 미수화 → isAdmin=false → 홈 redirect 버그)
+// ✅ HYDRATION-FIX v2: reactive selector + 1tick hydration delay 조합
+//   - 이전 방식(getState 1회): cleanup 경쟁조건으로 checked 영구 false → null 유지 버그
+//   - 새 방식: Zustand selector(반응형) + hydrated flag(미수화 오판 방지)
 function AdminRoute({ children }) {
-  const [checked, setChecked] = useState(false);
-  const [allowed, setAllowed] = useState(false);
-  const navigate = useNavigate();
+  // ✅ 반응형: store 업데이트 시 자동 재계산 (setUser, syncFromServer 후에도 즉시 반영)
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === 'sunjulab.k@gmail.com' ||
+    s.userTier === 'MASTER'
+  );
+  // ✅ 미수화 오판 방지: 첫 렌더에서 isAdmin=false → 즉시 redirect 막음
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    // setTimeout(0): 1tick 후 getState()로 수화 완료된 최신 상태 확인
-    const t = setTimeout(() => {
-      const { user, userTier } = useUserStore.getState();
-      const ok =
-        user?.id === ADMIN_ID ||
-        user?.email === ADMIN_EMAIL ||
-        user?.email === 'sunjulab.k@gmail.com' ||
-        userTier === 'MASTER';
-      setAllowed(ok);
-      setChecked(true);
-      if (!ok) navigate('/', { replace: true });
-    }, 0);
+    // 1tick 후 수화 완료 플래그 — localStorage 동기 초기화 완료 보장
+    const t = setTimeout(() => setHydrated(true), 0);
     return () => clearTimeout(t);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // 수화 확인 전: 빈 화면 (깜빡임 방지)
-  if (!checked) return null;
-  return allowed ? children : null;
+  if (!hydrated) return null;                    // 수화 전: 빈 화면
+  if (!isAdmin) return <Navigate to="/" replace />; // 수화 후: 권한 없으면 홈
+  return children;                               // 권한 있으면 자식 렌더
 }
 
 

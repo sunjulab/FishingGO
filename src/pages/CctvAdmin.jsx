@@ -41,15 +41,17 @@ export default function CctvAdmin() {
   // ENH6-B6: Zustand hydrate 완료 여부 플래그 — 초기 렌더에서 isAdmin=false 오판 방지
   const [authChecked, setAuthChecked] = useState(false);
 
-  // ENH6-B6: hydration guard — 1 tick 후 getState()로 최신 상태 확인 (초기 렌더에서 isAdmin=false 오판 방지)
+  // ENH6-B6: hydration guard — AdminRoute와 동일한 4중 조건으로 통일
   useEffect(() => {
     const timer = setTimeout(() => {
       setAuthChecked(true);
-      // ✅ 6TH-A4: ADMIN_ID/ADMIN_EMAIL 직접 비교 — isAdmin?.() 옵셔널 호출 방식 통일
-      const { user: currentUser } = useUserStore.getState();
-      if (!(currentUser?.id === ADMIN_ID || currentUser?.email === ADMIN_EMAIL)) {
-        navigate('/mypage', { replace: true });
-      }
+      const { user: currentUser, userTier } = useUserStore.getState();
+      const ok =
+        currentUser?.id === ADMIN_ID ||
+        currentUser?.email === ADMIN_EMAIL ||
+        currentUser?.email === 'sunjulab.k@gmail.com' ||
+        userTier === 'MASTER';
+      if (!ok) navigate('/', { replace: true });
     }, 0);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
