@@ -13,6 +13,12 @@ const isNative = () =>
   typeof window !== 'undefined' &&
   window.Capacitor?.isNativePlatform?.();
 
+// AdMob 테스트 모드:
+// - VITE_ADMOB_TESTING=true (Vercel 환경변수) → 테스트 광고 (플레이스토어 출시 전)
+// - VITE_ADMOB_TESTING=false 또는 미설정 + PROD=true → 실 광고
+const IS_ADMOB_TESTING =
+  import.meta.env.VITE_ADMOB_TESTING === 'true' || !import.meta.env.PROD;
+
 let AdMob = null;
 
 // AdMob SDK 초기화 (앱 시작 시 1회 호출)
@@ -24,9 +30,9 @@ export async function initAdMob() {
     await AdMob.initialize({
       requestTrackingAuthorization: false,
       testingDevices: [],
-      initializeForTesting: !import.meta.env.PROD,
+      initializeForTesting: IS_ADMOB_TESTING,
     });
-    console.log('[AdMob] 초기화 완료');
+    console.log(`[AdMob] 초기화 완료 (테스트모드: ${IS_ADMOB_TESTING})`);
   } catch (e) {
     console.warn('[AdMob] 초기화 실패 (웹 환경에서는 정상):', e.message);
   }
@@ -94,7 +100,7 @@ export async function showBannerAd() {
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
       margin: 0,
-      isTesting: !import.meta.env.PROD,
+      isTesting: IS_ADMOB_TESTING,
     });
   } catch (e) {
     console.warn('[AdMob] 배너 광고 오류:', e);
