@@ -524,7 +524,8 @@ export default function VVIPSubscribe() {
       {/* 항구 전체 목록 */}
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {filtered.map(harbor => {
-          const disabled = harbor.isTaken && !harbor.isMyHarbor;
+          // ✅ FIX: 내 슬롯이 있으면 내 항구 외 모두 비활성 (클릭 후 토스트가 아닌 시각적 회색 처리)
+          const disabled = !harbor.isMyHarbor && (harbor.isTaken || !!mySlot);
           return (
             <div key={harbor.id}
               onClick={() => !disabled && handleSelect(harbor)}
@@ -584,9 +585,11 @@ export default function VVIPSubscribe() {
                 <div style={{ fontSize: '11px', marginTop: '4px', fontWeight: '700' }}>
                   {harbor.isMyHarbor
                     ? <span style={{ color: '#FFD700', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={11} /> 독점 활성 중</span>
-                    : disabled
+                    : harbor.isTaken
                       ? <span style={{ color: '#FF5A5F' }}>🔒 마감 — {harbor.takenBy} 선장</span>
-                      : <span style={{ color: '#00C48C', display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={10} fill="#00C48C" /> 선착순 구매 가능 · ₩550,000/월</span>}
+                      : mySlot
+                        ? <span style={{ color: 'rgba(255,255,255,0.25)' }}>🔒 다른 항구 선점 중</span>
+                        : <span style={{ color: '#00C48C', display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={10} fill="#00C48C" /> 선착순 구매 가능 · ₩550,000/월</span>}
                 </div>
               </div>
 
