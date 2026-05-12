@@ -4851,9 +4851,9 @@ function parseDuration(iso) {
  * YouTube Videos API(contentDetails)로 실제 길이를 가져와 MIN_SECS 미만 제거
  * API 비용: 1 unit (Search가 100 unit 대비 매우 저렴)
  * @param {string[]} videoIds
- * @param {number} minSecs 최소 길이(초), 기본 240초(4분)
+ * @param {number} minSecs 최소 길이(초), 기본 120초(2분) — 4분(240초)에서 완화
  */
-async function filterByActualDuration(videoIds, minSecs = 240) {
+async function filterByActualDuration(videoIds, minSecs = 120) {
   if (!videoIds.length || !YT_API_KEY) return new Set(videoIds);
   try {
     const params = new URLSearchParams({ part: 'contentDetails', id: videoIds.join(','), key: YT_API_KEY });
@@ -4909,8 +4909,11 @@ app.get('/api/media/youtube/search', async (req, res) => {
       return res.json({ videos: [], nextPageToken: null, note: 'YOUTUBE_API_KEY 미설정' });
     }
 
-    // ✅ 검색은 날짜 제한 없음 — 채널명 검색 시 오래된 영상도 포함해야 함
-    const cacheKey = `search:${q}:${order}:all:${maxResults}:${pageToken}`;
+    // ✅ CACHE-FIX: date 순서 검색은 오늘 날짜를 캐시 키에 포함 → 4시간 캐시가 당일 갱신 보장
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = order === 'date'
+      ? `search:${q}:date:${today}:${maxResults}:${pageToken}`
+      : `search:${q}:${order}:all:${maxResults}:${pageToken}`;
     const cached = ytCacheGet(cacheKey);
     if (cached) {
       console.log(`[YouTube Search] 캐시 HIT: "${q}"`);
@@ -4947,27 +4950,33 @@ app.get('/api/media/youtube/search', async (req, res) => {
     }
 
     // ─── STEP 2: 영상 검색 (채널ID 있으면 채널 전용, 없으면 키워드) ─────────
-    // ✅ FIX-SORT: 키워드 검색 시 publishedAfter=1년 추가 → YouTube가 최신 영상을 세트에 포함시키도록 유도
-    //    채널ID 검색 시에는 날짜 제한 없이 전체 채널 영상 최신순 반환
-    const publishedAfterKeyword = (() => {
-      if (channelId) return null;               // 채널 검색: 날짜 제한 없음
+    // ✅ FIX-SORT: publishedAfter 정책 개선
+    //   채널 검색: 최근 6개월 제한 → 최신 영상 우선 반환 (전체 기간이면 오래된 영상 혼입)
+    //   키워드 검색: 최근 1년 제한
+    // ✅ FIX-DUR: videoDuration=any → YouTube 프리필터 제거, filterByActualDuration(120초)로 직접 2분 필터
+    //   기존 medium(4~20분)은 최근 단편 영상을 제외해 오래된 영상이 반환되는 원인이었음
+    const publishedAfterDate = (() => {
       const d = new Date();
-      d.setFullYear(d.getFullYear() - 1);       // 키워드 검색: 최근 1년으로 제한
+      if (channelId) {
+        d.setMonth(d.getMonth() - 6); // 채널 검색: 최근 6개월
+      } else {
+        d.setFullYear(d.getFullYear() - 1); // 키워드 검색: 최근 1년
+      }
       return d.toISOString();
     })();
-    const fetchMax = channelId ? String(maxResults) : String(Math.min(maxResults + 10, 25)); // 키워드 검색 시 여유분 확보
+    const fetchMax = String(Math.min(maxResults + 15, 30)); // 여유분 확보 (필터 후에도 충분한 결과 보장)
     const videoParams = {
       part: 'snippet',
       q: channelId ? '' : q,    // 채널 특정 검색 시 q 불필요
       type: 'video',
       order: order === 'viewCount' ? 'viewCount' : 'date',
-      videoDuration: 'medium',  // 4~20분
+      videoDuration: 'any',     // ✅ FIX-DUR: YouTube 프리필터 제거 → filterByActualDuration으로 직접 2분 필터
       relevanceLanguage: 'ko',
       regionCode: 'KR',
       maxResults: fetchMax,
       key: YT_API_KEY,
       ...(channelId ? { channelId } : {}),
-      ...(publishedAfterKeyword ? { publishedAfter: publishedAfterKeyword } : {}),
+      ...(order !== 'viewCount' ? { publishedAfter: publishedAfterDate } : {}), // 최신순만 날짜 제한
       ...(pageToken ? { pageToken } : {}),
     };
     // q가 비어있으면 제거 (channelId 모드)
@@ -4976,13 +4985,16 @@ app.get('/api/media/youtube/search', async (req, res) => {
     const params = new URLSearchParams(videoParams);
     const response = await axios.get(`${YT_BASE}/search?${params.toString()}`, axiosCfg);
     let videos = buildYtVideoList(response.data.items);
-    console.log(`[YouTube Search] 응답: ${videos.length}개 (채널ID: ${channelId || '없음'}, publishedAfter: ${publishedAfterKeyword ? '1년' : '없음'})`);
+    console.log(`[YouTube Search] 응답: ${videos.length}개 (채널ID: ${channelId || '없음'}, publishedAfter: ${publishedAfterDate.slice(0, 10)})`);
 
-    // ─── STEP 3: 실제 영상 길이 필터 (4분+) ─────────────────────────────────
+    // ─── STEP 3: 실제 영상 길이 필터 (2분+) ─────────────────────────────────
+    // ✅ FIX-DUR: 4분(240초) → 2분(120초)으로 기준 완화
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);
-    const validIds = await filterByActualDuration(videoIds, 240);
+    const validIds = await filterByActualDuration(videoIds, 120);
     videos = videos.filter(v => validIds.has(v.youtubeId));
-    console.log(`[YouTube Search] 길이 필터 후: ${videos.length}개 (≥4분)`);
+    // Shorts(60초 이하) 제목 필터 재적용 (videoDuration=any로 변경 후 보강)
+    videos = videos.filter(v => !v.title.toLowerCase().includes('#shorts') && !v.title.toLowerCase().includes('shorts'));
+    console.log(`[YouTube Search] 길이 필터 후: ${videos.length}개 (≥2분, Shorts 제외)`);
 
     // ─── STEP 4: 정렬 ─────────────────────────────────────────────────────────
     videos = sortVideos(videos, order);
@@ -5015,7 +5027,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
   try {
     const publishedAfterRecent = getPublishedAfter('date');      // 최근 7일
     const publishedAfterPopular = getPublishedAfter('viewCount'); // 최근 30일
-    const commonParams = { part: 'snippet', q, type: 'video', videoDuration: 'medium', relevanceLanguage: 'ko', regionCode: 'KR', maxResults: '10', key: YT_API_KEY };
+    const commonParams = { part: 'snippet', q, type: 'video', videoDuration: 'any', relevanceLanguage: 'ko', regionCode: 'KR', maxResults: '10', key: YT_API_KEY };
     const axiosCfg = { timeout: 10000, headers: { Referer: 'https://localhost:3000', Origin: 'https://localhost:3000' } };
 
     console.log(`[YouTube Unified] 병렬 요청: "${q}" | recent(7일) + popular(30일 인기순)`);
@@ -5029,9 +5041,9 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     let popular = popularResult.status === 'fulfilled' ? buildYtVideoList(popularResult.value.data.items) : [];
     console.log(`[YouTube Unified] 검색 결과: 최신 ${recent.length}개, 인기 ${popular.length}개`);
 
-    // 실제 영상 길이 필터 (Videos API) — 4분+ 보장
+    // 실제 영상 길이 필터 (Videos API) — ✅ 2분+ 보장 (4분 → 2분 기준 완화)
     const allIds = [...new Set([...recent.map(v => v.youtubeId), ...popular.map(v => v.youtubeId)])].filter(Boolean);
-    const validIds = await filterByActualDuration(allIds, 240);
+    const validIds = await filterByActualDuration(allIds, 120);
     recent = recent.filter(v => validIds.has(v.youtubeId));
     popular = popular.filter(v => validIds.has(v.youtubeId));
 
@@ -5045,7 +5057,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     recent = recent.map(v => ({ ...v, tag: 'recent' }));
     popular = popular.map(v => ({ ...v, tag: 'popular' }));
 
-    console.log(`[YouTube Unified] 필터 후: 최신 ${recent.length}개, 인기 ${popular.length}개 (≥4분)`);
+    console.log(`[YouTube Unified] 필터 후: 최신 ${recent.length}개, 인기 ${popular.length}개 (≥2분)`);
 
     const result = { recent, popular };
     ytCacheSet(cacheKey, result);
@@ -5084,7 +5096,7 @@ app.get('/api/media/youtube', async (req, res) => {
       q: '낚시',
       type: 'video',
       order: ytOrder,
-      videoDuration: 'medium',        // ✅ 4~20분 (Shorts 제외)
+      videoDuration: 'any',              // ✅ 2뵈+ 기준으로 완화 (medium=4~20분 제한 제거)
       relevanceLanguage: 'ko',
       regionCode: 'KR',
       maxResults: String(maxResults),
@@ -5106,11 +5118,11 @@ app.get('/api/media/youtube', async (req, res) => {
     let videos = buildYtVideoList(response.data.items);
     console.log(`[YouTube] 피드 응답: ${videos.length}개 | 첫 번째: ${videos[0]?.publishedAt || '없음'}`);
 
-    // ✅ 실제 영상 길이 확인 필터
+    // ✅ 실제 영상 길이 확인 필터 — 2분+(120초) 기준 (4분 → 2분 완화)
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);
-    const validIds = await filterByActualDuration(videoIds, 240); // 4분 미만 제외
+    const validIds = await filterByActualDuration(videoIds, 120);
     videos = videos.filter(v => validIds.has(v.youtubeId));
-    console.log(`[YouTube] 피드 길이 필터 후: ${videos.length}개 (≥4분)`);
+    console.log(`[YouTube] 피드 길이 필터 후: ${videos.length}개 (≥2분)`);
 
     videos = sortVideos(videos, order);
 
