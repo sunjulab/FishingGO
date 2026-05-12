@@ -4663,7 +4663,59 @@ app.get('/api/vvip/my-slot', (req, res) => {
   }
 });
 
-// 24시간마다 만료된 VVIP 슬롯 자동 정리 (서버 백그라운드)
+// ✅ ADMIN: VVIP 수동 부여 (결제 없이 어드민이 직접 슬롯 할당 — 테스트/운영자 지급용)
+// POST /api/admin/vvip/grant  { userId, harborId, days? }
+app.post('/api/admin/vvip/grant', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
+
+  const { userId, harborId, days = 30 } = req.body;
+  if (!userId || !harborId) return res.status(400).json({ error: 'userId, harborId 필수' });
+
+  const harbor = HARBOR_LIST.find(h => h.id === harborId);
+  if (!harbor) return res.status(404).json({ error: `존재하지 않는 항구: ${harborId}` });
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + Number(days) * 24 * 60 * 60 * 1000);
+
+  // 기존 슬롯 덮어쓰기 허용 (테스트 목적)
+  vvipSlots[harborId] = {
+    userId,
+    userName: userId,
+    purchasedAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    harborName: harbor.name,
+    grantedBy: tp.email || 'admin',
+  };
+  saveVvipSlots();
+
+  // MongoDB User 업데이트 (email 또는 id 양쪽 시도)
+  if (dbReady && User) {
+    try {
+      await User.findOneAndUpdate(
+        { $or: [{ email: userId }, { id: userId }, { name: userId }] },
+        { $set: { tier: 'BUSINESS_VIP', vvipHarborId: harborId, vvipExpiresAt: expiresAt } }
+      );
+    } catch (e) { console.error('[VVIP Grant DB]', e.message); }
+  } else {
+    // 인메모리 fallback
+    const mu = memUsers.find(u => u.email === userId || u.id === userId || u.name === userId);
+    if (mu) { mu.tier = 'BUSINESS_VIP'; mu.vvipHarborId = harborId; mu.vvipExpiresAt = expiresAt.toISOString(); saveMemUsers(); }
+  }
+
+  console.log(`[VVIP Grant] 어드민 수동 부여: ${userId} → ${harbor.name} (${days}일, 만료: ${expiresAt.toLocaleDateString('ko-KR')})`);
+  res.json({
+    success: true,
+    userId, harborId, harborName: harbor.name,
+    expiresAt: expiresAt.toISOString(),
+    daysLeft: days,
+    message: `✅ ${userId}에게 ${harbor.name} VVIP 슬롯 ${days}일 부여 완료`,
+  });
+});
+
 setInterval(() => {
   const now = new Date();
   let cleaned = 0;
