@@ -60,6 +60,10 @@ export default function MyPage() {
   );
 
   const tierBadge = isAdmin ? TIER_CONFIG.MASTER : (TIER_CONFIG[userTier] || TIER_CONFIG.FREE);
+  // ✅ FIX-VVIP-BADGE: VVIP는 항구명 포함 동적 label (user.vvipHarborName은 buildUserResponse에서 주입됨)
+  const tierBadgeLabel = (userTier === 'BUSINESS_VIP' && user?.vvipHarborName)
+    ? '\u{1F451} VVIP ' + user.vvipHarborName
+    : tierBadge.label;
   const levelInfo  = getLevelInfo(user?.totalExp || 0);
   
   const [activeTab, setActiveTab] = useState('records');
@@ -529,7 +533,7 @@ export default function MyPage() {
               <Camera size={14} color="#fff" />
             </div>
             {/* PRO/VIP/FREE 등 티어 뱃지 (FREE면 표시 안 함) */}
-            {tierBadge.label && (
+            {tierBadgeLabel && (
               <div style={{
                 position: 'absolute', top: '-8px', left: '-8px',
                 background: tierBadge.bg,
@@ -539,7 +543,7 @@ export default function MyPage() {
                 border: '2.5px solid #fff', letterSpacing: '0.02em',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 whiteSpace: 'nowrap',
-              }}>{tierBadge.label}</div>
+              }}>{tierBadgeLabel}</div>
             )}
             {/* 숨겨진 파일 input */}
             <input
