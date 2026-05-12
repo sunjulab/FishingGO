@@ -555,18 +555,21 @@ export default function MapHome() {
   const isGolden    = score >= 90;
   const tideData    = currentData;
   const phase       = tideData.tide?.phase || '7물(사리)';
-  // ✅ SORT-FIX: getPointSpecificData(p)로 실제 날씨(wind/wave/sst/tide) 전달 — 가짜 {sst:p.score/6} 제거
-  // 이전 코드는 wind/wave/tide 없이 가짜 데이터를 전달해 모든 포인트가 거의 동일한 점수를 받았음
-  const PREMIUM_POINTS = useMemo(() =>
-    [...ALL_FISHING_POINTS]
+  // ✅ FILTER-FIX: filter 상태를 deps에 포함 + 필터 적용 후 실시간 점수 정렬
+  // 이전: filter 누락으로 방파제/갯바위/항구 선택해도 목록 미변경 버그
+  const PREMIUM_POINTS = useMemo(() => {
+    const base = filter === '전체'
+      ? [...ALL_FISHING_POINTS]
+      : ALL_FISHING_POINTS.filter(p => p.type === filter);
+    return base
       .map(p => {
-        const weatherData = getPointSpecificData(p);      // 실제 캐시된 날씨 데이터
+        const weatherData = getPointSpecificData(p);
         const liveScore = evaluateFishingCondition(weatherData, p).score;
         return { ...p, _liveScore: liveScore };
       })
-      .sort((a, b) => b._liveScore - a._liveScore)        // 높은 점수 → 낮은 점수 내림차순
-      .slice(0, 8)                                        // 상위 8개만 표시
-  , [rankTick]); // ✅ REALTIME-FIX: 10분 주기로 날씨기반 점수 재계산
+      .sort((a, b) => b._liveScore - a._liveScore)
+      .slice(0, 8);
+  }, [rankTick, filter]); // ✅ FILTER-FIX: filter 추가 — 필터 변경 시 점수 재계산
 
   /* ── 낚시점수 원 색상 계산 ── */
   const getScoreCircleStyle = (s) => {
@@ -1294,12 +1297,20 @@ export default function MapHome() {
             {/* 우수 포인트 카드 */}
             <div style={{ marginTop: '14px' }}>
               <div style={{ padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: '950', color: '#1A1A2E', margin: 0 }}>실시간 우수 포인트</h3>
+                <h3 style={{ fontSize: '15px', fontWeight: '950', color: '#1A1A2E', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  {filter === '전체' ? '실시간 우수 포인트' : `${EMOJI_MAP[filter] || ''} ${filter} 점수 순위`}
+                  <span style={{ fontSize: '9px', background: '#E8F4FF', color: '#1565C0', padding: '2px 7px', borderRadius: '10px', fontWeight: '900' }}>LIVE</span>
+                </h3>
                 <span onClick={() => setViewMode('map')} style={{ fontSize: '11px', color: '#1565C0', fontWeight: '800', cursor: 'pointer' }}>지도보기 →</span>
               </div>
               <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', padding: '2px 16px 10px', scrollbarWidth: 'none' }}>
-                {PREMIUM_POINTS.map((point, rank) => {
-                  // ✅ SORT-ENH: _liveScore는 useMemo에서 미리 계산됨
+                {PREMIUM_POINTS.length === 0 ? (
+                  // ✅ FILTER-EMPTY: 해당 타입 포인트가 없을 때 안내
+                  <div style={{ padding: '24px 16px', textAlign: 'center', color: '#AAB0BE', fontSize: '13px', fontWeight: '700' }}>
+                    {filter} 포인트 데이터가 없습니다.<br />
+                    <span style={{ fontSize: '11px' }}>전체 보기로 전환하거나 다른 타입을 선택해주세요.</span>
+                  </div>
+                ) : PREMIUM_POINTS.map((point, rank) => {
                   const liveScore = point._liveScore ?? 0;
                   const scoreColor = liveScore >= 90 ? '#00C48C' : liveScore >= 75 ? '#1565C0' : liveScore >= 50 ? '#FF9B26' : '#FF5A5F';
                   const statusLabel = liveScore >= 90 ? '최고' : liveScore >= 75 ? '활발' : liveScore >= 50 ? '보통' : 'POOR';
@@ -1321,7 +1332,11 @@ export default function MapHome() {
                       </div>
                       <div style={{ padding: '8px 10px' }}>
                         <div style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{point.name}</div>
-                        <div style={{ fontSize: '9px', color: '#AAB0BE', fontWeight: '700' }}>{point.region} · {point.fish.split(',')[0]}</div>
+                        {/* ✅ TYPE-BADGE: 포인트 타입 뱃지 추가 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '8px', background: '#F0F5FF', color: '#1565C0', padding: '1px 5px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>{point.type}</span>
+                          <span style={{ fontSize: '9px', color: '#AAB0BE', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{point.region} · {point.fish.split(',')[0]}</span>
+                        </div>
                       </div>
                     </div>
                   );
