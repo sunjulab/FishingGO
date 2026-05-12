@@ -299,8 +299,8 @@ export default function CrewChat() {
         })}
       </div>
 
-      {/* Input Area — 컨테이너 safe-area padding이 이미 하단 처리 */}
-      <div style={{ padding: '12px 16px', background: '#fff', borderTop: '1px solid #eee', display: 'flex', gap: '10px', alignItems: 'center' }}>
+      {/* Input Area — overflow:hidden으로 버튼 가림 방지 */}
+      <div style={{ padding: '12px 16px', background: '#fff', borderTop: '1px solid #eee', display: 'flex', gap: '8px', alignItems: 'center', overflow: 'hidden' }}>
         {/* 크루장: 삭제 버튼 / 일반: 나가기 버튼 */}
         {isOwner ? (
           <button
@@ -325,7 +325,18 @@ export default function CrewChat() {
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
           placeholder={connected ? '메시지를 입력하세요...' : '연결 중...'}
           disabled={!connected}
-          style={{ flex: 1, padding: '12px 16px', backgroundColor: connected ? '#f5f5f7' : '#eee', border: 'none', borderRadius: '24px', outline: 'none', fontSize: '14px', opacity: connected ? 1 : 0.6 }}
+          style={{
+            flex: 1,
+            minWidth: 0,             // ✅ FIX: flex shrink 허용 — 버튼 가림 방지
+            padding: '12px 14px',
+            backgroundColor: connected ? '#f5f5f7' : '#eee',
+            border: 'none',
+            borderRadius: '24px',
+            outline: 'none',
+            fontSize: '14px',
+            opacity: connected ? 1 : 0.6,
+            boxSizing: 'border-box', // ✅ padding이 너비에 포함되도록
+          }}
         />
         <button
           onClick={handleSend}
