@@ -160,6 +160,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
   const [adWatching, setAdWatching] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
   const [adDone, setAdDone] = useState(false);
+  const [autoCount, setAutoCount] = useState(0); // ✅ FIX-AUTO: 자동 등록 카운트다운
 
   const CONTEXT_TEXT = {
     post:  { title: '🎣 게시글 무료 등록', action: '글 등록 완료!' },
@@ -167,12 +168,51 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
   };
   const ctx = CONTEXT_TEXT[context] || CONTEXT_TEXT.post;
 
-  const intervalRef = useRef(null); // ✅ 8TH-A3: React.useRef → useRef
+  const intervalRef  = useRef(null); // 광고 진행 타이머
+  const autoTimerRef = useRef(null); // ✅ FIX-AUTO: 자동 등록 타이머
+  const calledRef    = useRef(false); // ✅ FIX-DUP: handleComplete 중복 방지
 
-  // 언마운트 시 타이머 정리
-  useEffect(() => { // ✅ 8TH-A3: React.useEffect → useEffect
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  // ✅ FIX-RESET: isOpen이 true로 바뀔 때마다 상태 초기화 (adDone 잔류 방지)
+  useEffect(() => {
+    if (isOpen) {
+      setAdWatching(false);
+      setAdProgress(0);
+      setAdDone(false);
+      setAutoCount(0);
+      calledRef.current = false;
+    } else {
+      // 모달 닫힐 때 타이머 전부 정리
+      if (intervalRef.current)  { clearInterval(intervalRef.current);  intervalRef.current  = null; }
+      if (autoTimerRef.current) { clearInterval(autoTimerRef.current); autoTimerRef.current = null; }
+    }
+  }, [isOpen]);
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current)  clearInterval(intervalRef.current);
+      if (autoTimerRef.current) clearInterval(autoTimerRef.current);
+    };
   }, []);
+
+  // ✅ FIX-AUTO: adDone=true 시 1.5초 카운트다운 후 자동 등록
+  useEffect(() => {
+    if (!adDone) return;
+    setAutoCount(2); // 2초 카운트다운
+    const countId = setInterval(() => {
+      setAutoCount(prev => {
+        if (prev <= 1) {
+          clearInterval(countId);
+          autoTimerRef.current = null;
+          handleComplete(); // 자동 등록 트리거
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    autoTimerRef.current = countId;
+    return () => { clearInterval(countId); };
+  }, [adDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // [정지 방지] 광고 시청은 타이머 기반 시뮬레이션 (실제 애드몹 SDK 연동 시 교체)
   const handleWatchAd = () => {
@@ -200,21 +240,18 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       loadAdSense();
       setTimeout(() => {
         try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {
-          if (!import.meta.env.PROD) console.warn('[AdUnit] adsbygoogle push 실패:', e); // ✅ 17TH-C1: silent catch → 개발 환경 경고
+          if (!import.meta.env.PROD) console.warn('[AdUnit] adsbygoogle push 실패:', e);
         }
       }, 200);
     } catch (e) {
-      if (!import.meta.env.PROD) console.warn('[AdUnit] loadAdSense 실패:', e); // ✅ 17TH-C1: silent catch → 개발 환경 경고
+      if (!import.meta.env.PROD) console.warn('[AdUnit] loadAdSense 실패:', e);
     }
 
     const intervalId = setInterval(() => {
       setAdProgress(prev => {
         if (prev >= 100) {
-          // intervalId 클로저 변수로 직접 참조 — ref 변경에 무관하게 안전 정리
           clearInterval(intervalId);
           intervalRef.current = null;
-          // ✅ 2ND-B8: React 18 자동 배칭 — setInterval 내 복수 setState도 배치 처리됨
-          // setAdWatching(false) + setAdDone(true) 동시 적용, 불일치 상태 없음
           setAdWatching(false);
           setAdDone(true);
           return 100;
@@ -222,16 +259,17 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         return prev + (100 / 30); // 30초 광고
       });
     }, 1000);
-    intervalRef.current = intervalId; // ref에도 저장 (handleComplete에서 사용)
+    intervalRef.current = intervalId;
   };
 
-
+  // ✅ FIX-DUP: calledRef로 중복 호출 방지 (자동 타이머 + 수동 버튼 동시 방지)
   const handleComplete = () => {
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-    onRewardComplete();
-    onClose();
-    setAdDone(false);
-    setAdProgress(0);
+    if (calledRef.current) return;
+    calledRef.current = true;
+    if (intervalRef.current)  { clearInterval(intervalRef.current);  intervalRef.current  = null; }
+    if (autoTimerRef.current) { clearInterval(autoTimerRef.current); autoTimerRef.current = null; }
+    onRewardComplete?.();
+    onClose?.();
   };
 
 
@@ -330,11 +368,12 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
             )}
           </div>
         ) : (
+          // ✅ FIX-AUTO: 시청 완료 후 자동 등록 카운트다운 표시
           <button
             onClick={handleComplete}
             style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', backgroundColor: '#00C48C', color: '#fff', fontSize: '17px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,196,140,0.3)' }}
           >
-            ✅ 시청 완료! {ctx.action}
+            ✅ 시청 완료!{autoCount > 0 ? ` (${autoCount}초 후 자동 등록)` : ` ${ctx.action}`}
           </button>
         )}
 
