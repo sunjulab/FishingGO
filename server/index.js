@@ -4947,6 +4947,15 @@ app.get('/api/media/youtube/search', async (req, res) => {
     }
 
     // ─── STEP 2: 영상 검색 (채널ID 있으면 채널 전용, 없으면 키워드) ─────────
+    // ✅ FIX-SORT: 키워드 검색 시 publishedAfter=1년 추가 → YouTube가 최신 영상을 세트에 포함시키도록 유도
+    //    채널ID 검색 시에는 날짜 제한 없이 전체 채널 영상 최신순 반환
+    const publishedAfterKeyword = (() => {
+      if (channelId) return null;               // 채널 검색: 날짜 제한 없음
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - 1);       // 키워드 검색: 최근 1년으로 제한
+      return d.toISOString();
+    })();
+    const fetchMax = channelId ? String(maxResults) : String(Math.min(maxResults + 10, 25)); // 키워드 검색 시 여유분 확보
     const videoParams = {
       part: 'snippet',
       q: channelId ? '' : q,    // 채널 특정 검색 시 q 불필요
@@ -4955,9 +4964,10 @@ app.get('/api/media/youtube/search', async (req, res) => {
       videoDuration: 'medium',  // 4~20분
       relevanceLanguage: 'ko',
       regionCode: 'KR',
-      maxResults: String(maxResults),
+      maxResults: fetchMax,
       key: YT_API_KEY,
       ...(channelId ? { channelId } : {}),
+      ...(publishedAfterKeyword ? { publishedAfter: publishedAfterKeyword } : {}),
       ...(pageToken ? { pageToken } : {}),
     };
     // q가 비어있으면 제거 (channelId 모드)
@@ -4966,7 +4976,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
     const params = new URLSearchParams(videoParams);
     const response = await axios.get(`${YT_BASE}/search?${params.toString()}`, axiosCfg);
     let videos = buildYtVideoList(response.data.items);
-    console.log(`[YouTube Search] 응답: ${videos.length}개 (채널ID: ${channelId || '없음'})`);
+    console.log(`[YouTube Search] 응답: ${videos.length}개 (채널ID: ${channelId || '없음'}, publishedAfter: ${publishedAfterKeyword ? '1년' : '없음'})`);
 
     // ─── STEP 3: 실제 영상 길이 필터 (4분+) ─────────────────────────────────
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);

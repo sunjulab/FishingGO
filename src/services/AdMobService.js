@@ -64,16 +64,19 @@ export async function showRewardedAd(onRewarded, onFailed) {
       'onRewardedVideoAdRewarded',
       (reward) => {
         console.log('[AdMob] 보상 수령:', reward);
+        rewarded = true; // ✅ FIX: 보상 수령 플래그 — 닫기 이벤트에서 onFailed 이중 호출 방지
         rewardListener.remove();
         onRewarded?.(reward);
       }
     );
 
-    // 광고 종료(스킵/닫기) 리스너
+    // 광고 종료(스킵/닫기) 리스너 — 보상 없이 닫힌 경우 onFailed 호출
+    let rewarded = false;
     const closeListener = await AdMob.addListener(
       'onRewardedVideoAdClosed',
       () => {
         closeListener.remove();
+        if (!rewarded) onFailed?.(); // ✅ FIX: 보상 없이 닫힌 경우 onFailed 호출 → UI 잠금 해제
       }
     );
 
