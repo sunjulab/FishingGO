@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'; // ✅ 25TH-C2: useCallback named import 추가
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2 } from 'lucide-react';
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 7TH-A1: ADMIN_ID/ADMIN_EMAIL import
+import { Capacitor } from '@capacitor/core';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
 import { BannerAd, NativeAd } from '../components/AdUnit';
+import { showInterstitialAd } from '../services/AdMobService';
+import { loadNativeAd, updateNativeAdPositions, removeNativeAd, removeAllNativeAds } from '../services/NativeAdService';
 
 // ✅ 3RD-B5: InFeedAd 컴포넌트 함수 내부 인라인 정의 → 외부 추출 — 렌더마다 재생성 방지
 function InFeedAd() {
@@ -104,9 +107,11 @@ export default function CommunityTab() {
   const [activeTab, setActiveTab] = useState('business');
   // ENH4-B3: DOM 직접 조작 대신 React state 기반 하이라이트
   const [highlightedPostId, setHighlightedPostId] = useState(null);
-  const sentinelRef = useRef(null); // 무한스크롤 감지 sentinel
-  // ✅ 25TH-C3: 하트 애니메이션 타이머 누수 방지 ref (5TH-A4 패턴)
+  const sentinelRef = useRef(null);
   const likeTimerRef = useRef({});
+  const interstitialShownRef = useRef(false);
+  // ✅ NATIVE-AD: 인피드 네이티브 광고 슬롯 맵 (slotId → placeholder el)
+  const nativeAdSlotMapRef = useRef(new Map());
 
   // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
   useEffect(() => {
@@ -361,6 +366,33 @@ export default function CommunityTab() {
     fetchData();
     // fetchPosts는 아래 useEffect가 마운트 시에도 실행하므로 여기서 중복 호출 제거
   }, [location.search, user?.email]);
+
+  // ✅ ADMOB-INTERSTITIAL: 선상배홈보 탭 진입 시 FREE 유저 인터스티셜 광고 1회 표시
+  useEffect(() => {
+    if (activeTab !== 'business') return;
+    if (canAccessPremium) return;
+    if (interstitialShownRef.current) return;
+    interstitialShownRef.current = true;
+    const timer = setTimeout(() => {
+      showInterstitialAd(() => {
+        console.log('[AdMob] 선상배홈보 인터스티셜 종료');
+      });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [activeTab, canAccessPremium]);
+
+  // ✅ NATIVE-AD: 스크롤 시 인피드 네이티브 광고 위치 실시간 업데이트 (앱 전용)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handleScroll = () => updateNativeAdPositions(nativeAdSlotMapRef.current);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // ✅ NATIVE-AD: 페이지 언마운트 시 모든 네이티브 광고 제거
+  useEffect(() => {
+    return () => { removeAllNativeAds(); };
+  }, []);
 
   // 마운트·카테고리·검색어 변경 시 1페이지부터 재로드 (단 한 번만 실행됨)
   // ENH4-C2: location.search 변화 시 fetchPosts 중복 호출 가능성 업음 (openCategory/debouncedSearch가 파생 커버)
@@ -934,7 +966,7 @@ export default function CommunityTab() {
             )}
 
 
-            {effectiveBusinessPosts.map((post) => (
+            {effectiveBusinessPosts.map((post, index) => (
               <React.Fragment key={post._id || post.id}>
                 {post.isPinned ? (
                   /* VVIP 프리미엄 대형 카드 */
@@ -982,8 +1014,33 @@ export default function CommunityTab() {
                     </div>
                   </div>
                 ) : null}
-                {/* VVIP 카드 바로 아래 광고 */}
-                {post.isPinned && <BannerAd style={{ marginBottom: '16px' }} />}
+                {/* ✅ NATIVE-AD: VVIP 카드 아래 인피드 네이티브 광고
+                    웹: BannerAd (AdSense) / 앱: NativeAdPlugin이 placeholder 위에 오버레이 */}
+                {post.isPinned && !canAccessPremium && (() => {
+                  const slotId = `business_ad_${index}`;
+                  if (Capacitor.isNativePlatform()) {
+                    // 네이티브 앱: placeholder div 마운트 시 네이티브 광고 로드
+                    return (
+                      <div
+                        ref={el => {
+                          if (el && !nativeAdSlotMapRef.current.has(slotId)) {
+                            nativeAdSlotMapRef.current.set(slotId, el);
+                            loadNativeAd(slotId, el);
+                          } else if (!el) {
+                            nativeAdSlotMapRef.current.delete(slotId);
+                            removeNativeAd(slotId);
+                          }
+                        }}
+                        style={{
+                          width: '100%', height: 300, marginBottom: 16,
+                          borderRadius: 16, background: 'transparent',
+                        }}
+                      />
+                    );
+                  }
+                  // 웹: 기존 AdSense BannerAd
+                  return <BannerAd style={{ marginBottom: '16px' }} />;
+                })()}
                 {!post.isPinned && (
 
                   <div style={{

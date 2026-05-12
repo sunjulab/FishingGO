@@ -16,6 +16,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // ✅ NATIVE-AD: 인피드 네이티브 광고 플러그인 등록 (super.onCreate 전에 호출)
+        registerPlugin(NativeAdPlugin.class);
         super.onCreate(savedInstanceState);
 
         // ✅ 결제 연동: intent:// / market:// URL 처리 (카카오페이, 네이버페이, 토스 등)
