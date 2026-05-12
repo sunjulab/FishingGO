@@ -4967,7 +4967,9 @@ app.get('/api/media/youtube/search', async (req, res) => {
       }
       return d.toISOString();
     })();
-    const fetchMax = String(Math.min(maxResults + 15, 30)); // 여유분 확보 (필터 후에도 충분한 결과 보장)
+    // ✅ FIX-SHORTAGE: fetchMax 30→50 (한국 낚시 Shorts 비율 높음 → 필터 후 충분한 영상 확보)
+    // YouTube API는 maxResults 크기와 무관하게 Search 1회 = 100 units 고정 → 쿼터 추가 소비 없음
+    const fetchMax = String(Math.min(maxResults + 30, 50)); // 여유분 확보 (필터 후에도 충분한 결과 보장)
     const videoParams = {
       part: 'snippet',
       q: channelId ? '' : q,    // 채널 특정 검색 시 q 불필요
@@ -5030,7 +5032,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
   try {
     const publishedAfterRecent = getPublishedAfter('date');      // 최근 7일
     const publishedAfterPopular = getPublishedAfter('viewCount'); // 최근 30일
-    const commonParams = { part: 'snippet', q, type: 'video', videoDuration: 'any', relevanceLanguage: 'ko', regionCode: 'KR', maxResults: '10', key: YT_API_KEY };
+    const commonParams = { part: 'snippet', q, type: 'video', videoDuration: 'any', relevanceLanguage: 'ko', regionCode: 'KR', maxResults: '30', key: YT_API_KEY };
     const axiosCfg = { timeout: 10000, headers: { Referer: YT_ORIGIN, Origin: YT_ORIGIN } };
 
     console.log(`[YouTube Unified] 병렬 요청: "${q}" | recent(7일) + popular(30일 인기순)`);
@@ -5080,7 +5082,8 @@ app.get('/api/media/youtube', async (req, res) => {
   try {
     const order = req.query.order === 'viewCount' ? 'viewCount' : 'date';
     const pageToken = req.query.pageToken || '';
-    const maxResults = 15;
+    // ✅ FIX-SHORTAGE: 15→30 (한국 낚시 Shorts 비율 높음 → 필터 후 충분한 영상 확보)
+    const maxResults = 30;
     const publishedAfter = getPublishedAfter(order);
 
     if (!YT_API_KEY) {
