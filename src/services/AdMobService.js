@@ -61,7 +61,7 @@ export async function showRewardedAd(onRewarded, onFailed) {
 
     // 보상 수령 리스너
     const rewardListener = await AdMob.addListener(
-      'onRewardedVideoAdRewarded',
+      'onRewardedVideoAdReward',
       (reward) => {
         console.log('[AdMob] 보상 수령:', reward);
         rewarded = true; // ✅ FIX: 보상 수령 플래그 — 닫기 이벤트에서 onFailed 이중 호출 방지
@@ -73,7 +73,7 @@ export async function showRewardedAd(onRewarded, onFailed) {
     // 광고 종료(스킵/닫기) 리스너 — 보상 없이 닫힌 경우 onFailed 호출
     let rewarded = false;
     const closeListener = await AdMob.addListener(
-      'onRewardedVideoAdClosed',
+      'onRewardedVideoAdDismissed',
       () => {
         closeListener.remove();
         if (!rewarded) onFailed?.(); // ✅ FIX: 보상 없이 닫힌 경우 onFailed 호출 → UI 잠금 해제
@@ -110,7 +110,7 @@ export async function showInterstitialAd(onClosed) {
 
     // 닫힘 리스너
     const closeListener = await AdMob.addListener(
-      'interstitialDidDismissScreen',
+      'interstitialAdDismissed',
       () => {
         closeListener.remove();
         onClosed?.();
