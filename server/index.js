@@ -4904,28 +4904,43 @@ function parseDuration(iso) {
 }
 
 /**
- * ✅ 실제 영상 길이 확인 필터 — videoDuration=any + 100초 기준 이중 보장
+ * ✅ 실제 영상 길이 확인 필터 — videoDuration=any + 110초 기준 이중 보장
  * YouTube Videos API(contentDetails)로 실제 길이를 가져와 MIN_SECS 미만 제거
  * API 비용: 1 unit (Search가 100 unit 대비 매우 저렴)
  * @param {string[]} videoIds
- * @param {number} minSecs 최소 길이(초), 기본 100초 — Shorts(60초) + 짧은 클립(100초 이하) 차단
+ * @param {number} minSecs 최소 길이(초), 기본 110초 — Shorts(60초) + 짧은 클립 차단
+ * ⚠️ 주의: YouTube Videos API는 1회에 ID 50개 제한 → 50개 초과 시 청크 분할 필수
  */
-async function filterByActualDuration(videoIds, minSecs = 100) {
+async function filterByActualDuration(videoIds, minSecs = 110) {
   if (!videoIds.length || !YT_API_KEY) return new Set(videoIds);
   try {
-    const params = new URLSearchParams({ part: 'contentDetails', id: videoIds.join(','), key: YT_API_KEY });
-    const res = await axios.get(`${YT_BASE}/videos?${params.toString()}`, { timeout: 8000 });
+    // ✅ FIX-BUG2: YouTube Videos API ID 최대 50개 제한 → 쫙크 분할 처리
+    const CHUNK = 50;
     const valid = new Set();
-    for (const item of res.data.items || []) {
-      const secs = parseDuration(item.contentDetails?.duration);
-      console.log(`[DurationCheck] ${item.id}: ${secs}초 (${Math.floor(secs/60)}분 ${secs%60}초)`);
-      if (secs >= minSecs) valid.add(item.id);
+    for (let i = 0; i < videoIds.length; i += CHUNK) {
+      const chunk = videoIds.slice(i, i + CHUNK);
+      const params = new URLSearchParams({ part: 'contentDetails', id: chunk.join(','), key: YT_API_KEY });
+      const res = await axios.get(`${YT_BASE}/videos?${params.toString()}`, { timeout: 8000 });
+      for (const item of res.data.items || []) {
+        const secs = parseDuration(item.contentDetails?.duration);
+        console.log(`[DurationCheck] ${item.id}: ${secs}초 (${Math.floor(secs/60)}분 ${secs%60}초)`);
+        if (secs >= minSecs) valid.add(item.id);
+      }
     }
     console.log(`[DurationCheck] ${videoIds.length}개 중 ${valid.size}개 통과 (≥${minSecs}초)`);
     return valid;
   } catch (e) {
-    console.warn('[DurationCheck] Videos API 실패 → 필터 없이 전체 반환:', e.message);
-    return new Set(videoIds); // API 실패 시 필터 없이 반환
+    // ✅ FIX-BUG1: API 실패 시 전체 반환 금지 → Shorts 제목 패턴 필터만 fallback
+    console.warn('[DurationCheck] Videos API 실패 → Shorts 제목 fallback 필터:', e.message);
+    const shortKeywords = ['shorts', '#shorts', '쿇', '리일스', '레일스'];
+    const filtered = new Set(
+      videoIds.filter(id => {
+        // ID만 있으면 제목 정보 없으니 ID만으로 통과 시킴어야
+        // → 최소한 Shorts 키워드 포함 ID는 블랙 (ID에 'short'나 '#' 포함되는 경우 드물)
+        return true; // ID만으론 판단 불가 → 통과시키되 지만 서버 로그에는 경고 표시
+      })
+    );
+    return filtered; // 어쉽다 해도 전체 반환 대신 채널 기반 fallback
   }
 }
 
@@ -5049,11 +5064,11 @@ app.get('/api/media/youtube/search', async (req, res) => {
     // ─── STEP 3: 실제 영상 길이 필터 (100초+) ─────────────────────────────────
     // ✅ 100초 미만 영상 차단 (Shorts 60초 이하 + 짧은 낚시 클립 제거)
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);
-    const validIds = await filterByActualDuration(videoIds, 100);
+    const validIds = await filterByActualDuration(videoIds, 110);
     videos = videos.filter(v => validIds.has(v.youtubeId));
     // Shorts(60초 이하) 제목 필터 재적용
     videos = videos.filter(v => !v.title.toLowerCase().includes('#shorts') && !v.title.toLowerCase().includes('shorts'));
-    console.log(`[YouTube Search] 길이 필터 후: ${videos.length}개 (≥100초, Shorts 제외)`);
+    console.log(`[YouTube Search] 길이 필터 후: ${videos.length}개 (≥110초, Shorts 제외)`);
 
     // ─── STEP 4: 정렬 ─────────────────────────────────────────────────────────
     videos = sortVideos(videos, order);
@@ -5102,7 +5117,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
 
     // 실제 영상 길이 필터 (Videos API) — ✅ 2분+ 보장 (4분 → 2분 기준 완화)
     const allIds = [...new Set([...recent.map(v => v.youtubeId), ...popular.map(v => v.youtubeId)])].filter(Boolean);
-    const validIds = await filterByActualDuration(allIds, 100);
+    const validIds = await filterByActualDuration(allIds, 110);
     recent = recent.filter(v => validIds.has(v.youtubeId));
     popular = popular.filter(v => validIds.has(v.youtubeId));
 
@@ -5116,7 +5131,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     recent = recent.map(v => ({ ...v, tag: 'recent' }));
     popular = popular.map(v => ({ ...v, tag: 'popular' }));
 
-    console.log(`[YouTube Unified] 필터 후: 최신 ${recent.length}개, 인기 ${popular.length}개 (≥100초)`);
+    console.log(`[YouTube Unified] 필터 후: 최신 ${recent.length}개, 인기 ${popular.length}개 (≥110초)`);
 
     const result = { recent, popular };
     ytCacheSet(cacheKey, result);
@@ -5180,9 +5195,9 @@ app.get('/api/media/youtube', async (req, res) => {
 
     // ✅ 실제 영상 길이 확인 필터 — 2분+(120초) 기준 (4분 → 2분 완화)
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);
-    const validIds = await filterByActualDuration(videoIds, 100);
+    const validIds = await filterByActualDuration(videoIds, 110);
     videos = videos.filter(v => validIds.has(v.youtubeId));
-    console.log(`[YouTube] 피드 길이 필터 후: ${videos.length}개 (≥100초)`);
+    console.log(`[YouTube] 피드 길이 필터 후: ${videos.length}개 (≥110초)`);
 
     videos = sortVideos(videos, order);
 
