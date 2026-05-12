@@ -34,8 +34,9 @@ export default function MediaTab() {
   const [popularVideos, setPopularVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchResults, setSearchResults] = useState(null); // null = 검색결과 없음
-  const [searchChannelId, setSearchChannelId] = useState(null); // 제널 검색 여부
+  const [searchChannelId, setSearchChannelId] = useState(null); // 채널 검색 여부
 
+  // TODO: seenIds는 무한스크롤 페이지네이션 구현 시 중복 영상 제거에 사용 예정 (현재 미사용)
   const seenIds = useRef(new Set());
   // TTL 캐시 (4시간) — 서버 캐시와 동기화, 일일 쿼터 절약
   const unifiedCache = useRef(new Map()); // key → { recent, popular, ts }
@@ -51,7 +52,7 @@ export default function MediaTab() {
       .then(res => { if (res.data.products?.length) setSelectedVideo(p => ({ ...p, products: res.data.products })); })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVideo?.id]);
+  }, [selectedVideo?.youtubeId || selectedVideo?.id]); // ✅ FIX: YouTube API 결과는 youtubeId, 정적 TUTORIAL은 id — 둘 다 체크
 
   useEffect(() => { loadUnified('전체'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -123,8 +124,8 @@ export default function MediaTab() {
         setSearchChannelId(res.data.channelId || null); // 채널 특정 검색 여부
       }
     } catch (err) {
-      if (err.response?.status === 429) {
-        addToast('검색은 1분에 3회까지 가능합니다. 잠시 후 다시 시도해주세요. 🐟', 'warning');
+      if (err.response?.status === 429 || err.response?.status === 403) {
+        addToast('YouTube API 쿼터를 초과했습니다. 잠시 후 다시 시도해주세요. 🐟', 'warning');
       } else {
         addToast('검색 실패: ' + (err.message || '연결 오류'), 'error');
       }
@@ -276,7 +277,7 @@ export default function MediaTab() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-          <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '700' }}>📅 이번 주 최신 + 🔥 이달의 인기 · 4분 이상 영상</span>
+          <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '700' }}>📅 이번 주 최신 + 🔥 이달의 인기 · 2분 이상 영상</span>
         </div>
         <div style={{ position: 'relative', marginBottom: '16px' }}>
           <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#8E8E93' }} size={18} />
@@ -314,10 +315,10 @@ export default function MediaTab() {
             <>
               <SectionHeader
                 icon={searchChannelId ? '📺' : '🔍'}
-                title={searchChannelId ? `${searchQuery} 유튜브 체널` : '검색 결과'}
+                title={searchChannelId ? `${searchQuery} 유튜브 채널` : '검색 결과'}
                 subtitle={searchChannelId
-                  ? `이 체널 전용 영상 ${searchResults.length}개 · 4분 이상`
-                  : `"${searchQuery}" 결과 ${searchResults.length}개 · 4분 이상`}
+                  ? `이 채널 전용 영상 ${searchResults.length}개 · 2분 이상`
+                  : `"${searchQuery}" 결과 ${searchResults.length}개 · 2분 이상`}
                 color={searchChannelId ? '#FF0000' : '#0056D2'}
               />
               {searchResults.length === 0 && (
@@ -333,7 +334,7 @@ export default function MediaTab() {
               {/* 이번 주 최신 영상 섹션 */}
               {recentVideos.length > 0 && (
                 <>
-                  <SectionHeader icon="🕐" title="이번 주 업로드" subtitle="최근 7일 · 4분 이상 낚시 영상" color="#34C759" />
+                  <SectionHeader icon="🕐" title="이번 주 업로드" subtitle="최근 7일 · 2분 이상 낚시 영상" color="#34C759" />
                   {recentVideos.map(v => <VideoCard key={v.youtubeId} video={v} />)}
                 </>
               )}
@@ -341,7 +342,7 @@ export default function MediaTab() {
               {/* 인기 영상 섹션 */}
               {popularVideos.length > 0 && (
                 <div style={{ marginTop: recentVideos.length > 0 ? '8px' : '0' }}>
-                  <SectionHeader icon="🔥" title="이달의 인기 낚시 영상" subtitle="최근 1개월 최고 조회수 · 4분 이상" color="#FF3B30" />
+                  <SectionHeader icon="🔥" title="이달의 인기 낚시 영상" subtitle="최근 1개월 최고 조회수 · 2분 이상" color="#FF3B30" />
                   {popularVideos.map(v => <VideoCard key={v.youtubeId} video={v} />)}
                 </div>
               )}

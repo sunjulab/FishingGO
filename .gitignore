@@ -51,7 +51,7 @@ server/vvipSlots.json
 server/notices.json
 server/business.json
 # OPT-1: CCTV 오버라이드는 운영 서버에만 존재 — 저장소 제외
-server/cctv_overrides.json
+server/cctvOverrides.json
 server/secretPointOverrides.json
 
 # ✅ SECURITY: Android 서명 키스토어 — 절대 Git에 올리지 않음

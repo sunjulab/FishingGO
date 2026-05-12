@@ -4749,10 +4749,10 @@ app.get('/api/commerce/coupang/status', (req, res) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ▣ YouTube Data API v3 — 낚시 채널 미디어 탭 전용
-//   고도화 v2:
+//   고도화 v3:
 //   - order=date 는 q(검색어)와 함께 YouTube API에서 무시됨 → 서버에서 publishedAt 직접 정렬
-//   - videoDuration=medium (4~20분) → 2분+ 낚시 영상 커버, Shorts(60초 이하) 제외
-//   - 캐시 TTL 30분으로 연장 → API 쿼터 절약
+//   - videoDuration=any → 2분+(120초) filterByActualDuration 서버 직접 필터 (Shorts 제외)
+//   - 캐시 TTL 4시간 → API 쿼터 절약 (일 6회 × 201 units = 1,206 units)
 //   - order 파라미터: 'date'(최신순) | 'viewCount'(인기순)
 //     → 같은 키워드 다른 order는 별도 캐시 키 → API 호출 최소화
 // ══════════════════════════════════════════════════════════════════════════════
@@ -4776,6 +4776,9 @@ const YT_BLACKLIST = [
 
 const ytCache = new Map();
 const YT_CACHE_TTL_MS = 4 * 60 * 60 * 1000; // ✅ 4시간 캐시 (30분→4시간: 일일 쿼터 초과 방지)
+// ✅ 프로덕션 URL 환경변수 지원 (기본값: 알려진 배포 URL)
+// YouTube API는 API 키로 인증, Referer는 확인용 헤더 (필수값 아님)
+const YT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.ALLOWED_ORIGIN || 'https://fishing-go.vercel.app';
 // 30분 TTL: 48회/일 × 201 units = 9,648 units → 쿼터 초과 위험
 // 4시간 TTL:  6회/일 × 201 units = 1,206 units → 안전권 유지
 
@@ -4847,7 +4850,7 @@ function parseDuration(iso) {
 }
 
 /**
- * ✅ 실제 영상 길이 확인 필터 — videoDuration=medium 부정확 보완
+ * ✅ 실제 영상 길이 확인 필터 — videoDuration=any + 2분 기준 이중 보장
  * YouTube Videos API(contentDetails)로 실제 길이를 가져와 MIN_SECS 미만 제거
  * API 비용: 1 unit (Search가 100 unit 대비 매우 저렴)
  * @param {string[]} videoIds
@@ -4896,7 +4899,7 @@ function getPublishedAfter(order) {
  * GET /api/media/youtube/search?q=낚시&order=date|viewCount&maxResults=15
  * - order=date  : publishedAfter(1년) + publishedAt 서버 재정렬 → 실제 최신 영상
  * - order=viewCount : 전체 기간 조회수 인기순
- * - videoDuration=medium : 4~20분 (Shorts/초단편 제외)
+ * - videoDuration=any : Shorts 60초 이하 서버 필터 (filterByActualDuration 120초)
  */
 app.get('/api/media/youtube/search', async (req, res) => {
   try {
@@ -4922,7 +4925,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
 
     const axiosCfg = {
       timeout: 10000,
-      headers: { Referer: 'https://localhost:3000', Origin: 'https://localhost:3000' },
+      headers: { Referer: YT_ORIGIN, Origin: YT_ORIGIN },
     };
 
     console.log(`[YouTube Search] 요청: q="${q}", order=${order}`);
@@ -5028,7 +5031,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     const publishedAfterRecent = getPublishedAfter('date');      // 최근 7일
     const publishedAfterPopular = getPublishedAfter('viewCount'); // 최근 30일
     const commonParams = { part: 'snippet', q, type: 'video', videoDuration: 'any', relevanceLanguage: 'ko', regionCode: 'KR', maxResults: '10', key: YT_API_KEY };
-    const axiosCfg = { timeout: 10000, headers: { Referer: 'https://localhost:3000', Origin: 'https://localhost:3000' } };
+    const axiosCfg = { timeout: 10000, headers: { Referer: YT_ORIGIN, Origin: YT_ORIGIN } };
 
     console.log(`[YouTube Unified] 병렬 요청: "${q}" | recent(7일) + popular(30일 인기순)`);
 
@@ -5096,7 +5099,7 @@ app.get('/api/media/youtube', async (req, res) => {
       q: '낚시',
       type: 'video',
       order: ytOrder,
-      videoDuration: 'any',              // ✅ 2뵈+ 기준으로 완화 (medium=4~20분 제한 제거)
+      videoDuration: 'any',              // ✅ 2분+ 기준으로 완화 (medium=4~20분 제한 제거)
       relevanceLanguage: 'ko',
       regionCode: 'KR',
       maxResults: String(maxResults),
@@ -5109,8 +5112,8 @@ app.get('/api/media/youtube', async (req, res) => {
     const axiosConfig = {
       timeout: 10000,
       headers: {
-        'Referer': 'https://localhost:3000',
-        'Origin': 'https://localhost:3000',
+        'Referer': YT_ORIGIN,
+        'Origin': YT_ORIGIN,
       }
     };
     console.log(`[YouTube] 피드 요청: order=${order}, publishedAfter=${publishedAfter || '없음'}`);
