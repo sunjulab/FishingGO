@@ -185,13 +185,41 @@ export default function VVIPSubscribe() {
     if (user) {
       // ✅ NEW-BUG-09: userId 쿼리파라미터 제거 — 서버가 JWT에서 자동 추출
       apiClient.get('/api/vvip/my-slot')
-        .then(res => { if (res.data.hasSlot) setMySlot(res.data); })
+        .then(res => {
+          if (res.data.hasSlot) {
+            // ✅ FIX-SHAPE: 서버 응답 { harbor: { id, name }, slot: { expiresAt } }
+            // → 쫖리 후 항상 harborId/harborName/expiresAt 형태로 저장
+            setMySlot({
+              harborId: res.data.harbor?.id,
+              harborName: res.data.harbor?.name,
+              expiresAt: res.data.slot?.expiresAt,
+              daysLeft: res.data.daysLeft,
+            });
+          }
+        })
         .catch((err) => {
           // ✅ 24TH-B2: my-slot silent catch → 개발 환경 에러 가시화
           if (!import.meta.env.PROD) console.warn('[VVIPSubscribe] /api/vvip/my-slot 로드 실패:', err?.message);
         });
     }
-  }, [user?.email]);
+  }, [user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ✅ FIX-REALTIME: 30초 폴링 — 다른 유저가 슬롯을 선점하면 실시간 품절 반영
+  useEffect(() => {
+    if (!user) return;
+    const pollInterval = setInterval(() => {
+      apiClient.get('/api/vvip/harbors')
+        .then(res => {
+          const map = {};
+          (res.data.harbors || []).forEach(h => {
+            if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt };
+          });
+          setTakenMap(map);
+        })
+        .catch(() => {}); // 실패 시 조용히 스킵
+    }, 30000); // 30초 주기
+    return () => clearInterval(pollInterval); // 언마운트 시 폴링 자동 해제
+  }, [user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const harbors = HARBORS_STATIC.map(h => ({
     ...h,
