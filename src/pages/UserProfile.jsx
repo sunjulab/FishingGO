@@ -5,13 +5,13 @@ import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 
-// 티어 뱃지 색상 매핑
+// 티어 뱃지 색상 매핑 (label은 VVIP만 동적으로 항구명 포함)
 const TIER_BADGE = {
-  MASTER:        { label: 'MASTER',       bg: 'linear-gradient(135deg,#E60000,#990000)', color: '#fff' },
-  BUSINESS_VIP:  { label: '👑 VVIP',      bg: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#5C3A00' },
-  PRO:           { label: 'PRO',           bg: 'linear-gradient(135deg,#0056D2,#003fa3)', color: '#fff' },
-  BUSINESS_LITE: { label: 'LITE',          bg: 'linear-gradient(135deg,#C0C0C0,#A0A0A0)', color: '#1A1A2E' },
-  FREE:          { label: 'FREE',          bg: '#F2F2F7',                                  color: '#8E8E93' },
+  MASTER:        { bg: 'linear-gradient(135deg,#E60000,#990000)', color: '#fff',    label: 'MASTER' },
+  BUSINESS_VIP:  { bg: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#5C3A00', label: '👑 VVIP' }, // label은 아래서 동적 생성
+  PRO:           { bg: 'linear-gradient(135deg,#0056D2,#003fa3)', color: '#fff',    label: 'PRO' },
+  BUSINESS_LITE: { bg: 'linear-gradient(135deg,#C0C0C0,#A0A0A0)', color: '#1A1A2E', label: 'LITE' },
+  FREE:          { bg: '#F2F2F7',                                  color: '#8E8E93', label: 'FREE' },
 };
 
 export default function UserProfile() {
@@ -75,7 +75,11 @@ export default function UserProfile() {
     }
   };
 
+  // ✅ FIX-VVIP-BADGE: VVIP는 항구명 포함 동적 label
   const tierBadge = TIER_BADGE[profile?.tier] || TIER_BADGE.FREE;
+  const badgeLabel = profile?.tier === 'BUSINESS_VIP' && profile?.vvipHarborName
+    ? `� VVIP ${profile.vvipHarborName}`
+    : tierBadge.label;
 
   if (loading) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '14px', background: '#F2F2F7' }}>
@@ -128,7 +132,7 @@ export default function UserProfile() {
                 <span style={{ fontSize: '20px', fontWeight: '950', color: '#1c1c1e' }}>{displayName}</span>
                 {profile?.tier && profile.tier !== 'FREE' && (
                   <span style={{ fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '8px', background: tierBadge.bg, color: tierBadge.color }}>
-                    {tierBadge.label}
+                    {badgeLabel}
                   </span>
                 )}
               </div>

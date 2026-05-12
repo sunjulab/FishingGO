@@ -2507,6 +2507,13 @@ app.get('/api/user/profile/:name', async (req, res) => {
 
       const isFollowing = myEmail ? (u.followers || []).includes(myEmail) : false;
 
+      // ✅ FIX-VVIP-BADGE: VVIP 항구명을 프로필에 포함
+      let vvipHarborName = null;
+      if (u.tier === 'BUSINESS_VIP' && u.vvipHarborId) {
+        const hInfo = HARBOR_LIST.find(h => h.id === u.vvipHarborId);
+        vvipHarborName = hInfo?.name || null;
+      }
+
       return res.json({
         name: u.name,
         avatar: u.avatar || u.picture || null,
@@ -2520,6 +2527,8 @@ app.get('/api/user/profile/:name', async (req, res) => {
         recordCount,
         isFollowing,
         joinedAt: u.createdAt,
+        vvipHarborId: u.vvipHarborId || null,       // ✅ FIX-VVIP-BADGE
+        vvipHarborName,                              // ✅ FIX-VVIP-BADGE: '강릉·강문' 등
       });
     }
 
@@ -2529,6 +2538,12 @@ app.get('/api/user/profile/:name', async (req, res) => {
     const isFollowing = myEmail ? (u.followers || []).includes(myEmail) : false;
     const postCount = memPosts.filter(p => p.author === targetName).length;
     const recordCount = (memRecords || []).filter(r => r.author === targetName).length;
+    // ✅ FIX-VVIP-BADGE: 인메모리 fallback에도 vvipHarborName 포함
+    let vvipHarborName = null;
+    if (u.tier === 'BUSINESS_VIP' && u.vvipHarborId) {
+      const hInfo = HARBOR_LIST.find(h => h.id === u.vvipHarborId);
+      vvipHarborName = hInfo?.name || null;
+    }
     return res.json({
       name: u.name,
       avatar: u.avatar || null,
@@ -2542,6 +2557,8 @@ app.get('/api/user/profile/:name', async (req, res) => {
       recordCount,
       isFollowing,
       joinedAt: u.createdAt || null,
+      vvipHarborId: u.vvipHarborId || null,
+      vvipHarborName,
     });
   } catch (err) {
     console.error('[GET /api/user/profile/:name]', err.message);
@@ -3830,8 +3847,14 @@ app.post('/api/community/business', async (req, res) => {
       }
     }
 
-    // ✅ isPinned(VVIP 고정)는 마스터만 설정 가능 — 클라이언트 조작 방지
-    const safePinned = isAdmin ? !!isPinned : false;
+    // ✅ FIX-BUG1: isPinned — VVIP 슬롯 보유자도 고정 가능 (마스터와 동일 권한)
+    // VVIP 슬롯의 userId 매칭: author_email 기준
+    const myVvipEntry = Object.entries(vvipSlots).find(([, v]) => {
+      const isMatch = v.userId === author_email;
+      const isValid = !v.expiresAt || new Date(v.expiresAt) > new Date();
+      return isMatch && isValid;
+    });
+    const safePinned = (isAdmin || !!myVvipEntry) ? !!isPinned : false;
 
     // ✅ VVIP 지역 제한 검증 — 구독한 항구 지역과 게시글 region이 일치해야 함
     if (!isAdmin) {
