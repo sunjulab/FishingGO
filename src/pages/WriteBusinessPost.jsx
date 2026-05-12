@@ -86,13 +86,30 @@ export default function WriteBusinessPost() {
   const [extraMsg, setExtraMsg] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [content, setContent] = useState('');
-  const [isPinned, setIsPinned] = useState(false); // VVIP 프리미엄 스폰서 고정
+  // ✅ VIP-AUTO: VIP는 자동 체크, 어드민은 토글 가능
+  const [isPinned, setIsPinned] = useState(false);
+  const [myVipHarbor, setMyVipHarbor] = useState(null); // ✅ VIP-HARBOR: 내 VIP 항구 슬롯 정보
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdGate, setShowAdGate] = useState(false);
   const generateTimerRef = useRef(null); // ✅ 19TH-B2: AI 생성 타이머 ref — 언마운트 후 setState 방지
 
   const isReady = shipName && region && boatType && targetFish.trim() && price && schedule && capacity && phone;
+
+  // ✅ VIP-HARBOR: VIP 사용자 → 자신의 VIP 항구 슬롯 자동 로드 + 지역·isPinned 자동 설정
+  useEffect(() => {
+    if (!isVVIP || isEditMode) return;
+    apiClient.get('/api/vvip/my-slot')
+      .then(res => {
+        if (res.data?.hasSlot && res.data?.harbor) {
+          const h = res.data.harbor;
+          setMyVipHarbor({ id: h.id, name: h.name, key: h.key });
+          setRegion(h.key); // 항구 key = 홍보글 region (예: '강원 주문진')
+          setIsPinned(true); // VIP는 자동 고정
+        }
+      })
+      .catch(() => {}); // 슬롯 없어도 무시
+  }, [isVVIP]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 수정 모드: 기존 데이터 불러오기
   useEffect(() => {
@@ -183,7 +200,7 @@ export default function WriteBusinessPost() {
         price, date: schedule,
         capacity: Number(capacity),
         phone, content,
-        isPinned: isAdmin && isPinned, // ✅ 마스터만 isPinned 전송
+        isPinned: (isAdmin || isVVIP) && isPinned, // ✅ VIP-FIX: VIP도 isPinned 서버 전송
         // ENH6-A3: Unsplash 외부 의존 제거 — picsum.photos placeholder 사용
         cover: coverImage || 'https://picsum.photos/seed/fishingboat/400/200'
       };
@@ -271,19 +288,47 @@ export default function WriteBusinessPost() {
           <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '10px' }}>🚢 기본 정보</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <input value={shipName} onChange={e => setShipName(e.target.value)} placeholder="배 이름 (예: 강릉 에이스호)" style={INPUT_STYLE} />
-            <select value={region} onChange={e => setRegion(e.target.value)} style={INPUT_STYLE}>
-              <option value="">📍 출항 지역 / 항구 선택</option>
-              {/* ✅ 전국(전체)는 마스터만 선택 가능 */}
-              <option
-                value="전국 (전체)"
-                disabled={!isAdmin}
-                style={{ fontWeight: '900', color: isAdmin ? '#0056D2' : '#ccc', background: isAdmin ? '#EFF7FF' : '#fafafa' }}
-              >
-                {isAdmin ? '🌐 전국 (전체) — MASTER 전용' : '🔒 전국 (전체) — 마스터 전용'}
-              </option>
-              <option disabled style={{ color: '#ccc', fontSize: '11px' }}>────────────────</option>
-              {REGIONS.filter(r => r !== '전국 (전체)').map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+
+            {/* ✅ VIP-HARBOR: VIP 항구 고정 배지 (슬롯 있을 때) */}
+            {myVipHarbor && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 13px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #1A1A2E, #0F3460)',
+                border: '1.5px solid #FFD700',
+              }}>
+                <span style={{ fontSize: '16px' }}>👑</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', fontWeight: '900', color: '#FFD700' }}>내 VIP 항구 — 자동 설정됨</div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#fff' }}>{myVipHarbor.name} VIP</div>
+                </div>
+                <span style={{ fontSize: '10px', backgroundColor: '#FFD700', color: '#1A1A2E', padding: '2px 8px', borderRadius: '8px', fontWeight: '900' }}>고정</span>
+              </div>
+            )}
+
+            {/* VIP는 자신의 항구로 고정, 마스터는 전체 선택 가능 */}
+            {myVipHarbor ? (
+              // VIP: 항구 고정 (변경 불가)
+              <div style={{ ...INPUT_STYLE, color: '#555', backgroundColor: '#F8F9FA', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px' }}>📍</span>
+                <span>{myVipHarbor.key}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#FFD700', fontWeight: '900' }}>VIP 고정</span>
+              </div>
+            ) : (
+              <select value={region} onChange={e => setRegion(e.target.value)} style={INPUT_STYLE}>
+                <option value="">📍 출항 지역 / 항구 선택</option>
+                {/* ✅ 전국(전체)는 마스터만 선택 가능 */}
+                <option
+                  value="전국 (전체)"
+                  disabled={!isAdmin}
+                  style={{ fontWeight: '900', color: isAdmin ? '#0056D2' : '#ccc', background: isAdmin ? '#EFF7FF' : '#fafafa' }}
+                >
+                  {isAdmin ? '🌐 전국 (전체) — MASTER 전용' : '🔒 전국 (전체) — 마스터 전용'}
+                </option>
+                <option disabled style={{ color: '#ccc', fontSize: '11px' }}>────────────────</option>
+                {REGIONS.filter(r => r !== '전국 (전체)').map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            )}
             <select value={boatType} onChange={e => setBoatType(e.target.value)} style={INPUT_STYLE}>
               <option value="">🎣 출조 타입 선택</option>
               {BOAT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
@@ -417,12 +462,13 @@ export default function WriteBusinessPost() {
           )}
         </section>
 
-        {/* VVIP 전용: 프리미엄 스폰서 등록 체크박스 (마스터만 가능) */}
-        {isAdmin && (
+        {/* ✅ VIP-PIN: VIP + 마스터 모두 표시 — VIP는 자동체크+잠금, 마스터는 토글 */}
+        {(isAdmin || isVVIP) && (
           <section
-            onClick={() => setIsPinned(prev => !prev)}
+            onClick={() => { if (isAdmin) setIsPinned(prev => !prev); }} // VIP는 자동체크라 토글 불가
             style={{
-              borderRadius: '16px', padding: '14px 16px', cursor: 'pointer',
+              borderRadius: '16px', padding: '14px 16px',
+              cursor: isAdmin ? 'pointer' : 'default',
               background: isPinned
                 ? 'linear-gradient(135deg, #1A1A2E, #0F3460)'
                 : '#fff',
@@ -449,6 +495,11 @@ export default function WriteBusinessPost() {
                 <div style={{ fontSize: '11px', color: isPinned ? 'rgba(255,215,0,0.8)' : '#999' }}>
                   선상 배 홍보 피드 최상단에 '금빛 테두리 + VVIP 뱃지'로 영구 고정 노출 됩니다
                 </div>
+                {isVVIP && (
+                  <div style={{ fontSize: '10px', color: '#FFD700', marginTop: '3px', fontWeight: '700' }}>
+                    ✅ VIP 구독자 — 자동 체크됨 (변경 불가)
+                  </div>
+                )}
                 {isAdmin && !isVVIP && (
                   <div style={{ fontSize: '10px', color: '#FF9B26', marginTop: '3px', fontWeight: '700' }}>
                     🔧 마스터 전용 테스트 모드
