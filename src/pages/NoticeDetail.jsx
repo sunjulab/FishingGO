@@ -132,6 +132,18 @@ export default function NoticeDetail() {
           </div>
         </div>
 
+        {/* ✅ FIX-IMG: 공지사항 이미지 렌더링 (누락 버그 수정) */}
+        {notice.image && (
+          <div style={{ width: '100%', marginBottom: '24px', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F0F0F0' }}>
+            <img
+              src={notice.image}
+              alt={notice.title}
+              style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '400px' }}
+              onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
+            />
+          </div>
+        )}
+
         {/* 본문 내용 */}
         <div style={{ fontSize: '17px', color: '#222', lineHeight: '1.9', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '200px' }}>
           {notice.content}
