@@ -17,7 +17,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
-import { showRewardedAd } from '../services/AdMobService';
+import { showRewardedAd, showBannerAd, removeBannerAd } from '../services/AdMobService';
 
 // ─── 광고 키 설정 (테스트 키 → 실제 키 교체 시 이곳만 수정) ───
 const PUB_ID   = import.meta.env.VITE_ADSENSE_PUB_ID   || 'ca-pub-3940256099942544'; // 구글 공식 테스트 퍼블리셔
@@ -84,8 +84,20 @@ export function BannerAd({ style = {} }) {
   useAdPush(ref);
   // ✅ 29TH-B1: 하드코딩 'sunjulab' → ADMIN_ID/ADMIN_EMAIL 상수로 교체 (3RD-A2 패턴 통일)
   const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
-  // ✅ ADMOB: 네이티브 앱에서는 AdSense 불가 — AdMob 배너가 하단에서 대신 노출
-  if (isPremium || isCapacitorNative()) return null;
+
+  // ✅ ADMOB-BANNER: 네이티브 앱에서 AdMob 하단 배너 표시 (AdSense WebView 금지 대체)
+  useEffect(() => {
+    if (isPremium || !isCapacitorNative()) return;
+    showBannerAd();
+    return () => { removeBannerAd(); };
+  }, [isPremium]);
+
+  if (isPremium) return null;
+
+  // 네이티브 앱: AdMob 배너가 화면 하단에 오버레이로 뜨 → 콘텐츠 가림 방지 위한 spacer
+  if (isCapacitorNative()) {
+    return <div style={{ height: '60px', width: '100%', ...style }} />;
+  }
 
   return (
     <div

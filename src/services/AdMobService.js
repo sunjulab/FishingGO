@@ -37,6 +37,49 @@ export async function initAdMob() {
   }
 }
 
+// ─── 배너 광고 ────────────────────────────────────────────────────
+// 하단 고정 배너 — 커뮤니티/선상배홍보 탭에서 AdSense 대체
+let bannerShowing = false; // 중복 show() 방지
+
+/**
+ * 하단 AdMob 배너 광고 표시
+ * BannerAd 컴포넌트가 마운트될 때 호출
+ */
+export async function showBannerAd() {
+  if (!isNative() || !AdMob || bannerShowing) return;
+  try {
+    const { BannerAdSize, BannerAdPosition } = await import('@capacitor-community/admob');
+    await AdMob.showBanner({
+      adId: ADMOB_CONFIG.BANNER_ID,
+      adSize: BannerAdSize.ADAPTIVE_BANNER,
+      position: BannerAdPosition.BOTTOM_CENTER,
+      margin: 0,
+      isTesting: IS_ADMOB_TESTING,
+    });
+    bannerShowing = true;
+    console.log('[AdMob] 배너 광고 표시');
+  } catch (e) {
+    console.warn('[AdMob] 배너 광고 오류:', e.message);
+  }
+}
+
+/**
+ * 하단 AdMob 배너 광고 제거
+ * BannerAd 컴포넌트가 언마운트될 때 호출
+ */
+export async function removeBannerAd() {
+  if (!isNative() || !AdMob || !bannerShowing) return;
+  try {
+    await AdMob.removeBanner();
+    bannerShowing = false;
+    console.log('[AdMob] 배너 광고 제거');
+  } catch (e) {
+    console.warn('[AdMob] 배너 제거 오류:', e.message);
+  }
+}
+
+
+
 // ─── 보상형 광고 ─────────────────────────────────────────────────
 /**
  * 보상형 광고 표시

@@ -10,6 +10,10 @@ export const ADMOB_CONFIG = {
   NATIVE_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/8130405525'
     : 'ca-app-pub-3940256099942544/2247696314', // 개발 테스트 ID
+  // ✅ BANNER: 배너 광고 — 선상배홍보/커뮤니티 하단 고정 (네이티브 앱 AdSense 대체)
+  BANNER_ID: import.meta.env.PROD
+    ? 'ca-app-pub-9774243773523817/2324217523'  // ✅ 실제 배너 광고 단위 ID
+    : 'ca-app-pub-3940256099942544/6300978111', // 구글 공식 테스트 배너 ID
 };
 
 export const AD_CONFIG = {
