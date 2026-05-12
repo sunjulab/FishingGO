@@ -1196,6 +1196,21 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
       return res.json({ hasSubscription: true, status: 'active', tier });
     }
 
+    // ✅ FIX-VVIP-GRANT: DB tier가 FREE이지만 vvipExpiresAt이 많는 유효한 admin grant 계정 복원
+    // — admin grant는 tier + vvipHarborId + vvipExpiresAt만 저장, subscriptionExpiresAt 없음
+    const vvipGrantUser = await (async () => {
+      try {
+        if (!dbReady || !User) return null;
+        return await User.findOne({ $or: [{ email: userId }, { id: userId }] }, 'vvipHarborId vvipExpiresAt').lean();
+      } catch { return null; }
+    })();
+    if (vvipGrantUser?.vvipHarborId && vvipGrantUser?.vvipExpiresAt) {
+      const vvipExpiry = new Date(vvipGrantUser.vvipExpiresAt);
+      if (vvipExpiry > new Date()) {
+        return res.json({ hasSubscription: true, status: 'active', tier: 'BUSINESS_VIP' });
+      }
+    }
+
     return res.json({ hasSubscription: false, status: 'free', tier: 'FREE' });
   } catch (err) {
     console.error('[GET /api/payment/subscription]', err.message);
@@ -4578,15 +4593,45 @@ let vvipSlots = memVvipSlots;
 
 // DB 연결 시 VVIP 슬롯 불러오기
 async function loadVvipSlotsFromDB() {
-  if (!dbReady || !BusinessPost) return;
+  if (!dbReady || !User) return;
   try {
     const now = new Date();
-    const vvipPosts = await BusinessPost.find({ isPinned: true, $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] });
-    vvipPosts.forEach(p => {
-      if (p.harborId) vvipSlots[p.harborId] = { userId: p.author_email, userName: p.author, purchasedAt: p.createdAt?.toISOString(), expiresAt: p.expiresAt?.toISOString(), harborName: p.region };
+    let restored = 0;
+
+    // ① BusinessPost isPinned 기반 복원 (기존)
+    if (BusinessPost) {
+      const vvipPosts = await BusinessPost.find({ isPinned: true, $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] });
+      vvipPosts.forEach(p => {
+        if (p.harborId && !vvipSlots[p.harborId]) {
+          vvipSlots[p.harborId] = { userId: p.author_email, userName: p.author, purchasedAt: p.createdAt?.toISOString(), expiresAt: p.expiresAt?.toISOString(), harborName: p.region };
+          restored++;
+        }
+      });
+    }
+
+    // ② ✅ FIX-RELOAD: User에 vvipHarborId가 있고 vvipExpiresAt이 미래인 귌정 슈 복원
+    // — admin grant로 직접 부여된 슬롯은 BusinessPost가 없으므로 이 경로로만 복원 가능
+    const vvipUsers = await User.find({
+      vvipHarborId: { $exists: true, $ne: null },
+      vvipExpiresAt: { $gt: now },
+    }, 'email name vvipHarborId vvipExpiresAt').lean();
+    vvipUsers.forEach(u => {
+      const hId = u.vvipHarborId;
+      if (!hId || vvipSlots[hId]) return; // 이미 복원된 항구는 스킵
+      const hInfo = HARBOR_LIST.find(h => h.id === hId);
+      vvipSlots[hId] = {
+        userId: u.email,
+        userName: u.name || u.email,
+        purchasedAt: now.toISOString(),
+        expiresAt: u.vvipExpiresAt?.toISOString?.() || String(u.vvipExpiresAt),
+        harborName: hInfo?.name || hId,
+        restoredFromUser: true,
+      };
+      restored++;
     });
-    console.log(`[VVIP] DB에서 ${vvipPosts.length}개 슬롯 복원`);
-    saveVvipSlots(); // DB 로드 후 JSON 파일도 동기화
+
+    console.log(`[VVIP] DB에서 ${restored}개 슬롯 복원 (모두 ${Object.keys(vvipSlots).length}개 활성)`);
+    if (restored > 0) saveVvipSlots(); // 복원된 슬롯을 JSON 파일로도 동기화
   } catch (e) { console.error('[VVIP] 슬롯 로드 실패:', e.message); }
 }
 setTimeout(loadVvipSlotsFromDB, 3500);
