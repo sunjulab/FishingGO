@@ -1325,6 +1325,18 @@ function buildUserResponse(user) {
   // tier: 어드민=MASTER, sunjulab VIP계정=BUSINESS_VIP, 나머지=DB값
   const resolvedTier = isAdminUser ? 'MASTER' : isSunjulabVip ? 'BUSINESS_VIP' : (user.tier || 'FREE');
 
+  // ✅ FIX-VVIP-BADGE: VVIP 항구명 포함 — 로그인/토큰갱신/syncFromServer 전원 포함
+  const vvipHarborId = user.vvipHarborId || null;
+  let vvipHarborName = null;
+  if (vvipHarborId) {
+    try {
+      // HARBOR_LIST는 const로 파일 하단에 정의되어 있으나 서버 요청 처리 시점엔 이미 초기화됨
+      // try/catch로 초기화 전 호출 가능성 방어
+      const hInfo = HARBOR_LIST.find(h => h.id === vvipHarborId);
+      vvipHarborName = hInfo?.name || null;
+    } catch { /* HARBOR_LIST 미초기화 시 무시 */ }
+  }
+
   return {
     id: resolvedId,
     email: user.email,
@@ -1342,6 +1354,8 @@ function buildUserResponse(user) {
     notiSettings: user.notiSettings || { flow: true, bait: true, comm: true },
     totalAttendance: user.totalAttendance || 0,
     streak: user.streak || 0,
+    vvipHarborId,                // ✅ FIX-VVIP-BADGE
+    vvipHarborName,              // ✅ FIX-VVIP-BADGE: '강릉·강문' 등 — MyPage 뱃지 동적화
   };
 }
 
@@ -2493,7 +2507,7 @@ app.get('/api/user/profile/:name', async (req, res) => {
 
     if (dbReady && User) {
       const u = await User.findOne({ name: targetName },
-        'name avatar picture tier level totalExp streak followers following createdAt'
+        'name avatar picture tier level totalExp streak followers following createdAt vvipHarborId'
       ).lean();
       if (!u) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
 
@@ -4953,17 +4967,10 @@ async function filterByActualDuration(videoIds, minSecs = 110) {
     console.log(`[DurationCheck] ${videoIds.length}개 중 ${valid.size}개 통과 (≥${minSecs}초)`);
     return valid;
   } catch (e) {
-    // ✅ FIX-BUG1: API 실패 시 전체 반환 금지 → Shorts 제목 패턴 필터만 fallback
-    console.warn('[DurationCheck] Videos API 실패 → Shorts 제목 fallback 필터:', e.message);
-    const shortKeywords = ['shorts', '#shorts', '쿇', '리일스', '레일스'];
-    const filtered = new Set(
-      videoIds.filter(id => {
-        // ID만 있으면 제목 정보 없으니 ID만으로 통과 시킴어야
-        // → 최소한 Shorts 키워드 포함 ID는 블랙 (ID에 'short'나 '#' 포함되는 경우 드물)
-        return true; // ID만으론 판단 불가 → 통과시키되 지만 서버 로그에는 경고 표시
-      })
-    );
-    return filtered; // 어쉽다 해도 전체 반환 대신 채널 기반 fallback
+    // ⚠️ Videos API 실패 (quota 초과/네트워크 오류) — ID만으론 제목 판단 불가
+    // 전체 반환 불가피하지만 로그에 경고 표시
+    console.warn(`[DurationCheck] Videos API 실패 → ${videoIds.length}개 전체 보존 (필터 움):`, e.message);
+    return new Set(videoIds);
   }
 }
 
@@ -5084,8 +5091,8 @@ app.get('/api/media/youtube/search', async (req, res) => {
     let videos = buildYtVideoList(response.data.items);
     console.log(`[YouTube Search] 응답: ${videos.length}개 (채널ID: ${channelId || '없음'}, publishedAfter: ${publishedAfterDate.slice(0, 10)})`);
 
-    // ─── STEP 3: 실제 영상 길이 필터 (100초+) ─────────────────────────────────
-    // ✅ 100초 미만 영상 차단 (Shorts 60초 이하 + 짧은 낚시 클립 제거)
+    // ─── STEP 3: 실제 영상 길이 필터 (110초+) ─────────────────────────────────
+    // ✅ 110초 미만 영상 차단 (Shorts 60초 이하 + 짧은 낚시 클립 제거)
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);
     const validIds = await filterByActualDuration(videoIds, 110);
     videos = videos.filter(v => validIds.has(v.youtubeId));
@@ -5216,7 +5223,7 @@ app.get('/api/media/youtube', async (req, res) => {
     let videos = buildYtVideoList(response.data.items);
     console.log(`[YouTube] 피드 응답: ${videos.length}개 | 첫 번째: ${videos[0]?.publishedAt || '없음'}`);
 
-    // ✅ 실제 영상 길이 확인 필터 — 2분+(120초) 기준 (4분 → 2분 완화)
+    // ✅ 실제 영상 길이 확인 필터 — 110초+ 기준 (Shorts + 짧은 클립 차단)
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);
     const validIds = await filterByActualDuration(videoIds, 110);
     videos = videos.filter(v => validIds.has(v.youtubeId));

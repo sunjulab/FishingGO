@@ -78,7 +78,7 @@ export default function UserProfile() {
   // ✅ FIX-VVIP-BADGE: VVIP는 항구명 포함 동적 label
   const tierBadge = TIER_BADGE[profile?.tier] || TIER_BADGE.FREE;
   const badgeLabel = profile?.tier === 'BUSINESS_VIP' && profile?.vvipHarborName
-    ? `� VVIP ${profile.vvipHarborName}`
+    ? '\u{1F451} VVIP ' + profile.vvipHarborName
     : tierBadge.label;
 
   if (loading) return (
