@@ -42,7 +42,7 @@ class NativeAdPlugin : Plugin() {
     @PluginMethod
     fun loadAd(call: PluginCall) {
         val slotId = call.getString("slotId") ?: "slot_0"
-        val adUnitId = call.getString("adUnitId") ?: "ca-app-pub-3940256099942544/2247696314"
+        val adUnitId = call.getString("adUnitId") ?: "ca-app-pub-9774243773523817/8130405525"
         val x = call.getInt("x") ?: 0
         val y = call.getInt("y") ?: 0
         val width = call.getInt("width") ?: 0

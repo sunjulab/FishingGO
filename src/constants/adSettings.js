@@ -10,15 +10,13 @@ export const ADMOB_CONFIG = {
   NATIVE_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/8130405525'
     : 'ca-app-pub-3940256099942544/2247696314', // 개발 테스트 ID
-  // ✅ BANNER: 배너 광고 — 선상배홍보/커뮤니티 하단 고정 (네이티브 앱 AdSense 대체)
-  // AdMob 콘솔 → 앱 → 광고 단위 → 배너 → 새 광고 단위 생성 후 실제 ID로 교체
+  // 배너 광고 — 하단 고정 (AdMobService.showBannerAd)
   BANNER_ID: import.meta.env.PROD
-    ? 'ca-app-pub-9774243773523817/XXXXXXXXXX' // ⚠️ AdMob 콘솔에서 배너 광고 단위 생성 후 교체
+    ? 'ca-app-pub-9774243773523817/8130405525'  // 네이티브와 동일 단위 사용 (배너용 별도 단위 없을 때)
     : 'ca-app-pub-3940256099942544/6300978111', // 구글 공식 테스트 배너 ID
-  // ✅ INTERSTITIAL: 전면 광고 — 선상배홍보 탭 진입 시 FREE 유저 (네이티브 앱 인피드 대체)
-  // AdMob 콘솔 → 앱 → 광고 단위 → 전면(Interstitial) → 새 광고 단위 생성 후 교체
+  // 전면(인터스티셜) 광고 — 선상배홍보 탭 진입 시 FREE 유저
   INTERSTITIAL_ID: import.meta.env.PROD
-    ? 'ca-app-pub-9774243773523817/YYYYYYYYYY' // ⚠️ AdMob 콘솔에서 전면 광고 단위 생성 후 교체
+    ? 'ca-app-pub-9774243773523817/1020026097'  // 보상형과 동일 단위 사용 (전면용 별도 단위 없을 때)
     : 'ca-app-pub-3940256099942544/1033173712', // 구글 공식 테스트 전면광고 ID
 };
 
@@ -35,15 +33,3 @@ export const AD_CONFIG = {
   }
 };
 
-// ✅ PROD-AD-CHECK: 프로덕션 실광고 모드에서 placeholder ID 사용 시 즉시 경고
-// VITE_ADMOB_TESTING=false + XXXXXXXXXX/YYYYYYYYYY → AdMob 요청 거부, 배너·전면광고 수익 0원
-if (import.meta.env.PROD && import.meta.env.VITE_ADMOB_TESTING === 'false') {
-  if (ADMOB_CONFIG.BANNER_ID?.includes('XXXXXXXXXX')) {
-    // ⚠️ BANNER_ID placeholder — AdMob 콘솔에서 배너 광고단위 생성 후 adSettings.js를 교체하세요.
-    // (프로덕션 콘솔 노출 방지를 위해 console.error 제거)
-  }
-  if (ADMOB_CONFIG.INTERSTITIAL_ID?.includes('YYYYYYYYYY')) {
-    // ⚠️ INTERSTITIAL_ID placeholder — AdMob 콘솔에서 전면광고 단위 생성 후 adSettings.js를 교체하세요.
-    // (프로덕션 콘솔 노출 방지를 위해 console.error 제거)
-  }
-}
