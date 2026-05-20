@@ -89,7 +89,7 @@ export default function PaymentHistory() {
         <button onClick={() => window.history.length <= 1 ? navigate('/mypage', { replace: true }) : navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <ArrowLeft size={22} color="#fff" />
         </button>
-        <span style={{ fontSize: '18px', fontWeight: '950' }}>결제 내역</span>
+        <span style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950' }}>결제 내역</span>
       </div>
 
       <div style={{ padding: '20px 16px', maxWidth: '480px', margin: '0 auto' }}>
@@ -98,9 +98,9 @@ export default function PaymentHistory() {
         {subscription && (
           <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#16213e)', borderRadius: '20px', padding: '20px', marginBottom: '20px', border: '1px solid rgba(255,215,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', fontWeight: '700' }}>현재 구독</span>
+              <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '700' }}>현재 구독</span>
               <span style={{
-                fontSize: '11px', fontWeight: '900', padding: '4px 10px', borderRadius: '20px',
+                fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', padding: '4px 10px', borderRadius: '20px',
                 background: subscription.status === 'active' ? 'rgba(0,196,140,0.15)' : 'rgba(255,59,48,0.15)',
                 color: subscription.status === 'active' ? '#00C48C' : '#FF3B30',
                 border: `1px solid ${subscription.status === 'active' ? 'rgba(0,196,140,0.3)' : 'rgba(255,59,48,0.3)'}`,
@@ -108,11 +108,11 @@ export default function PaymentHistory() {
                 {subscription.status === 'active' ? '✅ 활성' : subscription.status === 'failed' ? '❌ 결제실패' : subscription.status === 'cancelled' ? '🚫 취소됨' : subscription.status}
               </span>
             </div>
-            <div style={{ fontSize: '24px', fontWeight: '950', marginBottom: '4px' }}>
+            <div style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '950', marginBottom: '4px' }}>
               {PLAN_LABEL[subscription.planId] || subscription.planId}
             </div>
-            <div style={{ fontSize: '20px', fontWeight: '950', color: '#FFD700', marginBottom: '14px' }}>
-              {subscription.amount?.toLocaleString()}원 <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>/ 월</span>
+            <div style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#FFD700', marginBottom: '14px' }}>
+              {subscription.amount?.toLocaleString()}원 <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)' }}>/ 월</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
               {[
@@ -122,8 +122,8 @@ export default function PaymentHistory() {
                 { label: '마지막 결제', value: subscription.lastBilledAt ? new Date(subscription.lastBilledAt).toLocaleDateString('ko-KR') : '-' },
               ].map(({ label, value }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', fontWeight: '700' }}>{label}</span>
-                  <span style={{ fontSize: '13px', color: '#fff', fontWeight: '800' }}>{value}</span>
+                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700' }}>{label}</span>
+                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#fff', fontWeight: '800' }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -131,13 +131,13 @@ export default function PaymentHistory() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => navigate('/vvip-subscribe')}
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(0,100,255,0.3)', background: 'rgba(0,100,255,0.1)', color: '#64B5F6', fontSize: '13px', fontWeight: '900', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(0,100,255,0.3)', background: 'rgba(0,100,255,0.1)', color: '#64B5F6', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}
                 >
                   플랜 변경
                 </button>
                 <button
                   onClick={() => setCancelConfirm(true)}
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: '#FF5A5F', fontSize: '13px', fontWeight: '900', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: '#FF5A5F', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}
                 >
                   구독 취소
                 </button>
@@ -146,7 +146,7 @@ export default function PaymentHistory() {
             {subscription.status === 'failed' && (
               <button
                 onClick={() => navigate('/vvip-subscribe')}
-                style={{ width: '100%', padding: '13px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#FF3B30,#C0392B)', color: '#fff', fontSize: '14px', fontWeight: '950', cursor: 'pointer' }}
+                style={{ width: '100%', padding: '13px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#FF3B30,#C0392B)', color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', cursor: 'pointer' }}
               >
                 결제 수단 재등록
               </button>
@@ -163,8 +163,8 @@ export default function PaymentHistory() {
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <Icon size={16} color={color} style={{ marginBottom: '6px' }} />
-                <div style={{ fontSize: '18px', fontWeight: '950', color }}>{value}</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>{label}</div>
+                <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color }}>{value}</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>{label}</div>
               </div>
             ))}
           </div>
@@ -173,7 +173,7 @@ export default function PaymentHistory() {
         {/* 내역 리스트 — 타임라인 스타일 */}
         <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '3px', height: '16px', background: 'linear-gradient(180deg, #FFD700, #FF9B26)', borderRadius: '2px' }} />
-          <span style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)' }}>결제 타임라인</span>
+          <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)' }}>결제 타임라인</span>
         </div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.3)' }}>
@@ -211,19 +211,19 @@ export default function PaymentHistory() {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff', marginBottom: '2px' }}>
+                        <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff', marginBottom: '2px' }}>
                           {PLAN_LABEL[item.planId] || item.planId || '구독 결제'}
                         </div>
-                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>
+                        <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>
                           {PG_LABEL[item.pgProvider] || item.pgProvider} · {dateStr}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '16px', fontWeight: '950', color: item.status === 'paid' ? '#fff' : cfg.color }}>
+                        <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: item.status === 'paid' ? '#fff' : cfg.color }}>
                           {item.status === 'refunded' ? '-' : ''}{item.amount?.toLocaleString()}원
                         </div>
                         <div style={{
-                          fontSize: '9px', fontWeight: '900', color: cfg.color,
+                          fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', color: cfg.color,
                           background: `${cfg.color}15`, padding: '2px 7px',
                           borderRadius: '10px', border: `1px solid ${cfg.color}30`,
                           display: 'inline-block', marginTop: '3px',
@@ -231,7 +231,7 @@ export default function PaymentHistory() {
                       </div>
                     </div>
                     {item.failReason && (
-                      <div style={{ fontSize: '10px', color: '#FF5A5F', fontWeight: '700', marginTop: '4px', padding: '4px 8px', background: 'rgba(255,90,95,0.1)', borderRadius: '6px' }}>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF5A5F', fontWeight: '700', marginTop: '4px', padding: '4px 8px', background: 'rgba(255,90,95,0.1)', borderRadius: '6px' }}>
                         ⚠ 사유: {item.failReason}
                       </div>
                     )}
@@ -247,8 +247,8 @@ export default function PaymentHistory() {
       {cancelConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div style={{ background: '#1a1a2e', borderRadius: '24px 24px 0 0', padding: '28px 20px', width: '100%', maxWidth: '480px' }}>
-            <div style={{ fontSize: '18px', fontWeight: '950', marginBottom: '8px' }}>구독을 취소하시겠습니까?</div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginBottom: '18px', lineHeight: 1.6 }}>
+            <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', marginBottom: '8px' }}>구독을 취소하시겠습니까?</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.55)', marginBottom: '18px', lineHeight: 1.6 }}>
               현재 결제 기간 종료 후 자동으로 해지됩니다.<br />
               남은 기간 동안은 서비스를 계속 이용하실 수 있습니다.
             </div>
@@ -256,13 +256,13 @@ export default function PaymentHistory() {
               value={cancelReason}
               onChange={e => setCancelReason(e.target.value)}
               placeholder="취소 사유 (선택 입력)"
-              style={{ width: '100%', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: '#fff', fontSize: '13px', fontWeight: '700', resize: 'none', outline: 'none', height: '72px', boxSizing: 'border-box', marginBottom: '14px' }}
+              style={{ width: '100%', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', resize: 'none', outline: 'none', height: '72px', boxSizing: 'border-box', marginBottom: '14px' }}
             />
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setCancelConfirm(false)} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '15px', fontWeight: '900', cursor: 'pointer' }}>
+              <button onClick={() => setCancelConfirm(false)} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}>
                 유지하기
               </button>
-              <button onClick={handleCancel} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg,#FF3B30,#C0392B)', color: '#fff', fontSize: '15px', fontWeight: '950', cursor: 'pointer' }}>
+              <button onClick={handleCancel} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg,#FF3B30,#C0392B)', color: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', cursor: 'pointer' }}>
                 취소 확정
               </button>
             </div>

@@ -4,22 +4,18 @@
  * ✅ ADMOB-ONLY: AdSense 완전 제거 — AdMob 전용
  * - 앱(Android Capacitor): AdMob SDK 사용
  *   · NativeAd  → NativeAdPlugin.kt (오버레이 방식)
- *   · BannerAd  → AdMobService.showBannerAd() (하단 고정)
- *   · 전면광고  → AdMobService.showInterstitialAd()
  *   · 보상형    → AdMobService.showRewardedAd()
  * - 웹 브라우저: 광고 없음 (AdSense Google 정책상 WebView 금지)
  *
  * [광고 정지 방지 규칙]
- * 1. 배너 자동 새로고침 최소 60초 간격
- * 2. 광고 클릭 유도 문구/화살표 금지
- * 3. 배너와 전면 광고 동시 렌더링 금지
- * 4. 광고 영역 위/아래 빈 공간(padding) 최소 8px 확보
- * 5. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
+ * 1. 광고 클릭 유도 문구/화살표 금지
+ * 2. 광고 영역 위/아래 빈 공간(padding) 최소 8px 확보
+ * 3. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
-import { showRewardedAd, showBannerAd, removeBannerAd } from '../services/AdMobService';
+import { showRewardedAd } from '../services/AdMobService';
 import { loadNativeAd, removeNativeAd } from '../services/NativeAdService';
 
 // Capacitor 네이티브 환경 감지 (3중 체크)
@@ -34,29 +30,7 @@ const isCapacitorNative = () => {
 // eslint-disable-next-line no-unused-vars
 function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 
-// ─────────────────────────────────────────────────────────────────
-//  1. 배너 광고 — 앱: AdMob 하단 고정 배너 / 웹: 렌더 안 함
-// ─────────────────────────────────────────────────────────────────
-export function BannerAd({ style = {} }) {
-  const isPremium = useUserStore(s =>
-    ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) ||
-    s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL
-  );
-  const IS_NATIVE = isCapacitorNative();
 
-  useEffect(() => {
-    if (!IS_NATIVE || isPremium) return;
-    // AdMob 하단 고정 배너 표시
-    showBannerAd();
-    return () => {
-      removeBannerAd();
-    };
-  }, [IS_NATIVE, isPremium]);
-
-  // 앱이 아니거나 프리미엄이면 아무것도 렌더하지 않음
-  // (AdMob 배너는 네이티브 레이어에 오버레이되므로 DOM 불필요)
-  return null;
-}
 
 // ─────────────────────────────────────────────────────────────────
 //  2. 네이티브(인피드) 광고 — 앱: NativeAdPlugin 오버레이용 placeholder
@@ -232,10 +206,10 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         {/* 핸들 */}
         <div style={{ width: '40px', height: '4px', backgroundColor: '#E5E5EA', borderRadius: '2px', margin: '0 auto 20px' }} />
         
-        <h2 style={{ fontSize: '22px', fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>
+        <h2 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>
           {ctx.title}
         </h2>
-        <p style={{ fontSize: '14px', color: '#888', textAlign: 'center', marginBottom: '28px' }}>
+        <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#888', textAlign: 'center', marginBottom: '28px' }}>
           무료로 이용하거나 <strong>LITE 이상</strong>을 구독하세요
         </p>
 
@@ -255,16 +229,16 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: '12px', opacity: 0.85, fontWeight: '700', marginBottom: '4px' }}>⭐ LITE 이상</div>
-              <div style={{ fontSize: '18px', fontWeight: '900', marginBottom: '4px' }}>광고 없이 무제한 등록</div>
-              <div style={{ fontSize: '12px', opacity: 0.9 }}>광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음</div>
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.85, fontWeight: '700', marginBottom: '4px' }}>⭐ LITE 이상</div>
+              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>광고 없이 무제한 등록</div>
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.9 }}>광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음</div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
-              <div style={{ fontSize: '22px', fontWeight: '900' }}>₩9,900</div>
-              <div style={{ fontSize: '11px', opacity: 0.85 }}>/월 구독</div>
+              <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900' }}>₩9,900</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, opacity: 0.85 }}>/월 구독</div>
             </div>
           </div>
-          <div style={{ marginTop: '14px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '10px 16px', fontSize: '14px', fontWeight: '800', textAlign: 'center' }}>
+          <div style={{ marginTop: '14px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '10px 16px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', textAlign: 'center' }}>
             🚀 지금 구독하고 바로 등록하기
           </div>
         </div>
@@ -272,10 +246,10 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         {/* 옵션 2: 무료 광고 시청 */}
         {!adDone ? (
           <div style={{ border: '1.5px solid #E5E5EA', borderRadius: '18px', padding: '20px' }}>
-            <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '4px', color: '#1c1c1e' }}>
+            <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '4px', color: '#1c1c1e' }}>
               📺 30초 광고 시청 후 무료 등록
             </div>
-            <div style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
+            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#888', marginBottom: '16px' }}>
               광고를 시청하면 1회 무료로 이용하실 수 있어요.
             </div>
 
@@ -283,21 +257,21 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
               <div>
                 {/* 앱: AdMob 보상형 광고 실행 중 | 웹: 타이머 시뮬레이션 */}
                 <div style={{ backgroundColor: '#F2F2F7', borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '24px' }}>📺</span>
-                  <span style={{ fontSize: '13px', color: '#888', marginLeft: '8px', fontWeight: '600' }}>시청 중...</span>
+                  <span style={{ fontSize: `calc(24px * var(--fs, 1))` }}>📺</span>
+                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#888', marginLeft: '8px', fontWeight: '600' }}>시청 중...</span>
                 </div>
                 {/* 진행 바 */}
                 <div style={{ height: '6px', backgroundColor: '#F2F2F7', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
                   <div style={{ height: '100%', width: `${adProgress}%`, backgroundColor: '#0056D2', borderRadius: '3px', transition: 'width 0.9s linear' }} />
                 </div>
-                <div style={{ fontSize: '12px', color: '#888', textAlign: 'center' }}>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#888', textAlign: 'center' }}>
                   {Math.ceil(30 - (adProgress / 100) * 30)}초 후 완료...
                 </div>
               </div>
             ) : (
               <button
                 onClick={handleWatchAd}
-                style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid #0056D2', backgroundColor: 'rgba(0,86,210,0.05)', color: '#0056D2', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid #0056D2', backgroundColor: 'rgba(0,86,210,0.05)', color: '#0056D2', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
               >
                 📺 광고 시청하기
               </button>
@@ -307,7 +281,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
           // ✅ FIX-AUTO: 시청 완료 후 자동 등록 카운트다운 표시
           <button
             onClick={handleComplete}
-            style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', backgroundColor: '#00C48C', color: '#fff', fontSize: '17px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,196,140,0.3)' }}
+            style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', backgroundColor: '#00C48C', color: '#fff', fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,196,140,0.3)' }}
           >
             ✅ 시청 완료!{autoCount > 0 ? ` (${autoCount}초 후 자동 등록)` : ` ${ctx.action}`}
           </button>
@@ -316,7 +290,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         {/* 닫기 */}
         <button
           onClick={onClose}
-          style={{ width: '100%', marginTop: '12px', padding: '14px', border: 'none', background: 'none', color: '#aaa', fontSize: '14px', cursor: 'pointer', fontWeight: '600' }}
+          style={{ width: '100%', marginTop: '12px', padding: '14px', border: 'none', background: 'none', color: '#aaa', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', fontWeight: '600' }}
         >
           취소
         </button>

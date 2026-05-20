@@ -393,6 +393,56 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', db: dbReady ? 'mongodb' : 'memory', uptime: Math.floor(process.uptime()), time: new Date().toISOString() });
 });
 
+// ── ✅ DEV-SEED: 테스트 게시글 시드 엔드포인트 (개발 전용, X-Seed-Secret 헤더 필요) ──
+app.post('/api/admin/seed-business-test', async (req, res) => {
+  if (req.headers['x-seed-secret'] !== 'fishinggo_seed_2026') return res.status(403).json({ error: '금지' });
+  const harbors = [
+    { label: '강릉·강문', key: '강원 강릉' }, { label: '주문진', key: '강원 주문진' },
+    { label: '속초', key: '강원 속초' }, { label: '고성(거진)', key: '강원 고성' },
+    { label: '양양(낙산·남애)', key: '강원 양양' }, { label: '동해·묵호', key: '강원 동해' },
+    { label: '삼척', key: '강원 삼척' }, { label: '구룡포(포항)', key: '경북 구룡포' },
+    { label: '감포(경주)', key: '경북 감포' }, { label: '강구(영덕)', key: '경북 강구' },
+    { label: '후포(울진)', key: '경북 후포' }, { label: '죽변(울진)', key: '경북 죽변' },
+    { label: '통영', key: '경남 통영' }, { label: '거제(대포·금포)', key: '경남 거제' },
+    { label: '남해(미조·상주)', key: '경남 남해' }, { label: '고성', key: '경남 고성' },
+    { label: '여수(국동)', key: '전남 여수' }, { label: '목포', key: '전남 목포' },
+    { label: '완도', key: '전남 완도' }, { label: '고흥(나로도)', key: '전남 고흥' },
+    { label: '진도', key: '전남 진도' }, { label: '군산(비응·야미도)', key: '전북 군산' },
+    { label: '부안(격포·위도)', key: '전북 부안' }, { label: '태안(안흥·마검포)', key: '충남 태안' },
+    { label: '보령(무창포·오천)', key: '충남 보령' }, { label: '서산(삼길포)', key: '충남 서산' },
+    { label: '남항부두', key: '인천 남항부두' }, { label: '연안부두', key: '인천 연안부두' },
+    { label: '기장', key: '부산 기장' }, { label: '다대포', key: '부산 다대포' },
+    { label: '용호부두', key: '부산 용호부두' }, { label: '도두항', key: '제주 도두항' },
+    { label: '애월항', key: '제주 애월항' }, { label: '서귀포', key: '제주 서귀포' },
+    { label: '모슬포', key: '제주 모슬포' }, { label: '성산항', key: '제주 성산항' },
+  ];
+  const TARGETS = ['감성돔','참돔','방어','부시리','갈치','대구','오징어','농어','광어','삼치'];
+  const TYPES   = ['선상낚시','선상낚시','야간선상','선상낚시','선상낚시'];
+  const DATES   = ['매일 출항','주말 출항','예약 후 출항','상시 출항','시즌 출항'];
+  const PRICES  = ['50,000원','60,000원','70,000원','80,000원','45,000원','55,000원','65,000원','75,000원'];
+  const now = new Date();
+  const docs = [];
+  for (let i = 0; i < harbors.length; i++) {
+    const h = harbors[i];
+    const t = TARGETS[i % TARGETS.length]; const ty = TYPES[i % TYPES.length];
+    const d = DATES[i % DATES.length];     const p  = PRICES[i % PRICES.length];
+    const t2 = TARGETS[(i+5)%TARGETS.length]; const ty2 = ty === '야간선상' ? '선상낚시' : '야간선상';
+    const d2 = d === '매일 출항' ? '주말 출항' : '매일 출항'; const p2 = PRICES[(i+4)%PRICES.length];
+    docs.push({ author: '낚시GO 관리자', author_email: `test1_${i}@fishinggo.test`, shipName: '낚시Go 테스트 1호', type: ty, target: t, region: h.key, date: d, price: p, phone: '010-0000-0001', capacity: 20, content: `[테스트] ${h.label} 출항 낚시Go 테스트 1호\n어종: ${t} / 출항: ${d} / 요금: ${p}/1인 / 정원: 20명`, isPinned: false, images: [], cover: '', createdAt: new Date(now-i*120000) });
+    docs.push({ author: '낚시GO 관리자', author_email: `test2_${i}@fishinggo.test`, shipName: '낚시Go 테스트 2호', type: ty2, target: t2, region: h.key, date: d2, price: p2, phone: '010-0000-0002', capacity: 15, content: `[테스트] ${h.label} 출항 낚시Go 테스트 2호\n어종: ${t2} / 출항: ${d2} / 요금: ${p2}/1인 / 정원: 15명`, isPinned: false, images: [], cover: '', createdAt: new Date(now-i*120000-60000) });
+  }
+  try {
+    if (dbReady && BusinessPost) {
+      await BusinessPost.deleteMany({ author_email: { $regex: /@fishinggo\.test$/ } });
+      const result = await BusinessPost.insertMany(docs);
+      return res.json({ success: true, count: result.length, mode: 'mongodb' });
+    }
+    memBusinessPosts = memBusinessPosts.filter(p => !p.author_email?.endsWith('@fishinggo.test'));
+    memBusinessPosts.unshift(...docs);
+    saveMemBusinessPosts();
+    res.json({ success: true, count: docs.length, mode: 'memory' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // NEW-C1: 채널 튜토리얼 영상 목록 — 서버에서 관리하여 어드민 없이 영상 추가/수정 가능
 // 향후 MongoDB 모델로 확장 예정 (현재는 정적 배열 반환)

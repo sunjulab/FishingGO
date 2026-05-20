@@ -1,0 +1,125 @@
+// ⚠️ 민물낚시 포인트 — 전국 주요 강·저수지·댐·호수
+// 장소 정보만 제공 (낚시 컨디션·날씨·CCTV·조황 없음)
+
+export const FRESHWATER_FISHING_POINTS = [
+  // ── 경기도 ──────────────────────────────────────────────────────
+  { id: 5001, name: '팔당호', type: '민물', region: '경기', lat: 37.5283, lng: 127.3458, fish: '잉어, 붕어, 메기', score: 0, status: null, obsCode: null },
+  { id: 5002, name: '청평호', type: '민물', region: '경기', lat: 37.7329, lng: 127.4897, fish: '배스, 붕어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5003, name: '양평 두물머리 한강', type: '민물', region: '경기', lat: 37.5266, lng: 127.3139, fish: '잉어, 붕어, 누치', score: 0, status: null, obsCode: null },
+  { id: 5004, name: '여주 이포보 한강', type: '민물', region: '경기', lat: 37.3789, lng: 127.6234, fish: '배스, 잉어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5005, name: '수원 광교저수지', type: '민물', region: '경기', lat: 37.3156, lng: 127.0389, fish: '붕어, 향어', score: 0, status: null, obsCode: null },
+  { id: 5006, name: '파주 공릉천', type: '민물', region: '경기', lat: 37.7612, lng: 126.7823, fish: '피라미, 붕어, 누치', score: 0, status: null, obsCode: null },
+  { id: 5007, name: '연천 임진강', type: '민물', region: '경기', lat: 38.0812, lng: 126.9234, fish: '쏘가리, 잉어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5008, name: '가평 북한강', type: '민물', region: '경기', lat: 37.8234, lng: 127.5123, fish: '배스, 쏘가리, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5009, name: '이천 설봉저수지', type: '민물', region: '경기', lat: 37.2789, lng: 127.4512, fish: '붕어, 향어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5010, name: '용인 기흥호', type: '민물', region: '경기', lat: 37.2456, lng: 127.1234, fish: '배스, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5011, name: '광주 곤지암천', type: '민물', region: '경기', lat: 37.3512, lng: 127.3234, fish: '붕어, 피라미, 배스', score: 0, status: null, obsCode: null },
+  { id: 5012, name: '포천 영평천', type: '민물', region: '경기', lat: 37.9345, lng: 127.1823, fish: '쏘가리, 꺽지, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5013, name: '양주 불곡저수지', type: '민물', region: '경기', lat: 37.8012, lng: 127.0623, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5014, name: '화성 기안천', type: '민물', region: '경기', lat: 37.1523, lng: 126.9234, fish: '붕어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5015, name: '하남 미사리 한강', type: '민물', region: '경기', lat: 37.5623, lng: 127.1923, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5016, name: '안성 고삼저수지', type: '민물', region: '경기', lat: 37.0523, lng: 127.2423, fish: '붕어, 잉어, 향어', score: 0, status: null, obsCode: null },
+  { id: 5017, name: '평택 현덕 저수지', type: '민물', region: '경기', lat: 36.9789, lng: 126.9823, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5018, name: '남양주 금남리 한강', type: '민물', region: '경기', lat: 37.6023, lng: 127.2923, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  // ── 경기 추가 (주요 낚시터) ─────────────────────────────────────
+  { id: 5092, name: '용인 백옥저수지', type: '민물', region: '경기', lat: 37.1923, lng: 127.2423, fish: '붕어, 잉어, 향어', score: 0, status: null, obsCode: null },
+  { id: 5093, name: '시흥 물왕저수지', type: '민물', region: '경기', lat: 37.3823, lng: 126.8023, fish: '붕어, 향어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5094, name: '안산 시화호', type: '민물', region: '경기', lat: 37.3045, lng: 126.7234, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5095, name: '김포 굴포천', type: '민물', region: '경기', lat: 37.6123, lng: 126.7123, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5096, name: '오산 궐리저수지', type: '민물', region: '경기', lat: 37.1423, lng: 127.0523, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+
+  // ── 강원도 ──────────────────────────────────────────────────────
+  { id: 5019, name: '소양호 (소양강댐)', type: '민물', region: '강원', lat: 37.8923, lng: 128.0234, fish: '쏘가리, 잉어, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5020, name: '파로호 (화천댐)', type: '민물', region: '강원', lat: 38.1123, lng: 127.7812, fish: '쏘가리, 누치, 꺽지', score: 0, status: null, obsCode: null },
+  { id: 5021, name: '화천호', type: '민물', region: '강원', lat: 38.1234, lng: 127.7023, fish: '빙어, 쏘가리, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5022, name: '춘천호', type: '민물', region: '강원', lat: 37.8823, lng: 127.6234, fish: '배스, 붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5023, name: '의암호', type: '민물', region: '강원', lat: 37.8234, lng: 127.6123, fish: '배스, 잉어, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5024, name: '홍천강 (홍천)', type: '민물', region: '강원', lat: 37.6912, lng: 127.8823, fish: '쏘가리, 꺽지, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5025, name: '내린천 (인제)', type: '민물', region: '강원', lat: 38.0623, lng: 128.1623, fish: '산천어, 쏘가리, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5026, name: '평창강 (평창)', type: '민물', region: '강원', lat: 37.3723, lng: 128.4123, fish: '쏘가리, 꺽지, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5027, name: '조양강 (정선)', type: '민물', region: '강원', lat: 37.3812, lng: 128.6623, fish: '쏘가리, 누치, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5028, name: '남대천 (강릉) - 연어', type: '민물', region: '강원', lat: 37.7512, lng: 128.8923, fish: '연어(가을), 피라미', score: 0, status: null, obsCode: null },
+  { id: 5029, name: '섬강 (원주)', type: '민물', region: '강원', lat: 37.3823, lng: 127.9523, fish: '쏘가리, 잉어, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5030, name: '동강 (영월)', type: '민물', region: '강원', lat: 37.2123, lng: 128.4523, fish: '쏘가리, 꺽지, 누치', score: 0, status: null, obsCode: null },
+  { id: 5031, name: '주천강 (영월)', type: '민물', region: '강원', lat: 37.1523, lng: 128.2823, fish: '쏘가리, 피라미, 꺽지', score: 0, status: null, obsCode: null },
+  // ── 강원 추가 ────────────────────────────────────────────────────
+  { id: 5098, name: '오십천 (삼척)', type: '민물', region: '강원', lat: 37.4023, lng: 129.1823, fish: '쏘가리, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5099, name: '연곡천 (강릉)', type: '민물', region: '강원', lat: 37.8423, lng: 128.8423, fish: '송어, 산천어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5100, name: '방태천 (인제)', type: '민물', region: '강원', lat: 38.0323, lng: 128.2123, fish: '산천어, 쏘가리, 꺽지', score: 0, status: null, obsCode: null },
+  { id: 5101, name: '골지천 (정선)', type: '민물', region: '강원', lat: 37.3323, lng: 128.7023, fish: '쏘가리, 누치, 피라미', score: 0, status: null, obsCode: null },
+
+  // ── 충청북도 ────────────────────────────────────────────────────
+  { id: 5032, name: '충주호 (충주댐)', type: '민물', region: '충북', lat: 36.9923, lng: 128.0823, fish: '잉어, 쏘가리, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5033, name: '대청호 (대청댐)', type: '민물', region: '충북', lat: 36.4123, lng: 127.5023, fish: '쏘가리, 잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5034, name: '청주 미호천', type: '민물', region: '충북', lat: 36.7123, lng: 127.4523, fish: '잉어, 붕어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5035, name: '제천 청풍호', type: '민물', region: '충북', lat: 37.0823, lng: 128.2023, fish: '쏘가리, 잉어, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5036, name: '초평저수지 (증평)', type: '민물', region: '충북', lat: 36.8523, lng: 127.5523, fish: '붕어, 향어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5037, name: '괴강 (괴산)', type: '민물', region: '충북', lat: 36.8123, lng: 127.7923, fish: '쏘가리, 꺽지, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5038, name: '보청천 (보은)', type: '민물', region: '충북', lat: 36.4823, lng: 127.7223, fish: '쏘가리, 붕어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5039, name: '달천 (충주)', type: '민물', region: '충북', lat: 36.9523, lng: 127.9023, fish: '쏘가리, 누치, 잉어', score: 0, status: null, obsCode: null },
+
+  // ── 충청남도 ────────────────────────────────────────────────────
+  { id: 5040, name: '예당저수지 (예산)', type: '민물', region: '충남', lat: 36.6623, lng: 126.7523, fish: '붕어, 잉어, 배스 (전국 최대 저수지)', score: 0, status: null, obsCode: null },
+  { id: 5041, name: '보령댐', type: '민물', region: '충남', lat: 36.4123, lng: 126.6523, fish: '붕어, 잉어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5042, name: '금강 (서천 하구)', type: '민물', region: '충남', lat: 36.0923, lng: 126.7023, fish: '잉어, 붕어, 숭어', score: 0, status: null, obsCode: null },
+  { id: 5043, name: '금강 (부여)', type: '민물', region: '충남', lat: 36.2723, lng: 126.9123, fish: '잉어, 붕어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5044, name: '금강 (논산 강경)', type: '민물', region: '충남', lat: 36.1423, lng: 126.9523, fish: '잉어, 메기, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5045, name: '홍성저수지', type: '민물', region: '충남', lat: 36.6023, lng: 126.6523, fish: '붕어, 잉어, 향어', score: 0, status: null, obsCode: null },
+  { id: 5046, name: '아산 온양저수지', type: '민물', region: '충남', lat: 36.7823, lng: 127.0023, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+
+  // ── 전라북도 ────────────────────────────────────────────────────
+  { id: 5047, name: '용담호 (용담댐)', type: '민물', region: '전북', lat: 35.9823, lng: 127.5823, fish: '잉어, 쏘가리, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5048, name: '대아저수지 (완주)', type: '민물', region: '전북', lat: 35.8523, lng: 127.2623, fish: '붕어, 잉어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5049, name: '섬진강 (순창)', type: '민물', region: '전북', lat: 35.3423, lng: 127.1523, fish: '쏘가리, 참마자, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5050, name: '요천 (남원)', type: '민물', region: '전북', lat: 35.4123, lng: 127.3823, fish: '쏘가리, 붕어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5051, name: '황등제 (익산)', type: '민물', region: '전북', lat: 35.9823, lng: 127.0123, fish: '붕어, 잉어, 향어', score: 0, status: null, obsCode: null },
+  { id: 5052, name: '만경강 (김제)', type: '민물', region: '전북', lat: 35.7923, lng: 126.8823, fish: '잉어, 붕어, 메기', score: 0, status: null, obsCode: null },
+  { id: 5053, name: '칠보저수지 (정읍)', type: '민물', region: '전북', lat: 35.5823, lng: 126.8523, fish: '붕어, 향어, 잉어', score: 0, status: null, obsCode: null },
+
+  // ── 전라남도 ────────────────────────────────────────────────────
+  { id: 5054, name: '주암호 (주암댐)', type: '민물', region: '전남', lat: 34.9923, lng: 127.0523, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5055, name: '장흥댐', type: '민물', region: '전남', lat: 34.7123, lng: 126.9523, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5056, name: '담양호 (담양댐)', type: '민물', region: '전남', lat: 35.2523, lng: 127.0023, fish: '잉어, 붕어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5057, name: '영산강 (나주)', type: '민물', region: '전남', lat: 35.0123, lng: 126.7123, fish: '잉어, 붕어, 숭어', score: 0, status: null, obsCode: null },
+  { id: 5058, name: '동복호 (화순)', type: '민물', region: '전남', lat: 35.0023, lng: 126.9523, fish: '붕어, 잉어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5059, name: '보성강 (보성)', type: '민물', region: '전남', lat: 34.7723, lng: 127.0823, fish: '쏘가리, 붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5060, name: '섬진강 (광양)', type: '민물', region: '전남', lat: 35.0223, lng: 127.6523, fish: '쏘가리, 은어, 참마자', score: 0, status: null, obsCode: null },
+  { id: 5061, name: '수어호 (광양댐)', type: '민물', region: '전남', lat: 34.8923, lng: 127.5523, fish: '잉어, 붕어', score: 0, status: null, obsCode: null },
+
+  // ── 경상북도 ────────────────────────────────────────────────────
+  { id: 5062, name: '안동호 (안동댐)', type: '민물', region: '경북', lat: 36.6823, lng: 128.8023, fish: '잉어, 쏘가리, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5063, name: '임하호 (임하댐)', type: '민물', region: '경북', lat: 36.5823, lng: 129.0023, fish: '잉어, 붕어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5064, name: '낙동강 (상주)', type: '민물', region: '경북', lat: 36.4123, lng: 128.1623, fish: '잉어, 붕어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5065, name: '영강 (문경)', type: '민물', region: '경북', lat: 36.5523, lng: 128.1623, fish: '쏘가리, 누치, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5066, name: '내성천 (예천)', type: '민물', region: '경북', lat: 36.6523, lng: 128.4523, fish: '쏘가리, 누치, 모래무지', score: 0, status: null, obsCode: null },
+  { id: 5067, name: '위천 (의성)', type: '민물', region: '경북', lat: 36.3523, lng: 128.5723, fish: '쏘가리, 피라미, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5068, name: '운문호 (운문댐)', type: '민물', region: '경북', lat: 35.6823, lng: 128.9523, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5069, name: '영천 자양호', type: '민물', region: '경북', lat: 35.9023, lng: 128.9523, fish: '붕어, 잉어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5070, name: '형산강 (경주)', type: '민물', region: '경북', lat: 35.8323, lng: 129.2223, fish: '은어, 붕어, 숭어', score: 0, status: null, obsCode: null },
+  { id: 5071, name: '서천 (영주)', type: '민물', region: '경북', lat: 36.8023, lng: 128.6123, fish: '쏘가리, 피라미, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5072, name: '봉화 낙동강 상류', type: '민물', region: '경북', lat: 36.8923, lng: 128.9823, fish: '쏘가리, 산천어, 꺽지', score: 0, status: null, obsCode: null },
+
+  // ── 경상남도 ────────────────────────────────────────────────────
+  { id: 5073, name: '합천호 (합천댐)', type: '민물', region: '경남', lat: 35.5923, lng: 128.1823, fish: '잉어, 붕어, 쏘가리', score: 0, status: null, obsCode: null },
+  { id: 5074, name: '남강댐 (진양호)', type: '민물', region: '경남', lat: 35.3023, lng: 128.0123, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5075, name: '주남저수지 (창원)', type: '민물', region: '경남', lat: 35.3723, lng: 128.5023, fish: '붕어, 잉어, 향어', score: 0, status: null, obsCode: null },
+  { id: 5076, name: '우포늪 (창녕)', type: '민물', region: '경남', lat: 35.5523, lng: 128.4323, fish: '붕어, 잉어, 가물치 (국내 최대 자연늪)', score: 0, status: null, obsCode: null },
+  { id: 5077, name: '밀양강 (밀양)', type: '민물', region: '경남', lat: 35.4923, lng: 128.7623, fish: '쏘가리, 누치, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5078, name: '남강 (진주)', type: '민물', region: '경남', lat: 35.1823, lng: 128.0923, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5079, name: '황강 (거창)', type: '민물', region: '경남', lat: 35.6823, lng: 127.9023, fish: '쏘가리, 꺽지, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5080, name: '경호강 (산청)', type: '민물', region: '경남', lat: 35.3423, lng: 127.8623, fish: '쏘가리, 누치, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5081, name: '섬진강 (하동)', type: '민물', region: '경남', lat: 35.0623, lng: 127.7323, fish: '쏘가리, 은어, 참마자', score: 0, status: null, obsCode: null },
+  { id: 5082, name: '함안 악양저수지', type: '민물', region: '경남', lat: 35.2823, lng: 128.3823, fish: '붕어, 향어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5083, name: '사천 금곡저수지', type: '민물', region: '경남', lat: 35.0123, lng: 128.0623, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+
+  // ── 서울/인천/대전/광주/대구 (광역시) ─────────────────────────
+  { id: 5084, name: '한강 (여의도)', type: '민물', region: '서울', lat: 37.5265, lng: 126.9343, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5085, name: '한강 (잠실)', type: '민물', region: '서울', lat: 37.5219, lng: 127.0823, fish: '잉어, 누치, 배스', score: 0, status: null, obsCode: null },
+  { id: 5086, name: '한강 (뚝섬)', type: '민물', region: '서울', lat: 37.5314, lng: 127.0654, fish: '잉어, 붕어', score: 0, status: null, obsCode: null },
+  { id: 5087, name: '낙동강 (대구 달성)', type: '민물', region: '대구', lat: 35.7723, lng: 128.4823, fish: '잉어, 붕어, 누치', score: 0, status: null, obsCode: null },
+  { id: 5088, name: '금호강 (대구)', type: '민물', region: '대구', lat: 35.8823, lng: 128.6023, fish: '붕어, 잉어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5089, name: '영산강 (광주)', type: '민물', region: '광주', lat: 35.1523, lng: 126.7523, fish: '잉어, 붕어, 배스', score: 0, status: null, obsCode: null },
+  { id: 5090, name: '금강 (대전 갑천)', type: '민물', region: '대전', lat: 36.3523, lng: 127.3823, fish: '잉어, 붕어, 피라미', score: 0, status: null, obsCode: null },
+  { id: 5091, name: '인천 부평저수지', type: '민물', region: '인천', lat: 37.5023, lng: 126.7223, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+  { id: 5097, name: '강화 선원저수지', type: '민물', region: '인천', lat: 37.6923, lng: 126.4923, fish: '붕어, 잉어', score: 0, status: null, obsCode: null },
+];

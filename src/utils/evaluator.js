@@ -234,32 +234,90 @@ export const evaluateFishingCondition = (data, point = {}) => {
 
   let result = { score, color: '#8e8e93', status: 'NORMAL', advice: '', tags: [], gear: '', fishAlert: null };
 
+  // ── 동적 멘트 생성 (수온·파고·풍속·물때·어종·시간·계절 반영) ──
+  const _fish  = (point?.fish || data?.fish || '').split(',')[0].trim();
+  const _sst   = parseFloat(data?.sst ?? data?.waterTemp ?? 13);
+  const _wind  = parseFloat(data?.wind?.speed ?? 0);
+  const _wave  = parseFloat(data?.wave?.coastal ?? 0);
+  const _phase = data?.tide?.phase || '';
+  const _hour  = new Date().getHours();
+  const _month = new Date().getMonth() + 1;
+  const _isNight = _hour >= 19 || _hour < 5;
+
+  const _buildAdvice = () => {
+    const parts = [];
+
+    // 점수 기반 핵심 멘트 (수온·파고·풍속은 카드 하단에 이미 표시 — 중복 제거)
+
+    if (score >= 90) {
+      if (_fish) parts.push(`${_fish} 입질 황금 컨디션! 지금 바로 출발하세요.`);
+      else       parts.push('황금 컨디션! 지금 당장 캐스팅하세요.');
+    } else if (score >= 75) {
+      if (_fish) parts.push(`${_fish} 활성 높음. 포인트 집중 공략으로 손맛 보세요.`);
+      else       parts.push('좋은 컨디션. 집중하면 손맛 볼 수 있습니다.');
+    } else if (score >= 50) {
+      if (_sst < 12)   parts.push(`저수온 영향으로 ${_fish || '어류'} 입질이 간헐적입니다. 밑밥으로 유인하세요.`);
+      else if (_wave > 1.5) parts.push(`파고 ${_wave}m — 채비가 흔들립니다. 고부력 채비를 사용하세요.`);
+      else if (_phase.includes('조금') || _phase.includes('무시'))
+        parts.push(`조금 물때로 ${_fish || '어류'} 입질이 뜸합니다. 인내심이 관건.`);
+      else if (_fish) parts.push(`${_fish}이 입을 약간 닫은 상태입니다. 유인력 강한 미끼로 승부하세요.`);
+      else parts.push('입질이 간헐적입니다. 기대치를 조금 낮추세요.');
+    } else if (score >= 30) {
+      if (_sst < 11)   parts.push(`수온 ${_sst.toFixed(1)}°C 저수온 — ${_fish || '어류'} 활동 급감. 꽝 확률 높습니다.`);
+      else if (_wind > 8) parts.push(`풍속 ${_wind.toFixed(1)}m/s 강풍 — 채비 운용이 어렵습니다. 출조를 재고하세요.`);
+      else if (_phase.includes('조금') || _phase.includes('무시'))
+        parts.push('조금·무시 물때 — 조류가 거의 없어 입질이 매우 드뭅니다.');
+      else parts.push('전반적으로 낚시 조건이 나쁩니다. 기대치를 크게 낮추세요.');
+    } else {
+      if (_wave > 2)   parts.push(`파고 ${_wave}m 너울 위험 — 즉시 철수! 절대 출조 금지.`);
+      else if (_wind > 12) parts.push(`풍속 ${_wind.toFixed(1)}m/s 강풍 — 사람이 날아갈 수 있습니다. 출조 금지.`);
+      else parts.push('출조 비권고. 기상 악화로 낚시가 불가능한 상황입니다.');
+    }
+
+    // 시간대 보너스 힌트
+    if (_isNight && ['농어','갈치','볼락'].includes(_fish))
+      parts.push(`야간 ${_fish} 황금 타임 — 불빛 주변 집중 공략.`);
+    else if (_hour >= 5 && _hour <= 7 && _fish)
+      parts.push(`새벽 돌풍 시간 — ${_fish} 활성 최고조.`);
+
+    // 계절 힌트
+    if ([3,4,5].includes(_month) && _fish)
+      parts.push(`봄 산란기 — ${_fish} 집중 시즌.`);
+    else if ([9,10,11].includes(_month) && _fish)
+      parts.push(`가을 대물 시즌 — ${_fish} 대형급 기대.`);
+
+    return parts.join('\n');
+  };
+
+  const _dynamicAdvice = _buildAdvice();
+
   if (score >= 90) {
     result.status = 'PERFECT';
     result.color  = '#00C48C';
-    result.advice = ADVICE_DB.PERFECT[seed % ADVICE_DB.PERFECT.length];
+    result.advice = _dynamicAdvice;
     result.gear   = '예민한 0~G2 찌낚시 채비로 아주 가볍게 공략하는 것을 추천합니다.';
   } else if (score >= 75) {
     result.status = 'GOOD';
     result.color  = '#0056D2';
-    result.advice = ADVICE_DB.GOOD[seed % ADVICE_DB.GOOD.length];
+    result.advice = _dynamicAdvice;
     result.gear   = '여유를 가지고 목줄을 길게 써서 자연스러운 미끼 연출에 집중하세요.';
   } else if (score >= 50) {
     result.status = 'NORMAL';
     result.color  = '#FF9B26';
-    result.advice = ADVICE_DB.NORMAL[seed % ADVICE_DB.NORMAL.length];
+    result.advice = _dynamicAdvice;
     result.gear   = '바람에 밀리지 않도록 고부력 찌(1호 이상)와 수중찌 조합이 필요합니다.';
   } else if (score >= 30) {
     result.status = 'POOR';
     result.color  = '#FF5A5F';
-    result.advice = ADVICE_DB.POOR[seed % ADVICE_DB.POOR.length];
+    result.advice = _dynamicAdvice;
     result.gear   = '캐스팅 연습이라 생각하세요. 전유동보다는 반유동이나 원투 낚시가 유리합니다.';
   } else {
     result.status = 'DANGER';
     result.color  = '#D32F2F';
-    result.advice = ADVICE_DB.DANGER[seed % ADVICE_DB.DANGER.length];
+    result.advice = _dynamicAdvice;
     result.gear   = '낚시용품 대신 구명센터 연락처를 확인하세요. 즉시 철수해야 합니다.';
   }
+
 
   // 어종별 특보 (24종)
   const mainFish = (point.fish || data.fish || '').split(',')[0].trim();

@@ -1,5 +1,7 @@
 // ✅ 4TH-C6: id는 이력 상 비연속 (1~28, 38~110) — 향후 id 직접 조회 대신 obsCode를 primary key로 사용 권장
-export const ALL_FISHING_POINTS = [
+import { FRESHWATER_FISHING_POINTS } from './freshwaterData.js';
+
+const SEA_FISHING_POINTS = [
   // ── 동해권 (Gangwon/Gyeongbuk) ──
   { id: 1, name: '묵호항 방파제', type: '방파제', region: '강원', lat: 37.5489, lng: 129.1170, fish: '감성돔, 우럭', score: 98, status: '피딩중', obsCode: 'DT_0033' },
   { id: 2, name: '속초항 방파제', type: '방파제', region: '강원', lat: 38.2134, lng: 128.6010, fish: '가자미, 우럭', score: 95, status: '최고', obsCode: 'DT_0021' },
@@ -57,8 +59,12 @@ export const ALL_FISHING_POINTS = [
   { id: 25, name: '제주 한림항 방파제', type: '방파제', region: '제주', lat: 33.4125, lng: 126.2584, fish: '독가시치, 벵에돔', score: 91, status: '활발', obsCode: 'DT_0010' },
   { id: 38, name: '제주 모슬포항 방파제', type: '방파제', region: '제주', lat: 33.2112, lng: 126.2512, fish: '방어, 벵에돔', score: 94, status: '피딩중', obsCode: 'DT_0011' },
   { id: 39, name: '제주 김녕항 방파제', type: '방파제', region: '제주', lat: 33.5512, lng: 126.7512, fish: '무늬오징어, 전갱이', score: 92, status: '활발', obsCode: 'DT_0045' },
-  { id: 40, name: '제주 위미항 방파제', type: '방파제', region: '제주', lat: 33.2712, lng: 126.6612, fish: '한치, 벵에돔', score: 90, status: '보통', obsCode: 'DT_0011' }
+  { id: 40, name: '제주 위미항 방파제', type: '방파제', region: '제주', lat: 33.2712, lng: 126.6612, fish: '한치, 벵에돔', score: 90, status: '보통', obsCode: 'DT_0011' },
 ];
+
+// ✅ 민물낚시 포인트는 freshwaterData.js에서 관리 (파일 크기 분산)
+export const ALL_FISHING_POINTS = [...SEA_FISHING_POINTS, ...FRESHWATER_FISHING_POINTS];
+
 
 // ── LITE 이상 회원 전용 비밀 포인트 (실제 낚시 명소 기반) ───────
 export const SECRET_FISHING_POINTS = [

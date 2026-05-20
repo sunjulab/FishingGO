@@ -11,16 +11,20 @@ import { evaluateFishingCondition } from '../utils/evaluator';
 import ReactPlayer from 'react-player';
 import FishingPointBottomSheet from '../components/FishingPointBottomSheet';
 import apiClient from '../api/index';
+import { fetchTideForecast, fetchWaterTemp } from '../api/marineApi';
 import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, SECRET_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
 import { useUserStore, TIER_CONFIG, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import CsInquirySection from '../components/CsInquirySection';
 import { NativeAd } from '../components/AdUnit';
+import CctvModal from '../components/CctvModal';
+import UpgradeModal from '../components/UpgradeModal';
+import DashboardView from './DashboardView';
 
 // ✅ 5TH-C4: EMOJI_MAP — WeatherDashboard와 동일 객체; 향후 constants/ui.js 추출 검토 권장
 
 
-const EMOJI_MAP = { '방파제': '⚓', '갯바위': '🪨', '선착장': '🚢', '항구': '🏖️' };
+const EMOJI_MAP = { '방파제': '⚓', '갯바위': '🪨', '선착장': '🚢', '항구': '🏖️', '민물': '📍' };
 const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#1565C0', '보통': '#8E8E93' };
 // ✅ 26TH-B2: DEFAULT_AVATAR_SVG 모듈 레벨 상수 — pravatar.cc 외부 의존 제거 (6TH-A2 MyPage 패턴)
 const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
@@ -81,6 +85,69 @@ export default function MapHome() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   // ✅ REALTIME-FIX: 실시간 점수 갱신 용 tick (10분마다 증가 → useMemo 재계산 트리거)
   const [rankTick, setRankTick] = useState(0);
+  const [weatherCache, setWeatherCache]   = useState({}); // ✅ FIX-HEATMAP: 히트맵 실시간 날씨 캐시 (stationId → precisionData)
+  // ✅ SHARE-COND: 바텀시트의 AI 낚시 컨디션 결과 공유 (홈화면 멘트 완전 동기화)
+  const [sharedCond, setSharedCond]       = useState(null);  // { cond, pointId }
+
+  /* ── 마운트 시 기본 포인트 AI 컨디션 전체 패치 (세로고침 대응) ── */
+  useEffect(() => {
+    const defaultPt = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
+    const nearest   = findNearestStation(defaultPt.lat, defaultPt.lng);
+    const sid       = nearest.id;
+    const todayStr  = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+    (async () => {
+      try {
+        let base = getPointSpecificData(defaultPt);
+        const [precRes, tideItems, waterTemp] = await Promise.allSettled([
+          apiClient.get(`/api/weather/precision?stationId=${sid}`),
+          fetchTideForecast(sid, todayStr),
+          fetchWaterTemp(sid, todayStr),
+        ]);
+
+        // precision 데이터 병합
+        if (precRes.status === 'fulfilled') {
+          base = { ...base, ...precRes.value.data, stationId: sid };
+        }
+        // 조석 예보 병합
+        if (tideItems.status === 'fulfilled' && tideItems.value?.length) {
+          const preds = tideItems.value.map(t => ({
+            time: t.hl_time || '', type: t.hl_code === 'H' ? '고조' : '간조', level: t.hl_level || ''
+          }));
+          base = {
+            ...base,
+            tide_predictions: preds,
+            tide: {
+              ...(base.tide || {}),
+              phase: base.tide?.phase || '조석 데이터',
+              high: preds.find(p => p.type === '고조')?.time || base.tide?.high || '-',
+              low:  preds.find(p => p.type === '간조')?.time || base.tide?.low  || '-',
+            },
+          };
+        }
+        // 수온 갱신
+        if (waterTemp.status === 'fulfilled' && waterTemp.value && waterTemp.value !== '-') {
+          base = { ...base, sst: waterTemp.value, waterTemp: waterTemp.value };
+        }
+
+        const initCond = evaluateFishingCondition(base, defaultPt);
+        setSharedCond({ cond: initCond, pointId: defaultPt.id });
+        if (!import.meta.env.PROD)
+          console.log('[Init] 기본 포인트 AI 컨디션 로드 완료 →', defaultPt.name, initCond.score, '점');
+      } catch (e) {
+        if (!import.meta.env.PROD) console.warn('[Init] 기본 AI 컨디션 패치 실패 → fallback', e);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ── 선택된 포인트 변경 시 sharedCond 액정 (sheetVisible 닫힌 후 갱신될 때까지 이전 포인트 멘트 개시 방지) ── */
+  useEffect(() => {
+    if (selectedPoint && sharedCond && sharedCond.pointId !== selectedPoint.id) {
+      setSharedCond(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPoint?.id]);
   // ── 즐겨찾기 (로컬 + DB 이중 동기화) ─────────────────────────
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('fishing_favorites') || '[]'); } catch { return []; }
@@ -308,10 +375,16 @@ export default function MapHome() {
       if (mapRef.current) mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
     }
     const nearest = findNearestStation(point.lat, point.lng);
+    // ✅ 민물 포인트는 해양 날씨/수온 정보 없음 → API 호출 스킵
+    if (point.type === '민물') {
+      setPrecisionData(null);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
       const dynamicTide = getPointSpecificData(point).tide;
-      setPrecisionData({ ...res.data, pointName: point.name, tide: dynamicTide });
+      setPrecisionData({ ...res.data, pointName: point.name, tide: dynamicTide, stationId: nearest.id });
     } catch {
       setPrecisionData(getPointSpecificData(point));
     } finally { setLoading(false); }
@@ -332,7 +405,7 @@ export default function MapHome() {
     const newMarkers = pts.map(point => {
       if (!window.kakao?.maps) return null;
       
-      const color = point.type === '방파제' ? '#00C48C' : point.type === '갯바위' ? '#0056D2' : point.type === '항구' ? '#9B59B6' : '#FF9B26'; // ✅ FIX-COLOR: 항구 마커 색상 index.css와 일치
+      const color = point.type === '방파제' ? '#00C48C' : point.type === '갯바위' ? '#0056D2' : point.type === '항구' ? '#9B59B6' : point.type === '민물' ? '#43A047' : '#FF9B26';
       const el = document.createElement('div');
       el.style.cssText = `
         background: ${color};
@@ -341,7 +414,7 @@ export default function MapHome() {
         color: #fff; font-weight: 950;
         border: 2px solid #fff; border-radius: 50%;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        cursor: pointer; font-size: 10px;
+        cursor: pointer; font-size: calc(10px * var(--fs, 1));
         transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       `;
       el.textContent = point.type.charAt(0);
@@ -383,7 +456,7 @@ export default function MapHome() {
       el.style.cssText = `
         width: 36px; height: 36px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 20px;
+        font-size: calc(20px * var(--fs, 1));
         filter: drop-shadow(0 0 8px rgba(255,215,0,0.9)) drop-shadow(0 0 3px rgba(255,160,0,0.8));
         cursor: pointer;
         animation: secretPulse 1.5s ease-in-out infinite;
@@ -405,17 +478,54 @@ export default function MapHome() {
 
 
 
+  /* ── 실시간 날씨 배치 패치 (히트맵 + 대시보드 미리보기 점수 통일) ── */
+  // ✅ FIX-SCORE-ALL: 앱 시작 2초 후 전체 기상관측소 배치 패치 → weatherCache 공유
+  // 히트맵 · 대시보드 카드 · 바텀시트 점수가 동일한 서버 데이터 기준으로 동기화
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const uniqueStationIds = [...new Set(
+        ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id)
+      )];
+      Promise.allSettled(
+        uniqueStationIds.map(id =>
+          apiClient.get(`/api/weather/precision?stationId=${id}`)
+            .then(res => ({ id, data: res.data }))
+        )
+      ).then(results => {
+        const newCache = {};
+        results.forEach(r => {
+          if (r.status === 'fulfilled' && r.value?.id) {
+            // ✅ FIX-STATIONID: weatherCache에 stationId 함께 저장 → 모든 evaluator 호출에서 seed 정확도 보장
+            newCache[r.value.id] = { ...r.value.data, stationId: r.value.id };
+          }
+        });
+        if (Object.keys(newCache).length > 0) {
+          setWeatherCache(newCache);
+          if (!import.meta.env.PROD)
+            console.log(`[Weather] ${Object.keys(newCache).length}개 관측소 실시간 날씨 로드 완료 → 히트맵+대시보드 점수 정확도 향상`);
+        }
+      }).catch(() => {}); // 실패 시 정적 데이터 fallback 유지
+    }, 2000); // 2초 딕레이 — 초기 페이지 로드 성능 보호
+    return () => clearTimeout(timer);
+  }, [rankTick]); // rankTick: 10분마다 자동 갱신
+
   /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
-  // ✅ 5TH-B2: heatmapData useMemo 캐싱 — showHeatmap/heatmapMode 변경 시 60+ 재계산 방지
-  // ✅ FIX-TDZ: useEffect deps에 heatmapData 포함되므로 useEffect보다 먼저 선언 필수
+  // ✅ FIX-HEATMAP-SCORE-v2: weatherCache 실시간 우선 → 서버 기상 데이터로 점수 계산
+  // 캐시 없으면 정적 getPointSpecificData fallback (히트맵 첫 로드 전 임시 표시)
   const heatmapData = useMemo(() =>
     ALL_FISHING_POINTS.map(point => {
-      const weatherData = getPointSpecificData(point);
+      const st = findNearestStation(point.lat, point.lng);
+      const staticData = getPointSpecificData(point);
+      // 실시간 캐시 우선 사용, 없으면 정적 fallback
+      const liveData = weatherCache[st.id];
+      const weatherData = liveData
+        ? { ...liveData, stationId: st.id, tide: staticData.tide, pointName: point.name }
+        : staticData;
       const sst = parseFloat(weatherData?.sst || 13);
       const condition = evaluateFishingCondition(weatherData, point);
       return { point, sst, score: condition.score };
     })
-  , []); // 포인트 데이터는 앱 생명주기 내 불변
+  , [rankTick, weatherCache]); // weatherCache 갱신 즉시 히트맵 점수 재계산
 
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
@@ -569,8 +679,22 @@ export default function MapHome() {
   };
 
   /* ── 렌더링용 데이터 가공 ── */
-  const currentData = precisionData || getPointSpecificData(selectedPoint || ALL_FISHING_POINTS[0]);
-  const cond        = evaluateFishingCondition(currentData, selectedPoint || ALL_FISHING_POINTS[0]);
+  // ✅ FIX-MAIN-SCORE: precisionData > weatherCache > 정적 순 우선순위
+  // precisionData: 포인트 클릭 시 서버에서 받은 정밀 데이터
+  // weatherCache:  앱 시작 2초 후 배치 패치된 실시간 날씨 (10분마다 갱신)
+  // 정적 fallback: weatherCache 로드 전 임시 표시
+  // ✅ DEFAULT-POINT: 홈화면 표시명(강릉 안목항 방파제)와 데이터 소스를 동일 포인트로 통일
+  const DEFAULT_POINT = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
+  const _selectedPt   = selectedPoint || DEFAULT_POINT;
+  const _nearestSt    = findNearestStation(_selectedPt.lat, _selectedPt.lng);
+  const _cachedLive   = weatherCache[_nearestSt?.id];
+  const _staticData   = getPointSpecificData(_selectedPt);
+  const currentData   = precisionData
+    || (_cachedLive ? { ..._cachedLive, stationId: _nearestSt?.id, tide: _staticData.tide, pointName: _selectedPt.name } : null)
+    || _staticData;
+  // ✅ SHARE-COND: 바텀시트 AI 컨디션 우선 → weatherCache/precisionData 순 fallback
+  const cond = (sharedCond?.pointId === _selectedPt?.id ? sharedCond.cond : null)
+    || evaluateFishingCondition(currentData, _selectedPt);
   const score       = cond.score;
   const isGolden    = score >= 90;
   const tideData    = currentData;
@@ -583,13 +707,19 @@ export default function MapHome() {
       : ALL_FISHING_POINTS.filter(p => p.type === filter);
     return base
       .map(p => {
-        const weatherData = getPointSpecificData(p);
+        const st = findNearestStation(p.lat, p.lng);
+        const staticData = getPointSpecificData(p);
+        // ✅ FIX-SCORE-ALL: weatherCache 우선 → 히트맵·대시보드 점수 전체 동기화
+        const liveData = weatherCache[st.id];
+        const weatherData = liveData
+          ? { ...liveData, stationId: st.id, tide: staticData.tide, pointName: p.name }
+          : staticData;
         const liveScore = evaluateFishingCondition(weatherData, p).score;
         return { ...p, _liveScore: liveScore };
       })
       .sort((a, b) => b._liveScore - a._liveScore)
       .slice(0, 8);
-  }, [rankTick, filter]); // ✅ FILTER-FIX: filter 추가 — 필터 변경 시 점수 재계산
+  }, [rankTick, filter, weatherCache]); // weatherCache 갱신 시 즉시 재계산
 
   /* ── 낚시점수 원 색상 계산 ── */
   const getScoreCircleStyle = (s) => {
@@ -604,7 +734,58 @@ export default function MapHome() {
   /* ── advice 줄바꿈 분리 ── */
   const adviceParts = cond.advice.split(/\[특보\]/);
   const mainAdvice  = adviceParts[0].trim();
-  const alertAdvice = adviceParts[1]?.trim() || null;
+  // ✅ FIX-ALERT: split 파싱 실패 방지 — fishAlert.alert 직접 우선 사용
+  const alertAdvice = cond.fishAlert?.alert || adviceParts[1]?.trim() || null;
+
+
+  /* ── 동적 특보 생성 (기상 조건 기반 실시간 멘트) ── */
+  const getDynamicAlert = () => {
+    const hour     = new Date().getHours();
+    const isNight  = hour >= 19 || hour < 5;
+    const isDawn   = hour >= 4 && hour < 7;
+    const wind     = parseFloat(tideData.wind?.speed ?? 0);
+    const wave     = parseFloat(tideData.wave?.coastal ?? 0);
+    const sst      = parseFloat(tideData.sst ?? 13);
+    const phase    = tideData.tide?.phase || '';
+    const mainFish = (selectedPoint?.fish || '').split(',')[0].trim();
+    const month    = new Date().getMonth() + 1;
+
+    // ① 위험 기상 최우선
+    if (wave > 2.5) return `파고 ${wave}m 너울 위험 — 갯바위·방파제 접근 금지! 즉시 대피하세요.`;
+    if (wind > 12)  return `풍속 ${wind.toFixed(1)}m/s 강풍 — 채비가 날아갑니다. 출조를 삼가세요.`;
+    if (wave > 1.5) return `파고 ${wave}m 구름파 — 외해 노출 포인트는 위험. 안전한 코스로 이동하세요.`;
+
+    // ② 수온 특보
+    if (sst < 9)  return `수온 ${sst.toFixed(1)}°C 극저수온 — ${mainFish || '어류'} 동면 수준. 꽝 확률 95% 이상.`;
+    if (sst < 11) return `수온 ${sst.toFixed(1)}°C 저수온 — ${mainFish ? `${mainFish}이 ` : ''}바닥에 바짝 붙었습니다. 지렁이+크릴 냄새로 유인하세요.`;
+
+    // ③ 황금 물때
+    if (phase.includes('7물(사리)') || phase.includes('6물') || phase.includes('8물'))
+      return `사리 물때 — 조류가 활발해 ${mainFish || '어류'} 입질 집중! 지금이 피딩 타임입니다.`;
+    if (phase.includes('13물') || phase.includes('조금') || phase.includes('무시'))
+      return `조금·무시 물때 — 조류가 약해 ${mainFish || '어류'} 입질이 뜨문뜨문합니다. 인내심이 관건.`;
+
+    // ④ 점수 기반
+    if (score >= 90) return `황금 컨디션 — ${mainFish || '대물'} 입질 확률 최고! 지금 바로 출발하세요.`;
+    if (score >= 75) return `우수 컨디션 — ${mainFish || '어류'} 활성 높음. 포인트 집중 공략으로 손맛 보세요.`;
+    if (score < 30)  return `출조 비권고 — 현재 기상·조건이 낚시에 매우 불리합니다. 다음 기회를 노리세요.`;
+
+    // ⑤ 시간대
+    if (isDawn && mainFish) return `새벽 돌풍 시간 — ${mainFish} 활성가 최고조! 해 뜨기 30분 전부터 준비하세요.`;
+    if (isNight && (mainFish === '농어' || mainFish === '갈치' || mainFish === '볼락'))
+      return `야간 피크 타임 — ${mainFish} 불빛 아래 집결합니다. 지금이 황금타임.`;
+
+    // ⑥ 계절 세밀정보
+    if (month >= 3 && month <= 5 && mainFish)
+      return `봄 시즌 — ${mainFish} 산란 직전 활성 최고조. 크릴+파래 혼합 미끼가 트립니다.`;
+    if (month >= 9 && month <= 11 && mainFish)
+      return `가을 대물 시즌 — ${mainFish} 대형급 기대! 밑밥으로 집중 투척하세요.`;
+
+    // ⑦ 어종 fallback (기존 고정 문구)
+    return alertAdvice || null;
+  };
+  const dynamicAlert = getDynamicAlert();
+
 
   /* ── 동적 미끼 팁 ── */
   const getBaitTip = () => {
@@ -661,14 +842,14 @@ export default function MapHome() {
         <div style={{ backgroundColor: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F0F0F5', zIndex: 20, flexShrink: 0 }}>
           {viewMode === 'map' ? (
             <>
-              <button onClick={() => setViewMode('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '800', color: '#1565C0' }}>
+              <button onClick={() => setViewMode('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#1565C0' }}>
                 <ArrowLeft size={18} /> 대시보드
               </button>
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                {['전체', '방파제', '갯바위', '항구'].map(f => (
+                {['전체', '방파제', '갯바위', '항구', '민물'].map(f => (
                   <button key={f} onClick={() => setFilter(f)} style={{
                     padding: '5px 10px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-                    fontSize: '11px', fontWeight: '800', flexShrink: 0,
+                    fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', flexShrink: 0,
                     background: filter === f ? '#1565C0' : '#F0F2F7',
                     color: filter === f ? '#fff' : '#555',
                     transition: 'all 0.2s',
@@ -685,7 +866,7 @@ export default function MapHome() {
                   }} 
                   style={{
                     padding: '5px 12px', borderRadius: '20px', border: '1.5px solid #FF3B30', cursor: 'pointer',
-                    fontSize: '11px', fontWeight: '900', flexShrink: 0,
+                    fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', flexShrink: 0,
                     background: showHeatmap ? '#FF3B30' : '#fff',
                     color: showHeatmap ? '#fff' : '#FF3B30',
                     transition: 'all 0.2s',
@@ -701,7 +882,7 @@ export default function MapHome() {
                     }}
                     style={{
                       padding: '5px 12px', borderRadius: '20px', border: '1.5px solid #0056D2', cursor: 'pointer',
-                      fontSize: '11px', fontWeight: '900', flexShrink: 0,
+                      fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', flexShrink: 0,
                       background: '#0056D2', color: '#fff',
                       transition: 'all 0.2s',
                     }}>
@@ -714,16 +895,16 @@ export default function MapHome() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Anchor size={22} color="#1565C0" strokeWidth={2.5} />
-                <span style={{ fontSize: '19px', fontWeight: '950', color: '#0056D2', letterSpacing: '-0.04em' }}>낚시GO</span>
+                <span style={{ fontSize: `calc(19px * var(--fs, 1))`, fontWeight: '950', color: '#0056D2', letterSpacing: '-0.04em' }}>낚시GO</span>
                 {currentTier.label && (
-                  <span style={{ background: currentTier.bg, fontSize: '8px', padding: '2px 7px', borderRadius: '20px', color: currentTier.color || '#fff', fontWeight: '900', marginLeft: '2px' }}>
+                  <span style={{ background: currentTier.bg, fontSize: `calc(8px * var(--fs, 1))`, padding: '2px 7px', borderRadius: '20px', color: currentTier.color || '#fff', fontWeight: '900', marginLeft: '2px' }}>
                     {currentTier.label}
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
                 {/* ✅ BUG-FIX: HeaderClock 컴포넌트로 1분마다 갱신 (기존 new Date() 정적 시계 수정) */}
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#1565C0', letterSpacing: '-0.02em', marginRight: '-6px' }}>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#1565C0', letterSpacing: '-0.02em', marginRight: '-6px' }}>
                   <HeaderClock />
                 </div>
                 <div style={{ position: 'relative', cursor: 'pointer' }}>
@@ -761,10 +942,10 @@ export default function MapHome() {
                 backdropFilter: 'blur(10px)', width: '220px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#1A1A2E' }}>
+                  <span style={{ fontSize: `calc(11.5px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E' }}>
                     {heatmapMode === 'sst' ? '🌡 표층 수온(SST) 범례' : '🎣 AI 낚시지도 조황 점수'}
                   </span>
-                  <span style={{ fontSize: '9px', fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>PRO</span>
+                  <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', background: isAdmin ? '#E60000' : '#FF3B30', color: '#fff', padding: '2px 6px', borderRadius: '8px' }}>PRO</span>
                 </div>
                 {heatmapMode === 'sst' ? (
                   <>
@@ -773,10 +954,10 @@ export default function MapHome() {
                       <div style={{ flex: 1, background: '#26C6DA' }} /><div style={{ flex: 1, background: '#66BB6A' }} /><div style={{ flex: 1, background: '#FFCA28' }} />
                       <div style={{ flex: 1, background: '#FFA726' }} /><div style={{ flex: 1, background: '#FF7043' }} /><div style={{ flex: 1, background: '#B71C1C' }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93' }}>
                       <span>&lt;8°C</span><span>(어종별 적정수온)</span><span>24°C&gt;</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', color: '#555', marginTop: '2px' }}>
                       <span style={{ color: '#1565C0' }}>저수온</span>
                       <span style={{ color: '#FFA726' }}>🔥 최적 활성도</span>
                       <span style={{ color: '#B71C1C' }}>고수온</span>
@@ -791,10 +972,10 @@ export default function MapHome() {
                       <div style={{ flex: 1, background: '#42A5F5' }} />
                       <div style={{ flex: 1, background: '#00E5A8' }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '700', color: '#8E8E93' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93' }}>
                       <span>0점</span><span>종합 낚시 점수</span><span>100점</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: '800', color: '#555', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', color: '#555', marginTop: '2px' }}>
                       <span style={{ color: '#D32F2F' }}>출조 보류</span>
                       <span style={{ color: '#FFCA28' }}>👌 무난함</span>
                       <span style={{ color: '#00E5A8' }}>✨ 황금물때</span>
@@ -808,15 +989,15 @@ export default function MapHome() {
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F4F6FA', gap: '12px', zIndex: 10 }}>
                 {mapLoadError ? (
                   <>
-                    <div style={{ fontSize: '40px' }}>🗺️</div>
-                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#1A1A2E' }}>카카오맵 API 키 필요</div>
-                    <div style={{ fontSize: '12px', color: '#888', fontWeight: '700', textAlign: 'center', lineHeight: 1.7, padding: '0 32px' }}>
+                    <div style={{ fontSize: `calc(40px * var(--fs, 1))` }}>🗺️</div>
+                    <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E' }}>카카오맵 API 키 필요</div>
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#888', fontWeight: '700', textAlign: 'center', lineHeight: 1.7, padding: '0 32px' }}>
                       .env.local 파일에 카카오 JavaScript 키를 입력하세요.<br />
-                      <code style={{ background: '#F0F0F0', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', color: '#0056D2' }}>VITE_KAKAO_APP_KEY=여기에_키_입력</code>
+                      <code style={{ background: '#F0F0F0', padding: '2px 8px', borderRadius: '6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2' }}>VITE_KAKAO_APP_KEY=여기에_키_입력</code>
                     </div>
                     <button
                       onClick={() => { window.open('https://developers.kakao.com', '_blank'); }}
-                      style={{ marginTop: '8px', padding: '10px 22px', background: '#FAE100', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', color: '#1A1A2E' }}
+                      style={{ marginTop: '8px', padding: '10px 22px', background: '#FAE100', border: 'none', borderRadius: '12px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', color: '#1A1A2E' }}
                     >
                       카카오 개발자 콘솔 →
                     </button>
@@ -824,7 +1005,7 @@ export default function MapHome() {
                 ) : (
                   <>
                     <div style={{ width: '40px', height: '40px', border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700' }}>지도 로딩 중…</span>
+                    <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>지도 로딩 중…</span>
                   </>
                 )}
               </div>
@@ -832,642 +1013,54 @@ export default function MapHome() {
           </div>
 
         {/* ── 대시보드 뷰 ── */}
-        <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))', scrollbarWidth: 'none' }}>
-
-            {/* 검색바 + 드롭다운 (최상단 이동) */}
-            <div style={{ padding: '16px 16px 0', position: 'relative', zIndex: 50 }} ref={searchRef}>
-              <div style={{ height: '48px', backgroundColor: '#fff', borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '10px', border: '1.5px solid #EBF2FF', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
-                <Search size={16} color="#1565C0" strokeWidth={3} />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  onFocus={() => searchQuery && setShowSearch(true)}
-                  placeholder="포인트, 어종, 지역 검색하여 현재 화면에 반영"
-                  style={{ border: 'none', background: 'none', fontSize: '13.5px', fontWeight: '800', outline: 'none', width: '100%', color: '#1A1A2E' }}
-                />
-                {searchQuery && (
-                  <button onClick={() => { setSearchQuery(''); setSearchResults([]); setShowSearch(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#AAB0BE', padding: 0 }}>
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-
-              {/* 검색 결과 드롭다운 */}
-              {showSearch && searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff',
-                  borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7',
-                  zIndex: 100, maxHeight: '280px', overflowY: 'auto', marginTop: '6px'
-                }}>
-                  {searchResults.map((p, i) => (
-                    <div key={p.id}
-                      onClick={() => {
-                        handlePointClick(p, true); // Dashboard view 갱신
-                        setShowSearch(false); setSearchQuery(''); setSearchResults([]);
-                      }}
-                      style={{
-                        padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px',
-                        borderBottom: i < searchResults.length - 1 ? '1px solid #F8F9FC' : 'none',
-                        cursor: 'pointer', transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F8F9FC'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <div style={{ width: '32px', height: '32px', background: '#EBF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                        {EMOJI_MAP[p.type] || '⚓'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                        <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
-                      </div>
-                      <div style={{ background: STATUS_COLOR[p.status] || '#8E8E93', borderRadius: '6px', padding: '3px 8px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '900', color: '#fff' }}>{p.status}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {showSearch && searchResults.length === 0 && searchQuery && (
-                <div style={{ position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff', borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, padding: '20px', textAlign: 'center', marginTop: '6px' }}>
-                  <AlertCircle size={24} color="#AAB0BE" style={{ margin: '0 auto 8px' }} />
-                  <div style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '800' }}>검색 결과가 없어요</div>
-                </div>
-              )}
-            </div>
-
-            {/* 메인 블루 카드 */}
-            <div style={{ padding: '16px 16px 0' }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #1565C0 0%, #1E88E5 60%, #42A5F5 100%)',
-                borderRadius: '20px', padding: '18px 18px 16px',
-                boxShadow: '0 8px 30px rgba(21,101,192,0.25)', position: 'relative', overflow: 'hidden',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.75)', fontSize: '11px', fontWeight: '700', marginBottom: '6px' }}>
-                  <MapPin size={10} color="rgba(255,255,255,0.75)" fill="rgba(255,255,255,0.4)" />
-                  {precisionData?.pointName || selectedPoint?.name || '강릉 안목항 방파제'}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', gap: '10px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '38px', fontWeight: '950', color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                      {tideData.temp ? (typeof tideData.temp === 'string' ? tideData.temp.replace('°C', '') : tideData.temp) + '°' : '15.2°'}
-                    </div>
-                    {/* 조언 텍스트 */}
-                    <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', marginTop: '6px', lineHeight: 1.5 }}>
-                      {mainAdvice}
-                    </div>
-                    {/* 특보 */}
-                    {alertAdvice && (
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'flex-start', gap: '5px',
-                        marginTop: '6px', background: 'rgba(255,80,80,0.22)',
-                        border: '1px solid rgba(255,80,80,0.5)', borderRadius: '8px',
-                        padding: '5px 9px', lineHeight: 1.45,
-                      }}>
-                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#FF8080', flexShrink: 0, paddingTop: '1px' }}>⚠ 특보</span>
-                        <span style={{ fontSize: '10px', color: 'rgba(255,200,200,0.95)', fontWeight: '700' }}>{alertAdvice}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 낚시점수 원 */}
-                  <div style={{
-                    width: '72px', height: '72px', borderRadius: '50%', flexShrink: 0,
-                    background: scoreStyle.bg,
-                    border: `2px solid ${scoreStyle.border}`,
-                    boxShadow: scoreStyle.glow,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    backdropFilter: 'blur(10px)', position: 'relative',
-                  }}>
-                    {/* 외곽 링 (점수 진행도 시각화) */}
-                    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)' }} viewBox="0 0 72 72">
-                      <circle cx="36" cy="36" r="32" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
-                      <circle cx="36" cy="36" r="32" fill="none" stroke={scoreStyle.border}
-                        strokeWidth="3" strokeLinecap="round"
-                        strokeDasharray={`${(score / 100) * 201} 201`}
-                        style={{ transition: 'stroke-dasharray 0.6s ease' }}
-                      />
-                    </svg>
-                    <div style={{ fontSize: '22px', fontWeight: '950', color: scoreStyle.numColor, lineHeight: 1, position: 'relative' }}>{score}</div>
-                    <div style={{ fontSize: '7.5px', fontWeight: '800', color: 'rgba(255,255,255,0.55)', marginTop: '2px', position: 'relative' }}>낚시점수</div>
-                    <div style={{ fontSize: '6.5px', fontWeight: '900', color: scoreStyle.numColor, opacity: 0.9, position: 'relative', marginTop: '1px', letterSpacing: '0.02em' }}>{scoreStyle.label}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
-                  {[
-                    { label: '상층', val: `${tideData.layers?.upper || '16.2'}°`, color: '#64B5F6' },
-                    { label: '중층', val: `${tideData.layers?.middle || '14.5'}°`, color: '#42A5F5' },
-                    { label: '저층', val: `${tideData.layers?.lower || '13.1'}°`, color: '#1E88E5' },
-                  ].map(l => (
-                    <div key={l.label} style={{ flex: 1, background: 'rgba(255,255,255,0.12)', borderRadius: '12px', padding: '8px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', fontWeight: '800', marginBottom: '2px' }}>{l.label}</div>
-                      <div style={{ fontSize: '13px', color: '#fff', fontWeight: '950' }}>{l.val}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ✅ FIX-BTN: 실시간 영상 버튼을 스크롤 영역 밖으로 분리 — marginLeft:auto + overflowX:auto 세로 변형 방지 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {/* 좌측: 스크롤 가능한 날씨 칩 */}
-                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '2px', flex: 1, alignItems: 'center' }}>
-                    {[
-                      { Icon: Waves, label: '파고', val: `${tideData.wave?.coastal || '0.4'}m` },
-                      { Icon: Wind,  label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s` },
-                      { Icon: Clock, label: '만조', val: tideData.tide?.high || '15:20' },
-                    ].map(chip => (
-                      <div key={chip.label} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, background: 'rgba(255,255,255,0.14)', borderRadius: '30px', padding: '6px 12px', border: '1px solid rgba(255,255,255,0.15)' }}>
-                        <chip.Icon size={11} color="rgba(255,255,255,0.8)" />
-                        <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>{chip.label}</span>
-                        <span style={{ fontSize: '11px', color: '#fff', fontWeight: '950' }}>{chip.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {/* 우측: 고정 CCTV 버튼 — div로 교체하여 Android WebView button flex 무시 문제 완전 해결 */}
-                  <div
-                    onClick={async () => {
-                      if (!canAccessPremium) {
-                        addToast('📺 실시간 해양 CCTV는 LITE 플랜 이상에서 제공됩니다.', 'error');
-                        return;
-                      }
-                      const sid = selectedPoint?.obsCode || 'DT_0001';
-                      try {
-                        const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
-                        setCctvData(res.data);
-                        setShowCCTV(true);
-                      } catch {
-                        addToast('영상 데이터를 불러오는 데 실패했습니다.', 'error');
-                      }
-                    }}
-                    style={{
-                      flexShrink: 0,
-                      background: canAccessPremium ? 'rgba(255,215,0,0.9)' : 'rgba(255,255,255,0.15)',
-                      border: canAccessPremium ? 'none' : '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '30px', padding: '6px 14px',
-                      display: 'inline-flex', flexDirection: 'row',
-                      alignItems: 'center', flexWrap: 'nowrap', gap: '5px',
-                      cursor: 'pointer', whiteSpace: 'nowrap',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-                      userSelect: 'none', WebkitUserSelect: 'none',
-                    }}
-                  >
-                    <Tv size={13} color="#1A1A2E" style={{ flexShrink: 0, display: 'block' }} />
-                    <span style={{ fontSize: '10px', fontWeight: '900', color: '#1A1A2E', lineHeight: 1, flexShrink: 0, whiteSpace: 'nowrap' }}>실시간 영상</span>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-            {/* ✅ ADMOB-NATIVE: AI 낙시 적합도 위 네이티브광고 (릴유 플랜 무료, 유료플랜은 NativeAd 내장 isPremium체크로 자동 숨김) */}
-            <NativeAd style={{ margin: '0 16px 4px' }} />
-
-            {/* ── AI 낚시 적합도 게이지 카드 ── */}
-            <div style={{ padding: '12px 16px 0' }}>
-              <div style={{
-                background: '#fff', borderRadius: '20px', padding: '16px 18px',
-                border: '1.5px solid #F0F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '15px' }}>🎯</span>
-                    <span style={{ fontSize: '13px', fontWeight: '900', color: '#1A1A2E' }}>AI 낚시 적합도</span>
-                  </div>
-                  <div style={{
-                    background: score >= 90 ? 'linear-gradient(135deg, #00C48C, #00897B)' : score >= 75 ? 'linear-gradient(135deg, #1565C0, #1E88E5)' : score >= 50 ? 'linear-gradient(135deg, #FF9B26, #F57F17)' : 'linear-gradient(135deg, #FF5A5F, #D32F2F)',
-                    borderRadius: '20px', padding: '4px 12px',
-                  }}>
-                    <span style={{ fontSize: '10px', fontWeight: '900', color: '#fff' }}>
-                      {score >= 90 ? '🔥 피딩 중!' : score >= 75 ? '✅ 출조 추천' : score >= 50 ? '🙂 보통' : '⚠ 재고 필요'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* 게이지 바 */}
-                <div style={{ position: 'relative', marginBottom: '8px' }}>
-                  <div style={{ height: '10px', background: '#F0F2F7', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${score}%`,
-                      background: score >= 90 ? 'linear-gradient(90deg, #00C48C, #00E5A8)' : score >= 75 ? 'linear-gradient(90deg, #1565C0, #42A5F5)' : score >= 50 ? 'linear-gradient(90deg, #FF9B26, #FFD54F)' : 'linear-gradient(90deg, #FF5A5F, #FF8A80)',
-                      borderRadius: '6px',
-                      transition: 'width 1s cubic-bezier(0.25, 1, 0.5, 1)',
-                      boxShadow: score >= 90 ? '0 0 8px rgba(0,196,140,0.6)' : 'none',
-                    }} className={score >= 90 ? 'gauge-pulse' : ''} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-                    <span style={{ fontSize: '9px', color: '#C7C7CC', fontWeight: '700' }}>0</span>
-                    <span style={{ fontSize: '12px', fontWeight: '950', color: score >= 90 ? '#00C48C' : score >= 75 ? '#1565C0' : score >= 50 ? '#FF9B26' : '#FF5A5F' }}>{score}점</span>
-                    <span style={{ fontSize: '9px', color: '#C7C7CC', fontWeight: '700' }}>100</span>
-                  </div>
-                </div>
-
-                {/* 세부 지표 */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-                  {[
-                    { label: '수온', val: `${parseFloat(tideData.sst || 14).toFixed(1)}°C`, ok: parseFloat(tideData.sst || 14) >= 12 && parseFloat(tideData.sst || 14) <= 22 },
-                    { label: '파고', val: `${tideData.wave?.coastal || '0.4'}m`, ok: parseFloat(tideData.wave?.coastal || 0.4) <= 1.0 },
-                    { label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s`, ok: parseFloat(tideData.wind?.speed || 2.1) <= 5 },
-                    { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물') }, // ✅ BUG-FIX: 사리는 조류 강해 낚시 유리(ok=true), 조금/무시가 불리 — 기존 !includes('사리') 역논리 수정
-                  ].map(item => (
-                    <div key={item.label} style={{
-                      background: item.ok ? 'rgba(0,196,140,0.08)' : 'rgba(255,90,95,0.08)',
-                      border: `1px solid ${item.ok ? 'rgba(0,196,140,0.25)' : 'rgba(255,90,95,0.25)'}`,
-                      borderRadius: '10px', padding: '7px 4px', textAlign: 'center',
-                    }}>
-                      <div style={{ fontSize: '9px', color: '#8E8E93', fontWeight: '700' }}>{item.label}</div>
-                      <div style={{ fontSize: '11px', fontWeight: '950', color: item.ok ? '#00C48C' : '#FF5A5F', marginTop: '2px' }}>{item.val}</div>
-                      <div style={{ fontSize: '8px', color: item.ok ? '#00C48C' : '#FF5A5F', fontWeight: '800' }}>{item.ok ? '✓ 양호' : '✗ 주의'}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 퀵메뉴 */}
-            <div style={{ padding: '16px 16px 4px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-                {[
-                  { Icon: Map,       label: '포인트',   color: '#1565C0', bg: '#EBF2FF',  action: () => setViewMode('map'),     locked: false },
-                  { Icon: BarChart2, label: '날씨',     color: '#2E7D32', bg: '#EDF7EE',  action: () => navigate('/weather'),   locked: false },
-                  { Icon: Ship,      label: '선상/크루', color: '#BF360C', bg: '#FFF3EE', action: () => navigate('/community'), locked: false },
-                  { Icon: Crown,     label: '클럽',     color: '#6A1B9A', bg: '#F5EEFF',  action: () => navigate('/community'), locked: false },
-                  {
-                    label: '비밀포인트',
-                    locked: !canAccessPremium,
-                    action: () => {
-                      if (!canAccessPremium) {
-                        addToast('🔒 LITE 플랜 이상에서 비밀 포인트를 확인할 수 있어요!', 'error');
-                        return;
-                      }
-                      setViewMode('map');
-                      setShowSecretPoints(true);
-                      addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');
-                    },
-                    customIcon: (
-                      <div style={{ position: 'relative', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{
-                          fontSize: '22px',
-                          filter: canAccessPremium
-                            ? 'drop-shadow(0 0 6px rgba(255,200,0,0.9)) drop-shadow(0 0 2px rgba(255,160,0,0.6))'
-                            : 'grayscale(1) opacity(0.5)',
-                          animation: canAccessPremium ? 'secretPulse 2s ease-in-out infinite' : 'none',
-                        }}>⭐</span>
-                        {!canAccessPremium && (
-                          <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '13px', height: '13px', background: '#8E8E93', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #fff' }}>
-                            <Lock size={7} color="#fff" />
-                          </div>
-                        )}
-                      </div>
-                    ),
-                  },
-                ].map((m, index) => (
-                  <div key={index} onClick={m.action} style={{ textAlign: 'center', cursor: 'pointer' }}>
-                    <div style={{
-                      width: '100%', aspectRatio: '1/1', backgroundColor: '#fff',
-                      borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      marginBottom: '5px',
-                      boxShadow: (!m.locked && m.label === '비밀포인트')
-                        ? '0 3px 14px rgba(255,200,0,0.25)'
-                        : '0 2px 8px rgba(0,0,0,0.05)',
-                      border: (!m.locked && m.label === '비밀포인트')
-                        ? '1.5px solid rgba(255,215,0,0.45)'
-                        : '1px solid #F0F2F7',
-                      transition: 'transform 0.15s',
-                    }}
-                      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.93)'}
-                      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      {m.customIcon ? m.customIcon : (
-                        <div style={{ width: '36px', height: '36px', background: m.bg, borderRadius: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <m.Icon size={19} color={m.color} />
-                        </div>
-                      )}
-                    </div>
-                    <span style={{
-                      fontSize: '9px', fontWeight: '800',
-                      color: (!m.locked && m.label === '비밀포인트') ? '#B8860B' : '#555',
-                    }}>{m.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-
-            {/* 피딩 스케줄 */}
-            <div style={{ padding: '10px 16px 6px' }}>
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '12px 14px', border: '1.5px solid #F0F2F7' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                  <Zap size={13} color="#FFB300" fill="#FFB300" />
-                  <span style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', marginLeft: '5px' }}>피딩 타임</span>
-                  <span style={{ marginLeft: 'auto', fontSize: '10px', color: isGolden ? '#E65100' : '#8E8E93', fontWeight: '800' }}>
-                    {isGolden ? '🌟 황금물때' : phase.split('(')[0]}
-                  </span>
-                </div>
-                {(() => {
-                  // 실시간 피딩 타임 동적 계산
-                  const now = new Date();
-                  const nowMin = now.getHours() * 60 + now.getMinutes();
-
-                  // 물때 만조/간조 시각 파싱 (HH:MM)
-                  const parseTime = (str) => {
-                    if (!str) return null;
-                    const [h, m] = String(str).split(':').map(Number);
-                    return isNaN(h) ? null : h * 60 + (m || 0);
-                  };
-
-                  const highMin = parseTime(tideData.tide?.high);
-                  const lowMin  = parseTime(tideData.tide?.low);
-
-                  // 피딩 타임: 간조, 만조(황금), 다음 물때로 정확히 분류 후 시간순 정렬
-                  const goldenMin = highMin ?? 870;          // 만조 시각 (황금)
-                  const lowMinVal = lowMin ?? 360;           // 간조 시각
-                  const nextLowMin = (lowMinVal + 720) % 1440; // 다음 간조 시각
-
-                  const fmt = (m) => {
-                    const hh = Math.floor(((m % 1440) + 1440) % 1440 / 60);
-                    const mm = ((m % 1440) + 1440) % 1440 % 60;
-                    return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-                  };
-
-                  // 현재 시각이 피딩 윈도우 안에 있으면 active
-                  const isInWindow = (centerMin, windowMin = 40) =>
-                    Math.abs(nowMin - centerMin) <= windowMin ||
-                    Math.abs(nowMin - centerMin + 1440) <= windowMin ||
-                    Math.abs(nowMin - centerMin - 1440) <= windowMin;
-
-                  const slots = [
-                    { label: '간조 물때', time: fmt(lowMinVal),    active: isInWindow(lowMinVal, 35), val: lowMinVal },
-                    { label: '만조 (황금)✨', time: fmt(goldenMin), active: isInWindow(goldenMin, 40), val: goldenMin },
-                    { label: '다음 물때', time: fmt(nextLowMin),   active: isInWindow(nextLowMin, 35), val: nextLowMin },
-                  ];
-
-                  // 시간 순으로 정렬하여 표시 오류 해결 (새벽이 18시에 나오는 현상 방지)
-                  slots.sort((a, b) => a.val - b.val);
-
-                  // 아무것도 active가 아니면 가장 가까운 미래 슬롯을 active (다음) 표시
-                  const hasActive = slots.some(s => s.active);
-                  if (!hasActive) {
-                    const diffs = slots.map((s, i) => {
-                      const diff = ((s.val - nowMin) + 1440) % 1440;
-                      return { i, diff };
-                    });
-                    diffs.sort((a, b) => a.diff - b.diff);
-                    slots[diffs[0].i].next = true;
-                  }
-
-                  return (
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {slots.map((ft, i) => (
-                        <div key={i} style={{
-                          flex: 1, padding: '8px 2px', borderRadius: '12px', textAlign: 'center',
-                          background: ft.active
-                            ? 'linear-gradient(135deg, #FFD700, #FFA000)'
-                            : ft.next
-                              ? 'linear-gradient(135deg, #E8F4FF, #D0E8FF)'
-                              : '#F8F9FC',
-                          border: ft.active ? 'none' : ft.next ? '1px solid #90CAF9' : '1px solid #F0F2F7',
-                        }}>
-                          <div style={{ fontSize: '8px', fontWeight: '900', color: ft.active ? '#5C3A00' : ft.next ? '#1565C0' : '#AAB0BE', marginBottom: '2px' }}>
-                            {ft.label}{ft.next ? ' (다음)' : ''}
-                          </div>
-                          <div style={{ fontSize: '11px', fontWeight: '950', color: ft.active ? '#1A1A00' : ft.next ? '#1565C0' : '#8E8E93' }}>
-                            {ft.time}
-                          </div>
-                          {ft.active && <div style={{ fontSize: '7px', color: '#5C3A00', fontWeight: '900', marginTop: '1px' }}>🔥 지금!</div>}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* 프리미엄 멤버십 구독 */}
-            <div style={{ padding: '8px 16px 12px' }}>
-              {canAccessPremium ? (
-                /* ── 유료 회원: 현재 플랜 상태 카드 ── */
-                <div style={{
-                  position: 'relative', overflow: 'hidden',
-                  background: 'linear-gradient(135deg, #111218 0%, #1E1F2E 100%)',
-                  borderRadius: '20px', padding: '18px 20px',
-                  display: 'flex', alignItems: 'center', gap: '14px',
-                  boxShadow: '0 12px 30px rgba(0,0,0,0.2)',
-                  border: '1px solid rgba(255,215,0,0.2)',
-                }}>
-                  <div style={{ position: 'absolute', top: '-40%', right: '-10%', width: '120px', height: '120px', background: 'radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)', backgroundSize: '200% 100%', animation: 'shimmer 3s infinite linear', pointerEvents: 'none' }} />
-                  <div style={{ position: 'relative', width: '46px', height: '46px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 6px 20px rgba(255,215,0,0.3)' }}>
-                    <Crown size={24} color="#5C3A00" fill="#5C3A00" />
-                    <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '12px', height: '12px', background: '#00C48C', borderRadius: '50%', border: '2px solid #1E1F2E', animation: 'pulse 2s infinite' }} />
-                  </div>
-                  <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '950', color: '#fff' }}>{currentTier.label || 'LITE'} 구독 중</span>
-                      <span style={{ background: '#00C48C', fontSize: '8px', padding: '2px 6px', borderRadius: '10px', color: '#fff', fontWeight: '900' }}>활성</span>
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600' }}>비밀 포인트 25곳 · 히트맵 · CCTV 이용 가능</div>
-                  </div>
-                  <div onClick={() => { setViewMode('map'); setShowSecretPoints(true); addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success'); }}
-                    style={{ position: 'relative', zIndex: 1, background: 'rgba(255,255,255,0.1)', color: '#FFD700', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '30px', padding: '8px 12px', fontSize: '10px', fontWeight: '900', cursor: 'pointer', backdropFilter: 'blur(5px)', whiteSpace: 'nowrap' }}>
-                    비밀포인트 보기 ›
-                  </div>
-                </div>
-              ) : (
-                /* ── 무료 회원: 심플 구독 유도 카드 (가격/플랜 최소화) ── */
-                <div
-                  onClick={() => navigate('/vvip-subscribe')}
-                  style={{
-                    background: 'linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 100%)',
-                    borderRadius: '22px', padding: '18px 20px',
-                    border: '1px solid rgba(255,215,0,0.22)',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.22)',
-                    position: 'relative', overflow: 'hidden', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '14px',
-                    transition: 'transform 0.15s',
-                  }}
-                  onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
-                  onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  {/* 배경 글로우 */}
-                  <div style={{ position: 'absolute', top: '-40%', right: '-10%', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(255,215,0,0.14) 0%, transparent 70%)', filter: 'blur(22px)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', bottom: '-40%', left: '-5%', width: '90px', height: '90px', background: 'radial-gradient(circle, rgba(0,196,140,0.1) 0%, transparent 70%)', filter: 'blur(16px)', pointerEvents: 'none' }} />
-                  {/* 왕관 아이콘 */}
-                  <div style={{ position: 'relative', width: '48px', height: '48px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 6px 18px rgba(255,215,0,0.35)', zIndex: 1 }}>
-                    <Crown size={24} color="#5C3A00" fill="#5C3A00" />
-                    <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '11px', height: '11px', background: '#00C48C', borderRadius: '50%', border: '2px solid #1A1A2E', animation: 'pulse 2s infinite' }} />
-                  </div>
-                  {/* 텍스트 */}
-                  <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
-                    <div style={{ fontSize: '15px', fontWeight: '950', color: '#fff', letterSpacing: '-0.02em', marginBottom: '4px' }}>프리미엄 멤버십</div>
-                    <div style={{ fontSize: '11px', color: 'rgba(255,215,0,0.75)', fontWeight: '700' }}>비밀 포인트 · CCTV · 히트맵 이용</div>
-                  </div>
-                  {/* CTA 화살표 버튼 */}
-                  <div style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '30px', padding: '9px 16px', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, boxShadow: '0 4px 14px rgba(255,215,0,0.4)' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap' }}>구독하러 가기</span>
-                    <span style={{ fontSize: '13px', color: '#1A1A2E', fontWeight: '900' }}>›</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-
-            {/* 우수 포인트 카드 */}
-            <div style={{ marginTop: '14px' }}>
-              <div style={{ padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: '950', color: '#1A1A2E', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  {filter === '전체' ? '실시간 우수 포인트' : `${EMOJI_MAP[filter] || ''} ${filter} 점수 순위`}
-                  <span style={{ fontSize: '9px', background: '#E8F4FF', color: '#1565C0', padding: '2px 7px', borderRadius: '10px', fontWeight: '900' }}>LIVE</span>
-                </h3>
-                <span onClick={() => setViewMode('map')} style={{ fontSize: '11px', color: '#1565C0', fontWeight: '800', cursor: 'pointer' }}>지도보기 →</span>
-              </div>
-              <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', padding: '2px 16px 10px', scrollbarWidth: 'none' }}>
-                {PREMIUM_POINTS.length === 0 ? (
-                  // ✅ FILTER-EMPTY: 해당 타입 포인트가 없을 때 안내
-                  <div style={{ padding: '24px 16px', textAlign: 'center', color: '#AAB0BE', fontSize: '13px', fontWeight: '700' }}>
-                    {filter} 포인트 데이터가 없습니다.<br />
-                    <span style={{ fontSize: '11px' }}>전체 보기로 전환하거나 다른 타입을 선택해주세요.</span>
-                  </div>
-                ) : PREMIUM_POINTS.map((point, rank) => {
-                  const liveScore = point._liveScore ?? 0;
-                  const scoreColor = liveScore >= 90 ? '#00C48C' : liveScore >= 75 ? '#1565C0' : liveScore >= 50 ? '#FF9B26' : '#FF5A5F';
-                  const statusLabel = liveScore >= 90 ? '최고' : liveScore >= 75 ? '활발' : liveScore >= 50 ? '보통' : 'POOR';
-                  return (
-                    <div key={point.id}
-                      onClick={() => { setViewMode('map'); handlePointClick(point); }}
-                      style={{ minWidth: '140px', background: '#fff', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(0,0,0,0.06)', border: `1px solid ${rank === 0 ? 'rgba(0,196,140,0.35)' : '#F0F2F7'}`, cursor: 'pointer', transition: 'transform 0.15s' }}
-                      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
-                      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      <div style={{ width: '100%', height: '90px', background: rank === 0 ? 'linear-gradient(135deg, #E0F7EF, #C8F0E0)' : 'linear-gradient(135deg, #E8F0FE, #D2E3FC)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '32px' }}>{EMOJI_MAP[point.type] || '⚓'}</span>
-                        {rank === 0 && <div style={{ position: 'absolute', top: '6px', left: '6px', background: 'linear-gradient(135deg,#00C48C,#00897B)', borderRadius: '6px', padding: '2px 7px' }}><span style={{ fontSize: '8px', fontWeight: '900', color: '#fff' }}>🏆 1위</span></div>}
-                        {rank > 0 && <div style={{ position: 'absolute', top: '6px', left: '6px', background: scoreColor, borderRadius: '6px', padding: '2px 6px' }}><span style={{ fontSize: '8px', fontWeight: '900', color: '#fff' }}>{statusLabel}</span></div>}
-                        <div style={{ position: 'absolute', top: '6px', right: '6px', background: liveScore >= 75 ? '#FFD700' : 'rgba(0,0,0,0.55)', borderRadius: '6px', padding: '2px 6px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                          <span style={{ fontSize: '9px', fontWeight: '900', color: liveScore >= 75 ? '#1A1A2E' : '#fff' }}>{liveScore}점</span>
-                        </div>
-                      </div>
-                      <div style={{ padding: '8px 10px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{point.name}</div>
-                        {/* ✅ TYPE-BADGE: 포인트 타입 뱃지 추가 */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '8px', background: '#F0F5FF', color: '#1565C0', padding: '1px 5px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>{point.type}</span>
-                          <span style={{ fontSize: '9px', color: '#AAB0BE', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{point.region} · {point.fish.split(',')[0]}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-
-
-            {/* 조황 보고 */}
-            <div style={{ padding: '10px 16px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>방금 올라온 조황</h3>
-              {recentPosts.length > 0 ? recentPosts.map(post => (
-                <div
-                  key={String(post._id || post.id)}
-                  onClick={() => navigate(`/community?tab=open&postId=${String(post._id || post.id)}`)}
-                  style={{
-                    background: '#fff', borderRadius: '12px', padding: '10px 12px', marginBottom: '8px',
-                    display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #F0F2F7',
-                    cursor: 'pointer', transition: 'all 0.18s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,86,210,0.13)'; e.currentTarget.style.borderColor = '#C8D8F5'; }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = '#F0F2F7'; }}
-                >
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0056D2, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '18px' }}>
-                    🎣
-                  </div>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(post.content || '').slice(0, 80)}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                      <span style={{ fontSize: '10px', color: '#AAB0BE', fontWeight: '700' }}>@{post.author}</span>
-                      <span style={{ fontSize: '9px', background: '#F0F5FF', color: '#0056D2', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
-                    </div>
-                  </div>
-                  <div style={{ color: '#C8D8F5', flexShrink: 0 }}>›</div>
-                </div>
-              )) : (
-                <div style={{ padding: '14px', textAlign: 'center', color: '#AAB0BE', fontSize: '12px', fontWeight: '700', border: '1px dotted #D0D5E0', borderRadius: '12px' }}>
-                  오늘의 첫 조황을 공유해보세요! 🎣
-                </div>
-              )}
-            </div>
-
-            {/* 미끼 팁 */}
-            <div style={{ padding: '4px 16px 20px' }}>
-              <div style={{ backgroundColor: '#1A1A2E', borderRadius: '16px', padding: '14px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
-                  {baitTip.icon}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '9px', fontWeight: '900', color: '#FFB300', marginBottom: '3px' }}>
-                    오늘의 미끼 팁 · {selectedPoint?.name?.slice(0, 8) || '현재 포인트'}
-                  </div>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#fff', lineHeight: 1.45 }}>
-                    {baitTip.text}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── 1:1 고객센터 문의 ─────────────────────────────────── */}
-            <CsInquirySection user={user} isAdmin={isAdmin} />
-
-
-          </div>
-        </div>
+        <DashboardView
+          viewMode={viewMode}
+          selectedPoint={selectedPoint}
+          tideData={tideData}
+          precisionData={precisionData}
+          score={score}
+          phase={phase}
+          isGolden={isGolden}
+          mainAdvice={mainAdvice}
+          alertAdvice={alertAdvice}
+          dynamicAlert={dynamicAlert}
+          baitTip={baitTip}
+          scoreStyle={scoreStyle}
+          favorites={favorites}
+          setViewMode={setViewMode}
+          handlePointClick={handlePointClick}
+          canAccessPremium={canAccessPremium}
+          showSecretPoints={showSecretPoints}
+          setShowSecretPoints={setShowSecretPoints}
+          addToast={addToast}
+          weatherCache={weatherCache}
+          PREMIUM_POINTS={PREMIUM_POINTS}
+          recentPosts={recentPosts}
+          user={user}
+          isAdmin={isAdmin}
+          currentTier={currentTier}
+          filter={filter}
+          setFilter={setFilter}
+          searchRef={searchRef}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchResults={searchResults}
+          setSearchResults={setSearchResults}
+          showSearch={showSearch}
+          setShowSearch={setShowSearch}
+          handleSearch={handleSearch}
+          DEFAULT_POINT={DEFAULT_POINT}
+          EMOJI_MAP={EMOJI_MAP}
+          findNearestStation={findNearestStation}
+          evaluateFishingCondition={evaluateFishingCondition}
+          getPointSpecificData={getPointSpecificData}
+          setCctvData={setCctvData}
+          setShowCCTV={setShowCCTV}
+        />
 
         {/* ── FREE 플랜 업그레이드 유도 모달 ── */}
-
         {showUpgradeModal && (
-          <div
-            onClick={() => setShowUpgradeModal(false)}
-            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1200, backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
-          >
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{ background: 'linear-gradient(160deg, #0a0a1a 0%, #0d1b3e 100%)', borderRadius: '28px', padding: '32px 28px', width: '100%', maxWidth: '380px', border: '1.5px solid rgba(100,160,255,0.25)', boxShadow: '0 24px 80px rgba(0,86,210,0.35)' }}
-            >
-              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                <div style={{ fontSize: '48px', marginBottom: '14px' }}>🔒</div>
-                <div style={{ fontSize: '18px', fontWeight: '950', color: '#fff', letterSpacing: '-0.04em', marginBottom: '8px' }}>오늘 무료 입장 3회 완료</div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: 1.6 }}>
-                  무료 플랜은 포인트 상세를 하루 3회까지 열람할 수 있어요.<br/>
-                  <strong style={{ color: '#64B5F6' }}>LITE 이상 플랜에서 무제한 입장</strong> 가능합니다.
-                </div>
-              </div>
-
-              <div style={{ background: 'rgba(100,160,255,0.08)', borderRadius: '16px', padding: '16px', marginBottom: '20px', border: '1px solid rgba(100,160,255,0.15)' }}>
-                <div style={{ fontSize: '11px', fontWeight: '900', color: '#64B5F6', marginBottom: '10px', letterSpacing: '0.04em' }}>⭐ LITE 플랜 혜택</div>
-                {[['🗺️ 포인트 상세', '무제한 입장'], ['📡 실시간 CCTV', '라이브 영상'], ['⭐ 비밀포인트', '황금 포인트 공개'], ['🔥 스마트 히트맵', '수온·조황 분석']].map(([icon, desc]) => (
-                  <div key={icon} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>
-                    <span>{icon}</span>
-                    <span style={{ color: '#00C48C' }}>✓ {desc}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={() => { setShowUpgradeModal(false); navigate('/vvip-subscribe'); }}
-                style={{ width: '100%', padding: '15px', background: 'linear-gradient(135deg, #1565C0, #0D47A1)', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '14px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px', boxShadow: '0 8px 24px rgba(21,101,192,0.5)', letterSpacing: '-0.03em' }}
-              >
-                🚀 LITE 플랜으로 업그레이드
-              </button>
-              <button
-                onClick={() => setShowUpgradeModal(false)}
-                style={{ width: '100%', padding: '12px', background: 'transparent', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-              >
-                내일 다시 방문하기
-              </button>
-            </div>
-          </div>
+          <UpgradeModal onClose={() => setShowUpgradeModal(false)} />
         )}
 
         {/* ── 바텀 시트 (포인트 상세) ── */}
@@ -1488,68 +1081,19 @@ export default function MapHome() {
           {selectedPoint && (
             <FishingPointBottomSheet 
               selectedPoint={selectedPoint} 
-              onClose={closeSheet} 
+              onClose={closeSheet}
+              onConditionReady={(cond, pointId) => setSharedCond({ cond, pointId })}
             />
           )}
         </div>
 
         {/* ── CCTV 모달 ── */}
         {showCCTV && cctvData && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1200, display: 'flex', flexDirection: 'column' }}>
-            {/* 헤더 */}
-            <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginBottom: '2px', letterSpacing: '0.05em' }}>
-                  📡 {cctvData.label || '실시간 현장 영상'}
-                </div>
-                <div style={{ fontSize: '16px', fontWeight: '950', color: '#fff' }}>{selectedPoint?.name}</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '600', marginTop: '2px' }}>
-                  {cctvData.areaName} · {cctvData.region}
-                </div>
-              </div>
-              <button onClick={() => { setShowCCTV(false); setCctvData(null); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <X size={18} color="#fff" />
-              </button>
-            </div>
-
-            {/* 영상/이미지 */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-              {(cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
-                <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-                  <iframe
-                    src={cctvData.url}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                  />
-                </div>
-              ) : cctvData.fallbackImg ? (
-                <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-                  <img
-                    src={cctvData.fallbackImg}
-                    alt={cctvData.areaName}
-                    style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
-                  />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
-                    <div style={{ fontSize: '11px', color: '#FFD700', fontWeight: '800' }}>📷 현장 대표 이미지</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '2px' }}>실시간 스트리밍 준비 중 · 연결 시 자동 업데이트</div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
-                  <AlertCircle size={40} style={{ margin: '0 auto 10px', display: 'block' }} />
-                  <div style={{ fontSize: '14px', fontWeight: '700' }}>영상 준비 중입니다</div>
-                </div>
-              )}
-            </div>
-
-            {/* 하단 안내 */}
-            <div style={{ padding: '12px 20px 30px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: '700', textAlign: 'center' }}>
-                {cctvData.type === 'youtube' ? '📺 YouTube 라이브 스트리밍 연동 (지자체 공식 채널)' : cctvData.type === 'iframe' ? '🔗 커스텀 스트림 연동 (관리자 직접 설정)' : '📡 지역 대표 해안 이미지 · 실시간 스트리밍 추가 예정'}
-              </div>
-            </div>
-          </div>
+          <CctvModal
+            cctvData={cctvData}
+            selectedPoint={selectedPoint}
+            onClose={() => { setShowCCTV(false); setCctvData(null); }}
+          />
         )}
 
         {/* 스핀 및 특수효과 애니메이션 */}

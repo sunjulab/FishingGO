@@ -12,13 +12,13 @@ function StatCard({ label, value, icon: Icon, color, sub }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontWeight: '700' }}>{label}</span>
+        <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700' }}>{label}</span>
         <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={16} color={color} />
         </div>
       </div>
-      <div style={{ fontSize: '26px', fontWeight: '950', color: '#fff', lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>{sub}</div>}
+      <div style={{ fontSize: `calc(26px * var(--fs, 1))`, fontWeight: '950', color: '#fff', lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>{sub}</div>}
     </div>
   );
 }
@@ -114,9 +114,9 @@ export default function AdminDashboard() {
           <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <ArrowLeft size={22} color="#fff" />
           </button>
-          <span style={{ fontSize: '18px', fontWeight: '950' }}>⚙️ 수익 대시보드</span>
+          <span style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950' }}>⚙️ 수익 대시보드</span>
         </div>
-        <button onClick={fetchStats} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800' }}>
+        <button onClick={fetchStats} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>
           <RefreshCw size={14} color="#fff" /> 새로고침
         </button>
       </div>
@@ -132,20 +132,20 @@ export default function AdminDashboard() {
         {error && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,59,48,0.1)', border: '1px solid rgba(255,59,48,0.2)', borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
             <AlertCircle size={18} color="#FF5A5F" />
-            <p style={{ margin: 0, fontSize: '13px', color: '#FF5A5F', fontWeight: '800' }}>{error}</p>
+            <p style={{ margin: 0, fontSize: `calc(13px * var(--fs, 1))`, color: '#FF5A5F', fontWeight: '800' }}>{error}</p>
           </div>
         )}
 
         {/* ── 사용자 현황 통계 (userStats 독립 조건 — stats 실패해도 표시) ── */}
         {userStats && (
           <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>👥 사용자 현황</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button onClick={() => setAutoRefresh(r => !r)} style={{ background: autoRefresh ? 'rgba(0,196,140,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: autoRefresh ? '#00C48C' : 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: '800' }}>
+                <button onClick={() => setAutoRefresh(r => !r)} style={{ background: autoRefresh ? 'rgba(0,196,140,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: autoRefresh ? '#00C48C' : 'rgba(255,255,255,0.5)', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800' }}>
                   {autoRefresh ? '🔴 자동갱신 중' : '⏸ 자동갱신'}
                 </button>
-                <button onClick={fetchUserStats} disabled={userStatsLoading} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <button onClick={fetchUserStats} disabled={userStatsLoading} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <RefreshCw size={11} />{userStatsLoading ? '...' : '갱신'}
                 </button>
               </div>
@@ -154,20 +154,20 @@ export default function AdminDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
               <div style={{ background: 'rgba(100,181,246,0.08)', border: '1px solid rgba(100,181,246,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
                 <Users size={18} color="#64B5F6" style={{ marginBottom: '6px' }} />
-                <div style={{ fontSize: '22px', fontWeight: '950', color: '#fff', lineHeight: 1 }}>{(userStats.totalUsers || 0).toLocaleString()}</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>전체 가입자</div>
+                <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#fff', lineHeight: 1 }}>{(userStats.totalUsers || 0).toLocaleString()}</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>전체 가입자</div>
               </div>
               <div style={{ background: 'rgba(0,196,140,0.08)', border: '1px solid rgba(0,196,140,0.25)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: '6px', right: '8px', width: '7px', height: '7px', borderRadius: '50%', background: '#00C48C', boxShadow: '0 0 0 2px rgba(0,196,140,0.3)', animation: 'pulse 2s infinite' }} />
                 <Wifi size={18} color="#00C48C" style={{ marginBottom: '6px' }} />
-                <div style={{ fontSize: '22px', fontWeight: '950', color: '#00C48C', lineHeight: 1 }}>{userStats.onlineNow || 0}</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>현재 접속 중</div>
-                <div style={{ fontSize: '9px', color: 'rgba(0,196,140,0.6)', fontWeight: '600' }}>5분 이내 활동</div>
+                <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#00C48C', lineHeight: 1 }}>{userStats.onlineNow || 0}</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>현재 접속 중</div>
+                <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: 'rgba(0,196,140,0.6)', fontWeight: '600' }}>5분 이내 활동</div>
               </div>
               <div style={{ background: 'rgba(255,90,95,0.08)', border: '1px solid rgba(255,90,95,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
                 <WifiOff size={18} color="#FF5A5F" style={{ marginBottom: '6px' }} />
-                <div style={{ fontSize: '22px', fontWeight: '950', color: '#FF5A5F', lineHeight: 1 }}>{(userStats.offlineUsers || 0).toLocaleString()}</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>미접속 (24h)</div>
+                <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#FF5A5F', lineHeight: 1 }}>{(userStats.offlineUsers || 0).toLocaleString()}</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>미접속 (24h)</div>
               </div>
             </div>
             {/* 보조 지표 2개 */}
@@ -175,22 +175,22 @@ export default function AdminDashboard() {
               <div style={{ background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Activity size={16} color="#FFD700" />
                 <div>
-                  <div style={{ fontSize: '18px', fontWeight: '950', color: '#FFD700' }}>{userStats.onlineToday || 0}</div>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>오늘 접속자</div>
+                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#FFD700' }}>{userStats.onlineToday || 0}</div>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>오늘 접속자</div>
                 </div>
               </div>
               <div style={{ background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(255,155,38,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <UserPlus size={16} color="#FF9B26" />
                 <div>
-                  <div style={{ fontSize: '18px', fontWeight: '950', color: '#FF9B26' }}>{userStats.newUsers7d || 0}</div>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>신규 가입 (7일)</div>
+                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#FF9B26' }}>{userStats.newUsers7d || 0}</div>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>신규 가입 (7일)</div>
                 </div>
               </div>
             </div>
             {/* 티어별 분포 미니 바 */}
             {userStats.tierBreakdown && (
               <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px 14px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ fontSize: '10px', fontWeight: '800', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>플랜별 가입자</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>플랜별 가입자</div>
                 {[
                   ['FREE',          '무료',           '#8E8E93'],
                   ['BUSINESS_LITE', '라이트',         '#64B5F6'],
@@ -203,24 +203,24 @@ export default function AdminDashboard() {
                   return (
                     <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                       <div style={{ width: '68px', flexShrink: 0 }}>
-                        <div style={{ fontSize: '10px', fontWeight: '900', color }}>{label}</div>
-                        <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.25)', fontWeight: '600' }}>{tier}</div>
+                        <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color }}>{label}</div>
+                        <div style={{ fontSize: `calc(8px * var(--fs, 1))`, color: 'rgba(255,255,255,0.25)', fontWeight: '600' }}>{tier}</div>
                       </div>
                       <div style={{ flex: 1, height: '5px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
                       </div>
-                      <span style={{ fontSize: '11px', color: cnt > 0 ? color : 'rgba(255,255,255,0.3)', fontWeight: '900', minWidth: '28px', textAlign: 'right' }}>{cnt}명</span>
+                      <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: cnt > 0 ? color : 'rgba(255,255,255,0.3)', fontWeight: '900', minWidth: '28px', textAlign: 'right' }}>{cnt}명</span>
                     </div>
                   );
                 })}
                 {/* DB 원시 티어 디버그 — 예상 밖의 티어명 발견 시 표시 */}
                 {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r)) && (
                   <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div style={{ fontSize: '9px', fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ DB 원시 티어 (정규화 필요)</div>
+                    <div style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ DB 원시 티어 (정규화 필요)</div>
                     {Object.entries(userStats.rawTiers)
                       .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r))
                       .map(([raw, cnt]) => (
-                        <div key={raw} style={{ fontSize: '9px', color: 'rgba(255,100,100,0.7)', fontWeight: '700' }}>{raw}: {cnt}명</div>
+                        <div key={raw} style={{ fontSize: `calc(9px * var(--fs, 1))`, color: 'rgba(255,100,100,0.7)', fontWeight: '700' }}>{raw}: {cnt}명</div>
                       ))
                     }
                   </div>
@@ -245,12 +245,12 @@ export default function AdminDashboard() {
             {/* 플랜별 분포 */}
             {Object.keys(planBreakdown).length > 0 && (
               <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '16px', padding: '18px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '14px' }}>플랜별 수익</div>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '14px' }}>플랜별 수익</div>
                 {Object.entries(planBreakdown).map(([plan, data]) => (
                   <div key={plan} style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '900', color: PLAN_COLOR[plan] || '#fff' }}>{plan}</span>
-                      <span style={{ fontSize: '13px', fontWeight: '950', color: '#fff' }}>
+                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: PLAN_COLOR[plan] || '#fff' }}>{plan}</span>
+                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#fff' }}>
                         {(data.revenue || 0).toLocaleString()}원 <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>({data.count}명)</span>
                       </span>
                     </div>
@@ -265,21 +265,21 @@ export default function AdminDashboard() {
             {/* 최근 결제 내역 */}
             {stats.recentPayments?.length > 0 && (
               <div>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px' }}>최근 결제 내역</div>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px' }}>최근 결제 내역</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {stats.recentPayments.map((p, i) => (
                     <div key={String(p._id || p.merchant_uid || i)} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>{p.userName || p.userId}</div>
-                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>
+                        <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{p.userName || p.userId}</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>
                           {p.planId} · {PG_LABEL[p.pgProvider] || p.pgProvider} · {new Date(p.createdAt).toLocaleDateString('ko-KR')}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '14px', fontWeight: '950', color: p.status === 'paid' ? '#00C48C' : '#FF5A5F' }}>
+                        <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: p.status === 'paid' ? '#00C48C' : '#FF5A5F' }}>
                           {(p.amount || 0).toLocaleString()}원
                         </div>
-                        <div style={{ fontSize: '10px', fontWeight: '800', color: p.status === 'paid' ? '#00C48C' : '#FF5A5F', marginTop: '2px' }}>
+                        <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: p.status === 'paid' ? '#00C48C' : '#FF5A5F', marginTop: '2px' }}>
                           {p.status === 'paid' ? '완료' : p.status === 'failed' ? '실패' : p.status}
                         </div>
                       </div>
@@ -295,12 +295,12 @@ export default function AdminDashboard() {
         <div style={{ marginTop: '24px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', overflow: 'hidden' }}>
           <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BellRing size={18} color="#FFD700" />
-            <span style={{ fontSize: '14px', fontWeight: '900', color: '#fff' }}>실시간 알림 발송</span>
+            <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>실시간 알림 발송</span>
           </div>
           {/* 탭 */}
           <div style={{ display: 'flex', padding: '12px 18px 0', gap: '8px' }}>
             {[{ id: 'broadcast', label: '무선 전체' }, { id: 'push', label: '개인 푸시' }].map(t => (
-              <button key={t.id} onClick={() => setAlertTab(t.id)} style={{ padding: '6px 14px', borderRadius: '10px', border: 'none', fontSize: '12px', fontWeight: '900', cursor: 'pointer', background: alertTab === t.id ? '#FFD700' : 'rgba(255,255,255,0.08)', color: alertTab === t.id ? '#1A1A2E' : 'rgba(255,255,255,0.5)', transition: 'all 0.15s' }}>
+              <button key={t.id} onClick={() => setAlertTab(t.id)} style={{ padding: '6px 14px', borderRadius: '10px', border: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', background: alertTab === t.id ? '#FFD700' : 'rgba(255,255,255,0.08)', color: alertTab === t.id ? '#1A1A2E' : 'rgba(255,255,255,0.5)', transition: 'all 0.15s' }}>
                 {t.label}
               </button>
             ))}
@@ -309,8 +309,8 @@ export default function AdminDashboard() {
           <div style={{ padding: '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {alertTab === 'broadcast' ? (
               <>
-                <input value={alertMsg} onChange={e => setAlertMsg(e.target.value)} placeholder="알림 메시지 (ex: 서검 한치 조황 폭발화!)" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: '700', outline: 'none' }} />
-                <input value={alertLocation} onChange={e => setAlertLocation(e.target.value)} placeholder="위치 (ex: 서검도 갯바위, 선택사항)" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: '700', outline: 'none' }} /> {/* ✅ 30TH-C3: '갌바위' → '갯바위' 오타 수정 */}
+                <input value={alertMsg} onChange={e => setAlertMsg(e.target.value)} placeholder="알림 메시지 (ex: 서검 한치 조황 폭발화!)" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }} />
+                <input value={alertLocation} onChange={e => setAlertLocation(e.target.value)} placeholder="위치 (ex: 서검도 갯바위, 선택사항)" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }} /> {/* ✅ 30TH-C3: '갌바위' → '갯바위' 오타 수정 */}
                 <button
                   disabled={!alertMsg.trim() || alertSending}
                   onClick={async () => {
@@ -323,16 +323,16 @@ export default function AdminDashboard() {
                     } catch (err) { addToast(err.response?.data?.error || '발송 실패', 'error'); }
                     finally { setAlertSending(false); }
                   }}
-                  style={{ padding: '13px', border: 'none', borderRadius: '12px', background: alertMsg.trim() ? 'linear-gradient(135deg,#FFD700,#FF9B26)' : 'rgba(255,255,255,0.06)', color: alertMsg.trim() ? '#1A1A2E' : 'rgba(255,255,255,0.25)', fontWeight: '950', fontSize: '14px', cursor: alertMsg.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                  style={{ padding: '13px', border: 'none', borderRadius: '12px', background: alertMsg.trim() ? 'linear-gradient(135deg,#FFD700,#FF9B26)' : 'rgba(255,255,255,0.06)', color: alertMsg.trim() ? '#1A1A2E' : 'rgba(255,255,255,0.25)', fontWeight: '950', fontSize: `calc(14px * var(--fs, 1))`, cursor: alertMsg.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
                 >
                   <Send size={16} />{alertSending ? '발송 중...' : '전체 알림 발송'}
                 </button>
               </>
             ) : (
               <>
-                <input value={pushEmail} onChange={e => setPushEmail(e.target.value)} placeholder="대상 이메일" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: '700', outline: 'none' }} />
-                <input value={pushTitle} onChange={e => setPushTitle(e.target.value)} placeholder="알림 제목 (선택)" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: '700', outline: 'none' }} />
-                <input value={pushMsg} onChange={e => setPushMsg(e.target.value)} placeholder="개인 메시지" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: '700', outline: 'none' }} />
+                <input value={pushEmail} onChange={e => setPushEmail(e.target.value)} placeholder="대상 이메일" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }} />
+                <input value={pushTitle} onChange={e => setPushTitle(e.target.value)} placeholder="알림 제목 (선택)" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }} />
+                <input value={pushMsg} onChange={e => setPushMsg(e.target.value)} placeholder="개인 메시지" style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }} />
                 <button
                   disabled={!pushEmail.trim() || !pushMsg.trim() || alertSending}
                   onClick={async () => {
@@ -344,7 +344,7 @@ export default function AdminDashboard() {
                     } catch (err) { addToast(err.response?.data?.error || '발송 실패', 'error'); }
                     finally { setAlertSending(false); }
                   }}
-                  style={{ padding: '13px', border: 'none', borderRadius: '12px', background: pushEmail.trim() && pushMsg.trim() ? 'linear-gradient(135deg,#64B5F6,#0056D2)' : 'rgba(255,255,255,0.06)', color: pushEmail.trim() && pushMsg.trim() ? '#fff' : 'rgba(255,255,255,0.25)', fontWeight: '950', fontSize: '14px', cursor: pushEmail.trim() && pushMsg.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                  style={{ padding: '13px', border: 'none', borderRadius: '12px', background: pushEmail.trim() && pushMsg.trim() ? 'linear-gradient(135deg,#64B5F6,#0056D2)' : 'rgba(255,255,255,0.06)', color: pushEmail.trim() && pushMsg.trim() ? '#fff' : 'rgba(255,255,255,0.25)', fontWeight: '950', fontSize: `calc(14px * var(--fs, 1))`, cursor: pushEmail.trim() && pushMsg.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
                 >
                   <Send size={16} />{alertSending ? '발송 중...' : '개인 푸시 발송'}
                 </button>
@@ -423,7 +423,7 @@ function CsAdminPanel({ addToast }) {
 
   const pendingCnt = items.filter(i => i.status === 'pending').length;
 
-  const inp = { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '11px 14px', color: '#fff', fontSize: '13px', fontWeight: '700', outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' };
+  const inp = { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '11px 14px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' };
 
   return (
     <div style={{ marginTop: '24px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', overflow: 'hidden' }}>
@@ -431,18 +431,18 @@ function CsAdminPanel({ addToast }) {
       <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <MessageSquare size={18} color="#64B5F6" />
-          <span style={{ fontSize: '14px', fontWeight: '900', color: '#fff' }}>1:1 고객문의 관리</span>
+          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>1:1 고객문의 관리</span>
           {pendingCnt > 0 && (
-            <span style={{ background: '#FF5A5F', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '20px' }}>
+            <span style={{ background: '#FF5A5F', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '2px 8px', borderRadius: '20px' }}>
               미답변 {pendingCnt}건
             </span>
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setShowFilter(f => !f)} style={{ background: showFilter ? 'rgba(100,181,246,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', color: '#64B5F6', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800' }}>
+          <button onClick={() => setShowFilter(f => !f)} style={{ background: showFilter ? 'rgba(100,181,246,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', color: '#64B5F6', display: 'flex', alignItems: 'center', gap: '5px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>
             <Filter size={13} /> 필터
           </button>
-          <button onClick={fetchAll} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800' }}>
+          <button onClick={fetchAll} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>
             <RefreshCw size={13} /> 새로고침
           </button>
         </div>
@@ -454,7 +454,7 @@ function CsAdminPanel({ addToast }) {
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {['all', 'pending', 'answered'].map(s => (
               <button key={s} onClick={() => setFilterSt(s)}
-                style={{ padding: '5px 12px', borderRadius: '10px', border: 'none', fontSize: '11px', fontWeight: '900', cursor: 'pointer',
+                style={{ padding: '5px 12px', borderRadius: '10px', border: 'none', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer',
                   background: filterSt === s ? '#64B5F6' : 'rgba(255,255,255,0.08)',
                   color: filterSt === s ? '#0d1b3e' : 'rgba(255,255,255,0.55)' }}>
                 {s === 'all' ? '전체' : s === 'pending' ? '⏳ 대기' : '✅ 완료'}
@@ -464,7 +464,7 @@ function CsAdminPanel({ addToast }) {
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {CATS.map(c => (
               <button key={c} onClick={() => setFilterCat(c)}
-                style={{ padding: '5px 12px', borderRadius: '10px', border: 'none', fontSize: '11px', fontWeight: '900', cursor: 'pointer',
+                style={{ padding: '5px 12px', borderRadius: '10px', border: 'none', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer',
                   background: filterCat === c ? '#FFD700' : 'rgba(255,255,255,0.08)',
                   color: filterCat === c ? '#1A1A2E' : 'rgba(255,255,255,0.55)' }}>
                 {c}
@@ -476,14 +476,14 @@ function CsAdminPanel({ addToast }) {
 
       {/* 목록 */}
       <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {loading && <div style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>불러오는 중...</div>}
+        {loading && <div style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.4)', fontSize: `calc(13px * var(--fs, 1))` }}>불러오는 중...</div>}
         {!loading && csError && (
-          <div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,90,95,0.7)', fontSize: '12px', border: '1px dashed rgba(255,90,95,0.2)', borderRadius: '12px', fontWeight: '700' }}>
-            ⚠️ 문의 목록을 불러오지 못했습니다. <button onClick={fetchAll} style={{ background: 'none', border: 'none', color: '#64B5F6', cursor: 'pointer', fontWeight: '800', fontSize: '12px' }}>재시도</button>
+          <div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,90,95,0.7)', fontSize: `calc(12px * var(--fs, 1))`, border: '1px dashed rgba(255,90,95,0.2)', borderRadius: '12px', fontWeight: '700' }}>
+            ⚠️ 문의 목록을 불러오지 못했습니다. <button onClick={fetchAll} style={{ background: 'none', border: 'none', color: '#64B5F6', cursor: 'pointer', fontWeight: '800', fontSize: `calc(12px * var(--fs, 1))` }}>재시도</button>
           </div>
         )}
         {!loading && !csError && filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.3)', fontSize: '13px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>문의 내역이 없습니다.</div>
+          <div style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.3)', fontSize: `calc(13px * var(--fs, 1))`, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>문의 내역이 없습니다.</div>
         )}
         {filtered.map(item => {
           const cfg = STATUS_CFG[item.status] || STATUS_CFG.pending;
@@ -495,15 +495,15 @@ function CsAdminPanel({ addToast }) {
                 style={{ padding: '12px 14px', cursor: 'pointer', background: item.status === 'pending' ? 'rgba(255,155,38,0.05)' : 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '5px' }}>
-                    <span style={{ fontSize: '9px', background: 'rgba(100,181,246,0.2)', color: '#64B5F6', padding: '2px 7px', borderRadius: '6px', fontWeight: '800' }}>{item.category}</span>
-                    <span style={{ fontSize: '9px', background: cfg.bg, color: cfg.color, padding: '2px 7px', borderRadius: '6px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: 'rgba(100,181,246,0.2)', color: '#64B5F6', padding: '2px 7px', borderRadius: '6px', fontWeight: '800' }}>{item.category}</span>
+                    <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: cfg.bg, color: cfg.color, padding: '2px 7px', borderRadius: '6px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '3px' }}>
                       {item.status === 'pending' ? <Clock size={9}/> : <CheckCircle size={9}/>}{cfg.label}
                     </span>
-                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>{item.nickname || item.authorEmail}</span>
-                    {item.phone && <span style={{ fontSize: '10px', color: '#FFD700', fontWeight: '700' }}>📞 {item.phone}</span>}
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>{item.nickname || item.authorEmail}</span>
+                    {item.phone && <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FFD700', fontWeight: '700' }}>📞 {item.phone}</span>}
                   </div>
-                  <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>{item.title}</div>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: '600', marginTop: '3px' }}>
+                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{item.title}</div>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '600', marginTop: '3px' }}>
                     {item.realName && `${item.realName} · `}{new Date(item.createdAt).toLocaleString('ko-KR')} · {item.id}
                   </div>
                 </div>
@@ -515,21 +515,21 @@ function CsAdminPanel({ addToast }) {
                 <div style={{ padding: '14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                   {/* 문의 내용 */}
                   <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#64B5F6', marginBottom: '6px' }}>📝 문의 내용</div>
-                    <pre style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontFamily: 'inherit', whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{item.content}</pre>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#64B5F6', marginBottom: '6px' }}>📝 문의 내용</div>
+                    <pre style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.8)', fontFamily: 'inherit', whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{item.content}</pre>
                   </div>
 
                   {/* 기존 답변 표시 */}
                   {item.reply && (
                     <div style={{ background: 'rgba(0,196,140,0.1)', border: '1px solid rgba(0,196,140,0.25)', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#00C48C', marginBottom: '6px' }}>✅ 등록된 답변 · {new Date(item.repliedAt).toLocaleString('ko-KR')}</div>
-                      <pre style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontFamily: 'inherit', whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{item.reply}</pre>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#00C48C', marginBottom: '6px' }}>✅ 등록된 답변 · {new Date(item.repliedAt).toLocaleString('ko-KR')}</div>
+                      <pre style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.8)', fontFamily: 'inherit', whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{item.reply}</pre>
                     </div>
                   )}
 
                   {/* 답변 작성 */}
                   <div>
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
                       {item.reply ? '✏️ 답변 수정' : '💬 답변 작성'}
                     </div>
                     <textarea
@@ -542,7 +542,7 @@ function CsAdminPanel({ addToast }) {
                     <button
                       onClick={() => sendReply(item.id)}
                       disabled={sendingId === item.id || !(replyMap[item.id] || '').trim()}
-                      style={{ marginTop: '8px', width: '100%', padding: '12px', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 0.2s',
+                      style={{ marginTop: '8px', width: '100%', padding: '12px', border: 'none', borderRadius: '12px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 0.2s',
                         background: (replyMap[item.id] || '').trim() ? 'linear-gradient(135deg, #00C48C, #00897B)' : 'rgba(255,255,255,0.06)',
                         color: (replyMap[item.id] || '').trim() ? '#fff' : 'rgba(255,255,255,0.25)' }}>
                       <Send size={14} />{sendingId === item.id ? '전송 중...' : '답변 등록'}
@@ -559,7 +559,7 @@ function CsAdminPanel({ addToast }) {
       {items.length > 0 && (
         <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '16px' }}>
           {[['전체', items.length, '#fff'], ['미답변', pendingCnt, '#FF9B26'], ['완료', items.filter(i=>i.status==='answered').length, '#00C48C']].map(([l, v, c]) => (
-            <div key={l} style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,0.4)' }}>
+            <div key={l} style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.4)' }}>
               {l}: <span style={{ color: c, fontWeight: '900' }}>{v}건</span>
             </div>
           ))}

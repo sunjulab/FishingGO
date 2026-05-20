@@ -263,10 +263,10 @@ export default function WeatherDashboard() {
         <div style={{ background: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F5', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)}>
             <ChevronLeft size={24} color="#1A1A2E" />
-            <span style={{ fontSize: '18px', fontWeight: '900', color: '#1A1A2E' }}>전국 해양 기상</span>
+            <span style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E' }}>전국 해양 기상</span>
           </div>
           {lastUpdated && (
-            <span style={{ fontSize: '10px', color: '#AAB0BE', fontWeight: '700' }}>
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700' }}>
               {lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 갱신
             </span>
           )}
@@ -275,7 +275,7 @@ export default function WeatherDashboard() {
         {usingFallback && (
           <div style={{ background: '#FFF8E1', borderBottom: '1px solid #FFE082', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <AlertCircle size={13} color="#F59E0B" />
-            <span style={{ fontSize: '11px', color: '#92400E', fontWeight: '700' }}>실시간 연결 실패 — 기본 해역 특성 데이터를 표시합니다.</span>
+            <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#92400E', fontWeight: '700' }}>실시간 연결 실패 — 기본 해역 특성 데이터를 표시합니다.</span>
           </div>
         )}
 
@@ -290,7 +290,7 @@ export default function WeatherDashboard() {
                 onChange={(e) => handleSearch(e.target.value)}
                 onFocus={() => searchQuery && setShowSearch(true)}
                 placeholder="포인트, 어종 검색하여 맞춤 날씨 보기"
-                style={{ border: 'none', background: 'none', fontSize: '13.5px', fontWeight: '800', outline: 'none', width: '100%', color: '#1A1A2E' }}
+                style={{ border: 'none', background: 'none', fontSize: `calc(13.5px * var(--fs, 1))`, fontWeight: '800', outline: 'none', width: '100%', color: '#1A1A2E' }}
               />
               {searchQuery && (
                 <button onClick={() => { setSearchQuery(''); setSearchResults([]); setShowSearch(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#AAB0BE', padding: 0 }}>
@@ -306,12 +306,12 @@ export default function WeatherDashboard() {
                     onMouseEnter={e => e.currentTarget.style.background = '#F8F9FC'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    <div style={{ width: '32px', height: '32px', background: '#EBF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <div style={{ width: '32px', height: '32px', background: '#EBF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(16px * var(--fs, 1))`, flexShrink: 0 }}>
                       {EMOJI_MAP[p.type] || '⚓'}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                      <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
+                      <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
                     </div>
                   </div>
                 ))}
@@ -320,7 +320,7 @@ export default function WeatherDashboard() {
             {showSearch && searchResults.length === 0 && searchQuery && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, padding: '20px', textAlign: 'center', marginTop: '6px' }}>
                 <AlertCircle size={24} color="#AAB0BE" style={{ margin: '0 auto 8px' }} />
-                <div style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '800' }}>검색 결과가 없어요</div>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800' }}>검색 결과가 없어요</div>
               </div>
             )}
           </div>
@@ -332,7 +332,7 @@ export default function WeatherDashboard() {
                 onClick={() => { setSelectedPoint(null); setLiveData(null); setActiveRegion(region); }}
                 style={{
                   padding: '10px 24px', borderRadius: '30px', border: 'none', cursor: 'pointer',
-                  fontSize: '15px', fontWeight: '800', flexShrink: 0,
+                  fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', flexShrink: 0,
                   background: (!selectedPoint && activeRegion === region) ? '#1565C0' : '#fff',
                   color:  (!selectedPoint && activeRegion === region) ? '#fff' : '#555',
                   boxShadow: (!selectedPoint && activeRegion === region) ? '0 4px 15px rgba(21,101,192,0.3)' : '0 2px 10px rgba(0,0,0,0.05)',
@@ -359,13 +359,13 @@ export default function WeatherDashboard() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', position: 'relative', zIndex: 10 }}>
               <div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', fontWeight: '700', marginBottom: '4px' }}>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.7)', fontWeight: '700', marginBottom: '4px' }}>
                   실시간 기상 측정소 {liveData ? '🟢' : '🔴'}
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '950', letterSpacing: '-0.03em' }}>{currentTitle}</div>
+                <div style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '950', letterSpacing: '-0.03em' }}>{currentTitle}</div>
               </div>
               <div style={{ background: statusIsWarn ? 'rgba(255,59,48,0.2)' : 'rgba(0,196,140,0.2)', padding: '6px 12px', borderRadius: '20px', border: statusIsWarn ? '1px solid rgba(255,59,48,0.5)' : '1px solid rgba(0,196,140,0.5)' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: statusIsWarn ? '#FF6B6B' : '#00C48C' }}>{current?.status ?? '-'}</span>
+                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: statusIsWarn ? '#FF6B6B' : '#00C48C' }}>{current?.status ?? '-'}</span>
               </div>
             </div>
 
@@ -378,27 +378,27 @@ export default function WeatherDashboard() {
               ].map(({ icon, label, value }) => (
                 <div key={label} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', opacity: 0.8 }}>
-                    {icon} <span style={{ fontSize: '12px', fontWeight: '700' }}>{label}</span>
+                    {icon} <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700' }}>{label}</span>
                   </div>
-                  <div style={{ fontSize: '18px', fontWeight: '900' }}>{value ?? '-'}</div>
+                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900' }}>{value ?? '-'}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* 조석 그래프 */}
-          <h3 style={{ fontSize: '17px', fontWeight: '900', color: '#1A1A2E', marginBottom: '14px', paddingLeft: '4px' }}>실시간 조석 그래프</h3>
+          <h3 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginBottom: '14px', paddingLeft: '4px' }}>실시간 조석 그래프</h3>
           <div style={{ background: '#fff', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', marginBottom: '24px', border: '1px solid #E5E8EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Sunrise size={20} color="#FF9B26" />
-                <span style={{ fontSize: '14px', fontWeight: '800', color: '#555' }}>
+                <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#555' }}>
                   일출 {current?.sunrise || liveData?.sunrise || localSun.sunrise}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Sunset size={20} color="#FF5A5F" />
-                <span style={{ fontSize: '14px', fontWeight: '800', color: '#555' }}>
+                <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#555' }}>
                   일몰 {current?.sunset || liveData?.sunset || localSun.sunset}
                 </span>
               </div>
@@ -410,7 +410,7 @@ export default function WeatherDashboard() {
 
             <button
               onClick={() => addToast('상세 해류도 및 기상 위성 영상은 유료 플랜에서 제공됩니다.', 'info')}
-              style={{ width: '100%', padding: '14px', background: '#F4F6FA', color: '#1565C0', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ width: '100%', padding: '14px', background: '#F4F6FA', color: '#1565C0', border: 'none', borderRadius: '14px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
               상세 위성 레이더망 보기 <ChevronDown size={16} />
             </button>

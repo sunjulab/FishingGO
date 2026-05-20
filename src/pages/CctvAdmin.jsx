@@ -224,16 +224,16 @@ export default function CctvAdmin() {
             width: '100%', maxWidth: '340px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
             border: `1.5px solid ${confirmModal.danger ? 'rgba(255,59,48,0.4)' : 'rgba(255,215,0,0.25)'}`,
           }}>
-            <div style={{ fontSize: '18px', fontWeight: '950', color: '#fff', marginBottom: '12px' }}>
+            <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#fff', marginBottom: '12px' }}>
               {confirmModal.title}
             </div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.7', whiteSpace: 'pre-line', marginBottom: '24px' }}>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', lineHeight: '1.7', whiteSpace: 'pre-line', marginBottom: '24px' }}>
               {confirmModal.message}
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={() => setConfirmModal(null)}
-                style={{ flex: 1, padding: '13px', background: 'rgba(255,255,255,0.07)', border: 'none', borderRadius: '14px', color: 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '13px', background: 'rgba(255,255,255,0.07)', border: 'none', borderRadius: '14px', color: 'rgba(255,255,255,0.6)', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
               >
                 취소
               </button>
@@ -245,7 +245,7 @@ export default function CctvAdmin() {
                     ? 'linear-gradient(135deg, #FF3B30, #C0392B)'
                     : 'linear-gradient(135deg, #FFD700, #FFA000)',
                   color: confirmModal.danger ? '#fff' : '#1A1A2E',
-                  fontSize: '14px', fontWeight: '900', cursor: 'pointer',
+                  fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer',
                 }}
               >
                 확인
@@ -266,12 +266,12 @@ export default function CctvAdmin() {
           <ArrowLeft size={18} color="#fff" />
         </button>
         <div>
-          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', letterSpacing: '0.08em' }}>MASTER ONLY</div>
-          <div style={{ fontSize: '18px', fontWeight: '950', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', letterSpacing: '0.08em' }}>MASTER ONLY</div>
+          <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Tv size={18} color="#FFD700" /> CCTV 채널 관리
           </div>
         </div>
-        <div style={{ marginLeft: 'auto', fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>
+        <div style={{ marginLeft: 'auto', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>
           {cctvList.filter(c => c.isOverride).length}개 커스텀 / {cctvList.length}개 전체
         </div>
       </div>
@@ -279,17 +279,17 @@ export default function CctvAdmin() {
       {/* 안내 배너 */}
       <div style={{ margin: '16px 16px 0', padding: '14px 16px', background: 'rgba(255,215,0,0.08)', borderRadius: '16px', border: '1px solid rgba(255,215,0,0.2)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <div style={{ fontSize: '12px', fontWeight: '900', color: '#FFD700' }}>📺 사용 방법</div>
+          <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#FFD700' }}>📺 사용 방법</div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={handleResetAll} style={{ background: 'rgba(255,100,100,0.2)', border: '1px solid rgba(255,100,100,0.5)', color: '#FF7B7B', borderRadius: '12px', padding: '6px 12px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button onClick={handleResetAll} style={{ background: 'rgba(255,100,100,0.2)', border: '1px solid rgba(255,100,100,0.5)', color: '#FF7B7B', borderRadius: '12px', padding: '6px 12px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <RotateCcw size={12} /> 설정 초기화(MOF)
             </button>
-            <button onClick={autoSyncCctvs} disabled={syncing} style={{ background: 'linear-gradient(135deg, #00C48C, #0056D2)', color: '#fff', border: 'none', borderRadius: '12px', padding: '6px 12px', fontSize: '10px', fontWeight: '800', cursor: syncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px', opacity: syncing ? 0.7 : 1 }}>
+            <button onClick={autoSyncCctvs} disabled={syncing} style={{ background: 'linear-gradient(135deg, #00C48C, #0056D2)', color: '#fff', border: 'none', borderRadius: '12px', padding: '6px 12px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', cursor: syncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px', opacity: syncing ? 0.7 : 1 }}>
               <Youtube size={12} className={syncing ? 'spin' : ''} /> {syncing ? '탐색 중...' : '자동 갱신'}
             </button>
           </div>
         </div>
-        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.6' }}>
+        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', lineHeight: '1.6' }}>
           YouTube 라이브 URL에서 <span style={{ color: '#FFD700', fontWeight: '800' }}>영상 ID(11자리)</span>만 복사하여 입력하세요.<br />
           예: youtube.com/watch?v=<span style={{ color: '#FFD700' }}>iCGFbFulG3Y</span> → <span style={{ color: '#FFD700' }}>iCGFbFulG3Y</span> 입력
         </div>
@@ -320,19 +320,19 @@ export default function CctvAdmin() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>{item.areaName}</span>
+                    <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{item.areaName}</span>
                     {item.isOverride && (
-                      <span style={{ fontSize: '9px', fontWeight: '900', background: 'rgba(100,220,100,0.2)', color: '#64DC64', padding: '2px 6px', borderRadius: '6px' }}>수정됨</span>
+                      <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', background: 'rgba(100,220,100,0.2)', color: '#64DC64', padding: '2px 6px', borderRadius: '6px' }}>수정됨</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
                     {item.obsCode} · {item.region} ·
                     <span style={{ color: item.type === 'youtube' ? '#FF6B6B' : '#64B5F6', marginLeft: '4px' }}>
                       {item.type === 'youtube' ? '▶ YouTube' : '🖼 이미지'}
                     </span>
                   </div>
                   {item.youtubeId && !isEditing && (
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', fontWeight: '600', fontFamily: 'monospace', marginTop: '2px' }}>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.25)', fontWeight: '600', fontFamily: 'monospace', marginTop: '2px' }}>
                       ID: {item.youtubeId}
                     </div>
                   )}
@@ -344,7 +344,7 @@ export default function CctvAdmin() {
                     {item.youtubeId && (
                       <button
                         onClick={() => setPreviewCode(isPreviewing ? null : item.obsCode)}
-                        style={{ background: 'rgba(255,107,107,0.15)', border: 'none', borderRadius: '10px', padding: '6px 10px', color: '#FF6B6B', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ background: 'rgba(255,107,107,0.15)', border: 'none', borderRadius: '10px', padding: '6px 10px', color: '#FF6B6B', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       >
                         {isPreviewing ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                         미리보기
@@ -355,7 +355,7 @@ export default function CctvAdmin() {
                         <RotateCcw size={13} />
                       </button>
                     )}
-                    <button onClick={() => startEdit(item)} style={{ background: 'rgba(255,215,0,0.15)', border: 'none', borderRadius: '10px', padding: '6px 12px', color: '#FFD700', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button onClick={() => startEdit(item)} style={{ background: 'rgba(255,215,0,0.15)', border: 'none', borderRadius: '10px', padding: '6px 12px', color: '#FFD700', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Edit3 size={12} /> 수정
                     </button>
                   </div>
@@ -394,7 +394,7 @@ export default function CctvAdmin() {
                         color: editValues.type === t
                           ? (t === 'youtube' ? '#FF6B6B' : t === 'iframe' ? '#64DC64' : '#64B5F6')
                           : 'rgba(255,255,255,0.4)',
-                        fontSize: '11px', fontWeight: '800', cursor: 'pointer',
+                        fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                       }}>
                         {t === 'youtube' ? <Youtube size={12} /> : t === 'iframe' ? <Link size={12} /> : <Image size={12} />}
@@ -406,7 +406,7 @@ export default function CctvAdmin() {
                   {/* YouTube ID 입력 */}
                   {editValues.type === 'youtube' && (
                     <div style={{ marginBottom: '10px' }}>
-                      <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
+                      <label style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
                         YouTube 영상 ID (URL의 ?v= 뒤 11자리 또는 전체 URL)
                       </label>
                       <input
@@ -416,12 +416,12 @@ export default function CctvAdmin() {
                         style={{
                           width: '100%', padding: '12px 14px',
                           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)',
-                          borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: '700',
+                          borderRadius: '12px', color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700',
                           outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box'
                         }}
                       />
                       {editValues.youtubeId && (
-                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
+                        <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
                           미리보기: youtube.com/watch?v={editValues.youtubeId}
                         </div>
                       )}
@@ -431,7 +431,7 @@ export default function CctvAdmin() {
                   {/* 커스텀 URL 입력 (iframe 타입) */}
                   {editValues.type === 'iframe' && (
                     <div style={{ marginBottom: '10px' }}>
-                      <label style={{ fontSize: '10px', color: '#64DC64', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
+                      <label style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#64DC64', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
                         🔗 커스텀 스트림 URL (iframe 임베드 가능한 모든 주소)
                       </label>
                       <input
@@ -441,11 +441,11 @@ export default function CctvAdmin() {
                         style={{
                           width: '100%', padding: '12px 14px',
                           background: 'rgba(100,220,100,0.06)', border: '1px solid rgba(100,220,100,0.3)',
-                          borderRadius: '12px', color: '#fff', fontSize: '12px', fontWeight: '700',
+                          borderRadius: '12px', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700',
                           outline: 'none', boxSizing: 'border-box'
                         }}
                       />
-                      <div style={{ fontSize: '10px', color: 'rgba(100,220,100,0.6)', marginTop: '6px', lineHeight: '1.5' }}>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(100,220,100,0.6)', marginTop: '6px', lineHeight: '1.5' }}>
                         ⚠️ iframe 임베드를 허용하는 URL만 작동합니다.<br />
                         YouTube, HLS 스트림, 지자체 CCTV 포털 등 가능
                       </div>
@@ -454,7 +454,7 @@ export default function CctvAdmin() {
 
                   {/* 라벨 입력 */}
                   <div style={{ marginBottom: '14px' }}>
-                    <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
+                    <label style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '800', marginBottom: '6px', display: 'block' }}>
                       표시 레이블 (선택)
                     </label>
                     <input
@@ -464,7 +464,7 @@ export default function CctvAdmin() {
                       style={{
                         width: '100%', padding: '10px 14px',
                         background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: '700',
+                        borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700',
                         outline: 'none', boxSizing: 'border-box'
                       }}
                     />
@@ -472,10 +472,10 @@ export default function CctvAdmin() {
 
                   {/* 저장/취소 */}
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={cancelEdit} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '12px', color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <button onClick={cancelEdit} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '12px', color: 'rgba(255,255,255,0.5)', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       <X size={14} /> 취소
                     </button>
-                    <button onClick={() => saveEdit(item.obsCode)} disabled={saving} style={{ flex: 2, padding: '12px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', border: 'none', borderRadius: '12px', color: '#1A1A2E', fontSize: '13px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: saving ? 0.7 : 1 }}>
+                    <button onClick={() => saveEdit(item.obsCode)} disabled={saving} style={{ flex: 2, padding: '12px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', border: 'none', borderRadius: '12px', color: '#1A1A2E', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: saving ? 0.7 : 1 }}>
                       <Check size={14} /> {saving ? '저장 중...' : '저장'}
                     </button>
                   </div>

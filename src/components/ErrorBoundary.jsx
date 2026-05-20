@@ -86,10 +86,10 @@ class ErrorBoundaryClass extends React.Component {
               border: '4px solid #E5E5EA', borderTopColor: '#0056D2',
               animation: 'spin 0.8s linear infinite', marginBottom: '20px',
             }} />
-            <p style={{ fontSize: '15px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px' }}>
+            <p style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', marginBottom: '6px' }}>
               🎣 재연결 중...
             </p>
-            <p style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '600' }}>
+            <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>
               자동 복구 시도 중 ({retries}/{MAX_AUTO_RETRIES})
             </p>
           </div>
@@ -111,18 +111,18 @@ class ErrorBoundaryClass extends React.Component {
           <div style={{
             width: '72px', height: '72px', borderRadius: '50%',
             backgroundColor: '#FFF0F0', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', fontSize: '32px', marginBottom: '20px'
+            justifyContent: 'center', fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '20px'
           }}>
             🎣
           </div>
 
           {/* 제목 */}
-          <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#1c1c1e', marginBottom: '8px' }}>
+          <h2 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', marginBottom: '8px' }}>
             잠시 문제가 발생했습니다
           </h2>
 
           {/* 설명 */}
-          <p style={{ fontSize: '14px', color: '#8E8E93', lineHeight: '1.6', marginBottom: '28px', maxWidth: '280px' }}>
+          <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#8E8E93', lineHeight: '1.6', marginBottom: '28px', maxWidth: '280px' }}>
             자동 복구를 {MAX_AUTO_RETRIES}회 시도했지만 실패했습니다.<br />
             아래 버튼을 눌러 다시 시도해주세요.
           </p>
@@ -133,7 +133,7 @@ class ErrorBoundaryClass extends React.Component {
             style={{
               padding: '14px 32px', backgroundColor: '#F2F2F7',
               color: '#1c1c1e', border: 'none', borderRadius: '12px',
-              fontSize: '15px', fontWeight: '700', cursor: 'pointer',
+              fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '700', cursor: 'pointer',
               marginBottom: '10px', width: '100%', maxWidth: '240px'
             }}
           >
@@ -146,7 +146,7 @@ class ErrorBoundaryClass extends React.Component {
             style={{
               padding: '14px 32px', backgroundColor: '#0056D2',
               color: '#fff', border: 'none', borderRadius: '12px',
-              fontSize: '15px', fontWeight: '700', cursor: 'pointer',
+              fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '700', cursor: 'pointer',
               marginBottom: '10px', width: '100%', maxWidth: '240px'
             }}
           >
@@ -159,7 +159,7 @@ class ErrorBoundaryClass extends React.Component {
             style={{
               padding: '14px 32px', backgroundColor: 'transparent',
               color: '#0056D2', border: '1.5px solid #0056D2', borderRadius: '12px',
-              fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+              fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '600', cursor: 'pointer',
               width: '100%', maxWidth: '240px'
             }}
           >
@@ -173,15 +173,15 @@ class ErrorBoundaryClass extends React.Component {
               background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)',
               borderRadius: '16px', padding: '16px', textAlign: 'left',
             }}>
-              <div style={{ fontSize: '11px', fontWeight: '900', color: '#DC2626', marginBottom: '8px' }}>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#DC2626', marginBottom: '8px' }}>
                 🔐 MASTER 전용 — 오류 상세
               </div>
               <details open>
-                <summary style={{ cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
+                <summary style={{ cursor: 'pointer', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
                   {this.state.error.name}: {this.state.error.message}
                 </summary>
                 <pre style={{
-                  fontSize: '10px', color: '#7F1D1D',
+                  fontSize: `calc(10px * var(--fs, 1))`, color: '#7F1D1D',
                   whiteSpace: 'pre-wrap', wordBreak: 'break-all',
                   background: 'rgba(0,0,0,0.04)', borderRadius: '8px',
                   padding: '10px', margin: '8px 0 0', maxHeight: '200px', overflowY: 'auto',

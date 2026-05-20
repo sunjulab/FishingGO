@@ -242,18 +242,18 @@ export default function VVIPSubscribe() {
           <X size={24} color="#FFD700" />
         </button>
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: '17px', fontWeight: '900', margin: 0, color: '#FFD700' }}>
+          <h1 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', margin: 0, color: '#FFD700' }}>
             {selectedPlan === 'VVIP' ? '👑 VVIP 항구 독점 구독' : '👑 프리미엄 멤버십 구독'}
           </h1>
           {selectedPlan === 'VVIP' && (
-            <div style={{ fontSize: '11px', color: 'rgba(255,215,0,0.5)', marginTop: '2px' }}>← 플랜 선택으로 돌아가기</div>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,215,0,0.5)', marginTop: '2px' }}>← 플랜 선택으로 돌아가기</div>
           )}
         </div>
         {selectedPlan === 'VVIP' && (
-          <div style={{ fontSize: '12px', color: 'rgba(255,215,0,0.7)', fontWeight: '800', textAlign: 'right' }}>
+          <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,215,0,0.7)', fontWeight: '800', textAlign: 'right' }}>
             잔여<br />
-            <span style={{ fontSize: '18px', color: availableCount > 0 ? '#00C48C' : '#FF5A5F', fontWeight: '900' }}>{availableCount}</span>
-            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>/{HARBORS_STATIC.length}</span>{/* ✅ 24TH-C4: 하드코딩 /23 → HARBORS_STATIC.length */}
+            <span style={{ fontSize: `calc(18px * var(--fs, 1))`, color: availableCount > 0 ? '#00C48C' : '#FF5A5F', fontWeight: '900' }}>{availableCount}</span>
+            <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)' }}>/{HARBORS_STATIC.length}</span>{/* ✅ 24TH-C4: 하드코딩 /23 → HARBORS_STATIC.length */}
           </div>
         )}
       </div>
@@ -263,10 +263,10 @@ export default function VVIPSubscribe() {
         <div style={{ padding: '20px 16px 0' }}>
           {/* 안내 헤더 */}
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🎣</div>
-            <div style={{ fontSize: '20px', fontWeight: '950', color: '#fff', marginBottom: '6px' }}>멤버십 플랜 선택</div>
+            <div style={{ fontSize: `calc(28px * var(--fs, 1))`, marginBottom: '8px' }}>🎣</div>
+            <div style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#fff', marginBottom: '6px' }}>멤버십 플랜 선택</div>
             {/* ✅ NEW-C5: 포트원 자동결제 구현 완료 — 기존 '마스터 안내' 문구 제거 */}
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>낚시GO 프리미엄 기능을 이용하세요<br />플랜 선택 후 즉시 정기구독이 시작됩니다</div>
+            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>낚시GO 프리미엄 기능을 이용하세요<br />플랜 선택 후 즉시 정기구독이 시작됩니다</div>
           </div>
 
           {/* 플랜 카드 */}
@@ -284,26 +284,26 @@ export default function VVIPSubscribe() {
               onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
             >
               {plan.badge && (
-                <div style={{ position: 'absolute', top: '16px', right: '16px', background: plan.hot ? '#1565C0' : 'linear-gradient(135deg,#FFD700,#FFA000)', color: plan.hot ? '#fff' : '#5C3A00', fontSize: '10px', fontWeight: '900', padding: '3px 10px', borderRadius: '12px' }}>{plan.badge}</div>
+                <div style={{ position: 'absolute', top: '16px', right: '16px', background: plan.hot ? '#1565C0' : 'linear-gradient(135deg,#FFD700,#FFA000)', color: plan.hot ? '#fff' : '#5C3A00', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 10px', borderRadius: '12px' }}>{plan.badge}</div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
                 <div style={{ width: '48px', height: '48px', background: `linear-gradient(135deg, ${plan.color}, ${plan.color}88)`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 14px ${plan.color}44` }}>
                   <Crown size={24} color={plan.id === 'VVIP' ? '#5C3A00' : '#fff'} fill={plan.id === 'VVIP' ? '#5C3A00' : 'none'} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '18px', fontWeight: '950', color: plan.color }}>{plan.label}</div>
+                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: plan.color }}>{plan.label}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
-                    <span style={{ fontSize: '22px', fontWeight: '950', color: '#fff' }}>{plan.price}</span>
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{plan.period}</span>
+                    <span style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#fff' }}>{plan.price}</span>
+                    <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)' }}>{plan.period}</span>
                   </div>
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {plan.features.map((f, i) => (
-                  <div key={i} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: '700' }}>✓ {f}</div>
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '4px 10px', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.7)', fontWeight: '700' }}>✓ {f}</div>
                 ))}
               </div>
-              <div style={{ marginTop: '14px', width: '100%', padding: '12px', background: plan.id === 'VVIP' ? 'linear-gradient(135deg,#FFD700,#FFA000)' : `${plan.color}22`, border: `1px solid ${plan.border}`, borderRadius: '12px', textAlign: 'center', fontSize: '13px', fontWeight: '900', color: plan.id === 'VVIP' ? '#1A1A2E' : plan.color }}>
+              <div style={{ marginTop: '14px', width: '100%', padding: '12px', background: plan.id === 'VVIP' ? 'linear-gradient(135deg,#FFD700,#FFA000)' : `${plan.color}22`, border: `1px solid ${plan.border}`, borderRadius: '12px', textAlign: 'center', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: plan.id === 'VVIP' ? '#1A1A2E' : plan.color }}>
                 {plan.id === 'VVIP' ? '항구 선택하러 가기 →' : `${plan.label} 구독 신청하기 →`}
               </div>
             </div>
@@ -320,32 +320,32 @@ export default function VVIPSubscribe() {
               <div style={{ width: '40px', height: '4px', background: 'rgba(255,215,0,0.3)', borderRadius: '2px', margin: '0 auto 22px' }} />
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <Crown size={36} color={plan.color} style={{ marginBottom: '8px' }} />
-                <h2 style={{ fontSize: '20px', fontWeight: '950', color: '#fff', margin: '0 0 4px' }}>{plan.label} 멤버십</h2>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', margin: 0 }}>월 {plan.price} 정기 구독</p>
+                <h2 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#fff', margin: '0 0 4px' }}>{plan.label} 멤버십</h2>
+                <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', margin: 0 }}>월 {plan.price} 정기 구독</p>
               </div>
               <div style={{ background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: '16px', padding: '18px', marginBottom: '14px' }}>
                 {[{ label: '플랜', value: plan.label }, { label: '구독 기간', value: '31일 (익월 자동갱신 알림)' }, { label: '결제 금액', value: plan.price, highlight: true }].map((row, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: i < 2 ? '10px' : 0, paddingTop: i === 2 ? '10px' : 0, borderTop: i === 2 ? '1px solid rgba(255,215,0,0.15)' : 'none' }}>
-                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>{row.label}</span>
-                    <strong style={{ fontSize: row.highlight ? '17px' : '13px', color: row.highlight ? plan.color : '#fff' }}>{row.value}</strong>
+                    <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)' }}>{row.label}</span>
+                    <strong style={{ fontSize: row.highlight ? `calc(17px * var(--fs, 1))` : `calc(13px * var(--fs, 1))`, color: row.highlight ? plan.color : '#fff' }}>{row.value}</strong>
                   </div>
                 ))}
               </div>
               {/* 결제 수단: 웹 페이지에서 선택 */}
               <div style={{ marginBottom: '14px', background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', color: 'rgba(255,215,0,0.8)', fontWeight: '800' }}>💳 결제 수단은 웹 결제 페이지에서 선택</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>카카오페이 · 토스 · 신용카드 지원</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,215,0,0.8)', fontWeight: '800' }}>💳 결제 수단은 웹 결제 페이지에서 선택</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>카카오페이 · 토스 · 신용카드 지원</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(0,100,255,0.08)', border: '1px solid rgba(0,100,255,0.2)', borderRadius: '12px', padding: '12px', marginBottom: '18px' }}>
-                <p style={{ fontSize: '12px', color: 'rgba(200,220,255,0.85)', margin: 0, lineHeight: '1.7', fontWeight: '600' }}>
+                <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(200,220,255,0.85)', margin: 0, lineHeight: '1.7', fontWeight: '600' }}>
                   🌐 <strong>웹 브라우저</strong>에서 결제가 진행됩니다.<br />
                   결제 완료 후 앱에서 로그아웃 → 재로그인하면 플랜이 활성화됩니다.
                 </p>
               </div>
-              <button onClick={() => handleLiteProPurchase(plan)} style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: `linear-gradient(135deg, ${plan.color}, ${plan.color}aa)`, color: plan.id === 'VVIP' ? '#1A1A2E' : '#fff', fontSize: '16px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
+              <button onClick={() => handleLiteProPurchase(plan)} style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: `linear-gradient(135deg, ${plan.color}, ${plan.color}aa)`, color: plan.id === 'VVIP' ? '#1A1A2E' : '#fff', fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
                 🌐 {plan.label} 결제 페이지 열기
               </button>
-              <button onClick={() => { setShowLiteProConfirm(false); setSelectedPlan(null); }} style={{ width: '100%', padding: '13px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '14px', cursor: 'pointer' }}>취소</button>
+              <button onClick={() => { setShowLiteProConfirm(false); setSelectedPlan(null); }} style={{ width: '100%', padding: '13px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.35)', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer' }}>취소</button>
             </div>
           </div>
         );
@@ -356,10 +356,10 @@ export default function VVIPSubscribe() {
       {selectedPlan === 'VVIP' && (<>
       {mySlot && (
         <div style={{ margin: '12px 16px 0', background: 'linear-gradient(135deg, #FFD700, #FF9B26)', borderRadius: '18px', padding: '16px 18px' }}>
-          <div style={{ fontSize: '10px', fontWeight: '900', color: '#5C3A00', marginBottom: '3px', letterSpacing: '0.06em' }}>내 VVIP 독점 항구</div>
-          <div style={{ fontSize: '20px', fontWeight: '950', color: '#1A1A2E' }}>👑 {mySlot.harborName}</div>
+          <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#5C3A00', marginBottom: '3px', letterSpacing: '0.06em' }}>내 VVIP 독점 항구</div>
+          <div style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E' }}>👑 {mySlot.harborName}</div>
           {mySlot.expiresAt && (
-            <div style={{ fontSize: '11px', color: '#5C3A00', fontWeight: '700', marginTop: '4px' }}>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#5C3A00', fontWeight: '700', marginTop: '4px' }}>
               만료: {new Date(mySlot.expiresAt).toLocaleDateString('ko-KR')}
             </div>
           )}
@@ -370,19 +370,19 @@ export default function VVIPSubscribe() {
       {!mySlot && (
         <div style={{ margin: '12px 16px 0', background: 'linear-gradient(135deg, #1A1A2E, #0F3460)', borderRadius: '18px', padding: '18px 20px', color: '#fff' }}>
           <Crown size={28} color="#FFD700" style={{ marginBottom: '8px' }} />
-          <div style={{ fontSize: '16px', fontWeight: '900', marginBottom: '4px' }}>항구별 선착순 1명 독점</div>
-          <div style={{ fontSize: '12px', opacity: 0.75, lineHeight: 1.6 }}>
+          <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>항구별 선착순 1명 독점</div>
+          <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.75, lineHeight: 1.6 }}>
             선택한 항구의 선상 홍보 피드 <strong style={{ color: '#FFD700' }}>최상단 영구 고정</strong>.<br />
             전국 낚시인 포인트 검색 시 가장 먼저 노출됩니다.
           </div>
           <div style={{ marginTop: '12px', display: 'flex', gap: '16px' }}>
             <div>
-              <div style={{ fontSize: '20px', fontWeight: '950', color: '#FFD700' }}>₩550,000</div>
-              <div style={{ fontSize: '10px', opacity: 0.65 }}>월 정액 · 세금계산서</div>
+              <div style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#FFD700' }}>₩550,000</div>
+              <div style={{ fontSize: `calc(10px * var(--fs, 1))`, opacity: 0.65 }}>월 정액 · 세금계산서</div>
             </div>
             <div>
-              <div style={{ fontSize: '20px', fontWeight: '950', color: availableCount > 0 ? '#00C48C' : '#FF5A5F' }}>{availableCount}석</div>
-              <div style={{ fontSize: '10px', opacity: 0.65 }}>전국 잔여 자리</div>
+              <div style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: availableCount > 0 ? '#00C48C' : '#FF5A5F' }}>{availableCount}석</div>
+              <div style={{ fontSize: `calc(10px * var(--fs, 1))`, opacity: 0.65 }}>전국 잔여 자리</div>
             </div>
           </div>
         </div>
@@ -392,7 +392,7 @@ export default function VVIPSubscribe() {
       <div style={{ padding: '14px 16px 8px', display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {REGION_TABS.map(tab => (
           <button key={tab} onClick={() => setSelectedRegion(tab)} style={{
-            padding: '7px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '800', whiteSpace: 'nowrap', cursor: 'pointer',
+            padding: '7px 14px', borderRadius: '20px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', whiteSpace: 'nowrap', cursor: 'pointer',
             border: selectedRegion === tab ? '1.5px solid #FFD700' : '1.5px solid rgba(255,255,255,0.1)',
             background: selectedRegion === tab ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.04)',
             color: selectedRegion === tab ? '#FFD700' : 'rgba(255,255,255,0.5)',
@@ -452,18 +452,18 @@ export default function VVIPSubscribe() {
               {/* 텍스트 */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '10px', background: 'rgba(255,215,0,0.15)', color: '#FFD700', padding: '2px 7px', borderRadius: '5px', fontWeight: '800' }}>{harbor.area}</span>
-                  <span style={{ fontSize: '15px', fontWeight: '900', color: harbor.isMyHarbor ? '#FFD700' : disabled ? 'rgba(255,255,255,0.25)' : '#fff' }}>
+                  <span style={{ fontSize: `calc(10px * var(--fs, 1))`, background: 'rgba(255,215,0,0.15)', color: '#FFD700', padding: '2px 7px', borderRadius: '5px', fontWeight: '800' }}>{harbor.area}</span>
+                  <span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900', color: harbor.isMyHarbor ? '#FFD700' : disabled ? 'rgba(255,255,255,0.25)' : '#fff' }}>
                     {harbor.name}
                   </span>
                   {harbor.isMyHarbor && (
-                    <span style={{ fontSize: '10px', background: '#FFD700', color: '#1A1A2E', padding: '2px 8px', borderRadius: '5px', fontWeight: '900' }}>내 자리</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, background: '#FFD700', color: '#1A1A2E', padding: '2px 8px', borderRadius: '5px', fontWeight: '900' }}>내 자리</span>
                   )}
                 </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <MapPin size={9} style={{ marginRight: '3px', verticalAlign: 'middle' }} />{harbor.desc}
                 </div>
-                <div style={{ fontSize: '11px', marginTop: '4px', fontWeight: '700' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, marginTop: '4px', fontWeight: '700' }}>
                   {harbor.isMyHarbor
                     ? <span style={{ color: '#FFD700', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={11} /> 독점 활성 중</span>
                     : harbor.isTaken
@@ -475,7 +475,7 @@ export default function VVIPSubscribe() {
               </div>
 
               {!disabled && !harbor.isMyHarbor && (
-                <div style={{ color: '#FFD700', fontSize: '20px', fontWeight: '900', flexShrink: 0 }}>›</div>
+                <div style={{ color: '#FFD700', fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', flexShrink: 0 }}>›</div>
               )}
             </div>
           );
@@ -489,8 +489,8 @@ export default function VVIPSubscribe() {
             <div style={{ width: '40px', height: '4px', background: 'rgba(255,215,0,0.3)', borderRadius: '2px', margin: '0 auto 22px' }} />
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <Crown size={40} color="#FFD700" style={{ marginBottom: '8px' }} />
-              <h2 style={{ fontSize: '20px', fontWeight: '950', color: '#fff', margin: '0 0 4px' }}>{selectedHarbor.name}</h2>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', margin: 0 }}>{selectedHarbor.area} · {REGION_EMOJI[selectedHarbor.region]} {selectedHarbor.region}</p>
+              <h2 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#fff', margin: '0 0 4px' }}>{selectedHarbor.name}</h2>
+              <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', margin: 0 }}>{selectedHarbor.area} · {REGION_EMOJI[selectedHarbor.region]} {selectedHarbor.region}</p>
             </div>
 
             <div style={{ background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: '16px', padding: '18px', marginBottom: '14px' }}>
@@ -501,25 +501,25 @@ export default function VVIPSubscribe() {
                 { label: '결제 금액', value: '₩550,000', highlight: true },
               ].map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: i < 3 ? '10px' : 0, paddingTop: i === 3 ? '10px' : 0, borderTop: i === 3 ? '1px solid rgba(255,215,0,0.15)' : 'none' }}>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>{row.label}</span>
-                  <strong style={{ fontSize: row.highlight ? '17px' : '13px', color: row.highlight ? '#FFD700' : '#fff' }}>{row.value}</strong>
+                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)' }}>{row.label}</span>
+                  <strong style={{ fontSize: row.highlight ? `calc(17px * var(--fs, 1))` : `calc(13px * var(--fs, 1))`, color: row.highlight ? '#FFD700' : '#fff' }}>{row.value}</strong>
                 </div>
               ))}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(0,100,255,0.08)', border: '1px solid rgba(0,100,255,0.2)', borderRadius: '12px', padding: '12px', marginBottom: '18px' }}>
-              <p style={{ fontSize: '12px', color: 'rgba(200,220,255,0.85)', margin: 0, lineHeight: '1.7', fontWeight: '600' }}>
+              <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(200,220,255,0.85)', margin: 0, lineHeight: '1.7', fontWeight: '600' }}>
                 🌐 <strong>웹 브라우저</strong>에서 결제가 진행됩니다.<br />
                 결제 완료 후 앱에서 로그아웃 → 재로그인하면 항구가 활성화됩니다.
               </p>
             </div>
 
             <button onClick={handlePurchase}
-              style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: '16px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
+              style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
               🌐 {selectedHarbor?.name} 결제 페이지 열기
             </button>
             <button onClick={() => setShowConfirm(false)}
-              style={{ width: '100%', padding: '13px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '14px', cursor: 'pointer' }}>
+              style={{ width: '100%', padding: '13px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.35)', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer' }}>
               취소
             </button>
           </div>

@@ -37,46 +37,6 @@ export async function initAdMob() {
   }
 }
 
-// ─── 배너 광고 ────────────────────────────────────────────────────
-// 하단 고정 배너 — 커뮤니티/선상배홍보 탭에서 AdSense 대체
-let bannerShowing = false; // 중복 show() 방지
-
-/**
- * 하단 AdMob 배너 광고 표시
- * BannerAd 컴포넌트가 마운트될 때 호출
- */
-export async function showBannerAd() {
-  if (!isNative() || !AdMob || bannerShowing) return;
-  try {
-    const { BannerAdSize, BannerAdPosition } = await import('@capacitor-community/admob');
-    await AdMob.showBanner({
-      adId: ADMOB_CONFIG.BANNER_ID,
-      adSize: BannerAdSize.ADAPTIVE_BANNER,
-      position: BannerAdPosition.BOTTOM_CENTER,
-      margin: 0,
-      isTesting: IS_ADMOB_TESTING,
-    });
-    bannerShowing = true;
-    if (!import.meta.env.PROD) console.log('[AdMob] 배너 광고 표시');
-  } catch (e) {
-    if (!import.meta.env.PROD) console.warn('[AdMob] 배너 광고 오류:', e.message);
-  }
-}
-
-/**
- * 하단 AdMob 배너 광고 제거
- * BannerAd 컴포넌트가 언마운트될 때 호출
- */
-export async function removeBannerAd() {
-  if (!isNative() || !AdMob || !bannerShowing) return;
-  try {
-    await AdMob.removeBanner();
-    bannerShowing = false;
-    if (!import.meta.env.PROD) console.log('[AdMob] 배너 광고 제거');
-  } catch (e) {
-    if (!import.meta.env.PROD) console.warn('[AdMob] 배너 제거 오류:', e.message);
-  }
-}
 
 
 
@@ -134,37 +94,3 @@ export async function showRewardedAd(onRewarded, onFailed) {
 }
 
 
-// ─── 전면(인터스티셜) 광고 ─────────────────────────────────────
-/**
- * 전면 광고 표시 (게시글 클릭 시 등 자연스러운 전환 지점에 삽입)
- * @param {function} [onClosed] - 광고 닫힌 후 콜백
- */
-export async function showInterstitialAd(onClosed) {
-  if (!isNative() || !AdMob) {
-    // 웹 환경 — 즉시 콜백 실행 (광고 없이 다음 동작 진행)
-    onClosed?.();
-    return;
-  }
-  try {
-    const options = {
-      adId: ADMOB_CONFIG.INTERSTITIAL_ID,
-      isTesting: IS_ADMOB_TESTING,
-    };
-
-    await AdMob.prepareInterstitial(options);
-
-    // 닫힘 리스너
-    const closeListener = await AdMob.addListener(
-      'interstitialAdDismissed',
-      () => {
-        closeListener.remove();
-        onClosed?.();
-      }
-    );
-
-    await AdMob.showInterstitial();
-  } catch (e) {
-    if (!import.meta.env.PROD) console.warn('[AdMob] 전면광고 오류:', e.message);
-    onClosed?.(); // 실패해도 다음 동작 진행
-  }
-}

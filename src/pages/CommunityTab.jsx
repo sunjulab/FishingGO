@@ -7,12 +7,12 @@ import { AD_CONFIG } from '../constants/adSettings';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
-import { BannerAd, NativeAd } from '../components/AdUnit';
-import { showInterstitialAd } from '../services/AdMobService';
+import { NativeAd } from '../components/AdUnit';
 import { loadNativeAd, updateNativeAdPositions, removeNativeAd, removeAllNativeAds } from '../services/NativeAdService';
 import ImageGallery from '../components/ImageGallery';
 import StorySlider from '../components/StorySlider';
 import { io } from 'socket.io-client';
+import { shareExternal } from '../utils/shareUtils';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -28,9 +28,9 @@ function InFeedAd() {
         <Award size={24} color="#fff" />
       </div>
       <div>
-        <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '900', marginBottom: '4px', display: 'inline-block', backgroundColor: 'rgba(0,86,210,0.1)', padding: '2px 8px', borderRadius: '6px' }}>가장 가까운 제휴 낚시점</div>
-        <div style={{ fontSize: '15px', color: '#1c1c1e', fontWeight: '950', marginBottom: '4px' }}>동해 낚시 1번지 24시 할인마트</div>
-        <div style={{ fontSize: '12px', color: '#555', fontWeight: '700' }}>현재 위치에서 2.4km (밑밥/미끼 상시 할인)</div>
+        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '900', marginBottom: '4px', display: 'inline-block', backgroundColor: 'rgba(0,86,210,0.1)', padding: '2px 8px', borderRadius: '6px' }}>가장 가까운 제휴 낚시점</div>
+        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, color: '#1c1c1e', fontWeight: '950', marginBottom: '4px' }}>동해 낚시 1번지 24시 할인마트</div>
+        <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#555', fontWeight: '700' }}>현재 위치에서 2.4km (밑밥/미끼 상시 할인)</div>
       </div>
     </div>
   );
@@ -119,7 +119,7 @@ export default function CommunityTab() {
   const [highlightedPostId, setHighlightedPostId] = useState(null);
   const sentinelRef = useRef(null);
   const likeTimerRef = useRef({});
-  const interstitialShownRef = useRef(false);
+
   // ✅ NATIVE-AD: 인피드 네이티브 광고 슬롯 맵 (slotId → placeholder el)
   const nativeAdSlotMapRef = useRef(new Map());
   const scrollToPostIdRef = useRef(null); // 복귀 시 해당 게시글로 scrollIntoView 대기용
@@ -224,12 +224,13 @@ export default function CommunityTab() {
   const [selectedBusinessRegion, setSelectedBusinessRegion] = useState('전체'); // 시도 필터
   const [selectedHarbor, setSelectedHarbor] = useState(''); // 항구 필터 (비어있으면 시도에서 전체)
   const [selectedBusinessPost, setSelectedBusinessPost] = useState(null); // 상세 모달용
+  const [businessSearchQuery, setBusinessSearchQuery] = useState(''); // ✅ 지역/선박명/어종 텍스트 검색
 
 
   // ✅ 7TH-C1: 서버 필터링 결과 직접 사용 — filteredPosts alias가 클라이언트 필터링 의도로 오해 유발
   // posts는 이미 서버에서 필터링된 결과를 포함함 (fetchPosts 수신 시 user.blockedUsers 필터 적용됨)
 
-  // ✅ 실제 낚시배 출항지 2단계 필터 (시도 → 항구)
+  // ✅ 실제 낚시배 출항지 2단계 필터 (시도 → 항구) + 텍스트 검색
   const effectiveBusinessPosts = useMemo(() => {
     const now = new Date();
     const withPinCheck = businessPosts
@@ -240,22 +241,34 @@ export default function CommunityTab() {
         return post;
       })
       .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+    // ✅ 텍스트 검색 필터 (지역명 / 선박명 / 어종 모두 포함)
+    const q = businessSearchQuery.trim().toLowerCase();
+    const searchFiltered = q
+      ? withPinCheck.filter(p =>
+          (p.region || '').toLowerCase().includes(q) ||
+          (p.shipName || '').toLowerCase().includes(q) ||
+          (p.target || '').toLowerCase().includes(q) ||
+          (p.content || '').toLowerCase().includes(q)
+        )
+      : withPinCheck;
+
     // 1단계: 시도 필터
     // ✅ '전국 (전체)' 게시글은 '전체' 탭에서만 노출, 지역 탭 선택 시에는 숨김
     if (selectedBusinessRegion === '전체') {
       const base = !selectedHarbor
-        ? withPinCheck  // 전체 탭 + 항구 미선택: '전국 (전체)' 포함 전체 노출
-        : withPinCheck.filter(p => (p.region || '') === selectedHarbor); // 항구 선택: 정확히 일치하는 항구만 (전국 제외)
+        ? searchFiltered  // 전체 탭 + 항구 미선택: '전국 (전체)' 포함 전체 노출
+        : searchFiltered.filter(p => (p.region || '') === selectedHarbor); // 항구 선택: 정확히 일치하는 항구만 (전국 제외)
       return base;
     }
     // 지역 탭 선택 시: '전국 (전체)' 게시글 허쟁 제외
-    const byRegion = withPinCheck.filter(p =>
+    const byRegion = searchFiltered.filter(p =>
       p.region !== '전국 (전체)' && (p.region || '').startsWith(selectedBusinessRegion)
     );
     // 2단계: 항구 필터
     if (!selectedHarbor) return byRegion;
     return byRegion.filter(p => (p.region || '').startsWith(selectedHarbor));
-  }, [businessPosts, selectedBusinessRegion, selectedHarbor]);
+  }, [businessPosts, selectedBusinessRegion, selectedHarbor, businessSearchQuery]);
 
   // 선택된 시도의 항구 목록 ({label,key} 객체 배열)
   const currentHarbors = useMemo(() => {
@@ -441,19 +454,7 @@ export default function CommunityTab() {
     //             (postId 스크롤/탭 전환은 L131 useEffect에서 별도 처리)
   }, [user?.email]);
 
-  // ✅ ADMOB-INTERSTITIAL: 선상배홈보 탭 진입 시 FREE 유저 인터스티셜 광고 1회 표시
-  useEffect(() => {
-    if (activeTab !== 'business') return;
-    if (canAccessPremium) return;
-    if (interstitialShownRef.current) return;
-    interstitialShownRef.current = true;
-    const timer = setTimeout(() => {
-      showInterstitialAd(() => {
-        if (!import.meta.env.PROD) console.log('[AdMob] 선상배홈보 인터스티셜 종료');
-      });
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [activeTab, canAccessPremium]);
+
 
   // ✅ NATIVE-AD: 스크롤 시 인피드 네이티브 광고 위치 실시간 업데이트 (앱 전용)
   useEffect(() => {
@@ -646,7 +647,7 @@ export default function CommunityTab() {
     <div className="page-container" style={{ backgroundColor: '#F2F2F7' }}>
       {/* 프리미엄 헤더 */}
       <div style={{ backgroundColor: '#fff', padding: '24px 20px 0', borderBottom: '1px solid #F0F0F0' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '20px' }}>커뮤니티</h1>
+        <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '900', marginBottom: '20px' }}>커뮤니티</h1>
         <div style={{ display: 'flex', gap: '4px' }}>
           <button
             onClick={() => setActiveTab('open')}
@@ -705,15 +706,15 @@ export default function CommunityTab() {
           {/* 검색창 */}
           <div style={{ padding: '10px 16px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F2F2F7', borderRadius: '12px', padding: '8px 14px' }}>
-              <span style={{ fontSize: '16px' }}>🔍</span>
+              <span style={{ fontSize: `calc(16px * var(--fs, 1))` }}>🔍</span>
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="게시글 검색 (내용, 작성자)"
-                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', color: '#1c1c1e' }}
+                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: `calc(14px * var(--fs, 1))`, color: '#1c1c1e' }}
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#999', fontSize: '16px' }}>✕</button>
+                <button onClick={() => setSearchQuery('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#999', fontSize: `calc(16px * var(--fs, 1))` }}>✕</button>
               )}
             </div>
           </div>
@@ -726,7 +727,7 @@ export default function CommunityTab() {
                   onClick={() => setOpenCategory(cat)}
                   style={{
                     padding: '7px 18px', borderRadius: '20px', border: 'none',
-                    fontSize: '13px', fontWeight: openCategory === cat ? '900' : '700',
+                    fontSize: `calc(13px * var(--fs, 1))`, fontWeight: openCategory === cat ? '900' : '700',
                     cursor: 'pointer',
                     backgroundColor: openCategory === cat ? '#0056D2' : '#F2F2F7',
                     color: openCategory === cat ? '#fff' : '#555',
@@ -744,7 +745,7 @@ export default function CommunityTab() {
               <button
                 onClick={() => setSortMode('latest')}
                 style={{
-                  padding: '5px 12px', borderRadius: '16px', border: 'none', fontSize: '12px', fontWeight: '800',
+                  padding: '5px 12px', borderRadius: '16px', border: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800',
                   background: sortMode === 'latest' ? '#1c1c1e' : '#F2F2F7',
                   color: sortMode === 'latest' ? '#fff' : '#666', cursor: 'pointer', transition: 'all 0.15s',
                 }}
@@ -752,7 +753,7 @@ export default function CommunityTab() {
               <button
                 onClick={() => setSortMode('popular')}
                 style={{
-                  padding: '5px 12px', borderRadius: '16px', border: 'none', fontSize: '12px', fontWeight: '800',
+                  padding: '5px 12px', borderRadius: '16px', border: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800',
                   background: sortMode === 'popular' ? '#FF5A5F' : '#F2F2F7',
                   color: sortMode === 'popular' ? '#fff' : '#666', cursor: 'pointer', transition: 'all 0.15s',
                 }}
@@ -763,7 +764,7 @@ export default function CommunityTab() {
               onClick={() => setViewMode(v => v === 'feed' ? 'grid' : 'feed')}
               style={{
                 background: 'none', border: '1px solid #E5E5EA', borderRadius: '8px',
-                padding: '5px 10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer',
+                padding: '5px 10px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer',
                 color: '#555', display: 'flex', alignItems: 'center', gap: '4px',
               }}
             >
@@ -789,16 +790,16 @@ export default function CommunityTab() {
                 onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  {notice.isPinned && <div style={{ padding: '4px 8px', backgroundColor: '#FF3B30', color: '#fff', fontSize: '10px', borderRadius: '6px', fontWeight: '900' }}>중요 필독</div>}
-                  <div style={{ fontSize: '12px', color: '#888', fontWeight: 'bold' }}>{notice.date}</div>
-                  <div style={{ fontSize: '11px', color: '#aaa', marginLeft: 'auto' }}>조회 {notice.views}</div>
+                  {notice.isPinned && <div style={{ padding: '4px 8px', backgroundColor: '#FF3B30', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, borderRadius: '6px', fontWeight: '900' }}>중요 필독</div>}
+                  <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#888', fontWeight: 'bold' }}>{notice.date}</div>
+                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#aaa', marginLeft: 'auto' }}>조회 {notice.views}</div>
                 </div>
-                <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e', marginBottom: '8px', wordBreak: 'keep-all' }}>{notice.title}</h3>
+                <h3 style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', marginBottom: '8px', wordBreak: 'keep-all' }}>{notice.title}</h3>
                 <p style={{
-                  fontSize: '14px', color: '#777', lineHeight: '1.6', paddingBottom: isAdmin ? '36px' : '0',
+                  fontSize: `calc(14px * var(--fs, 1))`, color: '#777', lineHeight: '1.6', paddingBottom: isAdmin ? '36px' : '0',
                   overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
                 }}>{notice.content}</p>
-                <div style={{ marginTop: '8px', fontSize: '12px', color: '#0056D2', fontWeight: '700', paddingBottom: isAdmin ? '36px' : '0' }}>
+                <div style={{ marginTop: '8px', fontSize: `calc(12px * var(--fs, 1))`, color: '#0056D2', fontWeight: '700', paddingBottom: isAdmin ? '36px' : '0' }}>
                   자세히 보기 →
                 </div>
 
@@ -830,12 +831,12 @@ export default function CommunityTab() {
               />
             )}
 
-            <BannerAd style={{ marginBottom: '16px' }} />
+
             {posts.length === 0 && !loading && (
               <div style={{ textAlign: 'center', padding: '48px 20px', color: '#AAB0BE' }}>
-                <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎣</div>
-                <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '6px', color: '#555' }}>아직 게시글이 없습니다</div>
-                <div style={{ fontSize: '13px' }}>첫 조황을 공유해보세요!</div>
+                <div style={{ fontSize: `calc(40px * var(--fs, 1))`, marginBottom: '12px' }}>🎣</div>
+                <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '6px', color: '#555' }}>아직 게시글이 없습니다</div>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))` }}>첫 조황을 공유해보세요!</div>
               </div>
             )}
 
@@ -858,18 +859,18 @@ export default function CommunityTab() {
                       {imgSrc ? (
                         <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', background: '#F8F9FA', fontSize: '9px', color: '#555', textAlign: 'center', lineHeight: 1.4 }}>
-                          <span style={{ fontSize: '18px', marginBottom: '3px' }}>🎣</span>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', background: '#F8F9FA', fontSize: `calc(9px * var(--fs, 1))`, color: '#555', textAlign: 'center', lineHeight: 1.4 }}>
+                          <span style={{ fontSize: `calc(18px * var(--fs, 1))`, marginBottom: '3px' }}>🎣</span>
                           {(post.content || '').slice(0, 28)}
                         </div>
                       )}
                       {post.images?.length > 1 && (
-                        <div style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.6)', borderRadius: '4px', padding: '1px 5px', fontSize: '8px', color: '#fff', fontWeight: '900' }}>
+                        <div style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.6)', borderRadius: '4px', padding: '1px 5px', fontSize: `calc(8px * var(--fs, 1))`, color: '#fff', fontWeight: '900' }}>
                           ⊞ {post.images.length}
                         </div>
                       )}
                       {(post.likes > 0) && (
-                        <div style={{ position: 'absolute', bottom: '4px', left: '4px', display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', padding: '2px 5px', fontSize: '9px', color: '#fff' }}>
+                        <div style={{ position: 'absolute', bottom: '4px', left: '4px', display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', padding: '2px 5px', fontSize: `calc(9px * var(--fs, 1))`, color: '#fff' }}>
                           ❤️ {post.likes}
                         </div>
                       )}
@@ -948,27 +949,27 @@ export default function CommunityTab() {
                         <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', background: '#EEF4FF', flexShrink: 0, border: '2px solid #E0EAFF' }}>
                           {post.author_avatar
                             ? <img src={post.author_avatar} alt={post.author} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '900', color: '#0056D2' }}>{(post.author || '?').charAt(0).toUpperCase()}</div>
+                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2' }}>{(post.author || '?').charAt(0).toUpperCase()}</div>
                           }
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             {(post.author === ADMIN_ID || post.author === 'sunjulab') && (
-                              <span style={{ fontSize: '9px', background: 'linear-gradient(135deg,#E60000,#990000)', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: '900' }}>MASTER</span>
+                              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: 'linear-gradient(135deg,#E60000,#990000)', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: '900' }}>MASTER</span>
                             )}
-                            <span style={{ fontSize: '11px', backgroundColor: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '2px 7px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
+                            <span style={{ fontSize: `calc(11px * var(--fs, 1))`, backgroundColor: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '2px 7px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
                             <strong onClick={(e) => { e.stopPropagation(); navigate(`/user/${encodeURIComponent(post.author)}`); }}
-                              style={{ fontSize: '14px', color: '#1c1c1e', cursor: 'pointer' }}>{post.author}</strong>
+                              style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#1c1c1e', cursor: 'pointer' }}>{post.author}</strong>
                           </div>
                           {post.location?.address && (
-                            <div style={{ fontSize: '11px', color: '#8E8E93', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '1px' }}>
+                            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '1px' }}>
                               📍 {post.location.address}
                             </div>
                           )}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', color: '#bbb' }}>{post.time}</span>
+                        <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#bbb' }}>{post.time}</span>
                         {(isAdmin || post.author_email === user?.email) && (
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button onClick={(e) => { e.stopPropagation(); navigate(`/write?editId=${postId}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={15} /></button>
@@ -1062,7 +1063,7 @@ export default function CommunityTab() {
                                 transform: 'translateY(-50%)',
                                 background: 'rgba(0,0,0,0.5)', border: 'none',
                                 borderRadius: '50%', width: '34px', height: '34px',
-                                color: '#fff', fontSize: '20px', cursor: 'pointer',
+                                color: '#fff', fontSize: `calc(20px * var(--fs, 1))`, cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 opacity: slideIdx === 0 ? 0.2 : 1,
                                 transition: 'opacity 0.2s', zIndex: 5,
@@ -1084,7 +1085,7 @@ export default function CommunityTab() {
                                 transform: 'translateY(-50%)',
                                 background: 'rgba(0,0,0,0.5)', border: 'none',
                                 borderRadius: '50%', width: '34px', height: '34px',
-                                color: '#fff', fontSize: '20px', cursor: 'pointer',
+                                color: '#fff', fontSize: `calc(20px * var(--fs, 1))`, cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 opacity: slideIdx === allImages.length - 1 ? 0.2 : 1,
                                 transition: 'opacity 0.2s', zIndex: 5,
@@ -1116,7 +1117,7 @@ export default function CommunityTab() {
                             <div style={{
                               position: 'absolute', top: '10px', right: '10px',
                               background: 'rgba(0,0,0,0.6)', borderRadius: '12px',
-                              padding: '2px 9px', fontSize: '11px', color: '#fff',
+                              padding: '2px 9px', fontSize: `calc(11px * var(--fs, 1))`, color: '#fff',
                               fontWeight: '800', zIndex: 5, pointerEvents: 'none',
                             }}>
                               {slideIdx + 1}/{allImages.length}
@@ -1127,7 +1128,7 @@ export default function CommunityTab() {
                         {/* 더블탭 하트 폭발 */}
                         {heartBurstId === postId && (
                           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 10 }}>
-                            <span style={{ fontSize: '80px', animation: 'heartPop 0.75s ease-out forwards' }}>❤️</span>
+                            <span style={{ fontSize: `calc(80px * var(--fs, 1))`, animation: 'heartPop 0.75s ease-out forwards' }}>❤️</span>
                           </div>
                         )}
                       </div>
@@ -1135,7 +1136,7 @@ export default function CommunityTab() {
 
                     {/* ── 본문 (3줄 축소 / 인라인 확장) ── */}
                     <div style={{ padding: allImages.length > 0 ? '12px 16px 0' : '10px 16px 0' }}>
-                      <p style={{ margin: 0, fontSize: '15px', color: '#1c1c1e', lineHeight: '1.65', fontWeight: '400',
+                      <p style={{ margin: 0, fontSize: `calc(15px * var(--fs, 1))`, color: '#1c1c1e', lineHeight: '1.65', fontWeight: '400',
                         ...(isExpanded ? {} : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' })
                       }}>
                         {renderContent(post.content)}
@@ -1143,13 +1144,13 @@ export default function CommunityTab() {
                       {needsExpand && !isExpanded && (
                         <span
                           onClick={e => { e.stopPropagation(); setExpandedPostId(postId); }}
-                          style={{ fontSize: '14px', color: '#8E8E93', cursor: 'pointer', fontWeight: '700', marginLeft: '4px' }}
+                          style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#8E8E93', cursor: 'pointer', fontWeight: '700', marginLeft: '4px' }}
                         >더보기</span>
                       )}
                       {isExpanded && needsExpand && (
                         <span
                           onClick={e => { e.stopPropagation(); setExpandedPostId(null); }}
-                          style={{ fontSize: '14px', color: '#8E8E93', cursor: 'pointer', fontWeight: '700', display: 'block', marginTop: '6px' }}
+                          style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#8E8E93', cursor: 'pointer', fontWeight: '700', display: 'block', marginTop: '6px' }}
                         >접기 ↑</span>
                       )}
                     </div>
@@ -1157,11 +1158,11 @@ export default function CommunityTab() {
                     {/* ── 좋아요 + 댓글 + 공유 버튼 ── */}
                     <div style={{ padding: '10px 16px', display: 'flex', gap: '16px', alignItems: 'center', borderTop: '1px solid #f8f8f8', marginTop: '10px' }}>
                       <span onClick={(e) => handleLike(e, postId)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', position: 'relative', color: likedPosts[postId] ? '#FF5A5F' : '#8e8e93', fontWeight: likedPosts[postId] ? '800' : '400', transition: 'color 0.2s', userSelect: 'none' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer', position: 'relative', color: likedPosts[postId] ? '#FF5A5F' : '#8e8e93', fontWeight: likedPosts[postId] ? '800' : '400', transition: 'color 0.2s', userSelect: 'none' }}>
                         <Heart size={16} color="#FF5A5F" fill={likedPosts[postId] ? '#FF5A5F' : 'none'}
                           style={{ transform: likeAnimating[postId] ? 'scale(1.6)' : 'scale(1)', transition: 'transform 0.25s cubic-bezier(0.36,0.07,0.19,0.97)', filter: likeAnimating[postId] ? 'drop-shadow(0 0 6px #FF5A5F)' : 'none' }} />
                         {post.likes || 0}
-                        {likeAnimating[postId] && <span style={{ position: 'absolute', top: '-18px', left: 0, fontSize: '18px', pointerEvents: 'none', animation: 'heartBurst 0.7s ease-out forwards' }}>❤️</span>}
+                        {likeAnimating[postId] && <span style={{ position: 'absolute', top: '-18px', left: 0, fontSize: `calc(18px * var(--fs, 1))`, pointerEvents: 'none', animation: 'heartBurst 0.7s ease-out forwards' }}>❤️</span>}
                       </span>
                       <span
                         onClick={e => {
@@ -1170,24 +1171,43 @@ export default function CommunityTab() {
                           setCommentOpenMap(prev => ({ ...prev, [postId]: nowOpen }));
                           if (nowOpen) setExpandedPostId(postId);
                         }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: commentOpenMap[postId] ? '#0056D2' : '#8e8e93', cursor: 'pointer', fontWeight: commentOpenMap[postId] ? '800' : '400', transition: 'color 0.2s' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(13px * var(--fs, 1))`, color: commentOpenMap[postId] ? '#0056D2' : '#8e8e93', cursor: 'pointer', fontWeight: commentOpenMap[postId] ? '800' : '400', transition: 'color 0.2s' }}>
                         <MessageSquare size={16} /> {post.comments?.length || 0}
                       </span>
-                      {/* ✅ SHARE-BTN: 채팅방 공유 버튼 */}
-                      <span
-                        onClick={async e => {
-                          e.stopPropagation();
-                          if (!user) { addToast('로그인 후 이용하세요.', 'error'); return; }
-                          try {
-                            const res = await apiClient.get('/api/user/crews');
-                            setMyCrews(Array.isArray(res.data) ? res.data : []);
-                          } catch { setMyCrews([]); }
-                          setShareTarget(null);
-                          setShareModal({ post });
-                        }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: '#8e8e93', cursor: 'pointer', marginLeft: 'auto', transition: 'color 0.2s' }}
-                        title="채팅방에 공유">
-                        <Share2 size={15} /> <span style={{ fontSize: '12px' }}>공유</span>
+                      {/* ✅ SHARE-BTN: 외부 앱 공유 + 크루 채팅방 공유 */}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+                        {/* 외부 앱 공유 (카카오톡·인스타 등 네이티브 공유 시트) */}
+                        <span
+                          onClick={e => {
+                            e.stopPropagation();
+                            shareExternal({
+                              title: `낚시GO | ${post.author}님의 조황`,
+                              text:  (post.content || '').slice(0, 80),
+                              url:   `${window.location.origin}/post/${postId}`,
+                              imgUrl: Array.isArray(post.images) ? post.images[0] : post.image,
+                              addToast,
+                            });
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(13px * var(--fs, 1))`, color: '#8e8e93', cursor: 'pointer', transition: 'color 0.2s' }}
+                          title="외부 앱에 공유">
+                          <Share2 size={15} />
+                        </span>
+                        {/* 크루 채팅방 공유 */}
+                        <span
+                          onClick={async e => {
+                            e.stopPropagation();
+                            if (!user) { addToast('로그인 후 이용하세요.', 'error'); return; }
+                            try {
+                              const res = await apiClient.get('/api/user/crews');
+                              setMyCrews(Array.isArray(res.data) ? res.data : []);
+                            } catch { setMyCrews([]); }
+                            setShareTarget(null);
+                            setShareModal({ post });
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', cursor: 'pointer', transition: 'color 0.2s' }}
+                          title="크루 채팅방에 공유">
+                          💬<span style={{ fontSize: `calc(11px * var(--fs, 1))` }}>크루</span>
+                        </span>
                       </span>
                     </div>
 
@@ -1195,7 +1215,7 @@ export default function CommunityTab() {
                     {post.comments?.length > 0 && (
                       <div style={{ padding: '0 16px 10px', borderTop: '1px solid #f8f8f8', paddingTop: '10px' }}>
                         {post.comments.slice(0, isExpanded ? post.comments.length : 2).map((c, i) => (
-                          <div key={i} style={{ fontSize: '13px', color: '#333', marginBottom: '5px',
+                          <div key={i} style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#333', marginBottom: '5px',
                             ...(isExpanded ? {} : { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })
                           }}>
                             <strong style={{ color: '#1c1c1e', marginRight: '5px' }}>{c.author}</strong>
@@ -1204,7 +1224,7 @@ export default function CommunityTab() {
                         ))}
                         {!isExpanded && post.comments.length > 2 && (
                           <span
-                            style={{ fontSize: '12px', color: '#8E8E93', cursor: 'pointer', fontWeight: '700' }}
+                            style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', cursor: 'pointer', fontWeight: '700' }}
                             onClick={e => { e.stopPropagation(); setExpandedPostId(postId); setCommentOpenMap(prev => ({ ...prev, [postId]: true })); }}>
                             댓글 {post.comments.length}개 모두 보기
                           </span>
@@ -1229,7 +1249,7 @@ export default function CommunityTab() {
                             width: '28px', height: '28px', borderRadius: '50%',
                             background: '#EEF4FF', flexShrink: 0,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '13px', fontWeight: '900', color: '#0056D2',
+                            fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2',
                           }}>
                             {(user?.name || user?.id || '?').charAt(0).toUpperCase()}
                           </div>
@@ -1241,7 +1261,7 @@ export default function CommunityTab() {
                             placeholder="댓글을 입력하세요..."
                             style={{
                               flex: 1, border: 'none', background: 'transparent',
-                              outline: 'none', fontSize: '14px', color: '#1c1c1e',
+                              outline: 'none', fontSize: `calc(14px * var(--fs, 1))`, color: '#1c1c1e',
                               fontWeight: '400',
                             }}
                           />
@@ -1276,7 +1296,7 @@ export default function CommunityTab() {
             <div ref={sentinelRef} style={{ height: 20 }} />
             {loadingMore && <div style={{ padding: '0 16px 12px' }}><SkeletonCard count={2} /></div>}
             {page >= totalPages && posts.length > 0 && (
-              <div style={{ textAlign: 'center', padding: '20px', fontSize: '13px', color: '#bbb' }}>
+              <div style={{ textAlign: 'center', padding: '20px', fontSize: `calc(13px * var(--fs, 1))`, color: '#bbb' }}>
                 모든 게시글을 불러왔습니다 🎣
               </div>
             )}
@@ -1287,23 +1307,23 @@ export default function CommunityTab() {
           <div className="fade-in">
             {/* 크루 검색창 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff', borderRadius: '14px', padding: '10px 16px', marginBottom: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #F0F0F0' }}>
-              <span style={{ fontSize: '16px', flexShrink: 0 }}>🔍</span>
+              <span style={{ fontSize: `calc(16px * var(--fs, 1))`, flexShrink: 0 }}>🔍</span>
               <input
                 value={crewSearch}
                 onChange={e => setCrewSearch(e.target.value)}
                 placeholder="크루명 검색"
-                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', color: '#1c1c1e', fontWeight: '600' }}
+                style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: `calc(14px * var(--fs, 1))`, color: '#1c1c1e', fontWeight: '600' }}
               />
               {crewSearch && (
-                <button onClick={() => setCrewSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#bbb', fontSize: '16px', padding: 0, lineHeight: 1 }}>✕</button>
+                <button onClick={() => setCrewSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#bbb', fontSize: `calc(16px * var(--fs, 1))`, padding: 0, lineHeight: 1 }}>✕</button>
               )}
             </div>
             {/* 검색 결과 없음 */}
             {filteredCrews.length === 0 && crews.length > 0 && (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#aaa' }}>
-                <div style={{ fontSize: '32px', marginBottom: '10px' }}>🔍</div>
-                <div style={{ fontSize: '15px', fontWeight: '800', color: '#555', marginBottom: '4px' }}>검색 결과가 없습니다</div>
-                <div style={{ fontSize: '13px' }}>'{crewSearch}' 에 해당하는 크루가 없습니다</div>
+                <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '10px' }}>🔍</div>
+                <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#555', marginBottom: '4px' }}>검색 결과가 없습니다</div>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))` }}>'{crewSearch}' 에 해당하는 크루가 없습니다</div>
               </div>
             )}
             {filteredCrews.map(crew => {
@@ -1315,17 +1335,17 @@ export default function CommunityTab() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                      {isMyCrew && <span style={{ fontSize: '9px', fontWeight: '900', background: '#0056D2', color: '#fff', padding: '2px 7px', borderRadius: '8px', flexShrink: 0 }}>내 크루</span>}
-                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{crew.name}</h3>
+                      {isMyCrew && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', background: '#0056D2', color: '#fff', padding: '2px 7px', borderRadius: '8px', flexShrink: 0 }}>내 크루</span>}
+                      <h3 style={{ margin: 0, fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{crew.name}</h3>
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', color: '#8e8e93', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', gap: '12px', color: '#8e8e93', fontSize: `calc(13px * var(--fs, 1))` }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={14} /> 인원 {crew.members}/{crew.limit != null ? crew.limit : 1000}</span>
                       {crew.region && crew.region !== '전국' && <span style={{ color: '#bbb' }}>📍 {crew.region}</span>}
                     </div>
                   </div>
                   {/* 입장 버튼 */}
                   {isMyCrew ? (
-                    <button onClick={() => navigate(`/crew/${crewId}/chat`)} style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)', flexShrink: 0, marginLeft: '8px' }}>
+                    <button onClick={() => navigate(`/crew/${crewId}/chat`)} style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)', flexShrink: 0, marginLeft: '8px' }}>
                       채팅 입장
                     </button>
                   ) : crew.isPrivate ? (
@@ -1348,7 +1368,7 @@ export default function CommunityTab() {
                         } catch { /* 실패해도 채팅 진입은 허용 */ }
                         navigate(`/crew/${crewId}/chat`);
                       }}
-                      style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)', flexShrink: 0, marginLeft: '8px' }}
+                      style={{ backgroundColor: '#0056D2', border: 'none', padding: '8px 18px', borderRadius: '20px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,86,210,0.2)', flexShrink: 0, marginLeft: '8px' }}
                     >
                       입장하기
                     </button>
@@ -1357,10 +1377,10 @@ export default function CommunityTab() {
                 {/* ✅ MASTER 전용: 강제 삭제 영역 */}
                 {isAdmin && (
                   <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #FFE0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10px', color: '#FF3B30', fontWeight: '900', background: 'rgba(255,59,48,0.08)', padding: '2px 8px', borderRadius: '6px' }}>MASTER 관리</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF3B30', fontWeight: '900', background: 'rgba(255,59,48,0.08)', padding: '2px 8px', borderRadius: '6px' }}>MASTER 관리</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAdminDeleteCrew(crewId, crew.name); }}
-                      style={{ border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '5px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '5px 12px', borderRadius: '8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                       <Trash2 size={12} /> 강제 삭제
                     </button>
@@ -1376,12 +1396,59 @@ export default function CommunityTab() {
           <div className="fade-in">
             <div style={{ padding: '16px', background: 'linear-gradient(135deg, #0A192F, #1A365D)', borderRadius: '16px', marginBottom: '20px', color: '#fff', boxShadow: '0 8px 24px rgba(10,25,47,0.2)', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.1 }}><Award size={100} /></div>
-              <div style={{ fontSize: '15px', fontWeight: '950', color: '#FFD700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#FFD700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Award size={18} /> 프리미엄 선상 직거래
               </div>
-              <p style={{ margin: '0 0 4px', fontSize: '12.5px', fontWeight: '700', lineHeight: '1.4' }}>비즈니스 인증을 거친 검증된 선장님들의 공간입니다.</p>
-              <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>게시물 하단의 [직통 전화] 버튼을 눌러 수수료 없이 다이렉트 예약하세요!</p>
+              <p style={{ margin: '0 0 4px', fontSize: `calc(12.5px * var(--fs, 1))`, fontWeight: '700', lineHeight: '1.4' }}>비즈니스 인증을 거친 검증된 선장님들의 공간입니다.</p>
+              <p style={{ margin: 0, fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)' }}>게시물 하단의 [직통 전화] 버튼을 눌러 수수료 없이 다이렉트 예약하세요!</p>
             </div>
+            {/* ✅ 지역 검색 바 */}
+            <div style={{ marginBottom: '12px', position: 'relative' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                background: '#fff', border: `1.5px solid ${businessSearchQuery ? '#0056D2' : '#E8EBF0'}`,
+                borderRadius: '14px', padding: '11px 14px',
+                boxShadow: businessSearchQuery ? '0 0 0 3px rgba(0,86,210,0.1)' : '0 2px 8px rgba(0,0,0,0.05)',
+                transition: 'all 0.2s',
+              }}>
+                <span style={{ fontSize: `calc(16px * var(--fs, 1))`, flexShrink: 0 }}>🔍</span>
+                <input
+                  type="text"
+                  value={businessSearchQuery}
+                  onChange={e => setBusinessSearchQuery(e.target.value)}
+                  placeholder="지역명·항구명·선박명·어종 검색"
+                  style={{
+                    flex: 1, border: 'none', outline: 'none', background: 'transparent',
+                    fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e',
+                    fontFamily: 'inherit',
+                  }}
+                />
+                {businessSearchQuery && (
+                  <button
+                    onClick={() => setBusinessSearchQuery('')}
+                    style={{
+                      background: '#E5E5EA', border: 'none', borderRadius: '50%',
+                      width: '22px', height: '22px', cursor: 'pointer', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: `calc(12px * var(--fs, 1))`, color: '#666', fontWeight: '900',
+                    }}
+                  >✕</button>
+                )}
+              </div>
+              {/* 검색 결과 수 표시 */}
+              {businessSearchQuery && (
+                <div style={{
+                  marginTop: '6px', fontSize: `calc(11px * var(--fs, 1))`,
+                  color: effectiveBusinessPosts.length > 0 ? '#0056D2' : '#FF5A5F',
+                  fontWeight: '800', paddingLeft: '4px',
+                }}>
+                  {effectiveBusinessPosts.length > 0
+                    ? `🎯 "${businessSearchQuery}" 검색 결과 ${effectiveBusinessPosts.length}건`
+                    : `"${businessSearchQuery}" 검색 결과가 없습니다`}
+                </div>
+              )}
+            </div>
+
             {/* ✅ 1단계: 시도 칩 */}
             <div style={{
               display: 'flex', gap: '7px', overflowX: 'auto', paddingBottom: '4px',
@@ -1399,7 +1466,7 @@ export default function CommunityTab() {
                     style={{
                       flexShrink: 0, padding: '7px 13px', borderRadius: '20px',
                       border: isActive ? 'none' : `1.5px solid ${hasPost ? '#0056D2' : '#E5E5EA'}`,
-                      fontSize: '12px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.15s',
+                      fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', transition: 'all 0.15s',
                       background: isActive ? 'linear-gradient(135deg, #0056D2, #0096FF)' : hasPost ? '#EEF4FF' : '#F5F5F7',
                       color: isActive ? '#fff' : hasPost ? '#0056D2' : '#bbb',
                       boxShadow: isActive ? '0 4px 12px rgba(0,86,210,0.3)' : 'none',
@@ -1411,7 +1478,7 @@ export default function CommunityTab() {
                       <span style={{
                         background: isActive ? 'rgba(255,255,255,0.3)' : '#0056D2',
                         color: '#fff', borderRadius: '10px', padding: '1px 6px',
-                        fontSize: '10px', fontWeight: '900',
+                        fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900',
                       }}>{count}</span>
                     )}
                   </button>
@@ -1440,7 +1507,7 @@ export default function CommunityTab() {
                   onClick={() => setSelectedHarbor('')}
                   style={{
                     flexShrink: 0, padding: '5px 12px', borderRadius: '14px', border: 'none',
-                    fontSize: '11px', fontWeight: '800', cursor: 'pointer',
+                    fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer',
                     background: !selectedHarbor ? '#1A1A2E' : '#F0F0F5',
                     color: !selectedHarbor ? '#fff' : '#555', transition: 'all 0.15s',
                   }}
@@ -1455,7 +1522,7 @@ export default function CommunityTab() {
                       style={{
                         flexShrink: 0, padding: '5px 12px', borderRadius: '14px',
                         border: `1px solid ${isActive ? '#1A1A2E' : count > 0 ? '#888' : '#DDD'}`,
-                        fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s',
+                        fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s',
                         background: isActive ? '#1A1A2E' : count > 0 ? '#F5F5F7' : '#FAFAFA',
                         color: isActive ? '#fff' : count > 0 ? '#333' : '#CCC',
                         display: 'flex', alignItems: 'center', gap: '4px',
@@ -1465,7 +1532,7 @@ export default function CommunityTab() {
                       {count > 0 && (
                         <span style={{
                           background: isActive ? 'rgba(255,255,255,0.25)' : '#555',
-                          color: '#fff', borderRadius: '8px', padding: '0px 5px', fontSize: '9px', fontWeight: '900',
+                          color: '#fff', borderRadius: '8px', padding: '0px 5px', fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900',
                         }}>{count}</span>
                       )}
                     </button>
@@ -1476,8 +1543,8 @@ export default function CommunityTab() {
 
             {effectiveBusinessPosts.length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#aaa' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🚢</div>
-                <div style={{ fontSize: '13px', fontWeight: '700' }}>
+                <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '8px' }}>🚢</div>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>
                   {selectedBusinessRegion === '전체' ? '등록된 홍보글이 없습니다' : `${selectedBusinessRegion} 지역 홍보글이 없습니다`}
                 </div>
               </div>
@@ -1489,18 +1556,18 @@ export default function CommunityTab() {
                 {post.isPinned ? (
                   /* VVIP 프리미엄 대형 카드 */
                   <div style={{ backgroundColor: '#FEFCF5', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 12px 40px rgba(255,215,0,0.25)', border: '2.5px solid #FFD700', overflow: 'hidden' }}>
-                    <div style={{ background: 'linear-gradient(90deg, #FFD700, #FF9B26)', color: '#5C3A00', padding: '10px 16px', fontSize: '12px', fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ background: 'linear-gradient(90deg, #FFD700, #FF9B26)', color: '#5C3A00', padding: '10px 16px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Award size={14} fill="#5C3A00" /> VVIP 프리미엄 스폰서 — 해당 항구 1위 독점</span>
                       {/* ✅ VVIP 카드: 작성자 or 마스터만 수정/삭제 */}
                       {(isAdmin || post.author_email === user?.email) && (
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           <button
                             onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
-                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
+                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
                           ><Edit2 size={11} /> 수정</button>
                           <button
                             onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
-                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
+                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
                           ><Trash2 size={11} /> 삭제</button>
                         </div>
                       )}
@@ -1518,59 +1585,53 @@ export default function CommunityTab() {
                           />
                         </div>
                       ) : (
-                        <div style={{ width: '100%', height: '220px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🚢</div>
+                        <div style={{ width: '100%', height: '220px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(48px * var(--fs, 1))` }}>🚢</div>
                       )}
-                      <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.65)', color: '#FFD700', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '900', pointerEvents: 'none' }}>
+                      <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.65)', color: '#FFD700', padding: '5px 14px', borderRadius: '20px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', pointerEvents: 'none' }}>
                         👑 {post.region || '항구 전용 VVIP'}
                       </div>
-                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '950', pointerEvents: 'none' }}>예약 모집중</div>
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '8px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', pointerEvents: 'none' }}>예약 모집중</div>
                     </div>
                     <div style={{ padding: '20px 18px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
-                      <div style={{ fontSize: '22px', fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>{post.shipName}</div>
+                      <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>{post.shipName}</div>
                       {/* ✅ WARN-CT1: post.content null guard */}
-                      <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#333', lineHeight: '1.8', fontWeight: '600' }}>{(post.content || '').slice(0, 140)}{(post.content || '').length > 140 ? '...' : ''}</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '13px' }}>
+                      <p style={{ margin: '0 0 16px', fontSize: `calc(14px * var(--fs, 1))`, color: '#333', lineHeight: '1.8', fontWeight: '600' }}>{(post.content || '').slice(0, 140)}{(post.content || '').length > 140 ? '...' : ''}</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: `calc(13px * var(--fs, 1))` }}>
                         <span style={{ background: '#F4F6FA', padding: '7px 14px', borderRadius: '12px', color: '#333', fontWeight: '800' }}>🎣 {post.target}</span>
                         <span style={{ background: '#F4F6FA', padding: '7px 14px', borderRadius: '12px', color: '#333', fontWeight: '800' }}>📅 {post.date}</span>
                         <span style={{ background: '#FFF3E0', padding: '7px 14px', borderRadius: '12px', color: '#E65100', fontWeight: '950' }}>💰 {post.price}</span>
                       </div>
                     </div>
                     <div style={{ padding: '0 18px 20px', display: 'flex', gap: '12px' }}>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '18px', borderRadius: '16px', fontWeight: '950', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 18px rgba(0,86,210,0.3)' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '18px', borderRadius: '16px', fontWeight: '950', fontSize: `calc(16px * var(--fs, 1))`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 18px rgba(0,86,210,0.3)' }}>
                         <Phone size={20} fill="#fff" /> 선장님께 즉시 전화
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 선상낚시 예약 문의드립니다.\n\n▶ 원하는 날짜:\n▶ 인원:\n▶ 기타 문의:`)}` ; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '18px 20px', borderRadius: '16px', fontWeight: '900', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 선상낚시 예약 문의드립니다.\n\n▶ 원하는 날짜:\n▶ 인원:\n▶ 기타 문의:`)}` ; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '18px 20px', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <MessageSquare size={20} /> 문자 보내기
                       </button>
                     </div>
                   </div>
                 ) : null}
-                {/* ✅ NATIVE-AD: VVIP 카드 아래 인피드 네이티브 광고
-                    웹: BannerAd (AdSense) / 앱: NativeAdPlugin이 placeholder 위에 오버레이 */}
-                {post.isPinned && !canAccessPremium && (() => {
+                {/* ✅ NATIVE-AD: VVIP 카드 아래 인피드 네이티브 광고 (앱 전용) */}
+                {post.isPinned && !canAccessPremium && Capacitor.isNativePlatform() && (() => {
                   const slotId = `business_ad_${index}`;
-                  if (Capacitor.isNativePlatform()) {
-                    // 네이티브 앱: placeholder div 마운트 시 네이티브 광고 로드
-                    return (
-                      <div
-                        ref={el => {
-                          if (el && !nativeAdSlotMapRef.current.has(slotId)) {
-                            nativeAdSlotMapRef.current.set(slotId, el);
-                            loadNativeAd(slotId, el);
-                          } else if (!el) {
-                            nativeAdSlotMapRef.current.delete(slotId);
-                            removeNativeAd(slotId);
-                          }
-                        }}
-                        style={{
-                          width: '100%', height: 300, marginBottom: 16,
-                          borderRadius: 16, background: 'transparent',
-                        }}
-                      />
-                    );
-                  }
-                  // 웹: 기존 AdSense BannerAd
-                  return <BannerAd style={{ marginBottom: '16px' }} />;
+                  return (
+                    <div
+                      ref={el => {
+                        if (el && !nativeAdSlotMapRef.current.has(slotId)) {
+                          nativeAdSlotMapRef.current.set(slotId, el);
+                          loadNativeAd(slotId, el);
+                        } else if (!el) {
+                          nativeAdSlotMapRef.current.delete(slotId);
+                          removeNativeAd(slotId);
+                        }
+                      }}
+                      style={{
+                        width: '100%', height: 300, marginBottom: 16,
+                        borderRadius: 16, background: 'transparent',
+                      }}
+                    />
+                  );
                 })()}
                 {!post.isPinned && (
 
@@ -1589,7 +1650,7 @@ export default function CommunityTab() {
                       <div style={{
                         background: 'linear-gradient(90deg, #0056D2, #0096FF)',
                         color: '#fff', padding: '7px 14px',
-                        fontSize: '11px', fontWeight: '900',
+                        fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                       }}>
                         <span>🌐 MASTER 공식 전국 홍보 &mdash; 모든 지역 출항 정보</span>
@@ -1598,11 +1659,11 @@ export default function CommunityTab() {
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
-                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
+                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
                             ><Edit2 size={10} /> 수정</button>
                             <button
                               onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
-                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
+                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
                             ><Trash2 size={10} /> 삭제</button>
                           </div>
                         )}
@@ -1623,14 +1684,14 @@ export default function CommunityTab() {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
-                            <span style={{ fontSize: '9px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
+                            <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
                             {/* ✅ 지역 배지 */}
                             {post.region === '전국 (전체)' ? (
-                              <span style={{ fontSize: '9px', background: 'rgba(0,86,210,0.12)', color: '#0056D2', padding: '2px 7px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>🌐 전국</span>
+                              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: 'rgba(0,86,210,0.12)', color: '#0056D2', padding: '2px 7px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>🌐 전국</span>
                             ) : post.region ? (
-                              <span style={{ fontSize: '9px', background: '#F0F0F5', color: '#555', padding: '2px 7px', borderRadius: '5px', fontWeight: '800', flexShrink: 0 }}>📍 {post.region}</span>
+                              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#F0F0F5', color: '#555', padding: '2px 7px', borderRadius: '5px', fontWeight: '800', flexShrink: 0 }}>📍 {post.region}</span>
                             ) : null}
-                            <span style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.shipName}</span>
+                            <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.shipName}</span>
                             {/* ✅ 작성자 or 마스터: 수정/삭제 (region 제한 없이 모든 카드에 표시) */}
                             {(isAdmin || post.author_email === user?.email) && post.region !== '전국 (전체)' && (
                               <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
@@ -1640,8 +1701,8 @@ export default function CommunityTab() {
                             )}
                           </div>
                           {/* ✅ WARN-CT1: post.content null guard (소형 카드) */}
-                          <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#666', lineHeight: '1.5' }}>{(post.content || '').slice(0, 45)}{(post.content || '').length > 45 ? '...' : ''}</p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '10px' }}>
+                          <p style={{ margin: '0 0 6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#666', lineHeight: '1.5' }}>{(post.content || '').slice(0, 45)}{(post.content || '').length > 45 ? '...' : ''}</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: `calc(10px * var(--fs, 1))` }}>
                             <span style={{ background: '#F4F6FA', padding: '3px 8px', borderRadius: '6px', color: '#333' }}>{post.target}</span>
                             <span style={{ background: '#FFF3E0', padding: '3px 8px', borderRadius: '6px', color: '#E65100', fontWeight: '800' }}>{post.price}</span>
                           </div>
@@ -1649,10 +1710,10 @@ export default function CommunityTab() {
                       </div>
                     </div>
                     <div style={{ padding: '8px 12px', background: '#F8F9FA', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '6px' }}>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '950', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '950', fontSize: `calc(12px * var(--fs, 1))`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                         <Phone size={13} fill="#fff" /> 즉시 전화
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}`; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}`; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: `calc(12px * var(--fs, 1))`, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <MessageSquare size={13} /> 문자
                       </button>
                     </div>
@@ -1666,7 +1727,7 @@ export default function CommunityTab() {
               <div style={{ padding: '0 16px 12px' }}><SkeletonCard count={2} /></div>
             )}
             {page >= totalPages && posts.length > 0 && (
-              <div style={{ textAlign: 'center', padding: '20px', fontSize: '13px', color: '#bbb' }}>
+              <div style={{ textAlign: 'center', padding: '20px', fontSize: `calc(13px * var(--fs, 1))`, color: '#bbb' }}>
                 모든 게시글을 불러왔습니다 🎣
               </div>
             )}
@@ -1700,7 +1761,7 @@ export default function CommunityTab() {
 
             {/* 헤더 닫기 버튼 */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 16px 4px' }}>
-              <button onClick={() => setSelectedBusinessPost(null)} style={{ border: 'none', background: '#F2F2F7', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#888', fontWeight: '900' }}>✕</button>
+              <button onClick={() => setSelectedBusinessPost(null)} style={{ border: 'none', background: '#F2F2F7', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(18px * var(--fs, 1))`, color: '#888', fontWeight: '900' }}>✕</button>
             </div>
 
             {/* ✅ MULTI-IMG: 모달 이미지 갤러리 슬라이드 (images[] 우선, cover 하위호환) */}
@@ -1714,23 +1775,23 @@ export default function CommunityTab() {
                   showZoom={true}
                 />
               ) : (
-                <div style={{ width: '100%', height: '200px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '56px', borderRadius: '20px' }}>🚢</div>
+                <div style={{ width: '100%', height: '200px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(56px * var(--fs, 1))`, borderRadius: '20px' }}>🚢</div>
               )}
               {/* 배지 오버레이 — 갤러리 위에 절대 위치 */}
               <div style={{ position: 'absolute', top: '12px', left: '12px', pointerEvents: 'none', zIndex: 2 }}>
                 {selectedBusinessPost.isPinned ? (
-                  <div style={{ background: 'linear-gradient(90deg,#FFD700,#FF9B26)', color: '#5C3A00', padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '950', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <div style={{ background: 'linear-gradient(90deg,#FFD700,#FF9B26)', color: '#5C3A00', padding: '5px 14px', borderRadius: '20px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Award size={12} fill="#5C3A00" /> VVIP 독점
                   </div>
                 ) : (
-                  <div style={{ background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '950' }}>모집중</div>
+                  <div style={{ background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '20px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950' }}>모집중</div>
                 )}
               </div>
               {/* 지역·가격 배지 */}
-              <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '800', pointerEvents: 'none', zIndex: 2 }}>
+              <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', pointerEvents: 'none', zIndex: 2 }}>
                 📍 {selectedBusinessPost.region || '지역 미표시'}
               </div>
-              <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: '#0056D2', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '950', pointerEvents: 'none', zIndex: 2 }}>
+              <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: '#0056D2', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', pointerEvents: 'none', zIndex: 2 }}>
                 {selectedBusinessPost.price || '문의'}
               </div>
             </div>
@@ -1739,10 +1800,10 @@ export default function CommunityTab() {
             <div style={{ padding: '20px 20px 0' }}>
               {/* 타입 + 선박명 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', background: '#F0F5FF', color: '#0056D2', padding: '3px 10px', borderRadius: '8px', fontWeight: '900', flexShrink: 0 }}>{selectedBusinessPost.type || '선상낚시'}</span>
+                <span style={{ fontSize: `calc(11px * var(--fs, 1))`, background: '#F0F5FF', color: '#0056D2', padding: '3px 10px', borderRadius: '8px', fontWeight: '900', flexShrink: 0 }}>{selectedBusinessPost.type || '선상낚시'}</span>
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '950', color: '#1A1A2E', marginBottom: '6px', lineHeight: 1.2 }}>{selectedBusinessPost.shipName}</div>
-              <div style={{ fontSize: '13px', color: '#888', fontWeight: '700', marginBottom: '18px' }}>선장 · {selectedBusinessPost.author}</div>
+              <div style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginBottom: '6px', lineHeight: 1.2 }}>{selectedBusinessPost.shipName}</div>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#888', fontWeight: '700', marginBottom: '18px' }}>선장 · {selectedBusinessPost.author}</div>
 
               {/* 정보 그리드 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
@@ -1753,16 +1814,16 @@ export default function CommunityTab() {
                   { icon: '📞', label: '연락처', value: selectedBusinessPost.phone },
                 ].map(({ icon, label, value }) => (
                   <div key={label} style={{ background: '#F8F9FC', borderRadius: '14px', padding: '12px 14px' }}>
-                    <div style={{ fontSize: '11px', color: '#AAB0BE', fontWeight: '800', marginBottom: '4px' }}>{icon} {label}</div>
-                    <div style={{ fontSize: '13px', color: '#1A1A2E', fontWeight: '800', lineHeight: 1.3 }}>{value || '-'}</div>
+                    <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '800', marginBottom: '4px' }}>{icon} {label}</div>
+                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#1A1A2E', fontWeight: '800', lineHeight: 1.3 }}>{value || '-'}</div>
                   </div>
                 ))}
               </div>
 
               {/* 전체 소개글 */}
               <div style={{ background: '#F8F9FC', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-                <div style={{ fontSize: '12px', color: '#AAB0BE', fontWeight: '800', marginBottom: '10px' }}>🚢 선박 소개</div>
-                <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.8', fontWeight: '600', margin: 0, whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '800', marginBottom: '10px' }}>🚢 선박 소개</div>
+                <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#333', lineHeight: '1.8', fontWeight: '600', margin: 0, whiteSpace: 'pre-wrap' }}>
                   {selectedBusinessPost.content || '소개 내용이 없습니다.'}
                 </p>
               </div>
@@ -1773,32 +1834,48 @@ export default function CommunityTab() {
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   onClick={() => { window.location.href = `tel:${selectedBusinessPost.phone || ''}`; }}
-                  style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '17px', borderRadius: '16px', fontWeight: '950', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,86,210,0.35)' }}
+                  style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '17px', borderRadius: '16px', fontWeight: '950', fontSize: `calc(16px * var(--fs, 1))`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,86,210,0.35)' }}
                 >
                   <Phone size={20} fill="#fff" /> 선장님께 즉시 전화
                 </button>
                 <button
                   onClick={() => { window.location.href = `sms:${selectedBusinessPost.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${selectedBusinessPost.shipName}] 선상낚시 예약 문의드립니다.\n\n▶ 원하는 날짜:\n▶ 인원:\n▶ 기타 문의:`)}` ; }}
-                  style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '17px 20px', borderRadius: '16px', fontWeight: '900', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}
+                  style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '17px 20px', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}
                 >
                   <MessageSquare size={20} /> 문자 보내기
                 </button>
               </div>
-              {/* ✅ 크루 채팅방 공유 버튼 */}
-              <button
-                onClick={async () => {
-                  if (!user) { addToast('로그인 후 이용하세요.', 'error'); return; }
-                  try {
-                    const res = await apiClient.get('/api/user/crews');
-                    setMyCrews(Array.isArray(res.data) ? res.data : []);
-                  } catch { setMyCrews([]); }
-                  setShareTarget(null);
-                  setShareModal({ post: { ...selectedBusinessPost, _bizShare: true } });
-                }}
-                style={{ width: '100%', padding: '14px', border: '1.5px solid #0056D2', borderRadius: '16px', background: 'rgba(0,86,210,0.05)', color: '#0056D2', fontSize: '15px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                <Share2 size={18} /> 크루 채팅방에 공유하기
-              </button>
+              {/* ✅ 공유 버튼 2개: 외부 앱 공유 + 크루 채팅방 공유 */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {/* 외부 앱 공유 (카카오톡·인스타 등) */}
+                <button
+                  onClick={() => shareExternal({
+                    title: `🚢 ${selectedBusinessPost.shipName} | 낚시GO 선상배 홍보`,
+                    text:  `${selectedBusinessPost.region || ''} · ${selectedBusinessPost.target || ''} · ${selectedBusinessPost.price || ''}`,
+                    url:   window.location.href,
+                    imgUrl: selectedBusinessPost.images?.[0] || selectedBusinessPost.cover,
+                    addToast,
+                  })}
+                  style={{ flex: 1, padding: '14px', border: '1.5px solid #0056D2', borderRadius: '16px', background: 'rgba(0,86,210,0.05)', color: '#0056D2', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  <Share2 size={18} /> 공유하기
+                </button>
+                {/* 크루 채팅방 공유 */}
+                <button
+                  onClick={async () => {
+                    if (!user) { addToast('로그인 후 이용하세요.', 'error'); return; }
+                    try {
+                      const res = await apiClient.get('/api/user/crews');
+                      setMyCrews(Array.isArray(res.data) ? res.data : []);
+                    } catch { setMyCrews([]); }
+                    setShareTarget(null);
+                    setShareModal({ post: { ...selectedBusinessPost, _bizShare: true } });
+                  }}
+                  style={{ flex: 1, padding: '14px', border: '1.5px solid #00875A', borderRadius: '16px', background: 'rgba(0,135,90,0.05)', color: '#00875A', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  💬 크루 채팅방
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1841,13 +1918,13 @@ export default function CommunityTab() {
                 <Lock size={20} color="#64B5F6" />
               </div>
               <div>
-                <div style={{ fontSize: '17px', fontWeight: '900', color: '#fff' }}>🔒 프라이빗 크루</div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginTop: '2px' }}>{crewPassModal.crew.name}</div>
+                <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>🔒 프라이빗 크루</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginTop: '2px' }}>{crewPassModal.crew.name}</div>
               </div>
             </div>
             {/* 입력 */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '800', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>입장 코드 4자리</label>
+              <label style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '800', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>입장 코드 4자리</label>
               <input
                 type="password"
                 maxLength={20}
@@ -1872,14 +1949,14 @@ export default function CommunityTab() {
                   }
                 }}
                 placeholder="입장 코드를 입력하세요"
-                style={{ width: '100%', padding: '16px 18px', background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(0,86,210,0.4)', borderRadius: '16px', color: '#fff', fontSize: '16px', fontWeight: '800', outline: 'none', letterSpacing: '0.15em', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '16px 18px', background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(0,86,210,0.4)', borderRadius: '16px', color: '#fff', fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', outline: 'none', letterSpacing: '0.15em', boxSizing: 'border-box' }}
               />
             </div>
             {/* 버튼 */}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={() => setCrewPassModal(null)}
-                style={{ flex: 1, padding: '15px', border: 'none', borderRadius: '16px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.55)', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '15px', border: 'none', borderRadius: '16px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.55)', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
               >
                 취소
               </button>
@@ -1900,7 +1977,7 @@ export default function CommunityTab() {
                     addToast(err.response?.data?.error || '입장 코드가 일치하지 않습니다.', 'error');
                   } finally { setCrewPassLoading(false); }
                 }}
-                style={{ flex: 2, padding: '15px', border: 'none', borderRadius: '16px', background: crewPassLoading || !crewPassInput.trim() ? 'rgba(0,86,210,0.3)' : 'linear-gradient(135deg,#0056D2,#1565C0)', color: '#fff', fontSize: '15px', fontWeight: '950', cursor: crewPassLoading ? 'not-allowed' : 'pointer', transition: 'opacity 0.2s' }}
+                style={{ flex: 2, padding: '15px', border: 'none', borderRadius: '16px', background: crewPassLoading || !crewPassInput.trim() ? 'rgba(0,86,210,0.3)' : 'linear-gradient(135deg,#0056D2,#1565C0)', color: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', cursor: crewPassLoading ? 'not-allowed' : 'pointer', transition: 'opacity 0.2s' }}
               >
                 {crewPassLoading ? '확인 중...' : '입장하기 🔓'}
               </button>
@@ -1916,7 +1993,7 @@ export default function CommunityTab() {
         >
           <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: '#fff', borderRadius: '24px 24px 0 0', padding: '20px 20px 32px', boxShadow: '0 -8px 32px rgba(0,0,0,0.18)', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '16px', fontWeight: '900', color: '#1c1c1e' }}>📤 크루 채팅방에 공유</span>
+              <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>📤 크루 채팅방에 공유</span>
               <button onClick={() => setShareModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                 <XIcon size={20} color="#8e8e93" />
               </button>
@@ -1926,21 +2003,21 @@ export default function CommunityTab() {
                 <img src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800', marginBottom: '3px' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', marginBottom: '3px' }}>
                   {shareModal.post._bizShare
                     ? `🚢 선상배 홍보 • ${shareModal.post.author || shareModal.post.shipName || ''}`
                     : `${shareModal.post.category || '전체'} • ${shareModal.post.author}`}
                 </div>
-                <div style={{ fontSize: '13px', color: '#1c1c1e', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#1c1c1e', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {shareModal.post._bizShare
                     ? `${shareModal.post.shipName || '선상낚시'} — ${shareModal.post.target || ''} (${shareModal.post.region || ''})`
                     : ((shareModal.post.content || '').slice(0, 60) || '(내용 없음)')}
                 </div>
               </div>
             </div>
-            <div style={{ fontSize: '13px', color: '#8e8e93', fontWeight: '700', marginBottom: '8px' }}>내가 속한 크루 ({myCrews.length})</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700', marginBottom: '8px' }}>내가 속한 크루 ({myCrews.length})</div>
             {myCrews.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#aaa', fontSize: '14px' }}>가입된 크루가 없습니다.</div>
+              <div style={{ textAlign: 'center', padding: '24px', color: '#aaa', fontSize: `calc(14px * var(--fs, 1))` }}>가입된 크루가 없습니다.</div>
             ) : (
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                 {myCrews.map(crew => {
@@ -1950,13 +2027,13 @@ export default function CommunityTab() {
                     <div key={crewId} onClick={() => setShareTarget(crew)}
                       style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '14px', cursor: 'pointer', background: selected ? '#EEF4FF' : '#F8F9FA', border: selected ? '2px solid #0056D2' : '1.5px solid transparent', transition: 'all 0.15s' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: selected ? '#0056D2' : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: '20px' }}>{crew.emoji || '🎣'}</span>
+                        <span style={{ fontSize: `calc(20px * var(--fs, 1))` }}>{crew.emoji || '🎣'}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '800', color: selected ? '#0056D2' : '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{crew.name}</div>
-                        <div style={{ fontSize: '11px', color: '#8e8e93' }}>멤버 {crew.memberList?.length || crew.members || 0}명</div>
+                        <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: selected ? '#0056D2' : '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{crew.name}</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8e8e93' }}>멤버 {crew.memberList?.length || crew.members || 0}명</div>
                       </div>
-                      {selected && <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0056D2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontSize: '12px' }}>✓</span></div>}
+                      {selected && <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0056D2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontSize: `calc(12px * var(--fs, 1))` }}>✓</span></div>}
                     </div>
                   );
                 })}
@@ -2005,7 +2082,7 @@ export default function CommunityTab() {
                 }
                 finally { setSharing(false); }
               }}
-              style={{ width: '100%', padding: '16px', border: 'none', borderRadius: '16px', background: (!shareTarget || sharing) ? '#E5E5EA' : 'linear-gradient(135deg,#0056D2,#1565C0)', color: (!shareTarget || sharing) ? '#aaa' : '#fff', fontSize: '16px', fontWeight: '900', cursor: (!shareTarget || sharing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+              style={{ width: '100%', padding: '16px', border: 'none', borderRadius: '16px', background: (!shareTarget || sharing) ? '#E5E5EA' : 'linear-gradient(135deg,#0056D2,#1565C0)', color: (!shareTarget || sharing) ? '#aaa' : '#fff', fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', cursor: (!shareTarget || sharing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
             >
               <Send size={18} />
               {sharing ? '공유 중...' : shareTarget ? `${shareTarget.name}에 공유하기` : '크루를 선택하세요'}

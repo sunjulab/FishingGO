@@ -122,7 +122,7 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
           {list.length > 1 && (
             <span style={{
               background: 'rgba(0,0,0,0.55)', color: '#fff',
-              fontSize: '12px', fontWeight: '800',
+              fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800',
               padding: '3px 8px', borderRadius: '10px',
             }}>
               {idx + 1} / {list.length}
@@ -229,7 +229,7 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
               >
                 <ChevronLeft size={22} color="#fff" />
               </button>
-              <span style={{ color: '#fff', fontWeight: '800', fontSize: '14px', alignSelf: 'center' }}>{idx + 1} / {list.length}</span>
+              <span style={{ color: '#fff', fontWeight: '800', fontSize: `calc(14px * var(--fs, 1))`, alignSelf: 'center' }}>{idx + 1} / {list.length}</span>
               <button onClick={goNext} disabled={idx === list.length - 1}
                 style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', cursor: idx === list.length - 1 ? 'default' : 'pointer', opacity: idx === list.length - 1 ? 0.3 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >

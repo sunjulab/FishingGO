@@ -187,7 +187,7 @@ export default function WritePost() {
         <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <X size={24} color="#1c1c1e" />
         </button>
-        <h2 style={{ fontSize: '17px', fontWeight: '800' }}>
+        <h2 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '800' }}>
           {isNoticeType ? '📢 공지사항 작성' : postType === 'business' ? '선상 배 홍보 등록' : '새 조황 공유하기'}
         </h2>
         <button
@@ -198,7 +198,7 @@ export default function WritePost() {
             color: content.trim() ? '#fff' : '#bbb',
             padding: '6px 16px',
             borderRadius: '20px',
-            fontSize: '13px',
+            fontSize: `calc(13px * var(--fs, 1))`,
             fontWeight: '800',
             display: 'flex',
             alignItems: 'center',
@@ -223,12 +223,12 @@ export default function WritePost() {
               boxShadow: '0 4px 12px rgba(0,86,210,0.2)'
             }}
           >
-            <div style={{ fontSize: '24px' }}>👑</div>
+            <div style={{ fontSize: `calc(24px * var(--fs, 1))` }}>👑</div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>비즈니스 라이트 — 월 ₩9,900</div>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.85)' }}>광고 없이 무제한 등록 (홍보글 제외)</div>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>비즈니스 라이트 — 월 ₩9,900</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.85)' }}>광고 없이 무제한 등록 (홍보글 제외)</div>
             </div>
-            <div style={{ marginLeft: 'auto', fontSize: '18px' }}>›</div>
+            <div style={{ marginLeft: 'auto', fontSize: `calc(18px * var(--fs, 1))` }}>›</div>
           </div>
         )}
 
@@ -241,10 +241,10 @@ export default function WritePost() {
             display: 'flex', alignItems: 'center', gap: '10px',
             marginBottom: '14px',
           }}>
-            <div style={{ fontSize: '20px' }}>📝</div>
+            <div style={{ fontSize: `calc(20px * var(--fs, 1))` }}>📝</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', fontWeight: '900', color: '#7A5900' }}>임시저장된 글이 있습니다</div>
-              <div style={{ fontSize: '11px', color: '#A07010', marginTop: '2px' }}>이전에 작성하다 중단된 내용을 복원할 수 있습니다.</div>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#7A5900' }}>임시저장된 글이 있습니다</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#A07010', marginTop: '2px' }}>이전에 작성하다 중단된 내용을 복원할 수 있습니다.</div>
             </div>
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
@@ -254,14 +254,14 @@ export default function WritePost() {
                   if (saved) { setContent(saved); addToast('✅ 임시저장 내용을 복원했습니다.', 'success'); }
                   setShowDraftBanner(false);
                 }}
-                style={{ padding: '6px 12px', borderRadius: '10px', border: 'none', background: '#FFD60A', color: '#1A1A2E', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+                style={{ padding: '6px 12px', borderRadius: '10px', border: 'none', background: '#FFD60A', color: '#1A1A2E', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}
               >복원</button>
               <button
                 onClick={() => {
                   try { localStorage.removeItem(DRAFT_KEY); } catch { /* StorageError 무시 */ }
                   setShowDraftBanner(false);
                 }}
-                style={{ padding: '6px 10px', borderRadius: '10px', border: '1px solid #E5E5EA', background: '#fff', color: '#8E8E93', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                style={{ padding: '6px 10px', borderRadius: '10px', border: '1px solid #E5E5EA', background: '#fff', color: '#8E8E93', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
               >삭제</button>
             </div>
           </div>
@@ -276,7 +276,7 @@ export default function WritePost() {
             marginBottom: '20px', cursor: 'pointer', border: '1px solid #eee'
           }}
         >
-          <span style={{ fontSize: '13px', fontWeight: '800', color: '#0056D2' }}>{category}</span>
+          <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#0056D2' }}>{category}</span>
           <ChevronDown size={14} color="#0056D2" />
         </div>
 
@@ -287,7 +287,7 @@ export default function WritePost() {
               placeholder="공지 제목을 입력하세요"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              style={{ width: '100%', border: 'none', borderBottom: '1.5px solid #eee', fontSize: '18px', fontWeight: '800', padding: '0 0 14px', marginBottom: '10px', outline: 'none', color: '#1A1A2E' }}
+              style={{ width: '100%', border: 'none', borderBottom: '1.5px solid #eee', fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '800', padding: '0 0 14px', marginBottom: '10px', outline: 'none', color: '#1A1A2E' }}
             />
             {/* ✅ POPUP-CTRL: 홈화면 팝업 지정 체크박스 */}
             <div
@@ -316,15 +316,15 @@ export default function WritePost() {
                 )}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: '900', color: isPopup ? '#FF3B30' : '#1c1c1e' }}>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: isPopup ? '#FF3B30' : '#1c1c1e' }}>
                   🔔 홈화면 팝업으로 노출
                 </div>
 
-                <div style={{ fontSize: '11px', color: '#8E8E93', marginTop: '2px' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', marginTop: '2px' }}>
                   체크 시 홈화면 시작 시 팝업으로 표시됩니다 (이미지 첨부 권장)
                 </div>
               </div>
-              <span style={{ fontSize: '18px' }}>{isPopup ? '🔔' : '🔕'}</span>
+              <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>{isPopup ? '🔔' : '🔕'}</span>
             </div>
           </>
         )}
@@ -332,7 +332,7 @@ export default function WritePost() {
         {/* 텍스트 입력 영역 */}
         <textarea
           placeholder={isNoticeType ? '공지 내용을 입력하세요.' : '현장 상황이나 조과를 자유롭게 공유해보세요. (예: 현재 강릉항 파고가 높습니다!)'}
-          style={{ width: '100%', minHeight: '200px', border: 'none', fontSize: '16px', lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+          style={{ width: '100%', minHeight: '200px', border: 'none', fontSize: `calc(16px * var(--fs, 1))`, lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
           onChange={(e) => setContent(e.target.value)}
           value={content}
         />
@@ -364,7 +364,7 @@ export default function WritePost() {
                   if (e.key === 'Escape') { setLocEditMode(false); setLocDraft(''); }
                 }}
                 placeholder="낚시 위치를 입력하세요 (ex. 강릉항 방파제)"
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: '12px', fontWeight: '700', color: '#0056D2', background: 'transparent' }}
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#0056D2', background: 'transparent' }}
                 autoFocus
               />
             </div>
@@ -375,12 +375,12 @@ export default function WritePost() {
                 if (addr) { setLocation({ lat: null, lng: null, address: addr }); setLocEditMode(false); addToast(`📍 위치 저장: ${addr}`, 'success'); }
                 else { setLocEditMode(false); }
               }}
-              style={{ flexShrink: 0, padding: '5px 12px', borderRadius: '16px', border: 'none', background: '#0056D2', color: '#fff', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+              style={{ flexShrink: 0, padding: '5px 12px', borderRadius: '16px', border: 'none', background: '#0056D2', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
             >확인</button>
             {/* 취소 버튼 */}
             <button
               onClick={() => { setLocEditMode(false); setLocDraft(''); }}
-              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             ><X size={14} /></button>
           </div>
         )}
@@ -409,7 +409,7 @@ export default function WritePost() {
                   if (e.key === 'Escape') { setLocEditMode(false); }
                 }}
                 placeholder="낚시 위치를 수정하세요"
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: '12px', fontWeight: '700', color: '#0056D2', background: 'transparent' }}
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#0056D2', background: 'transparent' }}
                 autoFocus
               />
             </div>
@@ -420,12 +420,12 @@ export default function WritePost() {
                 if (addr) { setLocation(prev => ({ ...prev, address: addr })); addToast(`📍 수정 완료: ${addr}`, 'success'); }
                 setLocEditMode(false);
               }}
-              style={{ flexShrink: 0, padding: '5px 12px', borderRadius: '16px', border: 'none', background: '#0056D2', color: '#fff', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+              style={{ flexShrink: 0, padding: '5px 12px', borderRadius: '16px', border: 'none', background: '#0056D2', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
             >확인</button>
             {/* 취소 */}
             <button
               onClick={() => setLocEditMode(false)}
-              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             ><X size={14} /></button>
           </div>
         )}
@@ -438,7 +438,7 @@ export default function WritePost() {
                 display: 'inline-flex', alignItems: 'center', gap: '5px',
                 background: 'rgba(0,86,210,0.08)', border: '1.5px solid rgba(0,86,210,0.25)',
                 borderRadius: '20px', padding: '6px 12px',
-                fontSize: '12px', fontWeight: '700', color: '#0056D2',
+                fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#0056D2',
                 maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}
             >
@@ -448,12 +448,12 @@ export default function WritePost() {
             {/* ✏️ 수정 버튼 */}
             <button
               onClick={() => { setLocDraft(location.address); setLocEditMode(true); }}
-              style={{ flexShrink: 0, padding: '4px 10px', borderRadius: '14px', border: '1px solid rgba(0,86,210,0.3)', background: 'rgba(0,86,210,0.06)', color: '#0056D2', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+              style={{ flexShrink: 0, padding: '4px 10px', borderRadius: '14px', border: '1px solid rgba(0,86,210,0.3)', background: 'rgba(0,86,210,0.06)', color: '#0056D2', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
             >✏️ 수정</button>
             {/* ❌ 제거 버튼 */}
             <button
               onClick={() => { setLocation(null); setLocDraft(''); addToast('📍 위치가 제거되었습니다.', 'info'); }}
-              style={{ flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: `calc(12px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             ><X size={12} /></button>
           </div>
         )}
@@ -519,7 +519,7 @@ export default function WritePost() {
                   { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
                 );
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: (location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666', fontSize: '13px', cursor: locLoading ? 'not-allowed' : 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: (location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666', fontSize: `calc(13px * var(--fs, 1))`, cursor: locLoading ? 'not-allowed' : 'pointer' }}
             >
               <MapPin size={16} color={(location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666'} />
               <span style={{ fontWeight: '600' }}>
@@ -546,7 +546,7 @@ export default function WritePost() {
                   setAiAnalyzing(false);
                 }
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1565C0', fontSize: '13px', cursor: 'pointer', background: 'rgba(21,101,192,0.1)', padding: '6px 12px', borderRadius: '16px', marginLeft: 'auto', border: '1px solid rgba(21,101,192,0.3)' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1565C0', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer', background: 'rgba(21,101,192,0.1)', padding: '6px 12px', borderRadius: '16px', marginLeft: 'auto', border: '1px solid rgba(21,101,192,0.3)' }}
             >
               <Scan size={16} />
               <span style={{ fontWeight: '800', color: aiAnalyzing ? '#FF9B26' : undefined }}>
@@ -563,7 +563,7 @@ export default function WritePost() {
         <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div className="bottom-sheet open" style={{ height: 'auto', padding: '24px 20px', maxWidth: '480px', margin: '0 auto' }}>
             <div className="sheet-handle"></div>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px' }}>장르 선택</h3>
+            <h3 style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '800', marginBottom: '20px' }}>장르 선택</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {categories.map(c => (
                 <div key={c} onClick={() => { setCategory(c); setShowCategoryPopup(false); }}

@@ -71,8 +71,12 @@ export default defineConfig(({ mode }) => {
     })]),  // ← conditional VitePWA end
   ],
   build: {
-    // ✅ ROLLUP-FIX: @rollup/wasm-node 오버라이드는 package.json overrides에서 처리
+    // ✅ ROLLUP-FIX: Windows 로컬 빌드는 npm run build:esbuild 사용
+    // Vercel(Linux)에서는 표준 vite build 사용 (@rollup/wasm-node)
+    target: 'esnext',
+    minify: false,
     rollupOptions: {
+      treeshake: false,
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
@@ -83,7 +87,7 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
   },
   server: {
     proxy: {

@@ -50,16 +50,16 @@ export default function SubscriptionFailBanner() {
     }}>
       <AlertTriangle size={18} color="#fff" style={{ flexShrink: 0 }} />
       <div style={{ flex: 1 }}>
-        <p style={{ margin: 0, fontSize: '12px', color: '#fff', fontWeight: '900', lineHeight: 1.4 }}>
+        <p style={{ margin: 0, fontSize: `calc(12px * var(--fs, 1))`, color: '#fff', fontWeight: '900', lineHeight: 1.4 }}>
           정기결제 실패 — {failInfo.planId} 플랜 자동 결제에 실패했습니다.
         </p>
-        <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.8)', fontWeight: '700' }}>
+        <p style={{ margin: '2px 0 0', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.8)', fontWeight: '700' }}>
           카드 정보를 확인하고 구독을 재등록해주세요.
         </p>
       </div>
       <button
         onClick={() => { setDismissed(true); navigate('/vvip-subscribe'); }}
-        style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', color: '#fff', padding: '6px 10px', fontSize: '11px', fontWeight: '900', cursor: 'pointer', flexShrink: 0 }}
+        style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', color: '#fff', padding: '6px 10px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', flexShrink: 0 }}
       >
         재등록
       </button>

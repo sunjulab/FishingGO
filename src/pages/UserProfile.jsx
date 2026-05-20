@@ -84,16 +84,16 @@ export default function UserProfile() {
   if (loading) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '14px', background: '#F2F2F7' }}>
       <div style={{ width: '36px', height: '36px', border: '3px solid #0056D2', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <p style={{ fontSize: '14px', color: '#8E8E93', fontWeight: '700' }}>프로필 불러오는 중...</p>
+      <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>프로필 불러오는 중...</p>
     </div>
   );
 
   if (notFound) return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: '#F2F2F7', textAlign: 'center' }}>
-      <div style={{ fontSize: '52px', marginBottom: '12px' }}>👤</div>
-      <p style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>사용자를 찾을 수 없습니다</p>
-      <p style={{ fontSize: '13px', color: '#8E8E93', marginBottom: '24px' }}>탈퇴했거나 존재하지 않는 닉네임입니다.</p>
-      <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ padding: '12px 28px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>돌아가기</button>
+      <div style={{ fontSize: `calc(52px * var(--fs, 1))`, marginBottom: '12px' }}>👤</div>
+      <p style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>사용자를 찾을 수 없습니다</p>
+      <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', marginBottom: '24px' }}>탈퇴했거나 존재하지 않는 닉네임입니다.</p>
+      <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ padding: '12px 28px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer' }}>돌아가기</button>
     </div>
   );
 
@@ -106,7 +106,7 @@ export default function UserProfile() {
         <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
           <ChevronLeft size={20} color="#1A1A2E" />
         </button>
-        <span style={{ flex: 1, fontSize: '16px', fontWeight: '950', color: '#1A1A2E', textAlign: 'center' }}>프로필</span>
+        <span style={{ flex: 1, fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', textAlign: 'center' }}>프로필</span>
         <div style={{ width: '36px' }} />
       </div>
 
@@ -119,7 +119,7 @@ export default function UserProfile() {
               width: '72px', height: '72px', borderRadius: '22px', flexShrink: 0, overflow: 'hidden',
               background: 'linear-gradient(135deg, #0056D2, #00C48C)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: '950', fontSize: '26px',
+              color: '#fff', fontWeight: '950', fontSize: `calc(26px * var(--fs, 1))`,
               boxShadow: '0 6px 16px rgba(0,86,210,0.25)',
             }}>
               {profile?.avatar
@@ -129,19 +129,19 @@ export default function UserProfile() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '20px', fontWeight: '950', color: '#1c1c1e' }}>{displayName}</span>
+                <span style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{displayName}</span>
                 {profile?.tier && profile.tier !== 'FREE' && (
-                  <span style={{ fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '8px', background: tierBadge.bg, color: tierBadge.color }}>
+                  <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 8px', borderRadius: '8px', background: tierBadge.bg, color: tierBadge.color }}>
                     {badgeLabel}
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '12px', background: '#EBF2FF', color: '#0056D2', padding: '3px 10px', borderRadius: '8px', fontWeight: '800' }}>
+                <span style={{ fontSize: `calc(12px * var(--fs, 1))`, background: '#EBF2FF', color: '#0056D2', padding: '3px 10px', borderRadius: '8px', fontWeight: '800' }}>
                   LV.{profile?.level || 1}
                 </span>
                 {(profile?.streak || 0) > 0 && (
-                  <span style={{ fontSize: '12px', color: '#FF5A5F', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#FF5A5F', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '3px' }}>
                     <Flame size={12} fill="#FF5A5F" color="#FF5A5F" /> {profile.streak}일 연속
                   </span>
                 )}
@@ -159,8 +159,8 @@ export default function UserProfile() {
             ].map(s => (
               <div key={s.label} style={{ background: '#fff', padding: '12px 6px', textAlign: 'center' }}>
                 <s.icon size={12} color="#0056D2" style={{ marginBottom: '4px' }} />
-                <div style={{ fontSize: '15px', fontWeight: '950', color: '#1c1c1e' }}>{s.val}</div>
-                <div style={{ fontSize: '9px', color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
+                <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{s.val}</div>
+                <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -171,7 +171,7 @@ export default function UserProfile() {
               onClick={handleFollow}
               disabled={followLoading}
               style={{
-                width: '100%', padding: '14px', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '15px', cursor: followLoading ? 'not-allowed' : 'pointer',
+                width: '100%', padding: '14px', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, cursor: followLoading ? 'not-allowed' : 'pointer',
                 background: following ? '#F2F2F7' : 'linear-gradient(135deg, #0056D2, #0096FF)',
                 color: following ? '#1c1c1e' : '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -188,7 +188,7 @@ export default function UserProfile() {
           {isSelf && (
             <button
               onClick={() => navigate('/mypage')}
-              style={{ width: '100%', padding: '14px', border: '2px solid #0056D2', borderRadius: '16px', fontWeight: '900', fontSize: '15px', cursor: 'pointer', background: '#fff', color: '#0056D2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              style={{ width: '100%', padding: '14px', border: '2px solid #0056D2', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, cursor: 'pointer', background: '#fff', color: '#0056D2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
               내 프로필 관리
             </button>
@@ -197,7 +197,7 @@ export default function UserProfile() {
 
         {/* 가입일 */}
         {profile?.joinedAt && (
-          <div style={{ textAlign: 'center', fontSize: '12px', color: '#AEAEB2', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+          <div style={{ textAlign: 'center', fontSize: `calc(12px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
             <Calendar size={12} />
             {new Date(profile.joinedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 가입
           </div>

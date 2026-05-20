@@ -33,17 +33,17 @@ function VideoCard({ video, onSelect, onNavigate }) {
         </div>
         {/* 전체화면 버튼 */}
         <div style={{ position: 'absolute', bottom: '10px', right: '10px', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: '8px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff' }}>
-          <Maximize2 size={11} /><span style={{ fontSize: '9px', fontWeight: '900' }}>전체화면</span>
+          <Maximize2 size={11} /><span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900' }}>전체화면</span>
         </div>
         {/* 채널명 */}
         {video.channelTitle && (
           <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'rgba(0,86,210,0.85)', borderRadius: '6px', padding: '3px 8px' }}>
-            <span style={{ fontSize: '10px', fontWeight: '900', color: '#fff' }}>{video.channelTitle}</span>
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{video.channelTitle}</span>
           </div>
         )}
         {/* 태그 뱃지 */}
         <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: isRecent ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.9)', borderRadius: '6px', padding: '3px 7px' }}>
-          <span style={{ fontSize: '9px', fontWeight: '900', color: '#fff' }}>
+          <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>
             {isRecent ? '🕐 최신' : '🔥 인기'}
           </span>
         </div>
@@ -53,19 +53,19 @@ function VideoCard({ video, onSelect, onNavigate }) {
       <div style={{ padding: '18px 22px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '7px' }}>
           {video.channelTitle && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#0056D2', fontWeight: '800' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800' }}>
               <User2 size={12} />{video.channelTitle}
             </div>
           )}
           {video.publishedAt && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: '#8E8E93', fontWeight: '700' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>
               <Clock size={11} />{timeAgo(video.publishedAt)}
             </div>
           )}
         </div>
-        <h2 style={{ fontSize: '17px', fontWeight: '950', color: '#1C1C1E', marginBottom: '7px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h2>
+        <h2 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E', marginBottom: '7px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h2>
         {video.description && (
-          <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '600', marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.description}</p>
+          <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.description}</p>
         )}
 
         {/* 쿠팡 상품 */}
@@ -73,7 +73,7 @@ function VideoCard({ video, onSelect, onNavigate }) {
           <div style={{ borderTop: '1px solid #F2F2F7', paddingTop: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
               <BagIcon size={15} color="#FF5A5F" />
-              <span style={{ fontSize: '13px', fontWeight: '950', color: '#1C1C1E' }}>필수 장비 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span>종</span>
+              <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E' }}>필수 장비 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span>종</span>
             </div>
             {video.products.slice(0, 1).map((item, idx) => (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#F8F9FA', padding: '10px', borderRadius: '16px', border: '1.5px solid #F2F2F7' }}>
@@ -81,13 +81,13 @@ function VideoCard({ video, onSelect, onNavigate }) {
                   <img src={item.img} alt={item.name || '낚시 장비'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '900', color: '#1C1C1E', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1C1C1E', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '950' }}>{item.price}</span>
-                    {item.discount && <span style={{ fontSize: '11px', fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 5px', borderRadius: '5px' }}>{item.discount} ↓</span>}
+                    <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950' }}>{item.price}</span>
+                    {item.discount && <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 5px', borderRadius: '5px' }}>{item.discount} ↓</span>}
                   </div>
                 </div>
-                <button onClick={() => onNavigate('/shop')} style={{ padding: '9px 14px', borderRadius: '12px', backgroundColor: '#0056D2', color: '#fff', border: 'none', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}>구매</button>
+                <button onClick={() => onNavigate('/shop')} style={{ padding: '9px 14px', borderRadius: '12px', backgroundColor: '#0056D2', color: '#fff', border: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}>구매</button>
               </div>
             ))}
           </div>
@@ -103,8 +103,8 @@ function SectionHeader({ icon, title, subtitle, color }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', marginTop: '8px' }}>
       <div style={{ width: '4px', height: '24px', backgroundColor: color, borderRadius: '2px' }} />
       <div>
-        <div style={{ fontSize: '17px', fontWeight: '950', color: '#1C1C1E' }}>{icon} {title}</div>
-        {subtitle && <div style={{ fontSize: '11px', fontWeight: '700', color: '#8E8E93', marginTop: '2px' }}>{subtitle}</div>}
+        <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E' }}>{icon} {title}</div>
+        {subtitle && <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', marginTop: '2px' }}>{subtitle}</div>}
       </div>
     </div>
   );
@@ -240,8 +240,8 @@ export default function MediaTab() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10001, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
             <div style={{ color: '#fff', flex: 1, paddingRight: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#60a5fa', marginBottom: '4px' }}>{selectedVideo.channelTitle}</div>
-              <div style={{ fontSize: '16px', fontWeight: '900' }}>{selectedVideo.title}</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#60a5fa', marginBottom: '4px' }}>{selectedVideo.channelTitle}</div>
+              <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900' }}>{selectedVideo.title}</div>
             </div>
             <button onClick={() => setSelectedVideo(null)} style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
               <X size={22} />
@@ -252,16 +252,16 @@ export default function MediaTab() {
               src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
             <button onClick={() => window.open(`https://www.youtube.com/watch?v=${selectedVideo.youtubeId}`, '_blank')}
-              style={{ marginTop: '14px', padding: '10px 20px', borderRadius: '24px', backgroundColor: '#FF0000', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
+              style={{ marginTop: '14px', padding: '10px 20px', borderRadius: '24px', backgroundColor: '#FF0000', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}>
               <Play size={14} fill="#fff" /> YouTube에서 보기
             </button>
           </div>
           <div style={{ padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)', background: 'linear-gradient(to top, rgba(0,0,0,1), transparent)', display: 'flex', alignItems: 'center', gap: '16px', color: '#fff' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '12px', opacity: 0.7 }}>이 기술에 필요한 장비</div>
-              <div style={{ fontSize: '15px', fontWeight: '900' }}>{selectedVideo.products?.[0]?.name || '관련 장비'} 외</div>
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.7 }}>이 기술에 필요한 장비</div>
+              <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900' }}>{selectedVideo.products?.[0]?.name || '관련 장비'} 외</div>
             </div>
-            <button onClick={() => navigate('/shop')} style={{ backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '14px', fontSize: '14px', fontWeight: '900', whiteSpace: 'nowrap' }}>
+            <button onClick={() => navigate('/shop')} style={{ backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '14px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', whiteSpace: 'nowrap' }}>
               쇼핑하기
             </button>
           </div>
@@ -273,22 +273,22 @@ export default function MediaTab() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ padding: '8px', backgroundColor: '#0056D2', borderRadius: '14px', color: '#fff' }}><Tv size={22} /></div>
-            <h1 style={{ fontSize: '24px', fontWeight: '950', color: '#1C1C1E', margin: 0 }}>낚시채널</h1>
+            <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E', margin: 0 }}>낚시채널</h1>
           </div>
           {/* 통합 피드 안내 뱃지 */}
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-            <span style={{ fontSize: '10px', fontWeight: '900', backgroundColor: 'rgba(52,199,89,0.15)', color: '#34C759', padding: '4px 8px', borderRadius: '8px' }}>🕐 최신</span>
-            <span style={{ fontSize: '10px', fontWeight: '900', backgroundColor: 'rgba(255,59,48,0.12)', color: '#FF3B30', padding: '4px 8px', borderRadius: '8px' }}>🔥 인기</span>
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', backgroundColor: 'rgba(52,199,89,0.15)', color: '#34C759', padding: '4px 8px', borderRadius: '8px' }}>🕐 최신</span>
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', backgroundColor: 'rgba(255,59,48,0.12)', color: '#FF3B30', padding: '4px 8px', borderRadius: '8px' }}>🔥 인기</span>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-          <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '700' }}>📅 이번 주 최신 + 🔥 이달의 인기 · 2분 이상 영상</span>
+          <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>📅 이번 주 최신 + 🔥 이달의 인기 · 2분 이상 영상</span>
         </div>
         <div style={{ position: 'relative', marginBottom: '16px' }}>
           <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#8E8E93' }} size={18} />
           <input type="text" placeholder="검색어 입력 후 Enter (예: 돌돔 낚시)"
             value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch}
-            style={{ width: '100%', padding: '16px 16px 16px 48px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '18px', fontSize: '15px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+            style={{ width: '100%', padding: '16px 16px 16px 48px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '18px', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
         </div>
       </div>
 
@@ -296,7 +296,7 @@ export default function MediaTab() {
       <div style={{ backgroundColor: '#fff', padding: '0 0 14px', borderBottom: '1px solid #E5E5EA', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100 }}>
         <div style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '12px 20px 0', scrollbarWidth: 'none' }}>
           {CATEGORIES.map(c => (
-            <button key={c} onClick={() => handleChipClick(c)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', fontSize: '14px', fontWeight: '800', backgroundColor: activeChip === c ? '#0056D2' : '#F2F2F7', color: activeChip === c ? '#fff' : '#8E8E93', whiteSpace: 'nowrap', transition: 'all 0.2s', cursor: 'pointer' }}>
+            <button key={c} onClick={() => handleChipClick(c)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', backgroundColor: activeChip === c ? '#0056D2' : '#F2F2F7', color: activeChip === c ? '#fff' : '#8E8E93', whiteSpace: 'nowrap', transition: 'all 0.2s', cursor: 'pointer' }}>
               {c}
             </button>
           ))}
@@ -307,7 +307,7 @@ export default function MediaTab() {
       {loading && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 0', gap: '14px' }}>
           <Loader2 size={32} style={{ animation: 'spin 0.8s linear infinite' }} color="#0056D2" />
-          <span style={{ fontSize: '14px', fontWeight: '700', color: '#8E8E93' }}>최신 + 인기 낚시 영상 불러오는 중... 🐟</span>
+          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93' }}>최신 + 인기 낚시 영상 불러오는 중... 🐟</span>
         </div>
       )}
 
@@ -328,8 +328,8 @@ export default function MediaTab() {
               />
               {searchResults.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: '#8E8E93' }}>
-                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>🎣</div>
-                  <div style={{ fontSize: '15px', fontWeight: '800' }}>검색 결과가 없습니다</div>
+                  <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '12px' }}>🎣</div>
+                  <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800' }}>검색 결과가 없습니다</div>
                 </div>
               )}
               {searchResults.map(v => <VideoCard key={v.youtubeId} video={{ ...v, tag: 'recent' }} onSelect={setSelectedVideo} onNavigate={navigate} />)}
@@ -355,9 +355,9 @@ export default function MediaTab() {
               {/* 완전 비어있는 경우 */}
               {recentVideos.length === 0 && popularVideos.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8E8E93' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎣</div>
-                  <div style={{ fontSize: '16px', fontWeight: '800', marginBottom: '8px', color: '#1C1C1E' }}>영상을 불러오는 중입니다</div>
-                  <div style={{ fontSize: '13px', fontWeight: '600' }}>잠시 후 다시 시도해주세요</div>
+                  <div style={{ fontSize: `calc(48px * var(--fs, 1))`, marginBottom: '16px' }}>🎣</div>
+                  <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', marginBottom: '8px', color: '#1C1C1E' }}>영상을 불러오는 중입니다</div>
+                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '600' }}>잠시 후 다시 시도해주세요</div>
                 </div>
               )}
             </>

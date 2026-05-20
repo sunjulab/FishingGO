@@ -63,6 +63,23 @@ function PageLoading() {
   return <LoadingSpinner />;
 }
 
+// ✅ FONT-SCALE: 앱 시작 시 localStorage → html[data-fs] + CSS --fs 변수 동기화
+function FontScaleInit() {
+  useEffect(() => {
+    const apply = (scale) => {
+      const v = ['1', '1.15', '1.3', '1.5'].includes(scale) ? scale : '1';
+      document.documentElement.setAttribute('data-fs', v);
+    };
+    // 초기 적용
+    apply(localStorage.getItem('fishinggo_fs') || '1');
+    // 다른 탭/창에서 변경 시 동기화
+    const onStorage = (e) => { if (e.key === 'fishinggo_fs') apply(e.newValue || '1'); };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  return null;
+}
+
 
 // ✅ BACK-FIX: 물리 뒤로가기 — 서브페이지(/post/,/crew/ 등)는 navigate(-1), 최상위 탭은 잠금
 function BackButtonHandler() {
@@ -137,7 +154,7 @@ function BottomNav() {
             style={{ textDecoration: 'none' }}
           >
             <Icon size={24} />
-            <span style={{ fontSize: '10px', marginTop: '4px', fontWeight: '700' }}>
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, marginTop: '4px', fontWeight: '700' }}>
               {item.name}
             </span>
           </NavLink>
@@ -344,6 +361,7 @@ export default function App() {
     // 이전 구조: <ErrorBoundary><BrowserRouter>... → useNavigate가 Router 바깥에서 호출돼 앱 전체 크래시
     <BrowserRouter>
       <ErrorBoundary>
+        <FontScaleInit />
         <KakaoLoader />
         <Toast />
         <SubscriptionFailBanner />

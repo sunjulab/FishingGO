@@ -97,7 +97,7 @@ export default function MultiImageUpload({
                 <div style={{
                   position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)',
                   background: '#0056D2', color: '#fff',
-                  fontSize: '9px', fontWeight: '900',
+                  fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900',
                   padding: '2px 6px', borderRadius: '8px',
                   whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '2px',
                 }}>
@@ -146,7 +146,7 @@ export default function MultiImageUpload({
                     style={{
                       width: '18px', height: '18px', background: idx === 0 ? '#e0e0e0' : '#0056D2',
                       border: 'none', borderRadius: '4px', cursor: idx === 0 ? 'default' : 'pointer',
-                      color: '#fff', fontSize: '10px', fontWeight: '900',
+                      color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >‹</button>
@@ -156,7 +156,7 @@ export default function MultiImageUpload({
                     style={{
                       width: '18px', height: '18px', background: idx === images.length - 1 ? '#e0e0e0' : '#0056D2',
                       border: 'none', borderRadius: '4px', cursor: idx === images.length - 1 ? 'default' : 'pointer',
-                      color: '#fff', fontSize: '10px', fontWeight: '900',
+                      color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >›</button>
@@ -174,7 +174,7 @@ export default function MultiImageUpload({
           style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             color: isLoading ? '#FF9B26' : images.length > 0 ? '#0056D2' : '#666',
-            fontSize: '14px', cursor: isLoading ? 'not-allowed' : 'pointer',
+            fontSize: `calc(14px * var(--fs, 1))`, cursor: isLoading ? 'not-allowed' : 'pointer',
             marginTop: images.length > 0 ? '28px' : 0,
           }}
         >
@@ -193,16 +193,16 @@ export default function MultiImageUpload({
             border: images.length > 0 ? '1.5px solid rgba(0,86,210,0.3)' : 'none',
           }}>
             {isLoading
-              ? <span style={{ fontSize: '10px', color: '#FF9B26', fontWeight: '800' }}>처리중</span>
+              ? <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF9B26', fontWeight: '800' }}>처리중</span>
               : <Image size={20} />
             }
           </div>
           <div>
-            <div style={{ fontWeight: '700', fontSize: '13px' }}>
+            <div style={{ fontWeight: '700', fontSize: `calc(13px * var(--fs, 1))` }}>
               {isLoading ? '사진 처리 중...' : `${label} (${images.length}/${maxCount})`}
             </div>
             {images.length === 0 && (
-              <div style={{ fontSize: '11px', color: '#aaa', marginTop: '1px' }}>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#aaa', marginTop: '1px' }}>
                 최대 {maxCount}장 | 순서 변경 가능
               </div>
             )}
@@ -213,7 +213,7 @@ export default function MultiImageUpload({
       {/* 꽉 찬 경우 안내 */}
       {images.length >= maxCount && (
         <div style={{
-          fontSize: '12px', color: '#888', fontWeight: '700',
+          fontSize: `calc(12px * var(--fs, 1))`, color: '#888', fontWeight: '700',
           marginTop: images.length > 1 ? '28px' : '8px',
           padding: '8px 12px', background: '#F8F9FA', borderRadius: '10px',
         }}>

@@ -196,19 +196,19 @@ export default function LoginPage() {
 
   // ─── 스타일 ──────────────────────────────────────────────────────────────
   const inputStyle = {
-    width: '100%', padding: '13px 16px', borderRadius: '12px', fontSize: '15px',
+    width: '100%', padding: '13px 16px', borderRadius: '12px', fontSize: `calc(15px * var(--fs, 1))`,
     outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
     border: '1.5px solid #e0e0e0', background: '#fafafa', transition: 'border 0.2s',
   };
   const checkBtnStyle = (active) => ({
-    flexShrink: 0, padding: '0 14px', borderRadius: '12px', fontWeight: '800', fontSize: '13px', cursor: 'pointer',
+    flexShrink: 0, padding: '0 14px', borderRadius: '12px', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer',
     border: `1.5px solid ${active === true ? '#22c55e' : active === false ? '#FF3B30' : '#0056D2'}`,
     background: active === true ? '#22c55e' : active === false ? '#FF3B30' : '#fff',
     color: active === true ? '#fff' : active === false ? '#fff' : '#0056D2', whiteSpace: 'nowrap',
     height: '46px',
   });
   const labelStyle = {
-    fontSize: '11px', fontWeight: '700', color: '#94a3b8',
+    fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#94a3b8',
     textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', display: 'block',
   };
 
@@ -251,21 +251,21 @@ export default function LoginPage() {
             }}>
               <Anchor size={34} color="#fff" />
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#0d1b2a', margin: 0 }}>낚시GO</h1>
-            <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>프리미엄 낚시 커뮤니티 플랫폼</p>
+            <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '900', color: '#0d1b2a', margin: 0 }}>낚시GO</h1>
+            <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#64748b', marginTop: '2px' }}>프리미엄 낚시 커뮤니티 플랫폼</p>
           </div>
 
           {/* ── 탭 ── */}
           <div style={{ display: 'flex', gap: '6px', marginBottom: '18px' }}>
             <button style={{
               flex: 1, padding: '10px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              fontWeight: '900', fontSize: '14px',
+              fontWeight: '900', fontSize: `calc(14px * var(--fs, 1))`,
               background: isLogin ? '#0056D2' : '#f1f5f9',
               color: isLogin ? '#fff' : '#64748b', transition: 'all 0.2s',
             }} onClick={() => { if (!isLogin) switchMode(); }}>로그인</button>
             <button style={{
               flex: 1, padding: '10px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              fontWeight: '900', fontSize: '14px',
+              fontWeight: '900', fontSize: `calc(14px * var(--fs, 1))`,
               background: !isLogin ? '#0056D2' : '#f1f5f9',
               color: !isLogin ? '#fff' : '#64748b', transition: 'all 0.2s',
             }} onClick={() => { if (isLogin) switchMode(); }}>회원가입</button>
@@ -381,7 +381,7 @@ export default function LoginPage() {
                     <div style={{ height: '4px', borderRadius: '4px', background: '#f0f0f0', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width, background: lvl.color, borderRadius: '4px', transition: 'width 0.3s, background 0.3s' }} />
                     </div>
-                    <div style={{ fontSize: '11px', color: lvl.color, fontWeight: '800', marginTop: '3px', textAlign: 'right' }}>
+                    <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: lvl.color, fontWeight: '800', marginTop: '3px', textAlign: 'right' }}>
                       비밀번호 강도: {lvl.label}
                     </div>
                   </div>
@@ -394,7 +394,7 @@ export default function LoginPage() {
               id="btn-submit"
               style={{
                 width: '100%', height: '52px', borderRadius: '14px', border: 'none',
-                fontSize: '16px', fontWeight: '900', cursor: 'pointer',
+                fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer',
                 background: 'linear-gradient(135deg, #0056D2, #003fa3)',
                 color: '#fff', boxShadow: '0 6px 18px rgba(0,86,210,0.4)',
                 transition: 'opacity 0.2s', opacity: loading ? 0.7 : 1,
@@ -412,7 +412,7 @@ export default function LoginPage() {
           {/* 게스트 버튼 */}
           <button id="btn-guest" style={{
             width: '100%', height: '46px', borderRadius: '12px', border: 'none',
-            background: '#f1f5f9', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer',
+            background: '#f1f5f9', color: '#64748b', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer',
           }} onClick={() => {
             setUser({ id: 'GUEST', name: '게스트낚시인', email: '', tier: 'FREE', level: 1, exp: 0, totalExp: 0, avatar: GUEST_AVATAR, followers: [] });
             navigate('/');
@@ -420,7 +420,7 @@ export default function LoginPage() {
             로그인 없이 둘러보기
           </button>
 
-          <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center', color: '#9ca3af', fontSize: '11px' }}>
+          <div style={{ textAlign: 'center', marginTop: '12px', display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center', color: '#9ca3af', fontSize: `calc(11px * var(--fs, 1))` }}>
             <ShieldCheck size={12} /> 보안 암호화 로그인 적용
           </div>
         </div>

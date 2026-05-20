@@ -131,9 +131,9 @@ export default function Channel() {
       <div style={{ background: 'linear-gradient(135deg, #0056D2 0%, #00308F 100%)', padding: '60px 24px 40px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
             <Video size={20} color="#FFD700" />
-            <span style={{ fontSize: '13px', fontWeight: '800', opacity: 0.8, letterSpacing: '0.1em' }}>PREMIUM ACADEMY</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', opacity: 0.8, letterSpacing: '0.1em' }}>PREMIUM ACADEMY</span>
         </div>
-        <h1 style={{ fontSize: '28px', fontWeight: '950', marginBottom: '24px', letterSpacing: '-0.02em' }}>실전 채비 마스터 🎓</h1>
+        <h1 style={{ fontSize: `calc(28px * var(--fs, 1))`, fontWeight: '950', marginBottom: '24px', letterSpacing: '-0.02em' }}>실전 채비 마스터 🎓</h1>
         
         {/* Horizontal Category Scroll */}
         <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', scrollbarWidth: 'none', paddingBottom: '5px' }}>
@@ -147,7 +147,7 @@ export default function Channel() {
                         border: 'none',
                         backgroundColor: filter === c ? '#fff' : 'rgba(255,255,255,0.15)',
                         color: filter === c ? '#0056D2' : '#fff',
-                        fontSize: '14px',
+                        fontSize: `calc(14px * var(--fs, 1))`,
                         fontWeight: '800',
                         whiteSpace: 'nowrap',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -164,13 +164,13 @@ export default function Channel() {
         {/* Video Player Modal/Overlay if playing */}
         {playingVideo && (
            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 3000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-               <button onClick={() => setPlayingVideo(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#fff', fontSize: '24px' }}>✕</button>
+               <button onClick={() => setPlayingVideo(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#fff', fontSize: `calc(24px * var(--fs, 1))` }}>✕</button>
                <div style={{ width: '100%', maxWidth: '800px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
                     <ReactPlayer url={playingVideo.url} playing width="100%" height="450px" controls />
                </div>
                <div style={{ width: '100%', maxWidth: '800px', marginTop: '24px', color: '#fff' }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px' }}>{playingVideo.title}</h2>
-                    <p style={{ fontSize: '14px', opacity: 0.7 }}>{playingVideo.description}</p>
+                    <h2 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '800', marginBottom: '8px' }}>{playingVideo.title}</h2>
+                    <p style={{ fontSize: `calc(14px * var(--fs, 1))`, opacity: 0.7 }}>{playingVideo.description}</p>
                </div>
            </div>
         )}
@@ -192,12 +192,12 @@ export default function Channel() {
                                 <Play fill="#0056D2" color="#0056D2" size={24} />
                             </div>
                         </div>
-                        <span style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '4px 8px', backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '11px', fontWeight: '700', borderRadius: '8px' }}>{video.duration}</span>
+                        <span style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '4px 8px', backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', borderRadius: '8px' }}>{video.duration}</span>
                     </div>
 
                     <div style={{ padding: '20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                             <h3 style={{ fontSize: '17px', fontWeight: '900', color: '#1C1C1E', flex: 1, marginRight: '10px' }}>{video.title}</h3>
+                             <h3 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1C1C1E', flex: 1, marginRight: '10px' }}>{video.title}</h3>
                              {/* NEW-B1: 북마크 버튼 — localStorage 저장 */}
                              <Bookmark
                                size={18}
@@ -207,20 +207,20 @@ export default function Channel() {
                                style={{ cursor: 'pointer', flexShrink: 0, transition: 'color 0.2s' }}
                              />
                         </div>
-                        <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '500', marginBottom: '20px', lineHeight: 1.4 }}>{video.description}</p>
+                        <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '500', marginBottom: '20px', lineHeight: 1.4 }}>{video.description}</p>
                         
                         {/* Shopping Tag Section (Coupang Partners Structure) */}
                         <div style={{ backgroundColor: '#F8F9FA', borderRadius: '24px', padding: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                 <ShoppingBag size={16} color="#0056D2" />
-                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#0056D2' }}>영상 속 추천 장비</span>
+                                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#0056D2' }}>영상 속 추천 장비</span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                              {video.gear.map(item => (
                                     <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '10px 16px', borderRadius: '16px', border: '1px solid #F2F2F7' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: '800' }}>{item.name}</span>
-                                            <span style={{ fontSize: '12px', color: '#FF5A5F', fontWeight: '900' }}>{item.price}</span>
+                                            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800' }}>{item.name}</span>
+                                            <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#FF5A5F', fontWeight: '900' }}>{item.price}</span>
                                         </div>
                                         <button
                                           onClick={() => {
@@ -230,7 +230,7 @@ export default function Channel() {
                                               : `https://www.coupang.com/np/search?q=${encodeURIComponent(item.name)}${COUPANG_PID ? `&sourceType=affiliate&affiliateCode=${COUPANG_PID}` : ''}`;
                                             window.open(searchUrl, '_blank', 'noopener,noreferrer');
                                           }}
-                                          style={{ padding: '8px 12px', borderRadius: '12px', backgroundColor: '#F2F2F7', border: 'none', color: '#1C1C1E', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                                          style={{ padding: '8px 12px', borderRadius: '12px', backgroundColor: '#F2F2F7', border: 'none', color: '#1C1C1E', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
                                         >
                                             보러가기 <ExternalLink size={12} />
                                         </button>
@@ -247,15 +247,15 @@ export default function Channel() {
         {/* NEW-B2: 프리미엄 Empty State */}
         {filteredVideos.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: '32px', border: '1.5px dashed #E0E0E0' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎬</div>
-            <p style={{ fontSize: '17px', fontWeight: '900', color: '#1C1C1E', marginBottom: '8px' }}>영상을 준비 중입니다</p>
-            <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '700', lineHeight: 1.5 }}>
+            <div style={{ fontSize: `calc(48px * var(--fs, 1))`, marginBottom: '16px' }}>🎬</div>
+            <p style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1C1C1E', marginBottom: '8px' }}>영상을 준비 중입니다</p>
+            <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', lineHeight: 1.5 }}>
               [<span style={{ fontWeight: '900' }}>{filter}</span>] 카테고리의 튜토리얼이<br />준비 중입니다. 다른 카테고리를 확인해보세요!
               {/* ✅ 2ND-C2: "공비" → "준비" 오타 수정 */}
             </p>
             <button
               onClick={() => setFilter('전체')}
-              style={{ marginTop: '16px', padding: '10px 24px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
+              style={{ marginTop: '16px', padding: '10px 24px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer' }}
             >
               전체 보기
             </button>

@@ -21,12 +21,12 @@ export default function StorySlider({ stories = [], onAddStory, onViewStory }) {
         <div style={{
           width: '58px', height: '58px', borderRadius: '50%',
           border: '2px dashed #0056D2', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: '26px', background: '#EEF4FF',
+          justifyContent: 'center', fontSize: `calc(26px * var(--fs, 1))`, background: '#EEF4FF',
           margin: '0 auto',
         }}>
-          <span style={{ color: '#0056D2', fontWeight: '900', fontSize: '24px', lineHeight: 1 }}>+</span>
+          <span style={{ color: '#0056D2', fontWeight: '900', fontSize: `calc(24px * var(--fs, 1))`, lineHeight: 1 }}>+</span>
         </div>
-        <div style={{ fontSize: '10px', marginTop: '5px', color: '#0056D2', fontWeight: '800' }}>
+        <div style={{ fontSize: `calc(10px * var(--fs, 1))`, marginTop: '5px', color: '#0056D2', fontWeight: '800' }}>
           오늘 조황
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function StorySlider({ stories = [], onAddStory, onViewStory }) {
                   <div style={{
                     width: '100%', height: '100%', background: '#F2F2F7',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '20px', fontWeight: '900', color: '#0056D2',
+                    fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2',
                   }}>
                     {story.author?.charAt(0) || '?'}
                   </div>
@@ -74,14 +74,14 @@ export default function StorySlider({ stories = [], onAddStory, onViewStory }) {
 
             {/* 닉네임 */}
             <div style={{
-              fontSize: '10px', marginTop: '5px', color: '#1c1c1e', fontWeight: '700',
+              fontSize: `calc(10px * var(--fs, 1))`, marginTop: '5px', color: '#1c1c1e', fontWeight: '700',
               maxWidth: '58px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {story.author}
             </div>
 
             {/* 만료 시간 */}
-            <div style={{ fontSize: '9px', color: '#aaa', marginTop: '1px' }}>
+            <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#aaa', marginTop: '1px' }}>
               {hoursLeft}h
             </div>
           </div>

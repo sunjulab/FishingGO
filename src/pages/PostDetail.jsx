@@ -5,6 +5,7 @@ import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import ImageGallery from '../components/ImageGallery';
+import { shareExternal } from '../utils/shareUtils';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -218,54 +219,29 @@ export default function PostDetail() {
     }
   };
 
-  // ✅ NEW-B3: useCallback 적용 — 매 렌더마다 함수 재생성 방지
+  // ✅ SHARE-EXT: shareUtils 유틸 사용 — Web Share API(네이티브 공유 시트) 우선
   const handleShare = useCallback(async () => {
-    const title = `낚시GO | ${post?.author}님의 조황`;
-    const text = post?.content?.slice(0, 80) || '낚시GO에서 조황을 확인하세요!';
-    const pageUrl = window.location.href;
-    const imgUrl = post?.image?.startsWith('http')
-      ? post.image
-      : `${window.location.origin}/og-image.png`;
-
-    if (window.Kakao?.isInitialized()) {
-      try {
-        window.Kakao.Share.sendDefault({
-          objectType: 'feed',
-          content: {
-            title,
-            description: text,
-            imageUrl: imgUrl,
-            link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
-          },
-          buttons: [{ title: '조황 보러가기', link: { mobileWebUrl: pageUrl, webUrl: pageUrl } }],
-        });
-        return;
-      } catch (e) { /* 카카오 실패 시 폴백 */ }
-    }
-    if (navigator.share) {
-      try { await navigator.share({ title, text, url: pageUrl }); return; }
-      catch (e) { /* 취소 무시 */ }
-    }
-    try {
-      await navigator.clipboard.writeText(pageUrl);
-      addToast('🔗 링크가 클립보드에 복사되었습니다!', 'success');
-    } catch {
-      addToast('링크 복사에 실패했습니다.', 'error');
-    }
+    await shareExternal({
+      title: `낚시GO | ${post?.author}님의 조황`,
+      text:  post?.content?.slice(0, 80) || '낚시GO에서 조황을 확인하세요!',
+      url:   window.location.href,
+      imgUrl: post?.image,
+      addToast,
+    });
   }, [post?.author, post?.content, post?.image, addToast]);
 
   if (loading) return (
     <div className="page-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
       <div style={{ width: '36px', height: '36px', border: '3px solid #0056D2', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <div style={{ fontSize: '14px', color: '#AAB0BE', fontWeight: '700' }}>불러오는 중...</div>
+      <div style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700' }}>불러오는 중...</div>
     </div>
   );
 
   if (error || !post) return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center', gap: '16px' }}>
-      <div style={{ fontSize: '48px' }}>🎣</div>
-      <div style={{ fontSize: '16px', color: '#666', fontWeight: '700' }}>{error || '게시글을 찾을 수 없습니다.'}</div>
-      <button onClick={goBack} style={{ padding: '12px 28px', backgroundColor: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '15px', cursor: 'pointer' }}>뒤로 가기</button>
+      <div style={{ fontSize: `calc(48px * var(--fs, 1))` }}>🎣</div>
+      <div style={{ fontSize: `calc(16px * var(--fs, 1))`, color: '#666', fontWeight: '700' }}>{error || '게시글을 찾을 수 없습니다.'}</div>
+      <button onClick={goBack} style={{ padding: '12px 28px', backgroundColor: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: `calc(15px * var(--fs, 1))`, cursor: 'pointer' }}>뒤로 가기</button>
     </div>
   );
 
@@ -279,7 +255,7 @@ export default function PostDetail() {
         <button onClick={goBack} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
           <ChevronLeft size={20} color="#1A1A2E" />
         </button>
-        <span style={{ flex: 1, fontSize: '16px', fontWeight: '950', color: '#1A1A2E', textAlign: 'center' }}>조황 게시글</span>
+        <span style={{ flex: 1, fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', textAlign: 'center' }}>조황 게시글</span>
         <div style={{ display: 'flex', gap: '4px' }}>
           <button onClick={handleShare} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
             <Share2 size={18} color="#666" />
@@ -291,11 +267,11 @@ export default function PostDetail() {
               </button>
               {showMenu && (
                 <div style={{ position: 'absolute', top: '44px', right: 0, background: '#fff', borderRadius: '14px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 200, minWidth: '130px', overflow: 'hidden' }}>
-                  <button onClick={openEdit} style={{ width: '100%', padding: '13px 16px', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '700', color: '#1A1A2E', cursor: 'pointer', textAlign: 'left' }}>
+                  <button onClick={openEdit} style={{ width: '100%', padding: '13px 16px', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#1A1A2E', cursor: 'pointer', textAlign: 'left' }}>
                     <Edit2 size={15} color="#0056D2" /> 수정하기
                   </button>
                   <div style={{ height: '1px', background: '#F0F2F7' }} />
-                  <button onClick={() => { setShowDeleteConfirm(true); setShowMenu(false); }} style={{ width: '100%', padding: '13px 16px', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '700', color: '#FF3B30', cursor: 'pointer', textAlign: 'left' }}>
+                  <button onClick={() => { setShowDeleteConfirm(true); setShowMenu(false); }} style={{ width: '100%', padding: '13px 16px', border: 'none', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#FF3B30', cursor: 'pointer', textAlign: 'left' }}>
                     <Trash2 size={15} color="#FF3B30" /> 삭제하기
                   </button>
                 </div>
@@ -311,17 +287,17 @@ export default function PostDetail() {
           <button
             onClick={() => hasPrev && navigateToPost(currentIndex - 1)}
             disabled={!hasPrev}
-            style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 12px', borderRadius: '10px', border: 'none', background: hasPrev ? '#E8F0FE' : 'transparent', color: hasPrev ? '#0056D2' : '#D0D5E0', fontSize: '12px', fontWeight: '800', cursor: hasPrev ? 'pointer' : 'default', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 12px', borderRadius: '10px', border: 'none', background: hasPrev ? '#E8F0FE' : 'transparent', color: hasPrev ? '#0056D2' : '#D0D5E0', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: hasPrev ? 'pointer' : 'default', transition: 'all 0.15s' }}
           >
             <ChevronLeft size={13} /> 이전글
           </button>
-          <span style={{ fontSize: '11px', color: '#AAB0BE', fontWeight: '700' }}>
+          <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700' }}>
             {currentIndex >= 0 ? `${currentIndex + 1} / ${postIds.length}` : `1 / ${postIds.length}`}
           </span>
           <button
             onClick={() => hasNext && navigateToPost(currentIndex + 1)}
             disabled={!hasNext}
-            style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 12px', borderRadius: '10px', border: 'none', background: hasNext ? '#E8F0FE' : 'transparent', color: hasNext ? '#0056D2' : '#D0D5E0', fontSize: '12px', fontWeight: '800', cursor: hasNext ? 'pointer' : 'default', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 12px', borderRadius: '10px', border: 'none', background: hasNext ? '#E8F0FE' : 'transparent', color: hasNext ? '#0056D2' : '#D0D5E0', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: hasNext ? 'pointer' : 'default', transition: 'all 0.15s' }}
           >
             다음글 <ChevronRight size={13} />
           </button>
@@ -335,7 +311,7 @@ export default function PostDetail() {
             {/* ✅ FOLLOW-ENH: 작성자 아바타+닉네임 클릭 → 프로필 페이지 이동 */}
             <div
               onClick={() => navigate(`/user/${encodeURIComponent(post.author)}`)}
-              style={{ width: '46px', height: '46px', borderRadius: '14px', background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '950', fontSize: '18px', flexShrink: 0, cursor: 'pointer' }}
+              style={{ width: '46px', height: '46px', borderRadius: '14px', background: `linear-gradient(135deg, ${categoryColor}, ${categoryColor}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '950', fontSize: `calc(18px * var(--fs, 1))`, flexShrink: 0, cursor: 'pointer' }}
             >
               {post.author?.[0] || '?'}
             </div>
@@ -343,11 +319,11 @@ export default function PostDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span
                   onClick={() => navigate(`/user/${encodeURIComponent(post.author)}`)}
-                  style={{ fontWeight: '950', fontSize: '15px', color: '#1A1A2E', cursor: 'pointer' }}
+                  style={{ fontWeight: '950', fontSize: `calc(15px * var(--fs, 1))`, color: '#1A1A2E', cursor: 'pointer' }}
                 >{post.author}</span>
-                <span style={{ fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '6px', background: `${categoryColor}18`, color: categoryColor }}>{post.category}</span>
+                <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '2px 8px', borderRadius: '6px', background: `${categoryColor}18`, color: categoryColor }}>{post.category}</span>
               </div>
-              <div style={{ fontSize: '11px', color: '#AAB0BE', fontWeight: '700', marginTop: '2px' }}>{timeAgo(post.createdAt)}</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700', marginTop: '2px' }}>{timeAgo(post.createdAt)}</div>
             </div>
           </div>
 
@@ -364,7 +340,7 @@ export default function PostDetail() {
           ) : null}
 
           <div style={{ padding: '16px 18px' }}>
-            <p style={{ fontSize: '15px', lineHeight: '1.75', color: '#1A1A2E', fontWeight: '600', whiteSpace: 'pre-wrap', margin: 0 }}>{post.content}</p>
+            <p style={{ fontSize: `calc(15px * var(--fs, 1))`, lineHeight: '1.75', color: '#1A1A2E', fontWeight: '600', whiteSpace: 'pre-wrap', margin: 0 }}>{post.content}</p>
             {/* ✅ LOC-3 + INSTA-P2: 위치 배지 — 앱 내 지도 + 카카오맵 연동 */}
             {post.location?.address && (
               <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
@@ -376,12 +352,12 @@ export default function PostDetail() {
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
                       background: 'rgba(0,86,210,0.07)', border: '1px solid rgba(0,86,210,0.2)',
                       borderRadius: '20px', padding: '5px 11px',
-                      fontSize: '12px', fontWeight: '700', color: '#0056D2', cursor: 'pointer',
+                      fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#0056D2', cursor: 'pointer',
                     }}
                   >
                     <MapPin size={12} />
                     <span>{post.location.address}</span>
-                    <span style={{ fontSize: '10px', opacity: 0.7 }}>→ 지도</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, opacity: 0.7 }}>→ 지도</span>
                   </div>
                 )}
                 {/* 카카오맵 */}
@@ -392,7 +368,7 @@ export default function PostDetail() {
                       display: 'inline-flex', alignItems: 'center', gap: '4px',
                       background: '#FFF9C4', border: '1px solid #F9C400',
                       borderRadius: '20px', padding: '5px 11px',
-                      fontSize: '12px', fontWeight: '700', color: '#7C5000', cursor: 'pointer',
+                      fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#7C5000', cursor: 'pointer',
                     }}
                   >
                     🗺️ 카카오맵
@@ -400,7 +376,7 @@ export default function PostDetail() {
                 )}
                 {/* 좌표 없이 주소만 있을 때 */}
                 {!post.location.lat && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(0,86,210,0.07)', border: '1px solid rgba(0,86,210,0.2)', borderRadius: '20px', padding: '5px 11px', fontSize: '12px', fontWeight: '700', color: '#0056D2' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(0,86,210,0.07)', border: '1px solid rgba(0,86,210,0.2)', borderRadius: '20px', padding: '5px 11px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#0056D2' }}>
                     <MapPin size={12} /><span>{post.location.address}</span>
                   </div>
                 )}
@@ -409,11 +385,11 @@ export default function PostDetail() {
           </div>
 
           <div style={{ padding: '12px 18px 16px', display: 'flex', gap: '20px', borderTop: '1px solid #F8F8F8' }}>
-            <button onClick={handleLike} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: liked ? '#FF5A5F' : '#AAB0BE', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+            <button onClick={handleLike} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: liked ? '#FF5A5F' : '#AAB0BE', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
               <Heart size={18} fill={liked ? '#FF5A5F' : 'none'} color={liked ? '#FF5A5F' : '#AAB0BE'} />
               <span>{post.likes || 0}</span>
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: '#AAB0BE' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#AAB0BE' }}>
               <MessageSquare size={18} /><span>{commentCount}</span>
             </div>
           </div>
@@ -429,11 +405,11 @@ export default function PostDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ width: '3px', height: '18px', background: '#FF5A5F', borderRadius: '2px' }} />
                 <ShoppingBag size={15} color="#FF5A5F" />
-                <span style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E' }}>이 낚시에 어울리는 용품</span>
+                <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E' }}>이 낚시에 어울리는 용품</span>
               </div>
               <button
                 onClick={() => navigate('/shop')}
-                style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '800', color: '#0056D2', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#0056D2', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
               >
                 전체보기 <ChevronRight size={13} />
               </button>
@@ -466,26 +442,26 @@ export default function PostDetail() {
                   </div>
                   {/* 상품 정보 */}
                   <div style={{ padding: '8px 8px 10px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1A1A2E', lineHeight: '1.35', marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#1A1A2E', lineHeight: '1.35', marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {item.name}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '950', color: '#1A1A2E' }}>{item.price}</span>
+                      <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E' }}>{item.price}</span>
                       {item.discount && (
-                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#FF5A5F', background: 'rgba(255,90,95,0.1)', padding: '1px 5px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#FF5A5F', background: 'rgba(255,90,95,0.1)', padding: '1px 5px', borderRadius: '4px' }}>
                           {item.discount}↓
                         </span>
                       )}
                     </div>
                     {/* 쿠팡 구매 버튼 */}
-                    <div style={{ marginTop: '6px', padding: '5px 0', background: 'linear-gradient(135deg,#FF5A5F,#FF3B30)', borderRadius: '8px', textAlign: 'center', fontSize: '10px', fontWeight: '900', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                    <div style={{ marginTop: '6px', padding: '5px 0', background: 'linear-gradient(135deg,#FF5A5F,#FF3B30)', borderRadius: '8px', textAlign: 'center', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
                       <ExternalLink size={9} /> 쿠팡 구매
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: '10px', color: '#AEAEB2', fontWeight: '600', textAlign: 'right', marginTop: '8px', margin: '8px 0 0' }}>
+            <p style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', textAlign: 'right', marginTop: '8px', margin: '8px 0 0' }}>
               이 포스팅은 쿠팡 파트너스 활동의 일환으로 수수료를 받을 수 있습니다
             </p>
           </div>
@@ -493,13 +469,13 @@ export default function PostDetail() {
 
         {/* 댓글 목록 */}
         <div style={{ margin: '0 12px', backgroundColor: '#fff', borderRadius: '20px', padding: '16px 18px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E', marginBottom: '16px' }}>댓글 {commentCount}</h3>
+          <h3 style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginBottom: '16px' }}>댓글 {commentCount}</h3>
           {Array.isArray(post.comments) && post.comments.length > 0 ? (
             post.comments.map((c, idx) => (
               <div key={String(c._id || idx)} style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'flex-start' }}>
                 <div
                   onClick={() => navigate(`/user/${encodeURIComponent(c.author)}`)}
-                  style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #F0F5FF, #E0ECFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '900', color: '#0056D2', cursor: 'pointer' }}
+                  style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #F0F5FF, #E0ECFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2', cursor: 'pointer' }}
                 >
                   {c.author ? c.author[0] : <User size={16} />}
                 </div>
@@ -507,26 +483,26 @@ export default function PostDetail() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <span
                       onClick={() => navigate(`/user/${encodeURIComponent(c.author)}`)}
-                      style={{ fontWeight: '800', fontSize: '13px', color: '#1A1A2E', cursor: 'pointer' }}
+                      style={{ fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, color: '#1A1A2E', cursor: 'pointer' }}
                     >{c.author}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', color: '#D0D5E0', fontWeight: '700' }}>{timeAgo(c.createdAt)}</span>
+                      <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#D0D5E0', fontWeight: '700' }}>{timeAgo(c.createdAt)}</span>
                       {/* ✅ 본인 또는 어드민에게만 삭제 버튼 표시 */}
                       {(isAdmin || (user && c.author_email === user.email)) && (
                         <button
                           onClick={() => deleteComment(c._id?.toString() || c.id || String(c.createdAt))}
-                          style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: '6px', color: '#FF3B30', fontSize: '11px', fontWeight: '900', lineHeight: 1 }}
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: '6px', color: '#FF3B30', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', lineHeight: 1 }}
                           title="댓글 삭제"
                         >×</button>
                       )}
                     </div>
                   </div>
-                  <p style={{ fontSize: '14px', color: '#444', lineHeight: '1.5', margin: 0, fontWeight: '600' }}>{c.text}</p>
+                  <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#444', lineHeight: '1.5', margin: 0, fontWeight: '600' }}>{c.text}</p>
                 </div>
               </div>
             ))
           ) : (
-            <div style={{ textAlign: 'center', padding: '24px 0', color: '#D0D5E0', fontSize: '13px', fontWeight: '700' }}>첫 댓글을 남겨보세요! 🎣</div>
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#D0D5E0', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>첫 댓글을 남겨보세요! 🎣</div>
           )}
         </div>
       </div>
@@ -535,7 +511,7 @@ export default function PostDetail() {
       <div style={{ padding: '10px 16px', backgroundColor: '#fff', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 -4px 16px rgba(0,0,0,0.06)' }}>
         <input
           placeholder="칭찬과 응원의 댓글을 남겨주세요 🎣"
-          style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', backgroundColor: '#F2F2F7', border: 'none', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#1A1A2E' }}
+          style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', backgroundColor: '#F2F2F7', border: 'none', outline: 'none', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '600', color: '#1A1A2E' }}
           value={comment} onChange={e => setComment(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && submitComment()}
         />
@@ -550,12 +526,12 @@ export default function PostDetail() {
       {showDeleteConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#fff', borderRadius: '20px', padding: '28px 24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>🗑️</div>
-            <div style={{ fontSize: '17px', fontWeight: '900', color: '#1A1A2E', marginBottom: '8px' }}>게시글을 삭제할까요?</div>
-            <div style={{ fontSize: '13px', color: '#AAB0BE', marginBottom: '24px' }}>삭제된 게시글은 복구할 수 없습니다.</div>
+            <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '12px' }}>🗑️</div>
+            <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginBottom: '8px' }}>게시글을 삭제할까요?</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#AAB0BE', marginBottom: '24px' }}>삭제된 게시글은 복구할 수 없습니다.</div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '13px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: '14px', fontWeight: '800', cursor: 'pointer', color: '#666' }}>취소</button>
-              <button onClick={handleDelete} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: '#FF3B30', fontSize: '14px', fontWeight: '900', cursor: 'pointer', color: '#fff' }}>삭제</button>
+              <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '13px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: '#666' }}>취소</button>
+              <button onClick={handleDelete} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: '#FF3B30', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', color: '#fff' }}>삭제</button>
             </div>
           </div>
         </div>

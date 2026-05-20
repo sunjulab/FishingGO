@@ -35,7 +35,7 @@ export default function LoadingSpinner({ size = '40px', color = '#0056D2', label
         }}
       />
       {label && (
-        <span style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '800' }}>
+        <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800' }}>
           {label}
         </span>
       )}

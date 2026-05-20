@@ -125,7 +125,7 @@ export default function ImagePositionEditor({ src, onConfirm, onCancel }) {
         >
           <X size={22} />
         </button>
-        <span style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '-0.3px' }}>
+        <span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', letterSpacing: '-0.3px' }}>
           📐 사진 위치 조정
         </span>
         <button
@@ -133,7 +133,7 @@ export default function ImagePositionEditor({ src, onConfirm, onCancel }) {
           style={{
             background: '#0056D2', border: 'none', color: '#fff',
             borderRadius: '10px', padding: '8px 18px',
-            fontSize: '14px', fontWeight: '800', cursor: 'pointer',
+            fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: '5px',
           }}
         >
@@ -166,7 +166,7 @@ export default function ImagePositionEditor({ src, onConfirm, onCancel }) {
       </div>
 
       {/* 안내 */}
-      <div style={{ marginTop: '18px', display: 'flex', alignItems: 'center', gap: '6px', color: '#aaa', fontSize: '13px' }}>
+      <div style={{ marginTop: '18px', display: 'flex', alignItems: 'center', gap: '6px', color: '#aaa', fontSize: `calc(13px * var(--fs, 1))` }}>
         <Maximize2 size={14} />
         드래그하여 보이는 영역을 조정하세요
       </div>

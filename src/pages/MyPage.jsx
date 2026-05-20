@@ -99,6 +99,8 @@ export default function MyPage() {
 
   // 설정 대시보드 상태 — 안전한 기본값으로 초기화 후 user 로드 시 동기화
   const [notiSetting, setNotiSetting] = useState(DEFAULT_NOTI);
+  // ✅ FONT-SCALE: 리렌더 트리거용 (CSS 변수 변경 후 활성 버튼 상태 즉시 반영)
+  const [fontScale, setFontScale] = useState(() => localStorage.getItem('fishinggo_fs') || '1');
 
   // NEW-B3: 카메라 오버레이 hover 상태 — DOM 직접 조작 anti-pattern 제거
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
@@ -469,11 +471,11 @@ export default function MyPage() {
   if (!user) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F8F9FA', gap: '16px' }}>
-        <div style={{ fontSize: '48px' }}>🎣</div>
-        <p style={{ fontSize: '16px', fontWeight: '800', color: '#1c1c1e' }}>로그인이 필요합니다</p>
+        <div style={{ fontSize: `calc(48px * var(--fs, 1))` }}>🎣</div>
+        <p style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>로그인이 필요합니다</p>
         <button
           onClick={() => navigate('/login')}
-          style={{ padding: '14px 32px', background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '15px', cursor: 'pointer' }}
+          style={{ padding: '14px 32px', background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, cursor: 'pointer' }}
         >
           로그인 / 회원가입
         </button>
@@ -541,7 +543,7 @@ export default function MyPage() {
                 position: 'absolute', top: '-8px', left: '-8px',
                 background: tierBadge.bg,
                 color: tierBadge.color,
-                fontSize: '10px', fontWeight: '900',
+                fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900',
                 padding: '3px 9px', borderRadius: '12px',
                 border: '2.5px solid #fff', letterSpacing: '0.02em',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
@@ -562,17 +564,17 @@ export default function MyPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {isEditing ? (
                 <div style={{ position: 'relative', width: '100%' }}>
-                  <input value={newName} onChange={e => setNewName(e.target.value)} style={{ background: '#fff', border: '2px solid #0056D2', borderRadius: '12px', padding: '8px 40px 8px 12px', fontSize: '18px', fontWeight: '900', width: '100%', outline: 'none' }} />
+                  <input value={newName} onChange={e => setNewName(e.target.value)} style={{ background: '#fff', border: '2px solid #0056D2', borderRadius: '12px', padding: '8px 40px 8px 12px', fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', width: '100%', outline: 'none' }} />
                   <Check size={18} color="#00C48C" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }} onClick={handleNicknameChange} />
                 </div>
               ) : (
                 <>
-                  <h2 style={{ fontSize: '22px', fontWeight: '950', color: '#1c1c1e' }}>{user.name}</h2>
+                  <h2 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{user.name}</h2>
                   <div onClick={() => setIsEditing(true)} style={{ backgroundColor: '#F2F2F7', padding: '6px', borderRadius: '8px', cursor: 'pointer' }}><Edit3 size={14} color="#8E8E93" /></div>
                 </>
               )}
             </div>
-            <p style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{user.email}</p>
+            <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{user.email}</p>
 
             {/* 레벨 카드 */}
             <div
@@ -582,17 +584,17 @@ export default function MyPage() {
               {/* 쫐호 + 이모지 */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '18px' }}>{levelInfo.emoji}</span>
+                  <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>{levelInfo.emoji}</span>
                   <div>
-                    <div style={{ fontSize: '10px', color: '#0056D2', fontWeight: '900', letterSpacing: '0.04em' }}>LV.{levelInfo.level}</div>
-                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#1c1c1e', lineHeight: 1.2 }}>{levelInfo.title}</div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#0056D2', fontWeight: '900', letterSpacing: '0.04em' }}>LV.{levelInfo.level}</div>
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', lineHeight: 1.2 }}>{levelInfo.title}</div>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   {levelInfo.isMaxLevel ? (
-                    <span style={{ fontSize: '10px', fontWeight: '900', color: '#FFD700' }}>MAX LEVEL 🏆</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#FFD700' }}>MAX LEVEL 🏆</span>
                   ) : (
-                    <span style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700' }}>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>
                       {levelInfo.expInCurrentLevel} / {levelInfo.expNeededForNext} XP
                     </span>
                   )}
@@ -608,7 +610,7 @@ export default function MyPage() {
               </div>
               {/* 다음 레벨 보상 */}
               {levelInfo.nextLevel && (
-                <div style={{ fontSize: '10px', color: '#0056D2', fontWeight: '700', marginTop: '6px' }}>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#0056D2', fontWeight: '700', marginTop: '6px' }}>
                   LV.{levelInfo.nextLevel.level} 달성 시: {levelInfo.nextLevel.reward || levelInfo.nextLevel.title}
                 </div>
               )}
@@ -617,9 +619,9 @@ export default function MyPage() {
             {/* 연속출석 */}
             {(user.streak || 0) > 0 && (
               <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '14px' }}>🔥</span>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#FF5A5F' }}>{user.streak}일 연속 출석 중!</span>
-                {(user.streak >= 7) && <span style={{ fontSize: '9px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '8px', fontWeight: '900' }}>+80 EXP 발동 중</span>}
+                <span style={{ fontSize: `calc(14px * var(--fs, 1))` }}>🔥</span>
+                <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#FF5A5F' }}>{user.streak}일 연속 출석 중!</span>
+                {(user.streak >= 7) && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '8px', fontWeight: '900' }}>+80 EXP 발동 중</span>}
               </div>
             )}
           </div>
@@ -635,9 +637,9 @@ export default function MyPage() {
              <div key={s.label} onClick={s.onClick} style={{ backgroundColor: '#fff', padding: '14px 6px', textAlign: 'center', cursor: s.onClick ? 'pointer' : 'default' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}>
                    <s.icon size={11} color={s.color} fill={s.color} />
-                   <span style={{ fontSize: '16px', fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
+                   <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
                 </div>
-                <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
              </div>
            ))}
         </div>
@@ -645,18 +647,18 @@ export default function MyPage() {
 
       {/* 🟦 Tabs Switcher 🟦 */}
       <div style={{ display: 'flex', padding: '20px 24px 10px', gap: '24px', overflowX: 'auto' }}>
-         <div onClick={() => setActiveTab('records')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'records' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+         <div onClick={() => setActiveTab('records')} style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: activeTab === 'records' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             기록부 {activeTab === 'records' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
          </div>
-         <div onClick={() => setActiveTab('posts')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'posts' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+         <div onClick={() => setActiveTab('posts')} style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: activeTab === 'posts' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             나의 피드 {activeTab === 'posts' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
          </div>
-         <div onClick={() => setActiveTab('stats')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'stats' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+         <div onClick={() => setActiveTab('stats')} style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: activeTab === 'stats' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             조과통계 {activeTab === 'stats' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#FF9B26', borderRadius: '2px' }}></div>}
          </div>
          {/* ✅ CREW-ENH: 내 크루 탭 */}
-         <div onClick={() => setActiveTab('crews')} style={{ fontSize: '18px', fontWeight: '950', color: activeTab === 'crews' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Users size={16} /> 내 크루 {myCrews.length > 0 && <span style={{ fontSize: '11px', background: '#0056D2', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontWeight: '900' }}>{myCrews.length}</span>} {activeTab === 'crews' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
+         <div onClick={() => setActiveTab('crews')} style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: activeTab === 'crews' ? '#1c1c1e' : '#C7C7CC', position: 'relative', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Users size={16} /> 내 크루 {myCrews.length > 0 && <span style={{ fontSize: `calc(11px * var(--fs, 1))`, background: '#0056D2', color: '#fff', borderRadius: '10px', padding: '1px 7px', fontWeight: '900' }}>{myCrews.length}</span>} {activeTab === 'crews' && <div style={{ position: 'absolute', bottom: '-8px', left: 0, width: '100%', height: '4px', backgroundColor: '#0056D2', borderRadius: '2px' }}></div>}
          </div>
       </div>
 
@@ -712,23 +714,23 @@ export default function MyPage() {
                    { label: '대표 어종', val: entries[0]?.[0] || '-', emoji: '🏆', color: '#FF5A5F' },
                  ].map(s => (
                    <div key={s.label} style={{ background: '#fff', borderRadius: '16px', padding: '14px 10px', textAlign: 'center', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
-                     <div style={{ fontSize: '20px', marginBottom: '4px' }}>{s.emoji}</div>
-                     <div style={{ fontSize: '16px', fontWeight: '950', color: s.color, wordBreak: 'keep-all' }}>{s.val}</div>
-                     <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700', marginTop: '2px' }}>{s.label}</div>
+                     <div style={{ fontSize: `calc(20px * var(--fs, 1))`, marginBottom: '4px' }}>{s.emoji}</div>
+                     <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: s.color, wordBreak: 'keep-all' }}>{s.val}</div>
+                     <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', marginTop: '2px' }}>{s.label}</div>
                    </div>
                  ))}
                </div>
 
                {/* 월별 조과 추이 */}
                <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '14px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                 <div style={{ fontSize: '15px', fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>📈 월별 조과 추이</div>
+                 <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>📈 월별 조과 추이</div>
                  {realRecords.length === 0 ? (
-                   <p style={{ color: '#8E8E93', fontSize: '13px', fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
+                   <p style={{ color: '#8E8E93', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
                  ) : (
                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '80px' }}>
                      {monthEntries.map(([month, cnt]) => (
                        <div key={month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                         <div style={{ fontSize: '10px', fontWeight: '900', color: '#0056D2' }}>{cnt > 0 ? cnt : ''}</div>
+                         <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2' }}>{cnt > 0 ? cnt : ''}</div>
                          <div style={{
                            width: '100%', borderRadius: '6px 6px 0 0',
                            height: `${Math.max((cnt / maxMonth) * 60, cnt > 0 ? 8 : 2)}px`,
@@ -736,7 +738,7 @@ export default function MyPage() {
                            transition: 'height 0.8s ease',
                            minHeight: '2px',
                          }} />
-                         <div style={{ fontSize: '9px', color: '#8E8E93', fontWeight: '700' }}>{month}</div>
+                         <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{month}</div>
                        </div>
                      ))}
                    </div>
@@ -745,14 +747,14 @@ export default function MyPage() {
 
                {/* 어종별 바 차트 */}
                <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '14px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                 <div style={{ fontSize: '15px', fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>🐟 어종별 조과</div>
+                 <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>🐟 어종별 조과</div>
                  {entries.length === 0 ? (
-                   <p style={{ color: '#8E8E93', fontSize: '13px', fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
+                   <p style={{ color: '#8E8E93', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
                  ) : entries.map(([sp, cnt], i) => (
                    <div key={sp} style={{ marginBottom: '12px' }}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                       <span style={{ fontSize: '13px', fontWeight: '800', color: '#1c1c1e' }}>{sp}</span>
-                       <span style={{ fontSize: '13px', fontWeight: '950', color: BAR_COLORS[i] }}>{cnt}회</span>
+                       <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>{sp}</span>
+                       <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: BAR_COLORS[i] }}>{cnt}회</span>
                      </div>
                      <div style={{ height: '8px', background: '#F2F2F7', borderRadius: '4px', overflow: 'hidden' }}>
                        <div style={{ height: '100%', width: `${(cnt / max) * 100}%`, background: BAR_COLORS[i], borderRadius: '4px', transition: 'width 0.8s ease' }} />
@@ -764,19 +766,19 @@ export default function MyPage() {
                {/* 단골 포인트 TOP3 */}
                {topSpots.length > 0 && (
                  <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                   <div style={{ fontSize: '15px', fontWeight: '950', marginBottom: '14px', color: '#1c1c1e' }}>⭐ 단골 포인트 TOP3</div>
+                   <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '14px', color: '#1c1c1e' }}>⭐ 단골 포인트 TOP3</div>
                    {topSpots.map(([spot, cnt], i) => (
                      <div key={spot} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < topSpots.length - 1 ? '12px' : 0 }}>
                        <div style={{
                          width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
                          background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32',
                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                         fontSize: '12px', fontWeight: '900', color: '#fff',
+                         fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#fff',
                        }}>{i + 1}</div>
                        <div style={{ flex: 1 }}>
-                         <div style={{ fontSize: '13px', fontWeight: '900', color: '#1c1c1e' }}>{spot}</div>
+                         <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>{spot}</div>
                        </div>
-                       <div style={{ fontSize: '13px', fontWeight: '950', color: '#0056D2' }}>{cnt}회</div>
+                       <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#0056D2' }}>{cnt}회</div>
                      </div>
                    ))}
                  </div>
@@ -792,21 +794,21 @@ export default function MyPage() {
                 >
                    {r.image
                      ? <img src={r.image} style={{ width: '100%', height: '140px', objectFit: 'cover' }} alt="" />
-                     : <div style={{ width: '100%', height: '140px', background: 'linear-gradient(135deg,#EBF5FF,#F0FFF8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🎣</div>
+                     : <div style={{ width: '100%', height: '140px', background: 'linear-gradient(135deg,#EBF5FF,#F0FFF8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(36px * var(--fs, 1))` }}>🎣</div>
                    }
                    <div style={{ padding: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '12px', background: '#EBF5FF', color: '#0056D2', padding: '2px 8px', borderRadius: '8px', fontWeight: '800' }}>{r.fish || '어종 미입력'}</span>
+                        <span style={{ fontSize: `calc(12px * var(--fs, 1))`, background: '#EBF5FF', color: '#0056D2', padding: '2px 8px', borderRadius: '8px', fontWeight: '800' }}>{r.fish || '어종 미입력'}</span>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#555', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.location || r.memo || '장소 미입력'}</div>
-                      <div style={{ fontSize: '10px', color: '#AEAEB2', fontWeight: '600', marginTop: '2px' }}>{r.date || (r.createdAt ? String(r.createdAt).slice(0,10) : '')}</div>
+                      <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#555', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.location || r.memo || '장소 미입력'}</div>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', marginTop: '2px' }}>{r.date || (r.createdAt ? String(r.createdAt).slice(0,10) : '')}</div>
                    </div>
                 </div>
               )) : (
                 <div style={{ gridColumn: 'span 2', padding: '40px', textAlign: 'center', color: '#8E8E93' }}>
-                   <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎣</div>
-                   <p style={{ fontSize: '14px', fontWeight: '700' }}>아직 등록된 조과 기록이 없습니다.</p>
-                   <p style={{ fontSize: '12px', color: '#AEAEB2', fontWeight: '600', marginTop: '4px' }}>첫 번째 조과를 등록해보세요!</p>
+                   <div style={{ fontSize: `calc(40px * var(--fs, 1))`, marginBottom: '10px' }}>🎣</div>
+                   <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>아직 등록된 조과 기록이 없습니다.</p>
+                   <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', marginTop: '4px' }}>첫 번째 조과를 등록해보세요!</p>
                 </div>
               )}
               <div
@@ -814,18 +816,18 @@ export default function MyPage() {
                 style={{ height: '190px', borderRadius: '28px', border: '2px dashed #00C48C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#00C48C', cursor: 'pointer', background: 'rgba(0,196,140,0.03)' }}
               >
                  <Camera size={28} color="#00C48C" />
-                 <span style={{ fontSize: '14px', fontWeight: '900', color: '#00C48C' }}>조과 기록 추가하기</span>
-                 <span style={{ fontSize: '11px', fontWeight: '700', color: '#8E8E93', textAlign: 'center' }}>낚시 포인트 선택 → 조과 기록 남기기</span>
+                 <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#00C48C' }}>조과 기록 추가하기</span>
+                 <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', textAlign: 'center' }}>낚시 포인트 선택 → 조과 기록 남기기</span>
               </div>
            </div>
           ) : activeTab === 'crews' ? (
            <div>
              {myCrews.length === 0 ? (
                <div style={{ padding: '48px 20px', textAlign: 'center' }}>
-                 <div style={{ fontSize: '48px', marginBottom: '12px' }}>⚓</div>
-                 <p style={{ fontSize: '15px', fontWeight: '800', color: '#555', marginBottom: '6px' }}>아직 가입한 크루가 없습니다</p>
-                 <p style={{ fontSize: '13px', color: '#8E8E93', marginBottom: '20px' }}>커뮤니티에서 크루에 참여해보세요!</p>
-                 <button onClick={() => navigate('/community?tab=crew')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#0056D2,#0096FF)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>크루 찾아보기 🎣</button>
+                 <div style={{ fontSize: `calc(48px * var(--fs, 1))`, marginBottom: '12px' }}>⚓</div>
+                 <p style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#555', marginBottom: '6px' }}>아직 가입한 크루가 없습니다</p>
+                 <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', marginBottom: '20px' }}>커뮤니티에서 크루에 참여해보세요!</p>
+                 <button onClick={() => navigate('/community?tab=crew')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#0056D2,#0096FF)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer' }}>크루 찾아보기 🎣</button>
                </div>
              ) : myCrews.map(crew => {
                const crewId = String(crew._id || crew.id);
@@ -835,15 +837,15 @@ export default function MyPage() {
                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isOwner ? 0 : '10px' }}>
                      <div>
                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                         {isOwner && <span style={{ fontSize: '9px', background: '#FFD700', color: '#1c1c1e', padding: '2px 6px', borderRadius: '6px', fontWeight: '900' }}>크루장</span>}
-                         <span style={{ fontSize: '16px', fontWeight: '900', color: '#1c1c1e' }}>{crew.name}</span>
+                         {isOwner && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#FFD700', color: '#1c1c1e', padding: '2px 6px', borderRadius: '6px', fontWeight: '900' }}>크루장</span>}
+                         <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>{crew.name}</span>
                        </div>
-                       <div style={{ display: 'flex', gap: '10px', fontSize: '12px', color: '#8e8e93' }}>
+                       <div style={{ display: 'flex', gap: '10px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93' }}>
                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Users size={12} /> {crew.members}/{crew.limit || 20}명</span>
                          {crew.region && crew.region !== '전국' && <span>📍 {crew.region}</span>}
                        </div>
                      </div>
-                     <button onClick={() => navigate(`/crew/${crewId}/chat`)} style={{ padding: '8px 16px', background: 'linear-gradient(135deg,#0056D2,#0096FF)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', flexShrink: 0 }}>채팅 입장</button>
+                     <button onClick={() => navigate(`/crew/${crewId}/chat`)} style={{ padding: '8px 16px', background: 'linear-gradient(135deg,#0056D2,#0096FF)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', flexShrink: 0 }}>채팅 입장</button>
                    </div>
                    {!isOwner && (
                      <button disabled={leavingCrewId === crewId} onClick={async () => {
@@ -854,7 +856,7 @@ export default function MyPage() {
                          addToast('크루에서 탈퇴했습니다.', 'success');
                        } catch (err) { addToast(err.response?.data?.error || '탈퇴 실패', 'error'); }
                        finally { setLeavingCrewId(null); }
-                     }} style={{ width: '100%', padding: '8px', border: '1.5px solid #FFE5E5', borderRadius: '10px', background: '#FFF0F0', color: '#FF3B30', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+                     }} style={{ width: '100%', padding: '8px', border: '1.5px solid #FFE5E5', borderRadius: '10px', background: '#FFF0F0', color: '#FF3B30', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}>
                        {leavingCrewId === crewId ? '탈퇴 중...' : '크루 나가기'}
                      </button>
                    )}
@@ -866,16 +868,16 @@ export default function MyPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {realPosts.length > 0 ? realPosts.map(p => (
                 <div key={String(p._id || p.id)} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '28px', border: '1.5px solid #F2F2F7' }}>
-                   <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', marginBottom: '8px' }}>{p.time}</div>
-                   <p style={{ fontSize: '14px', fontWeight: '700', color: '#1c1c1e', margin: '0 0 16px' }}>{p.content}</p>
+                   <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '8px' }}>{p.time}</div>
+                   <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', margin: '0 0 16px' }}>{p.content}</p>
                    <div style={{ display: 'flex', gap: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#8e8e93', fontWeight: '700' }}><Heart size={14} color="#FF5A5F" /> {p.likes}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#8e8e93', fontWeight: '700' }}><MessageSquare size={14} /> {p.comments.length}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700' }}><Heart size={14} color="#FF5A5F" /> {p.likes}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700' }}><MessageSquare size={14} /> {p.comments.length}</div>
                    </div>
                 </div>
               )) : (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#8E8E93' }}>
-                   <p style={{ fontSize: '14px', fontWeight: '700' }}>등록된 게시글이 없습니다.</p>
+                   <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>등록된 게시글이 없습니다.</p>
                 </div>
               )}
            </div>
@@ -885,21 +887,21 @@ export default function MyPage() {
       {/* 🟦 비즈니스 파트너 센터 (BUSINESS LITE/PRO/VIP 한정) 🟦 */}
       {canAccessPartnerCenter && (
         <div className="fade-in" style={{ padding: '10px 24px 20px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '950', marginBottom: '14px', color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '20px' }}>👑</span> 비즈니스 파트너 센터
+          <h3 style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', marginBottom: '14px', color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: `calc(20px * var(--fs, 1))` }}>👑</span> 비즈니스 파트너 센터
           </h3>
           <div style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #2A2A4A 100%)', borderRadius: '28px', padding: '24px', color: '#fff', boxShadow: '0 12px 30px rgba(26,26,46,0.2)' }}>
 
             {/* 1. 연락처 확인 */}
             <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '18px', borderRadius: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.1)' }}>
               <div>
-                <div style={{ fontSize: '11.5px', color: '#FFD700', fontWeight: '900', marginBottom: '6px', letterSpacing: '0.02em' }}>📞 문의 연락처 관리</div>
-                <div style={{ fontSize: '15px', fontWeight: '950', letterSpacing: '-0.02em' }}>전화·문자 연락처 확인</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', marginTop: '4px', fontWeight: '600' }}>예약 문의 시 노출되는 번호입니다</div>
+                <div style={{ fontSize: `calc(11.5px * var(--fs, 1))`, color: '#FFD700', fontWeight: '900', marginBottom: '6px', letterSpacing: '0.02em' }}>📞 문의 연락처 관리</div>
+                <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', letterSpacing: '-0.02em' }}>전화·문자 연락처 확인</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.55)', marginTop: '4px', fontWeight: '600' }}>예약 문의 시 노출되는 번호입니다</div>
               </div>
               <button
                 onClick={handleOpenBizPhone}
-                style={{ backgroundColor: '#FFD700', color: '#1A1A2E', border: 'none', padding: '12px 16px', borderRadius: '14px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,215,0,0.3)', whiteSpace: 'nowrap' }}
+                style={{ backgroundColor: '#FFD700', color: '#1A1A2E', border: 'none', padding: '12px 16px', borderRadius: '14px', fontWeight: '900', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,215,0,0.3)', whiteSpace: 'nowrap' }}
               >연락처 확인</button>
             </div>
 
@@ -911,8 +913,8 @@ export default function MyPage() {
                 style={{ backgroundColor: 'rgba(0,196,140,0.12)', border: '1px solid rgba(0,196,140,0.3)', padding: '16px 10px', borderRadius: '18px', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s' }}
               >
                 <Camera size={24} color="#00C48C" style={{ marginBottom: '8px' }} />
-                <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>조과 갤러리</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>선상 게시판에<br/>자동 노출</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>조과 갤러리</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>선상 게시판에<br/>자동 노출</div>
               </div>
               {/* 내 선박 홍보글 관리 */}
               <div
@@ -920,8 +922,8 @@ export default function MyPage() {
                 style={{ backgroundColor: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.25)', padding: '16px 10px', borderRadius: '18px', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s' }}
               >
                 <BookOpen size={24} color="#FFD700" style={{ marginBottom: '8px' }} />
-                <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>내 홍보글</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>등록 게시글<br/>확인·삭제</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>내 홍보글</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>등록 게시글<br/>확인·삭제</div>
               </div>
               {/* 선박 홍보글 신규 등록 */}
               <div
@@ -929,8 +931,8 @@ export default function MyPage() {
                 style={{ backgroundColor: 'rgba(0,86,210,0.15)', border: '1px solid rgba(0,86,210,0.3)', padding: '16px 10px', borderRadius: '18px', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.15s' }}
               >
                 <MapPin size={24} color="#4A9EFF" style={{ marginBottom: '8px' }} />
-                <div style={{ fontSize: '12px', fontWeight: '900', marginBottom: '4px' }}>홍보글 등록</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>선박 홍보글<br/>새로 작성</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>홍보글 등록</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.55)', fontWeight: '600', lineHeight: '1.3' }}>선박 홍보글<br/>새로 작성</div>
               </div>
             </div>
 
@@ -943,17 +945,17 @@ export default function MyPage() {
       {isAdmin && (
         <div style={{ padding: '0 24px 16px' }}>
           <div style={{ background: 'linear-gradient(135deg, #0A0F1C, #1A2340)', borderRadius: '20px', padding: '16px 18px', border: '1.5px solid rgba(255,215,0,0.25)' }}>
-            <div style={{ fontSize: '10px', color: 'rgba(255,215,0,0.7)', fontWeight: '900', letterSpacing: '0.1em', marginBottom: '12px' }}>⚙️ MASTER ADMIN</div>
+            <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,215,0,0.7)', fontWeight: '900', letterSpacing: '0.1em', marginBottom: '12px' }}>⚙️ MASTER ADMIN</div>
             <button
               onClick={() => navigate('/cctv-admin')}
               style={{ width: '100%', padding: '14px 16px', background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: '#fff', textAlign: 'left' }}
             >
               <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '18px' }}>📺</span>
+                <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>📺</span>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: '900', color: '#FFD700' }}>CCTV 채널 관리</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>지역별 YouTube ID 직접 수정 · 미리보기</div>
+                <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#FFD700' }}>CCTV 채널 관리</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>지역별 YouTube ID 직접 수정 · 미리보기</div>
               </div>
               <ChevronRight size={16} color="#FFD700" />
             </button>
@@ -963,11 +965,11 @@ export default function MyPage() {
               style={{ width: '100%', padding: '14px 16px', background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: '#fff', textAlign: 'left', marginTop: '8px' }}
             >
               <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #FF6B35, #E60000)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '18px' }}>⭐</span>
+                <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>⭐</span>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: '900', color: '#FFD700' }}>비밀포인트 위치 수정</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>주소 검색으로 정확한 좌표 직접 지정</div>
+                <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#FFD700' }}>비밀포인트 위치 수정</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>주소 검색으로 정확한 좌표 직접 지정</div>
               </div>
               <ChevronRight size={16} color="#FFD700" />
             </button>
@@ -977,11 +979,11 @@ export default function MyPage() {
               style={{ width: '100%', padding: '14px 16px', background: 'rgba(0,196,140,0.1)', border: '1px solid rgba(0,196,140,0.3)', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: '#fff', textAlign: 'left', marginTop: '8px' }}
             >
               <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #00C48C, #00897B)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '18px' }}>📊</span>
+                <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>📊</span>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: '900', color: '#00C48C' }}>수익 대시보드</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>월 매출 · 플랜별 구독자 · 최근 결제내역</div>
+                <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#00C48C' }}>수익 대시보드</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>월 매출 · 플랜별 구독자 · 최근 결제내역</div>
               </div>
               <ChevronRight size={16} color="#00C48C" />
             </button>
@@ -990,14 +992,66 @@ export default function MyPage() {
       )}
 
       <div style={{ padding: '10px 24px 40px' }}>
+         {/* ✅ FONT-SCALE: 글씨 크기 설정 카드 */}
+         {(() => {
+           const LEVELS = [
+             { key: '1',    label: '기본',   size: 14 },
+             { key: '1.15', label: '크게',   size: 16 },
+             { key: '1.3',  label: '더크게', size: 18 },
+             { key: '1.5',  label: '최대',   size: 21 },
+           ];
+           const applyFs = (key) => {
+             localStorage.setItem('fishinggo_fs', key);
+             document.documentElement.setAttribute('data-fs', key);
+             setFontScale(key); // 리렌더 → 활성 버튼 즉시 업데이트
+           };
+           return (
+             <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7', marginBottom: '12px' }}>
+               <div style={{ padding: '18px 24px', borderBottom: '1px solid #F8F9FA' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                   <div style={{ backgroundColor: '#EBF2FF', padding: '10px', borderRadius: '12px' }}>
+                     <span style={{ fontSize: `calc(20px * var(--fs, 1))` }}>🔤</span>
+                   </div>
+                   <div>
+                     <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e' }}>글씨 크기</div>
+                     <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>눈에 편한 크기로 조절하세요</div>
+                   </div>
+                 </div>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                   {LEVELS.map(lv => (
+                     <button
+                       key={lv.key}
+                       onClick={() => applyFs(lv.key)}
+                       style={{
+                         padding: '10px 4px', border: 'none', borderRadius: '14px', cursor: 'pointer',
+                         background: fontScale === lv.key ? '#0056D2' : '#F2F2F7',
+                         color: fontScale === lv.key ? '#fff' : '#555',
+                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                         transition: 'all 0.2s',
+                         boxShadow: fontScale === lv.key ? '0 4px 12px rgba(0,86,210,0.3)' : 'none',
+                       }}
+                     >
+                       <span style={{ fontSize: `${lv.size}px`, fontWeight: '900', lineHeight: 1 }}>가</span>
+                       <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800' }}>{lv.label}</span>
+                     </button>
+                   ))}
+                 </div>
+                 <div style={{ marginTop: '12px', padding: '10px 14px', background: '#F8F9FC', borderRadius: '10px', fontSize: 'calc(13px * var(--fs, 1))', color: '#555', fontWeight: '700' }}>
+                   미리보기 — 낚시GO 글씨 크기가 이렇게 표시됩니다.
+                 </div>
+               </div>
+             </div>
+           );
+         })()}
+
          <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7' }}>
-            {menuItems.map((item) => ( // ✅ 26TH-C3: key를 item.id로 교체 (17TH-B2 패턴 — MENU_ITEMS는 외부 상수로 인덱스 연속성 보장됨)
+            {menuItems.map((item) => ( // ✅ 26TH-C3: key를 item.id로 교체
               <div key={item.id} onClick={() => item.id === 'history' ? navigate('/payment-history') : setShowModal(item.id)} style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: item.id !== 'security' ? '1px solid #F8F9FA' : 'none', cursor: 'pointer' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ backgroundColor: `${item.color}15`, padding: '10px', borderRadius: '12px' }}><item.icon size={20} color={item.color} strokeWidth={2.5} /></div>
                     <div>
-                        <div style={{ fontSize: '15px', fontWeight: '850', color: '#1c1c1e' }}>{item.title}</div>
-                        <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600' }}>{item.desc}</div>
+                        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e' }}>{item.title}</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>{item.desc}</div>
                     </div>
                  </div>
                  <ChevronRight size={18} color="#C7C7CC" />
@@ -1011,7 +1065,7 @@ export default function MyPage() {
              background: user?.id === 'GUEST' ? '#0056D2' : 'transparent', 
              color: user?.id === 'GUEST' ? '#fff' : '#FF5A5F', 
              border: user?.id === 'GUEST' ? 'none' : '2px solid #FF5A5F22', 
-             borderRadius: '24px', fontWeight: '900', fontSize: '16px', marginTop: '24px',
+             borderRadius: '24px', fontWeight: '900', fontSize: `calc(16px * var(--fs, 1))`, marginTop: '24px',
              boxShadow: user?.id === 'GUEST' ? '0 8px 20px rgba(0,86,210,0.3)' : 'none'
            }}
          >
@@ -1027,7 +1081,7 @@ export default function MyPage() {
               
               {showModal === 'noti' && (
                 <>
-                  <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '24px' }}>알림 설정</h3>
+                  <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', marginBottom: '24px' }}>알림 설정</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {[
                         { key: 'flow', label: '물때 및 피딩 타임 알림', icon: History },
@@ -1036,7 +1090,7 @@ export default function MyPage() {
                     ].map(n => (
                         <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <n.icon size={18} color="#8E8E93" /><span style={{ fontSize: '15px', fontWeight: '750' }}>{n.label}</span>
+                                <n.icon size={18} color="#8E8E93" /><span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '750' }}>{n.label}</span>
                             </div>
                             <div onClick={() => handleToggleNoti(n.key)} style={{ cursor: 'pointer' }}>
                                 {notiSetting[n.key] ? <ToggleRight size={32} color="#0056D2" fill="#0056D2" /> : <ToggleLeft size={32} color="#E5E5EA" />}
@@ -1100,10 +1154,10 @@ export default function MyPage() {
                 ];
                 return (
                   <>
-                    <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '4px' }}>구독 관리</h3>
-                    <p style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '600', marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>구독 관리</h3>
+                    <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '20px' }}>
                       현재 플랜: <strong style={{ color: '#0056D2' }}>{planNames[userTier] || '무료'}</strong>
-                      {!isFree && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#FF5A5F' }}>· 구독 중</span>}
+                      {!isFree && <span style={{ marginLeft: '8px', fontSize: `calc(11px * var(--fs, 1))`, color: '#FF5A5F' }}>· 구독 중</span>}
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
@@ -1128,22 +1182,22 @@ export default function MyPage() {
                           >
                             {/* 잠금 배지 — 하위 플랜 */}
                             {isLocked && (
-                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#8E8E93', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '3px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#8E8E93', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                                 🔒 구독 유지 중
                               </div>
                             )}
                             {plan.highlight && !isActive && !isLocked && (
-                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '3px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                                 인기 플랜
                               </div>
                             )}
                             {plan.exclusive && !isActive && !isLocked && (
-                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #FFD700, #FF9B26)', color: '#5C3A00', fontSize: '10px', fontWeight: '900', padding: '3px 14px', borderRadius: '20px', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(255,215,0,0.5)' }}>
+                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #FFD700, #FF9B26)', color: '#5C3A00', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 14px', borderRadius: '20px', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(255,215,0,0.5)' }}>
                                 항구 · 지역별 선착순 1명
                               </div>
                             )}
                             {plan.exclusive && isActive && (
-                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #FFD700, #FF9B26)', color: '#5C3A00', fontSize: '10px', fontWeight: '900', padding: '3px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #FFD700, #FF9B26)', color: '#5C3A00', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                                 항구 지역 독점 활성 중
                               </div>
                             )}
@@ -1151,21 +1205,21 @@ export default function MyPage() {
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
                                   {plan.badge && (
-                                    <span style={{ fontSize: '9px', fontWeight: '900', padding: '2px 7px', borderRadius: '8px', background: isLocked ? '#C0C0C0' : plan.badgeBg, color: isLocked ? '#fff' : plan.badgeColor }}>{plan.badge}</span>
+                                    <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', padding: '2px 7px', borderRadius: '8px', background: isLocked ? '#C0C0C0' : plan.badgeBg, color: isLocked ? '#fff' : plan.badgeColor }}>{plan.badge}</span>
                                   )}
-                                  <span style={{ fontSize: '15px', fontWeight: '900', color: isLocked ? '#AEAEB2' : '#1c1c1e' }}>{plan.name}</span>
-                                  {isActive && <span style={{ fontSize: '10px', color: '#0056D2', fontWeight: '800' }}>✓ 현재</span>}
+                                  <span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900', color: isLocked ? '#AEAEB2' : '#1c1c1e' }}>{plan.name}</span>
+                                  {isActive && <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800' }}>✓ 현재</span>}
                                 </div>
                                 <ul style={{ margin: 0, padding: '0 0 0 4px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                   {plan.features.map((f, i) => (
-                                    <li key={i} style={{ fontSize: '11px', color: isLocked ? '#C0C0C0' : '#555', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                      <span style={{ color: isLocked ? '#C0C0C0' : '#0056D2', fontSize: '10px' }}>✓</span> {f}
+                                    <li key={i} style={{ fontSize: `calc(11px * var(--fs, 1))`, color: isLocked ? '#C0C0C0' : '#555', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                      <span style={{ color: isLocked ? '#C0C0C0' : '#0056D2', fontSize: `calc(10px * var(--fs, 1))` }}>✓</span> {f}
                                     </li>
                                   ))}
                                 </ul>
                               </div>
                               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
-                                <div style={{ fontSize: '14px', fontWeight: '900', color: isActive ? '#0056D2' : isLocked ? '#AEAEB2' : '#1c1c1e', whiteSpace: 'nowrap' }}>{plan.price}</div>
+                                <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: isActive ? '#0056D2' : isLocked ? '#AEAEB2' : '#1c1c1e', whiteSpace: 'nowrap' }}>{plan.price}</div>
                               </div>
                             </div>
                           </div>
@@ -1174,7 +1228,7 @@ export default function MyPage() {
 
                     </div>
 
-                    <p style={{ fontSize: '11px', color: '#AEAEB2', textAlign: 'center', fontWeight: '600' }}>
+                    <p style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#AEAEB2', textAlign: 'center', fontWeight: '600' }}>
                       * 일반 피드 광고는 플랜과 무관하게 표시됩니다.<br/>
                       * 유료 플랜은 게시글·크루 등록 시 광고 시청이 면제됩니다.
                     </p>
@@ -1185,7 +1239,7 @@ export default function MyPage() {
 
               {showModal === 'security' && (
                 <>
-                  <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '24px' }}>보안 및 차단 설정</h3>
+                  <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', marginBottom: '24px' }}>보안 및 차단 설정</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     
                     {/* 비밀번호 변경 탭 */}
@@ -1211,7 +1265,7 @@ export default function MyPage() {
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><ShieldAlert size={18} color="#8E8E93" /><span style={{ fontWeight: '750' }}>차단 사용자 관리</span></div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '13px', color: '#FF5A5F', fontWeight: '800' }}>{blockedUsers.length}명</span>
+                          <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#FF5A5F', fontWeight: '800' }}>{blockedUsers.length}명</span>
                           <ChevronRight size={18} color="#C7C7CC" style={{ transform: secTab === 'block' ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
                         </div>
                     </div>
@@ -1225,11 +1279,11 @@ export default function MyPage() {
                         <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {blockedUsers.map(bu => (
                             <div key={bu} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #F0F0F0' }}>
-                              <span style={{ fontSize: '14px', fontWeight: '700' }}>{bu}</span>
-                              <button onClick={() => handleUnblockUser(bu)} style={{ padding: '6px 10px', fontSize: '12px', background: '#FF5A5F15', color: '#FF5A5F', border: 'none', borderRadius: '6px', fontWeight: '800', cursor: 'pointer' }}>해제</button>
+                              <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>{bu}</span>
+                              <button onClick={() => handleUnblockUser(bu)} style={{ padding: '6px 10px', fontSize: `calc(12px * var(--fs, 1))`, background: '#FF5A5F15', color: '#FF5A5F', border: 'none', borderRadius: '6px', fontWeight: '800', cursor: 'pointer' }}>해제</button>
                             </div>
                           ))}
-                          {blockedUsers.length === 0 && <div style={{ fontSize: '12px', color: '#8E8E93', textAlign: 'center', padding: '10px' }}>차단한 사용자가 없습니다.</div>}
+                          {blockedUsers.length === 0 && <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', textAlign: 'center', padding: '10px' }}>차단한 사용자가 없습니다.</div>}
                         </div>
                       </div>
                     )}
@@ -1237,7 +1291,7 @@ export default function MyPage() {
                 </>
               )}
               
-              <button onClick={() => setShowModal(null)} style={{ width: '100%', marginTop: '32px', padding: '18px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '16px' }}>닫기</button>
+              <button onClick={() => setShowModal(null)} style={{ width: '100%', marginTop: '32px', padding: '18px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: `calc(16px * var(--fs, 1))` }}>닫기</button>
            </div>
         </div>
       )}
@@ -1254,21 +1308,21 @@ export default function MyPage() {
           >
             <div style={{ width: '40px', height: '5px', background: '#E5E5EA', borderRadius: '3px', margin: '0 auto 20px' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '900', margin: 0 }}>
+              <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', margin: 0 }}>
                 {followModal === 'followers' ? '팔로워' : '팔로잉'}
-                <span style={{ fontSize: '14px', color: '#0056D2', fontWeight: '800', marginLeft: '8px' }}>
+                <span style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', marginLeft: '8px' }}>
                   {followList.length}명
                 </span>
               </h3>
-              <button onClick={() => setFollowModal(null)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#8E8E93' }}>✕</button>
+              <button onClick={() => setFollowModal(null)} style={{ background: 'none', border: 'none', fontSize: `calc(22px * var(--fs, 1))`, cursor: 'pointer', color: '#8E8E93' }}>✕</button>
             </div>
 
             {followLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8E8E93', fontSize: '14px', fontWeight: '700' }}>불러오는 중...</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8E8E93', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>불러오는 중...</div>
             ) : followList.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: '36px', marginBottom: '10px' }}>👤</div>
-                <p style={{ fontSize: '14px', fontWeight: '700', color: '#8E8E93' }}>
+                <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '10px' }}>👤</div>
+                <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93' }}>
                   {followModal === 'followers' ? '아직 팔로워가 없습니다.' : '팔로잉 중인 사용자가 없습니다.'}
                 </p>
               </div>
@@ -1283,7 +1337,7 @@ export default function MyPage() {
                     <div style={{
                       width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
                       background: 'linear-gradient(135deg, #0056D2, #00C48C)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '900', fontSize: '16px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '900', fontSize: `calc(16px * var(--fs, 1))`,
                     }}>
                       {u.avatar || u.picture
                         ? <img src={u.avatar || u.picture} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
@@ -1291,8 +1345,8 @@ export default function MyPage() {
                       }
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '15px', fontWeight: '800', color: '#1c1c1e' }}>{u.name || '이름 없음'}</div>
-                      <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{u.email}</div>
+                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>{u.name || '이름 없음'}</div>
+                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{u.email}</div>
                     </div>
                   </div>
                 ))}
@@ -1308,26 +1362,26 @@ export default function MyPage() {
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setBizPhoneModal(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px' }}>
             <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
-            <div style={{ fontSize:'18px', fontWeight:'950', marginBottom:'6px' }}>📞 내 연락처 정보</div>
-            <div style={{ fontSize:'13px', color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>예약 문의 고객에게 노출되는 번호입니다</div>
+            <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', marginBottom:'6px' }}>📞 내 연락처 정보</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>예약 문의 고객에게 노출되는 번호입니다</div>
             {bizPhone.shipName && (
               <div style={{ background:'#F8F9FA', borderRadius:'16px', padding:'14px 18px', marginBottom:'12px' }}>
-                <div style={{ fontSize:'11px', color:'#8E8E93', fontWeight:'700', marginBottom:'4px' }}>선박명</div>
-                <div style={{ fontSize:'17px', fontWeight:'900', color:'#1c1c1e' }}>🚢 {bizPhone.shipName}</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'700', marginBottom:'4px' }}>선박명</div>
+                <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight:'900', color:'#1c1c1e' }}>🚢 {bizPhone.shipName}</div>
               </div>
             )}
             <div style={{ background:'#EBF5FF', borderRadius:'16px', padding:'18px', marginBottom:'20px', textAlign:'center' }}>
               {bizPhone.phone ? (
                 <>
-                  <div style={{ fontSize:'26px', fontWeight:'950', color:'#0056D2', letterSpacing:'0.02em', marginBottom:'12px' }}>{bizPhone.phone}</div>
+                  <div style={{ fontSize: `calc(26px * var(--fs, 1))`, fontWeight:'950', color:'#0056D2', letterSpacing:'0.02em', marginBottom:'12px' }}>{bizPhone.phone}</div>
                   <div style={{ display:'flex', gap:'10px' }}>
-                    <a href={`tel:${bizPhone.phone}`} style={{ flex:1, padding:'13px', background:'#0056D2', color:'#fff', borderRadius:'14px', fontWeight:'900', fontSize:'14px', textDecoration:'none', textAlign:'center', display:'block' }}>📞 전화하기</a>
-                    <a href={`sms:${bizPhone.phone}`} style={{ flex:1, padding:'13px', background:'#34C759', color:'#fff', borderRadius:'14px', fontWeight:'900', fontSize:'14px', textDecoration:'none', textAlign:'center', display:'block' }}>💬 문자하기</a>
+                    <a href={`tel:${bizPhone.phone}`} style={{ flex:1, padding:'13px', background:'#0056D2', color:'#fff', borderRadius:'14px', fontWeight:'900', fontSize: `calc(14px * var(--fs, 1))`, textDecoration:'none', textAlign:'center', display:'block' }}>📞 전화하기</a>
+                    <a href={`sms:${bizPhone.phone}`} style={{ flex:1, padding:'13px', background:'#34C759', color:'#fff', borderRadius:'14px', fontWeight:'900', fontSize: `calc(14px * var(--fs, 1))`, textDecoration:'none', textAlign:'center', display:'block' }}>💬 문자하기</a>
                   </div>
                 </>
               ) : (
-                <div style={{ color:'#8E8E93', fontSize:'14px', fontWeight:'700', padding:'10px 0' }}>
-                  <div style={{ fontSize:'28px', marginBottom:'8px' }}>📵</div>
+                <div style={{ color:'#8E8E93', fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'700', padding:'10px 0' }}>
+                  <div style={{ fontSize: `calc(28px * var(--fs, 1))`, marginBottom:'8px' }}>📵</div>
                   등록된 연락처가 없습니다.<br/>선박 홍보글 등록 시 연락처를 입력해주세요.
                   <button onClick={() => { setBizPhoneModal(false); navigate('/write-business'); }} style={{ display:'block', width:'100%', marginTop:'14px', padding:'12px', background:'#0056D2', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>홍보글 등록하기</button>
                 </div>
@@ -1344,14 +1398,14 @@ export default function MyPage() {
           <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px', maxHeight:'80vh', overflowY:'auto' }}>
             <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
-              <div style={{ fontSize:'18px', fontWeight:'950', color:'#1c1c1e' }}>🚢 내 선박 홍보글</div>
-              <button onClick={() => setBizPostsModal(false)} style={{ background:'none', border:'none', fontSize:'22px', cursor:'pointer', color:'#8E8E93' }}>✕</button>
+              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', color:'#1c1c1e' }}>🚢 내 선박 홍보글</div>
+              <button onClick={() => setBizPostsModal(false)} style={{ background:'none', border:'none', fontSize: `calc(22px * var(--fs, 1))`, cursor:'pointer', color:'#8E8E93' }}>✕</button>
             </div>
             {bizPostsLoading ? <div style={{ textAlign:'center', padding:'40px 0', color:'#8E8E93' }}>불러오는 중...</div>
             : myBizPosts.length === 0 ? (
               <div style={{ textAlign:'center', padding:'40px 0' }}>
-                <div style={{ fontSize:'36px', marginBottom:'10px' }}>🚢</div>
-                <p style={{ fontSize:'14px', fontWeight:'700', color:'#8E8E93' }}>등록된 홍보글이 없습니다.</p>
+                <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom:'10px' }}>🚢</div>
+                <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'700', color:'#8E8E93' }}>등록된 홍보글이 없습니다.</p>
                 <button onClick={() => { setBizPostsModal(false); navigate('/write-business'); }} style={{ marginTop:'14px', padding:'12px 24px', background:'#0056D2', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>홍보글 등록하기</button>
               </div>
             ) : (
@@ -1360,16 +1414,16 @@ export default function MyPage() {
                   <div key={String(p._id || p.id)} style={{ background:'#F8F9FA', borderRadius:'18px', padding:'16px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
                       <div>
-                        <div style={{ fontSize:'15px', fontWeight:'900', color:'#1c1c1e' }}>{p.shipName || '선박명 미입력'}</div>
-                        <div style={{ fontSize:'11px', color:'#8E8E93', fontWeight:'600', marginTop:'2px' }}>{p.region} · {p.type || p.boatType}</div>
+                        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight:'900', color:'#1c1c1e' }}>{p.shipName || '선박명 미입력'}</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginTop:'2px' }}>{p.region} · {p.type || p.boatType}</div>
                       </div>
                       <div style={{ display:'flex', gap:'6px' }}>
-                        <button onClick={() => { setBizPostsModal(false); navigate(`/write-business?editId=${p._id || p.id}`); }} style={{ padding:'6px 10px', background:'#EBF5FF', color:'#0056D2', border:'none', borderRadius:'8px', fontWeight:'800', fontSize:'12px', cursor:'pointer' }}>수정</button>
-                        <button onClick={() => handleDeleteBizPost(p._id || p.id)} disabled={deletingBizId === (p._id || p.id)} style={{ padding:'6px 10px', background:'#FFF0F0', color:'#FF3B30', border:'none', borderRadius:'8px', fontWeight:'800', fontSize:'12px', cursor:'pointer' }}>{deletingBizId === (p._id || p.id) ? '...' : '삭제'}</button>
+                        <button onClick={() => { setBizPostsModal(false); navigate(`/write-business?editId=${p._id || p.id}`); }} style={{ padding:'6px 10px', background:'#EBF5FF', color:'#0056D2', border:'none', borderRadius:'8px', fontWeight:'800', fontSize: `calc(12px * var(--fs, 1))`, cursor:'pointer' }}>수정</button>
+                        <button onClick={() => handleDeleteBizPost(p._id || p.id)} disabled={deletingBizId === (p._id || p.id)} style={{ padding:'6px 10px', background:'#FFF0F0', color:'#FF3B30', border:'none', borderRadius:'8px', fontWeight:'800', fontSize: `calc(12px * var(--fs, 1))`, cursor:'pointer' }}>{deletingBizId === (p._id || p.id) ? '...' : '삭제'}</button>
                       </div>
                     </div>
-                    <div style={{ fontSize:'12px', color:'#555', fontWeight:'600', lineHeight:'1.5', overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{p.content}</div>
-                    {p.phone && <div style={{ fontSize:'12px', color:'#0056D2', fontWeight:'800', marginTop:'8px' }}>📞 {p.phone}</div>}
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color:'#555', fontWeight:'600', lineHeight:'1.5', overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{p.content}</div>
+                    {p.phone && <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color:'#0056D2', fontWeight:'800', marginTop:'8px' }}>📞 {p.phone}</div>}
                   </div>
                 ))}
                 <button onClick={() => { setBizPostsModal(false); navigate('/write-business'); }} style={{ width:'100%', padding:'14px', background:'linear-gradient(135deg,#0056D2,#0096FF)', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>+ 새 홍보글 등록</button>
@@ -1386,14 +1440,14 @@ export default function MyPage() {
           <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px', paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 40px)', width:'100%', maxWidth:'480px', maxHeight:'90vh', overflowY:'auto' }}>
             <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
-              <div style={{ fontSize:'18px', fontWeight:'950', color:'#1c1c1e' }}>🎣 조과 갤러리 등록</div>
-              <button onClick={() => setGalleryModal(false)} style={{ background:'none', border:'none', fontSize:'22px', cursor:'pointer', color:'#8E8E93' }}>✕</button>
+              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', color:'#1c1c1e' }}>🎣 조과 갤러리 등록</div>
+              <button onClick={() => setGalleryModal(false)} style={{ background:'none', border:'none', fontSize: `calc(22px * var(--fs, 1))`, cursor:'pointer', color:'#8E8E93' }}>✕</button>
             </div>
-            <div style={{ fontSize:'13px', color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>오픈게시판 선상 카테고리에 자동으로 등록됩니다 🚢</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>오픈게시판 선상 카테고리에 자동으로 등록됩니다 🚢</div>
             <div onClick={() => galleryFileRef.current?.click()} style={{ width:'100%', height:'150px', background:'#F8F9FA', borderRadius:'18px', border:'2px dashed #D1D1D6', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', marginBottom:'16px', overflow:'hidden' }}>
               {galleryForm.image
                 ? <img src={galleryForm.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'16px' }} />
-                : <div style={{ textAlign:'center', color:'#8E8E93' }}><Camera size={32} style={{ marginBottom:'8px' }} /><div style={{ fontSize:'13px', fontWeight:'700' }}>사진 추가 (선택)</div></div>
+                : <div style={{ textAlign:'center', color:'#8E8E93' }}><Camera size={32} style={{ marginBottom:'8px' }} /><div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight:'700' }}>사진 추가 (선택)</div></div>
               }
             </div>
             {[
@@ -1404,11 +1458,11 @@ export default function MyPage() {
               { key:'memo', label:'한마디', placeholder:'예: 새벽 출조 대박조과!' },
             ].map(({ key, label, placeholder }) => (
               <div key={key} style={{ marginBottom:'12px' }}>
-                <div style={{ fontSize:'12px', fontWeight:'800', color:'#444', marginBottom:'6px' }}>{label}</div>
-                <input value={galleryForm[key]} onChange={e => setGalleryForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={placeholder} style={{ width:'100%', padding:'12px 14px', borderRadius:'12px', border:'1.5px solid #E5E5EA', fontSize:'14px', fontWeight:'600', outline:'none', boxSizing:'border-box' }} />
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight:'800', color:'#444', marginBottom:'6px' }}>{label}</div>
+                <input value={galleryForm[key]} onChange={e => setGalleryForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={placeholder} style={{ width:'100%', padding:'12px 14px', borderRadius:'12px', border:'1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'600', outline:'none', boxSizing:'border-box' }} />
               </div>
             ))}
-            <button onClick={handleGallerySubmit} disabled={gallerySubmitting} style={{ width:'100%', padding:'15px', background: gallerySubmitting ? '#ccc' : 'linear-gradient(135deg,#00C48C,#00897B)', color:'#fff', border:'none', borderRadius:'16px', fontWeight:'900', fontSize:'15px', cursor: gallerySubmitting ? 'not-allowed' : 'pointer', marginTop:'4px' }}>
+            <button onClick={handleGallerySubmit} disabled={gallerySubmitting} style={{ width:'100%', padding:'15px', background: gallerySubmitting ? '#ccc' : 'linear-gradient(135deg,#00C48C,#00897B)', color:'#fff', border:'none', borderRadius:'16px', fontWeight:'900', fontSize: `calc(15px * var(--fs, 1))`, cursor: gallerySubmitting ? 'not-allowed' : 'pointer', marginTop:'4px' }}>
               {gallerySubmitting ? '등록 중...' : '🎣 오픈게시판에 등록하기'}
             </button>
           </div>

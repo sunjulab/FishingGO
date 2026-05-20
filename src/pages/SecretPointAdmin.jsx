@@ -144,7 +144,7 @@ export default function SecretPointAdmin() {
     if (markerRef.current) markerRef.current.setMap(null);
     const marker = new window.kakao.maps.Marker({ position: latlng, map: mapInstanceRef.current });
     const iw = new window.kakao.maps.InfoWindow({
-      content: `<div style="padding:5px 9px;font-size:11px;font-weight:700">${label}<br/><span style="font-size:10px;color:#555;font-family:monospace">${lat.toFixed(5)}, ${lng.toFixed(5)}</span></div>`,
+      content: `<div style="padding:5px 9px;font-size:calc(11px * var(--fs, 1));font-weight:700">${label}<br/><span style="font-size:calc(10px * var(--fs, 1));color:#555;font-family:monospace">${lat.toFixed(5)}, ${lng.toFixed(5)}</span></div>`,
     });
     iw.open(mapInstanceRef.current, marker);
     markerRef.current = marker;
@@ -271,8 +271,8 @@ export default function SecretPointAdmin() {
     <div style={{ minHeight: '100vh', background: '#0A0F1C', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       {debugMsg ? (
         <>
-          <div style={{ fontSize: '22px', marginBottom: '12px' }}>🔐 권한 확인 실패</div>
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }}>4초 후 홈으로 이동합니다</div>
+          <div style={{ fontSize: `calc(22px * var(--fs, 1))`, marginBottom: '12px' }}>🔐 권한 확인 실패</div>
+          <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }}>4초 후 홈으로 이동합니다</div>
           {/* ✅ 하단 디버그 오버레이 — 실제 인증 상태 표시 */}
           <div style={{
             position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -281,24 +281,24 @@ export default function SecretPointAdmin() {
             borderRadius: '20px 20px 0 0',
             boxShadow: '0 -8px 32px rgba(220,38,38,0.4)',
           }}>
-            <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff', marginBottom: '10px' }}>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff', marginBottom: '10px' }}>
               ❗ 오류 보기 — 인증 실패 상세
             </div>
             <pre style={{
-              fontSize: '11px', color: 'rgba(255,255,255,0.85)',
+              fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.85)',
               background: 'rgba(0,0,0,0.3)', borderRadius: '10px',
               padding: '12px', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
               fontFamily: 'monospace', lineHeight: '1.6',
             }}>
               {debugMsg}
             </pre>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '10px' }}>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', marginTop: '10px' }}>
               위 값이 ADMIN_ID / ADMIN_EMAIL과 다르면 로그인 계정을 확인하세요
             </div>
           </div>
         </>
       ) : (
-        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '14px' }}>인증 확인 중...</div>
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: `calc(14px * var(--fs, 1))` }}>인증 확인 중...</div>
       )}
     </div>
   );
@@ -309,8 +309,8 @@ export default function SecretPointAdmin() {
       {/* ✅ FIX-ERR: 오류 배너 (토큰 만료/권한 오류 안내) */}
       {saveError && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10000, background: 'rgba(220,38,38,0.95)', backdropFilter: 'blur(8px)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-          <span style={{ color: '#fff', fontSize: '14px', fontWeight: '800' }}>{saveError}</span>
-          <button onClick={() => setSaveError(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', color: '#fff', padding: '4px 10px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>닫기</button>
+          <span style={{ color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800' }}>{saveError}</span>
+          <button onClick={() => setSaveError(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', color: '#fff', padding: '4px 10px', cursor: 'pointer', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>닫기</button>
         </div>
       )}
 
@@ -320,11 +320,11 @@ export default function SecretPointAdmin() {
           <div style={{ width: '72px', height: '72px', background: 'linear-gradient(135deg, #00C48C, #007B5E)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CheckCircle size={36} color="#fff" />
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '900' }}>저장 완료!</div>
-          <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>{selectedPoint?.name?.replace('⭐ ', '')}</div>
-          <div style={{ fontSize: '13px', color: '#00C48C', fontFamily: 'monospace' }}>{previewCoords?.lat.toFixed(5)}, {previewCoords?.lng.toFixed(5)}</div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>모든 사용자에게 실시간 반영됩니다 ✅</div>
-          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>2초 후 자동 닫힙니다...</div>{/* ✅ 5TH-C2: '자동 새로고침' 오기 수정 */}
+          <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900' }}>저장 완료!</div>
+          <div style={{ fontSize: `calc(14px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)' }}>{selectedPoint?.name?.replace('⭐ ', '')}</div>
+          <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#00C48C', fontFamily: 'monospace' }}>{previewCoords?.lat.toFixed(5)}, {previewCoords?.lng.toFixed(5)}</div>
+          <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>모든 사용자에게 실시간 반영됩니다 ✅</div>
+          <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.2)' }}>2초 후 자동 닫힙니다...</div>{/* ✅ 5TH-C2: '자동 새로고침' 오기 수정 */}
         </div>
       )}
 
@@ -335,15 +335,15 @@ export default function SecretPointAdmin() {
             <ArrowLeft size={20} />
           </button>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '10px', color: 'rgba(255,215,0,0.7)', fontWeight: '900', letterSpacing: '0.15em' }}>⚙️ MASTER ADMIN</div>
-            <div style={{ fontSize: '18px', fontWeight: '900' }}>비밀포인트 위치 수정</div>
+            <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,215,0,0.7)', fontWeight: '900', letterSpacing: '0.15em' }}>⚙️ MASTER ADMIN</div>
+            <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900' }}>비밀포인트 위치 수정</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {serverOnline
-              ? <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,196,140,0.15)', border: '1px solid rgba(0,196,140,0.3)', borderRadius: '20px', padding: '4px 10px', fontSize: '11px', color: '#00C48C', fontWeight: '800' }}><Wifi size={12} />서버연결</div>
-              : <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: '20px', padding: '4px 10px', fontSize: '11px', color: '#FF6B6B', fontWeight: '800' }}><WifiOff size={12} />로컬저장</div>
+              ? <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,196,140,0.15)', border: '1px solid rgba(0,196,140,0.3)', borderRadius: '20px', padding: '4px 10px', fontSize: `calc(11px * var(--fs, 1))`, color: '#00C48C', fontWeight: '800' }}><Wifi size={12} />서버연결</div>
+              : <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: '20px', padding: '4px 10px', fontSize: `calc(11px * var(--fs, 1))`, color: '#FF6B6B', fontWeight: '800' }}><WifiOff size={12} />로컬저장</div>
             }
-            {overrideCount > 0 && <div style={{ background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '20px', padding: '4px 10px', fontSize: '11px', color: '#FFD700', fontWeight: '800' }}>{overrideCount}개</div>}
+            {overrideCount > 0 && <div style={{ background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '20px', padding: '4px 10px', fontSize: `calc(11px * var(--fs, 1))`, color: '#FFD700', fontWeight: '800' }}>{overrideCount}개</div>}
           </div>
         </div>
       </div>
@@ -352,17 +352,17 @@ export default function SecretPointAdmin() {
       <div style={{ position: 'relative' }}>
         <div ref={mapCallbackRef} style={{ width: '100%', height: selectedPoint ? '260px' : '180px', background: '#1a2340', transition: 'height 0.3s' }} />
         {selectedPoint && inputMode === 'click' && (
-          <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,196,140,0.92)', color: '#fff', fontSize: '12px', fontWeight: '800', padding: '5px 16px', borderRadius: '20px', pointerEvents: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,196,140,0.92)', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', padding: '5px 16px', borderRadius: '20px', pointerEvents: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <MousePointer size={13} /> 탭하여 위치 선택
           </div>
         )}
         {!selectedPoint && mapReady && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,15,28,0.5)', pointerEvents: 'none' }}>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>아래에서 포인트를 선택하세요</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>아래에서 포인트를 선택하세요</div>
           </div>
         )}
         {previewCoords && (
-          <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', color: previewCoords.source === 'click' ? '#00C48C' : '#FFD700', fontSize: '12px', fontWeight: '800', padding: '6px 14px', borderRadius: '20px', pointerEvents: 'none', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+          <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', color: previewCoords.source === 'click' ? '#00C48C' : '#FFD700', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', padding: '6px 14px', borderRadius: '20px', pointerEvents: 'none', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
             {previewCoords.lat.toFixed(5)}, {previewCoords.lng.toFixed(5)}
           </div>
         )}
@@ -374,7 +374,7 @@ export default function SecretPointAdmin() {
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{ width: '100%', padding: '14px', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '15px', cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'rgba(255,255,255,0.1)' : (previewCoords.source === 'click' ? 'linear-gradient(135deg, #00C48C, #007B5E)' : 'linear-gradient(135deg, #FFD700, #FFA000)'), color: saving ? 'rgba(255,255,255,0.4)' : (previewCoords.source === 'click' ? '#fff' : '#000'), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}
+            style={{ width: '100%', padding: '14px', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, cursor: saving ? 'not-allowed' : 'pointer', background: saving ? 'rgba(255,255,255,0.1)' : (previewCoords.source === 'click' ? 'linear-gradient(135deg, #00C48C, #007B5E)' : 'linear-gradient(135deg, #FFD700, #FFA000)'), color: saving ? 'rgba(255,255,255,0.4)' : (previewCoords.source === 'click' ? '#fff' : '#000'), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}
           >
             <CheckCircle size={18} />
             {saving ? '저장 중...' : (serverOnline ? '🌐 서버에 저장 (전체 반영)' : '💾 로컬 저장')}
@@ -386,8 +386,8 @@ export default function SecretPointAdmin() {
 
         {/* 포인트 선택 */}
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', color: 'rgba(255,215,0,0.8)', fontWeight: '900', letterSpacing: '0.12em', marginBottom: '10px' }}>
-            📍 포인트 선택 {selectedPoint && <span style={{ color: '#FFD700', fontSize: '12px' }}>— {selectedPoint.name.replace('⭐ ', '')}</span>}
+          <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,215,0,0.8)', fontWeight: '900', letterSpacing: '0.12em', marginBottom: '10px' }}>
+            📍 포인트 선택 {selectedPoint && <span style={{ color: '#FFD700', fontSize: `calc(12px * var(--fs, 1))` }}>— {selectedPoint.name.replace('⭐ ', '')}</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '200px', overflowY: 'auto' }}>
             {SECRET_FISHING_POINTS.map(p => {
@@ -398,13 +398,13 @@ export default function SecretPointAdmin() {
                   style={{ background: isSelected ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.04)', border: isSelected ? '1.5px solid rgba(255,215,0,0.5)' : '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '9px 13px', cursor: 'pointer', color: '#fff', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '9px' }}>
                   <Star size={12} fill={isSelected ? '#FFD700' : 'none'} color={isSelected ? '#FFD700' : '#444'} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '700', color: isSelected ? '#FFD700' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name.replace('⭐ ', '')}</div>
-                    <div style={{ fontSize: '10px', fontFamily: 'monospace', marginTop: '1px', color: ov ? '#FFD700' : 'rgba(255,255,255,0.3)' }}>
+                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', color: isSelected ? '#FFD700' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name.replace('⭐ ', '')}</div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontFamily: 'monospace', marginTop: '1px', color: ov ? '#FFD700' : 'rgba(255,255,255,0.3)' }}>
                       {ov ? `🔧 ${ov.lat.toFixed(4)}, ${ov.lng.toFixed(4)}` : `${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`}
                     </div>
                   </div>
                   {ov && (
-                    <button onClick={e => { e.stopPropagation(); handleReset(p.id); }} style={{ fontSize: '10px', color: '#FF6B6B', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: '6px', padding: '3px 7px', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    <button onClick={e => { e.stopPropagation(); handleReset(p.id); }} style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF6B6B', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: '6px', padding: '3px 7px', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '2px' }}>
                       <RotateCcw size={9} />초기화
                     </button>
                   )}
@@ -417,10 +417,10 @@ export default function SecretPointAdmin() {
         {/* 모드 선택 */}
         {selectedPoint && (
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-            <button onClick={() => setInputMode('click')} style={{ flex: 1, padding: '11px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: inputMode === 'click' ? 'linear-gradient(135deg, #00C48C, #007B5E)' : 'rgba(255,255,255,0.07)', color: inputMode === 'click' ? '#fff' : 'rgba(255,255,255,0.5)' }}>
+            <button onClick={() => setInputMode('click')} style={{ flex: 1, padding: '11px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: inputMode === 'click' ? 'linear-gradient(135deg, #00C48C, #007B5E)' : 'rgba(255,255,255,0.07)', color: inputMode === 'click' ? '#fff' : 'rgba(255,255,255,0.5)' }}>
               <MousePointer size={14} /> 지도 직접 클릭
             </button>
-            <button onClick={() => setInputMode('search')} style={{ flex: 1, padding: '11px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: inputMode === 'search' ? 'linear-gradient(135deg, #FFD700, #FFA000)' : 'rgba(255,255,255,0.07)', color: inputMode === 'search' ? '#000' : 'rgba(255,255,255,0.5)' }}>
+            <button onClick={() => setInputMode('search')} style={{ flex: 1, padding: '11px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: inputMode === 'search' ? 'linear-gradient(135deg, #FFD700, #FFA000)' : 'rgba(255,255,255,0.07)', color: inputMode === 'search' ? '#000' : 'rgba(255,255,255,0.5)' }}>
               <Search size={14} /> 주소 검색
             </button>
           </div>
@@ -431,8 +431,8 @@ export default function SecretPointAdmin() {
           <div style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
               <input type="text" value={addressInput} onChange={e => setAddressInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="장소명 또는 주소 입력"
-                style={{ flex: 1, padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.13)', borderRadius: '12px', color: '#fff', fontSize: '14px', outline: 'none' }} />
-              <button onClick={handleSearch} disabled={searching} style={{ padding: '0 16px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '900', color: '#000', opacity: searching ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
+                style={{ flex: 1, padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.13)', borderRadius: '12px', color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, outline: 'none' }} />
+              <button onClick={handleSearch} disabled={searching} style={{ padding: '0 16px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '900', color: '#000', opacity: searching ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(13px * var(--fs, 1))` }}>
                 {searching ? '...' : <><Search size={14} />검색</>}
               </button>
             </div>
@@ -443,8 +443,8 @@ export default function SecretPointAdmin() {
                     style={{ width: '100%', padding: '11px 14px', background: 'transparent', border: 'none', borderBottom: idx < searchResults.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', color: '#fff', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '9px' }}>
                     <MapPin size={13} color="#FFD700" style={{ marginTop: '2px', flexShrink: 0 }} />
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: '700' }}>{r.address}</div>
-                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>{r.lat.toFixed(5)}, {r.lng.toFixed(5)}</div>
+                      <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>{r.address}</div>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>{r.lat.toFixed(5)}, {r.lng.toFixed(5)}</div>
                     </div>
                   </button>
                 ))}
@@ -456,8 +456,8 @@ export default function SecretPointAdmin() {
         {/* 수정된 포인트 목록 */}
         {overrideCount > 0 && (
           <div style={{ marginTop: '8px' }}>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Zap size={12} color="#FFD700" /> 수정된 포인트 ({overrideCount}개) {serverOnline && <span style={{ color: '#00C48C', fontSize: '10px' }}>● 서버 반영됨</span>}
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Zap size={12} color="#FFD700" /> 수정된 포인트 ({overrideCount}개) {serverOnline && <span style={{ color: '#00C48C', fontSize: `calc(10px * var(--fs, 1))` }}>● 서버 반영됨</span>}
             </div>
             {Object.entries(overrides).map(([id, coords]) => {
               const p = SECRET_FISHING_POINTS.find(x => x.id === parseInt(id));
@@ -465,15 +465,15 @@ export default function SecretPointAdmin() {
               return (
                 <div key={id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: '10px', padding: '9px 13px', marginBottom: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#FFD700' }}>{p.name.replace('⭐ ', '')}</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</div>
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#FFD700' }}>{p.name.replace('⭐ ', '')}</div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</div>
                   </div>
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button onClick={() => { setSelectedPoint(p); if (mapInstanceRef.current) { mapInstanceRef.current.setCenter(new window.kakao.maps.LatLng(coords.lat, coords.lng)); mapInstanceRef.current.setLevel(5); } }}
-                      style={{ fontSize: '11px', color: '#4FC3F7', background: 'rgba(79,195,247,0.08)', border: '1px solid rgba(79,195,247,0.2)', borderRadius: '7px', padding: '4px 8px', cursor: 'pointer' }}>
+                      style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#4FC3F7', background: 'rgba(79,195,247,0.08)', border: '1px solid rgba(79,195,247,0.2)', borderRadius: '7px', padding: '4px 8px', cursor: 'pointer' }}>
                       보기
                     </button>
-                    <button onClick={() => handleReset(parseInt(id))} style={{ fontSize: '11px', color: '#FF6B6B', background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: '7px', padding: '4px 8px', cursor: 'pointer' }}>초기화</button>
+                    <button onClick={() => handleReset(parseInt(id))} style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#FF6B6B', background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: '7px', padding: '4px 8px', cursor: 'pointer' }}>초기화</button>
                   </div>
                 </div>
               );

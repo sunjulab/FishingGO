@@ -34,7 +34,7 @@ export default function Toast() {
             animation: 'slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
           }}>
             <Icon size={20} color={color} />
-            <span style={{ fontSize: '14px', fontWeight: '800', color: '#1A1A2E', flex: 1 }}>{toast.message}</span>
+            <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#1A1A2E', flex: 1 }}>{toast.message}</span>
             <X size={16} color="#8E8E93" style={{ cursor: 'pointer' }} onClick={() => removeToast(toast.id)} />
           </div>
         );

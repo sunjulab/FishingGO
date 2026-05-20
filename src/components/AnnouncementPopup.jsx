@@ -135,17 +135,17 @@ export default function AnnouncementPopup() {
         {/* ── 헤더 ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 12px', borderBottom: '1px solid #F0F0F0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ background: '#FF3B30', color: '#fff', fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '6px' }}>
+            <span style={{ background: '#FF3B30', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 8px', borderRadius: '6px' }}>
               📢 공지
             </span>
             {notice.isPinned && (
-              <span style={{ background: '#FFF1F0', color: '#FF3B30', fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '6px', border: '1px solid #FFCCC7' }}>
+              <span style={{ background: '#FFF1F0', color: '#FF3B30', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '3px 8px', borderRadius: '6px', border: '1px solid #FFCCC7' }}>
                 📌 필독
               </span>
             )}
           </div>
           {total > 1 && (
-            <span style={{ fontSize: '12px', color: '#AAB0BE', fontWeight: '700' }}>
+            <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700' }}>
               {idx + 1} / {total}
             </span>
           )}
@@ -188,16 +188,16 @@ export default function AnnouncementPopup() {
 
           {/* 이미지 위 힌트 오버레이 */}
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.55))', padding: '24px 16px 12px', pointerEvents: 'none' }}>
-            <div style={{ color: '#fff', fontSize: '12px', fontWeight: '800', opacity: 0.9 }}>탭하여 자세히 보기 →</div>
+            <div style={{ color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', opacity: 0.9 }}>탭하여 자세히 보기 →</div>
           </div>
         </div>
 
         {/* ── 제목 + 내용 요약 ── */}
         <div onClick={handleNoticeClick} style={{ padding: '16px 20px 12px', cursor: 'pointer' }}>
-          <h2 style={{ fontSize: '17px', fontWeight: '950', color: '#1c1c1e', margin: '0 0 8px', lineHeight: '1.4', wordBreak: 'keep-all' }}>
+          <h2 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e', margin: '0 0 8px', lineHeight: '1.4', wordBreak: 'keep-all' }}>
             {notice.title}
           </h2>
-          <p style={{ fontSize: '13px', color: '#666', lineHeight: '1.6', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#666', lineHeight: '1.6', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {notice.content}
           </p>
         </div>
@@ -216,19 +216,19 @@ export default function AnnouncementPopup() {
                 </svg>
               )}
             </div>
-            <span style={{ fontSize: '13px', color: '#555', fontWeight: '700' }}>오늘 하루 안 보기</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#555', fontWeight: '700' }}>오늘 하루 안 보기</span>
           </label>
 
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
             {total > 1 && (
-              <button onClick={handleHideAll} style={{ padding: '9px 12px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: '12px', fontWeight: '800', color: '#888', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button onClick={handleHideAll} style={{ padding: '9px 12px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#888', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 모두 닫기
               </button>
             )}
-            <button onClick={handleClose} style={{ padding: '9px 16px', border: 'none', borderRadius: '12px', background: '#F2F2F7', fontSize: '13px', fontWeight: '800', color: '#555', cursor: 'pointer' }}>
+            <button onClick={handleClose} style={{ padding: '9px 16px', border: 'none', borderRadius: '12px', background: '#F2F2F7', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#555', cursor: 'pointer' }}>
               닫기
             </button>
-            <button onClick={handleNoticeClick} style={{ padding: '9px 16px', border: 'none', borderRadius: '12px', background: 'linear-gradient(135deg, #0056D2, #003FA3)', fontSize: '13px', fontWeight: '900', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,86,210,0.3)' }}>
+            <button onClick={handleNoticeClick} style={{ padding: '9px 16px', border: 'none', borderRadius: '12px', background: 'linear-gradient(135deg, #0056D2, #003FA3)', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,86,210,0.3)' }}>
               자세히 보기
             </button>
           </div>
