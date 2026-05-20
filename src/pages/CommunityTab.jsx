@@ -1962,7 +1962,11 @@ export default function CommunityTab() {
                     let tok; try { tok = localStorage.getItem('access_token') || undefined; } catch { tok = undefined; }
                     const s = io(SOCKET_URL, { transports: ['websocket', 'polling'], auth: { token: tok } });
                     shareSockets.current[crewId] = s;
-                    await new Promise(res => s.once('connect', res));
+                    await new Promise((res, rej) => {
+                      const t = setTimeout(() => rej(new Error('연결 타임아웃')), 5000);
+                      s.once('connect', () => { clearTimeout(t); res(); });
+                      s.once('connect_error', (e) => { clearTimeout(t); rej(e); });
+                    });
                     s.emit('join_crew', crewId);
                   }
                   shareSockets.current[crewId].emit('send_msg', {
@@ -1979,7 +1983,14 @@ export default function CommunityTab() {
                   });
                   addToast(`✅ ${shareTarget.name} 채팅방에 공유했습니다!`, 'success');
                   setShareModal(null);
-                } catch { addToast('공유에 실패했습니다.', 'error'); }
+                } catch (err) {
+                  // 연결 실패한 소켓 캐시 정리
+                  if (shareSockets.current[crewId]) {
+                    try { shareSockets.current[crewId].disconnect(); } catch { }
+                    delete shareSockets.current[crewId];
+                  }
+                  addToast('공유에 실패했습니다. 잠시 후 다시 시도해주세요.', 'error');
+                }
                 finally { setSharing(false); }
               }}
               style={{ width: '100%', padding: '16px', border: 'none', borderRadius: '16px', background: (!shareTarget || sharing) ? '#E5E5EA' : 'linear-gradient(135deg,#0056D2,#1565C0)', color: (!shareTarget || sharing) ? '#aaa' : '#fff', fontSize: '16px', fontWeight: '900', cursor: (!shareTarget || sharing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
