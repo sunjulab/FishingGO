@@ -1910,12 +1910,20 @@ export default function CommunityTab() {
               </button>
             </div>
             <div style={{ background: '#F8F9FA', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #E5E5EA' }}>
-              {(shareModal.post.images?.[0] || shareModal.post.image) && (
-                <img src={shareModal.post.images?.[0] || shareModal.post.image} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+              {(shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover) && (
+                <img src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800', marginBottom: '3px' }}>{shareModal.post.category || '전체'} • {shareModal.post.author}</div>
-                <div style={{ fontSize: '13px', color: '#1c1c1e', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(shareModal.post.content || '').slice(0, 60) || '(내용 없음)'}</div>
+                <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800', marginBottom: '3px' }}>
+                  {shareModal.post._bizShare
+                    ? `🚢 선상배 홍보 • ${shareModal.post.author || shareModal.post.shipName || ''}`
+                    : `${shareModal.post.category || '전체'} • ${shareModal.post.author}`}
+                </div>
+                <div style={{ fontSize: '13px', color: '#1c1c1e', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {shareModal.post._bizShare
+                    ? `${shareModal.post.shipName || '선상낚시'} — ${shareModal.post.target || ''} (${shareModal.post.region || ''})`
+                    : ((shareModal.post.content || '').slice(0, 60) || '(내용 없음)')}
+                </div>
               </div>
             </div>
             <div style={{ fontSize: '13px', color: '#8e8e93', fontWeight: '700', marginBottom: '8px' }}>내가 속한 크루 ({myCrews.length})</div>
