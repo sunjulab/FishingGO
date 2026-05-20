@@ -16,7 +16,10 @@ const apiClient = axios.create({
 // ─── Request Interceptor: 토큰 자동 첨부 ────────────────────────────────────
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    // ✅ FIX-STORAGE: localStorage.getItem try/catch — SafarI 개인보호 모드 등에서 getItem이 StorageError 든질 수 있음
+    // 무방비 시 모든 API 요청 실패 — 토큰 없이 요청으로 폴백
+    let token = null;
+    try { token = localStorage.getItem('access_token'); } catch { /* StorageError: 토큰 없이 진행 */ }
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -72,7 +75,9 @@ apiClient.interceptors.response.use(
     // /auth 경로 요청 중 401이면 리다이렉트 루프 방지를 위해 제외
     const isAuthRoute = originalRequest.url?.includes('/api/auth/');
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
-      const refreshToken = localStorage.getItem('refresh_token');
+      // ✅ FIX-STORAGE: 리프레시 토큰 getItem try/catch — StorageError 시 null 폴백
+      let refreshToken = null;
+      try { refreshToken = localStorage.getItem('refresh_token'); } catch { /* ok */ }
 
       // Refresh Token 없으면 로그인 페이지로 (현재 로그인 페이지가 아닐 때만)
       if (!refreshToken) {
@@ -112,7 +117,8 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken });
+        // ✅ FIX-TIMEOUT: 직접 axios 호출에 10s 타임아웃 — apiClient 기본값 미적용, 갱신 서버 지연 시 인터셉터 무한 대기 방지
+        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken }, { timeout: 10000 });
         // BUG-34: 서버가 accessToken 또는 token 키 중 어느 것으로도 응답할 수 있음
         const newAccessToken = response.data.accessToken || response.data.token;
         const { refreshToken: newRefreshToken } = response.data;
@@ -122,8 +128,8 @@ apiClient.interceptors.response.use(
         }
 
         // 새 토큰 저장 (Refresh Token Rotation 지원)
-        localStorage.setItem('access_token', newAccessToken);
-        if (newRefreshToken) localStorage.setItem('refresh_token', newRefreshToken);
+        try { localStorage.setItem('access_token', newAccessToken); } catch { /* StorageError 무시 */ }
+        if (newRefreshToken) { try { localStorage.setItem('refresh_token', newRefreshToken); } catch { /* StorageError 무시 */ } }
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 
         // 대기 중이던 요청들 재시도

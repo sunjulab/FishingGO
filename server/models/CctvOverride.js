@@ -7,7 +7,8 @@ const cctvOverrideSchema = new mongoose.Schema({
   type:      { type: String, default: 'youtube' },
   label:     { type: String, default: null },
   areaName:  { type: String, default: null },
-  updatedAt: { type: Date, default: Date.now },
-});
+  // ✅ BUG-FIX: updatedAt을 수동 default: Date.now로 관리하면 findOneAndUpdate 시 자동 갱신 안 됨
+  // → Mongoose timestamps 옵션으로 createdAt/updatedAt 자동 관리
+}, { timestamps: true });
 
 module.exports = mongoose.model('CctvOverride', cctvOverrideSchema);

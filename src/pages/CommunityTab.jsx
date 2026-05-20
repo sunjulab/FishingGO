@@ -998,11 +998,11 @@ export default function CommunityTab() {
                               style={{
                                 flex: '0 0 100%',
                                 scrollSnapAlign: 'start',
+                                // ✅ RATIO-3/4: 3:4 고정 비율 컨테이너
+                                aspectRatio: '3 / 4',
                                 overflow: 'hidden',
-                                background: '#111',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                position: 'relative',
+                                background: '#000',
                               }}
                             >
                               <img
@@ -1010,10 +1010,11 @@ export default function CommunityTab() {
                                 alt={`사진 ${imgIdx + 1}`}
                                 loading="lazy"
                                 style={{
+                                  position: 'absolute',
+                                  inset: 0,
                                   width: '100%',
-                                  height: 'auto',
-                                  maxHeight: '360px',
-                                  objectFit: 'contain',
+                                  height: '100%',
+                                  objectFit: 'cover',
                                   display: 'block',
                                   pointerEvents: 'none',
                                 }}

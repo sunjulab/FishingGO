@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, MapPin, ShoppingBag, ChevronRight, ExternalLink } from 'lucide-react';
-
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A3: ADMIN_ID/EMAIL import
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
+import ImageGallery from '../components/ImageGallery';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -25,10 +25,35 @@ export default function PostDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
+
+  // 이전글/다음글 네비게이션 (CommunityTab이 전달한 postIds 배열)
+  const postIds = location.state?.postIds || [];
+  const currentIndex = location.state?.currentIndex ?? -1;
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex !== -1 && currentIndex < postIds.length - 1;
+
+  // 뒤로가기: postId + 탭 저장 → CommunityTab이 'open' 탭 + 해당 게시글로 스크롤 복원
   const goBack = () => {
-    const fromTab = location.state?.fromTab;
-    if (fromTab) navigate(`/community?tab=${fromTab}`);
-    else navigate(-1);
+    sessionStorage.setItem('community_return_post_id', id);
+    sessionStorage.setItem('community_return_tab', 'open');
+    // ✅ HISTORY-FIX: 딥링크 직접 진입 시 history 없으면 /community 폴백
+    if (window.history.length <= 1) {
+      navigate('/community', { replace: true });
+    } else {
+      navigate(-1);
+    }
+  };
+
+  // 이전글/다음글 이동 (replace로 히스토리 누적 방지)
+  const navigateToPost = (newIndex) => {
+    const targetId = postIds[newIndex];
+    // ✅ NAV-FIX: postId + 탭 저장 — 뒤로가기 시 CommunityTab이 'open' 탭 + 마지막 본 글로 복원
+    sessionStorage.setItem('community_return_post_id', targetId);
+    sessionStorage.setItem('community_return_tab', 'open');
+    navigate(`/post/${targetId}`, {
+      replace: true,
+      state: { postIds, currentIndex: newIndex },
+    });
   };
   const user = useUserStore((state) => state.user);
   const addToast = useToastStore((state) => state.addToast);
@@ -94,7 +119,18 @@ export default function PostDetail() {
       if (err.response?.status === 404) setError('게시글을 찾을 수 없습니다.');
       else setError('네트워크 오류가 발생했습니다.');
     } finally { setLoading(false); }
-  }, [id, user?.email, addToast]);
+  }, [id, user?.email]); // ✅ BUG-FIX: addToast는 fetchPost 내부에서 미사용 — 불필요한 deps 제거
+
+  // ✅ NAV-FIX: 이전글/다음글 이동 시 id 바뀌면 상태 즉시 초기화
+  // setLoading(true) 필수 — post=null만 하면 252줄 if(!post) 조건에 걸려 에러화면 잠깐 표시됨
+  useEffect(() => {
+    setLoading(true);
+    setPost(null);
+    setError(null);
+    setLiked(false);
+    setComment('');
+    setCoupangProducts([]);
+  }, [id]);
 
   // ✅ NEW-A4: user?.email deps 추가 — 로그인 직후 likedBy stale 방지
   // ✅ 24TH-B1: fetchPost가 useCallback으로 안정화되어 eslint-disable 없이 deps 포함
@@ -107,7 +143,7 @@ export default function PostDetail() {
     apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(kw)}`)
       .then(res => { if (res.data.products?.length) setCoupangProducts(res.data.products.slice(0, 5)); })
       .catch(() => {}); // 실패해도 UI에 영향 없음
-  }, [post?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [String(post?._id)]); // eslint-disable-line react-hooks/exhaustive-deps // ✅ ID-FIX: ObjectId → string 비교
 
   const handleLike = async () => {
     if (user?.id === 'GUEST') { addToast('로그인이 필요한 기능입니다.', 'error'); return; }
@@ -269,6 +305,29 @@ export default function PostDetail() {
         </div>
       </div>
 
+      {/* 이전글/다음글 네비게이션 바 */}
+      {postIds.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: '#F8F9FA', borderBottom: '1px solid #F0F2F7', flexShrink: 0 }}>
+          <button
+            onClick={() => hasPrev && navigateToPost(currentIndex - 1)}
+            disabled={!hasPrev}
+            style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 12px', borderRadius: '10px', border: 'none', background: hasPrev ? '#E8F0FE' : 'transparent', color: hasPrev ? '#0056D2' : '#D0D5E0', fontSize: '12px', fontWeight: '800', cursor: hasPrev ? 'pointer' : 'default', transition: 'all 0.15s' }}
+          >
+            <ChevronLeft size={13} /> 이전글
+          </button>
+          <span style={{ fontSize: '11px', color: '#AAB0BE', fontWeight: '700' }}>
+            {currentIndex >= 0 ? `${currentIndex + 1} / ${postIds.length}` : `1 / ${postIds.length}`}
+          </span>
+          <button
+            onClick={() => hasNext && navigateToPost(currentIndex + 1)}
+            disabled={!hasNext}
+            style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '6px 12px', borderRadius: '10px', border: 'none', background: hasNext ? '#E8F0FE' : 'transparent', color: hasNext ? '#0056D2' : '#D0D5E0', fontSize: '12px', fontWeight: '800', cursor: hasNext ? 'pointer' : 'default', transition: 'all 0.15s' }}
+          >
+            다음글 <ChevronRight size={13} />
+          </button>
+        </div>
+      )}
+
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '90px' }} onClick={() => setShowMenu(false)}>
         {/* 게시글 카드 */}
         <div style={{ backgroundColor: '#fff', margin: '12px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
@@ -293,41 +352,58 @@ export default function PostDetail() {
           </div>
 
 
-          {post.image && (
-            <div style={{ width: '100%', maxHeight: '320px', overflow: 'hidden', marginBottom: '4px' }}>
-              {/* ENH4-A3+B1: lazy loading + blur placeholder */}
-              <img
-                src={post.image}
-                alt="조황 사진"
-                loading="lazy"
-                style={{ width: '100%', height: '320px', objectFit: 'cover', display: 'block', filter: 'blur(4px)', transition: 'filter 0.3s ease' }}
-                onLoad={(e) => { e.target.style.filter = 'none'; }}
-              />
-            </div>
-          )}
+          {/* ✅ MULTI-IMG: 다중 이미지 갤러리 (images 배열 우선, image 단일 필드 하위호환) */}
+          {(Array.isArray(post.images) && post.images.length > 0) || post.image ? (
+            <ImageGallery
+              images={post.images}
+              image={post.image}
+              maxHeight={320}
+              borderRadius="0"
+              showZoom={true}
+            />
+          ) : null}
 
           <div style={{ padding: '16px 18px' }}>
             <p style={{ fontSize: '15px', lineHeight: '1.75', color: '#1A1A2E', fontWeight: '600', whiteSpace: 'pre-wrap', margin: 0 }}>{post.content}</p>
-            {/* ✅ LOC-3: 위치 배지 — post.location이 있을 때만 표시 */}
+            {/* ✅ LOC-3 + INSTA-P2: 위치 배지 — 앱 내 지도 + 카카오맵 연동 */}
             {post.location?.address && (
-              <div
-                onClick={() => {
-                  if (post.location.lat && post.location.lng) {
-                    window.open(`https://map.kakao.com/link/map/${encodeURIComponent(post.location.address)},${post.location.lat},${post.location.lng}`, '_blank');
-                  }
-                }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '5px',
-                  marginTop: '12px',
-                  background: 'rgba(0,86,210,0.07)', border: '1px solid rgba(0,86,210,0.2)',
-                  borderRadius: '20px', padding: '5px 11px',
-                  fontSize: '12px', fontWeight: '700', color: '#0056D2',
-                  cursor: post.location.lat ? 'pointer' : 'default',
-                  maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}
-              >
-                <MapPin size={12} />
-                <span>{post.location.address}</span>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
+                {/* 앱 내 지도 이동 */}
+                {post.location.lat && (
+                  <div
+                    onClick={() => navigate(`/?lat=${post.location.lat}&lng=${post.location.lng}`)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      background: 'rgba(0,86,210,0.07)', border: '1px solid rgba(0,86,210,0.2)',
+                      borderRadius: '20px', padding: '5px 11px',
+                      fontSize: '12px', fontWeight: '700', color: '#0056D2', cursor: 'pointer',
+                    }}
+                  >
+                    <MapPin size={12} />
+                    <span>{post.location.address}</span>
+                    <span style={{ fontSize: '10px', opacity: 0.7 }}>→ 지도</span>
+                  </div>
+                )}
+                {/* 카카오맵 */}
+                {post.location.lat && (
+                  <div
+                    onClick={() => window.open(`https://map.kakao.com/link/map/${encodeURIComponent(post.location.address)},${post.location.lat},${post.location.lng}`, '_blank')}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      background: '#FFF9C4', border: '1px solid #F9C400',
+                      borderRadius: '20px', padding: '5px 11px',
+                      fontSize: '12px', fontWeight: '700', color: '#7C5000', cursor: 'pointer',
+                    }}
+                  >
+                    🗺️ 카카오맵
+                  </div>
+                )}
+                {/* 좌표 없이 주소만 있을 때 */}
+                {!post.location.lat && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(0,86,210,0.07)', border: '1px solid rgba(0,86,210,0.2)', borderRadius: '20px', padding: '5px 11px', fontSize: '12px', fontWeight: '700', color: '#0056D2' }}>
+                    <MapPin size={12} /><span>{post.location.address}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -367,7 +443,7 @@ export default function PostDetail() {
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
               {coupangProducts.map((item, idx) => (
                 <div
-                  key={idx}
+                  key={String(item.productId || item.id || idx)}
                   onClick={() => navigate('/shop')}
                   style={{
                     flexShrink: 0, width: '130px', background: '#F8F9FA',
@@ -420,7 +496,7 @@ export default function PostDetail() {
           <h3 style={{ fontSize: '14px', fontWeight: '950', color: '#1A1A2E', marginBottom: '16px' }}>댓글 {commentCount}</h3>
           {Array.isArray(post.comments) && post.comments.length > 0 ? (
             post.comments.map((c, idx) => (
-              <div key={c._id || idx} style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'flex-start' }}>
+              <div key={String(c._id || idx)} style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'flex-start' }}>
                 <div
                   onClick={() => navigate(`/user/${encodeURIComponent(c.author)}`)}
                   style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #F0F5FF, #E0ECFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '900', color: '#0056D2', cursor: 'pointer' }}

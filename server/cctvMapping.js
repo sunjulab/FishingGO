@@ -35,6 +35,8 @@ const CCTV_MAP = {
 
   // ── 경북 동해 ──
   'DT_0002': { areaName: '영덕 고래불', region: '경북', type: 'mof', beachCode: null, label: '🎣 영덕/울진 실시간' }, // ✅ 9TH-C3: beachCode 0은 유효하지 않을 가능성 높음 — null로 명시적 미정의 처리
+  // ✅ BUG-FIX: DT_0014 ALL_STATIONS에 있으나 CCTV_MAP 누락 → 잘못된 DEFAULT_CCTV 반환 방지
+  'DT_0014': { areaName: '울진/후포 해역', region: '경북', type: 'mof', beachCode: null, label: '🎣 울진/후포 실시간' },
   'DT_0036': { areaName: '울산 정자',    region: '경북', type: 'mof', beachCode: 74, label: '🎣 경주/울산 실시간' },
 
   // ── 부산/남해 ──

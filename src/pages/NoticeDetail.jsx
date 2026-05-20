@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react'; // ✅ 23TH-C4: useCallback 추가
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ChevronLeft, Edit2, Trash2, Bell, Calendar, Eye } from 'lucide-react';
 import apiClient from '../api/index';
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A2: ADMIN_ID/EMAIL import
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
-import LoadingSpinner from '../components/LoadingSpinner'; // ✅ 11TH-C2: LoadingSpinner import
+import LoadingSpinner from '../components/LoadingSpinner';
+import ImageGallery from '../components/ImageGallery';
 
 export default function NoticeDetail() {
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ export default function NoticeDetail() {
     <div style={{ backgroundColor: '#fff', minHeight: '100dvh' }}>
       {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ backgroundColor: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F0', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: '#1c1c1e' }}>
+        <button onClick={() => window.history.length <= 1 ? navigate('/community?tab=notice', { replace: true }) : navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', color: '#1c1c1e' }}>
           <ChevronLeft size={26} />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -132,17 +133,16 @@ export default function NoticeDetail() {
           </div>
         </div>
 
-        {/* ✅ FIX-IMG: 공지사항 이미지 렌더링 (누락 버그 수정) */}
-        {notice.image && (
-          <div style={{ width: '100%', marginBottom: '24px', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F0F0F0' }}>
-            <img
-              src={notice.image}
-              alt={notice.title}
-              style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '400px' }}
-              onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
-            />
-          </div>
-        )}
+        {/* ✅ MULTI-IMG: 공지사항 다중 이미지 갤러리 (images 배열 우선, image 단일 필드 하위호환) */}
+        {(Array.isArray(notice.images) && notice.images.length > 0) || notice.image ? (
+          <ImageGallery
+            images={notice.images}
+            image={notice.image}
+            maxHeight={400}
+            borderRadius="16px"
+            showZoom={true}
+          />
+        ) : null}
 
         {/* 본문 내용 */}
         <div style={{ fontSize: '17px', color: '#222', lineHeight: '1.9', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '200px' }}>

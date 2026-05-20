@@ -7,6 +7,8 @@ import { useToastStore } from '../store/useToastStore';
 import { NativeAd } from './AdUnit';
 import { showInterstitialAd } from '../services/AdMobService';
 import { Capacitor } from '@capacitor/core';
+// ✅ TIDE-API: 공공데이터포털 해양 3종 API
+import { fetchTideForecast, fetchWaterTemp, fetchFishingIndex } from '../api/marineApi';
 
 // ENH3-B5: 환경변수는 불변 — 컴포넌트 외부 상수로 분리
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -46,8 +48,8 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
     try {
       // ① 조과 기록 저장
       await apiClient.post('/api/user/records', {
-        author: user.name,
-        author_email: user.email,
+        author: user?.name || user?.nickname || 'anonymous',
+        author_email: user?.email || '',
         fish: form.fish.trim(),
         size: form.size,
         weight: form.weight,
@@ -243,7 +245,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
     s.userTier === 'MASTER'
   );
   const addToast = useToastStore(state => state.addToast);
-  // ENH3-B5: 모듈 레벨 API_BASE 상수 사용 (isEditingCctv 제거)
+  // ENH3-B5: 모듈 레벨 API_BASE 상수 사용
+  // isEditingCctv: CCTV 수정 UI 상태 (아래 useState로 관리)
 
 
   const [isEditingCctv, setIsEditingCctv] = useState(false);
@@ -309,9 +312,18 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
       setLoading(true);
       setCctvLoading(true);
       const sid = selectedPoint.obsCode || 'DT_0001';
-      const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' \uc77c\ub78c' : '\ub099\uc2dc\uc6a9\ud488';
+      const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' 일람' : '낚시용품';
 
-      // ENH3-C3: CCTV\uc640 \uc1fc\ud551\uc744 \ud574\uc591\ub0a0\uc528 \ub300\uae30 \uc911 \ubcd1\ub82c \uc2dc\uc791 \u2014 \ub85c\ub529 \uc2dc\uac04 \ub2e8\ucd95
+      // ── 날짜 (YYYYMMDD) ────────────────────────────────
+      const todayStr = (() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}${m}${day}`;
+      })();
+
+      // ── 병렬 실행: CCTV / 쇼핑 / 기상 서버 / 공공데이터포털 3종 ──
       const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}`)
         .then(res => { setCctvData(res.data); })
         .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
@@ -321,10 +333,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
         .then(res => { if (res.data?.products) setShoppingItems(res.data.products.slice(0, 3)); })
         .catch(err => { if (!import.meta.env.PROD) console.error('Shop Load Error:', err); });
 
-      // ✅ 7TH-B5: 마린데이터도 병렬화 — CCTV/쇼핑과 함께 Promise.allSettled로 전체 벑렬 시작
+      // ── 기상 서버 (수온·기상 종합) ────────────────────
       const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}`)
         .then(resp => {
-          setMarineData({ ...resp.data, stationId: sid });
+          setMarineData(prev => ({ ...prev, ...resp.data, stationId: sid }));
         })
         .catch(err => {
           if (!import.meta.env.PROD) console.error('Data Load Error:', err);
@@ -333,19 +345,79 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
           const baseSst = profile[reg] || 16.0;
           const seed = (parseInt(selectedPoint.id) % 10 - 5) / 10 || 0;
           const finalSst = (baseSst + seed).toFixed(1);
-          setMarineData({
+          setMarineData(prev => ({
+            ...prev,
             stationId: sid,
             sst: finalSst,
             temp: `${finalSst}°C`,
             layers: { upper: finalSst, middle: (finalSst - 1.2).toFixed(1), lower: (finalSst - 3.4).toFixed(1) },
             tide: { phase: '분석 중', high: '15:20', low: '08:42' },
             tide_predictions: [{ time: '14:20', type: '고조', level: 180 }]
-          });
+          }));
         })
         .finally(() => setLoading(false));
 
-      // 세 API 병렬 대기 — 어느 하나가 실패해도 나머지 콘텐츠는 정상 표시
-      await Promise.allSettled([marinePromise, cctvPromise, shopPromise]);
+      // ── ✅ 공공데이터포털 조석예보 ─────────────────────
+      const tidePromise = fetchTideForecast(sid, todayStr)
+        .then(items => {
+          if (!items || items.length === 0) return;
+          // hl_code: 'H'=고조, 'L'=저조 → tide_predictions 배열로 변환
+          const predictions = items.map(item => ({
+            tph_time: item.hl_time || item.tph_time || '',
+            hl_code: item.hl_code === 'H' ? '고조' : '간조',
+            tph_level: item.hl_level || item.tph_level || '',
+            time: item.hl_time || '',
+            type: item.hl_code === 'H' ? '고조' : '간조',
+            level: item.hl_level || '',
+          }));
+          setMarineData(prev => ({
+            ...prev,
+            tide_predictions: predictions,
+            tide: {
+              ...(prev.tide || {}),
+              phase: prev.tide?.phase || '조석 데이터',
+              high: predictions.find(p => p.hl_code === '고조')?.tph_time || prev.tide?.high || '-',
+              low: predictions.find(p => p.hl_code === '간조')?.tph_time || prev.tide?.low || '-',
+            },
+          }));
+          if (!import.meta.env.PROD) console.info(`[BottomSheet] 조석예보 ${predictions.length}건 로드 완료`);
+        })
+        .catch(err => { if (!import.meta.env.PROD) console.warn('[BottomSheet] 조석예보 실패:', err); });
+
+      // ── ✅ 공공데이터포털 실측 수온 ──────────────────
+      const waterTempPromise = fetchWaterTemp(sid, todayStr)
+        .then(temp => {
+          if (temp && temp !== '-') {
+            setMarineData(prev => ({ ...prev, waterTemp: temp, sst: temp }));
+            if (!import.meta.env.PROD) console.info(`[BottomSheet] 실측 수온 ${temp}°C 로드 완료`);
+          }
+        })
+        .catch(err => { if (!import.meta.env.PROD) console.warn('[BottomSheet] 수온 실패:', err); });
+
+      // ── ✅ 공공데이터포털 바다낚시지수 ──────────────
+      const fishingIdxPromise = fetchFishingIndex(sid)
+        .then(items => {
+          if (!items || items.length === 0) return;
+          // 오늘 날짜에 해당하는 첫 번째 예보 레코드 사용
+          const today = items[0];
+          const gradeMap = { '1': '매우좋음', '2': '좋음', '3': '보통', '4': '나쁨', '5': '매우나쁨' };
+          const idx = today?.fishing_idx || today?.fishingIdx || '';
+          const grade = today?.fishing_grade || gradeMap[idx] || idx;
+          setMarineData(prev => ({
+            ...prev,
+            fishingIndex: {
+              등급: grade,
+              수온: today?.wt ? `${today.wt}°C` : '-',
+              파고: today?.wh ? `${today.wh}m` : '-',
+              조류: today?.current_spd ? `${today.current_spd}m/s` : '-',
+            },
+          }));
+          if (!import.meta.env.PROD) console.info(`[BottomSheet] 낚시지수 ${grade} 로드 완료`);
+        })
+        .catch(err => { if (!import.meta.env.PROD) console.warn('[BottomSheet] 낚시지수 실패:', err); });
+
+      // 전체 병렬 대기
+      await Promise.allSettled([marinePromise, cctvPromise, shopPromise, tidePromise, waterTempPromise, fishingIdxPromise]);
 
       // 해당 구역 선상배 홍보글 조회
       setBizLoading(true);
@@ -513,8 +585,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                     alt={cctvData.areaName} 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     onError={(e) => {
-                      if (e.target.src !== cctvData.safeFallbackImg) {
+                      if (cctvData.safeFallbackImg && e.target.src !== cctvData.safeFallbackImg) {
                         e.target.src = cctvData.safeFallbackImg;
+                      } else {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
                       }
                     }}
                   />
@@ -607,7 +682,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                         🛒 이 포인트 권장 채비 쇼핑
                       </div>
                       <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
-                        {shoppingItems.map((item, idx) => (
+                         {shoppingItems.map((item, idx) => (
                           <div
                             key={item.productId || item.link || idx}
                             onClick={() => window.open(item.link || item.coupangUrl, '_blank')}
@@ -620,17 +695,19 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                             onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                             onMouseOut={(e) => e.currentTarget.style.transform = 'none'}
                           >
-                            <img 
-                              src={item.productImage} 
-                              alt={item.productName} 
+                            {/* ✅ FIELD-FIX: server L4344 반환 필드(img/name/price) 사용 — productImage/productName은 L4827 dead code 필드 */}
+                            <img
+                              src={item.img || item.productImage}
+                              alt={item.name || item.productName || '낚시용품'}
                               style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px' }}
+                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; }}
                             />
                             <div style={{ fontSize: '10px', fontWeight: '800', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3, marginBottom: '6px', height: '26px' }}>
-                              {item.productName}
+                              {item.name || item.productName}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                               <span style={{ fontSize: '12px', fontWeight: '950', color: '#E65100' }}>
-                                {(Number(item.productPrice) || 0).toLocaleString()}원
+                                {item.price || `${(Number(item.productPrice) || 0).toLocaleString()}원`}
                               </span>
                             </div>
                           </div>
@@ -747,7 +824,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {businessPosts.map((biz, idx) => (
                     <div
-                      key={biz._id || biz.id || idx}
+                      key={String(biz._id || biz.id || idx)}
                       style={{
                         position: 'relative',
                         background: biz.isPinned ? 'linear-gradient(135deg, #1a1200 0%, #2d1f00 50%, #1a1200 100%)' : '#fff',

@@ -12,6 +12,7 @@ export default function LoginPage() {
   const setUser = useUserStore(state => state.setUser);
   const addToast = useToastStore(state => state.addToast);
   const timerRef = useRef(null);
+  const levelTimerRef = useRef(null); // ✅ FIX-TIMER: justAttended/leveledUp 하나의 ref 공유 시 leveledUp clearTimeout이 출석 toast 취소 버그
 
   const [isLogin, setIsLogin] = useState(true);
   const [userId, setUserId] = useState('');
@@ -29,9 +30,12 @@ export default function LoginPage() {
     const email = data.user?.email;
     let userToSet = data.user;
     const accessToken = data.accessToken || data.token;
-    localStorage.setItem('access_token', accessToken);
-    if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    // ✅ FIX-TOKEN: undefined guard — accessToken 없을 시 setItem 호출 방지 (문자열 "undefined" 저장 방지)
+    if (accessToken) {
+      try { localStorage.setItem('access_token', accessToken); } catch { /* StorageError 무시 */ }
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    }
+    if (data.refreshToken) { try { localStorage.setItem('refresh_token', data.refreshToken); } catch { /* StorageError 무시 */ } }
 
     try {
       const savedAvatar = email ? localStorage.getItem(`avatar_${email}`) : null;
@@ -50,14 +54,16 @@ export default function LoginPage() {
     setUser(userToSet);
     addToast(`환영합니다, ${data.user.name}님! 🎣`, 'success');
     if (data.justAttended) {
+      // ✅ FIX-TIMER: 별도 ref 사용 — leveledUp clearTimeout이 출석 toast를 취소하는 버그 수정
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => addToast(`🎉 오늘 출석 완료! +${data.expGained || 20} EXP 획득`, 'success'), 800);
     }
     if (data.leveledUp) {
       const currentLevelIndex = (data.user.level || 1) - 1;
       const levelReward = LEVEL_CONFIG[currentLevelIndex]?.reward || '소정의 찌(포인트)';
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
+      // ✅ FIX-TIMER: levelTimerRef 사용 — justAttended timerRef를 새로 준덕덕이 clearTimeout하지 않음
+      if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
+      levelTimerRef.current = setTimeout(() => {
         addToast(`⭐ 레벨 ${data.user.level} 달성 기념 보상!`, 'success');
         addToast(`🎁 보상: [${levelReward}] 지급 완료!`, 'info');
       }, 1600);

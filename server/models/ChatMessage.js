@@ -6,8 +6,7 @@ const chatMessageSchema = new mongoose.Schema({
   sender:    { type: String, required: true },
   text:      { type: String, required: true },
   time:      { type: String, default: '' },
-  createdAt: { type: Date, default: Date.now },
-});
+}, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps 자동 관리 (TTL 인덱스 정상 작동)
 
 // 채팅은 최근 30일만 보존 (TTL 인덱스)
 chatMessageSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });

@@ -5,14 +5,13 @@
  * - 커버사진 업로드
  * - 등록 완료 시 businessPosts 피드에 전화 바로 연결되는 카드로 노출
  */
-import React, { useState, useEffect, useMemo, useRef } from 'react'; // ✅ 7TH-B7: useMemo / ✅ 19TH-B2: useRef import 추가
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { X, Phone, Image, Sparkles, ChevronDown, CheckCircle2, MapPin } from 'lucide-react';
+import { X, Phone, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useToastStore } from '../store/useToastStore';
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 7TH-A2: ADMIN_ID/ADMIN_EMAIL import
-import { RewardGateModal } from '../components/AdUnit';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+import MultiImageUpload from '../components/MultiImageUpload';
 import apiClient from '../api/index';
-import { fileToCompressedBase64 } from '../utils/imageUtils';
 
 const FISH_TYPES = ['감성돔', '참돔', '방어', '광어', '대구', '문어', '쭈꾸미', '갑오징어', '우럭', '농어', '삼치', '고등어', '장어'];
 const BOAT_TYPES = ['선상낚시', '야간선상', '에깅/문어', '선상루어', '캐스팅', '심해낚시', '갯바위 투어'];
@@ -84,17 +83,19 @@ export default function WriteBusinessPost() {
   const [capacity, setCapacity] = useState('');
   const [phone, setPhone] = useState('');
   const [extraMsg, setExtraMsg] = useState('');
-  const [coverImage, setCoverImage] = useState('');
+  const [images, setImages] = useState([]); // ✅ MULTI-IMG: 다중 이미지 배열 (최대 5장)
   const [content, setContent] = useState('');
   // ✅ VIP-AUTO: VIP는 자동 체크, 어드민은 토글 가능
   const [isPinned, setIsPinned] = useState(false);
   const [myVipHarbor, setMyVipHarbor] = useState(null); // ✅ VIP-HARBOR: 내 VIP 항구 슬롯 정보
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAdGate, setShowAdGate] = useState(false);
   const generateTimerRef = useRef(null); // ✅ 19TH-B2: AI 생성 타이머 ref — 언마운트 후 setState 방지
 
-  const isReady = shipName && region && boatType && targetFish.trim() && price && schedule && capacity && phone;
+  // ✅ BUG-FIX: isReady phone 최소 9자리 → 8자리로 완화 (1588-XXXX 등 8자리 대표번호 허용, handlePostClick과 일치)
+  const isReady = shipName.trim() && region && boatType && targetFish.trim() && price.trim() && schedule.trim()
+    && String(capacity).trim() !== ''
+    && phone.replace(/[^0-9]/g, '').length >= 8;
 
   // ✅ VIP-HARBOR: VIP 사용자 → 자신의 VIP 항구 슬롯 자동 로드 + 지역·isPinned 자동 설정
   useEffect(() => {
@@ -121,12 +122,17 @@ export default function WriteBusinessPost() {
         setRegion(data.region || '');
         setBoatType(data.type || '');
         setTargetFish(data.target || ''); // ✅ LOC-FISH: 문자열 그대로 로드
-        setPrice(data.price || '');
+        setPrice(data.price != null ? String(data.price) : '');
         setSchedule(data.date || '');
-        setCapacity(String(data.capacity || ''));
+        // ✅ BUG-FIX: capacity=0은 DB에 null로 저장되므로 null만 체크. data.capacity !== 0 조건은 불필요
+        setCapacity(data.capacity != null ? String(data.capacity) : '');
         setPhone(data.phone || '');
         setExtraMsg('');
-        setCoverImage(data.cover || '');
+        // ✅ MULTI-IMG: 수정 모드에서 기존 이미지 배열 복원
+        const existingImages = Array.isArray(data.images) && data.images.length > 0
+          ? data.images
+          : data.cover ? [data.cover] : [];
+        setImages(existingImages);
         setContent(data.content || '');
         setIsPinned(data.isPinned || false);
       })
@@ -173,14 +179,18 @@ export default function WriteBusinessPost() {
     // ✅ 인원 숫자 검증 — 마스터는 1~1000, 일반유저는 1~200
     const cap = Number(capacity);
     const maxCap = isAdmin ? 1000 : 200;
-    if (!capacity || isNaN(cap) || cap < 1 || cap > maxCap) {
+    // ✅ BUG-FIX: !capacity는 '0' 문자열에서도 true → cap 수치로만 검증
+    if (String(capacity).trim() === '' || isNaN(cap) || cap < 1 || cap > maxCap) {
       addToast(`인원은 1~${maxCap}사이의 숫자로 입력해주세요.`, 'error');
       return;
     }
-    // 전화번호 형식 검증
-    const phoneRegex = /^(010|011|016|017|018|019)-?\d{3,4}-?\d{4}$/;
-    if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
-      addToast('올바른 전화번호를 입력해주세요. (010-XXXX-XXXX)', 'error');
+    // 전화번호 형식 검증 — 모바일(010~019) + 유선(02, 031~099) + 대표번호(1544, 1588 등 8자리) 허용
+    const digitsOnly = phone.replace(/[^0-9]/g, '');
+    // ✅ BUG-FIX: 1588-XXXX 등 대표번호는 8자리 → 최소 8자리로 완화
+    // 유선(02-): 9~10자리, 대표번호(1588-): 8자리, 모바일(010-): 10~11자리
+    const phoneRegex = /^(02\d{7,8}|0[3-9]\d{7,8}|1[0-9]{3}\d{4}|[0-9]{3}\d{7,8})$/;
+    if (digitsOnly.length < 8 || digitsOnly.length > 11 || !phoneRegex.test(digitsOnly)) {
+      addToast('올바른 전화번호를 입력해주세요. (예: 010-1234-5678 / 02-1234-5678 / 1588-1234)', 'error');
       return;
     }
     doPost();
@@ -191,19 +201,24 @@ export default function WriteBusinessPost() {
     const storedUser = user;
     if (!storedUser) { addToast('로그인이 필요합니다.', 'error'); setIsSubmitting(false); return; }
     try {
-      const payload = {
-        author: storedUser.name,
-        author_email: storedUser.email,
-        shipName, region,
-        type: boatType,
-        target: targetFish.trim() || '미정',
-        price, date: schedule,
-        capacity: Number(capacity),
-        phone, content,
-        isPinned: (isAdmin || isVVIP) && isPinned, // ✅ VIP-FIX: VIP도 isPinned 서버 전송
-        // ENH6-A3: Unsplash 외부 의존 제거 — picsum.photos placeholder 사용
-        cover: coverImage || 'https://picsum.photos/seed/fishingboat/400/200'
-      };
+        // ✅ MULTI-IMG: 이미지 배열 전송
+        // ✅ BUG-FIX: base64는 원본 대비 ~1.33배 크므로 3MB 원본 = ~4MB base64
+        //             3MB 체크 → 정상 압축 이미지도 짤리던 버그 수정 (4MB로 완화)
+        const safeImages = images.filter(img => img && img.length <= 4 * 1024 * 1024);
+        const bizCover = safeImages[0] || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect width='400' height='200' fill='%23E8EBF0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='36' fill='%23B0B8C8'%3E%F0%9F%9A%A2%3C/text%3E%3C/svg%3E";
+        const payload = {
+          author: storedUser.name,
+          author_email: storedUser.email,
+          shipName, region,
+          type: boatType,
+          target: targetFish.trim() || '미정',
+          price, date: schedule,
+          capacity: Number(capacity),
+          phone, content,
+          isPinned: (isAdmin || isVVIP) && isPinned,
+          cover: bizCover,
+          images: safeImages, // ✅ MULTI-IMG: 전체 배열
+        };
       if (isEditMode) {
         payload.email = storedUser.email;
       }
@@ -213,7 +228,7 @@ export default function WriteBusinessPost() {
         : `/api/community/business`;
       await apiClient[method](url, isEditMode ? payload : { ...payload, category: '선상' });
       addToast(isEditMode ? '✅ 홍보글이 수정되었습니다!' : '🚢 선상 배 홍보글이 등록되었습니다!', 'success');
-      navigate(isEditMode ? -1 : '/community?tab=business');
+      navigate(isEditMode ? (window.history.length <= 1 ? '/community' : -1) : '/community?tab=business');
     } catch (err) {
       if (!import.meta.env.PROD) console.error('Business post error:', err);
       // ✅ 중복 등록(409) 처리 — 수정 페이지로 자동 이동
@@ -233,7 +248,7 @@ export default function WriteBusinessPost() {
     <div style={{ backgroundColor: '#F2F2F7', minHeight: '100dvh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', maxWidth: '430px', margin: '0 auto', position: 'relative' }}>
       {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ backgroundColor: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={22} color="#1c1c1e" /></button>
+        <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}><X size={22} color="#1c1c1e" /></button>
         <h2 style={{ fontSize: '15px', fontWeight: '900', margin: 0 }}>{isEditMode ? '홍보글 수정' : '선상 배 홍보 등록'}</h2>
         <button
           disabled={!isReady || !content || isSubmitting}
@@ -255,32 +270,15 @@ export default function WriteBusinessPost() {
 
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
-        {/* 커버 이미지 업로드 */}
-        <section style={{ backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden' }}>
-          <label htmlFor="cover-upload" style={{ display: 'block', cursor: 'pointer' }}>
-            {coverImage ? (
-              <img src={coverImage} alt="커버" style={{ width: '100%', height: '100px', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ height: '80px', backgroundColor: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#aaa' }}>
-                <Image size={22} />
-                <span style={{ fontSize: '13px', fontWeight: '700' }}>배 사진 등록 (클릭)</span>
-              </div>
-            )}
-          </label>
-          <input id="cover-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
-            const f = e.target.files[0];
-            e.target.value = ''; // 같은 파일 재선택 시 onChange 재발생
-            if (f) {
-              try {
-                const compressed = await fileToCompressedBase64(f, { maxWidth: 1200, maxHeight: 900, quality: 0.85, preset: 'business' });
-                setCoverImage(compressed);
-              } catch (err) {
-                const r = new FileReader();
-                r.onloadend = () => setCoverImage(r.result);
-                r.readAsDataURL(f);
-              }
-            }
-          }} />
+        {/* ✅ MULTI-IMG: 다중 이미지 업로드 (최대 5장, 첫 번째 = 대표 커버) */}
+        <section style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '900', color: '#8E8E93', marginBottom: '12px' }}>📸 배 사진 (최대 5장)</div>
+          <MultiImageUpload
+            images={images}
+            onChange={setImages}
+            maxCount={5}
+            label="배 사진 추가"
+          />
         </section>
 
         {/* 기본 정보 */}
@@ -393,7 +391,9 @@ export default function WriteBusinessPost() {
               onChange={e => setCapacity(e.target.value.replace(/[^0-9]/g, ''))}
               placeholder={isAdmin ? '👥 모집 인원 (1~1000명, 전국 공지용)' : '👥 모집 인원 (숫자만, 최대 200명)'}
               style={INPUT_STYLE}
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min="1"
               max={isAdmin ? 1000 : 200}
             />
@@ -408,13 +408,32 @@ export default function WriteBusinessPost() {
             <input
               value={phone}
               onChange={e => {
-                // ✅ 전화번호 자동 포맷: 010-1234-5678
-                const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                // ✅ BUG-FIX: 전화번호 자동 포맷 — 번호 유형별 올바른 포맷 적용
+                // 02(유선 서울): 02-XXXX-XXXX (최대 10자리)
+                // 0XX(지역번호): 031-XXX-XXXX (최대 11자리)
+                // 010(모바일):   010-XXXX-XXXX (최대 11자리)
+                // 1XXX(대표번호): 1588-XXXX / 1544-XXXX (최대 8자리)
+                const raw = e.target.value.replace(/[^0-9]/g, '');
+                let digits = raw;
                 let formatted = digits;
-                if (digits.length >= 4 && digits.length <= 7) {
-                  formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
-                } else if (digits.length > 7) {
-                  formatted = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+
+                if (digits.startsWith('02')) {
+                  // 유선 서울: 02-XXXX-XXXX
+                  digits = digits.slice(0, 10);
+                  if (digits.length <= 2) formatted = digits;
+                  else if (digits.length <= 6) formatted = `${digits.slice(0, 2)}-${digits.slice(2)}`;
+                  else formatted = `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6)}`;
+                } else if (digits.startsWith('1') && digits.length <= 8) {
+                  // 대표번호: 1588-XXXX
+                  digits = digits.slice(0, 8);
+                  if (digits.length <= 4) formatted = digits;
+                  else formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`;
+                } else {
+                  // 0XX (010, 031, 070 등): 3자리-3/4자리-4자리
+                  digits = digits.slice(0, 11);
+                  if (digits.length <= 3) formatted = digits;
+                  else if (digits.length <= 7) formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+                  else formatted = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
                 }
                 setPhone(formatted);
               }}
@@ -517,10 +536,11 @@ export default function WriteBusinessPost() {
             <div style={{ fontSize: '13px', fontWeight: '900', color: '#8E8E93', marginBottom: '12px', paddingLeft: '4px' }}>📱 등록 후 보여지는 카드 미리보기</div>
             <div style={{ backgroundColor: '#fff', borderRadius: '20px', overflow: 'hidden', border: '1.5px solid #F0F2F7', boxShadow: '0 4px 14px rgba(0,0,0,0.05)' }}>
               <div style={{ padding: '16px', display: 'flex', gap: '14px' }}>
-                {coverImage ? (
-                  <img src={coverImage} style={{ width: '90px', height: '90px', borderRadius: '14px', objectFit: 'cover', flexShrink: 0 }} alt="커버" />
+                {/* ✅ FIX: coverImage 미정의 버그 → images[0] 사용. ImageIcon import 추가 */}
+                {images[0] ? (
+                  <img src={images[0]} style={{ width: '90px', height: '90px', borderRadius: '14px', objectFit: 'cover', flexShrink: 0 }} alt="커버" />
                 ) : (
-                  <div style={{ width: '90px', height: '90px', borderRadius: '14px', flexShrink: 0, backgroundColor: '#F2F2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}><Image size={28} /></div>
+                  <div style={{ width: '90px', height: '90px', borderRadius: '14px', flexShrink: 0, backgroundColor: '#F2F2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}><ImageIcon size={28} /></div>
                 )}
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>

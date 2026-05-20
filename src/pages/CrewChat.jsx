@@ -79,7 +79,9 @@ export default function CrewChat() {
   };
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('access_token') || undefined;
+    // ✅ FIX-STORAGE: localStorage.getItem try/catch — Safari 개인정보 보호 모드 StorageError 방어
+    let accessToken;
+    try { accessToken = localStorage.getItem('access_token') || undefined; } catch { accessToken = undefined; }
     const newSocket = io(SOCKET_URL, {
       reconnection: true, reconnectionAttempts: Infinity,
       reconnectionDelay: 1000, reconnectionDelayMax: 5000,
@@ -91,14 +93,14 @@ export default function CrewChat() {
     newSocket.on('connect', () => {
       setConnected(true); setReconnecting(false);
       mySocketId.current = newSocket.id;
+      newSocket.emit('join_crew', id); // ✅ BUG-FIX: connect 완료 후 join_crew 발송 (연결 전 emit race condition 수정)
     });
     newSocket.on('disconnect', () => setConnected(false));
     newSocket.on('reconnecting', () => setReconnecting(true));
     newSocket.on('reconnect', () => {
       setConnected(true); setReconnecting(false);
-      newSocket.emit('join_crew', id);
+      newSocket.emit('join_crew', id); // 재연결 후 채팅방 재입장
     });
-    newSocket.emit('join_crew', id);
     newSocket.on('chat_history', (history) => setMessages(history));
     newSocket.on('new_msg', (msg) => setMessages(prev => {
       const next = [...prev, msg];
@@ -112,7 +114,8 @@ export default function CrewChat() {
     });
     // 크루장 위임 이벤트
     newSocket.on('crew_transferred', ({ newOwnerEmail, newOwnerName, message }) => {
-      addToast(message, 'success');
+      // ✅ FIX-MSG: message undefined 방어 — 서버가 message 필드를 생략하면 'undefined' 토스트 방지
+      addToast(message || '크루장이 위임되었습니다.', 'success');
       if (user?.email === newOwnerEmail) {
         setCrewOwner(newOwnerEmail);
       }
@@ -154,7 +157,7 @@ export default function CrewChat() {
     if (isOwner) { addToast('크루장은 탈퇴할 수 없습니다. 크루를 삭제해주세요.', 'error'); return; }
     setLeavingCrew(true);
     try {
-      await apiClient.post(`/api/community/crews/${id}/leave`, { email: user.email });
+      await apiClient.post(`/api/community/crews/${id}/leave`, { email: user?.email });
       addToast('크루에서 탈퇴했습니다.', 'success');
       navigate('/community?tab=crew');
     } catch (err) {
@@ -224,7 +227,7 @@ export default function CrewChat() {
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#fff', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {/* Header — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>
+        <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <ChevronLeft size={24} />
         </button>
         <div style={{ flex: 1 }}>
@@ -270,7 +273,7 @@ export default function CrewChat() {
             msg.sender === myName ||
             msg.sender === user?.email;
           return (
-            <div key={msg._id || `msg-${idx}`} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '78%' }}>
+            <div key={String(msg._id || `msg-${idx}`)} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '78%' }}>
               <div style={{ fontSize: '11px', color: '#8e8e93', marginBottom: '4px', textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: '4px', flexDirection: isMe ? 'row-reverse' : 'row' }}>
                 {msg.senderEmoji && <span style={{ fontSize: '13px' }}>{msg.senderEmoji}</span>}
                 <span style={{ fontWeight: '700', color: isMe ? '#0056D2' : '#1c1c1e', fontSize: '12px' }}>{msg.sender}</span>

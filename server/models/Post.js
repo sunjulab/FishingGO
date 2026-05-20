@@ -14,6 +14,12 @@ const postSchema = new mongoose.Schema({
   category:     { type: String, required: true },
   content:      { type: String, required: true },
   image:        { type: String, default: null },
+  images:       { type: [String], default: [],
+    validate: {
+      validator: (v) => v.length <= 5,
+      message: '이미지는 최대 5장까지 등록할 수 있습니다.',
+    }
+  }, // ✅ MULTI-IMG + VALID-FIX: 다중 이미지 배열 (최대 5장 스키마 레벨 검증 추가)
   // ✅ LOC: 위치 정보 필드 — { address, lat, lng }
   location:     {
     address: { type: String, default: '' },
@@ -23,8 +29,7 @@ const postSchema = new mongoose.Schema({
   likes:        { type: Number, default: 0 },
   likedBy:      { type: [String], default: [] },  // 좋아요 중복방지: 유저 이메일 목록
   comments:     { type: [commentSchema], default: [] },
-  createdAt:    { type: Date, default: Date.now }
-});
+}, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps로 자동 관리 (CctvOverride 패턴 통일)
 
 // ─── 검색 성능 최적화: 풀텍스트 인덱스 ─────────────────────────────────────
 postSchema.index({ content: 'text', author: 'text' }); // $text 검색 지원

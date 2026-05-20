@@ -111,7 +111,7 @@ export default function AdminDashboard() {
       {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', background: '#070B14', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <ArrowLeft size={22} color="#fff" />
           </button>
           <span style={{ fontSize: '18px', fontWeight: '950' }}>⚙️ 수익 대시보드</span>
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px' }}>최근 결제 내역</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {stats.recentPayments.map((p, i) => (
-                    <div key={p._id || p.merchant_uid || i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div key={String(p._id || p.merchant_uid || i)} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>{p.userName || p.userId}</div>
                         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>

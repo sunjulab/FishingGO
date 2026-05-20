@@ -15,18 +15,18 @@ const jwt  = require('jsonwebtoken');
 const fs   = require('fs');
 const path = require('path');
 
-// ✅ 10TH-A1: isAdminToken 로컈 헬퍼 — server/index.js와 동일 로직 유지 (순환 import 방지)
-// 레거시 id 'sunjulab' + 실제 이메일 'sunjulab.k@gmail.com' 모두 허용
+// ✅ FIX-ADMIN-SYNC: server/index.js isAdminToken과 동기화 (10TH-A1 주석 유지)
+// 기존: sunjulab(ID) / sunjulab(email) → 최신: sunjulab.k(email) / MASTER(tier)
 function isAdminToken(tp) {
   if (!tp) return false;
-  return tp.id === 'sunjulab'
-    || tp.email === 'sunjulab'
-    || tp.email === 'sunjulab.k@gmail.com';
+  return tp.email === 'sunjulab.k'           // 마스터 계정 이메일
+    || tp.email === 'sunjulab.k@gmail.com'   // Gmail OAuth 로그인
+    || tp.tier  === 'MASTER';                 // 티어 기반 판별
 }
 
 // ✅ SEC-03: 하드코딩된 JWT_SECRET fallback 제거 — 환경변수 미설정 시 검증 실패 (위조 방지)
 const JWT_SECRET     = process.env.JWT_SECRET;
-if (!JWT_SECRET) console.error('[CCTV] CRITICAL: JWT_SECRET 환경변수가 설정되지 않았습니다!');
+if (!JWT_SECRET) process.stderr.write('[CCTV] CRITICAL: JWT_SECRET 환경변수가 설정되지 않았습니다!\n'); // ✅ BUG-FIX: console.error → stderr (logger 초기화 전 안전 출력)
 const OVERRIDES_FILE = path.join(__dirname, 'cctv_overrides.json');
 
 // ✅ 27TH-B2: 모듈 레벨 logger shim — registerCctvAdminRoutes({ logger }) 주입 전 기본값 console
@@ -89,8 +89,8 @@ async function saveToDb(CctvOverrideModel, obsCode, data) {
   try {
     await CctvOverrideModel.findOneAndUpdate(
       { obsCode },
-      { ...data, updatedAt: new Date() },
-      { upsert: true, new: true }
+      { ...data }, // ✅ BUG-FIX: timestamps:true 시 updatedAt 수동 전달 불필요 — Mongoose가 자동 관리
+      { upsert: true, new: true, timestamps: true } // ✅ timestamps 옵션 명시로 updatedAt 자동 갱신 보장
     );
   } catch (e) {
     _log.error('[CCTV] DB 저장 실패:', e.message);
@@ -213,7 +213,7 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
         await saveToDb(CctvOverrideModel, obsCode, { ...data, areaName: base.areaName });
       } catch (e) {
         // DB 실패 시 JSON fallback으로 계속 진행
-        console.warn('[CCTV PUT] DB 실패 → JSON fallback');
+        _log.warn('[CCTV PUT] DB 실패 → JSON fallback:', e.message);
       }
     }
 
@@ -234,7 +234,7 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
       try {
         await deleteFromDb(CctvOverrideModel, obsCode);
       } catch (e) {
-        console.warn('[CCTV DELETE] DB 실패 → JSON fallback');
+        _log.warn('[CCTV DELETE] DB 실패 → JSON fallback:', e.message);
       }
     }
 
@@ -265,7 +265,7 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
       try {
         await resetDb(CctvOverrideModel);
       } catch (e) {
-        console.warn('[CCTV RESET] DB 실패 → JSON fallback');
+        _log.warn('[CCTV RESET] DB 실패 → JSON fallback:', e.message);
       }
     }
 

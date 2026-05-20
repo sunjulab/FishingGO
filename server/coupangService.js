@@ -131,8 +131,7 @@ async function searchCoupang(keyword, limit = 6) {
       badge:        item.isRocket ? '로켓배송' : '낚시GO 추천',
     }));
   } catch (err) {
-    // ENH5-A1: 프로덕션 console.error 노출 방지
-    if (process.env.NODE_ENV !== 'production') console.error('[쿠팡 API 오류]:', err.message); // ✅ 14TH-B1: '쿠팬' → '쿠팡' 오타 수정
+    (global.logger?.warn || (() => {}))(`[쿠팡 API 오류]: ${err.message}`); // ✅ ENH5-A1/14TH-B1: console.error → logger.warn (Winston 통일, 프로덕션 안전)
     return getMockProducts(keyword);
   }
 }

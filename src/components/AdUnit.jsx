@@ -17,7 +17,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
-import { showRewardedAd, showBannerAd, removeBannerAd } from '../services/AdMobService';
+import { showRewardedAd } from '../services/AdMobService';
 
 // ─── 광고 키 설정 (테스트 키 → 실제 키 교체 시 이곳만 수정) ───
 const PUB_ID   = import.meta.env.VITE_ADSENSE_PUB_ID   || 'ca-pub-3940256099942544'; // 구글 공식 테스트 퍼블리셔
@@ -82,22 +82,9 @@ function useAdPush(ref) {
 export function BannerAd({ style = {} }) {
   const ref = useRef();
   useAdPush(ref);
-  // ✅ 29TH-B1: 하드코딩 'sunjulab' → ADMIN_ID/ADMIN_EMAIL 상수로 교체 (3RD-A2 패턴 통일)
   const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
-
-  // ✅ ADMOB-BANNER: 네이티브 앱에서 AdMob 하단 배너 표시 (AdSense WebView 금지 대체)
-  useEffect(() => {
-    if (isPremium || !isCapacitorNative()) return;
-    showBannerAd();
-    return () => { removeBannerAd(); };
-  }, [isPremium]);
-
-  if (isPremium) return null;
-
-  // 네이티브 앱: AdMob 배너가 화면 하단에 오버레이로 뜨 → 콘텐츠 가림 방지 위한 spacer
-  if (isCapacitorNative()) {
-    return <div style={{ height: '60px', width: '100%', ...style }} />;
-  }
+  // ✅ ADMOB: 네이티브 앱에서는 AdSense 불가 (Google WebView 정책) — 인터스티셜로 대체
+  if (isPremium || isCapacitorNative()) return null;
 
   return (
     <div
@@ -106,7 +93,7 @@ export function BannerAd({ style = {} }) {
         width: '100%',
         minHeight: '60px',
         overflow: 'hidden',
-        margin: '8px 0',       // [정지 방지] 위아래 8px 여백 필수
+        margin: '8px 0',
         borderRadius: '12px',
         ...style
       }}
@@ -118,7 +105,7 @@ export function BannerAd({ style = {} }) {
         data-ad-slot={SLOT_BANNER}
         data-ad-format="auto"
         data-full-width-responsive="true"
-        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}  // ✅ INFO-BT1: 테스트 모드에서만 adtest=on
+        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}
       />
     </div>
   );
@@ -151,6 +138,7 @@ export function NativeAd({ style = {} }) {
       <div style={{ fontSize: '10px', color: '#aaa', fontWeight: '700', padding: '4px 8px', textAlign: 'right' }}>
         광고 · Sponsored
       </div>
+      {/* ✅ INFO-BT1: IS_TEST_AD=true 시 data-adtest="on" 주입 — 프로덕션 키 설정 시 자동 제거 */}
       <ins
         className="adsbygoogle"
         style={{ display: 'block', minHeight: '120px', background: '#f5f5f5' }}
@@ -158,7 +146,7 @@ export function NativeAd({ style = {} }) {
         data-ad-layout="in-article"
         data-ad-client={PUB_ID}
         data-ad-slot={SLOT_NATIVE}
-        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}  // ✅ INFO-BT1
+        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}
       />
     </div>
   );

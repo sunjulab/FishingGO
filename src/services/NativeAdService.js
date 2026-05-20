@@ -58,9 +58,9 @@ export async function loadNativeAd(slotId, el) {
       ...rect,
     });
     activeSlots.add(slotId);
-    console.log(`[NativeAd] 로드 완료: ${slotId}`);
+    if (!import.meta.env.PROD) console.log(`[NativeAd] 로드 완료: ${slotId}`);
   } catch (e) {
-    console.warn(`[NativeAd] 로드 실패: ${slotId}`, e?.message);
+    if (!import.meta.env.PROD) console.warn(`[NativeAd] 로드 실패: ${slotId}`, e?.message);
   }
 }
 
@@ -103,6 +103,6 @@ export async function removeAllNativeAds() {
   try {
     await NativeAdPlugin.removeAll();
     activeSlots.clear();
-    console.log('[NativeAd] 전체 슬롯 제거');
+    if (!import.meta.env.PROD) console.log('[NativeAd] 전체 슬롯 제거');
   } catch { /* ignore */ }
 }

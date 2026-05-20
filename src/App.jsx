@@ -64,22 +64,47 @@ function PageLoading() {
 }
 
 
-// ✅ BACK-LOCK: 기기 뒤로가기 완전 잠금 (네비게이션 차단, 앱 종료 차단)
-// MainActivity.java onBackPressed()가 1차 차단, JS 리스너가 2차 소비
+// ✅ BACK-FIX: 물리 뒤로가기 — 서브페이지(/post/,/crew/ 등)는 navigate(-1), 최상위 탭은 잠금
 function BackButtonHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
-    // 이벤트 소비만 — 아무 동작 없음 (navigate 없음, exitApp 없음)
-    const handleBack = () => { /* 뒤로가기 잠금: 이벤트 소비 */ };
+    // 최상위 탭 경로 (뒤로가기 잠금 대상)
+    const ROOT_PATHS = ['/', '/community', '/media', '/shop', '/mypage'];
+    const isRoot = ROOT_PATHS.includes(location.pathname);
+
+    const handleBack = () => {
+      if (isRoot) {
+        // 최상위 탭: 뒤로가기 잠금 (앱 종료 방지)
+        return;
+      }
+      // 서브페이지: navigate(-1)로 이전 화면으로 이동
+      // ✅ community_return_post_id + tab 저장 — CommunityTab 스크롤/탭 복원용
+      if (location.pathname.startsWith('/post/')) {
+        const postId = location.pathname.split('/post/')[1]?.split('?')[0]?.split('#')[0];
+        if (postId) {
+          sessionStorage.setItem('community_return_post_id', postId);
+          sessionStorage.setItem('community_return_tab', 'open');
+        }
+      }
+      // ✅ HISTORY-FIX: 딥링크 직접 진입 시 history가 없으면 /community로 폴백
+      if (window.history.length <= 1) {
+        navigate('/community', { replace: true });
+      } else {
+        navigate(-1);
+      }
+    };
 
     if (CapApp) {
       const listenerP = CapApp.addListener('backButton', handleBack);
       return () => { listenerP?.then?.(l => l?.remove?.()).catch?.(() => {}); };
     } else {
-      const domBack = (e) => { e?.preventDefault?.(); };
+      const domBack = (e) => { e?.preventDefault?.(); handleBack(); };
       document.addEventListener('backbutton', domBack, false);
       return () => document.removeEventListener('backbutton', domBack, false);
     }
-  }, []);
+  }, [location.pathname, navigate]);
 
   return null;
 }

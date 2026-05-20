@@ -4,15 +4,21 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import apiClient from '../api/index';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+// ✅ FIX-TZ: KST(UTC+9) 기준 날짜 코드 — toISOString()은 UTC이어서 한국에서 오후 6시 리셋 버그 방지
+function getTodayKST() {
+  const kstMs = Date.now() + 9 * 60 * 60 * 1000;
+  return new Date(kstMs).toISOString().slice(0, 10); // 'YYYY-MM-DD' KST 기준
+}
 function getTodayKey(noticeId) {
-  return 'popup_hidden_' + noticeId + '_' + new Date().toISOString().slice(0, 10);
+  return 'popup_hidden_' + noticeId + '_' + getTodayKST();
 }
 function isHiddenToday(noticeId) {
   try { return !!localStorage.getItem(getTodayKey(noticeId)); } catch { return false; }
 }
 function getHideAllKey() {
-  return 'popup_hidden_all_' + new Date().toISOString().slice(0, 10);
+  return 'popup_hidden_all_' + getTodayKST(); // ✅ FIX-TZ: KST 기준
 }
+
 
 // ─── AnnouncementPopup ────────────────────────────────────────────────────────
 // 앱 시작 시 image 필드가 있는 공지를 carousel 팝업으로 노출.
@@ -151,7 +157,7 @@ export default function AnnouncementPopup() {
         {/* ── 이미지 (클릭시 공지로 이동) ── */}
         <div onClick={handleNoticeClick} style={{ position: 'relative', cursor: 'pointer', userSelect: 'none' }}>
           <img
-            src={notice.image}
+            src={Array.isArray(notice.images) && notice.images.length > 0 ? notice.images[0] : notice.image}
             alt={notice.title}
             loading="lazy"
             style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}

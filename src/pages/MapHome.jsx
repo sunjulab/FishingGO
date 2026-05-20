@@ -25,6 +25,20 @@ const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#
 // ✅ 26TH-B2: DEFAULT_AVATAR_SVG 모듈 레벨 상수 — pravatar.cc 외부 의존 제거 (6TH-A2 MyPage 패턴)
 const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
 
+// ✅ BUG-FIX: 헤더 시계 고정 버그 수정 — 마운트 후 new Date() 직접 사용 시 시계 정지 → 별도 컴포넌트로 1분 인터벌 갱신
+function HeaderClock() {
+  const [clockStr, setClockStr] = React.useState(() =>
+    new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+  );
+  React.useEffect(() => {
+    const t = setInterval(() =>
+      setClockStr(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }))
+    , 60000);
+    return () => clearInterval(t);
+  }, []);
+  return clockStr;
+}
+
 export default function MapHome() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
@@ -72,6 +86,7 @@ export default function MapHome() {
     try { return JSON.parse(localStorage.getItem('fishing_favorites') || '[]'); } catch { return []; }
   });
   const secretMarkersRef = useRef([]);
+  const closeSheetTimerRef = useRef(null); // ✅ FIX: closeSheet setTimeout 언마운트 정리
 
   // ✅ 5TH-A5: currentTime setInterval 제거 — LiveClock 컴포넌트가 도맡하므로 MapHome 리렌더 불필요
   // 기존: setInterval(() => setCurrentTime(new Date()), 60000) 제거
@@ -79,7 +94,8 @@ export default function MapHome() {
   // ✅ REALTIME-FIX: 10분마다 rankTick 증가 → PREMIUM_POINTS 점수 재계산 유도
   useEffect(() => {
     const id = setInterval(() => setRankTick(t => t + 1), 10 * 60 * 1000);
-    return () => clearInterval(id);
+    // ✅ FIX: closeSheet 타이머 언마운트 정리
+    return () => { clearInterval(id); if (closeSheetTimerRef.current) clearTimeout(closeSheetTimerRef.current); };
   }, []);
 
   // 즐겨찾기 DB 동기화 (로그인 시 서버에서 불러오기)
@@ -91,7 +107,7 @@ export default function MapHome() {
       .then(res => {
         if (res.data.favorites?.length > 0) {
           setFavorites(res.data.favorites);
-          localStorage.setItem('fishing_favorites', JSON.stringify(res.data.favorites));
+          try { localStorage.setItem('fishing_favorites', JSON.stringify(res.data.favorites)); } catch { /* StorageError 무시 */ }
         }
       })
       .catch((err) => {
@@ -105,7 +121,7 @@ export default function MapHome() {
     const isFav = favorites.includes(pointId);
     const next = isFav ? favorites.filter(f => f !== pointId) : [...favorites, pointId];
     setFavorites(next);
-    localStorage.setItem('fishing_favorites', JSON.stringify(next));
+    try { localStorage.setItem('fishing_favorites', JSON.stringify(next)); } catch { /* StorageError 무시 */ }
     addToast(isFav ? '즐겨찾기 해제' : '⭐ 즐겨찾기 추가!', isFav ? 'info' : 'success');
     // ENH6-C1: isGuest 변수 추출 — GUEST 체크 중복 제거
     const userId = user?.email || user?.id;
@@ -193,7 +209,7 @@ export default function MapHome() {
             // ENH6-A1/B2: 위치 거부 시 PROD 가드 + 사용자 toast 피드백
             () => {
               if (!import.meta.env.PROD) console.warn('[MapHome] 위치 권한이 거부되었습니다.');
-              addToast('현위치를 가져올 수 없습니다. 지도에서 직접 포인트를 타앱해 주세요.', 'info');
+              addToast('현위치를 가져올 수 없습니다. 지도에서 직접 포인트를 탭해 주세요.', 'info');
             },
             { timeout: 8000 }
           );
@@ -316,7 +332,7 @@ export default function MapHome() {
     const newMarkers = pts.map(point => {
       if (!window.kakao?.maps) return null;
       
-      const color = point.type === '방파제' ? '#00C48C' : point.type === '갯바위' ? '#0056D2' : '#FF9B26';
+      const color = point.type === '방파제' ? '#00C48C' : point.type === '갯바위' ? '#0056D2' : point.type === '항구' ? '#9B59B6' : '#FF9B26'; // ✅ FIX-COLOR: 항구 마커 색상 index.css와 일치
       const el = document.createElement('div');
       el.style.cssText = `
         background: ${color};
@@ -542,10 +558,14 @@ export default function MapHome() {
   };
 
 
-  /* ── 바텀시트 닫기 ── */
   const closeSheet = () => {
     setSheetVisible(false);
-    setTimeout(() => setSelectedPoint(null), 350);
+    // ✅ FIX: 이전 타이머 정리 후 ref 추적 — 언마운트 시 clearTimeout 보장
+    if (closeSheetTimerRef.current) clearTimeout(closeSheetTimerRef.current);
+    closeSheetTimerRef.current = setTimeout(() => {
+      setSelectedPoint(null);
+      closeSheetTimerRef.current = null;
+    }, 350);
   };
 
   /* ── 렌더링용 데이터 가공 ── */
@@ -702,9 +722,9 @@ export default function MapHome() {
                 )}
               </div>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                {/* ✅ 26TH-B2: currentTime 미정의 참조 → new Date() 직접 사용 (5TH-A5: LiveClock이 없는 헤더에서 정적 표시) */}
+                {/* ✅ BUG-FIX: HeaderClock 컴포넌트로 1분마다 갱신 (기존 new Date() 정적 시계 수정) */}
                 <div style={{ fontSize: '13px', fontWeight: '800', color: '#1565C0', letterSpacing: '-0.02em', marginRight: '-6px' }}>
-                  {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  <HeaderClock />
                 </div>
                 <div style={{ position: 'relative', cursor: 'pointer' }}>
                   <Bell size={20} color="#333" strokeWidth={2} />
@@ -1048,7 +1068,7 @@ export default function MapHome() {
                     { label: '수온', val: `${parseFloat(tideData.sst || 14).toFixed(1)}°C`, ok: parseFloat(tideData.sst || 14) >= 12 && parseFloat(tideData.sst || 14) <= 22 },
                     { label: '파고', val: `${tideData.wave?.coastal || '0.4'}m`, ok: parseFloat(tideData.wave?.coastal || 0.4) <= 1.0 },
                     { label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s`, ok: parseFloat(tideData.wind?.speed || 2.1) <= 5 },
-                    { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('사리') },
+                    { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물') }, // ✅ BUG-FIX: 사리는 조류 강해 낚시 유리(ok=true), 조금/무시가 불리 — 기존 !includes('사리') 역논리 수정
                   ].map(item => (
                     <div key={item.label} style={{
                       background: item.ok ? 'rgba(0,196,140,0.08)' : 'rgba(255,90,95,0.08)',
@@ -1351,8 +1371,8 @@ export default function MapHome() {
               <h3 style={{ fontSize: '15px', fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>방금 올라온 조황</h3>
               {recentPosts.length > 0 ? recentPosts.map(post => (
                 <div
-                  key={post._id || post.id}
-                  onClick={() => navigate(`/community?tab=open&postId=${post._id || post.id}`)}
+                  key={String(post._id || post.id)}
+                  onClick={() => navigate(`/community?tab=open&postId=${String(post._id || post.id)}`)}
                   style={{
                     background: '#fff', borderRadius: '12px', padding: '10px 12px', marginBottom: '8px',
                     display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #F0F2F7',

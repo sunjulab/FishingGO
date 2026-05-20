@@ -27,6 +27,7 @@ export const PLAN_LABEL = {
 
 export const PLAN_COLOR = {
   LITE: '#8E8E93',
+  BUSINESS_LITE: '#8E8E93', // ✅ PLAN_LABEL과 동기화 — AdminDashboard 차트에서 undefined 방지
   PRO: '#0056D2',
   VVIP: '#FFD700',
   BUSINESS_VIP: '#FFD700', // ✅ 8TH-B4: PLAN_LABEL과 키 동기화 — undefined 반환 버그 해결

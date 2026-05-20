@@ -48,6 +48,16 @@ services:
         sync: false
       - key: VITE_ADSENSE_SLOT_NATIVE
         sync: false
+      # ── 포트원 채널키 (실결제 필수) ─────────────────────────────
+      # ✅ FIX: .env.example에 추가 후 render.yaml 누락 수정
+      # 포트원 대시보드 > 채널 관리에서 발급
+      - key: VITE_PORTONE_CHANNEL_KEY
+        sync: false
+      # ── AdMob 광고 모드 (Android 전용) ──────────────────────────
+      # ✅ FIX: 미설정 시 VITE_ADMOB_TESTING=true 기본값 → 테스트 광고 (수익 미발생)
+      # 플레이스토어 출시 후 Render 환경변수에서 false로 설정
+      - key: VITE_ADMOB_TESTING
+        sync: false
 
   # ══════════════════════════════════════════════════════════════
   # ⚙️  백엔드 — Node.js Express API

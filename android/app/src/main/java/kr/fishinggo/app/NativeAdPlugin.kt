@@ -146,39 +146,40 @@ class NativeAdPlugin : Plugin() {
             gravity = Gravity.TOP or Gravity.START
         }
 
-        // 루트 뷰에 추가
-        bridge.rootView.addView(adView, params)
+        // 루트 뷰에 추가 (Capacitor 5+: bridge.rootView → webView.parent as FrameLayout)
+        val container = bridge.webView.parent as? FrameLayout
+        container?.addView(adView, params)
         adViews[slotId] = adView
         Log.d(TAG, "네이티브 광고 배치: slotId=$slotId x=$x y=$y w=$w h=$h")
     }
 
-    private fun bindNativeAd(adView: NativeAdView, nativeAd: NativeAd) {
+    private fun bindNativeAd(adView: NativeAdView, ad: NativeAd) {
         // 헤드라인
         adView.headlineView = adView.findViewById<TextView>(R.id.ad_headline).also {
-            it.text = nativeAd.headline ?: ""
+            it.text = ad.headline ?: ""
         }
         // 광고주
         adView.advertiserView = adView.findViewById<TextView>(R.id.ad_advertiser).also {
-            it.text = nativeAd.advertiser ?: ""
-            it.visibility = if (nativeAd.advertiser != null) View.VISIBLE else View.GONE
+            it.text = ad.advertiser ?: ""
+            it.visibility = if (ad.advertiser != null) View.VISIBLE else View.GONE
         }
         // 본문
         adView.bodyView = adView.findViewById<TextView>(R.id.ad_body).also {
-            it.text = nativeAd.body ?: ""
-            it.visibility = if (nativeAd.body != null) View.VISIBLE else View.GONE
+            it.text = ad.body ?: ""
+            it.visibility = if (ad.body != null) View.VISIBLE else View.GONE
         }
         // CTA 버튼
         adView.callToActionView = adView.findViewById<Button>(R.id.ad_call_to_action).also {
-            it.text = nativeAd.callToAction ?: "더 보기"
-            it.visibility = if (nativeAd.callToAction != null) View.VISIBLE else View.GONE
+            it.text = ad.callToAction ?: "더 보기"
+            it.visibility = if (ad.callToAction != null) View.VISIBLE else View.GONE
         }
         // 미디어 (이미지/영상)
         adView.mediaView = adView.findViewById<MediaView>(R.id.ad_media).also {
-            nativeAd.mediaContent?.let { mc -> it.mediaContent = mc }
+            ad.mediaContent?.let { mc -> it.mediaContent = mc }
         }
         // 아이콘
         adView.iconView = adView.findViewById<ImageView>(R.id.ad_icon).also {
-            val icon = nativeAd.icon
+            val icon = ad.icon
             if (icon != null) {
                 it.setImageDrawable(icon.drawable)
                 it.visibility = View.VISIBLE
@@ -188,7 +189,7 @@ class NativeAdPlugin : Plugin() {
         }
         // 별점
         adView.starRatingView = adView.findViewById<RatingBar>(R.id.ad_stars).also {
-            val stars = nativeAd.starRating
+            val stars = ad.starRating
             if (stars != null) {
                 it.rating = stars.toFloat()
                 it.visibility = View.VISIBLE
@@ -197,13 +198,14 @@ class NativeAdPlugin : Plugin() {
             }
         }
 
-        // NativeAd 최종 등록
-        adView.setNativeAd(nativeAd)
+        // NativeAd 최종 등록 (명시적 Java 메서드 호출)
+        adView.setNativeAd(ad)
     }
 
     private fun removeSlot(slotId: String) {
-        adViews.remove(slotId)?.let { view ->
-            bridge.rootView.removeView(view)
+        adViews.remove(slotId)?.let { view: NativeAdView ->
+            val container = bridge.webView.parent as? FrameLayout
+            container?.removeView(view)
         }
     }
 }

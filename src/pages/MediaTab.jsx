@@ -16,6 +16,100 @@ const CATEGORY_KEYWORDS = {
   '에깅':  ['에깅낚시', '쭈꾸미낚시', '갑오징어 에깅'],
 };
 
+// ✅ BUG-FIX: VideoCard/SectionHeader 모듈 레벨 추출 — 내부 정의 시 렌더마다 새 컴포넌트 타입 생성 → 완전 재마운트 버그
+// navigate/setSelectedVideo는 props로 전달
+function VideoCard({ video, onSelect, onNavigate }) {
+  const isRecent = video.tag === 'recent';
+  return (
+    <div className="card fade-up" style={{ marginBottom: '20px', backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 6px 24px rgba(0,0,0,0.07)' }}>
+      {/* 썸네일 */}
+      <div style={{ position: 'relative', paddingTop: '56.25%', backgroundColor: '#000', cursor: 'pointer' }} onClick={() => onSelect(video)}>
+        <img src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`} alt={video.title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} loading="lazy" />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.08)' }}>
+          <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(0,0,0,0.25)' }}>
+            <Play fill="#0056D2" color="#0056D2" size={26} />
+          </div>
+        </div>
+        {/* 전체화면 버튼 */}
+        <div style={{ position: 'absolute', bottom: '10px', right: '10px', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: '8px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff' }}>
+          <Maximize2 size={11} /><span style={{ fontSize: '9px', fontWeight: '900' }}>전체화면</span>
+        </div>
+        {/* 채널명 */}
+        {video.channelTitle && (
+          <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'rgba(0,86,210,0.85)', borderRadius: '6px', padding: '3px 8px' }}>
+            <span style={{ fontSize: '10px', fontWeight: '900', color: '#fff' }}>{video.channelTitle}</span>
+          </div>
+        )}
+        {/* 태그 뱃지 */}
+        <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: isRecent ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.9)', borderRadius: '6px', padding: '3px 7px' }}>
+          <span style={{ fontSize: '9px', fontWeight: '900', color: '#fff' }}>
+            {isRecent ? '🕐 최신' : '🔥 인기'}
+          </span>
+        </div>
+      </div>
+
+      {/* 카드 본문 */}
+      <div style={{ padding: '18px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '7px' }}>
+          {video.channelTitle && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#0056D2', fontWeight: '800' }}>
+              <User2 size={12} />{video.channelTitle}
+            </div>
+          )}
+          {video.publishedAt && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: '#8E8E93', fontWeight: '700' }}>
+              <Clock size={11} />{timeAgo(video.publishedAt)}
+            </div>
+          )}
+        </div>
+        <h2 style={{ fontSize: '17px', fontWeight: '950', color: '#1C1C1E', marginBottom: '7px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h2>
+        {video.description && (
+          <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '600', marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.description}</p>
+        )}
+
+        {/* 쿠팡 상품 */}
+        {video.products?.length > 0 && (
+          <div style={{ borderTop: '1px solid #F2F2F7', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+              <BagIcon size={15} color="#FF5A5F" />
+              <span style={{ fontSize: '13px', fontWeight: '950', color: '#1C1C1E' }}>필수 장비 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span>종</span>
+            </div>
+            {video.products.slice(0, 1).map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#F8F9FA', padding: '10px', borderRadius: '16px', border: '1.5px solid #F2F2F7' }}>
+                <div style={{ width: '54px', height: '54px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }}>
+                  <img src={item.img} alt={item.name || '낚시 장비'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '900', color: '#1C1C1E', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '950' }}>{item.price}</span>
+                    {item.discount && <span style={{ fontSize: '11px', fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 5px', borderRadius: '5px' }}>{item.discount} ↓</span>}
+                  </div>
+                </div>
+                <button onClick={() => onNavigate('/shop')} style={{ padding: '9px 14px', borderRadius: '12px', backgroundColor: '#0056D2', color: '#fff', border: 'none', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}>구매</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ✅ BUG-FIX: SectionHeader 모듈 레벨 추출
+function SectionHeader({ icon, title, subtitle, color }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', marginTop: '8px' }}>
+      <div style={{ width: '4px', height: '24px', backgroundColor: color, borderRadius: '2px' }} />
+      <div>
+        <div style={{ fontSize: '17px', fontWeight: '950', color: '#1C1C1E' }}>{icon} {title}</div>
+        {subtitle && <div style={{ fontSize: '11px', fontWeight: '700', color: '#8E8E93', marginTop: '2px' }}>{subtitle}</div>}
+      </div>
+    </div>
+  );
+}
+
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
@@ -136,96 +230,7 @@ export default function MediaTab() {
 
   const handleChipClick = (chip) => { loadUnified(chip); };
 
-  // ─── 비디오 카드 렌더 ─────────────────────────────────────────────────────
-  const VideoCard = ({ video }) => {
-    const isRecent = video.tag === 'recent';
-    return (
-      <div className="card fade-up" style={{ marginBottom: '20px', backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 6px 24px rgba(0,0,0,0.07)' }}>
-        {/* 썸네일 */}
-        <div style={{ position: 'relative', paddingTop: '56.25%', backgroundColor: '#000', cursor: 'pointer' }} onClick={() => setSelectedVideo(video)}>
-          <img src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`} alt={video.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} loading="lazy" />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.08)' }}>
-            <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(0,0,0,0.25)' }}>
-              <Play fill="#0056D2" color="#0056D2" size={26} />
-            </div>
-          </div>
-          {/* 전체화면 버튼 */}
-          <div style={{ position: 'absolute', bottom: '10px', right: '10px', backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: '8px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff' }}>
-            <Maximize2 size={11} /><span style={{ fontSize: '9px', fontWeight: '900' }}>전체화면</span>
-          </div>
-          {/* 채널명 */}
-          {video.channelTitle && (
-            <div style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'rgba(0,86,210,0.85)', borderRadius: '6px', padding: '3px 8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: '900', color: '#fff' }}>{video.channelTitle}</span>
-            </div>
-          )}
-          {/* 태그 뱃지 */}
-          <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: isRecent ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.9)', borderRadius: '6px', padding: '3px 7px' }}>
-            <span style={{ fontSize: '9px', fontWeight: '900', color: '#fff' }}>
-              {isRecent ? '🕐 최신' : '🔥 인기'}
-            </span>
-          </div>
-        </div>
-
-        {/* 카드 본문 */}
-        <div style={{ padding: '18px 22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '7px' }}>
-            {video.channelTitle && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#0056D2', fontWeight: '800' }}>
-                <User2 size={12} />{video.channelTitle}
-              </div>
-            )}
-            {video.publishedAt && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: '#8E8E93', fontWeight: '700' }}>
-                <Clock size={11} />{timeAgo(video.publishedAt)}
-              </div>
-            )}
-          </div>
-          <h2 style={{ fontSize: '17px', fontWeight: '950', color: '#1C1C1E', marginBottom: '7px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h2>
-          {video.description && (
-            <p style={{ fontSize: '13px', color: '#8E8E93', fontWeight: '600', marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.description}</p>
-          )}
-
-          {/* 쿠팡 상품 */}
-          {video.products?.length > 0 && (
-            <div style={{ borderTop: '1px solid #F2F2F7', paddingTop: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                <BagIcon size={15} color="#FF5A5F" />
-                <span style={{ fontSize: '13px', fontWeight: '950', color: '#1C1C1E' }}>필수 장비 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span>종</span>
-              </div>
-              {video.products.slice(0, 1).map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#F8F9FA', padding: '10px', borderRadius: '16px', border: '1.5px solid #F2F2F7' }}>
-                  <div style={{ width: '54px', height: '54px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }}>
-                    <img src={item.img} alt={item.name || '낚시 장비'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '900', color: '#1C1C1E', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '950' }}>{item.price}</span>
-                      {item.discount && <span style={{ fontSize: '11px', fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 5px', borderRadius: '5px' }}>{item.discount} ↓</span>}
-                    </div>
-                  </div>
-                  <button onClick={() => navigate('/shop')} style={{ padding: '9px 14px', borderRadius: '12px', backgroundColor: '#0056D2', color: '#fff', border: 'none', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}>구매</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // ─── 섹션 헤더 ────────────────────────────────────────────────────────────
-  const SectionHeader = ({ icon, title, subtitle, color }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', marginTop: '8px' }}>
-      <div style={{ width: '4px', height: '24px', backgroundColor: color, borderRadius: '2px' }} />
-      <div>
-        <div style={{ fontSize: '17px', fontWeight: '950', color: '#1C1C1E' }}>{icon} {title}</div>
-        {subtitle && <div style={{ fontSize: '11px', fontWeight: '700', color: '#8E8E93', marginTop: '2px' }}>{subtitle}</div>}
-      </div>
-    </div>
-  );
+  // VideoCard, SectionHeader → 모듈 레벨 컴포넌트 (위로 이동됨 — 렌더마다 재생성 방지)
 
   return (
     <div className="page-container" style={{ backgroundColor: '#F2F2F7', overflowX: 'hidden' }}>
@@ -327,7 +332,7 @@ export default function MediaTab() {
                   <div style={{ fontSize: '15px', fontWeight: '800' }}>검색 결과가 없습니다</div>
                 </div>
               )}
-              {searchResults.map(v => <VideoCard key={v.youtubeId} video={{ ...v, tag: 'recent' }} />)}
+              {searchResults.map(v => <VideoCard key={v.youtubeId} video={{ ...v, tag: 'recent' }} onSelect={setSelectedVideo} onNavigate={navigate} />)}
             </>
           ) : (
             <>
@@ -335,7 +340,7 @@ export default function MediaTab() {
               {recentVideos.length > 0 && (
                 <>
                   <SectionHeader icon="🕐" title="이번 주 업로드" subtitle="최근 7일 · 2분 이상 낚시 영상" color="#34C759" />
-                  {recentVideos.map(v => <VideoCard key={v.youtubeId} video={v} />)}
+                  {recentVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} />)}
                 </>
               )}
 
@@ -343,7 +348,7 @@ export default function MediaTab() {
               {popularVideos.length > 0 && (
                 <div style={{ marginTop: recentVideos.length > 0 ? '8px' : '0' }}>
                   <SectionHeader icon="🔥" title="이달의 인기 낚시 영상" subtitle="최근 1개월 최고 조회수 · 2분 이상" color="#FF3B30" />
-                  {popularVideos.map(v => <VideoCard key={v.youtubeId} video={v} />)}
+                  {popularVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} />)}
                 </div>
               )}
 

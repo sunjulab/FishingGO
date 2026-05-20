@@ -261,7 +261,7 @@ export default function MyPage() {
     setDeletingBizId(id);
     try {
       await apiClient.delete(`/api/business/posts/${id}`);
-      setMyBizPosts(prev => prev.filter(p => (p._id || p.id) !== id));
+      setMyBizPosts(prev => prev.filter(p => String(p._id || p.id) !== String(id)));
       addToast('홍보글이 삭제되었습니다.', 'success');
     } catch (err) { addToast(err.response?.data?.error || '삭제 실패', 'error'); }
     finally { setDeletingBizId(null); }
@@ -337,7 +337,7 @@ export default function MyPage() {
   // useEffect 호출보다 반드시 먼저 선언해야 함
   const fetchUserData = React.useCallback(async () => {
     // 이메일 없는 GUEST/비로그인 사용자는 API 호출 불필요
-    if (!user?.email || user.email === 'guest@fishinggo.com') return;
+    if (!user?.email || user.email === 'guest@fishinggo.com' || user?.id === 'GUEST' || user?.id === 'guest') return;
     try {
       setLoading(true);
       // NEW-C2: Promise.all → Promise.allSettled — 하나 실패해도 나머지 탭 표시 가능
@@ -448,6 +448,9 @@ export default function MyPage() {
         if (!import.meta.env.PROD) console.error('이미지 압축 실패:', compressErr);
         addToast('이미지 처리 중 오류가 발생했습니다.', 'error');
       }
+    };
+    reader.onerror = () => {
+      addToast('파일을 읽을 수 없습니다. 다른 파일을 선택해주세요.', 'error');
     };
     reader.readAsDataURL(file);
   };
@@ -783,8 +786,8 @@ export default function MyPage() {
          })() : activeTab === 'records' ? (
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
               {realRecords.length > 0 ? realRecords.map(r => (
-                <div key={r._id || r.id}
-                  onClick={() => navigate(`/catch/${r._id || r.id}`)}
+                <div key={String(r._id || r.id)}
+                  onClick={() => navigate(`/catch/${String(r._id || r.id)}`)}
                   style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7', cursor: 'pointer' }}
                 >
                    {r.image
@@ -862,7 +865,7 @@ export default function MyPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {realPosts.length > 0 ? realPosts.map(p => (
-                <div key={p.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '28px', border: '1.5px solid #F2F2F7' }}>
+                <div key={String(p._id || p.id)} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '28px', border: '1.5px solid #F2F2F7' }}>
                    <div style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '600', marginBottom: '8px' }}>{p.time}</div>
                    <p style={{ fontSize: '14px', fontWeight: '700', color: '#1c1c1e', margin: '0 0 16px' }}>{p.content}</p>
                    <div style={{ display: 'flex', gap: '16px' }}>
@@ -1354,11 +1357,11 @@ export default function MyPage() {
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
                 {myBizPosts.map(p => (
-                  <div key={p._id || p.id} style={{ background:'#F8F9FA', borderRadius:'18px', padding:'16px' }}>
+                  <div key={String(p._id || p.id)} style={{ background:'#F8F9FA', borderRadius:'18px', padding:'16px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
                       <div>
                         <div style={{ fontSize:'15px', fontWeight:'900', color:'#1c1c1e' }}>{p.shipName || '선박명 미입력'}</div>
-                        <div style={{ fontSize:'11px', color:'#8E8E93', fontWeight:'600', marginTop:'2px' }}>{p.region} · {p.boatType}</div>
+                        <div style={{ fontSize:'11px', color:'#8E8E93', fontWeight:'600', marginTop:'2px' }}>{p.region} · {p.type || p.boatType}</div>
                       </div>
                       <div style={{ display:'flex', gap:'6px' }}>
                         <button onClick={() => { setBizPostsModal(false); navigate(`/write-business?editId=${p._id || p.id}`); }} style={{ padding:'6px 10px', background:'#EBF5FF', color:'#0056D2', border:'none', borderRadius:'8px', fontWeight:'800', fontSize:'12px', cursor:'pointer' }}>수정</button>

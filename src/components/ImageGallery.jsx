@@ -64,6 +64,7 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
           borderRadius, border: '1px solid #F0F0F0',
           marginBottom: '20px', userSelect: 'none',
           backgroundColor: '#000',
+          aspectRatio: '3 / 4',
         }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -73,10 +74,11 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
           src={list[idx]}
           alt={`사진 ${idx + 1}`}
           style={{
+            position: 'absolute',
+            inset: 0,
             width: '100%',
-            height: 'auto',
-            maxHeight: `${maxHeight}px`,
-            objectFit: 'contain',
+            height: '100%',
+            objectFit: 'cover',
             display: 'block',
             transition: 'opacity 0.2s',
           }}

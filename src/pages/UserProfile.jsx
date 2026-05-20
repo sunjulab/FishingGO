@@ -93,7 +93,7 @@ export default function UserProfile() {
       <div style={{ fontSize: '52px', marginBottom: '12px' }}>👤</div>
       <p style={{ fontSize: '18px', fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>사용자를 찾을 수 없습니다</p>
       <p style={{ fontSize: '13px', color: '#8E8E93', marginBottom: '24px' }}>탈퇴했거나 존재하지 않는 닉네임입니다.</p>
-      <button onClick={() => navigate(-1)} style={{ padding: '12px 28px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>돌아가기</button>
+      <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ padding: '12px 28px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>돌아가기</button>
     </div>
   );
 
@@ -103,7 +103,7 @@ export default function UserProfile() {
     <div style={{ minHeight: '100dvh', background: '#F2F2F7', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif" }}>
       {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, background: '#fff', borderBottom: '1px solid #F0F2F7', padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
+        <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
           <ChevronLeft size={20} color="#1A1A2E" />
         </button>
         <span style={{ flex: 1, fontSize: '16px', fontWeight: '950', color: '#1A1A2E', textAlign: 'center' }}>프로필</span>

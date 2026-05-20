@@ -86,7 +86,7 @@ export default function PaymentHistory() {
     <div style={{ minHeight: '100vh', background: '#0E0E1A', color: '#fff', fontFamily: 'Pretendard, sans-serif', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 40px)' }}>
       {/* 헤더 */}
       <div style={{ padding: '16px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button onClick={() => window.history.length <= 1 ? navigate('/mypage', { replace: true }) : navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <ArrowLeft size={22} color="#fff" />
         </button>
         <span style={{ fontSize: '18px', fontWeight: '950' }}>결제 내역</span>
@@ -193,7 +193,7 @@ export default function PaymentHistory() {
               const Icon = cfg.icon;
               const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '-';
               return (
-                <div key={item._id || item.merchant_uid || i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '14px', position: 'relative' }}>
+                <div key={String(item._id || item.merchant_uid || i)} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '14px', position: 'relative' }}>
                   {/* 타임라인 점 */}
                   <div style={{
                     width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,

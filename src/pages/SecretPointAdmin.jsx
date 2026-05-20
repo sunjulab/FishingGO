@@ -9,7 +9,7 @@ import { useToastStore } from '../store/useToastStore';
 
 // ✅ 5TH-C6: localStorage 중복 패턴 헬퍼 함수 — handleSave/handleReset 두 곳
 const getLocalOverrides = () => { try { return JSON.parse(localStorage.getItem('secretPointOverrides') || '{}'); } catch { return {}; } };
-const setLocalOverrides = (ov) => localStorage.setItem('secretPointOverrides', JSON.stringify(ov));
+const setLocalOverrides = (ov) => { try { localStorage.setItem('secretPointOverrides', JSON.stringify(ov)); } catch { /* StorageError 무시 */ } };
 
 export default function SecretPointAdmin() {
   const navigate = useNavigate();
@@ -394,7 +394,7 @@ export default function SecretPointAdmin() {
               const ov = overrides[String(p.id)];
               const isSelected = selectedPoint?.id === p.id;
               return (
-                <button key={p.id} onClick={() => { setSelectedPoint(p); setAddressInput(''); setSearchResults([]); setPreviewCoords(null); }}
+                <button key={String(p.id)} onClick={() => { setSelectedPoint(p); setAddressInput(''); setSearchResults([]); setPreviewCoords(null); }}
                   style={{ background: isSelected ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.04)', border: isSelected ? '1.5px solid rgba(255,215,0,0.5)' : '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '9px 13px', cursor: 'pointer', color: '#fff', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '9px' }}>
                   <Star size={12} fill={isSelected ? '#FFD700' : 'none'} color={isSelected ? '#FFD700' : '#444'} />
                   <div style={{ flex: 1, minWidth: 0 }}>

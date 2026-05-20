@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'; // ✅ 16TH-C1: useRef 추가
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { X, Image, MapPin, Send, ChevronDown, CheckCircle2, Scan } from 'lucide-react';
+import { X, MapPin, Send, ChevronDown, CheckCircle2, Scan } from 'lucide-react';
 import { RewardGateModal } from '../components/AdUnit';
+import MultiImageUpload from '../components/MultiImageUpload';
 import { useToastStore } from '../store/useToastStore';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import apiClient from '../api/index';
@@ -15,21 +16,20 @@ export default function WritePost() {
   const [category, setCategory] = useState('전체');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [image, setImage] = useState('');
-  const [imageLoading, setImageLoading] = useState(false); // 압축 중 상태
+  const [images, setImages] = useState([]); // ✅ MULTI-IMG: 다중 이미지 배열 (최대 5장)
+  const [imageLoading, setImageLoading] = useState(false);
   const [showCategoryPopup, setShowCategoryPopup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdGate, setShowAdGate] = useState(false);
-  const [aiAnalyzing, setAiAnalyzing] = useState(false); // ✅ BUG-58: DOM 직접조작 → state 교체
-  const [showDraftBanner, setShowDraftBanner] = useState(false); // 임시저장 복원 배너
-  const [isPopup, setIsPopup] = useState(false); // ✅ POPUP-CTRL: 홈화면 팝업 노출 여부
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [isPopup, setIsPopup] = useState(false);
   // ✅ LOC-1: 위치 상태 — { lat, lng, address }
   const [location, setLocation] = useState(null);
   const [locLoading, setLocLoading] = useState(false);
-  const [locEditMode, setLocEditMode] = useState(false); // ✅ LOC-EDIT: 주소 직접수정 모드
-  const [locDraft, setLocDraft] = useState('');           // ✅ LOC-EDIT: 수정 중 임시 주소
-  const locInputRef = useRef(null);                       // ✅ LOC-EDIT: input ref (JSX ref={locInputRef})
-  const imageInputRef = useRef(null); // ✅ 16TH-C1: DOM 직접 접근 제거 — useRef 패턴
+  const [locEditMode, setLocEditMode] = useState(false);
+  const [locDraft, setLocDraft] = useState('');
+  const locInputRef = useRef(null);
 
   const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅', '조황 공유'];
   const addToast = useToastStore((state) => state.addToast);
@@ -55,7 +55,6 @@ export default function WritePost() {
   const isEditMode = !!editId;
 
   // 수정 모드: 기존 데이터 불러오기
-  // ✅ NEW-B2: isNoticeType deps 추가 — type 쿼리 변경 시 stale 데이터 방지
   useEffect(() => {
     if (!isEditMode) return;
     const endpoint = isNoticeType
@@ -66,14 +65,14 @@ export default function WritePost() {
         setContent(res.data.content || '');
         setTitle(res.data.title || '');
         setCategory(res.data.category || '전체');
-        // ✅ BUG-NOTICE-IMG: 수정 모드에서 기존 이미지 복원 — 누락 시 저장 시 image:null로 덮어써짐
-        if (res.data.image) setImage(res.data.image);
-        // ✅ POPUP-CTRL: 수정 모드에서 기존 isPopup 상태 복원
+        // ✅ MULTI-IMG: 수정 모드에서 기존 이미지 배열 복원 (하위호환: image 단일 필드도 지원)
+        const existingImages = Array.isArray(res.data.images) && res.data.images.length > 0
+          ? res.data.images
+          : res.data.image ? [res.data.image] : [];
+        setImages(existingImages);
         if (res.data.isPopup !== undefined) setIsPopup(!!res.data.isPopup);
-
       })
       .catch((err) => {
-        // ✅ 24TH-B3: silent catch → 에러 피드백 추가 (19TH-B1 패턴)
         if (!import.meta.env.PROD) console.warn('[WritePost] 수정 데이터 로드 실패:', err?.message);
         addToast('게시글 정보를 불러오지 못했습니다.', 'error');
       });
@@ -85,7 +84,8 @@ export default function WritePost() {
 
   useEffect(() => {
     if (isEditMode || isNoticeType) return; // 수정모드·공지는 draft 비활성화
-    const saved = localStorage.getItem(DRAFT_KEY);
+    let saved = null;
+    try { saved = localStorage.getItem(DRAFT_KEY); } catch { /* StorageError 무시 */ }
     if (saved && saved.trim().length > 0) setShowDraftBanner(true);
   }, [DRAFT_KEY, isEditMode, isNoticeType]);
 
@@ -94,9 +94,9 @@ export default function WritePost() {
     if (isEditMode || isNoticeType) return;
     const timer = setTimeout(() => {
       if (content.trim().length > 0) {
-        localStorage.setItem(DRAFT_KEY, content);
+        try { localStorage.setItem(DRAFT_KEY, content); } catch { /* StorageError 무시 */ }
       } else {
-        localStorage.removeItem(DRAFT_KEY);
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* StorageError 무시 */ }
         setShowDraftBanner(false);
       }
     }, 500);
@@ -131,23 +131,23 @@ export default function WritePost() {
   const doPost = async () => {
     setIsSubmitting(true);
     const storedUser = user;
-    // ✅ FIX: 비회원(GUEST) 글쓰기 차단 — storedUser null 체크 + GUEST id 체크 이중 방어
     if (!storedUser || storedUser.id === 'GUEST') {
       addToast('로그인이 필요합니다. 마이페이지에서 로그인해주세요.', 'error');
       setIsSubmitting(false);
       return;
     }
     try {
+      // ✅ BUG-FIX: img.length는 Base64 문자 수 (byte수 아님) — 3MB 바이너리 = 4MB Base64
+      // 기존 3*1024*1024 문자수 기준은 실제 2.25MB 바이너리만 허용 → 4*1024*1024로 수정
+      const safeImages = images.filter(img => img && img.length <= 4 * 1024 * 1024);
+      const safeImage = safeImages[0] || null;
+
       if (isNoticeType) {
         const method = isEditMode ? 'put' : 'post';
         const url = isEditMode ? `/api/community/notices/${editId}` : `/api/community/notices`;
-        // ✅ POPUP: 공지 이미지를 payload에 포함 — 첫 이미지가 앱 시작 팝업 이미지로 자동 사용
-        // image는 1MB 이하로 제한 (base64 DB 저장 MongoDB 용량 대비)
-        const safeNoticeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
-        // ✅ BUG-41: 수정 모드에서 isPinned를 false로 덮어쓰지 않도록 제거
         const noticePayload = isEditMode
-          ? { title: title.trim(), content, image: safeNoticeImage, isPopup }
-          : { title: title.trim(), content, isPinned: false, image: safeNoticeImage, isPopup };
+          ? { title: title.trim(), content, images: safeImages, image: safeImage, isPopup }
+          : { title: title.trim(), content, isPinned: false, images: safeImages, image: safeImage, isPopup };
         await apiClient[method](url, noticePayload);
         addToast(isEditMode ? '📢 공지사항이 수정되었습니다!' : '📢 공지사항이 등록되었습니다!', 'success');
         navigate(isEditMode ? -1 : '/community?tab=notice');
@@ -155,15 +155,11 @@ export default function WritePost() {
       } else {
         const method = isEditMode ? 'put' : 'post';
         const url = isEditMode ? `/api/community/posts/${editId}` : `/api/community/posts`;
-        // 이미지가 1MB 초과면 제외하고 전송 (MongoDB 16MB 제한 대비)
-        const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
         const body = isEditMode
-          ? { content, category, email: storedUser.email }
-          : { author: storedUser.name, author_email: storedUser.email, category, content, image: safeImage, location: location || null };
+          ? { content, category, email: storedUser.email, images: safeImages, image: safeImage }
+          : { author: storedUser.name, author_email: storedUser.email, category, content, images: safeImages, image: safeImage, location: location || null };
         await apiClient[method](url, body);
-        // ✅ DRAFT-3: 등록 성공 시 draft 삭제
-        if (!isEditMode) localStorage.removeItem(DRAFT_KEY);
-        // EXP 서버 등록
+        if (!isEditMode) { try { localStorage.removeItem(DRAFT_KEY); } catch { /* StorageError 무시 */ } }
         if (!isEditMode) {
           const userId = storedUser.email || storedUser.id;
           if (userId) apiClient.post('/api/user/exp', { userId, action: 'post_write' }).catch(() => { });
@@ -172,7 +168,6 @@ export default function WritePost() {
         navigate(isEditMode ? -1 : '/community?tab=open');
       }
     } catch (err) {
-      // ENH3-A4: 프로덕션에서 콘솔 스택 트레이스 노출 방지
       if (!import.meta.env.PROD) console.error('Post error:', err);
       const msg = err.response?.data?.error || '등록 실패. 서버를 확인해주세요.';
       addToast(msg, 'error');
@@ -189,7 +184,7 @@ export default function WritePost() {
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
       {/* 고정 헤더 */}
       <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>
+        <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <X size={24} color="#1c1c1e" />
         </button>
         <h2 style={{ fontSize: '17px', fontWeight: '800' }}>
@@ -254,7 +249,8 @@ export default function WritePost() {
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 onClick={() => {
-                  const saved = localStorage.getItem(DRAFT_KEY);
+                  let saved = null;
+                  try { saved = localStorage.getItem(DRAFT_KEY); } catch { /* StorageError 무시 */ }
                   if (saved) { setContent(saved); addToast('✅ 임시저장 내용을 복원했습니다.', 'success'); }
                   setShowDraftBanner(false);
                 }}
@@ -262,7 +258,7 @@ export default function WritePost() {
               >복원</button>
               <button
                 onClick={() => {
-                  localStorage.removeItem(DRAFT_KEY);
+                  try { localStorage.removeItem(DRAFT_KEY); } catch { /* StorageError 무시 */ }
                   setShowDraftBanner(false);
                 }}
                 style={{ padding: '6px 10px', borderRadius: '10px', border: '1px solid #E5E5EA', background: '#fff', color: '#8E8E93', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
@@ -336,7 +332,7 @@ export default function WritePost() {
         {/* 텍스트 입력 영역 */}
         <textarea
           placeholder={isNoticeType ? '공지 내용을 입력하세요.' : '현장 상황이나 조과를 자유롭게 공유해보세요. (예: 현재 강릉항 파고가 높습니다!)'}
-          style={{ width: '100%', minHeight: '200px', border: 'none', fontSize: '16px', lineHeight: '1.6', outline: 'none', resize: 'none' }}
+          style={{ width: '100%', minHeight: '200px', border: 'none', fontSize: '16px', lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
           onChange={(e) => setContent(e.target.value)}
           value={content}
         />
@@ -467,132 +463,99 @@ export default function WritePost() {
           position: 'fixed', bottom: 0,
           left: '50%', transform: 'translateX(-50%)',
           width: '100%', maxWidth: '480px',
-          padding: '16px 20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          padding: '12px 20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
           backgroundColor: '#fff',
-          borderTop: '1px solid #f0f0f0', display: 'flex', gap: '20px',
+          borderTop: '1px solid #f0f0f0',
           zIndex: 200,
         }}>
-          <div
-            onClick={() => imageInputRef.current?.click()} // ✅ 16TH-C1: document.getElementById → useRef
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: image ? '#0056D2' : '#666', fontSize: '14px', cursor: 'pointer' }}
-          >
-            <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
-              const file = e.target.files[0];
-              e.target.value = ''; // 동일 파일 재선택 가능하도록 초기화
-              if (file) {
-                setImageLoading(true);
-                try {
-                  const compressed = await fileToCompressedBase64(file, { maxWidth: 800, maxHeight: 800, quality: 0.80, preset: 'post' });
-                  setImage(compressed);
-                } catch (err) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => setImage(reader.result);
-                  reader.readAsDataURL(file);
-                } finally {
-                  setImageLoading(false);
-                }
-              }
-            }} />
-            <div style={{ width: '36px', height: '36px', backgroundColor: image ? 'rgba(0,86,210,0.05)' : '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {imageLoading ? <span style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800' }}>압축중</span> : <Image size={20} />}
-            </div>
-            <span style={{ fontWeight: '600' }}>{imageLoading ? '사진 처리 중...' : image ? '사진 추가됨' : '사진 추가'}</span>
-          </div>
-          {/* ENH3-B1: 위치 추가 버튼 — GPS 획득 + 카카오 역지오코딩 + 직접입력 */}
-          <div
-            onClick={async () => {
-              // 이미 위치 있는 경우: 수정 모드 진입 (취소 대신)
-              if (location) { setLocDraft(location.address); setLocEditMode(true); return; }
-              if (locEditMode) { setLocEditMode(false); setLocDraft(''); return; }
-              // GPS 지원 안 하는 경우: 직접 입력 모드
-              if (!navigator.geolocation) { setLocEditMode(true); return; }
-              setLocLoading(true);
-              navigator.geolocation.getCurrentPosition(
-                async (pos) => {
-                  const { latitude: lat, longitude: lng } = pos.coords;
-                  let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                  // 카카오 역지오코딩으로 주소 변환 시도
-                  try {
-                    await new Promise((resolve) => {
-                      if (window.kakao?.maps?.services?.Geocoder) { resolve(); return; }
-                      window.kakao.maps.load(resolve);
-                    });
-                    const geocoder = new window.kakao.maps.services.Geocoder();
-                    await new Promise((resolve) => {
-                      geocoder.coord2Address(lng, lat, (result, status) => {
-                        if (status === window.kakao.maps.services.Status.OK && result[0]) {
-                          const road = result[0].road_address?.address_name;
-                          const jibun = result[0].address?.address_name;
-                          address = road || jibun || address;
-                        }
-                        resolve();
+          {/* ✅ MULTI-IMG: 다중 이미지 업로드 */}
+          <MultiImageUpload
+            images={images}
+            onChange={setImages}
+            maxCount={5}
+            isLoading={imageLoading}
+            label="사진 추가"
+          />
+
+          {/* 하단 액션 행 */}
+          <div style={{ display: 'flex', gap: '12px', marginTop: '10px', alignItems: 'center' }}>
+            {/* 위치 추가 버튼 */}
+            <div
+              onClick={async () => {
+                if (location) { setLocDraft(location.address); setLocEditMode(true); return; }
+                if (locEditMode) { setLocEditMode(false); setLocDraft(''); return; }
+                if (!navigator.geolocation) { setLocEditMode(true); return; }
+                setLocLoading(true);
+                navigator.geolocation.getCurrentPosition(
+                  async (pos) => {
+                    const { latitude: lat, longitude: lng } = pos.coords;
+                    let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    try {
+                      await new Promise((resolve) => {
+                        if (window.kakao?.maps?.services?.Geocoder) { resolve(); return; }
+                        window.kakao.maps.load(resolve);
                       });
-                    });
-                  } catch { /* 역지오코딩 실패 시 좌표 문자열 사용 */ }
-                  setLocation({ lat, lng, address });
-                  setLocLoading(false);
-                  addToast(`📍 위치 추가: ${address}`, 'success');
-                },
-                (err) => {
-                  setLocLoading(false);
-                  if (err.code === 1) {
-                    // 권한 거부 시 직접입력 모드로 진입
-                    addToast('📍 GPS 권한이 없습니다. 직접 입력해주세요.', 'info');
+                      const geocoder = new window.kakao.maps.services.Geocoder();
+                      await new Promise((resolve) => {
+                        geocoder.coord2Address(lng, lat, (result, status) => {
+                          if (status === window.kakao.maps.services.Status.OK && result[0]) {
+                            const road = result[0].road_address?.address_name;
+                            const jibun = result[0].address?.address_name;
+                            address = road || jibun || address;
+                          }
+                          resolve();
+                        });
+                      });
+                    } catch { /* 역지오코딩 실패 시 좌표 문자열 사용 */ }
+                    setLocation({ lat, lng, address });
+                    setLocLoading(false);
+                    addToast(`📍 위치 추가: ${address}`, 'success');
+                  },
+                  (err) => {
+                    setLocLoading(false);
+                    addToast('GPS 권한이 없습니다. 직접 입력해주세요.', 'info');
                     setLocEditMode(true);
-                  } else {
-                    addToast('위치를 가져올 수 없습니다. 직접 입력해주세요.', 'info');
-                    setLocEditMode(true);
-                  }
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-              );
-            }}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: (location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666', fontSize: '14px', cursor: locLoading ? 'not-allowed' : 'pointer' }}
-          >
-            <div style={{ width: '36px', height: '36px', backgroundColor: (location || locEditMode) ? 'rgba(0,86,210,0.08)' : '#f8f9fa', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: (location || locEditMode) ? '1.5px solid #0056D2' : 'none' }}>
-              <MapPin size={20} color={(location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666'} />
+                  },
+                  { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                );
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: (location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666', fontSize: '13px', cursor: locLoading ? 'not-allowed' : 'pointer' }}
+            >
+              <MapPin size={16} color={(location || locEditMode) ? '#0056D2' : locLoading ? '#FF9B26' : '#666'} />
+              <span style={{ fontWeight: '600' }}>
+                {locLoading ? '위치 가져오는 중...' : location ? '위치 수정' : locEditMode ? '입력 중...' : '위치 추가'}
+              </span>
             </div>
-            <span style={{ fontWeight: '600' }}>
-              {locLoading ? '위치 가져오는 중...' : location ? '위치 수정' : locEditMode ? '입력 중...' : '위치 추가'}
-            </span>
-          </div>
-          <div
-            onClick={async () => {
-              if (!image) { addToast('사진을 먼저 올려주세요.', 'error'); return; }
-              setAiAnalyzing(true);
-              // ✅ AI-TEMPLATE: API 비용 0원 — 실용적 조황 작성 템플릿 자동 삽입
-              const template = `\n\n🤖 AI 조황 일지\n\n📍 낚시 장소: \n🐟 어종: \n📏 씨알 / 마릿수: \n🎣 채비 / 미끼: \n🌊 날씨 / 파고: \n💬 현장 메모: `;
-              // 서버 /api/ai/analyze 우선 시도 — 미연동 시 템플릿 fallback
-              try {
-                const res = await apiClient.post('/api/ai/analyze', { image }, { timeout: 15000 });
-                if (res.data?.text) {
-                  setContent((prev) => prev + '\n\n🤖 [AI 자동 일지]\n' + res.data.text);
-                } else {
+
+            {/* AI 자동 일지 버튼 */}
+            <div
+              onClick={async () => {
+                if (!images.length) { addToast('사진을 먼저 올려주세요.', 'error'); return; }
+                setAiAnalyzing(true);
+                const template = `\n\n🤖 AI 조황 일지\n\n📍 낚시 장소: \n🐟 어종: \n📏 씨알 / 마릿수: \n🎣 채비 / 미끼: \n🌊 날씨 / 파고: \n💬 현장 메모: `;
+                try {
+                  const res = await apiClient.post('/api/ai/analyze', { image: images[0] }, { timeout: 15000 });
+                  if (res.data?.text) {
+                    setContent((prev) => prev + '\n\n🤖 [AI 자동 일지]\n' + res.data.text);
+                  } else {
+                    setContent((prev) => prev + template);
+                  }
+                } catch {
                   setContent((prev) => prev + template);
+                } finally {
+                  setAiAnalyzing(false);
                 }
-              } catch {
-                setContent((prev) => prev + template);
-              } finally {
-                setAiAnalyzing(false);
-              }
-            }}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1565C0', fontSize: '13px', cursor: 'pointer', background: 'rgba(21,101,192,0.1)', padding: '6px 12px', borderRadius: '16px', marginLeft: 'auto', border: '1px solid rgba(21,101,192,0.3)' }}
-          >
-            <Scan size={16} />
-            <span style={{ fontWeight: '800', color: aiAnalyzing ? '#FF9B26' : undefined }}>
-              {aiAnalyzing ? 'AI 판별 중...' : 'AI 자동 일지'}
-            </span>
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1565C0', fontSize: '13px', cursor: 'pointer', background: 'rgba(21,101,192,0.1)', padding: '6px 12px', borderRadius: '16px', marginLeft: 'auto', border: '1px solid rgba(21,101,192,0.3)' }}
+            >
+              <Scan size={16} />
+              <span style={{ fontWeight: '800', color: aiAnalyzing ? '#FF9B26' : undefined }}>
+                {aiAnalyzing ? 'AI 판별 중...' : 'AI 자동 일지'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {image && (
-          <div style={{ marginTop: '20px', position: 'relative', width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden' }}>
-            <img src={image} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div onClick={(e) => { e.stopPropagation(); setImage(''); }} style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', padding: '4px', cursor: 'pointer' }}>
-              <X size={12} />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 카테고리 모달 */}

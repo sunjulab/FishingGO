@@ -46,7 +46,7 @@ export default function CreateCrew() {
       if (res.data) {
         const data = res.data;
         addToast('\ud06c\ub8e8\uac00 \uc131\uacf5\uc801\uc73c\ub85c \uac1c\uc124\ub418\uc5c8\uc2b5\ub2c8\ub2e4!', 'success');
-        navigate(`/crew/${data.id || data._id || 'CREW_001'}/chat`);
+        navigate(`/crew/${String(data.id || data._id || 'CREW_001')}/chat`);
       }
     } catch (err) {
       // ENH6-A2: \ud504\ub85c\ub355\uc158 console.error \uc2a4\ud0dd \ud2b8\ub808\uc774\uc2a4 \ub178\ucd9c \ubc29\uc9c0
@@ -79,10 +79,10 @@ export default function CreateCrew() {
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
        <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none' }}>
+        <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <X size={24} color="#1c1c1e" />
         </button>
-        <h2 style={{ fontSize: '17px', fontWeight: '800' }}>프라이빗 크루 만들기</h2>
+        <h2 style={{ fontSize: '17px', fontWeight: '800' }}>{isPrivate ? '프라이빗 크루 만들기' : '공개 크루 만들기'}</h2>
         <div style={{ width: '24px' }}></div>
       </div>
 

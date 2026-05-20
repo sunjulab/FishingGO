@@ -83,7 +83,7 @@ export default function CatchDetail() {
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
       <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f0f0', backgroundColor: '#fff' }}>
-        <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none', padding: '8px' }}>
+        <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none', padding: '8px' }}>
           <ChevronLeft size={24} color="#1c1c1e" />
         </button>
         <h2 style={{ fontSize: '17px', fontWeight: '800', flex: 1, textAlign: 'center', marginRight: '40px' }}>나의 조과 기록</h2>
@@ -97,7 +97,7 @@ export default function CatchDetail() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: '16px' }}>
             <div style={{ fontSize: '48px' }}>🎣</div>
             <p style={{ fontSize: '16px', fontWeight: '800', color: '#1c1c1e' }}>기록을 찾을 수 없습니다</p>
-            <button onClick={() => navigate(-1)} style={{ padding: '12px 24px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', cursor: 'pointer' }}>
+            <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ padding: '12px 24px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', cursor: 'pointer' }}>
               돌아가기
             </button>
           </div>

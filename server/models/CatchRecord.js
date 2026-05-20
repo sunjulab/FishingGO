@@ -20,8 +20,7 @@ const catchRecordSchema = new mongoose.Schema({
   date:         { type: String, default: '' },        // 날짜 (YYYY-MM-DD)
   time:         { type: String, default: '' },        // 시간
   pointId:      { type: String, default: null },      // 연결된 포인트 ID
-  createdAt:    { type: Date, default: Date.now },
-});
+}, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps로 자동 관리 (CctvOverride/Post.js 패턴 통일)
 
 // ✅ BUG-45: 쿼리 성능 인덱스 추가
 catchRecordSchema.index({ author_email: 1, createdAt: -1 }); // 내 기록 조회

@@ -1,10 +1,20 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'; // ✅ 11TH-B1: useRef/useCallback 추가
-import { useNavigate } from 'react-router-dom';
-import { X, Crown, Lock, AlertTriangle, MapPin, Star, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Crown, Lock, MapPin, Star, CheckCircle2 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
-import { requestBillingPayment, PG_OPTIONS, PG_CONFIG } from '../utils/paymentUtils';
+
+// 외부 브라우저로 결제 페이지 오픈 (구글 수수료 0%)
+const WEB_PAY_BASE = 'https://fishing-go.vercel.app';
+function openExternalBrowser(url) {
+  // Capacitor 환경: window.open with _system → 기기 기본 브라우저 강제 오픈
+  // 웹 환경: 새 탭
+  if (window?.Capacitor?.isNativePlatform?.()) {
+    window.open(url, '_system');
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
 
 // ── 36개 항구 목록 (HARBOR_DATA와 동기화) ─────────────────────────────────
 const HARBORS_STATIC = [
@@ -60,14 +70,10 @@ const REGION_TABS = ['전체', '동해권', '남해권', '서해권', '제주권
 const REGION_EMOJI = { '동해권': '🌊', '남해권': '⚓', '서해권': '🦀', '제주권': '🌺' };
 
 export default function VVIPSubscribe() {
-  const navigate = useNavigate();
   const user = useUserStore(s => s.user);
-  const setUserTier = useUserStore(s => s.setUserTier);
-  const updateUser = useUserStore(s => s.updateUser);
   const addToast = useToastStore(s => s.addToast);
 
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [selectedPg, setSelectedPg] = useState('kakao'); // 'kakao' | 'toss' | 'card'
 
   const [takenMap, setTakenMap] = useState({});
   const [mySlot, setMySlot] = useState(null);
@@ -75,60 +81,8 @@ export default function VVIPSubscribe() {
   const [selectedHarbor, setSelectedHarbor] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLiteProConfirm, setShowLiteProConfirm] = useState(false);
-  const [purchasing, setPurchasing] = useState(false);
-  const navTimerRef = useRef(null);
-  useEffect(() => () => { if (navTimerRef.current) clearTimeout(navTimerRef.current); }, []);
-  const markHarborTaken = useCallback((harborId, ownerName) => {
-    setTakenMap(prev => ({ ...prev, [harborId]: { takenBy: ownerName } }));
-  }, []);
 
-  // ✅ MOBILE-PAY: m_redirect_url 처리 — 모바일 결제 완료 후 redirect 파라미터 처리
-  const redirectParams = useState(() => {
-    const p = new URLSearchParams(window.location.search);
-    const impUid = p.get('imp_uid');
-    const merchantUid = p.get('merchant_uid');
-    if (impUid && merchantUid) {
-      window.history.replaceState({}, '', window.location.pathname);
-      return { impUid, merchantUid, success: p.get('imp_success'), errMsg: p.get('error_msg') };
-    }
-    return null;
-  })[0];
-  const redirectDone = useRef(false);
-
-  useEffect(() => {
-    if (!redirectParams || redirectDone.current || !user) return;
-    redirectDone.current = true;
-    if (redirectParams.success !== 'true') {
-      addToast(redirectParams.errMsg || '결제가 취소되었습니다.', 'error');
-      return;
-    }
-    const ctx = (() => { try { return JSON.parse(sessionStorage.getItem('pg_ctx') || 'null'); } catch { return null; } })();
-    sessionStorage.removeItem('pg_ctx');
-    const planId = ctx?.planId || redirectParams.merchantUid.split('_')[2];
-    const harborId = ctx?.harborId || null;
-    const pgProvider = ctx?.pgProvider || 'redirect';
-    const plan = [{ id: 'LITE', tier: 'BUSINESS_LITE', label: 'LITE' }, { id: 'PRO', tier: 'PRO', label: 'PRO' }, { id: 'VVIP', tier: 'BUSINESS_VIP', label: 'VVIP' }].find(p => p.id === planId);
-    const safeId = (user?.email || user?.id || 'user').replace(/[^a-zA-Z0-9]/g, '_');
-    const customerUid = `fishing_bill_${safeId}_${(planId || 'PLAN').replace(/[^a-zA-Z0-9]/g, '_')}`;
-    setPurchasing(true);
-    apiClient.post('/api/payment/billing/register', {
-      imp_uid: redirectParams.impUid, customer_uid: customerUid,
-      merchant_uid: redirectParams.merchantUid,
-      planId, pgProvider, userId: user.email || user.id, userName: user.name,
-      ...(harborId && { harborId }),
-    }).then(res => {
-      if (res.data.success) {
-        setUserTier(plan?.tier || 'BUSINESS_LITE');
-        updateUser({ tier: plan?.tier || 'BUSINESS_LITE' });
-        if (harborId) markHarborTaken(harborId, user.name);
-        addToast(`🎉 ${plan?.label || planId} 구독 등록 완료!`, 'success');
-        if (navTimerRef.current) clearTimeout(navTimerRef.current);
-        navTimerRef.current = setTimeout(() => navigate('/', { replace: true }), 1500);
-      }
-    }).catch(err => {
-      addToast(err?.response?.data?.message || '결제 검증 실패. 고객센터 문의 바랍니다.', 'error');
-    }).finally(() => setPurchasing(false));
-  }, [user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 웹결제 전환으로 m_redirect 처리 useEffect 제거됨 (구글 수수료 0% 방식)
 
   const PLANS = [
     {
@@ -249,124 +203,42 @@ export default function VVIPSubscribe() {
     setShowConfirm(true);
   };
 
-  // LITE / PRO 정기결제(빌링) 등록
-  const handleLiteProPurchase = async (plan) => {
+  // LITE / PRO 웹 결제 페이지로 이동 (구글 수수료 0% — 외부 브라우저)
+  const handleLiteProPurchase = (plan) => {
     if (!user) { addToast('로그인이 필요합니다.', 'error'); return; }
-    setPurchasing(true);
-    try {
-      // 모바일 redirect 복귀 시 컨텍스트 복원용
-      sessionStorage.setItem('pg_ctx', JSON.stringify({ planId: plan.id, pgProvider: selectedPg }));
-      // ① 포트원 빌링키 등록 + 첫 결제
-      const { imp_uid, customer_uid, merchant_uid } = await requestBillingPayment({
-        pgKey:     selectedPg,
-        planId:    plan.id,
-        planLabel: plan.label,
-        amount:    plan.priceNum,
-        user,
-      });
-
-      // ② 서버에 빌링키 등록
-      const res = await apiClient.post('/api/payment/billing/register', {
-        imp_uid, customer_uid,
-        planId:     plan.id,
-        pgProvider: selectedPg,
-        userId:     user.email || user.id,
-        userName:   user.name,
-      });
-
-      if (res.data.success) {
-        setUserTier(plan.tier);
-        updateUser({ tier: plan.tier });
-        addToast(`🎉 ${plan.label} 정기구독 등록 완료!`, 'success');
-        addToast(`✅ 다음 결제일: ${new Date(res.data.nextBillingDate).toLocaleDateString('ko-KR')}`, 'info');
-        // 결제 내역 자동 저장
-        apiClient.post('/api/payment/history/record', {
-          userId:      user.email || user.id,
-          userName:    user.name,
-          planId:      plan.id,
-          pgProvider:  selectedPg,
-          paymentType: 'billing_first',
-          amount:      plan.priceNum,
-          status:      'paid',
-          imp_uid,
-          merchant_uid,
-        }).catch(() => {});
-        setShowLiteProConfirm(false);
-        // ✅ 11TH-B1: 이전 타이머 정리 후 재등록
-        if (navTimerRef.current) clearTimeout(navTimerRef.current);
-        navTimerRef.current = setTimeout(() => navigate('/', { replace: true }), 1200);
-      }
-    } catch (err) {
-      addToast(err.message || '정기결제 등록에 실패했습니다. 다시 시도해주세요.', 'error');
-    } finally {
-      setPurchasing(false);
-    }
+    const params = new URLSearchParams({
+      planId: plan.id,
+      email:  user.email || user.id || '',
+      name:   user.name  || '',
+    });
+    const url = `${WEB_PAY_BASE}/vvip-subscribe?${params.toString()}`;
+    addToast('웹 브라우저에서 결제를 진행해주세요 🌐', 'info');
+    openExternalBrowser(url);
+    setShowLiteProConfirm(false);
+    setSelectedPlan(null);
   };
 
-  // VVIP 항구 독점 정기결제 등록
-  const handlePurchase = async () => {
+  // VVIP 항구 독점 — 웹 결제 페이지로 이동 (구글 수수료 0%)
+  const handlePurchase = () => {
     if (!user) { addToast('로그인이 필요합니다.', 'error'); return; }
-    setPurchasing(true);
-    try {
-      // 모바일 redirect 복귀 시 컨텍스트 복원용 (harborId 포함)
-      sessionStorage.setItem('pg_ctx', JSON.stringify({ planId: 'VVIP', pgProvider: selectedPg, harborId: selectedHarbor.id }));
-      // ① 포트원 빌링키 등록 + 첫 결제
-      const { imp_uid, customer_uid, merchant_uid } = await requestBillingPayment({
-        pgKey:     selectedPg,
-        planId:    'VVIP',
-        planLabel: `VVIP - ${selectedHarbor.name}`,
-        amount:    550000,
-        user,
-        harborId:  selectedHarbor.id,
-      });
-
-      // ② 서버에 빌링키 + 항구 선점 등록
-      const res = await apiClient.post('/api/payment/billing/register', {
-        imp_uid, customer_uid,
-        planId:     'VVIP',
-        pgProvider: selectedPg,
-        harborId:   selectedHarbor.id,
-        userId:     user.email || user.id,
-        userName:   user.name,
-      });
-
-      if (res.data.success) {
-        setUserTier('BUSINESS_VIP');
-        updateUser({ tier: 'BUSINESS_VIP' });
-        // ✅ 11TH-B5: markHarborTaken useCallback
-        markHarborTaken(selectedHarbor.id, user.name);
-        setMySlot({ harborId: selectedHarbor.id, harborName: selectedHarbor.name, expiresAt: res.data.nextBillingDate });
-        addToast(`🎉 ${selectedHarbor.name} VVIP 정기구독 등록 완료!`, 'success');
-        addToast(`✅ 매월 ${new Date(res.data.nextBillingDate).getDate()}일 자동 청구됩니다.`, 'info');
-        // 결제 내역 자동 저장
-        apiClient.post('/api/payment/history/record', {
-          userId:      user.email || user.id,
-          userName:    user.name,
-          planId:      'VVIP',
-          pgProvider:  selectedPg,
-          paymentType: 'billing_first',
-          amount:      550000,
-          status:      'paid',
-          imp_uid,
-          merchant_uid,
-        }).catch(() => {});
-        setShowConfirm(false);
-        // ✅ 11TH-B1: 이전 타이머 정리 후 재등록
-        if (navTimerRef.current) clearTimeout(navTimerRef.current);
-        navTimerRef.current = setTimeout(() => navigate('/', { replace: true }), 1200);
-      }
-    } catch (err) {
-      addToast(err.message || '정기결제 등록 실패. 다시 시도해주세요.', 'error');
-    } finally {
-      setPurchasing(false);
-    }
+    const params = new URLSearchParams({
+      planId:     'VVIP',
+      email:      user.email || user.id || '',
+      name:       user.name  || '',
+      harborId:   selectedHarbor?.id   || '',
+      harborName: selectedHarbor?.name || '',
+    });
+    const url = `${WEB_PAY_BASE}/vvip-subscribe?${params.toString()}`;
+    addToast('웹 브라우저에서 결제를 진행해주세요 🌐', 'info');
+    openExternalBrowser(url);
+    setShowConfirm(false);
   };
 
   return (
     <div style={{ backgroundColor: '#0A0F1C', minHeight: '100dvh', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 40px)' }}>
       {/* 헤더 */}
       <div style={{ backgroundColor: 'rgba(10,15,28,0.97)', padding: '16px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid rgba(255,215,0,0.12)' }}>
-        <button onClick={() => selectedPlan ? setSelectedPlan(null) : navigate(-1)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
+        <button onClick={() => selectedPlan ? setSelectedPlan(null) : window.history.back()} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
           <X size={24} color="#FFD700" />
         </button>
         <div style={{ flex: 1 }}>
@@ -459,38 +331,19 @@ export default function VVIPSubscribe() {
                   </div>
                 ))}
               </div>
-              {/* PG 선택 */}
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginBottom: '8px', fontWeight: '700' }}>결제 수단 선택</div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {PG_OPTIONS.map(pgKey => {
-                    const cfg = PG_CONFIG[pgKey];
-                    const active = selectedPg === pgKey;
-                    return (
-                      <button key={pgKey} onClick={() => setSelectedPg(pgKey)}
-                        style={{
-                          flex: 1, padding: '10px 4px', borderRadius: '12px', border: 'none',
-                          background: active ? cfg.color : 'rgba(255,255,255,0.07)',
-                          color: active ? cfg.textColor : 'rgba(255,255,255,0.5)',
-                          fontSize: '12px', fontWeight: '900', cursor: 'pointer',
-                          transition: 'all 0.15s',
-                          boxShadow: active ? `0 4px 12px ${cfg.color}55` : 'none',
-                        }}
-                      >
-                        {cfg.emoji} {cfg.label}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* 결제 수단: 웹 페이지에서 선택 */}
+              <div style={{ marginBottom: '14px', background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '12px', color: 'rgba(255,215,0,0.8)', fontWeight: '800' }}>💳 결제 수단은 웹 결제 페이지에서 선택</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>카카오페이 · 토스 · 신용카드 지원</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(0,100,255,0.08)', border: '1px solid rgba(0,100,255,0.2)', borderRadius: '12px', padding: '12px', marginBottom: '18px' }}>
                 <p style={{ fontSize: '12px', color: 'rgba(200,220,255,0.85)', margin: 0, lineHeight: '1.7', fontWeight: '600' }}>
-                  {PG_CONFIG[selectedPg].emoji} <strong>{PG_CONFIG[selectedPg].label}</strong>로 즉시 결제됩니다.<br />
-                  결제 완료 즉시 플랜이 자동 활성화됩니다.
+                  🌐 <strong>웹 브라우저</strong>에서 결제가 진행됩니다.<br />
+                  결제 완료 후 앱에서 로그아웃 → 재로그인하면 플랜이 활성화됩니다.
                 </p>
               </div>
-              <button onClick={() => handleLiteProPurchase(plan)} disabled={purchasing} style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: `linear-gradient(135deg, ${plan.color}, ${plan.color}aa)`, color: plan.id === 'VVIP' ? '#1A1A2E' : '#fff', fontSize: '16px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px', opacity: purchasing ? 0.7 : 1 }}>
-                {purchasing ? '결제 진행 중...' : `${PG_CONFIG[selectedPg].emoji} ${plan.label} 정기구독 시작`}
+              <button onClick={() => handleLiteProPurchase(plan)} style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: `linear-gradient(135deg, ${plan.color}, ${plan.color}aa)`, color: plan.id === 'VVIP' ? '#1A1A2E' : '#fff', fontSize: '16px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
+                🌐 {plan.label} 결제 페이지 열기
               </button>
               <button onClick={() => { setShowLiteProConfirm(false); setSelectedPlan(null); }} style={{ width: '100%', padding: '13px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '14px', cursor: 'pointer' }}>취소</button>
             </div>
@@ -654,16 +507,16 @@ export default function VVIPSubscribe() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(255,59,48,0.08)', border: '1px solid rgba(255,59,48,0.2)', borderRadius: '12px', padding: '12px', marginBottom: '18px' }}>
-              <AlertTriangle size={14} color="#FF5A5F" style={{ marginTop: '2px', flexShrink: 0 }} />
-              <p style={{ fontSize: '12px', color: 'rgba(100,200,255,0.9)', margin: 0, lineHeight: '1.7', fontWeight: '600' }}>
-                🔄 카드 등록 후 <strong>매월 자동 청구</strong>됩니다.<br />언제든지 마이페이지에서 취소 가능합니다.
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(0,100,255,0.08)', border: '1px solid rgba(0,100,255,0.2)', borderRadius: '12px', padding: '12px', marginBottom: '18px' }}>
+              <p style={{ fontSize: '12px', color: 'rgba(200,220,255,0.85)', margin: 0, lineHeight: '1.7', fontWeight: '600' }}>
+                🌐 <strong>웹 브라우저</strong>에서 결제가 진행됩니다.<br />
+                결제 완료 후 앱에서 로그아웃 → 재로그인하면 항구가 활성화됩니다.
               </p>
             </div>
 
-            <button onClick={handlePurchase} disabled={purchasing}
-              style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: '16px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px', opacity: purchasing ? 0.7 : 1 }}>
-              {purchasing ? '결제 진행 중...' : `${PG_CONFIG[selectedPg].emoji} ${selectedHarbor?.name} 정기구독 시작`}
+            <button onClick={handlePurchase}
+              style={{ width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: '16px', fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
+              🌐 {selectedHarbor?.name} 결제 페이지 열기
             </button>
             <button onClick={() => setShowConfirm(false)}
               style={{ width: '100%', padding: '13px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '14px', cursor: 'pointer' }}>

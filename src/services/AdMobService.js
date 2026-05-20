@@ -31,9 +31,9 @@ export async function initAdMob() {
       testingDevices: [],
       initializeForTesting: IS_ADMOB_TESTING,
     });
-    console.log(`[AdMob] 초기화 완료 (테스트모드: ${IS_ADMOB_TESTING})`);
+    if (!import.meta.env.PROD) console.log(`[AdMob] 초기화 완료 (테스트모드: ${IS_ADMOB_TESTING})`);
   } catch (e) {
-    console.warn('[AdMob] 초기화 실패 (웹 환경에서는 정상):', e.message);
+    if (!import.meta.env.PROD) console.warn('[AdMob] 초기화 실패 (웹 환경에서는 정상):', e.message);
   }
 }
 
@@ -57,9 +57,9 @@ export async function showBannerAd() {
       isTesting: IS_ADMOB_TESTING,
     });
     bannerShowing = true;
-    console.log('[AdMob] 배너 광고 표시');
+    if (!import.meta.env.PROD) console.log('[AdMob] 배너 광고 표시');
   } catch (e) {
-    console.warn('[AdMob] 배너 광고 오류:', e.message);
+    if (!import.meta.env.PROD) console.warn('[AdMob] 배너 광고 오류:', e.message);
   }
 }
 
@@ -72,9 +72,9 @@ export async function removeBannerAd() {
   try {
     await AdMob.removeBanner();
     bannerShowing = false;
-    console.log('[AdMob] 배너 광고 제거');
+    if (!import.meta.env.PROD) console.log('[AdMob] 배너 광고 제거');
   } catch (e) {
-    console.warn('[AdMob] 배너 제거 오류:', e.message);
+    if (!import.meta.env.PROD) console.warn('[AdMob] 배너 제거 오류:', e.message);
   }
 }
 
@@ -89,7 +89,7 @@ export async function removeBannerAd() {
 export async function showRewardedAd(onRewarded, onFailed) {
   // 웹 브라우저 환경 — 시뮬레이션 (30초 카운트다운)
   if (!isNative() || !AdMob) {
-    console.log('[AdMob] 웹 환경 — 보상형 광고 시뮬레이션');
+    if (!import.meta.env.PROD) console.log('[AdMob] 웹 환경 — 보상형 광고 시뮬레이션');
     return { simulated: true };
   }
 
@@ -102,11 +102,14 @@ export async function showRewardedAd(onRewarded, onFailed) {
     // 광고 로드
     await AdMob.prepareRewardVideoAd(options);
 
+    // ✅ FIX-TDZ: rewarded 플래그를 리스너 등록 전에 선언 — 클로저 내 사용보다 늦은 선언 코드 순서 개선
+    let rewarded = false;
+
     // 보상 수령 리스너
     const rewardListener = await AdMob.addListener(
       'onRewardedVideoAdReward',
       (reward) => {
-        console.log('[AdMob] 보상 수령:', reward);
+        if (!import.meta.env.PROD) console.log('[AdMob] 보상 수령:', reward);
         rewarded = true; // ✅ FIX: 보상 수령 플래그 — 닫기 이벤트에서 onFailed 이중 호출 방지
         rewardListener.remove();
         onRewarded?.(reward);
@@ -114,7 +117,6 @@ export async function showRewardedAd(onRewarded, onFailed) {
     );
 
     // 광고 종료(스킵/닫기) 리스너 — 보상 없이 닫힌 경우 onFailed 호출
-    let rewarded = false;
     const closeListener = await AdMob.addListener(
       'onRewardedVideoAdDismissed',
       () => {
@@ -126,7 +128,7 @@ export async function showRewardedAd(onRewarded, onFailed) {
     // 광고 표시
     await AdMob.showRewardVideoAd();
   } catch (e) {
-    console.error('[AdMob] 보상형 광고 오류:', e);
+    if (!import.meta.env.PROD) console.error('[AdMob] 보상형 광고 오류:', e);
     onFailed?.(e);
   }
 }
@@ -145,8 +147,8 @@ export async function showInterstitialAd(onClosed) {
   }
   try {
     const options = {
-      adId: ADMOB_CONFIG.NATIVE_ID,
-      isTesting: IS_ADMOB_TESTING, // ✅ FIX: !import.meta.env.PROD → IS_ADMOB_TESTING 통일
+      adId: ADMOB_CONFIG.INTERSTITIAL_ID,
+      isTesting: IS_ADMOB_TESTING,
     };
 
     await AdMob.prepareInterstitial(options);
@@ -162,7 +164,7 @@ export async function showInterstitialAd(onClosed) {
 
     await AdMob.showInterstitial();
   } catch (e) {
-    console.warn('[AdMob] 전면광고 오류:', e.message);
+    if (!import.meta.env.PROD) console.warn('[AdMob] 전면광고 오류:', e.message);
     onClosed?.(); // 실패해도 다음 동작 진행
   }
 }

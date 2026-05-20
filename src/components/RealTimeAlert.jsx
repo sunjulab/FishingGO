@@ -37,7 +37,9 @@ export default function RealTimeAlert() {
       Notification.requestPermission().catch(() => { /* 권한 거부 시 무시 */ });
     }
 
-    const token = localStorage.getItem('access_token');
+    // ✅ FIX-STORAGE: localStorage.getItem try/catch — Safari 개인정보 보호 모드 StorageError 방어
+    let token = null;
+    try { token = localStorage.getItem('access_token'); } catch { /* 접근 실패 시 무인증 소켓 연결 */ }
     const socket = io(SOCKET_URL, {
       auth: token ? { token } : {},
       reconnection: true,

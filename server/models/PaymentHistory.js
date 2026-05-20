@@ -16,8 +16,7 @@ const paymentHistorySchema = new mongoose.Schema({
   merchant_uid: { type: String, unique: true, sparse: true }, // ✅ 10TH-C3: sparse 의도적 — 테스트모드(null)는 중복 허용, 실결제시에만 unique 강제
   failReason:   { type: String },
   refundedAt:   { type: Date },
-  createdAt:    { type: Date, default: Date.now },
-});
+}, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps 자동 관리
 
 paymentHistorySchema.index({ userId: 1, createdAt: -1 });
 

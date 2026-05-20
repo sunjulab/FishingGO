@@ -261,7 +261,7 @@ export default function WeatherDashboard() {
 
         {/* 헤더 — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
         <div style={{ background: '#fff', padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0F0F5', position: 'sticky', top: 0, zIndex: 100 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate(-1)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)}>
             <ChevronLeft size={24} color="#1A1A2E" />
             <span style={{ fontSize: '18px', fontWeight: '900', color: '#1A1A2E' }}>전국 해양 기상</span>
           </div>

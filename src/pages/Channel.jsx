@@ -185,7 +185,7 @@ export default function Channel() {
                           src={video.thumbnail}
                           alt={video.title}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { e.currentTarget.style.background = '#e0e0e0'; e.currentTarget.src = ''; }}
+                          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.background = '#e0e0e0'; e.currentTarget.src = ''; }}
                         />
                         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(0,0,0,0.2)' }}>

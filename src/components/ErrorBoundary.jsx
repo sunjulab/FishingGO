@@ -27,7 +27,14 @@ class ErrorBoundaryClass extends React.Component {
   // 뒤로가기 + 상태 초기화
   handleGoBack = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    if (this.props.navigate) this.props.navigate(-1);
+    if (this.props.navigate) {
+      // ✅ HISTORY-FIX: history가 없으면 홈 폴백 (에러 직후 히스토리 손상 방지)
+      if (window.history.length <= 1) {
+        this.props.navigate('/', { replace: true });
+      } else {
+        this.props.navigate(-1);
+      }
+    }
   };
 
   render() {

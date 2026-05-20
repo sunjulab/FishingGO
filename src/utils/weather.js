@@ -92,7 +92,9 @@ export function calculateFishingIndex(wind, wave, pressureTrend) {
  */
 export function getTidePhase(date) {
   const phases = ['1물', '2물', '3물', '4물', '5물', '6물', '7물(사리)', '8물', '9물', '10물', '11물', '12물', '13물(조금)', '14물(무시)', '15물'];
-  const day = new Date(date).getDate() % 15;
+  // ✅ BUG-FIX: getDate() 1~31 반환 → (getDate()-1)%15로 index 0~14 정확히 순환
+  // 기존 getDate()%15: 1일=index1, 15일=index0 비연속 문제 해결
+  const day = (new Date(date).getDate() - 1) % 15;
   return phases[day];
 }
 
@@ -112,11 +114,11 @@ export const weatherCache = {
   },
   get: (stationId) => {
     const cacheKey = `fishing_go_cache_${stationId}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (!cached) return null;
-
-    // ✅ WARN-WC1: JSON.parse 실패(데이터 손상) 시 자동 삭제 후 null 반환
+    // ✅ FIX-STORAGE: getItem + JSON.parse 모두 단일 try/catch로 보호
+    // — Safari 개인정보 보호 모드 등에서 getItem()이 StorageError를 던질 수 있음 (WARN-WC1)
     try {
+      const cached = localStorage.getItem(cacheKey);
+      if (!cached) return null;
       const { timestamp, data } = JSON.parse(cached);
       const threeDays = 3 * 24 * 60 * 60 * 1000;
       if (Date.now() - timestamp > threeDays) {
@@ -124,10 +126,11 @@ export const weatherCache = {
         return null;
       }
       return data;
-    } catch (e) {
-      // JSON 파싱 실패 → 손상된 캐시 자동 제거
-      localStorage.removeItem(cacheKey);
+    } catch {
+      // JSON 파싱 실패 또는 Storage 접근 거부 → 손상된 캐시 자동 제거
+      try { localStorage.removeItem(cacheKey); } catch { /* 삭제도 실패하면 무시 */ }
       return null;
     }
   }
+
 };

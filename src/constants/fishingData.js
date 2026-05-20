@@ -143,8 +143,9 @@ export const getPointSpecificData = (point) => {
   const microWind = Math.max(0.5, p.wind + (pointSeed % 7  - 3) / 6).toFixed(1);
   const microWave = Math.max(0.1, p.wave + (pointSeed % 5  - 2) / 20).toFixed(2);
 
-  // 물때: 포인트 시드 기반 (1~14물 순환)
-  const tideNum = (pointSeed % 14) + 1;
+  // 물때: 포인트 시드 기반 (1~15물 순환)
+  // ✅ BUG-FIX: (pointSeed % 14) + 1 → (pointSeed % 15) + 1 — 기존은 15물이 절대 출력 안됨
+  const tideNum = (pointSeed % 15) + 1;
   const tidePhase = tideNum === 7 ? '7물(사리)' : tideNum === 13 ? '13물(조금)' : tideNum === 14 ? '14물(무시)' : `${tideNum}물`;
 
   // 만조/간조 시간 동적 계산 (물때 기준 매일 약 45분씩 지연되는 점 반영)

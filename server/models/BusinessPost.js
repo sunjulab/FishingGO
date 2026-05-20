@@ -12,12 +12,13 @@ const businessPostSchema = new mongoose.Schema({
   price:       { type: mongoose.Schema.Types.Mixed, default: '' }, // ✅ 28TH-C1: String → Mixed (27TH-C2 패턴) — 금액 정렬 오류 방지, 기존 String 데이터 호환 유지
   phone:       { type: String, default: '' },
   content:     { type: String, required: true },
-  cover:       { type: String, default: '' },     // 대표 이미지 URL
+  cover:       { type: String, default: '' },     // 대표 이미지 URL (images[0] 자동 동기)
+  images:      { type: [String], default: [] },   // ✅ MULTI-IMG: 다중 이미지 (최대 5장)
+  capacity:    { type: Number, default: null },    // 모집 인원
   isPinned:    { type: Boolean, default: false }, // VVIP 스폰서 여부
   harborId:    { type: String, default: null },   // VVIP 연결 항구 ID
   expiresAt:   { type: Date, default: null },     // VVIP 만료일
-  createdAt:   { type: Date, default: Date.now },
-});
+}, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps 자동 관리
 
 // ✅ LOW-2: 쿼리 성능 인덱스 추가
 // author_email: 내 게시물 조회 시 O(1) 탐색

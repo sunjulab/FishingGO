@@ -206,7 +206,9 @@ export default function CctvAdmin() {
   const getEmbedUrl = (youtubeId) =>
     `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1`;
 
-  if (!isAdmin) return null;
+  // ✅ BUG-FIX: authChecked 완료 전에는 null 반환하지 않음 — Hydration 완료 전 isAdmin=false 오판 방지
+  if (!authChecked) return null; // hydration 대기
+  if (!isAdmin) return null;     // 인증 완료 후 비관리자 차단
 
   return (
     <div className="page-container" style={{ backgroundColor: '#0A0F1C', minHeight: '100vh', paddingBottom: '40px' }}>

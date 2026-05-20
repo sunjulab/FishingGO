@@ -1,0 +1,2 @@
+  logger.info(`   웹훅: ${process.env.PORTONE_WEBHOOK_SECRET ? '✅' : '⚠️ 미설정'} | SMS: ${process.env.SMS_API_KEY ? '✅' : '⚠️ 미설정'} | DB: ${process.env.MONGO_PASS || process.env.MONGO_URI ? '✅ MongoDB' : '⚠️ 인메모리'}`);
+  if (env === 'production') logger.info('[보안] 프로덕션 모드 — /api/debug 차단, 웹훅 서명 검증 활성화');
