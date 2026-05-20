@@ -1,155 +1,108 @@
 /**
  * AdUnit.jsx - Fishing GO 광고 통합 모듈
- * 
- * [광고 정지 방지 규칙 적용 현황]
- * 1. 배너 자동 새로고침 최소 60초 간격 (Google 정책)
+ *
+ * ✅ ADMOB-ONLY: AdSense 완전 제거 — AdMob 전용
+ * - 앱(Android Capacitor): AdMob SDK 사용
+ *   · NativeAd  → NativeAdPlugin.kt (오버레이 방식)
+ *   · BannerAd  → AdMobService.showBannerAd() (하단 고정)
+ *   · 전면광고  → AdMobService.showInterstitialAd()
+ *   · 보상형    → AdMobService.showRewardedAd()
+ * - 웹 브라우저: 광고 없음 (AdSense Google 정책상 WebView 금지)
+ *
+ * [광고 정지 방지 규칙]
+ * 1. 배너 자동 새로고침 최소 60초 간격
  * 2. 광고 클릭 유도 문구/화살표 금지
  * 3. 배너와 전면 광고 동시 렌더링 금지
  * 4. 광고 영역 위/아래 빈 공간(padding) 최소 8px 확보
- * 5. 광고 영역 숨김(hidden/opacity 0) 금지 - 테스트 키에서 실제 키로 교체만 하면 됨
- * 6. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
- * 
- * [키 교체 방법]
- * - 현재: 구글 공식 테스트 코드 (ca-pub-3940256099942544 / 테스트 슬롯)
- * - 실제 전환: VITE_ADSENSE_PUB_ID, VITE_ADSENSE_SLOT_BANNER 등 .env에 추가 후 아래 변수만 교체
- * ✅ 2ND-C7: ⚠️ VITE_ADSENSE_PUB_ID 미설정 시 프로덕션에서도 테스트 광고 자동 실행 (수익 미발생)
+ * 5. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
-import { showRewardedAd } from '../services/AdMobService';
+import { showRewardedAd, showBannerAd, removeBannerAd } from '../services/AdMobService';
+import { loadNativeAd, removeNativeAd } from '../services/NativeAdService';
 
-// ─── 광고 키 설정 (테스트 키 → 실제 키 교체 시 이곳만 수정) ───
-const PUB_ID   = import.meta.env.VITE_ADSENSE_PUB_ID   || 'ca-pub-3940256099942544'; // 구글 공식 테스트 퍼블리셔
-const SLOT_BANNER  = import.meta.env.VITE_ADSENSE_SLOT_BANNER  || '6300978111'; // 테스트 배너 슬롯
-const SLOT_NATIVE  = import.meta.env.VITE_ADSENSE_SLOT_NATIVE  || '2247696314'; // 테스트 인피드 슬롯
-
-// ✅ INFO-BT1: 프로덕션에서 data-adtest="on" 제거 — 데브에서만 테스트 모드
-// 실제 키(VITE_ADSENSE_PUB_ID)를 설정하면 프로덕션 에서도 실제 광고 수익 발생
-const IS_TEST_AD = !import.meta.env.VITE_ADSENSE_PUB_ID; // 엔브 미설정 시만 테스트 모드
-
-// Capacitor 네이티브 WebView 환경 감지 (애드센스는 웹 전용 — WebView 금지)
-// @capacitor/core 임포트로 window.Capacitor 타이밍 문제 해소 + Android WebView UA 3중 감지
+// Capacitor 네이티브 환경 감지 (3중 체크)
 const isCapacitorNative = () => {
-  // 1순위: @capacitor/core 공식 API (window.Capacitor 주입 전에도 동작)
   try { if (Capacitor.isNativePlatform()) return true; } catch (_) {}
-  // 2순위: window.Capacitor 폴백
   if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) return true;
-  // 3순위: Android WebView UA 감지 (미리 주입 실패 시 안전망)
   if (typeof navigator !== 'undefined' && /wv/.test(navigator.userAgent) && /Android/.test(navigator.userAgent)) return true;
   return false;
 };
 
-// ENH5-C2: adSenseLoaded 모듈 스코프 변수 의존성 제거 — getElementById 체크만으로 중복 방지 (HMR 안전)
-function loadAdSense() {
-  // ✅ ADMOB-FIX: Capacitor 네이티브 앱에서는 AdSense 스킵 (Google 정책: WebView 금지)
-  // 네이티브 앱은 AdMobService.js의 showBannerAd()가 담당
-  if (isCapacitorNative()) return;
-  if (document.getElementById('adsense-script')) return;
-  const script = document.createElement('script');
-  script.id = 'adsense-script';
-  script.async = true;
-  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${PUB_ID}`;
-  script.crossOrigin = 'anonymous';
-  document.head.appendChild(script);
-}
-
-// ─── 공통 광고 렌더 훅 ───
-function useAdPush(ref) {
-  useEffect(() => {
-    loadAdSense();
-    const pushAd = setTimeout(() => {
-      try {
-        if (ref.current) {
-          const insNode = ref.current.querySelector('ins');
-          if (insNode && !insNode.hasAttribute('data-adsbygoogle-status')) {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-          }
-        }
-      } catch (e) {
-        // ENH5-A5: 프로덕션 console.error 노출 방지 — 애드센스 스택 트레이스 유옵
-        if (!import.meta.env.PROD) console.error('AdSense Push Error:', e);
-      }
-    }, 150);
-    return () => clearTimeout(pushAd);
-  }, []);
-}
+// AdSense는 완전히 제거됨 — 웹에서도 광고 없음 (AdMob 전용)
+// eslint-disable-next-line no-unused-vars
+function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 
 // ─────────────────────────────────────────────────────────────────
-//  1. 배너 광고 (하단 고정 or 섹션 사이 삽입형)
-//  [정지 방지] 레이아웃 내부에 자연스럽게 녹아들게 배치 필수
+//  1. 배너 광고 — 앱: AdMob 하단 고정 배너 / 웹: 렌더 안 함
 // ─────────────────────────────────────────────────────────────────
 export function BannerAd({ style = {} }) {
-  const ref = useRef();
-  useAdPush(ref);
-  const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
-  // ✅ ADMOB: 네이티브 앱에서는 AdSense 불가 (Google WebView 정책) — 인터스티셜로 대체
-  if (isPremium || isCapacitorNative()) return null;
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        width: '100%',
-        minHeight: '60px',
-        overflow: 'hidden',
-        margin: '8px 0',
-        borderRadius: '12px',
-        ...style
-      }}
-    >
-      <ins
-        className="adsbygoogle"
-        style={{ display: 'block', width: '100%', minHeight: '60px', background: '#f5f5f5' }}
-        data-ad-client={PUB_ID}
-        data-ad-slot={SLOT_BANNER}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}
-      />
-    </div>
+  const isPremium = useUserStore(s =>
+    ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) ||
+    s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL
   );
+  const IS_NATIVE = isCapacitorNative();
+
+  useEffect(() => {
+    if (!IS_NATIVE || isPremium) return;
+    // AdMob 하단 고정 배너 표시
+    showBannerAd();
+    return () => {
+      removeBannerAd();
+    };
+  }, [IS_NATIVE, isPremium]);
+
+  // 앱이 아니거나 프리미엄이면 아무것도 렌더하지 않음
+  // (AdMob 배너는 네이티브 레이어에 오버레이되므로 DOM 불필요)
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  2. 네이티브(인피드) 광고 — 피드 사이 자연스러운 카드형
-//  [정지 방지] 'Sponsored' 또는 'AD' 라벨 반드시 표시
+//  2. 네이티브(인피드) 광고 — 앱: NativeAdPlugin 오버레이용 placeholder
+//  [핵심] 앱에서 null 반환 금지 — placeholder div가 있어야 NativeAdPlugin.kt가 동작
 // ─────────────────────────────────────────────────────────────────
-export function NativeAd({ style = {} }) {
+export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
   const ref = useRef();
-  useAdPush(ref);
-  // ✅ 29TH-B1: 하드코딩 'sunjulab' → ADMIN_ID/ADMIN_EMAIL 상수로 교체 (3RD-A2 패턴 통일)
-  const isPremium = useUserStore(s => ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) || s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL);
-  // ✅ ADMOB: 네이티브 앱에서는 AdSense 불가 — AdMob 전면광고가 피드에서 대신 트리거됨
-  if (isPremium || isCapacitorNative()) return null;
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        width: '100%',
-        margin: '4px 0 12px',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        ...style
-      }}
-    >
-      {/* [정지 방지] 광고임을 명시하는 라벨 — 삭제 절대 금지 */}
-      <div style={{ fontSize: '10px', color: '#aaa', fontWeight: '700', padding: '4px 8px', textAlign: 'right' }}>
-        광고 · Sponsored
-      </div>
-      {/* ✅ INFO-BT1: IS_TEST_AD=true 시 data-adtest="on" 주입 — 프로덕션 키 설정 시 자동 제거 */}
-      <ins
-        className="adsbygoogle"
-        style={{ display: 'block', minHeight: '120px', background: '#f5f5f5' }}
-        data-ad-format="fluid"
-        data-ad-layout="in-article"
-        data-ad-client={PUB_ID}
-        data-ad-slot={SLOT_NATIVE}
-        {...(IS_TEST_AD ? { 'data-adtest': 'on' } : {})}
-      />
-    </div>
+  const IS_NATIVE = isCapacitorNative();
+  const isPremium = useUserStore(s =>
+    ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) ||
+    s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL
   );
+
+  useEffect(() => {
+    if (!IS_NATIVE || isPremium || !ref.current) return;
+    // placeholder div가 DOM에 마운트되면 NativeAdPlugin에 광고 로드 요청
+    const el = ref.current;
+    loadNativeAd(slotId, el);
+    return () => {
+      removeNativeAd(slotId);
+    };
+  }, [IS_NATIVE, isPremium, slotId]);
+
+  // 프리미엄 유저는 광고 없음
+  if (isPremium) return null;
+
+  if (IS_NATIVE) {
+    // 앱: NativeAdPlugin이 이 div 위에 AdMob NativeAdView를 오버레이함
+    // → 반드시 렌더해야 함 (null 반환 금지)
+    return (
+      <div
+        ref={ref}
+        style={{
+          width: '100%',
+          minHeight: 280,
+          margin: '4px 0 12px',
+          borderRadius: '16px',
+          background: 'transparent', // 네이티브 뷰가 위에 올라오므로 투명
+          ...style,
+        }}
+      />
+    );
+  }
+
+  // 웹 환경: AdSense 제거됨 — 광고 없음
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -230,22 +183,11 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       return;
     }
 
-    // 웹 환경 — 30초 타이머 시뮬레이션
+
+    // 웹 환경 — 30초 타이머 시뮬레이션 (광고 없음, 앱에서는 showRewardedAd로 실제 AdMob 보상형 실행)
     setAdWatching(true);
     setAdProgress(0);
     if (intervalRef.current) clearInterval(intervalRef.current);
-
-    // ✅ 광고 ins 슬롯 push (adWatching 전환 직후)
-    try {
-      loadAdSense();
-      setTimeout(() => {
-        try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {
-          if (!import.meta.env.PROD) console.warn('[AdUnit] adsbygoogle push 실패:', e);
-        }
-      }, 200);
-    } catch (e) {
-      if (!import.meta.env.PROD) console.warn('[AdUnit] loadAdSense 실패:', e);
-    }
 
     const intervalId = setInterval(() => {
       setAdProgress(prev => {
@@ -339,16 +281,10 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
 
             {adWatching ? (
               <div>
-                {/* [정지 방지] 광고 슬롯 — 시청 중 배너 표시 */}
-                <div style={{ backgroundColor: '#F2F2F7', borderRadius: '12px', padding: '12px', marginBottom: '12px', textAlign: 'center', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ins
-                    className="adsbygoogle"
-                    style={{ display: 'block', width: '100%', minHeight: '60px' }}
-                    data-ad-client={PUB_ID}
-                    data-ad-slot={SLOT_BANNER}
-                    data-ad-format="auto"
-                    data-full-width-responsive="true"
-                  />
+                {/* 앱: AdMob 보상형 광고 실행 중 | 웹: 타이머 시뮬레이션 */}
+                <div style={{ backgroundColor: '#F2F2F7', borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '24px' }}>📺</span>
+                  <span style={{ fontSize: '13px', color: '#888', marginLeft: '8px', fontWeight: '600' }}>시청 중...</span>
                 </div>
                 {/* 진행 바 */}
                 <div style={{ height: '6px', backgroundColor: '#F2F2F7', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>

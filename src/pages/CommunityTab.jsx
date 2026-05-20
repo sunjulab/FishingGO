@@ -1266,7 +1266,7 @@ export default function CommunityTab() {
                       </div>
                     )}
                   </div>
-                  {(index + 1) % 4 === 0 && <NativeAd />}
+                  {(index + 1) % 4 === 0 && <NativeAd slotId={`feed_native_${index}`} />}
                   {!canAccessPremium && (index + 1) % AD_CONFIG.FREE_USER.FEED_AD_INTERVAL === 0 && <InFeedAd />}
                 </React.Fragment>
               );
