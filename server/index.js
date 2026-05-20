@@ -765,7 +765,21 @@ io.on('connection', (socket) => {
     if (dbReady && ChatMessage) {
       try {
         const msgs = await ChatMessage.find({ crewId }).sort({ createdAt: -1 }).limit(50);
-        chatHistories[crewId] = msgs.reverse().map(m => ({ sender: m.sender, text: m.text, time: m.time }));
+        chatHistories[crewId] = msgs.reverse().map(m => ({
+          sender: m.sender,
+          text: m.text,
+          time: m.time,
+          // ✅ POST-SHARE: 공유 카드 필드 포함
+          type: m.type || 'text',
+          postId: m.postId || '',
+          postTitle: m.postTitle || '',
+          postPreview: m.postPreview || '',
+          postImage: m.postImage || '',
+          postCategory: m.postCategory || '',
+          senderLevel: m.senderLevel || '',
+          senderEmoji: m.senderEmoji || '',
+          senderTitle: m.senderTitle || '',
+        }));
       } catch (e) { logger.warn(`[Socket] join_crew 채팅 히스토리 DB 로드 실패 (crewId=${crewId}): ${e.message}`); } // ✅ 21TH-B2: silent catch → logger.warn
     }
     if (!chatHistories[crewId]) chatHistories[crewId] = [];
@@ -813,7 +827,21 @@ io.on('connection', (socket) => {
       io.to(data.crewId).emit('new_msg', msgData);
       if (dbReady && ChatMessage) {
         try {
-          await new ChatMessage({ crewId: data.crewId, sender: msgData.sender, text: `[게시글공유] ${msgData.postTitle}`, time: msgData.time }).save();
+          await new ChatMessage({
+            crewId: data.crewId,
+            sender: msgData.sender,
+            text: `[게시글공유] ${msgData.postTitle}`,
+            time: msgData.time,
+            type: 'post_share',
+            postId: msgData.postId,
+            postTitle: msgData.postTitle,
+            postPreview: msgData.postPreview,
+            postImage: msgData.postImage,
+            postCategory: msgData.postCategory,
+            senderLevel: msgData.senderLevel,
+            senderEmoji: msgData.senderEmoji,
+            senderTitle: msgData.senderTitle,
+          }).save();
         } catch (e) { logger.error(`[Socket] post_share DB 저장 실패: ${e.message}`); }
       } else { saveChatHistories(); }
       return;

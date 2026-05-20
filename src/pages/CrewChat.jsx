@@ -284,7 +284,12 @@ export default function CrewChat() {
                 </div>
                 {/* 공유 카드 */}
                 <div
-                  onClick={() => navigate(`/post/${msg.postId}`)}
+                  onClick={() => {
+                    const cat = msg.postCategory || '';
+                    if (cat.includes('공지')) navigate(`/notice/${msg.postId}`);
+                    else if (cat.includes('선상배') || cat.includes('홍보')) navigate('/community?tab=business');
+                    else navigate(`/post/${msg.postId}`);
+                  }}
                   style={{
                     background: isMe ? 'linear-gradient(135deg,#0056D2,#1565C0)' : '#fff',
                     borderRadius: '16px',
@@ -300,8 +305,12 @@ export default function CrewChat() {
                 >
                   {/* 헤더 배지 */}
                   <div style={{ padding: '8px 12px', background: isMe ? 'rgba(255,255,255,0.12)' : 'rgba(0,86,210,0.06)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '14px' }}>📢</span>
-                    <span style={{ fontSize: '11px', fontWeight: '900', color: isMe ? 'rgba(255,255,255,0.9)' : '#0056D2' }}>오픈게시판 공유</span>
+                    <span style={{ fontSize: '14px' }}>
+                      {(msg.postCategory || '').includes('공지') ? '📢' : (msg.postCategory || '').includes('선상배') ? '🚢' : '📸'}
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: isMe ? 'rgba(255,255,255,0.9)' : '#0056D2' }}>
+                      {(msg.postCategory || '').includes('공지') ? '공지사항' : (msg.postCategory || '').includes('선상배') ? '선상배 홍보' : '오픈게시판'}
+                    </span>
                     <span style={{ fontSize: '10px', color: isMe ? 'rgba(255,255,255,0.55)' : '#aaa', marginLeft: 'auto' }}>{msg.postCategory}</span>
                   </div>
                   {/* 이미지 + 내용 */}
