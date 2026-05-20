@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'; // ✅ 25TH-C2: useCallback named import 추가
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2 } from 'lucide-react';
+import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2, Share2, X as XIcon, Send } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
@@ -10,8 +10,11 @@ import SkeletonCard from '../components/SkeletonCard';
 import { BannerAd, NativeAd } from '../components/AdUnit';
 import { showInterstitialAd } from '../services/AdMobService';
 import { loadNativeAd, updateNativeAdPositions, removeNativeAd, removeAllNativeAds } from '../services/NativeAdService';
-import ImageGallery from '../components/ImageGallery'; // ✅ MULTI-IMG: 다중 이미지 갤러리
-import StorySlider from '../components/StorySlider'; // ✅ INSTA-P3: 24h 조황 스토리 슬라이더
+import ImageGallery from '../components/ImageGallery';
+import StorySlider from '../components/StorySlider';
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ✅ 3RD-B5: InFeedAd 컴포넌트 함수 내부 인라인 정의 → 외부 추출 — 렌더마다 재생성 방지
 function InFeedAd() {
@@ -189,11 +192,16 @@ export default function CommunityTab() {
   const [totalPages, setTotalPages] = useState(1);       // 전체 페이지 수
   const [loadingMore, setLoadingMore] = useState(false); // 더보기 로딩
   // ✅ INSTA-P1: 그리드/피드 전환 + 인기순 정렬
-  const [viewMode, setViewMode] = useState('feed'); // 'feed' | 'grid'
-  const [sortMode, setSortMode] = useState('latest'); // 'latest' | 'popular'
-  // ✅ INSTA-EXPAND: 인스타그램형 인라인 카드 확장
-  const [expandedPostId, setExpandedPostId] = useState(null); // 확장된 postId
-  const [slideIndexMap, setSlideIndexMap] = useState({}); // postId → 현재 슬라이드 인덱스
+  const [viewMode, setViewMode] = useState('feed');
+  const [sortMode, setSortMode] = useState('latest');
+  const [expandedPostId, setExpandedPostId] = useState(null);
+  const [slideIndexMap, setSlideIndexMap] = useState({});
+  // ✅ SHARE: 게시글 → 크루 채팅 공유 모달
+  const [shareModal, setShareModal] = useState(null); // { post } | null
+  const [myCrews, setMyCrews] = useState([]);           // 내가 속한 크루 목록
+  const [shareTarget, setShareTarget] = useState(null); // 선택된 크루
+  const [sharing, setSharing] = useState(false);
+  const shareSockets = useRef({});                      // crewId → socket 캐시
   const slideStartXRef = useRef({}); // postId → 터치 시작 X좌표
   const slideWrapperRefs = useRef(new Map()); // postId → 슬라이더 wrapper DOM 요소
   // ✅ INSTA-COMMENT: 인라인 댓글 입력창
@@ -1134,7 +1142,7 @@ export default function CommunityTab() {
                       )}
                     </div>
 
-                    {/* ── 좋아요 + 댓글 버튼 ── */}
+                    {/* ── 좋아요 + 댓글 + 공유 버튼 ── */}
                     <div style={{ padding: '10px 16px', display: 'flex', gap: '16px', alignItems: 'center', borderTop: '1px solid #f8f8f8', marginTop: '10px' }}>
                       <span onClick={(e) => handleLike(e, postId)}
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', position: 'relative', color: likedPosts[postId] ? '#FF5A5F' : '#8e8e93', fontWeight: likedPosts[postId] ? '800' : '400', transition: 'color 0.2s', userSelect: 'none' }}>
@@ -1143,7 +1151,6 @@ export default function CommunityTab() {
                         {post.likes || 0}
                         {likeAnimating[postId] && <span style={{ position: 'absolute', top: '-18px', left: 0, fontSize: '18px', pointerEvents: 'none', animation: 'heartBurst 0.7s ease-out forwards' }}>❤️</span>}
                       </span>
-                      {/* ✅ INSTA-COMMENT: 댓글 버튼 클릭 → 입력창 토글 + expand */}
                       <span
                         onClick={e => {
                           e.stopPropagation();
@@ -1153,6 +1160,22 @@ export default function CommunityTab() {
                         }}
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: commentOpenMap[postId] ? '#0056D2' : '#8e8e93', cursor: 'pointer', fontWeight: commentOpenMap[postId] ? '800' : '400', transition: 'color 0.2s' }}>
                         <MessageSquare size={16} /> {post.comments?.length || 0}
+                      </span>
+                      {/* ✅ SHARE-BTN: 채팅방 공유 버튼 */}
+                      <span
+                        onClick={async e => {
+                          e.stopPropagation();
+                          if (!user) { addToast('로그인 후 이용하세요.', 'error'); return; }
+                          try {
+                            const res = await apiClient.get('/api/user/crews');
+                            setMyCrews(Array.isArray(res.data) ? res.data : []);
+                          } catch { setMyCrews([]); }
+                          setShareTarget(null);
+                          setShareModal({ post });
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: '#8e8e93', cursor: 'pointer', marginLeft: 'auto', transition: 'color 0.2s' }}
+                        title="채팅방에 공유">
+                        <Share2 size={15} /> <span style={{ fontSize: '12px' }}>공유</span>
                       </span>
                     </div>
 
@@ -1734,18 +1757,35 @@ export default function CommunityTab() {
             </div>
 
             {/* 하단 액션 버튼 (고정) */}
-            <div style={{ padding: '0 20px 36px', display: 'flex', gap: '12px', background: '#fff', borderTop: '1px solid #F0F2F7', paddingTop: '16px' }}>
+            <div style={{ padding: '0 20px 36px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#fff', borderTop: '1px solid #F0F2F7', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => { window.location.href = `tel:${selectedBusinessPost.phone || ''}`; }}
+                  style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '17px', borderRadius: '16px', fontWeight: '950', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,86,210,0.35)' }}
+                >
+                  <Phone size={20} fill="#fff" /> 선장님께 즉시 전화
+                </button>
+                <button
+                  onClick={() => { window.location.href = `sms:${selectedBusinessPost.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${selectedBusinessPost.shipName}] 선상낚시 예약 문의드립니다.\n\n▶ 원하는 날짜:\n▶ 인원:\n▶ 기타 문의:`)}` ; }}
+                  style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '17px 20px', borderRadius: '16px', fontWeight: '900', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  <MessageSquare size={20} /> 문자 보내기
+                </button>
+              </div>
+              {/* ✅ 크루 채팅방 공유 버튼 */}
               <button
-                onClick={() => { window.location.href = `tel:${selectedBusinessPost.phone || ''}`; }}
-                style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '17px', borderRadius: '16px', fontWeight: '950', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,86,210,0.35)' }}
+                onClick={async () => {
+                  if (!user) { addToast('로그인 후 이용하세요.', 'error'); return; }
+                  try {
+                    const res = await apiClient.get('/api/user/crews');
+                    setMyCrews(Array.isArray(res.data) ? res.data : []);
+                  } catch { setMyCrews([]); }
+                  setShareTarget(null);
+                  setShareModal({ post: { ...selectedBusinessPost, _bizShare: true } });
+                }}
+                style={{ width: '100%', padding: '14px', border: '1.5px solid #0056D2', borderRadius: '16px', background: 'rgba(0,86,210,0.05)', color: '#0056D2', fontSize: '15px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                <Phone size={20} fill="#fff" /> 선장님께 즉시 전화
-              </button>
-              <button
-                onClick={() => { window.location.href = `sms:${selectedBusinessPost.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${selectedBusinessPost.shipName}] 선상낚시 예약 문의드립니다.\n\n▶ 원하는 날짜:\n▶ 인원:\n▶ 기타 문의:`)}` ; }}
-                style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '17px 20px', borderRadius: '16px', fontWeight: '900', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}
-              >
-                <MessageSquare size={20} /> 문자 보내기
+                <Share2 size={18} /> 크루 채팅방에 공유하기
               </button>
             </div>
           </div>
@@ -1853,6 +1893,92 @@ export default function CommunityTab() {
                 {crewPassLoading ? '확인 중...' : '입장하기 🔓'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ SHARE-MODAL: 게시글 → 크루 채팅방 공유 */}
+      {shareModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={() => setShareModal(null)}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: '#fff', borderRadius: '24px 24px 0 0', padding: '20px 20px 32px', boxShadow: '0 -8px 32px rgba(0,0,0,0.18)', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '16px', fontWeight: '900', color: '#1c1c1e' }}>📤 크루 채팅방에 공유</span>
+              <button onClick={() => setShareModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <XIcon size={20} color="#8e8e93" />
+              </button>
+            </div>
+            <div style={{ background: '#F8F9FA', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #E5E5EA' }}>
+              {(shareModal.post.images?.[0] || shareModal.post.image) && (
+                <img src={shareModal.post.images?.[0] || shareModal.post.image} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '11px', color: '#0056D2', fontWeight: '800', marginBottom: '3px' }}>{shareModal.post.category || '전체'} • {shareModal.post.author}</div>
+                <div style={{ fontSize: '13px', color: '#1c1c1e', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(shareModal.post.content || '').slice(0, 60) || '(내용 없음)'}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: '13px', color: '#8e8e93', fontWeight: '700', marginBottom: '8px' }}>내가 속한 크루 ({myCrews.length})</div>
+            {myCrews.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: '#aaa', fontSize: '14px' }}>가입된 크루가 없습니다.</div>
+            ) : (
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                {myCrews.map(crew => {
+                  const crewId = String(crew._id || crew.id);
+                  const selected = String(shareTarget?._id || shareTarget?.id) === crewId;
+                  return (
+                    <div key={crewId} onClick={() => setShareTarget(crew)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '14px', cursor: 'pointer', background: selected ? '#EEF4FF' : '#F8F9FA', border: selected ? '2px solid #0056D2' : '1.5px solid transparent', transition: 'all 0.15s' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: selected ? '#0056D2' : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '20px' }}>{crew.emoji || '🎣'}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: selected ? '#0056D2' : '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{crew.name}</div>
+                        <div style={{ fontSize: '11px', color: '#8e8e93' }}>멤버 {crew.memberList?.length || crew.members || 0}명</div>
+                      </div>
+                      {selected && <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#0056D2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontSize: '12px' }}>✓</span></div>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button
+              disabled={!shareTarget || sharing}
+              onClick={async () => {
+                if (!shareTarget || sharing) return;
+                setSharing(true);
+                const crewId = String(shareTarget._id || shareTarget.id);
+                const post = shareModal.post;
+                try {
+                  if (!shareSockets.current[crewId] || !shareSockets.current[crewId].connected) {
+                    let tok; try { tok = localStorage.getItem('access_token') || undefined; } catch { tok = undefined; }
+                    const s = io(SOCKET_URL, { transports: ['websocket', 'polling'], auth: { token: tok } });
+                    shareSockets.current[crewId] = s;
+                    await new Promise(res => s.once('connect', res));
+                    s.emit('join_crew', crewId);
+                  }
+                  shareSockets.current[crewId].emit('send_msg', {
+                    crewId, type: 'post_share',
+                    postId: String(post._id || post.id),
+                    postTitle: post._bizShare
+                      ? `🚢 ${post.shipName || '선상낚시'} — ${post.target || ''} (${post.region || ''})`
+                      : ((post.content || '').slice(0, 60) || '(내용 없음)'),
+                    postPreview: post._bizShare
+                      ? `${post.type || '선상낚시'} · ${post.price || '문의'} · 정원 ${post.capacity || '?'}명`
+                      : (post.content || '').slice(0, 120),
+                    postImage: post.images?.[0] || post.image || post.cover || '',
+                    postCategory: post._bizShare ? '🚢 선상배 홍보' : (post.category || '전체'),
+                  });
+                  addToast(`✅ ${shareTarget.name} 채팅방에 공유했습니다!`, 'success');
+                  setShareModal(null);
+                } catch { addToast('공유에 실패했습니다.', 'error'); }
+                finally { setSharing(false); }
+              }}
+              style={{ width: '100%', padding: '16px', border: 'none', borderRadius: '16px', background: (!shareTarget || sharing) ? '#E5E5EA' : 'linear-gradient(135deg,#0056D2,#1565C0)', color: (!shareTarget || sharing) ? '#aaa' : '#fff', fontSize: '16px', fontWeight: '900', cursor: (!shareTarget || sharing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+            >
+              <Send size={18} />
+              {sharing ? '공유 중...' : shareTarget ? `${shareTarget.name}에 공유하기` : '크루를 선택하세요'}
+            </button>
           </div>
         </div>
       )}

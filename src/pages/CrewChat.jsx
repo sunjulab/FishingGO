@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { ChevronLeft, Send, Users, ShieldCheck, Wifi, WifiOff, X, LogOut, Trash2 } from 'lucide-react';
+import { ChevronLeft, Send, Users, ShieldCheck, Wifi, WifiOff, X, LogOut, Trash2, ExternalLink } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
@@ -272,6 +272,59 @@ export default function CrewChat() {
             (msg.socketId && msg.socketId === mySocketId.current) ||
             msg.sender === myName ||
             msg.sender === user?.email;
+
+          // ✅ POST-SHARE: 게시글 공유 카드
+          if (msg.type === 'post_share') {
+            return (
+              <div key={String(msg._id || `msg-${idx}`)} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '82%' }}>
+                <div style={{ fontSize: '11px', color: '#8e8e93', marginBottom: '4px', textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: '4px', flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                  {msg.senderEmoji && <span style={{ fontSize: '13px' }}>{msg.senderEmoji}</span>}
+                  <span style={{ fontWeight: '700', color: isMe ? '#0056D2' : '#1c1c1e', fontSize: '12px' }}>{msg.sender}</span>
+                  <span style={{ color: '#c0c0c0', fontSize: '10px' }}>• {formatMsgTime(msg)}</span>
+                </div>
+                {/* 공유 카드 */}
+                <div
+                  onClick={() => navigate(`/post/${msg.postId}`)}
+                  style={{
+                    background: isMe ? 'linear-gradient(135deg,#0056D2,#1565C0)' : '#fff',
+                    borderRadius: '16px',
+                    borderBottomRightRadius: isMe ? '4px' : '16px',
+                    borderBottomLeftRadius: isMe ? '16px' : '4px',
+                    overflow: 'hidden', cursor: 'pointer',
+                    boxShadow: isMe ? '0 4px 16px rgba(0,86,210,0.3)' : '0 2px 10px rgba(0,0,0,0.1)',
+                    border: isMe ? 'none' : '1px solid #E5E5EA',
+                    transition: 'transform 0.15s, box-shadow 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = isMe ? '0 4px 16px rgba(0,86,210,0.3)' : '0 2px 10px rgba(0,0,0,0.1)'; }}
+                >
+                  {/* 헤더 배지 */}
+                  <div style={{ padding: '8px 12px', background: isMe ? 'rgba(255,255,255,0.12)' : 'rgba(0,86,210,0.06)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px' }}>📢</span>
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: isMe ? 'rgba(255,255,255,0.9)' : '#0056D2' }}>오픈게시판 공유</span>
+                    <span style={{ fontSize: '10px', color: isMe ? 'rgba(255,255,255,0.55)' : '#aaa', marginLeft: 'auto' }}>{msg.postCategory}</span>
+                  </div>
+                  {/* 이미지 + 내용 */}
+                  <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                    {msg.postImage && (
+                      <img src={msg.postImage} alt="" style={{ width: '70px', height: '70px', objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <div style={{ padding: '10px 12px', flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: isMe ? '#fff' : '#1c1c1e', lineHeight: '1.4', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {msg.postTitle || '(내용 없음)'}
+                      </div>
+                    </div>
+                  </div>
+                  {/* 풀버튼 */}
+                  <div style={{ padding: '8px 12px', borderTop: `1px solid ${isMe ? 'rgba(255,255,255,0.15)' : '#f0f0f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', color: isMe ? 'rgba(255,255,255,0.8)' : '#0056D2', fontSize: '12px', fontWeight: '800' }}>
+                    <ExternalLink size={12} />
+                    게시글 보러가기
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div key={String(msg._id || `msg-${idx}`)} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '78%' }}>
               <div style={{ fontSize: '11px', color: '#8e8e93', marginBottom: '4px', textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: '4px', flexDirection: isMe ? 'row-reverse' : 'row' }}>

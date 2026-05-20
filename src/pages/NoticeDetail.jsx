@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, Edit2, Trash2, Bell, Calendar, Eye } from 'lucide-react';
+import { ChevronLeft, Edit2, Trash2, Bell, Calendar, Eye, Share2, Send, X as XIcon } from 'lucide-react';
 import apiClient from '../api/index';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ImageGallery from '../components/ImageGallery';
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function NoticeDetail() {
   const navigate = useNavigate();
@@ -18,6 +21,12 @@ export default function NoticeDetail() {
   const [notice, setNotice] = useState(location.state?.notice || null);
   const [loading, setLoading] = useState(!location.state?.notice);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // ✅ SHARE
+  const [shareModal, setShareModal] = useState(false);
+  const [myCrews, setMyCrews] = useState([]);
+  const [shareTarget, setShareTarget] = useState(null);
+  const [sharing, setSharing] = useState(false);
+  const shareSockets = useRef({});
 
   // ✅ 11TH-A2: state.isAdmin() 셉렉터 → ADMIN_ID/EMAIL 직접 비교 (3RD-A2 표준으로 통일)
   const isAdmin = useUserStore((state) =>
@@ -98,7 +107,26 @@ export default function NoticeDetail() {
               <Trash2 size={14} /> 삭제
             </button>
           </div>
-        ) : <div style={{ width: '70px' }} />}
+        ) : (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {/* ✅ 공유 버튼 (일반 유저) */}
+            <button
+              onClick={async () => {
+                if (!user) { addToast('로그인 후 이용하세요.', 'error'); return; }
+                try {
+                  const res = await apiClient.get('/api/user/crews');
+                  setMyCrews(Array.isArray(res.data) ? res.data : []);
+                } catch { setMyCrews([]); }
+                setShareTarget(null);
+                setShareModal(true);
+              }}
+              style={{ background: 'rgba(0,86,210,0.08)', border: 'none', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', color: '#0056D2', fontWeight: '800', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px' }}
+            >
+              <Share2 size={14} /> 공유
+            </button>
+            <div style={{ width: '70px' }} />
+          </div>
+        )}
       </div>
 
       {/* 본문 */}
@@ -172,6 +200,79 @@ export default function NoticeDetail() {
               <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1.5px solid #E5E5EA', background: '#fff', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}>취소</button>
               <button onClick={handleDelete} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#FF3B30', color: '#fff', fontSize: '15px', fontWeight: '900', cursor: 'pointer' }}>삭제</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ SHARE-MODAL: 공지 → 크루 채팅방 공유 */}
+      {shareModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={() => setShareModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: '#fff', borderRadius: '24px 24px 0 0', padding: '20px 20px 32px', boxShadow: '0 -8px 32px rgba(0,0,0,0.18)', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '16px', fontWeight: '900', color: '#1c1c1e' }}>📢 크루 채팅방에 공유</span>
+              <button onClick={() => setShareModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><XIcon size={20} color="#8e8e93" /></button>
+            </div>
+            {/* 미리보기 */}
+            <div style={{ background: '#FFF5F5', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px', border: '1px solid #FFD6D6' }}>
+              <div style={{ fontSize: '11px', color: '#FF3B30', fontWeight: '900', marginBottom: '4px' }}>📢 공지사항</div>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1c1c1e' }}>{notice.title}</div>
+              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>{(notice.content || '').slice(0, 60)}</div>
+            </div>
+            <div style={{ fontSize: '13px', color: '#8e8e93', fontWeight: '700', marginBottom: '8px' }}>내가 속한 크루 ({myCrews.length})</div>
+            {myCrews.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: '#aaa', fontSize: '14px' }}>가입된 크루가 없습니다.</div>
+            ) : (
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                {myCrews.map(crew => {
+                  const crewId = String(crew._id || crew.id);
+                  const selected = String(shareTarget?._id || shareTarget?.id) === crewId;
+                  return (
+                    <div key={crewId} onClick={() => setShareTarget(crew)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '14px', cursor: 'pointer', background: selected ? '#EEF4FF' : '#F8F9FA', border: selected ? '2px solid #0056D2' : '1.5px solid transparent' }}>
+                      <span style={{ fontSize: '24px' }}>{crew.emoji || '🎣'}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: selected ? '#0056D2' : '#1c1c1e' }}>{crew.name}</div>
+                        <div style={{ fontSize: '11px', color: '#8e8e93' }}>멤버 {crew.memberList?.length || crew.members || 0}명</div>
+                      </div>
+                      {selected && <span style={{ color: '#0056D2', fontWeight: '900' }}>✓</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button
+              disabled={!shareTarget || sharing}
+              onClick={async () => {
+                if (!shareTarget || sharing) return;
+                setSharing(true);
+                const crewId = String(shareTarget._id || shareTarget.id);
+                try {
+                  if (!shareSockets.current[crewId] || !shareSockets.current[crewId].connected) {
+                    let tok; try { tok = localStorage.getItem('access_token') || undefined; } catch { tok = undefined; }
+                    const s = io(SOCKET_URL, { transports: ['websocket', 'polling'], auth: { token: tok } });
+                    shareSockets.current[crewId] = s;
+                    await new Promise(res => s.once('connect', res));
+                    s.emit('join_crew', crewId);
+                  }
+                  shareSockets.current[crewId].emit('send_msg', {
+                    crewId, type: 'post_share',
+                    postId: String(notice._id || id),
+                    postTitle: notice.title || '(제목 없음)',
+                    postPreview: (notice.content || '').slice(0, 120),
+                    postImage: notice.images?.[0] || notice.image || '',
+                    postCategory: '📢 공지사항',
+                  });
+                  addToast(`✅ ${shareTarget.name} 채팅방에 공유했습니다!`, 'success');
+                  setShareModal(false);
+                } catch { addToast('공유에 실패했습니다.', 'error'); }
+                finally { setSharing(false); }
+              }}
+              style={{ width: '100%', padding: '16px', border: 'none', borderRadius: '16px', background: (!shareTarget || sharing) ? '#E5E5EA' : 'linear-gradient(135deg,#FF3B30,#c0392b)', color: (!shareTarget || sharing) ? '#aaa' : '#fff', fontSize: '16px', fontWeight: '900', cursor: (!shareTarget || sharing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Send size={18} />
+              {sharing ? '공유 중...' : shareTarget ? `${shareTarget.name}에 공유하기` : '크루를 선택하세요'}
+            </button>
           </div>
         </div>
       )}

@@ -773,62 +773,77 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_msg', async (data) => {
-    // ── 서버 사이드 유효성 검증 ──────────────────────────────
-    const text = censorText((data.text || '').toString().trim()); // ✅ BUG-FIX: 채팅 욕설 필터 적용 (게시글/댓글과 동일)
-    if (!text || text.length > 500) return; // 빈값/500자 초과 차단
     if (!data.crewId || typeof data.crewId !== 'string') return;
 
-    // ✅ NICK-FIX (완전체): 닉네임 우선 결정 — 모든 유저/신규가입자 동일 보장
-    // 우선순위: 소켓 캐시 → memUsers 동기 → DB await → JWT name → 익명
+    // ── 닉네임 결정 (기존 로직 동일) ─────────────────────────
     let resolvedNickname = cachedNickname;
     if (!resolvedNickname && verifiedUser?.email) {
-      // 2순위: 인메모리에서 즉시 동기 조회
       const memU = memUsers.find(u => u.email === verifiedUser.email);
-      if (memU?.name) {
-        resolvedNickname = memU.name;
-        cachedNickname = memU.name;
-      } else if (dbReady && User) {
-        // 3순위: DB await 조회 (DB 모드 신규 가입자 대응 — 경쟁조건 완전 제거)
+      if (memU?.name) { resolvedNickname = memU.name; cachedNickname = memU.name; }
+      else if (dbReady && User) {
         try {
           const dbU = await User.findOne({ email: verifiedUser.email }).select('name totalExp').lean();
-          if (dbU?.name) {
-            resolvedNickname = dbU.name;
-            cachedNickname = dbU.name;
-            if (dbU.totalExp !== undefined) cachedLevel = getServerLevel(dbU.totalExp);
-          }
-        } catch { /* DB 조회 실패 시 다음 fallback */ }
+          if (dbU?.name) { resolvedNickname = dbU.name; cachedNickname = dbU.name; if (dbU.totalExp !== undefined) cachedLevel = getServerLevel(dbU.totalExp); }
+        } catch { /* fallback */ }
       }
     }
-    // 최종 fallback: JWT name → 익명 (절대 이메일/아이디 노출 없음)
-    const senderRaw = resolvedNickname || verifiedUser?.name || '익명';
-    const sender = senderRaw.toString().slice(0, 30);
+    const sender = (resolvedNickname || verifiedUser?.name || '익명').toString().slice(0, 30);
+
+    // ── post_share 타입 처리 ──────────────────────────────────
+    if (data.type === 'post_share') {
+      const postId = (data.postId || '').toString().trim();
+      if (!postId) return;
+      const msgData = {
+        type: 'post_share',
+        sender,
+        postId,
+        postTitle:   (data.postTitle   || '').toString().slice(0, 100),
+        postPreview: (data.postPreview || '').toString().slice(0, 120),
+        postImage:   (data.postImage   || '').toString().slice(0, 300),
+        postCategory:(data.postCategory|| '').toString().slice(0, 20),
+        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        socketId: socket.id,
+        senderLevel: cachedLevel.level,
+        senderEmoji: cachedLevel.emoji,
+        senderTitle: cachedLevel.title,
+      };
+      if (!chatHistories[data.crewId]) chatHistories[data.crewId] = [];
+      chatHistories[data.crewId].push(msgData);
+      if (chatHistories[data.crewId].length > 500) chatHistories[data.crewId] = chatHistories[data.crewId].slice(-500);
+      io.to(data.crewId).emit('new_msg', msgData);
+      if (dbReady && ChatMessage) {
+        try {
+          await new ChatMessage({ crewId: data.crewId, sender: msgData.sender, text: `[게시글공유] ${msgData.postTitle}`, time: msgData.time }).save();
+        } catch (e) { logger.error(`[Socket] post_share DB 저장 실패: ${e.message}`); }
+      } else { saveChatHistories(); }
+      return;
+    }
+
+    // ── 일반 텍스트 메시지 처리 (기존 로직) ──────────────────
+    const text = censorText((data.text || '').toString().trim());
+    if (!text || text.length > 500) return;
 
     const msgData = {
       sender,
       text,
       time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-      socketId: socket.id,  // ✅ BUG-DUP: 발신자 소켓ID — 클라이언트 본인 메시지 판별용
+      socketId: socket.id,
       senderLevel: cachedLevel.level,
       senderEmoji: cachedLevel.emoji,
       senderTitle: cachedLevel.title,
     };
     if (!chatHistories[data.crewId]) chatHistories[data.crewId] = [];
     chatHistories[data.crewId].push(msgData);
-    // 메모리 보호: 채팅방당 최대 500개 유지
-    if (chatHistories[data.crewId].length > 500) {
-      chatHistories[data.crewId] = chatHistories[data.crewId].slice(-500);
-    }
-    // 방 전체 인원에게 발송
+    if (chatHistories[data.crewId].length > 500) chatHistories[data.crewId] = chatHistories[data.crewId].slice(-500);
     io.to(data.crewId).emit('new_msg', msgData);
-    // DB 영구저장
     if (dbReady && ChatMessage) {
       try {
         await new ChatMessage({ crewId: data.crewId, sender: msgData.sender, text: msgData.text, time: msgData.time }).save();
-        // DB 모드에서도 일정 비율로 파일 백업 (서버 재시작 대비)
         if (chatHistories[data.crewId]?.length % 50 === 0) saveChatHistories();
-      } catch (e) { logger.error(`[Socket] send_msg DB 저장 실패 (crewId=${data.crewId}): ${e.message}`); } // ✅ 21TH-B3: silent catch → logger.error
+      } catch (e) { logger.error(`[Socket] send_msg DB 저장 실패 (crewId=${data.crewId}): ${e.message}`); }
     } else { saveChatHistories(); }
   });
+
 
   socket.on('disconnect', () => {
     logger.info(`[Socket] User disconnected: ${socket.id}`); // ✅ 21TH-B1: console.log → logger.info
