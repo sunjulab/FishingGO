@@ -3,20 +3,18 @@ name: FishingGO Auto Deploy
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:   # 수동 실행 허용 (Actions 탭에서 Run workflow 버튼)
 
 jobs:
-  # ✅ 29TH-C2: 배포 경로 명시
-  # 프론트엔드(Vercel): GitHub 저장소 연동으로 main push 시 자동 배포
-  #   - Vercel 대시보드 → 프로젝트 → Settings → Git Integration 확인
-  #   - 연동 해제 시: vercel CLI(deploy_cli.cjs/.mjs)로 수동 배포 가능
-  # 백엔드(Render): 아래 deploy-backend job으로 Render Deploy Hook 트리거
+  # ══════════════════════════════════════════════════════════════
+  # ⚙️  Job 1: Render 백엔드 재배포 트리거
+  # ══════════════════════════════════════════════════════════════
   deploy-backend:
-    name: Trigger Render Backend Redeploy
-    runs-on: ubuntu-22.04  # ✅ 21TH-C2: ubuntu-latest → 버전 고정 (major 업그레이드로 인한 빌드 불일치 방지)
+    name: "① Render 백엔드 재배포"
+    runs-on: ubuntu-22.04
     steps:
       - name: Trigger Render Deploy Hook
         run: |
-          # ✅ 13TH-B3: --fail 추가 — HTTP 오류 시 workflow 실패 처리 (이전: 무조건 성공)
           response=$(curl --fail --silent --show-error -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
           http_code="${response: -3}"
           if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
@@ -25,3 +23,121 @@ jobs:
             echo "❌ Render 배포 트리거 실패 (HTTP $http_code)"
             exit 1
           fi
+
+  # ══════════════════════════════════════════════════════════════
+  # 🗄️  Job 2: MongoDB 마이그레이션 자동 실행
+  #   - Render 배포 완료(90초) 후 migrate.js 실행
+  #   - MONGO_URI 시크릿이 없으면 스킵 (인메모리 모드)
+  # ══════════════════════════════════════════════════════════════
+  run-migration:
+    name: "② MongoDB 마이그레이션"
+    runs-on: ubuntu-22.04
+    needs: deploy-backend          # 백엔드 배포 후 실행
+    if: ${{ secrets.MONGO_URI != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        run: npm install
+        working-directory: server
+
+      - name: Wait for Render deploy (90s)
+        run: sleep 90
+
+      - name: Run migration script
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          NODE_ENV: production
+        run: node migrate.js
+        working-directory: server
+
+  # ══════════════════════════════════════════════════════════════
+  # 📱  Job 3: Android APK 자동 빌드
+  #   - main 브랜치 push 또는 수동 실행 시 APK 빌드
+  #   - 빌드된 APK는 Actions Artifacts로 30일 보관
+  #   - GitHub Secrets 필요:
+  #       KEYSTORE_PASSWORD  : 키스토어 비밀번호
+  #       KEY_ALIAS          : 키 별칭 (fishinggo)
+  #       KEY_PASSWORD       : 키 비밀번호
+  #       VITE_API_URL       : 프로덕션 API URL
+  #       VITE_KAKAO_APP_KEY : 카카오 앱 키
+  # ══════════════════════════════════════════════════════════════
+  build-apk:
+    name: "③ Android APK 빌드"
+    runs-on: ubuntu-22.04
+    needs: deploy-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build Vite (프론트엔드)
+        env:
+          VITE_API_URL:        ${{ secrets.VITE_API_URL }}
+          VITE_KAKAO_APP_KEY:  ${{ secrets.VITE_KAKAO_APP_KEY }}
+          VITE_DISABLE_PWA:    'true'
+        run: npm run build
+
+      - name: Capacitor Sync (웹 → Android)
+        run: npx cap sync android
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        working-directory: android
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fishinggo-release-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+      - name: APK 빌드 완료 요약
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          APK_SIZE=$(du -sh "$APK_PATH" | cut -f1)
+          echo "✅ APK 빌드 완료"
+          echo "   파일: $(basename $APK_PATH)"
+          echo "   크기: $APK_SIZE"
+          echo "   위치: Actions → 해당 워크플로 → Artifacts 탭에서 다운로드"
