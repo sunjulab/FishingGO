@@ -437,7 +437,9 @@ export default function CommunityTab() {
     };
     fetchData();
     // fetchPosts는 아래 useEffect가 마운트 시에도 실행하므로 여기서 중복 호출 제거
-  }, [location.search, user?.email]);
+    // ✅ BUG-FIX: location.search 제거 — URL 쿼리 변경 시 크루/공지/선상배 API 중복 재호출 방지
+    //             (postId 스크롤/탭 전환은 L131 useEffect에서 별도 처리)
+  }, [user?.email]);
 
   // ✅ ADMOB-INTERSTITIAL: 선상배홈보 탭 진입 시 FREE 유저 인터스티셜 광고 1회 표시
   useEffect(() => {

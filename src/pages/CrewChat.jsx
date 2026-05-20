@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { ChevronLeft, Send, Users, ShieldCheck, Wifi, WifiOff, X, LogOut, Trash2, ExternalLink } from 'lucide-react';
@@ -60,6 +60,16 @@ export default function CrewChat() {
   const myRole = members.find(m => m.email === user?.email)?.role || 'member';
   const isOfficer = myRole === 'officer';
 
+  // ✅ BUG-FIX: useCallback으로 안정화 — stale closure 방지 + useEffect deps 충돌 해소
+  // ⚠️ 선언 위치: useEffect(L63) 이전에 위치해야 호출 시 TDZ 없음
+  const loadMembers = useCallback(async () => {
+    setLoadingMembers(true);
+    try {
+      const res = await apiClient.get(`/api/community/crews/${id}/members`);
+      setMembers(res.data?.members || []);
+    } catch { } finally { setLoadingMembers(false); }
+  }, [id]);
+
   useEffect(() => {
     apiClient.get(`/api/community/crews/${id}`)
       .then(res => {
@@ -68,15 +78,7 @@ export default function CrewChat() {
         setCrewLimit(res.data?.limit != null ? res.data.limit : 1000);
       }).catch(() => {});
     loadMembers();
-  }, [id]);
-
-  const loadMembers = async () => {
-    setLoadingMembers(true);
-    try {
-      const res = await apiClient.get(`/api/community/crews/${id}/members`);
-      setMembers(res.data?.members || []);
-    } catch { } finally { setLoadingMembers(false); }
-  };
+  }, [id, loadMembers]); // ✅ BUG-FIX: loadMembers를 deps에 포함 (useCallback으로 안정화됨)
 
   useEffect(() => {
     // ✅ FIX-STORAGE: localStorage.getItem try/catch — Safari 개인정보 보호 모드 StorageError 방어
