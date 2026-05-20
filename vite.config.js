@@ -16,10 +16,11 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     // ✅ APK 빌드 시 VITE_DISABLE_PWA=true 환경변수로 PWA 비활성화 가능
-    ...(env.VITE_DISABLE_PWA === 'true' ? [] : [VitePWA({
+    // ✅ DEV-FIX: 개발 모드에서는 PWA 서비스워커 완전 비활성화 (API 요청 차단 방지)
+    ...(env.VITE_DISABLE_PWA === 'true' || mode !== 'production' ? [] : [VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'], // webp 제거 — 대용량 파일 캐시 방지
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'], // ✅ FIX-PWA: png 추가 — icon-192.png/icon-512.png 오프라인 프리캐시 보장
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB (5MB → 3MB 강화)
         skipWaiting: true,
         clientsClaim: true,
@@ -91,11 +92,17 @@ export default defineConfig(({ mode }) => {
         changeOrigin: true,
         secure: false,
       },
-      '/khoa-api': {
-        target: 'https://www.khoa.go.kr',
+      '/data-go-api': {
+        target: 'https://apis.data.go.kr',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/khoa-api/, '/api'),
+        rewrite: (path) => path.replace(/^\/data-go-api/, ''),
         secure: false,
+        // ✅ FIX-PROXY: 공공데이터포털 URL 이중 인코딩 방지
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            // decodeURIComponent 없이 그대로 전달 (이중 인코딩 방지)
+          });
+        },
       }
     }
   }

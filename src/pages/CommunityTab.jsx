@@ -10,6 +10,8 @@ import SkeletonCard from '../components/SkeletonCard';
 import { BannerAd, NativeAd } from '../components/AdUnit';
 import { showInterstitialAd } from '../services/AdMobService';
 import { loadNativeAd, updateNativeAdPositions, removeNativeAd, removeAllNativeAds } from '../services/NativeAdService';
+import ImageGallery from '../components/ImageGallery'; // ✅ MULTI-IMG: 다중 이미지 갤러리
+import StorySlider from '../components/StorySlider'; // ✅ INSTA-P3: 24h 조황 스토리 슬라이더
 
 // ✅ 3RD-B5: InFeedAd 컴포넌트 함수 내부 인라인 정의 → 외부 추출 — 렌더마다 재생성 방지
 function InFeedAd() {
@@ -104,7 +106,12 @@ function useDebounce(value, delay = 300) {
 export default function CommunityTab() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('business');
+  // ✅ BUG-FIX: 복귀 시 sessionStorage에 returnTab이 있으면 'open'으로 시작, 즉시 삭제 (일반 진입 시 오염 방지)
+  const [activeTab, setActiveTab] = useState(() => {
+    const rt = sessionStorage.getItem('community_return_tab');
+    if (rt) sessionStorage.removeItem('community_return_tab'); // 즉시 삭제
+    return rt || 'business';
+  });
   // ENH4-B3: DOM 직접 조작 대신 React state 기반 하이라이트
   const [highlightedPostId, setHighlightedPostId] = useState(null);
   const sentinelRef = useRef(null);
@@ -112,6 +119,10 @@ export default function CommunityTab() {
   const interstitialShownRef = useRef(false);
   // ✅ NATIVE-AD: 인피드 네이티브 광고 슬롯 맵 (slotId → placeholder el)
   const nativeAdSlotMapRef = useRef(new Map());
+  const scrollToPostIdRef = useRef(null); // 복귀 시 해당 게시글로 scrollIntoView 대기용
+  // ✅ INSTA-P1: 그리드/피드 뷰 전환
+  const lastTapRef = useRef({}); // 더블탭 감지용 (postId → 마지막 탭 시각)
+  const [heartBurstId, setHeartBurstId] = useState(null); // 더블탭 하트 폭발 표시용 postId
 
   // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
   useEffect(() => {
@@ -133,7 +144,17 @@ export default function CommunityTab() {
     }
   }, [location.search]);
 
-  // ✅ 25TH-B2: canAccessPremium 셀렉터 실함 호출 → userTier 기반 useMemo 직접 판별 (16TH-B1 WritePost / 17TH-A1 FishingPointBottomSheet 패턴 통일)
+  // ✅ SCROLL-RETURN: 마운트 시 sessionStorage에서 반환 게시글ID 복원
+  // ⚠️ activeTab은 useState() lazy init에서 이미 복원 및 삭제됨 — 여기서는 returnId만 처리
+  useEffect(() => {
+    const returnId = sessionStorage.getItem('community_return_post_id');
+    if (returnId) {
+      scrollToPostIdRef.current = returnId; // posts 로드 후 scrollIntoView
+      sessionStorage.removeItem('community_return_post_id'); // ✅ ID-FIX: 설정 후 즉시 삭제 (다음 진입 시 재실행 방지)
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ✅ 25TH-B2: canAccessPremium 셀렉터 실함 호출 → userTier 기반 useMemo 직접 판별
   const userTier = useUserStore((state) => state.userTier);
   const user = useUserStore((state) => state.user);
   const canAccessPremium = useMemo(() => {
@@ -167,6 +188,21 @@ export default function CommunityTab() {
   const [page, setPage] = useState(1);                   // 현재 페이지
   const [totalPages, setTotalPages] = useState(1);       // 전체 페이지 수
   const [loadingMore, setLoadingMore] = useState(false); // 더보기 로딩
+  // ✅ INSTA-P1: 그리드/피드 전환 + 인기순 정렬
+  const [viewMode, setViewMode] = useState('feed'); // 'feed' | 'grid'
+  const [sortMode, setSortMode] = useState('latest'); // 'latest' | 'popular'
+  // ✅ INSTA-EXPAND: 인스타그램형 인라인 카드 확장
+  const [expandedPostId, setExpandedPostId] = useState(null); // 확장된 postId
+  const [slideIndexMap, setSlideIndexMap] = useState({}); // postId → 현재 슬라이드 인덱스
+  const slideStartXRef = useRef({}); // postId → 터치 시작 X좌표
+  const slideWrapperRefs = useRef(new Map()); // postId → 슬라이더 wrapper DOM 요소
+  // ✅ INSTA-COMMENT: 인라인 댓글 입력창
+  const [commentInputMap, setCommentInputMap] = useState({}); // postId → 입력 텍스트
+  const [commentOpenMap, setCommentOpenMap] = useState({}); // postId → 입력창 열림 여부
+  const [commentSubmittingMap, setCommentSubmittingMap] = useState({}); // postId → 제출 중
+  // ✅ INSTA-P3: 스토리 상태
+  const [stories, setStories] = useState([]);
+  const [storyViewer, setStoryViewer] = useState(null); // 현재 보고 있는 story
   // ✅ 7TH-B1: OPEN_CATEGORIES는 컴포넌트 외부 상수로 이동 (L31)
   const [crewPassModal, setCrewPassModal] = useState(null); // { crew } | null
   const [crewPassInput, setCrewPassInput]  = useState('');
@@ -303,6 +339,8 @@ export default function CommunityTab() {
       params.set('limit', 20);
       if (openCategory !== '전체') params.set('category', openCategory);
       if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim());
+      // ✅ INSTA-P2: 인기순 정렬 지원
+      if (sortMode === 'popular') params.set('sort', 'popular');
       const res = await apiClient.get(`/api/community/posts?${params}`);
       const data = res.data;
       // 서버가 {posts, total, page, totalPages} 형식 반환
@@ -323,7 +361,22 @@ export default function CommunityTab() {
       // 1페이지 로드 완료 시 초기 로딩 해제 (append=true인 무한스크롤은 제외)
       if (pageNum === 1 && !append) setLoading(false);
     }
-  }, [openCategory, debouncedSearch, user?.blockedUsers]);
+  }, [openCategory, debouncedSearch, sortMode, user?.blockedUsers]);
+
+  // ✅ SCROLL-APPLY: posts 로드 완료 후 반환 게시글으로 scrollIntoView
+  // ⚠️ requestAnimationFrame만으로는 렌더 확정이 늘리면 실패 — setTimeout 150ms 보증 추가
+  useEffect(() => {
+    if (!scrollToPostIdRef.current || posts.length === 0) return;
+    const targetId = scrollToPostIdRef.current;
+    scrollToPostIdRef.current = null;
+    sessionStorage.removeItem('community_return_post_id');
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`post-${targetId}`);
+      if (el) el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    }, 150); // DOM 렌더 충분한 시간 확보
+    return () => clearTimeout(timer);
+  }, [posts]);
+
 
   // ✅ 7TH-B2: React.useEffect → useEffect 통일
   useEffect(() => {
@@ -338,7 +391,12 @@ export default function CommunityTab() {
           apiClient.get('/api/community/business').catch(() => ({ data: [] })),
         ];
         // ✅ CREW-ENH: 로그인 유저면 내 크루 목록도 함께 로드
-        const myCrewsPromise = (user?.email && user.email !== 'guest@fishinggo.com')
+        // ✅ BUG-FIX: GUEST id 체크 추가 — 비로그인/GUEST 상태에서 401 콘솔 에러 방지
+        const isLoggedIn = user?.email
+          && user.email !== 'guest@fishinggo.com'
+          && user?.id !== 'GUEST'
+          && user?.id !== 'guest';
+        const myCrewsPromise = isLoggedIn
           ? apiClient.get('/api/user/crews').catch(() => ({ data: [] }))
           : Promise.resolve({ data: [] });
 
@@ -347,9 +405,15 @@ export default function CommunityTab() {
 
         // ✅ FIX-EMPTY: ?.length 조건 제거 — 빈 배열([])도 항상 setState 호출
         // 이전: [].length === 0 (falsy) → setCrews 미호출 → 구버전 state 유지 버그
-        if (Array.isArray(crewsRes.data)) setCrews(crewsRes.data.filter(c => !blocked.includes(c.ownerName)));
+        // ✅ BUG-FIX: 차단 필터 ownerName → owner(이메일) — blockedUsers는 이메일 목록
+        if (Array.isArray(crewsRes.data)) setCrews(crewsRes.data.filter(c => !blocked.includes(c.owner)));
         if (Array.isArray(noticesRes.data)) setNoticePosts(noticesRes.data);
         if (Array.isArray(businessRes.data)) setBusinessPosts(businessRes.data.filter(p => !blocked.includes(p.author)));
+
+        // ✅ INSTA-P3: 24h 스토리 로드 (오류는 조용히 무시)
+        apiClient.get('/api/stories').then(r => {
+          if (Array.isArray(r.data)) setStories(r.data);
+        }).catch(() => { /* 스토리 API 없어도 무시 */ });
 
         // ✅ CREW-ENH: 내 크루 ID Set 구성
         if (Array.isArray(myCrewsRes?.data) && myCrewsRes.data.length > 0) {
@@ -375,7 +439,7 @@ export default function CommunityTab() {
     interstitialShownRef.current = true;
     const timer = setTimeout(() => {
       showInterstitialAd(() => {
-        console.log('[AdMob] 선상배홈보 인터스티셜 종료');
+        if (!import.meta.env.PROD) console.log('[AdMob] 선상배홈보 인터스티셜 종료');
       });
     }, 1500);
     return () => clearTimeout(timer);
@@ -404,12 +468,13 @@ export default function CommunityTab() {
   }, [openCategory, debouncedSearch, activeTab, fetchPosts]);
 
   // 무한스크롤: sentinel div가 뷰포트에 들어오면 다음 페이지 자동 로드
+  // ✅ BUG-FIX: activeTab !== 'open' 시에도 observer가 작동해 불필요한 API 호출 발생 → tab guard 추가
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && page < totalPages) {
+        if (entries[0].isIntersecting && !loadingMore && page < totalPages && activeTab === 'open') {
           setLoadingMore(true);
           fetchPosts(page + 1, true).finally(() => setLoadingMore(false));
         }
@@ -418,7 +483,7 @@ export default function CommunityTab() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [page, totalPages, loadingMore, fetchPosts]);
+  }, [page, totalPages, loadingMore, fetchPosts, activeTab]);
 
   const handleLoadMore = async () => {
     if (page >= totalPages) return;
@@ -431,12 +496,13 @@ export default function CommunityTab() {
   const handleDeletePost = async (e, id, type) => {
     e.stopPropagation();
     const myEmail = user?.email || user?.id || null;
-    const myName = user?.name || null;
+    // ✅ BUG-FIX: myName 변수 제거 (dead code — handleDeletePost에서 미사용)
     const isAuthorDelete =
       (type === 'open' && posts.find(p => String(p._id || p.id) === String(id))?.author_email === myEmail) ||
       (type === 'business' && businessPosts.find(p => String(p._id || p.id) === String(id))?.author_email === myEmail);
     if (!isAdmin && !isAuthorDelete) return;
-    // window.confirm 제거 — 권한 체크 통과 시 즉시 삭제 (PostDetail에 인앱 확인 모달 있음)
+    // ✅ BUG-FIX: 즉시 삭제 → 확인 다이얼로그 추가 (PostDetail 모달 없이 카드에서 직접 삭제하므로 취소 기회 필요)
+    if (!window.confirm('게시물을 삭제하시겠습니까?')) return;
     try {
       const endpoint =
         type === 'open' ? `/api/community/posts/${id}` :
@@ -447,9 +513,9 @@ export default function CommunityTab() {
           email: myEmail,
         }
       });
-      if (type === 'open') setPosts(prev => prev.filter(p => (p._id || p.id) !== id));
-      if (type === 'business') setBusinessPosts(prev => prev.filter(p => (p._id || p.id) !== id));
-      if (type === 'notice') setNoticePosts(prev => prev.filter(p => (p._id || p.id) !== id));
+      if (type === 'open') setPosts(prev => prev.filter(p => String(p._id || p.id) !== String(id)));
+      if (type === 'business') setBusinessPosts(prev => prev.filter(p => String(p._id || p.id) !== String(id)));
+      if (type === 'notice') setNoticePosts(prev => prev.filter(p => String(p._id || p.id) !== String(id)));
       addToast('게시물이 삭제되었습니다.', 'success');
     } catch (err) {
       const errMsg = err.response?.data?.error || '삭제에 실패했습니다. 다시 시도해주세요.';
@@ -481,8 +547,8 @@ export default function CommunityTab() {
     const prevLiked = { ...likedPosts };
     const newLiked = { ...likedPosts, [postId]: true };
     setLikedPosts(newLiked);
-    localStorage.setItem('community_liked_posts', JSON.stringify(newLiked));
-    setPosts(prev => prev.map(p => (p._id || p.id) === postId ? { ...p, likes: (p.likes || 0) + 1 } : p));
+    try { localStorage.setItem('community_liked_posts', JSON.stringify(newLiked)); } catch { /* StorageError 무시 */ }
+    setPosts(prev => prev.map(p => String(p._id || p.id) === postId ? { ...p, likes: (p.likes || 0) + 1 } : p));
 
     // 하트 버스트 애니메이션 트리거
     setLikeAnimating(prev => ({ ...prev, [postId]: true }));
@@ -499,7 +565,7 @@ export default function CommunityTab() {
       // 서버 응답의 정확한 likes 수로 동기화
       const serverLikes = res.data?.likes;
       if (typeof serverLikes === 'number') {
-        setPosts(prev => prev.map(p => (p._id || p.id) === postId ? { ...p, likes: serverLikes } : p));
+        setPosts(prev => prev.map(p => String(p._id || p.id) === postId ? { ...p, likes: serverLikes } : p));
       }
     } catch (err) {
       const status = err.response?.status;
@@ -508,20 +574,51 @@ export default function CommunityTab() {
         // 서버 기준 이미 좋아요 → 로컬 상태는 유지 (중복 방어 성공)
         const serverLikes = err.response?.data?.likes;
         if (typeof serverLikes === 'number') {
-          setPosts(prev => prev.map(p => (p._id || p.id) === postId ? { ...p, likes: serverLikes } : p));
+          setPosts(prev => prev.map(p => String(p._id || p.id) === postId ? { ...p, likes: serverLikes } : p));
         }
         return;
       }
       if (status === 401 || code === 'AUTH_REQUIRED') {
         // JWT 만료 — Optimistic UI 롤백
         setLikedPosts(prevLiked);
-        localStorage.setItem('community_liked_posts', JSON.stringify(prevLiked));
-        setPosts(prev => prev.map(p => (p._id || p.id) === postId ? { ...p, likes: Math.max((p.likes || 1) - 1, 0) } : p));
+        try { localStorage.setItem('community_liked_posts', JSON.stringify(prevLiked)); } catch { /* StorageError 무시 */ }
+        setPosts(prev => prev.map(p => String(p._id || p.id) === postId ? { ...p, likes: Math.max((p.likes || 1) - 1, 0) } : p));
         addToast('로그인이 필요합니다.', 'error');
         return;
       }
       // 네트워크 오류 등 — 로컬 상태는 유지 (낙관적 처리), 경고만 출력
       if (!import.meta.env.PROD) console.warn('[Like] 서버 동기화 실패 (로컬 반영 유지):', err.message);
+    }
+  };
+
+  // ✅ INSTA-COMMENT: 인라인 댓글 제출 핸들러
+  const handleCommentSubmit = async (postId) => {
+    const text = (commentInputMap[postId] || '').trim();
+    if (!text) return;
+    if (!user || user.id === 'GUEST') { addToast('로그인 후 이용 가능합니다.', 'error'); return; }
+    setCommentSubmittingMap(prev => ({ ...prev, [postId]: true }));
+    try {
+      const res = await apiClient.post(`/api/community/posts/${postId}/comments`, {
+        author: user.name || user.id,
+        author_email: user.email || user.id,
+        text,
+      });
+      // ✅ BUG-FIX-COMMENT: 서버는 post 전체(comments 배열 포함)를 반환
+      // comments[0]은 가장 오래된 댓글 → 전체 comments 배열로 교체해야 최신 댓글 반영
+      const serverComments = res.data?.comments;
+      if (Array.isArray(serverComments)) {
+        setPosts(prev => prev.map(p =>
+          String(p._id || p.id) === postId
+            ? { ...p, comments: serverComments }
+            : p
+        ));
+      }
+      setCommentInputMap(prev => ({ ...prev, [postId]: '' }));
+      addToast('댓글이 등록되었습니다! 💬', 'success');
+    } catch (err) {
+      addToast(err.response?.data?.error || '댓글 등록에 실패했습니다.', 'error');
+    } finally {
+      setCommentSubmittingMap(prev => ({ ...prev, [postId]: false }));
     }
   };
 
@@ -620,8 +717,42 @@ export default function CommunityTab() {
               ))}
             </div>
           </div>
+          {/* ✅ INSTA-P1+P2: 정렬 토글 + 뷰모드 전환 툴바 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 10px' }}>
+            {/* 정렬 버튼 */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => setSortMode('latest')}
+                style={{
+                  padding: '5px 12px', borderRadius: '16px', border: 'none', fontSize: '12px', fontWeight: '800',
+                  background: sortMode === 'latest' ? '#1c1c1e' : '#F2F2F7',
+                  color: sortMode === 'latest' ? '#fff' : '#666', cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >최신순</button>
+              <button
+                onClick={() => setSortMode('popular')}
+                style={{
+                  padding: '5px 12px', borderRadius: '16px', border: 'none', fontSize: '12px', fontWeight: '800',
+                  background: sortMode === 'popular' ? '#FF5A5F' : '#F2F2F7',
+                  color: sortMode === 'popular' ? '#fff' : '#666', cursor: 'pointer', transition: 'all 0.15s',
+                }}
+              >🔥 인기순</button>
+            </div>
+            {/* 뷰모드 전환 */}
+            <button
+              onClick={() => setViewMode(v => v === 'feed' ? 'grid' : 'feed')}
+              style={{
+                background: 'none', border: '1px solid #E5E5EA', borderRadius: '8px',
+                padding: '5px 10px', fontSize: '13px', fontWeight: '800', cursor: 'pointer',
+                color: '#555', display: 'flex', alignItems: 'center', gap: '4px',
+              }}
+            >
+              {viewMode === 'feed' ? '⊞' : '≡'} {viewMode === 'feed' ? '그리드' : '피드'}
+            </button>
+          </div>
         </div>
       )}
+
 
       {/* 탭 내용 렌더링 영역 */}
       <div style={{ padding: '16px' }}>
@@ -653,10 +784,10 @@ export default function CommunityTab() {
 
                 {isAdmin && (
                   <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '6px' }}>
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/write?type=notice&editId=${notice._id || notice.id}`); }} style={{ border: 'none', background: 'rgba(0,86,210,0.1)', color: '#0056D2', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button onClick={(e) => { e.stopPropagation(); navigate(`/write?type=notice&editId=${String(notice._id || notice.id)}`); }} style={{ border: 'none', background: 'rgba(0,86,210,0.1)', color: '#0056D2', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Edit2 size={13} /> 수정
                     </button>
-                    <button onClick={(e) => handleDeletePost(e, notice._id || notice.id, 'notice')} style={{ border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button onClick={(e) => handleDeletePost(e, String(notice._id || notice.id), 'notice')} style={{ border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Trash2 size={13} /> 삭제
                     </button>
                   </div>
@@ -666,6 +797,19 @@ export default function CommunityTab() {
           </div>
         ) : activeTab === 'open' ? (
           <div className="fade-in">
+            {/* ✅ INSTA-P3: 24h 조황 스토리 슬라이더 */}
+            {(stories.length > 0 || user?.id !== 'GUEST') && (
+              <StorySlider
+                stories={stories}
+                onAddStory={() => {
+                  if (!user || user.id === 'GUEST') { addToast('로그인이 필요합니다.', 'error'); return; }
+                  addToast('스토리 등록: 사진을 선택해 24h 조황을 공유하세요!', 'info');
+                  navigate('/write?story=1');
+                }}
+                onViewStory={(s) => setStoryViewer(s)}
+              />
+            )}
+
             <BannerAd style={{ marginBottom: '16px' }} />
             {posts.length === 0 && !loading && (
               <div style={{ textAlign: 'center', padding: '48px 20px', color: '#AAB0BE' }}>
@@ -674,96 +818,434 @@ export default function CommunityTab() {
                 <div style={{ fontSize: '13px' }}>첫 조황을 공유해보세요!</div>
               </div>
             )}
-            {posts.map((post, index) => {
-              const postId = post._id || post.id;
+
+            {/* ✅ INSTA-P1: 그리드 뷰 */}
+            {viewMode === 'grid' && posts.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px', margin: '0 -16px' }}>
+                {posts.map((post, index) => {
+                  const postId = String(post._id || post.id);
+                  const imgSrc = post.images?.[0] || post.image;
+                  return (
+                    <div
+                      key={postId}
+                      onClick={() => {
+                        sessionStorage.setItem('community_return_tab', 'open');
+                        sessionStorage.setItem('community_return_post_id', postId);
+                        navigate(`/post/${postId}`, { state: { postIds: posts.map(p => String(p._id || p.id)), currentIndex: index } });
+                      }}
+                      style={{ aspectRatio: '1', overflow: 'hidden', position: 'relative', cursor: 'pointer', background: '#F2F2F7' }}
+                    >
+                      {imgSrc ? (
+                        <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', background: '#F8F9FA', fontSize: '9px', color: '#555', textAlign: 'center', lineHeight: 1.4 }}>
+                          <span style={{ fontSize: '18px', marginBottom: '3px' }}>🎣</span>
+                          {(post.content || '').slice(0, 28)}
+                        </div>
+                      )}
+                      {post.images?.length > 1 && (
+                        <div style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.6)', borderRadius: '4px', padding: '1px 5px', fontSize: '8px', color: '#fff', fontWeight: '900' }}>
+                          ⊞ {post.images.length}
+                        </div>
+                      )}
+                      {(post.likes > 0) && (
+                        <div style={{ position: 'absolute', bottom: '4px', left: '4px', display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', padding: '2px 5px', fontSize: '9px', color: '#fff' }}>
+                          ❤️ {post.likes}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ✅ INSTA-EXPAND: 인스타그램형 피드 (인라인 확장 + 이미지 슬라이드) */}
+            {viewMode === 'feed' && posts.map((post, index) => {
+              const postId = String(post._id || post.id);
+              const isExpanded = expandedPostId === postId;
+              const allImages = Array.isArray(post.images) && post.images.length > 0
+                ? post.images
+                : post.image ? [post.image] : [];
+              const slideIdx = slideIndexMap[postId] || 0;
+              const imgCount = allImages.length;
+              // ✅ FIX-EXPAND: 글자 수 OR 줄바꿈 3줄 초과 시 더보기 표시
+              const contentLines = (post.content || '').split('\n');
+              const needsExpand = (post.content || '').length > 80 || contentLines.length > 3;
+
+              // ✅ FIX-NEWLINE: \n → <br> 변환 + 해시태그 파싱
+              const renderContent = (text) => {
+                if (!text) return null;
+                // 먼저 줄바꿈으로 분리, 각 줄을 해시태그 파싱 후 <br> 삽입
+                const lines = text.split('\n');
+                return lines.map((line, lineIdx) => {
+                  const parts = line.split(/(#[\w가-힣]+)/g).map((part, i) =>
+                    part.startsWith('#') ? (
+                      <span key={i} onClick={(e) => { e.stopPropagation(); setSearchQuery(part.slice(1)); }}
+                        style={{ color: '#0056D2', fontWeight: '800', cursor: 'pointer' }}>{part}</span>
+                    ) : part
+                  );
+                  return (
+                    <React.Fragment key={lineIdx}>
+                      {parts}
+                      {lineIdx < lines.length - 1 && <br />}
+                    </React.Fragment>
+                  );
+                });
+              };
+
+              // ✅ FIX-SLIDER: CSS transform 슬라이드 이동 헬퍼
+              const goSlide = (e, dir) => {
+                e.stopPropagation();
+                setSlideIndexMap(prev => {
+                  const cur = prev[postId] || 0;
+                  const next = Math.max(0, Math.min(allImages.length - 1, cur + dir));
+                  return { ...prev, [postId]: next };
+                });
+              };
+
               return (
                 <React.Fragment key={postId}>
                   <div
                     id={`post-${postId}`}
-                    onClick={() => navigate(`/post/${postId}`, { state: { fromTab: 'open' } })}
                     style={{
-                      backgroundColor: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '12px',
-                      boxShadow: highlightedPostId === postId ? '0 0 0 3px #0056D2' : '0 2px 10px rgba(0,0,0,0.03)',
-                      border: highlightedPostId === postId ? '1px solid #0056D2' : '1px solid #f0f0f0',
-                      cursor: 'pointer',
-                      transition: 'box-shadow 0.3s ease, border-color 0.3s ease'
+                      backgroundColor: '#fff',
+                      borderRadius: isExpanded ? '20px' : '16px',
+                      marginBottom: '12px',
+                      boxShadow: isExpanded
+                        ? '0 8px 32px rgba(0,86,210,0.13)'
+                        : highlightedPostId === postId ? '0 0 0 3px #0056D2' : '0 2px 10px rgba(0,0,0,0.03)',
+                      border: isExpanded ? '1.5px solid #C8D9FF' : highlightedPostId === postId ? '1px solid #0056D2' : '1px solid #f0f0f0',
+                      overflow: 'hidden',
+                      transition: 'all 0.28s cubic-bezier(0.4,0,0.2,1)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {(post.author === ADMIN_ID || post.author === 'sunjulab') ? ( // ✅ ADMIN_ID 상수 + 레거시 닉네임 호환
-                          <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #E60000, #990000)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>MASTER</span>
-                        ) : post.author_email === 'premium_user@fishinggo.com' ? (
-                          <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #FFD700, #F57F17)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>PRO</span>
-                        ) : null}
-                        <span style={{ fontSize: '11px', backgroundColor: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '4px 8px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
-                        <strong
-                          onClick={(e) => { e.stopPropagation(); navigate(`/user/${encodeURIComponent(post.author)}`); }}
-                          style={{ fontSize: '14px', color: '#333', cursor: 'pointer' }}
-                        >{post.author}</strong>
+                    {/* ── 헤더 (아바타 + 닉네임 + 위치 + 수정/삭제) ── */}
+                    <div
+                      style={{ padding: '14px 16px 0', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }}
+                      onClick={() => setExpandedPostId(isExpanded ? null : postId)}
+                    >
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', background: '#EEF4FF', flexShrink: 0, border: '2px solid #E0EAFF' }}>
+                          {post.author_avatar
+                            ? <img src={post.author_avatar} alt={post.author} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '900', color: '#0056D2' }}>{(post.author || '?').charAt(0).toUpperCase()}</div>
+                          }
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            {(post.author === ADMIN_ID || post.author === 'sunjulab') && (
+                              <span style={{ fontSize: '9px', background: 'linear-gradient(135deg,#E60000,#990000)', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: '900' }}>MASTER</span>
+                            )}
+                            <span style={{ fontSize: '11px', backgroundColor: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '2px 7px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
+                            <strong onClick={(e) => { e.stopPropagation(); navigate(`/user/${encodeURIComponent(post.author)}`); }}
+                              style={{ fontSize: '14px', color: '#1c1c1e', cursor: 'pointer' }}>{post.author}</strong>
+                          </div>
+                          {post.location?.address && (
+                            <div style={{ fontSize: '11px', color: '#8E8E93', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '1px' }}>
+                              📍 {post.location.address}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '12px', color: '#bbb' }}>{post.time}</span>
                         {(isAdmin || post.author_email === user?.email) && (
                           <div style={{ display: 'flex', gap: '4px' }}>
-                            <button onClick={(e) => { e.stopPropagation(); navigate(`/write?editId=${postId}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}>
-                              <Edit2 size={15} />
-                            </button>
-                            <button onClick={(e) => handleDeletePost(e, postId, 'open')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}>
-                              <Trash2 size={15} />
-                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); navigate(`/write?editId=${postId}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={15} /></button>
+                            <button onClick={(e) => handleDeletePost(e, postId, 'open')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={15} /></button>
                           </div>
                         )}
                       </div>
                     </div>
-                    <p style={{ margin: '8px 0 16px 0', fontSize: '15px', color: '#1c1c1e', lineHeight: '1.6', fontWeight: '400' }}>{post.content}</p>
-                    {post.image && (
-                      <div style={{ width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', border: '1px solid #f0f0f0' }}>
-                        <img src={post.image} alt="post" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+                    {/* ── 이미지 슬라이드 (인스타그램형 — CSS scroll-snap 방식) ── */}
+                    {allImages.length > 0 && (
+                      <div style={{ position: 'relative', marginTop: '12px', userSelect: 'none' }}>
+                        {/* ✅ SLIDER-FINAL: scroll-snap 네이티브 방식 — px/% 계산 오류 원천 제거 */}
+                        <div
+                          ref={el => el ? slideWrapperRefs.current.set(postId, el) : slideWrapperRefs.current.delete(postId)}
+                          className="insta-slider"
+                          style={{
+                            display: 'flex',
+                            overflowX: 'auto',
+                            scrollSnapType: 'x mandatory',
+                            scrollBehavior: 'smooth',
+                            WebkitOverflowScrolling: 'touch',
+                          }}
+                          onScroll={e => {
+                            const el = e.currentTarget;
+                            const newIdx = Math.round(el.scrollLeft / el.offsetWidth);
+                            if (newIdx !== slideIdx) {
+                              setSlideIndexMap(prev => ({ ...prev, [postId]: newIdx }));
+                            }
+                          }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            const now = Date.now();
+                            if (now - (lastTapRef.current[postId] || 0) < 300) {
+                              if (!likedPosts[postId]) {
+                                handleLike({ stopPropagation: () => {} }, postId);
+                                setHeartBurstId(postId);
+                                setTimeout(() => setHeartBurstId(null), 800);
+                              }
+                            }
+                            lastTapRef.current[postId] = now;
+                          }}
+                        >
+                          {allImages.map((imgSrc, imgIdx) => (
+                            <div
+                              key={imgIdx}
+                              style={{
+                                flex: '0 0 100%',
+                                scrollSnapAlign: 'start',
+                                overflow: 'hidden',
+                                background: '#111',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <img
+                                src={imgSrc}
+                                alt={`사진 ${imgIdx + 1}`}
+                                loading="lazy"
+                                style={{
+                                  width: '100%',
+                                  height: 'auto',
+                                  maxHeight: '360px',
+                                  objectFit: 'contain',
+                                  display: 'block',
+                                  pointerEvents: 'none',
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 좌우 화살표 버튼 */}
+                        {allImages.length > 1 && (
+                          <>
+                            <button
+                              onClick={e => {
+                                e.stopPropagation();
+                                const el = slideWrapperRefs.current.get(postId);
+                                if (el) {
+                                  const newIdx = Math.max(0, slideIdx - 1);
+                                  el.scrollTo({ left: el.offsetWidth * newIdx, behavior: 'smooth' });
+                                  setSlideIndexMap(prev => ({ ...prev, [postId]: newIdx }));
+                                }
+                              }}
+                              disabled={slideIdx === 0}
+                              style={{
+                                position: 'absolute', left: '8px', top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(0,0,0,0.5)', border: 'none',
+                                borderRadius: '50%', width: '34px', height: '34px',
+                                color: '#fff', fontSize: '20px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                opacity: slideIdx === 0 ? 0.2 : 1,
+                                transition: 'opacity 0.2s', zIndex: 5,
+                              }}
+                            >‹</button>
+                            <button
+                              onClick={e => {
+                                e.stopPropagation();
+                                const el = slideWrapperRefs.current.get(postId);
+                                if (el) {
+                                  const newIdx = Math.min(allImages.length - 1, slideIdx + 1);
+                                  el.scrollTo({ left: el.offsetWidth * newIdx, behavior: 'smooth' });
+                                  setSlideIndexMap(prev => ({ ...prev, [postId]: newIdx }));
+                                }
+                              }}
+                              disabled={slideIdx === allImages.length - 1}
+                              style={{
+                                position: 'absolute', right: '8px', top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'rgba(0,0,0,0.5)', border: 'none',
+                                borderRadius: '50%', width: '34px', height: '34px',
+                                color: '#fff', fontSize: '20px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                opacity: slideIdx === allImages.length - 1 ? 0.2 : 1,
+                                transition: 'opacity 0.2s', zIndex: 5,
+                              }}
+                            >›</button>
+
+                            {/* 점 인디케이터 */}
+                            <div style={{
+                              position: 'absolute', bottom: '10px', left: '50%',
+                              transform: 'translateX(-50%)',
+                              display: 'flex', gap: '5px', zIndex: 5,
+                              pointerEvents: 'none',
+                            }}>
+                              {allImages.map((_, di) => (
+                                <div
+                                  key={di}
+                                  style={{
+                                    width: di === slideIdx ? '20px' : '6px',
+                                    height: '6px', borderRadius: '3px',
+                                    background: di === slideIdx ? '#fff' : 'rgba(255,255,255,0.5)',
+                                    transition: 'all 0.22s',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            {/* 장 수 배지 */}
+                            <div style={{
+                              position: 'absolute', top: '10px', right: '10px',
+                              background: 'rgba(0,0,0,0.6)', borderRadius: '12px',
+                              padding: '2px 9px', fontSize: '11px', color: '#fff',
+                              fontWeight: '800', zIndex: 5, pointerEvents: 'none',
+                            }}>
+                              {slideIdx + 1}/{allImages.length}
+                            </div>
+                          </>
+                        )}
+
+                        {/* 더블탭 하트 폭발 */}
+                        {heartBurstId === postId && (
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 10 }}>
+                            <span style={{ fontSize: '80px', animation: 'heartPop 0.75s ease-out forwards' }}>❤️</span>
+                          </div>
+                        )}
                       </div>
                     )}
-                    <div style={{ display: 'flex', gap: '16px', color: '#8e8e93', borderTop: '1px solid #f8f8f8', paddingTop: '12px' }}>
-                      <span
-                        onClick={(e) => handleLike(e, post._id || post.id)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px',
-                          cursor: 'pointer', position: 'relative',
-                          color: likedPosts[post._id || post.id] ? '#FF5A5F' : '#8e8e93',
-                          fontWeight: likedPosts[post._id || post.id] ? '800' : '400',
-                          transition: 'color 0.2s',
-                          userSelect: 'none',
-                        }}
-                      >
-                        <Heart
-                          size={16}
-                          color="#FF5A5F"
-                          fill={likedPosts[post._id || post.id] ? '#FF5A5F' : 'none'}
-                          style={{
-                            transform: likeAnimating[post._id || post.id] ? 'scale(1.6)' : 'scale(1)',
-                            transition: 'transform 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97)',
-                            filter: likeAnimating[post._id || post.id] ? 'drop-shadow(0 0 6px #FF5A5F)' : 'none',
-                          }}
-                        />
-                        {post.likes || 0}
-                        {/* 하트 버스트 파티클 */}
-                        {likeAnimating[post._id || post.id] && (
-                          <span style={{
-                            position: 'absolute', top: '-18px', left: '0',
-                            fontSize: '18px', pointerEvents: 'none',
-                            animation: 'heartBurst 0.7s ease-out forwards',
-                          }}>❤️</span>
-                        )}
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}><MessageSquare size={16} /> {post.comments?.length || 0}</span>
+
+                    {/* ── 본문 (3줄 축소 / 인라인 확장) ── */}
+                    <div style={{ padding: allImages.length > 0 ? '12px 16px 0' : '10px 16px 0' }}>
+                      <p style={{ margin: 0, fontSize: '15px', color: '#1c1c1e', lineHeight: '1.65', fontWeight: '400',
+                        ...(isExpanded ? {} : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' })
+                      }}>
+                        {renderContent(post.content)}
+                      </p>
+                      {needsExpand && !isExpanded && (
+                        <span
+                          onClick={e => { e.stopPropagation(); setExpandedPostId(postId); }}
+                          style={{ fontSize: '14px', color: '#8E8E93', cursor: 'pointer', fontWeight: '700', marginLeft: '4px' }}
+                        >더보기</span>
+                      )}
+                      {isExpanded && needsExpand && (
+                        <span
+                          onClick={e => { e.stopPropagation(); setExpandedPostId(null); }}
+                          style={{ fontSize: '14px', color: '#8E8E93', cursor: 'pointer', fontWeight: '700', display: 'block', marginTop: '6px' }}
+                        >접기 ↑</span>
+                      )}
                     </div>
+
+                    {/* ── 좋아요 + 댓글 버튼 ── */}
+                    <div style={{ padding: '10px 16px', display: 'flex', gap: '16px', alignItems: 'center', borderTop: '1px solid #f8f8f8', marginTop: '10px' }}>
+                      <span onClick={(e) => handleLike(e, postId)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', position: 'relative', color: likedPosts[postId] ? '#FF5A5F' : '#8e8e93', fontWeight: likedPosts[postId] ? '800' : '400', transition: 'color 0.2s', userSelect: 'none' }}>
+                        <Heart size={16} color="#FF5A5F" fill={likedPosts[postId] ? '#FF5A5F' : 'none'}
+                          style={{ transform: likeAnimating[postId] ? 'scale(1.6)' : 'scale(1)', transition: 'transform 0.25s cubic-bezier(0.36,0.07,0.19,0.97)', filter: likeAnimating[postId] ? 'drop-shadow(0 0 6px #FF5A5F)' : 'none' }} />
+                        {post.likes || 0}
+                        {likeAnimating[postId] && <span style={{ position: 'absolute', top: '-18px', left: 0, fontSize: '18px', pointerEvents: 'none', animation: 'heartBurst 0.7s ease-out forwards' }}>❤️</span>}
+                      </span>
+                      {/* ✅ INSTA-COMMENT: 댓글 버튼 클릭 → 입력창 토글 + expand */}
+                      <span
+                        onClick={e => {
+                          e.stopPropagation();
+                          const nowOpen = !commentOpenMap[postId];
+                          setCommentOpenMap(prev => ({ ...prev, [postId]: nowOpen }));
+                          if (nowOpen) setExpandedPostId(postId);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: commentOpenMap[postId] ? '#0056D2' : '#8e8e93', cursor: 'pointer', fontWeight: commentOpenMap[postId] ? '800' : '400', transition: 'color 0.2s' }}>
+                        <MessageSquare size={16} /> {post.comments?.length || 0}
+                      </span>
+                    </div>
+
+                    {/* ── 인라인 댓글 (축소: 2줄 / 확장: 전체) ── */}
+                    {post.comments?.length > 0 && (
+                      <div style={{ padding: '0 16px 10px', borderTop: '1px solid #f8f8f8', paddingTop: '10px' }}>
+                        {post.comments.slice(0, isExpanded ? post.comments.length : 2).map((c, i) => (
+                          <div key={i} style={{ fontSize: '13px', color: '#333', marginBottom: '5px',
+                            ...(isExpanded ? {} : { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })
+                          }}>
+                            <strong style={{ color: '#1c1c1e', marginRight: '5px' }}>{c.author}</strong>
+                            <span style={{ color: '#555' }}>{c.text || c.content}</span>
+                          </div>
+                        ))}
+                        {!isExpanded && post.comments.length > 2 && (
+                          <span
+                            style={{ fontSize: '12px', color: '#8E8E93', cursor: 'pointer', fontWeight: '700' }}
+                            onClick={e => { e.stopPropagation(); setExpandedPostId(postId); setCommentOpenMap(prev => ({ ...prev, [postId]: true })); }}>
+                            댓글 {post.comments.length}개 모두 보기
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ✅ INSTA-COMMENT: 인라인 댓글 입력창 */}
+                    {commentOpenMap[postId] && (
+                      <div
+                        style={{ padding: '8px 12px 12px', borderTop: '1px solid #f0f0f0' }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          backgroundColor: '#F7F8FA', borderRadius: '24px',
+                          padding: '8px 14px', border: '1.5px solid #E5E7EB',
+                          transition: 'border-color 0.15s',
+                        }}>
+                          {/* 작성자 아바타 */}
+                          <div style={{
+                            width: '28px', height: '28px', borderRadius: '50%',
+                            background: '#EEF4FF', flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '13px', fontWeight: '900', color: '#0056D2',
+                          }}>
+                            {(user?.name || user?.id || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <input
+                            autoFocus
+                            value={commentInputMap[postId] || ''}
+                            onChange={e => setCommentInputMap(prev => ({ ...prev, [postId]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommentSubmit(postId); } }}
+                            placeholder="댓글을 입력하세요..."
+                            style={{
+                              flex: 1, border: 'none', background: 'transparent',
+                              outline: 'none', fontSize: '14px', color: '#1c1c1e',
+                              fontWeight: '400',
+                            }}
+                          />
+                          <button
+                            onClick={() => handleCommentSubmit(postId)}
+                            disabled={commentSubmittingMap[postId] || !(commentInputMap[postId] || '').trim()}
+                            style={{
+                              background: (commentInputMap[postId] || '').trim() ? '#0056D2' : '#E5E7EB',
+                              border: 'none', borderRadius: '50%',
+                              width: '30px', height: '30px', flexShrink: 0,
+                              cursor: (commentInputMap[postId] || '').trim() ? 'pointer' : 'default',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              transition: 'background 0.15s',
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <path d="M22 2L11 13" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
+                              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" strokeWidth="2.5" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {/* [정지 방지] 4개 글당 1개 - 과도한 광고 도배 금지 */}
                   {(index + 1) % 4 === 0 && <NativeAd />}
                   {!canAccessPremium && (index + 1) % AD_CONFIG.FREE_USER.FEED_AD_INTERVAL === 0 && <InFeedAd />}
                 </React.Fragment>
-              )
+              );
             })}
+
+            {/* 무한스크롤 sentinel */}
+            <div ref={sentinelRef} style={{ height: 20 }} />
+            {loadingMore && <div style={{ padding: '0 16px 12px' }}><SkeletonCard count={2} /></div>}
+            {page >= totalPages && posts.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '20px', fontSize: '13px', color: '#bbb' }}>
+                모든 게시글을 불러왔습니다 🎣
+              </div>
+            )}
           </div>
+
         ) : activeTab === 'crew' ? (
           // [프라이빗 크루 뷰]
           <div className="fade-in">
@@ -967,7 +1449,7 @@ export default function CommunityTab() {
 
 
             {effectiveBusinessPosts.map((post, index) => (
-              <React.Fragment key={post._id || post.id}>
+              <React.Fragment key={String(post._id || post.id)}>
                 {post.isPinned ? (
                   /* VVIP 프리미엄 대형 카드 */
                   <div style={{ backgroundColor: '#FEFCF5', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 12px 40px rgba(255,215,0,0.25)', border: '2.5px solid #FFD700', overflow: 'hidden' }}>
@@ -977,22 +1459,35 @@ export default function CommunityTab() {
                       {(isAdmin || post.author_email === user?.email) && (
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
                             style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
                           ><Edit2 size={11} /> 수정</button>
                           <button
-                            onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')}
+                            onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
                             style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
                           ><Trash2 size={11} /> 삭제</button>
                         </div>
                       )}
                     </div>
+                    {/* ✅ MULTI-IMG: VVIP 대형 카드 이미지 갤러리 슬라이드 */}
                     <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
-                      <img src={post.cover} style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} alt="배" />
-                      <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.65)', color: '#FFD700', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '900' }}>
+                      {(Array.isArray(post.images) && post.images.length > 0) || post.cover ? (
+                        <div onClick={e => e.stopPropagation()}>
+                          <ImageGallery
+                            images={post.images}
+                            image={post.cover}
+                            maxHeight={220}
+                            borderRadius="0"
+                            showZoom={false}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ width: '100%', height: '220px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🚢</div>
+                      )}
+                      <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.65)', color: '#FFD700', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '900', pointerEvents: 'none' }}>
                         👑 {post.region || '항구 전용 VVIP'}
                       </div>
-                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '950' }}>예약 모집중</div>
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '950', pointerEvents: 'none' }}>예약 모집중</div>
                     </div>
                     <div style={{ padding: '20px 18px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
                       <div style={{ fontSize: '22px', fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>{post.shipName}</div>
@@ -1066,11 +1561,11 @@ export default function CommunityTab() {
                         {(isAdmin || post.author_email === user?.email) && (
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button
-                              onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
                               style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
                             ><Edit2 size={10} /> 수정</button>
                             <button
-                              onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')}
+                              onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
                               style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: '10px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
                             ><Trash2 size={10} /> 삭제</button>
                           </div>
@@ -1079,7 +1574,17 @@ export default function CommunityTab() {
                     )}
                     <div style={{ padding: '12px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
                       <div style={{ display: 'flex', gap: '12px' }}>
-                        <img src={post.cover} style={{ width: '76px', height: '76px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} alt="배" />
+                        {/* ✅ MULTI-IMG: 일반 카드 썸네일 — 여러 장 있을 때 미니 갤러리 */}
+                        <div style={{ width: '76px', height: '76px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: '#E8EBF0' }}
+                          onClick={e => e.stopPropagation()}>
+                          <ImageGallery
+                            images={post.images}
+                            image={post.cover}
+                            maxHeight={76}
+                            borderRadius="0"
+                            showZoom={false}
+                          />
+                        </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
                             <span style={{ fontSize: '9px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
@@ -1093,13 +1598,13 @@ export default function CommunityTab() {
                             {/* ✅ 작성자 or 마스터: 수정/삭제 (region 제한 없이 모든 카드에 표시) */}
                             {(isAdmin || post.author_email === user?.email) && post.region !== '전국 (전체)' && (
                               <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
-                                <button onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${post._id || post.id}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={14} /></button>
-                                <button onClick={(e) => handleDeletePost(e, post._id || post.id, 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={14} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={14} /></button>
+                                <button onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={14} /></button>
                               </div>
                             )}
                           </div>
                           {/* ✅ WARN-CT1: post.content null guard (소형 카드) */}
-                          <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#666', lineHeight: '1.5' }}>{(post.content || '').slice(0, 45)}...</p>
+                          <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#666', lineHeight: '1.5' }}>{(post.content || '').slice(0, 45)}{(post.content || '').length > 45 ? '...' : ''}</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '10px' }}>
                             <span style={{ background: '#F4F6FA', padding: '3px 8px', borderRadius: '6px', color: '#333' }}>{post.target}</span>
                             <span style={{ background: '#FFF3E0', padding: '3px 8px', borderRadius: '6px', color: '#E65100', fontWeight: '800' }}>{post.price}</span>
@@ -1111,7 +1616,7 @@ export default function CommunityTab() {
                       <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '950', fontSize: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                         <Phone size={13} fill="#fff" /> 즉시 전화
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낙시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}` ; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}`; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <MessageSquare size={13} /> 문자
                       </button>
                     </div>
@@ -1162,30 +1667,34 @@ export default function CommunityTab() {
               <button onClick={() => setSelectedBusinessPost(null)} style={{ border: 'none', background: '#F2F2F7', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#888', fontWeight: '900' }}>✕</button>
             </div>
 
-            {/* 커버 이미지 */}
+            {/* ✅ MULTI-IMG: 모달 이미지 갤러리 슬라이드 (images[] 우선, cover 하위호환) */}
             <div style={{ position: 'relative', margin: '0 16px', borderRadius: '20px', overflow: 'hidden' }}>
-              <img
-                src={selectedBusinessPost.cover || 'https://picsum.photos/seed/fishingboat/600/300'}
-                alt="선상 배"
-                style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }}
-                onError={(e) => { e.target.src = 'https://picsum.photos/seed/boat/600/300'; }}
-              />
-              {/* 그라디언트 오버레이 */}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }} />
-              {/* 배지 */}
-              {selectedBusinessPost.isPinned ? (
-                <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'linear-gradient(90deg,#FFD700,#FF9B26)', color: '#5C3A00', padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '950', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Award size={12} fill="#5C3A00" /> VVIP 독점
-                </div>
+              {(Array.isArray(selectedBusinessPost.images) && selectedBusinessPost.images.length > 0) || selectedBusinessPost.cover ? (
+                <ImageGallery
+                  images={selectedBusinessPost.images}
+                  image={selectedBusinessPost.cover}
+                  maxHeight={220}
+                  borderRadius="0"
+                  showZoom={true}
+                />
               ) : (
-                <div style={{ position: 'absolute', top: '12px', left: '12px', background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '950' }}>모집중</div>
+                <div style={{ width: '100%', height: '200px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '56px', borderRadius: '20px' }}>🚢</div>
               )}
-              {/* 지역 */}
-              <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '800' }}>
+              {/* 배지 오버레이 — 갤러리 위에 절대 위치 */}
+              <div style={{ position: 'absolute', top: '12px', left: '12px', pointerEvents: 'none', zIndex: 2 }}>
+                {selectedBusinessPost.isPinned ? (
+                  <div style={{ background: 'linear-gradient(90deg,#FFD700,#FF9B26)', color: '#5C3A00', padding: '5px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '950', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Award size={12} fill="#5C3A00" /> VVIP 독점
+                  </div>
+                ) : (
+                  <div style={{ background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '950' }}>모집중</div>
+                )}
+              </div>
+              {/* 지역·가격 배지 */}
+              <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '800', pointerEvents: 'none', zIndex: 2 }}>
                 📍 {selectedBusinessPost.region || '지역 미표시'}
               </div>
-              {/* 가격 */}
-              <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: '#0056D2', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '950' }}>
+              <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: '#0056D2', color: '#fff', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '950', pointerEvents: 'none', zIndex: 2 }}>
                 {selectedBusinessPost.price || '문의'}
               </div>
             </div>
@@ -1204,7 +1713,7 @@ export default function CommunityTab() {
                 {[
                   { icon: '🎣', label: '대상어종', value: selectedBusinessPost.target },
                   { icon: '📅', label: '운항 일정', value: selectedBusinessPost.date },
-                  { icon: '👥', label: '모집 인원', value: selectedBusinessPost.capacity ? `${selectedBusinessPost.capacity}명` : '문의' },
+                  { icon: '👥', label: '모집 인원', value: selectedBusinessPost.capacity != null ? `${selectedBusinessPost.capacity}명` : '문의' },
                   { icon: '📞', label: '연락처', value: selectedBusinessPost.phone },
                 ].map(({ icon, label, value }) => (
                   <div key={label} style={{ background: '#F8F9FC', borderRadius: '14px', padding: '12px 14px' }}>

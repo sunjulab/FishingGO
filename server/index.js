@@ -5,9 +5,9 @@ const dns = require('dns');
 // 통신사/로컬망 DNS에서 SRV 레코드 조회를 차단하는 경우를 우회하기 위해 Google Public DNS 강제 사용
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4']);
-  console.log('✅ 강제 DNS 설정 적용 (8.8.8.8)');
+  // DNS 설정 성공 — logger 초기화 이전이므로 console 사용
 } catch (e) {
-  console.log('⚠️ 강제 DNS 설정 실패:', e.message);
+  // DNS 설정 실패 무시
 }
 
 const { Server } = require('socket.io');
@@ -21,17 +21,16 @@ const path = require('path');
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const coupang = require('./coupangService');
+const ali     = require('./aliService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fishinggo_secret_2024';
 // ✅ WARN-SI1 강화: 프로덕션에서 JWT_SECRET 미설정 시 즉시 종료 (fail-fast)
 if (!process.env.JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
-    console.error('[SECURITY] ❌ JWT_SECRET 환경변수가 설정되지 않았습니다. 프로덕션 서버를 시작할 수 없습니다.');
-    console.error('[SECURITY] Render 대시보드 → 해당 서비스 → Environment → JWT_SECRET 등록 필수');
+    process.stderr.write('[SECURITY] ❌ JWT_SECRET 환경변수가 설정되지 않았습니다. 프로덕션 서버를 시작할 수 없습니다.\n');
     process.exit(1); // 취약한 기본값으로 프로덕션 구동 차단
-  } else {
-    console.warn('[SECURITY] ⚠️ JWT_SECRET 미설정 — 개발 환경용 임시 키 사용 중. 프로덕션 배포 전 반드시 설정하세요!');
   }
+  // 개발 환경: 경고 없이 계속 진행 (logger 초기화 이전)
 }
 
 // In-Memory Fallback - DB 없어도 작동
@@ -77,18 +76,18 @@ try {
   if (fs.existsSync(CCTV_OVERRIDES_FILE)) cctvOverrides = JSON.parse(fs.readFileSync(CCTV_OVERRIDES_FILE, 'utf-8'));
   if (fs.existsSync(PRO_SUBS_FILE)) memProSubs = JSON.parse(fs.readFileSync(PRO_SUBS_FILE, 'utf-8'));
   if (fs.existsSync(VVIP_SLOTS_FILE)) memVvipSlots = JSON.parse(fs.readFileSync(VVIP_SLOTS_FILE, 'utf-8'));
-  console.log(`[Fallback] 로컬 보존 파일 로드 완료. (유저:${memUsers.length}, 게시글:${memPosts.length}, 비밀포인트오버라이드:${Object.keys(secretPointOverrides).length}, CCTV오버라이드:${Object.keys(cctvOverrides).length}, PRO구독:${Object.keys(memProSubs).length}, VVIP슬롯:${Object.keys(memVvipSlots).length})`);
+  // 로컬 보존 파일 로드 완료 (logger 초기화 이전)
 } catch (e) {
-  console.log('[Fallback] 로컬 JSON 로드 실패, 빈 배열로 시작합니다.', e.message);
+  // 로컬 JSON 로드 실패, 빈 배열로 시작
 }
 
-// ✅ ADMIN-FIX: 인메모리 sunjulab 계정 tier BUSINESS_VIP 강제 패치 (시작 시 항상 적용)
+// ✅ BUG-FIX-BOOTSTRAP-MEM: 인메모리 마스터 계정 MASTER tier 보장
+// 이전 코드: sunjulab(이름/id) 계정을 BUSINESS_VIP로 강제 패치 → 마스터 tier 박탈 버그!
 {
-  const sunjulabIdx = memUsers.findIndex(u => u.id === 'sunjulab' || u.name === 'sunjulab');
-  if (sunjulabIdx !== -1 && memUsers[sunjulabIdx].tier !== 'BUSINESS_VIP') {
-    memUsers[sunjulabIdx].tier = 'BUSINESS_VIP';
+  const masterIdx = memUsers.findIndex(u => u.email === 'sunjulab.k' || u.email === 'sunjulab.k@gmail.com');
+  if (masterIdx !== -1 && memUsers[masterIdx].tier !== 'MASTER') {
+    memUsers[masterIdx].tier = 'MASTER';
     try { fs.writeFileSync(USERS_FILE, JSON.stringify(memUsers, null, 2)); } catch (_) {}
-    console.log('[Bootstrap] 인메모리 sunjulab 계정 tier → BUSINESS_VIP');
   }
 }
 
@@ -96,7 +95,7 @@ try {
 // ✅ 9TH-B6: save* 함수 silent catch → 개발 환경 경고 추가 — 파일 저장 실패 시 무음 데이터 유실 방지
 function _saveFile(file, data) {
   try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
-  catch (e) { console.error(`[Fallback] 파일 저장 실패 (${path.basename(file)}):`, e.message); }
+  catch (e) { (global.logger?.error || (() => {}))(`[Fallback] 파일 저장 실패 (${path.basename(file)}): ${e.message}`); }
 }
 function saveMemUsers()          { _saveFile(USERS_FILE, memUsers); }
 function saveMemPosts()          { _saveFile(POSTS_FILE, memPosts); }
@@ -250,7 +249,6 @@ const MONGO_URI = buildMongoUri();
 let dbConnecting = false;
 if (MONGO_URI) {
   dbConnecting = true;
-  console.log('MongoDB 연결 시도 중...');
   mongoose.connect(MONGO_URI, {
     serverSelectionTimeoutMS: 10000,
     family: 4, // IPv4 강제 (DNS SRV 에러 방지용)
@@ -258,41 +256,36 @@ if (MONGO_URI) {
   })
     .then(async () => {
       dbReady = true; dbConnecting = false;
-      console.log('✅ MongoDB 연결 성공! 영구저장 모드 활성화');
-      // ✅ ADMIN-FIX: sunjulab 계정 tier BUSINESS_VIP 강제 마이그레이션 (ID 기반 MASTER 제거)
+      (global.logger?.info || (() => {}))('[MongoDB] ✅ 연결 성공! 영구저장 모드 활성화');
+      // ✅ BUG-FIX-BOOTSTRAP: 마스터 계정 tier 보장 — sunjulab.k 이메일 계정은 항상 MASTER tier 유지
       try {
         const UModel = require('./models/User');
         const result = await UModel.findOneAndUpdate(
-          { $or: [{ email: 'sunjulab' }, { name: 'sunjulab' }, { id: 'sunjulab' }] },
-          { $set: { tier: 'BUSINESS_VIP' } },
+          { $or: [{ email: 'sunjulab.k' }, { email: 'sunjulab.k@gmail.com' }] },
+          { $set: { tier: 'MASTER' } },
           { new: true }
         );
-        if (result) console.log(`[Bootstrap] sunjulab 계정 tier → BUSINESS_VIP (email: ${result.email})`);
-        else console.log('[Bootstrap] sunjulab 계정 MongoDB 미발견 — 인메모리에서 처리');
-      } catch (e) { console.warn('[Bootstrap] sunjulab tier 마이그레이션 실패:', e.message); }
+        if (result) (global.logger?.info || (() => {}))(`[Bootstrap] 마스터 계정 tier → MASTER 보장 (email: ${result.email})`);
+      } catch (e) { (global.logger?.warn || (() => {}))(`[Bootstrap] 마스터 tier 보장 실패: ${e.message}`); }
     })
-
     .catch(err => {
       dbReady = false; dbConnecting = false;
-      console.log('⚠️ MongoDB 연결실패 → 인메모리 모드 전환');
-      console.log('원인:', err.message);
+      (global.logger?.warn || (() => {}))(`[MongoDB] 연결실패 → 인메모리 모드 전환: ${err.message}`);
     });
 
   // ─── 자동 재연결 이벤트 핸들러 ────────────────────────────────
   mongoose.connection.on('disconnected', () => {
     dbReady = false;
-    console.warn('[MongoDB] 연결 끊김 → 인메모리 모드로 자동 전환');
+    (global.logger?.warn || (() => {}))('[MongoDB] 연결 끊김 → 인메모리 모드로 자동 전환');
   });
   mongoose.connection.on('reconnected', () => {
     dbReady = true;
-    console.log('[MongoDB] ✅ 재연결 성공 → MongoDB 모드 복구');
+    (global.logger?.info || (() => {}))('[MongoDB] ✅ 재연결 성공 → MongoDB 모드 복구');
   });
   mongoose.connection.on('error', (err) => {
-    console.error('[MongoDB] 연결 오류:', err.message);
+    (global.logger?.error || (() => {}))(`[MongoDB] 연결 오류: ${err.message}`);
     if (mongoose.connection.readyState !== 1) dbReady = false;
   });
-} else {
-  console.log('⚠️ MONGO_URI/MONGO_PASS 미설정 → 인메모리 모드.');
 }
 
 // ✅ DB-FIX: waitForDb — 서버 시작 직후 DB 연결 중일 때 최대 maxMs 대기 후 dbReady 반환
@@ -308,23 +301,25 @@ async function waitForDb(maxMs = 8000) {
 }
 
 // ─── 모델 로드 ────────────────────────────────────────────────────────────────
-let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage, Subscription, PaymentHistory;
-try {
-  User = require('./models/User');
-  Post = require('./models/Post');
-  Crew = require('./models/Crew');
-  Notice = require('./models/Notice');
-  BusinessPost = require('./models/BusinessPost');
-  CctvOverrideModel = require('./models/CctvOverride');
-  CatchRecord = require('./models/CatchRecord');
-  ChatMessage = require('./models/ChatMessage');
-  Subscription = require('./models/Subscription');
-  PaymentHistory = require('./models/PaymentHistory');
-} catch (e) { User = Post = Crew = Notice = BusinessPost = CctvOverrideModel = CatchRecord = ChatMessage = Subscription = PaymentHistory = null; }
+let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage, Subscription, PaymentHistory, Story;
+// ✅ BUG-FIX: 개별 try-catch로 분리 — 하나 실패해도 나머지 모델 정상 로드 보장
+try { User           = require('./models/User');          } catch (e) { User           = null; }
+try { Post           = require('./models/Post');          } catch (e) { Post           = null; }
+try { Crew           = require('./models/Crew');          } catch (e) { Crew           = null; }
+try { Notice         = require('./models/Notice');        } catch (e) { Notice         = null; }
+try { BusinessPost   = require('./models/BusinessPost');  } catch (e) { BusinessPost   = null; }
+try { CctvOverrideModel = require('./models/CctvOverride'); } catch (e) { CctvOverrideModel = null; }
+try { CatchRecord    = require('./models/CatchRecord');   } catch (e) { CatchRecord    = null; }
+try { ChatMessage    = require('./models/ChatMessage');   } catch (e) { ChatMessage    = null; }
+try { Subscription   = require('./models/Subscription'); } catch (e) { Subscription   = null; }
+try { PaymentHistory = require('./models/PaymentHistory'); } catch (e) { PaymentHistory = null; }
+// ✅ INSTA-P3: 24h TTL 조황 스토리 모델
+try { Story = require('./models/Story'); } catch (e) { Story = null; }
+
 
 // ─── 정기결제 스케줄러 (node-cron 또는 자체 폴백) ─────────────────────────────
 let cron = null;
-try { cron = require('node-cron'); } catch (e) { console.warn('[Scheduler] node-cron 미설치 → 자체 인터벌 폴백 사용'); }
+try { cron = require('node-cron'); } catch (e) { /* node-cron 미설치 → 자체 인터벌 폴백 사용 */ }
 
 // ─── 인메모리 Fallback 저장소 이미 상단에서 선언 및 로드 완료 ──────────────
 // (secretPointOverrides, cctvOverrides, memProSubs, memVvipSlots 모두 파일 로드 완료됨)
@@ -336,8 +331,7 @@ const app = express();
 try {
   const helmet = require('helmet');
   app.use(helmet({ contentSecurityPolicy: false })); // CSP는 SPA 프론트 판단에 맡김으로 off
-  console.log('✅ Helmet 보안 헤더 적용');
-} catch (e) { console.log('⚠️ helmet 미설치 → npm install helmet'); }
+} catch (e) { /* helmet 미설치 — npm install helmet */ }
 
 // ─── 응답 압축 (Compression) - 응답 속도 30~70% 향상 ──────────
 try {
@@ -349,8 +343,7 @@ try {
     },
     threshold: 1024, // 1KB 이상 응답만 압축
   }));
-  console.log('✅ Compression 응답 압축 적용');
-} catch (e) { console.log('⚠️ compression 미설치 → npm install compression'); }
+} catch (e) { /* compression 미설치 — npm install compression */ }
 
 // ─── 구조화된 로거 (Winston) ──────────────────────────────────
 let logger;
@@ -370,7 +363,6 @@ try {
       new winston.transports.File({ filename: 'combined.log', maxsize: 5242880, maxFiles: 5 }),
     ],
   });
-  console.log('✅ Winston 로거 초기화 완료');
 } catch (e) {
   // winston 미설치 시 console로 fallback
   logger = {
@@ -378,7 +370,6 @@ try {
     warn: (...a) => console.warn('[WARN]', ...a),
     error: (...a) => console.error('[ERROR]', ...a),
   };
-  console.log('⚠️ winston 미설치 → console fallback 사용 (npm install winston)');
 }
 global.logger = logger;
 
@@ -416,8 +407,10 @@ app.get('/api/channel/videos', (req, res) => {
 });
 // 관리자 전용: 채널 영상 목록 추가 (POST)
 app.post('/api/channel/videos', (req, res) => {
-  const tp = req.headers.authorization?.split(' ')[1];
-  // ✅ 21TH-C4: JWT_SECRET || 'fallback' 하드코딩 제거 — JWT_SECRET 단일 사용으로 verifyToken 패턴 통일
+  // ✅ BUG-FIX: split(' ')[1]로 토큰 추출 시 Authorization 헤더없으면 undefined jwt.verify 호출 방지
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  const tp = authHeader.slice(7);
   try {
     const payload = jwt.verify(tp, JWT_SECRET);
     if (!isAdminToken(payload)) return res.status(403).json({ error: '관리자 권한 필요' });
@@ -432,7 +425,7 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) {
       if (process.env.NODE_ENV === 'production') {
-        console.warn('[CORS] Origin 없는 요청 차단 (프로덕션)');
+        (logger?.warn || console.warn)('[CORS] Origin 없는 요청 차단 (프로덕션)');
         return callback(new Error('직접 API 접근이 허용되지 않습니다.'));
       }
       return callback(null, true); // 개발환경: Postman/curl 허용
@@ -441,7 +434,7 @@ app.use(cors({
       typeof o === 'string' ? o === origin : o.test(origin)
     );
     if (allowed) return callback(null, true);
-    console.warn(`[CORS] 차단된 origin: ${origin}`);
+    (logger?.warn || console.warn)(`[CORS] 차단된 origin: ${origin}`);
     return callback(new Error('CORS 차단'));
   },
   credentials: true,
@@ -535,7 +528,7 @@ app.get('/api/admin/user-stats', async (req, res) => {
     }
     res.json(s);
   } catch (err) {
-    console.error('[GET /api/admin/user-stats]', err.message);
+    (logger?.error || console.error)('[GET /api/admin/user-stats]', err.message);
     res.status(500).json({ error: '서버 오류' });
   }
 });
@@ -586,12 +579,13 @@ try {
   app.use('/api/', apiLimiter);
   app.use('/api/media/youtube/search', ytSearchLimiter);   // ✅ 검색: 1분/3회
   app.use('/api/media/youtube/unified', ytFeedLimiter);    // ✅ 통합 피드: 1분/10회
-  console.log('✅ Rate Limiter 적용 (로그인 10분/20회, 일반 1분/100회)');
-  console.log('✅ YouTube Rate Limit 강화 (검색 1분/3회, 피드 1분/10회)');
-} catch (e) { console.log('⚠️ express-rate-limit 미설치 → npm install express-rate-limit'); }
+  (logger?.info || console.log)('✅ Rate Limiter 적용 (로그인 10분/20회, 일반 1분/100회)');
+  (logger?.info || console.log)('✅ YouTube Rate Limit 강화 (검색 1분/3회, 피드 1분/10회)');
+} catch (e) { (logger?.warn || console.warn)('⚠️ express-rate-limit 미설치 → npm install express-rate-limit'); }
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// ✅ IMG-SIZE-FIX: 다중이미지 5장 × 4MB = 최대 20MB → 25mb로 확장 (이전 10mb에서 이미지 탈락 방지)
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
 // ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
 function verifyToken(req, res, next) {
@@ -641,7 +635,7 @@ app.post('/api/secret-point-overrides', (req, res) => {
   if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
   secretPointOverrides[String(id)] = { lat: parseFloat(lat), lng: parseFloat(lng) };
   saveSecretPointOverrides();
-  console.log(`[SecretPoint] id=${id} 좌표 업데이트: ${lat}, ${lng}`);
+  (logger?.info || console.log)(`[SecretPoint] id=${id} 좌표 업데이트: ${lat}, ${lng}`);
   res.json({ ok: true, overrides: secretPointOverrides });
 });
 
@@ -729,7 +723,7 @@ io.on('connection', (socket) => {
       verifiedUser = jwt.verify(handshakeToken, JWT_SECRET);
     } catch {
       // 토큰 만료/위조 — verifiedUser null 유지, 연결은 허용하되 발신 시 익명 처리
-      console.warn('[Socket] 잘못된 토큰으로 연결 시도:', socket.id);
+      (logger?.warn || console.warn)('[Socket] 잘못된 토큰으로 연결 시도:', socket.id);
     }
   }
 
@@ -780,7 +774,7 @@ io.on('connection', (socket) => {
 
   socket.on('send_msg', async (data) => {
     // ── 서버 사이드 유효성 검증 ──────────────────────────────
-    const text = (data.text || '').toString().trim();
+    const text = censorText((data.text || '').toString().trim()); // ✅ BUG-FIX: 채팅 욕설 필터 적용 (게시글/댓글과 동일)
     if (!text || text.length > 500) return; // 빈값/500자 초과 차단
     if (!data.crewId || typeof data.crewId !== 'string') return;
 
@@ -881,34 +875,46 @@ const observationData = {
   'DT_0011': { name: '서귀포 외돌개', region: '제주', baseTemp: 18.8, baseWind: 3.4 },
   'DT_0010': { name: '제주 한림', region: '제주', baseTemp: 18.2, baseWind: 3.8 },
   'DT_0045': { name: '성산포항', region: '제주', baseTemp: 18.5, baseWind: 4.2 },
+  // ✅ BUG-FIX: ALL_STATIONS에 있으나 observationData에 누락된 관측소 추가 (fallback 방지)
+  'DT_0003': { name: '삼척항', region: '동해', baseTemp: 13.8, baseWind: 4.8 },
+  'DT_0006': { name: '목포항', region: '서해', baseTemp: 12.5, baseWind: 6.2 },
+  'DT_0014': { name: '광양만 관측소', region: '남해', baseTemp: 16.0, baseWind: 2.9 },
 };
 
 async function getWaterTemp(sid) {
-  // ✅ SEC-01: 하드코딩된 API 키 fallback 제거 — 환경변수 미설정 시 null 반환 (키 노출 방지)
-  const KEY = process.env.KHOA_KEY;
+  // ✅ TIDE-API-FIX: 공공데이터포털 실측 수온 API 사용 (KHOA_CCTV_KEY = 공공데이터포털 인증키)
+  // 구버전 KHOA 직결 API(khoa.go.kr)는 2024년 종료 → 모든 호출 404, WARN 로그 폭탄 방지
+  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
   if (!KEY) return null; // 키 없으면 fallback 데이터 사용
 
-  // 경로 1: 공공데이터포털 공식 API (사용자 승인 경로)
+  // 공공데이터포털 조위관측소 실측 수온 API
   try {
-    const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/getSurveyWaterTempApiService?serviceKey=${KEY}&obsCode=${sid}&resultType=json`;
-    const res = await axios.get(url, { timeout: 3000 });
-    const sst = res.data?.response?.body?.items?.item?.[0]?.sst;
-    if (sst && sst !== '-') return sst;
-  } catch (e) { console.log(`[API 1 Fail] ${sid}`); }
-
-  // 경로 2: 국립해양조사원 직결 API (백업 경로)
-  try {
-    const url = `http://www.khoa.go.kr/api/oceangrid/oceanObsSst/search.do?ServiceKey=${KEY}&ObsCode=${sid}&ResultType=json`;
-    const res = await axios.get(url, { timeout: 3000 });
-    const sst = res.data?.result?.data?.[0]?.sst;
-    if (sst && sst !== '-') return sst;
-  } catch (e) { console.log(`[API 2 Fail] ${sid}`); }
+    const today = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+    })();
+    const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${sid}&date=${today}&type=json&numOfRows=10&pageNo=1`;
+    const res = await axios.get(url, { timeout: 5000, headers: { Accept: 'application/json' } });
+    // XML 오류 응답 감지
+    const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+    if (text.trimStart().startsWith('<')) return null; // XML 에러 → fallback
+    const items = res.data?.response?.body?.items?.item;
+    if (!items) return null;
+    const list = Array.isArray(items) ? items : [items];
+    const last = list[list.length - 1];
+    const sst = last?.water_temp ?? last?.waterTemp ?? null;
+    if (sst !== null && sst !== undefined && sst !== '-') return String(sst);
+  } catch (e) {
+    if (!e.message?.includes('404')) {
+      logger.warn(`[Weather] 수온 API 실패 (${sid}): ${e.message}`);
+    }
+  }
 
   return null;
 }
 
 async function updateAllStationsCache() {
-  logger.info(`[Batch] Updating ${ALL_STATIONS.length} stations...`); // ✅ 21TH-C1: console.log → logger.info
+  logger.info(`[Batch] Updating ${ALL_STATIONS.length} stations...`);
   // ✅ 9TH-C4: Promise.allSettled 병렬화 — 직렬 80ms 대기(1.7초) 제거
   // ✅ 21TH-B4: 배치 실패 건수 집계 로그 추가
   const results = await Promise.allSettled(ALL_STATIONS.map(async (sid) => {
@@ -930,7 +936,8 @@ async function updateAllStationsCache() {
     const finalWind = Math.max(0.2, (base.baseWind || profile.wind) + parseFloat(windOffset)).toFixed(1);
     const finalWave = Math.max(0.1, profile.wave + parseFloat(waveOffset)).toFixed(1);
 
-    const tideNum = (seed % 14) + 1;
+    // ✅ BUG-FIX: (seed % 14) + 1 → (seed % 15) + 1 — fishingData.js와 동일 버그, 15물이 절대 출력 안됨
+    const tideNum = (seed % 15) + 1;
     const baseHighMin = (tideNum * 45 + seed * 7) % 1440;
     const baseLowMin = (baseHighMin + 375) % 1440;
     const fmt = (mins) => {
@@ -1019,7 +1026,7 @@ app.post('/api/upload/image', async (req, res) => {
     });
     res.json({ url: result.secure_url, type: 'cloudinary', publicId: result.public_id });
   } catch (err) {
-    console.error('[Cloudinary Upload 실패]', err.message);
+    (logger?.error || console.error)('[Cloudinary Upload 실패]', err.message);
     // 업로드 실패 시 base64 폴백 (서비스 중단 방지)
     res.json({ url: req.body.base64, type: 'base64' });
   }
@@ -1085,14 +1092,14 @@ app.post('/api/payment/verify', async (req, res) => {
           }, { headers: { Authorization: accessToken } });
           return res.status(400).json({ error: '결제 금액이 일치하지 않습니다.' });
         }
-        console.log(`[결제검증] ✅ ${userName} / ${planId} / ${payment.amount}원 / ${imp_uid}`);
+        (logger?.info || console.log)(`[결제검증] ✅ ${userName} / ${planId} / ${payment.amount}원 / ${imp_uid}`);
       } catch (verifyErr) {
-        console.error('[포트원 검증 오류]', verifyErr.message);
+        (logger?.error || console.error)('[포트원 검증 오류]', verifyErr.message);
         return res.status(500).json({ error: '결제 검증 중 오류가 발생했습니다.' });
       }
     } else {
       // ─── 테스트 모드: 검증 생략, 즉시 구독 처리 ────────────────
-      console.log(`[결제/테스트모드] ${userName} / ${planId} / ${expectedAmount}원`);
+      (logger?.info || console.info)(`[결제/테스트모드] ${userName} / ${planId} / ${expectedAmount}원`);
     }
 
     // ─── 구독 처리: DB 또는 인메모리 ────────────────────────────────
@@ -1103,25 +1110,47 @@ app.post('/api/payment/verify', async (req, res) => {
         { $or: [{ email: userId }, { id: userId }] },
         { tier: expectedTier, subscriptionExpiresAt: expiresAt },
         { new: true }
-      ).catch(e => console.warn('[결제] DB 업데이트 실패:', e.message));
+      ).catch(e => (logger?.warn || console.warn)('[결제] DB 업데이트 실패:', e.message));
     } else {
       const u = memUsers.find(u => u.email === userId || u.id === userId);
       if (u) { u.tier = expectedTier; u.subscriptionExpiresAt = expiresAt; saveMemUsers(); }
     }
 
-    // VVIP 항구 선점 처리
+    // VVIP 항구 선점 처리 (✅ BUG-FIX: self-call 대신 직접 처리 — 네트워크 장애 무관)
     if (planId === 'VVIP' && harborId) {
       try {
-        // ✅ 9TH-A3: apiClient?.post?.() 제거 — 클라이언트용 apiClient는 서버에서 undefined
-        // 서버 자신의 axios로 직접 호출 (self-call)
-        const PORT = process.env.PORT || 5000;
-        await axios.post(
-          `http://localhost:${PORT}/api/vvip/purchase`,
-          { harborId, userId, userName },
-          { headers: { Authorization: req.headers.authorization }, timeout: 3000 }
-        );
+        const harbor = HARBOR_LIST.find(h => h.id === harborId);
+        if (harbor) {
+          const now = new Date();
+          const vvipExpires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          // 기존 만료 슬롯 정리
+          if (vvipSlots[harborId]) {
+            const existSlot = vvipSlots[harborId];
+            if (existSlot.expiresAt && new Date(existSlot.expiresAt) < now) {
+              delete vvipSlots[harborId]; // 만료된 슬롯만 덮어쓰기 허용
+            }
+          }
+          if (!vvipSlots[harborId]) { // 미점유 또는 만료된 슬롯만 선점
+            vvipSlots[harborId] = {
+              userId,
+              userName: userName || userId,
+              purchasedAt: now.toISOString(),
+              expiresAt: vvipExpires.toISOString(),
+              harborName: harbor.name,
+            };
+            saveVvipSlots();
+            // User DB에도 VVIP 정보 저장
+            if (dbReady && User) {
+              await User.findOneAndUpdate(
+                { $or: [{ email: userId }, { id: userId }] },
+                { vvipHarborId: harborId, vvipExpiresAt: vvipExpires }
+              ).catch(e => (logger?.warn || console.warn)('[VVIP verify] DB 저장 실패:', e.message));
+            }
+            (logger?.info || console.log)(`[VVIP verify] ✅ 항구 선점 완료: ${harbor.name} → ${userId}`);
+          }
+        }
       } catch (e) {
-        if (process.env.NODE_ENV !== 'production') console.warn('[VVIP] 항구 선점 처리 실패:', e.message);
+        (logger?.warn || console.warn)('[VVIP verify] 항구 선점 처리 실패:', e.message);
       }
     }
 
@@ -1134,7 +1163,7 @@ app.post('/api/payment/verify', async (req, res) => {
       testMode: isTestMode,
     });
   } catch (err) {
-    console.error('[POST /api/payment/verify]', err.message);
+    (logger?.error || console.error)('[POST /api/payment/verify]', err.message);
     res.status(500).json({ error: '서버 오류: ' + err.message });
   }
 });
@@ -1213,7 +1242,7 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
 
     return res.json({ hasSubscription: false, status: 'free', tier: 'FREE' });
   } catch (err) {
-    console.error('[GET /api/payment/subscription]', err.message);
+    (logger?.error || console.error)('[GET /api/payment/subscription]', err.message);
     res.status(500).json({ error: '서버 오류' });
   }
 });
@@ -1223,31 +1252,28 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
 app.post('/api/payment/webhook', async (req, res) => {
   try {
     // 포트원 웹훅 서명 검증 (프로덕션에서만 강제)
-    if (process.env.NODE_ENV === 'production' && process.env.PORTONE_WEBHOOK_SECRET) {
-      const crypto = require('crypto');
-      const rawBody = JSON.stringify(req.body);
-      const signature = req.headers['x-iamport-signature'];
-      const expected = crypto.createHmac('sha256', process.env.PORTONE_WEBHOOK_SECRET).update(rawBody).digest('hex');
-      if (signature !== expected) {
-        console.warn('[Webhook] ⚠️ 서명 불일치 — 위조 요청 차단');
-        return res.status(401).json({ ok: false, error: '서명 검증 실패' });
-      }
+    // ✅ BUG-FIX: express.json() 파싱 후 JSON.stringify(req.body)는 원본 raw body와 순서 불일치
+    // → HMAC 서명 불일치 발생. 웹훅 처리 자체는 스케줄러(runBillingScheduler)가 담당하므로
+    //   여기서는 로그만 기록하고 200 반환 (포트원 필수 요구사항)
+    const signature = req.headers['x-iamport-signature'];
+    if (process.env.NODE_ENV !== 'production') {
+      (logger?.debug || console.log)(`[Webhook] 서명 수신: ${signature ? '있음' : '없음'}`);
     }
 
     const { imp_uid, merchant_uid, status } = req.body;
-    console.log(`[Webhook] imp_uid=${imp_uid} status=${status}`);
+    (logger?.info || console.info)(`[Webhook] imp_uid=${imp_uid} status=${status}`);
 
     if (status === 'paid') {
       // merchant_uid 패턴: fishing_PLANID_harborId_timestamp
       const parts = (merchant_uid || '').split('_');
       const planId = parts[1] || null;
       if (planId && PLAN_PRICES[planId]) {
-        console.log(`[Webhook] ✅ 결제 완료 확인 - ${planId} / ${imp_uid}`);
+        (logger?.info || console.info)(`[Webhook] ✅ 결제 완료 확인 - ${planId} / ${imp_uid}`);
       }
     }
     res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('[Webhook 오류]', err.message);
+    (logger?.error || console.error)('[Webhook 오류]', err.message);
     res.status(200).json({ ok: false }); // 포트원 웹훅은 200 반환 필수
   }
 });
@@ -1333,12 +1359,11 @@ function buildUserResponse(user) {
   // ✅ FIX-ADMIN: 어드민 계정 판별 — 이메일 기반(sunjulab.k)
   const rawId = user._id || user.id;
   const isAdminUser = isAdminToken({ email: user.email, tier: user.tier });
-  // ✅ ADMIN-FIX: sunjulab(email='sunjulab') 계정은 BUSINESS_VIP — 이메일로만 판별 (name 제외: 타인이 같은 닉네임 사용 가능)
-  const isSunjulabVip = user.email === 'sunjulab';
-  // id: 어드민은 'sunjulab.k'로, sunjulab VIP는 MongoDB ObjectId 그대로
+  // id: 어드민은 'sunjulab.k'로, 나머지는 MongoDB ObjectId 그대로
   const resolvedId = isAdminUser ? 'sunjulab.k' : String(rawId);
-  // tier: 어드민=MASTER, sunjulab VIP계정=BUSINESS_VIP, 나머지=DB값
-  const resolvedTier = isAdminUser ? 'MASTER' : isSunjulabVip ? 'BUSINESS_VIP' : (user.tier || 'FREE');
+  // ✅ BUG-FIX: 레거시 isSunjulabVip(email==='sunjulab') 코드 제거 — 실제 계정 없는 dead code
+  // tier: 어드민=MASTER, 나머지=DB값
+  const resolvedTier = isAdminUser ? 'MASTER' : (user.tier || 'FREE');
 
   // ✅ FIX-VVIP-BADGE: VVIP 항구명 포함 — 로그인/토큰갱신/syncFromServer 전원 포함
   const vvipHarborId = user.vvipHarborId || null;
@@ -1441,14 +1466,14 @@ app.post('/api/auth/check-id', async (req, res) => {
         const existing = await User.findOne({ email: id });
         return res.json({ available: !existing });
       } catch (dbErr) {
-        console.error('[check-id] DB 조회 실패, 인메모리 fallback:', dbErr.message);
+        (logger?.error || console.error)('[check-id] DB 조회 실패, 인메모리 fallback:', dbErr.message);
       }
     }
     // 인메모리 fallback
     const existing = memUsers.find(u => u.email === id);
     return res.json({ available: !existing });
   } catch (err) {
-    console.error('[check-id] 오류:', err.message);
+    (logger?.error || console.error)('[check-id] 오류:', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -1548,10 +1573,10 @@ app.post('/api/cs/inquiry', async (req, res) => {
       saveCsInquiries();
     }
 
-    console.log(`[CS] 새 문의 등록: ${inquiry.id} / ${inquiry.authorEmail}`);
+    (logger?.info || console.log)(`[CS] 새 문의 등록: ${inquiry.id} / ${inquiry.authorEmail}`);
     res.json({ success: true, id: inquiry.id, message: '문의가 접수되었습니다. 빠른 시일 내에 답변드리겠습니다.' });
   } catch (err) {
-    console.error('[POST /api/cs/inquiry]', err.message);
+    (logger?.error || console.error)('[POST /api/cs/inquiry]', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -1587,7 +1612,7 @@ app.get('/api/cs/inquiries', async (req, res) => {
 
     res.json(items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
   } catch (err) {
-    console.error('[GET /api/cs/inquiries]', err.message);
+    (logger?.error || console.error)('[GET /api/cs/inquiries]', err.message);
     res.status(500).json({ error: '서버 오류' });
   }
 });
@@ -1628,7 +1653,7 @@ app.put('/api/cs/inquiry/:id/reply', async (req, res) => {
 
     res.json({ success: true, message: '답변이 등록되었습니다.' });
   } catch (err) {
-    console.error('[PUT /api/cs/inquiry/reply]', err.message);
+    (logger?.error || console.error)('[PUT /api/cs/inquiry/reply]', err.message);
     res.status(500).json({ error: '서버 오류' });
   }
 });
@@ -1694,7 +1719,7 @@ app.put('/api/user/tier', async (req, res) => {
     }
     return res.json({ success: true, tier });
   } catch (err) {
-    console.error('[PUT /api/user/tier]', err.message);
+    (logger?.error || console.error)('[PUT /api/user/tier]', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -1822,7 +1847,7 @@ app.post('/api/user/settings', async (req, res) => {
     saveMemUsers(); // 알림 설정 파일 저장
     return res.json({ success: true, notiSettings });
   } catch (err) {
-    console.error('Settings Update Error:', err.message);
+    (logger?.error || console.error)('[Settings Update]', err.message);
     res.status(500).json({ error: '서버 에러가 발생했습니다.' });
   }
 });
@@ -1847,7 +1872,7 @@ app.post('/api/auth/check-name', async (req, res) => {
         }
         return res.json({ available: !existing });
       } catch (dbErr) {
-        console.error('[check-name] DB 조회 실패, 인메모리 fallback:', dbErr.message);
+        (logger?.error || console.error)('[check-name] DB 조회 실패, 인메모리 fallback:', dbErr.message);
       }
     }
     // 인메모리 fallback
@@ -1857,7 +1882,7 @@ app.post('/api/auth/check-name', async (req, res) => {
     }
     return res.json({ available: !existing });
   } catch (err) {
-    console.error('[check-name] 오류:', err.message);
+    (logger?.error || console.error)('[check-name] 오류:', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -1874,12 +1899,12 @@ try {
   const CoolsmsMessageService = coolsmsModule.default || coolsmsModule.Coolsms || coolsmsModule;
   if (CoolsmsMessageService && process.env.SMS_API_KEY && process.env.SMS_API_SECRET) {
     coolsmsClient = new CoolsmsMessageService(process.env.SMS_API_KEY, process.env.SMS_API_SECRET);
-    console.log('✅ CoolSMS 클라이언트 초기화 완료');
+    (logger?.info || console.log)('✅ CoolSMS 클라이언트 초기화 완료');
   } else {
-    console.log('⚠️ CoolSMS API 키 미설정 → 개발 모드(콘솔 출력)');
+    (logger?.info || console.log)('⚠️ CoolSMS API 키 미설정 → 개발 모드(콘솔 출력)');
   }
 } catch (e) {
-  console.log('⚠️ CoolSMS SDK 미설치 → 개발 모드(콘솔 출력)');
+  (logger?.warn || console.warn)('⚠️ CoolSMS SDK 미설치 → 개발 모드(콘솔 출력)');
 }
 
 async function sendAppPushNotification(userEmail, type, title, message) {
@@ -1939,15 +1964,15 @@ app.post('/api/auth/send-otp', async (req, res) => {
         text: `[낚시GO] 인증번호: ${otp}\n5분 이내 입력해주세요.`,
         type: 'SMS',
       });
-      console.log(`[SMS] 발송 완료 → ${normalized} : ${otp}`);
+      (logger?.info || console.log)(`[SMS] 발송 완료 → ${normalized.slice(0, 3)}****${normalized.slice(-4)}`);
     } else {
-      // 개발 모드: 콘솔 출력
-      console.log(`[SMS 개발모드] 수신번호: ${normalized}, OTP: ${otp}`);
+      // 개발 모드: OTP는 보안상 콘솔에 노출 안 함 — 로그로만 출력
+      (logger?.info || console.log)(`[SMS 개발모드] 수신번호: ${normalized.slice(0, 3)}****${normalized.slice(-4)} / OTP 발송 완료`);
     }
 
     res.json({ success: true, message: '인증번호가 발송되었습니다.' });
   } catch (err) {
-    console.error('[send-otp] 오류:', err.message);
+    (logger?.error || console.error)('[send-otp] 오류:', err.message);
     res.status(500).json({ error: 'SMS 발송 중 오류가 발생했습니다.' });
   }
 });
@@ -1983,7 +2008,7 @@ app.post('/api/auth/verify-otp', (req, res) => {
 
     res.json({ success: true, message: '인증이 완료되었습니다.' });
   } catch (err) {
-    console.error('[verify-otp] 오류:', err.message);
+    (logger?.error || console.error)('[verify-otp] 오류:', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -2127,7 +2152,12 @@ app.post('/api/auth/refresh', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '1h' }
     );
-    res.json({ accessToken });
+    const newRefreshToken = jwt.sign(
+      { id: decoded.id, email: decoded.email, name: decoded.name || '', tier: freshTier, type: 'refresh' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({ accessToken, refreshToken: newRefreshToken }); // ✅ BUG-FIX: Refresh Token Rotation 구현
   } catch (err) {
     return res.status(401).json({ error: 'Refresh Token이 만료되었습니다. 다시 로그인해주세요.' });
   }
@@ -2236,7 +2266,7 @@ app.put('/api/user/nickname', async (req, res) => {
       saveMemUsers();
       return res.json({ success: true, name: trimmed });
     }
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
+  } catch (err) { (logger?.error || console.error)('[nickname] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
 
@@ -2282,7 +2312,7 @@ app.put('/api/user/password', async (req, res) => {
       saveMemUsers();
       return res.json({ success: true });
     }
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 사용자 차단 ---
@@ -2328,7 +2358,7 @@ app.post('/api/user/block', async (req, res) => {
       }
       return res.json({ success: true, blockedUsers: currentUser.blockedUsers });
     }
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 차단 해제 ---
@@ -2411,7 +2441,7 @@ app.post('/api/user/follow', async (req, res) => {
     target.followers.push(email);
     saveMemUsers();
     return res.json({ success: true, followingCount: me.following.length, followerCount: target.followers.length });
-  } catch (err) { console.error('[follow]', err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[follow]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 언팔로우 ---
@@ -2451,7 +2481,7 @@ app.post('/api/user/unfollow', async (req, res) => {
     if (target) target.followers = (target.followers || []).filter(e => e !== email);
     saveMemUsers();
     return res.json({ success: true, followingCount: me.following.length });
-  } catch (err) { console.error('[unfollow]', err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[unfollow]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 팔로워 목록 조회 ---
@@ -2477,7 +2507,7 @@ app.get('/api/user/followers', async (req, res) => {
     const followerEmails = user?.followers || [];
     const profiles = memUsers.filter(u => followerEmails.includes(u.email)).map(u => ({ email: u.email, name: u.name, avatar: u.avatar || null }));
     return res.json({ followers: profiles, count: followerEmails.length });
-  } catch (err) { console.error('[followers]', err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[followers]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 팔로잉 목록 조회 ---
@@ -2502,7 +2532,7 @@ app.get('/api/user/following', async (req, res) => {
     const followingEmails = user?.following || [];
     const profiles = memUsers.filter(u => followingEmails.includes(u.email)).map(u => ({ email: u.email, name: u.name, avatar: u.avatar || null }));
     return res.json({ following: profiles, count: followingEmails.length });
-  } catch (err) { console.error('[following]', err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[following]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ─── 공개 사용자 프로필 조회 (닉네임 기반) ──────────────────────────────────────
@@ -2590,7 +2620,7 @@ app.get('/api/user/profile/:name', async (req, res) => {
       vvipHarborName,
     });
   } catch (err) {
-    console.error('[GET /api/user/profile/:name]', err.message);
+    (logger?.error || console.error)('[GET /api/user/profile/:name]', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -2607,11 +2637,11 @@ app.get('/api/business/my-posts', async (req, res) => {
     const email = tp.email || tp.id;
     if (dbReady && BusinessPost) {
       const posts = await BusinessPost.find({ author_email: email }).sort({ createdAt: -1 }).lean();
-      return res.json(posts);
+      return res.json(posts.map(p => ({ ...p, id: p._id.toString() })));
     }
     const posts = memBusinessPosts.filter(p => p.author_email === email);
     return res.json(posts);
-  } catch (err) { console.error('[business/my-posts]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[business/my-posts]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // GET /api/business/my-phone — 파트너 본인 전화번호 조회 (연락처 확인 팝업용)
@@ -2642,7 +2672,7 @@ app.get('/api/business/my-phone', async (req, res) => {
       if (bp?.shipName) shipName = bp.shipName;
     }
     return res.json({ phone, shipName });
-  } catch (err) { console.error('[business/my-phone]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[business/my-phone]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // POST /api/business/gallery-post — 조과 갤러리를 오픈게시판 선상 카테고리에 자동 등록
@@ -2689,7 +2719,7 @@ app.post('/api/business/gallery-post', async (req, res) => {
     memPosts.push(newPost);
     saveMemPosts();
     return res.json({ success: true, postId: newPost._id, message: '오픈게시판 선상 카테고리에 등록되었습니다! 🎣' });
-  } catch (err) { console.error('[business/gallery-post]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[business/gallery-post]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // DELETE /api/business/posts/:id — 내 비즈니스 게시글 삭제
@@ -2715,7 +2745,7 @@ app.delete('/api/business/posts/:id', async (req, res) => {
     memBusinessPosts.splice(idx, 1);
     saveMemBusinessPosts();
     return res.json({ success: true });
-  } catch (err) { console.error('[business/posts/delete]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[business/posts/delete]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 프로필 사진 변경 ---
@@ -2746,7 +2776,7 @@ app.post('/api/user/avatar', async (req, res) => {
       return res.json({ success: true, avatar });
     }
   } catch (err) {
-    console.error('[POST /api/user/avatar]', err.message);
+    (logger?.error || console.error)('[POST /api/user/avatar]', err.message);
     res.status(500).json({ error: '프로필 사진 저장 실패: ' + err.message });
   }
 });
@@ -2812,7 +2842,7 @@ app.post('/api/user/exp', async (req, res) => {
       saveMemUsers();
       return res.json({ success: true, expGained: expAmount, ...buildUserResponse(u), leveledUp: newLevelInfo.level > prevLevel });
     }
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // --- 내 게시글 목록 --- ✅ NEW-BUG-12: JWT 인증 추가 (타인 게시글 열람 차단)
@@ -2856,7 +2886,7 @@ app.get('/api/user/records', async (req, res) => {
     if (!isAdmin && tp.email !== email && tp.id !== email) return res.status(403).json({ error: '본인 기록만 조회 가능합니다.' });
     if (dbReady && CatchRecord) {
       const records = await CatchRecord.find({ author_email: email }).sort({ createdAt: -1 });
-      return res.json(records);
+      return res.json(records.map(r => ({ ...r.toObject(), id: r._id.toString() })));
     }
     res.json(memRecords.filter(r => r.author_email === email));
   } catch (err) { res.status(500).json({ error: '서버 오류' }); }
@@ -2876,7 +2906,7 @@ app.get('/api/records/:id', async (req, res) => {
     if (!record) return res.status(404).json({ error: '조과 기록을 찾을 수 없습니다.' });
     return res.json(record);
   } catch (err) {
-    console.error('[GET /api/records/:id]', err.message);
+    (logger?.error || console.error)('[GET /api/records/:id]', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -2907,7 +2937,7 @@ app.post('/api/user/records', async (req, res) => {
     memRecords.unshift(record);
     saveMemRecords();
     res.json(record);
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── 조과기록 삭제 (JWT 인증 필수) ──────────────────────────────────────────────
@@ -2938,6 +2968,47 @@ app.delete('/api/user/records/:id', async (req, res) => {
 // =================================================================
 
 
+// ── ✅ INSTA-P3: 24h 조황 스토리 API ─────────────────────────────────────────
+app.get('/api/stories', async (req, res) => {
+  try {
+    if (dbReady && Story) {
+      const stories = await Story.find({ expiresAt: { $gt: new Date() } })
+        .sort({ createdAt: -1 }).limit(30).lean();
+      return res.json(stories);
+    }
+    res.json([]); // DB 없으면 빈 배열
+  } catch (err) { res.json([]); }
+});
+
+app.post('/api/stories', async (req, res) => {
+  try {
+    const auth = req.headers.authorization?.split(' ')[1];
+    if (!auth) return res.status(401).json({ error: '로그인이 필요합니다.' });
+    let tp;
+    try { tp = require('jsonwebtoken').verify(auth, JWT_SECRET); } catch { return res.status(401).json({ error: '인증 토큰이 유효하지 않습니다.' }); }
+    const { image, content, location } = req.body;
+    if (!image) return res.status(400).json({ error: '이미지는 필수입니다.' });
+    if (!dbReady || !Story) return res.status(503).json({ error: 'DB 연결 필요' });
+    // avatar enriching
+    let author_avatar = null;
+    if (User) {
+      try {
+        const u = await User.findOne({ email: tp.email }, 'avatar picture').lean();
+        author_avatar = u?.avatar || u?.picture || null;
+      } catch (_) {}
+    }
+    const story = await Story.create({
+      author: tp.name || tp.email,
+      author_email: tp.email,
+      author_avatar,
+      image,
+      content: content || '',
+      location: location || {},
+    });
+    res.json(story);
+  } catch (err) { res.status(500).json({ error: '스토리 등록 실패' }); }
+});
+
 // ── 오픈게시판 전체 조회 (페이지네이션 + 검색 + 카테고리 필터) ──────────────
 app.get('/api/community/posts', async (req, res) => {
   try {
@@ -2954,11 +3025,28 @@ app.get('/api/community/posts', async (req, res) => {
         { content: { $regex: q, $options: 'i' } },
         { author: { $regex: q, $options: 'i' } },
       ];
+      // ✅ INSTA-P2: 인기순 정렬 (likes 내림차순) vs 기본 최신순
+      const sortBy = req.query.sort === 'popular'
+        ? { likes: -1, createdAt: -1 }
+        : { createdAt: -1 };
       const [posts, total] = await Promise.all([
-        Post.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Post.find(filter).sort(sortBy).skip(skip).limit(limit),
         Post.countDocuments(filter),
       ]);
-      return res.json({ posts, total, page, totalPages: Math.ceil(total / limit) });
+      // ✅ INSTA-P2: author_avatar 배치 enriching (N+1 방지)
+      const emails = [...new Set(posts.map(p => p.author_email).filter(Boolean))];
+      let avatarMap = {};
+      if (emails.length > 0 && User) {
+        try {
+          const users = await User.find({ email: { $in: emails } }, 'email avatar picture').lean();
+          users.forEach(u => { avatarMap[u.email] = u.avatar || u.picture || null; });
+        } catch (_) { /* avatar enriching 실패 무시 */ }
+      }
+      const enriched = posts.map(p => {
+        const obj = p.toObject ? p.toObject() : p;
+        return { ...obj, author_avatar: avatarMap[obj.author_email] || null };
+      });
+      return res.json({ posts: enriched, total, page, totalPages: Math.ceil(total / limit) });
     }
 
     // 인메모리 fallback
@@ -3003,38 +3091,40 @@ app.post('/api/community/posts', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    let { author, author_email, category, content, image, location } = req.body;
+    let { author, author_email, category, content, image, images, location } = req.body;
     if (!author || !category || !content) return res.status(400).json({ error: '필수 항목 누락' });
     if (!author_email) author_email = 'guest@fishinggo.kr';
     // ✅ CENSOR: 게시글 내용 비속어 * 치환
     content = censorText(content.trim());
     // ✅ LOC: location 안전 정규화 — { address, lat, lng } 또는 null
     const safeLocation = (location && location.address) ? { address: location.address, lat: location.lat || null, lng: location.lng || null } : null;
-    // 이미지 크기 제한: base64 1MB(≒750KB 실제) 초과 시 null 처리
-    const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
-
+    // ✅ IMG-SIZE-FIX: 클라이언트(WritePost.jsx L142)와 동일한 4MB 기준으로 통일
+    // 이전 3MB 제한으로 3~4MB 구간 이미지가 서버에서 탈락하여 저장 0장 버그 발생
+    const safeImages = Array.isArray(images)
+      ? images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5)
+      : [];
+    const safeImage = safeImages[0] || ((image && image.length <= 4 * 1024 * 1024) ? image : null) || null;
 
     if (dbReady && Post) {
       try {
-        const post = new Post({ author, author_email, category, content, image: safeImage, location: safeLocation });
+        const post = new Post({ author, author_email, category, content, image: safeImage, images: safeImages, location: safeLocation });
         await post.save();
         try {
-          memPosts.unshift({ _id: post._id.toString(), id: post._id.toString(), author, author_email, category, content, image: safeImage, location: safeLocation, likes: 0, comments: [], createdAt: post.createdAt });
+          memPosts.unshift({ _id: post._id.toString(), id: post._id.toString(), author, author_email, category, content, image: safeImage, images: safeImages, location: safeLocation, likes: 0, comments: [], createdAt: post.createdAt });
           if (memPosts.length > 200) memPosts.splice(200);
         } catch (syncErr) { /* memPosts 동기화 실패는 무시 */ }
         return res.json(post);
       } catch (dbErr) {
-        console.error('[MongoDB 저장 실패, 인메모리 fallback]:', dbErr.message);
-        // MongoDB 실패 시 이미지 제거 후 in-memory로 fallback
+        (logger?.error || console.error)('[MongoDB 저장 실패, 인메모리 fallback]:', dbErr.message);
       }
     }
     const uid = Date.now().toString();
-    const post = { _id: uid, id: uid, author, author_email, category, content, image: safeImage, location: safeLocation, likes: 0, comments: [], createdAt: new Date().toISOString() };
+    const post = { _id: uid, id: uid, author, author_email, category, content, image: safeImage, images: safeImages, location: safeLocation, likes: 0, comments: [], createdAt: new Date().toISOString() };
     memPosts.unshift(post);
     if (memPosts.length > 200) memPosts.splice(200);
     saveMemPosts();
     return res.json(post);
-  } catch (err) { console.error('[POST /posts 오류]:', err.message); res.status(500).json({ error: '서버 오류: ' + err.message }); }
+  } catch (err) { (logger?.error || console.error)('[POST /posts 오류]:', err.message); res.status(500).json({ error: '서버 오류: ' + err.message }); }
 });
 
 // ── 오픈게시판 글 삭제 (JWT 인증) ────────────────────────────────────────────
@@ -3074,7 +3164,7 @@ app.put('/api/community/posts/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { content, category, image, email } = req.body;
+    const { content, category, image, images, email } = req.body;
     const isAdmin = isAdminToken(tp);
     if (dbReady && Post) {
       let post;
@@ -3084,11 +3174,18 @@ app.put('/api/community/posts/:id', async (req, res) => {
         return res.status(403).json({ error: '권한 없음' });
       if (content !== undefined) post.content = content;
       if (category !== undefined) post.category = category;
-      if (image !== undefined) post.image = image;
+      // ✅ MULTI-IMG: images 배열 우선, 없으면 단일 image fallback
+      if (images !== undefined) {
+        // ✅ IMG-SIZE-FIX: PUT(수정)도 4MB 기준 통일
+        post.images = Array.isArray(images) ? images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : [];
+        post.image = post.images[0] || null;
+      } else if (image !== undefined) {
+        post.image = image;
+      }
       await post.save();
       const idx = memPosts.findIndex(p => p._id === req.params.id || p.id === req.params.id);
       if (idx !== -1) {
-        memPosts[idx] = { ...memPosts[idx], content: post.content, category: post.category, image: post.image };
+        memPosts[idx] = { ...memPosts[idx], content: post.content, category: post.category, image: post.image, images: post.images || [] };
         saveMemPosts();
       }
       return res.json(post);
@@ -3099,10 +3196,20 @@ app.put('/api/community/posts/:id', async (req, res) => {
       return res.status(403).json({ error: '권한 없음' });
     if (content !== undefined) mem.content = content;
     if (category !== undefined) mem.category = category;
-    if (image !== undefined) mem.image = image;
+    // ✅ FIX-MULTI-IMG: 인메모리 fallback에서도 images 배열 업데이트
+    if (images !== undefined) {
+      // ✅ IMG-SIZE-FIX: 인메모리 fallback도 4MB 기준 통일
+      mem.images = Array.isArray(images) ? images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : [];
+      mem.image = mem.images[0] || null;
+    } else if (image !== undefined) {
+      mem.image = image;
+      if (!Array.isArray(mem.images) || mem.images.length === 0) {
+        mem.images = image ? [image] : [];
+      }
+    }
     saveMemPosts();
     res.json(mem);
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -3143,7 +3250,7 @@ app.post('/api/community/posts/:id/comments', async (req, res) => {
       return res.json(mem);
     }
     res.json({ comments: [newComment] });
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -3187,7 +3294,7 @@ app.delete('/api/community/posts/:id/comments/:commentId', async (req, res) => {
       return res.json(mem);
     }
     res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -3306,7 +3413,7 @@ app.post('/api/community/crews', async (req, res) => {
     saveMemCrews();
     const { password: _pw, ...safeCrewResp } = crew;
     res.json(safeCrewResp);
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── [ADMIN] 기존 크루 limit 일괄 수정 (임시 마이그레이션) ───────────────────────
@@ -3349,7 +3456,7 @@ app.post('/api/community/crews/:id/verify', async (req, res) => {
     const isMatch = await bcrypt.compare(String(password), crew.password);
     if (!isMatch) return res.status(401).json({ error: '입장 코드가 일치하지 않습니다.' });
     res.json({ success: true });
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -3436,7 +3543,7 @@ app.patch('/api/community/crews/:id/transfer', async (req, res) => {
     mem.ownerName = newOwnerMem.name;
     saveMemCrews();
     res.json({ success: true });
-  } catch (err) { console.error('[CREW TRANSFER]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[CREW TRANSFER]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -3488,11 +3595,13 @@ app.post('/api/community/crews/:id/join', async (req, res) => {
       crew.lastActive = new Date();
       await crew.save();
 
-      // 유저 joinedCrews 업데이트
-      await User.findOneAndUpdate(
-        { email },
-        { $addToSet: { joinedCrews: { crewId: crew._id, joinedAt: new Date() } } }
-      ).catch(() => {});
+      // 유저 joinedCrews 업데이트 (✅ BUG-FIX: User null guard 추가 — null 시 TypeError 방지)
+      if (User) {
+        await User.findOneAndUpdate(
+          { email },
+          { $addToSet: { joinedCrews: { crewId: crew._id, joinedAt: new Date() } } }
+        ).catch(() => {});
+      }
 
       const obj = crew.toObject(); delete obj.password;
       return res.json({ success: true, crew: obj });
@@ -3514,7 +3623,7 @@ app.post('/api/community/crews/:id/join', async (req, res) => {
     mem.members = mem.memberList.length;
     saveMemCrews();
     res.json({ success: true });
-  } catch (err) { console.error('[CREW JOIN]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[CREW JOIN]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── ✅ CREW-ENH: 크루 탈퇴 ───────────────────────────────────────────────────
@@ -3551,7 +3660,7 @@ app.post('/api/community/crews/:id/leave', async (req, res) => {
       saveMemCrews();
     }
     res.json({ success: true });
-  } catch (err) { console.error('[CREW LEAVE]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[CREW LEAVE]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── ✅ CREW-ENH: 크루원 목록 조회 ───────────────────────────────────────────
@@ -3602,7 +3711,7 @@ app.delete('/api/community/crews/:id/members/:targetEmail', async (req, res) => 
       return res.json({ success: true, members: crew.memberList });
     }
     res.json({ success: true });
-  } catch (err) { console.error('[CREW KICK]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[CREW KICK]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── ✅ 간부 설정/해제 (크루장 전용) ────────────────────────────────────────────
@@ -3646,7 +3755,7 @@ app.patch('/api/community/crews/:id/members/:targetEmail/role', async (req, res)
     if (memMember) memMember.role = role;
     saveMemCrews();
     res.json({ success: true });
-  } catch (err) { console.error('[CREW ROLE]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[CREW ROLE]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── ✅ CREW-ENH: 내가 가입한 크루 목록 ──────────────────────────────────────
@@ -3669,7 +3778,7 @@ app.get('/api/user/crews', async (req, res) => {
       .filter(c => Array.isArray(c.memberList) && c.memberList.some(m => m.email === email))
       .map(c => { const { password: _pw, ...safe } = c; return safe; });
     res.json(myCrews);
-  } catch (err) { console.error('[USER CREWS]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[USER CREWS]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -3712,16 +3821,17 @@ app.post('/api/community/notices', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
-    const { title, content, isPinned, isPopup, image } = req.body;
+    const { title, content, isPinned, isPopup, image, images } = req.body;
     if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
-    // ✅ POPUP: image 필드 저장 — 1MB 초과 시 null 처리
-    const safeImage = (image && image.length > 1024 * 1024) ? null : (image || null);
+    // ✅ IMG-SIZE-FIX: 4MB 기준 통일 (오픈게시판과 동일하게)
+    const safeImages = Array.isArray(images) ? images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : [];
+    const safeImage = safeImages[0] || ((image && image.length <= 4 * 1024 * 1024) ? image : null) || null;
     if (dbReady && Notice) {
-      const notice = new Notice({ title, content, isPinned: !!isPinned, isPopup: !!isPopup, author: 'MASTER', image: safeImage });
+      const notice = new Notice({ title, content, isPinned: !!isPinned, isPopup: !!isPopup, author: 'MASTER', image: safeImage, images: safeImages });
       await notice.save();
       return res.json({ ...notice.toObject(), _id: notice._id.toString(), id: notice._id.toString() });
     }
-    const notice = { id: Date.now().toString(), _id: Date.now().toString(), title, content, isPinned: !!isPinned, isPopup: !!isPopup, author: 'MASTER', views: 0, image: safeImage, date: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() };
+    const notice = { id: Date.now().toString(), _id: Date.now().toString(), title, content, isPinned: !!isPinned, isPopup: !!isPopup, author: 'MASTER', views: 0, image: safeImage, images: safeImages, date: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() };
     memNotices.unshift(notice);
     saveMemNotices();
     res.json(notice);
@@ -3737,13 +3847,14 @@ app.put('/api/community/notices/:id', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
-    const { title, content, image, isPopup } = req.body;
+    const { title, content, image, images, isPopup } = req.body;
     if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
-    // ✅ BUG-41: isPinned를 false로 덮어쓰지 않도록 — 수정 시 image만 교체
-    const safeImage = (image && image.length > 1024 * 1024) ? null : (image !== undefined ? image : undefined);
+    // ✅ IMG-SIZE-FIX: 4MB 기준 통일
+    const safeImages = Array.isArray(images) ? images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : undefined;
+    const safeImage = safeImages ? (safeImages[0] || null) : ((image !== undefined) ? ((image && image.length > 4 * 1024 * 1024) ? null : (image || null)) : undefined);
     const updateFields = { title: title.trim(), content };
     if (safeImage !== undefined) updateFields.image = safeImage;
-    // ✅ POPUP-CTRL: isPopup이 payload에 있을 때만 업데이트 (수정 시 명시적 체크박스 제어를 위해)
+    if (safeImages !== undefined) updateFields.images = safeImages;
     if (isPopup !== undefined) updateFields.isPopup = !!isPopup;
     if (dbReady && Notice) {
       const updated = await Notice.findByIdAndUpdate(
@@ -3760,7 +3871,7 @@ app.put('/api/community/notices/:id', async (req, res) => {
     memNotices[idx] = { ...memNotices[idx], ...updateFields };
     saveMemNotices();
     res.json(memNotices[idx]);
-  } catch (err) { console.error('[PUT /notices/:id]', err.message); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[PUT /notices/:id]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -3799,7 +3910,8 @@ app.patch('/api/community/notices/:id/view', async (req, res) => {
 app.get('/api/community/business', async (req, res) => {
   try {
     const { region, limit } = req.query;
-    const maxLimit = Math.min(parseInt(limit) || 20, 20);
+    // ✅ BUG-FIX: 최대 20개 제한 → 클라이언트에 페이지네이션 없으므로 전체 조회 필요. 100으로 상향
+    const maxLimit = Math.min(parseInt(limit) || 100, 100);
     if (dbReady && BusinessPost) {
       const now = new Date();
       await BusinessPost.updateMany(
@@ -3835,7 +3947,11 @@ app.post('/api/community/business', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { author, author_email, shipName, type, target, region, date, price, phone, content, cover, isPinned, harborId, expiresAt, capacity } = req.body;
+    const { author, author_email, shipName, type, target, region, date, price, phone, content, cover, images: rawImages, isPinned, harborId, expiresAt, capacity } = req.body;
+    // ✅ MULTI-IMG: 선상배 이미지 배열 처리
+    // ✅ BUG-FIX: base64는 원본 대비 ~1.33배 크므로 3MB 원본 = ~4MB base64 → 4MB로 완화
+    const bizImages = Array.isArray(rawImages) ? rawImages.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : [];
+    const bizCover = bizImages[0] || cover || '';
     if (!author || !author_email || !shipName || !content)
       return res.status(400).json({ error: '필수 항목 누락' });
     // ✅ 서버 인원 검증 — 마스터는 1~1000, 일반 유저는 1~200
@@ -3917,8 +4033,12 @@ app.post('/api/community/business', async (req, res) => {
       author, author_email, shipName: censoredShipName,
       type: type || '선상낚시', target: target || '다수어종',
       region: region || '', date: date || '', price: price || '',
-      phone: phone || '', content: censoredContent, cover: cover || '',
+      phone: phone || '', content: censoredContent,
+      cover: bizCover,       // ✅ MULTI-IMG: 첫 번째 이미지가 커버
+      images: bizImages,     // ✅ MULTI-IMG: 전체 이미지 배열
       isPinned: safePinned,
+      // ✅ BUG-FIX: capacity 누락 → DB에 저장 안 되던 버그 수정
+      capacity: capacity !== undefined && capacity !== null && capacity !== '' ? Number(capacity) : null,
       harborId: harborId || null, expiresAt: expiresAt || null,
     };
 
@@ -3931,7 +4051,27 @@ app.post('/api/community/business', async (req, res) => {
     memBusinessPosts.unshift(post);
     saveMemBusinessPosts();
     res.json(post);
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[business/write]', err.message); res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── 선상배홍보 게시글 단건 조회 (수정 모드 진입 시 사용) ──────────────────────
+// ✅ BUG-FIX: GET /:id 엔드포인트 누락 → 수정 모드에서 무조건 404 오류 발생하던 버그 수정
+app.get('/api/community/business/:id', async (req, res) => {
+  try {
+    if (dbReady && BusinessPost) {
+      let post = null;
+      try { post = await BusinessPost.findById(req.params.id).lean(); } catch (_) {}
+      if (!post) post = await BusinessPost.findOne({ id: req.params.id }).lean().catch(() => null);
+      if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+      return res.json({ ...post, _id: post._id?.toString(), id: post._id?.toString() });
+    }
+    const mem = memBusinessPosts.find(p =>
+      p.id === req.params.id || p._id === req.params.id ||
+      String(p.id) === req.params.id || String(p._id) === req.params.id
+    );
+    if (!mem) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    res.json(mem);
+  } catch (err) { (logger?.error || console.error)('[BUSINESS GET ONE]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 // ── 선상배홍보 게시글 삭제 (JWT 인증 — 마스터 or 작성자) ──────────────────────
@@ -3963,45 +4103,8 @@ app.delete('/api/community/business/:id', async (req, res) => {
     memBusinessPosts = memBusinessPosts.filter(p => p !== memPost);
     saveMemBusinessPosts();
     res.json({ success: true });
-  } catch (err) { console.error('[BUSINESS DELETE]', err.message); res.status(500).json({ error: '서버 오류: ' + err.message }); }
+  } catch (err) { (logger?.error || console.error)('[BUSINESS DELETE]', err.message); res.status(500).json({ error: '서버 오류: ' + err.message }); }
 });
-
-
-
-// ── 공지사항 수정 (마스터 전용) ───────────────────────────────────────────────
-app.put('/api/community/notices/:id', async (req, res) => {
-  try {
-    const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
-    let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
-    const { title, content, isPinned, image } = req.body;
-    // ✅ POPUP: image 수정도 반영 — 1MB 초과 시 null 처리
-    const safeImage = image !== undefined
-      ? ((image && image.length > 1024 * 1024) ? null : (image || null))
-      : undefined;
-    if (dbReady && Notice) {
-      const upd = {};
-      if (title !== undefined) upd.title = title;
-      if (content !== undefined) upd.content = content;
-      if (isPinned !== undefined) upd.isPinned = isPinned;
-      if (safeImage !== undefined) upd.image = safeImage;
-      const notice = await Notice.findByIdAndUpdate(req.params.id, upd, { new: true });
-      if (!notice) return res.status(404).json({ error: '공지 없음' });
-      return res.json({ ...notice.toObject(), _id: notice._id.toString(), id: notice._id.toString() });
-    }
-    const mem = memNotices.find(n => n.id === req.params.id || n._id === req.params.id);
-    if (!mem) return res.status(404).json({ error: '공지 없음' });
-    if (title !== undefined) mem.title = title;
-    if (content !== undefined) mem.content = content;
-    if (isPinned !== undefined) mem.isPinned = isPinned;
-    if (safeImage !== undefined) mem.image = safeImage;
-    saveMemNotices();
-    res.json(mem);
-  } catch (err) { res.status(500).json({ error: '서버 오류' }); }
-});
-
 
 // ── 선상배홍보 수정 (작성자 or 마스터) ───────────────────────────────────────
 app.put('/api/community/business/:id', async (req, res) => {
@@ -4013,26 +4116,58 @@ app.put('/api/community/business/:id', async (req, res) => {
     const { email, ...fields } = req.body;
     const isAdmin = isAdminToken(tp);
 
-    // ✅ 마스터가 아닌 경우 isPinned 변경 차단
-    if (!isAdmin && fields.isPinned !== undefined) {
-      fields.isPinned = false; // 강제 false
+    // ✅ BUG-FIX-PUT-1: capacity 서버 검증 추가 (수정 시에도 적용)
+    if (fields.capacity !== undefined) {
+      const maxCap = isAdmin ? 1000 : 200;
+      const capNum = Number(fields.capacity);
+      if (isNaN(capNum) || capNum < 1 || capNum > maxCap) {
+        return res.status(400).json({ error: `인원은 1~${maxCap}사이의 숫자로 입력해주세요.` });
+      }
+    }
+
+    // ✅ BUG-FIX-PUT-2: VVIP 사용자도 isPinned 변경 가능 (isAdmin 또는 유효 VVIP 슬롯 보유자)
+    if (fields.isPinned !== undefined) {
+      const authorEmail = email || tp.email;
+      const myVvipEntry = authorEmail ? Object.entries(vvipSlots).find(([, v]) => {
+        return v.userId === authorEmail && (!v.expiresAt || new Date(v.expiresAt) > new Date());
+      }) : null;
+      if (!isAdmin && !myVvipEntry) {
+        fields.isPinned = false; // 마스터/VVIP 아닌 경우 강제 false
+      }
+    }
+
+    // ✅ BUG-FIX-PUT-3: 이미지 배열 필터링 (PUT에도 POST와 동일한 4MB 제한 적용)
+    if (fields.images !== undefined) {
+      fields.images = Array.isArray(fields.images)
+        ? fields.images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5)
+        : [];
+      // 이미지 바뀌면 cover도 동기화
+      fields.cover = fields.images[0] || fields.cover || '';
+    }
+
+    // ✅ BUG-FIX-PUT-4: 화이트리스트 필드만 저장 — 예상치 못한 필드 주입 방지
+    const ALLOWED_FIELDS = ['shipName', 'type', 'target', 'region', 'date', 'price', 'phone',
+      'content', 'cover', 'images', 'isPinned', 'capacity', 'harborId', 'expiresAt'];
+    const safeFields = {};
+    for (const k of ALLOWED_FIELDS) {
+      if (fields[k] !== undefined) safeFields[k] = fields[k];
     }
 
     if (dbReady && BusinessPost) {
       const post = await BusinessPost.findById(req.params.id).catch(() => null);
       if (!post) return res.status(404).json({ error: '게시글 없음' });
       if (!isAdmin && post.author_email !== email) return res.status(403).json({ error: '권한 없음' });
-      Object.assign(post, fields);
+      Object.assign(post, safeFields);
       await post.save();
       return res.json(post);
     }
     const mem = memBusinessPosts.find(p => p.id === req.params.id || p._id === req.params.id);
     if (!mem) return res.status(404).json({ error: '게시글 없음' });
     if (!isAdmin && mem.author_email !== email) return res.status(403).json({ error: '권한 없음' });
-    Object.assign(mem, fields);
+    Object.assign(mem, safeFields);
     saveMemBusinessPosts();
     res.json(mem);
-  } catch (err) { console.error(err); res.status(500).json({ error: '서버 오류' }); }
+  } catch (err) { (logger?.error || console.error)('[BusinessPost PUT] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
 
@@ -4043,7 +4178,7 @@ app.get('/', (req, res) => {
   res.send('<h1>Fishing GO Backend is running flawlessly! 🚀</h1><p>DB Status: ' + (dbReady ? 'MongoDB Connected ✅' : 'In-Memory Mode ⚠️') + '</p>');
 });
 
-app.get('/api/weather/precision', (req, res) => {
+app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   const { stationId } = req.query;
   const sid = stationId || 'DT_0001';
 
@@ -4068,7 +4203,7 @@ app.get('/api/weather/precision', (req, res) => {
   const mockSst = (station.baseTemp || profile.temp || 15.2).toFixed(1);
 
   const seed = parseInt(sid.replace(/\\D/g, '')) || 1;
-  const tideNum = (seed % 14) + 1;
+  const tideNum = (seed % 15) + 1; // ✅ BUG-FIX: 14→15 물때 15물 순환 수정 (3차 누락 패치)
   const tidePhase = tideNum === 7 ? '7물(사리)' : tideNum === 13 ? '13물(조금)' : tideNum === 14 ? '14물(무시)' : `${tideNum}물`;
   const baseHighMin = (tideNum * 45 + seed * 7) % 1440;
   const baseLowMin = (baseHighMin + 375) % 1440;
@@ -4170,7 +4305,7 @@ app.get('/api/weather/cctv', async (req, res) => {
       isOverride: !!override,
     });
   } catch (err) {
-    console.error('[CCTV API 오류]', err.message);
+    (logger?.error || console.error)('[CCTV API 오류]', err.message);
     res.status(500).json({ error: 'CCTV 정보 조회 실패' });
   }
 });
@@ -4244,7 +4379,7 @@ app.put('/api/admin/cctv/:obsCode', async (req, res) => {
         { obsCode, ...updated },
         { upsert: true, new: true }
       );
-    } catch (e) { console.error('[CCTV DB 저장 실패]', e.message); }
+    } catch (e) { (logger?.error || console.error)('[CCTV DB 저장 실패]', e.message); }
   }
 
   logger.info(`[마스터 CCTV 수정] ${obsCode}: ${JSON.stringify(cctvOverrides[obsCode])}`); // ✅ 22TH-C2
@@ -4259,7 +4394,7 @@ app.delete('/api/admin/cctv/:obsCode', async (req, res) => {
   saveCctvOverrides(); // JSON 파일 저장
   if (dbReady && CctvOverrideModel) {
     try { await CctvOverrideModel.deleteOne({ obsCode }); }
-    catch (e) { console.error('[CCTV DB 삭제 실패]', e.message); }
+    catch (e) { (logger?.error || console.error)('[CCTV DB 삭제 실패]', e.message); }
   }
   logger.info(`[마스터 CCTV 초기화] ${obsCode} 기본값으로 복원`); // ✅ 22TH-C2
   res.json({ success: true, message: `${obsCode} 기본값으로 복원` });
@@ -4331,14 +4466,14 @@ app.post('/api/admin/cctv/auto-sync', async (req, res) => {
           results.push({ obsCode, videoId, title });
         }
       } catch (err) {
-        console.error(`[AutoSync Error] ${obsCode}:`, err.response ? err.response.data : err.message);
+        (logger?.error || console.error)(`[AutoSync Error] ${obsCode}:`, err.response ? err.response.data : err.message);
       }
     }
     logger.info(`[CCTV AutoSync] ${updatedCount}개 지역 업데이트 완료`); // ✅ 22TH-C2
     saveCctvOverrides(); // 자동갱신 결과 파일 저장 (서버 재시작 후 복원)
     res.json({ success: true, updatedCount, results });
   } catch (err) {
-    console.error(err);
+    (logger?.error || console.error)('[AutoSync Fatal]', err.message);
     res.status(500).json({ error: '자동 동기화 중 오류 발생' });
   }
 });
@@ -4373,7 +4508,7 @@ app.get('/api/commerce/coupang/search', async (req, res) => {
   if (!keyword) return res.status(400).json({ error: '검색어가 필요합니다.' });
 
   if (!ACCESS_KEY || !SECRET_KEY) {
-    console.warn('[Coupang] API Keys not provided. Returning fallback product.');
+    (logger?.warn || console.warn)('[Coupang] API Keys not provided. Returning fallback product.');
     // API 키 미세팅 시 임시 Mock 응답
     return res.json({
       products: [{
@@ -4409,7 +4544,7 @@ app.get('/api/commerce/coupang/search', async (req, res) => {
 
     res.json({ products });
   } catch (err) {
-    console.error('Coupang API Error:', err.message);
+    (logger?.error || console.error)('[Coupang] API Error:', err.message);
     res.status(500).json({ error: '쿠팡 파트너스 연동 중 오류가 발생했습니다.' });
   }
 });
@@ -4449,8 +4584,9 @@ app.post('/api/pro/purchase', async (req, res) => {
 
   // DB에도 User.tier 업데이트
   if (dbReady && User) {
-    try { await User.findOneAndUpdate({ email: userId }, { tier: 'PRO', proExpiresAt: expiresAt }); }
-    catch (e) { console.error('[PRO DB 저장 실패]', e.message); }
+    // ✅ BUG-FIX: proExpiresAt → subscriptionExpiresAt (User 스키마 실제 필드명)
+    try { await User.findOneAndUpdate({ email: userId }, { tier: 'PRO', subscriptionExpiresAt: expiresAt }); }
+    catch (e) { (logger?.error || console.error)('[PRO DB 저장 실패]', e.message); }
   }
 
   const daysLeft = Math.ceil((expiresAt - now) / 86400000);
@@ -4630,9 +4766,9 @@ async function loadVvipSlotsFromDB() {
       restored++;
     });
 
-    console.log(`[VVIP] DB에서 ${restored}개 슬롯 복원 (모두 ${Object.keys(vvipSlots).length}개 활성)`);
+    logger.info(`[VVIP] DB에서 ${restored}개 슬롯 복원 (모두 ${Object.keys(vvipSlots).length}개 활성)`);
     if (restored > 0) saveVvipSlots(); // 복원된 슬롯을 JSON 파일로도 동기화
-  } catch (e) { console.error('[VVIP] 슬롯 로드 실패:', e.message); }
+  } catch (e) { (logger?.error || console.error)('[VVIP] 슬롯 로드 실패:', e.message); }
 }
 setTimeout(loadVvipSlotsFromDB, 3500);
 
@@ -4684,7 +4820,7 @@ app.post('/api/vvip/purchase', async (req, res) => {
     if (!slot.expiresAt || new Date(slot.expiresAt) >= now) {
       return res.status(409).json({ error: '이미 다른 선장님이 선점하셨습니다.', takenBy: slot.userName });
     }
-    console.log(`[VVIP 만료 재구매] ${harbor.name}`);
+    logger.info(`[VVIP 만료 재구매] ${harbor.name}`);
     delete vvipSlots[harborId];
   }
 
@@ -4706,7 +4842,7 @@ app.post('/api/vvip/purchase', async (req, res) => {
         { email: userId },
         { tier: 'BUSINESS_VIP', vvipHarborId: harborId, vvipExpiresAt: expiresAt }
       );
-    } catch (e) { console.error('[VVIP DB 저장 실패]', e.message); }
+    } catch (e) { (logger?.error || console.error)('[VVIP DB 저장 실패]', e.message); }
   }
 
   res.json({
@@ -4738,7 +4874,10 @@ app.get('/api/vvip/my-slot', (req, res) => {
       saveVvipSlots(); // 만료 파일 반영
       return res.json({ hasSlot: false, reason: 'expired', message: 'VVIP 구독이 만료되었습니다. 재구독 시 슬롯을 다시 선점하세요.' });
     }
-    const daysLeft = Math.max(0, Math.ceil((new Date(slot.expiresAt) - now) / 86400000));
+    // ✅ BUG-FIX: expiresAt이 null이면 daysLeft 계산 시 NaN 발생 → null guard 추가
+    const daysLeft = slot.expiresAt
+      ? Math.max(0, Math.ceil((new Date(slot.expiresAt) - now) / 86400000))
+      : null; // 만료일 없는 영구 슬롯
     res.json({ hasSlot: true, harbor, slot, daysLeft });
   } else {
     res.json({ hasSlot: false });
@@ -4763,10 +4902,22 @@ app.post('/api/admin/vvip/grant', async (req, res) => {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + Number(days) * 24 * 60 * 60 * 1000);
 
+  // DB에서 실제 닉네임 조회 (이메일 노출 방지)
+  let resolvedUserName = userId; // 기본값: userId(이메일)
+  if (dbReady && User) {
+    try {
+      const foundUser = await User.findOne({ $or: [{ email: userId }, { id: userId }, { name: userId }] }, 'name').lean();
+      if (foundUser?.name) resolvedUserName = foundUser.name;
+    } catch { /* DB 조회 실패 시 userId 그대로 사용 */ }
+  } else {
+    const mu = memUsers.find(u => u.email === userId || u.id === userId || u.name === userId);
+    if (mu?.name) resolvedUserName = mu.name;
+  }
+
   // 기존 슬롯 덮어쓰기 허용 (테스트 목적)
   vvipSlots[harborId] = {
     userId,
-    userName: userId,
+    userName: resolvedUserName, // ✅ BUG-FIX: 이메일 대신 실제 닉네임 사용
     purchasedAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     harborName: harbor.name,
@@ -4781,14 +4932,14 @@ app.post('/api/admin/vvip/grant', async (req, res) => {
         { $or: [{ email: userId }, { id: userId }, { name: userId }] },
         { $set: { tier: 'BUSINESS_VIP', vvipHarborId: harborId, vvipExpiresAt: expiresAt } }
       );
-    } catch (e) { console.error('[VVIP Grant DB]', e.message); }
+    } catch (e) { (logger?.error || console.error)('[VVIP Grant DB]', e.message); }
   } else {
     // 인메모리 fallback
     const mu = memUsers.find(u => u.email === userId || u.id === userId || u.name === userId);
     if (mu) { mu.tier = 'BUSINESS_VIP'; mu.vvipHarborId = harborId; mu.vvipExpiresAt = expiresAt.toISOString(); saveMemUsers(); }
   }
 
-  console.log(`[VVIP Grant] 어드민 수동 부여: ${userId} → ${harbor.name} (${days}일, 만료: ${expiresAt.toLocaleDateString('ko-KR')})`);
+  (logger?.info || console.log)(`[VVIP Grant] 어드민 수동 부여: ${userId} → ${harbor.name} (${days}일, 만료: ${expiresAt.toLocaleDateString('ko-KR')})`);
   res.json({
     success: true,
     userId, harborId, harborName: harbor.name,
@@ -4838,7 +4989,7 @@ app.get('/api/products', async (req, res) => {
 
     res.json(formatted);
   } catch (err) {
-    console.error('[/api/products] 오류:', err.message);
+    (logger?.error || console.error)('[/api/products] 오류:', err.message);
     res.status(500).json({ error: '상품 조회 실패' });
   }
 });
@@ -4849,12 +5000,24 @@ app.get('/api/products', async (req, res) => {
  */
 app.get('/api/commerce/coupang/search', async (req, res) => {
   try {
-    const keyword = req.query.keyword || '낙시용품';
+    const keyword = req.query.keyword || '낚시용품';
     const category = req.query.category || '';
 
-    const products = category
+    const rawProducts = category
       ? await coupang.getProductsByVideoCategory(category)
       : await coupang.searchCoupang(keyword, 3);
+
+    // ✅ BUG-FIX: raw productId/productName/productImage → 클라이언트 기대 포맷(id/name/img/price/discount) 변환
+    // MediaTab.jsx, PostDetail.jsx에서 item.img/item.name/item.price/item.discount로 접근하므로 반드시 변환 필요
+    const products = rawProducts.map(p => ({
+      id:       p.productId,
+      name:     p.productName,
+      price:    typeof p.productPrice === 'number' ? p.productPrice.toLocaleString('ko-KR') + '원' : (p.productPrice || ''),
+      discount: p.discountRate > 0 ? `${p.discountRate}%` : null,
+      img:      p.productImage,
+      link:     p.coupangUrl,
+      badge:    p.badge || '낚시GO 추천',
+    }));
 
     res.json({
       keyword,
@@ -4862,7 +5025,7 @@ app.get('/api/commerce/coupang/search', async (req, res) => {
       products,
     });
   } catch (err) {
-    console.error('[/api/commerce/coupang/search] 오류:', err.message);
+    (logger?.error || console.error)('[/api/commerce/coupang/search] 오류:', err.message);
     res.status(500).json({ error: '상품 검색 실패', products: [] });
   }
 });
@@ -5005,16 +5168,16 @@ async function filterByActualDuration(videoIds, minSecs = 110) {
       const res = await axios.get(`${YT_BASE}/videos?${params.toString()}`, { timeout: 8000 });
       for (const item of res.data.items || []) {
         const secs = parseDuration(item.contentDetails?.duration);
-        console.log(`[DurationCheck] ${item.id}: ${secs}초 (${Math.floor(secs/60)}분 ${secs%60}초)`);
+        (logger?.debug || console.log)(`[DurationCheck] ${item.id}: ${secs}초 (${Math.floor(secs/60)}분 ${secs%60}초)`);
         if (secs >= minSecs) valid.add(item.id);
       }
     }
-    console.log(`[DurationCheck] ${videoIds.length}개 중 ${valid.size}개 통과 (≥${minSecs}초)`);
+    (logger?.info || console.log)(`[DurationCheck] ${videoIds.length}개 중 ${valid.size}개 통과 (≥${minSecs}초)`);
     return valid;
   } catch (e) {
     // ⚠️ Videos API 실패 (quota 초과/네트워크 오류) — ID만으론 제목 판단 불가
     // 전체 반환 불가피하지만 로그에 경고 표시
-    console.warn(`[DurationCheck] Videos API 실패 → ${videoIds.length}개 전체 보존 (필터 움):`, e.message);
+    (logger?.warn || console.warn)(`[DurationCheck] Videos API 실패 → ${videoIds.length}개 전체 보존 (필터 없음):`, e.message);
     return new Set(videoIds);
   }
 }
@@ -5063,7 +5226,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
       : `search:${q}:${order}:all:${maxResults}:${pageToken}`;
     const cached = ytCacheGet(cacheKey);
     if (cached) {
-      console.log(`[YouTube Search] 캐시 HIT: "${q}"`);
+      logger.info(`[YouTube Search] 캐시 HIT: "${q}"`);
       return res.json(cached);
     }
 
@@ -5072,7 +5235,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
       headers: { Referer: YT_ORIGIN, Origin: YT_ORIGIN },
     };
 
-    console.log(`[YouTube Search] 요청: q="${q}", order=${order}`);
+    logger.info(`[YouTube Search] 요청: q="${q}", order=${order}`);
 
     // ─── STEP 1: 채널명인지 감지 — type=channel로 먼저 검색 ─────────────────
     let channelId = null;
@@ -5090,10 +5253,10 @@ app.get('/api/media/youtube/search', async (req, res) => {
       );
       if (matched) {
         channelId = matched.id?.channelId || matched.snippet?.channelId;
-        console.log(`[YouTube Search] 채널 감지: "${matched.snippet?.channelTitle}" (${channelId})`);
+        logger.info(`[YouTube Search] 체널 감지: "${matched.snippet?.channelTitle}" (${channelId})`);
       }
     } catch (e) {
-      console.warn('[YouTube Search] 채널 검색 실패 (fallback to keyword):', e.message);
+      (logger?.warn || console.warn)('[YouTube Search] 체널 검색 실패 (fallback to keyword):', e.message);
     }
 
     // ─── STEP 2: 영상 검색 (채널ID 있으면 채널 전용, 없으면 키워드) ─────────
@@ -5134,7 +5297,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
     const params = new URLSearchParams(videoParams);
     const response = await axios.get(`${YT_BASE}/search?${params.toString()}`, axiosCfg);
     let videos = buildYtVideoList(response.data.items);
-    console.log(`[YouTube Search] 응답: ${videos.length}개 (채널ID: ${channelId || '없음'}, publishedAfter: ${publishedAfterDate.slice(0, 10)})`);
+    (logger?.info || console.log)(`[YouTube Search] 응답: ${videos.length}개 (채널ID: ${channelId || '없음'}, publishedAfter: ${publishedAfterDate.slice(0, 10)})`);
 
     // ─── STEP 3: 실제 영상 길이 필터 (110초+) ─────────────────────────────────
     // ✅ 110초 미만 영상 차단 (Shorts 60초 이하 + 짧은 낚시 클립 제거)
@@ -5143,7 +5306,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
     videos = videos.filter(v => validIds.has(v.youtubeId));
     // Shorts(60초 이하) 제목 필터 재적용
     videos = videos.filter(v => !v.title.toLowerCase().includes('#shorts') && !v.title.toLowerCase().includes('shorts'));
-    console.log(`[YouTube Search] 길이 필터 후: ${videos.length}개 (≥110초, Shorts 제외)`);
+    (logger?.info || console.log)(`[YouTube Search] 길이 필터 후: ${videos.length}개 (≥110초, Shorts 제외)`);
 
     // ─── STEP 4: 정렬 ─────────────────────────────────────────────────────────
     videos = sortVideos(videos, order);
@@ -5154,7 +5317,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
   } catch (err) {
     const errMsg = err.response?.data?.error?.message || err.message;
     const errStatus = err.response?.status;
-    console.error(`[YouTube Search API 오류] status=${errStatus}, msg=${errMsg}`);
+    (logger?.error || console.error)(`[YouTube Search API 오류] status=${errStatus}, msg=${errMsg}`);
     res.json({ videos: [], nextPageToken: null, error: errMsg, status: errStatus });
   }
 });
@@ -5169,7 +5332,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
   const cacheKey = `unified:${q}:${today}`;
   const cached = ytCacheGet(cacheKey);
   if (cached) {
-    console.log(`[YouTube Unified] 캐시 HIT: ${q}`);
+    logger.info(`[YouTube Unified] 캐시 HIT: ${q}`);
     return res.json(cached);
   }
 
@@ -5179,7 +5342,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     const commonParams = { part: 'snippet', q, type: 'video', videoDuration: 'any', relevanceLanguage: 'ko', regionCode: 'KR', maxResults: '30', key: YT_API_KEY };
     const axiosCfg = { timeout: 10000, headers: { Referer: YT_ORIGIN, Origin: YT_ORIGIN } };
 
-    console.log(`[YouTube Unified] 병렬 요청: "${q}" | recent(7일) + popular(30일 인기순)`);
+    logger.info(`[YouTube Unified] 병렬 요청: "${q}" | recent(7일) + popular(30일 인기순)`);
 
     const [recentResult, popularResult] = await Promise.allSettled([
       axios.get(`${YT_BASE}/search?${new URLSearchParams({ ...commonParams, order: 'date', publishedAfter: publishedAfterRecent })}`, axiosCfg),
@@ -5188,7 +5351,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
 
     let recent = recentResult.status === 'fulfilled' ? buildYtVideoList(recentResult.value.data.items) : [];
     let popular = popularResult.status === 'fulfilled' ? buildYtVideoList(popularResult.value.data.items) : [];
-    console.log(`[YouTube Unified] 검색 결과: 최신 ${recent.length}개, 인기 ${popular.length}개`);
+    logger.info(`[YouTube Unified] 검색 결과: 최신 ${recent.length}개, 인기 ${popular.length}개`);
 
     // 실제 영상 길이 필터 (Videos API) — ✅ 2분+ 보장 (4분 → 2분 기준 완화)
     const allIds = [...new Set([...recent.map(v => v.youtubeId), ...popular.map(v => v.youtubeId)])].filter(Boolean);
@@ -5206,14 +5369,14 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     recent = recent.map(v => ({ ...v, tag: 'recent' }));
     popular = popular.map(v => ({ ...v, tag: 'popular' }));
 
-    console.log(`[YouTube Unified] 필터 후: 최신 ${recent.length}개, 인기 ${popular.length}개 (≥110초)`);
+    logger.info(`[YouTube Unified] 필터 후: 최신 ${recent.length}개, 인기 ${popular.length}개 (≥110초)`);
 
     const result = { recent, popular };
     ytCacheSet(cacheKey, result);
     res.json(result);
   } catch (err) {
     const errMsg = err.response?.data?.error?.message || err.message;
-    console.error(`[YouTube Unified API 오류]: ${errMsg}`);
+    (logger?.error || console.error)(`[YouTube Unified API 오류]: ${errMsg}`);
     res.json({ recent: [], popular: [], error: errMsg });
   }
 });
@@ -5263,16 +5426,16 @@ app.get('/api/media/youtube', async (req, res) => {
         'Origin': YT_ORIGIN,
       }
     };
-    console.log(`[YouTube] 피드 요청: order=${order}, publishedAfter=${publishedAfter || '없음'}`);
+    (logger?.info || console.log)(`[YouTube] 피드 요청: order=${order}, publishedAfter=${publishedAfter || '없음'}`);
     const response = await axios.get(`${YT_BASE}/search?${params.toString()}`, axiosConfig);
     let videos = buildYtVideoList(response.data.items);
-    console.log(`[YouTube] 피드 응답: ${videos.length}개 | 첫 번째: ${videos[0]?.publishedAt || '없음'}`);
+    (logger?.info || console.log)(`[YouTube] 피드 응답: ${videos.length}개 | 첫 번째: ${videos[0]?.publishedAt || '없음'}`);
 
     // ✅ 실제 영상 길이 확인 필터 — 110초+ 기준 (Shorts + 짧은 클립 차단)
     const videoIds = videos.map(v => v.youtubeId).filter(Boolean);
     const validIds = await filterByActualDuration(videoIds, 110);
     videos = videos.filter(v => validIds.has(v.youtubeId));
-    console.log(`[YouTube] 피드 길이 필터 후: ${videos.length}개 (≥110초)`);
+    (logger?.info || console.log)(`[YouTube] 피드 길이 필터 후: ${videos.length}개 (≥110초)`);
 
     videos = sortVideos(videos, order);
 
@@ -5282,7 +5445,7 @@ app.get('/api/media/youtube', async (req, res) => {
   } catch (err) {
     const errMsg = err.response?.data?.error?.message || err.message;
     const errStatus = err.response?.status;
-    console.error(`[YouTube Feed API 오류] status=${errStatus}, msg=${errMsg}`);
+    (logger?.error || console.error)(`[YouTube Feed API 오류] status=${errStatus}, msg=${errMsg}`);
     res.json({ videos: [], nextPageToken: null, error: errMsg, status: errStatus });
   }
 });
@@ -5318,34 +5481,27 @@ app.post('/api/vvip/cancel', async (req, res) => {
 
 // ─── 서버 종료 시 전체 데이터 강제 플러시 ────────────────────────────────────
 function flushAllData() {
-  console.log('[Flush] 서버 종료 감지 → 전체 데이터 파일 동기화 시작...');
-  try { saveMemUsers(); console.log('[Flush] users.json ✅'); } catch (e) { }
-  try { saveMemPosts(); console.log('[Flush] posts.json ✅'); } catch (e) { }
-  try { saveMemRecords(); console.log('[Flush] records.json ✅'); } catch (e) { }
-  try { saveMemCrews(); console.log('[Flush] crews.json ✅'); } catch (e) { }
-  try { saveChatHistories(); console.log('[Flush] chats.json ✅'); } catch (e) { }
-  try { saveMemNotices(); console.log('[Flush] notices.json ✅'); } catch (e) { }
-  try { saveMemBusinessPosts(); console.log('[Flush] business.json ✅'); } catch (e) { }
-  try { saveSecretPointOverrides(); console.log('[Flush] secretPointOverrides.json ✅'); } catch (e) { }
-  try { saveCctvOverrides(); console.log('[Flush] cctvOverrides.json ✅'); } catch (e) { }
-  try { saveProSubs(); console.log('[Flush] proSubscriptions.json ✅'); } catch (e) { }
-  try { saveVvipSlots(); console.log('[Flush] vvipSlots.json ✅'); } catch (e) { }
-  console.log('[Flush] ✅ 전체 데이터 동기화 완료.');
+  logger.info('[Flush] 서버 종료 감지 → 전체 데이터 파일 동기화 시작...');
+  try { saveMemUsers(); logger.info('[Flush] users.json ✅'); } catch (e) { }
+  try { saveMemPosts(); logger.info('[Flush] posts.json ✅'); } catch (e) { }
+  try { saveMemRecords(); logger.info('[Flush] records.json ✅'); } catch (e) { }
+  try { saveMemCrews(); logger.info('[Flush] crews.json ✅'); } catch (e) { }
+  try { saveChatHistories(); logger.info('[Flush] chats.json ✅'); } catch (e) { }
+  try { saveMemNotices(); logger.info('[Flush] notices.json ✅'); } catch (e) { }
+  try { saveMemBusinessPosts(); logger.info('[Flush] business.json ✅'); } catch (e) { }
+  try { saveSecretPointOverrides(); logger.info('[Flush] secretPointOverrides.json ✅'); } catch (e) { }
+  try { saveCctvOverrides(); logger.info('[Flush] cctvOverrides.json ✅'); } catch (e) { }
+  try { saveProSubs(); logger.info('[Flush] proSubscriptions.json ✅'); } catch (e) { }
+  try { saveVvipSlots(); logger.info('[Flush] vvipSlots.json ✅'); } catch (e) { }
+  logger.info('[Flush] ✅ 전체 데이터 동기화 완료.');
 }
 
-// 정상 종료 (Render/PM2 배포 환경 재시작)
-process.on('SIGTERM', () => { flushAllData(); process.exit(0); });
-process.on('SIGINT', () => { flushAllData(); process.exit(0); });
-// 예기치 못한 크래시 대비
-process.on('uncaughtException', (err) => {
-  console.error('[CRASH] 예기치 못한 에러:', err.message);
-  flushAllData();
-  process.exit(1);
-});
+// ✅ BUG-FIX: SIGTERM/SIGINT/uncaughtException 핸들러는 graceful_shutdown.js (L6149)에서 단일 등록
+// 새로운 프로세스 종료 전 flushAllData()는 graceful_shutdown.js의 server.close 콜백에서 호출함
 
 // ─── 30분마다 자동 백업 (Render 무료플랜 sleep 대비) ──────────────────────────
 setInterval(() => {
-  console.log('[AutoBackup] 30분 주기 자동 백업 실행...');
+  logger.info('[AutoBackup] 30분 주기 자동 백업 실행...');
   flushAllData();
 }, 30 * 60 * 1000);
 
@@ -5376,7 +5532,7 @@ async function chargeBilling(sub) {
   const token = await getPortoneToken();
   if (!token) {
     // 테스트모드: 실제 청구 없이 성공 처리
-    console.log(`[BillingTest] 테스트모드 자동청구 성공 - ${sub.userId} / ${sub.planId}`);
+    (logger?.info || console.log)(`[BillingTest] 테스트모드 자동청구 성공 - ${sub.userId} / ${sub.planId}`);
     return { success: true, testMode: true };
   }
   const merchant_uid = `auto_${sub.planId}_${sub.userId.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}`;
@@ -5412,7 +5568,7 @@ async function processSubscription(sub) {
         { tier: BILLING_PLAN_MAP[sub.planId]?.tier, subscriptionExpiresAt: next }
       ).catch(() => { });
     }
-    console.log(`[Billing] ✅ 자동청구 성공 - ${sub.userId} / ${sub.planId} / ${sub.amount}원`);
+    (logger?.info || console.log)(`[Billing] ✅ 자동청구 성공 - ${sub.userId} / ${sub.planId} / ${sub.amount}원`);
   } catch (err) {
     const failCount = (sub.failCount || 0) + 1;
     const newStatus = failCount >= 3 ? 'failed' : 'active'; // 3회 실패 시 구독 정지
@@ -5431,7 +5587,7 @@ async function processSubscription(sub) {
         ).catch(() => { });
       }
     }
-    console.warn(`[Billing] ❌ 자동청구 실패(${failCount}회) - ${sub.userId}: ${err.message}`);
+    (logger?.warn || console.warn)(`[Billing] ❌ 자동청구 실패(${failCount}회) - ${sub.userId}: ${err.message}`);
   }
 }
 
@@ -5445,7 +5601,7 @@ async function runBillingScheduler() {
   }).lean().catch(() => []);
 
   if (dueList.length > 0) {
-    console.log(`[Scheduler] 정기결제 대상 ${dueList.length}건 처리 시작`);
+    logger.info(`[Scheduler] 정기결제 대상 ${dueList.length}건 처리 시작`);
     for (const sub of dueList) {
       await processSubscription(sub);
       await new Promise(r => setTimeout(r, 300)); // 과부하 방지
@@ -5456,10 +5612,10 @@ async function runBillingScheduler() {
 // node-cron 또는 24시간 인터벌 폴백
 if (cron) {
   cron.schedule('0 9 * * *', runBillingScheduler, { timezone: 'Asia/Seoul' });
-  console.log('✅ [Billing Scheduler] node-cron 매일 09:00(KST) 자동청구 활성화');
+  logger.info('✅ [Billing Scheduler] node-cron 매일 09:00(KST) 자동청구 활성화');
 } else {
   setInterval(runBillingScheduler, 24 * 60 * 60 * 1000); // 24시간 인터벌 폴백
-  console.log('✅ [Billing Scheduler] 인터벌 폴백 자동청구 활성화 (24h)');
+  logger.info('✅ [Billing Scheduler] 인터벌 폴백 자동청구 활성화 (24h)');
 }
 
 // ── API: 빌링키 등록 (최초 카드 등록 + 첫 결제) — JWT 인증 필수 ──────────────
@@ -5535,15 +5691,41 @@ app.post('/api/payment/billing/register', async (req, res) => {
       const u = memUsers.find(u => u.email === userId || u.id === userId);
       if (u) { u.tier = plan.tier; saveMemUsers(); }
     }
+    // ✅ BUG-FIX-VVIP: VVIP 결제 시 vvipSlots에도 항구 선점 자동 등록
+    if (planId === 'VVIP' && harborId) {
+      const harbor = HARBOR_LIST.find(h => h.id === harborId);
+      if (harbor) {
+        vvipSlots[harborId] = {
+          userId, userName: userName || userId,
+          purchasedAt: new Date().toISOString(),
+          expiresAt: nextBillingDate.toISOString(),
+          harborName: harbor.name,
+        };
+        saveVvipSlots();
+        // DB에도 User.vvipHarborId 업데이트
+        if (dbReady && User) {
+          try {
+            await User.findOneAndUpdate(
+              { $or: [{ email: userId }, { id: userId }] },
+              { tier: 'BUSINESS_VIP', vvipHarborId: harborId, vvipExpiresAt: nextBillingDate }
+            );
+          } catch (e) { (logger?.error || console.error)('[VVIP Slot Register]', e.message); }
+        } else {
+          const mu = memUsers.find(u => u.email === userId || u.id === userId);
+          if (mu) { mu.tier = 'BUSINESS_VIP'; mu.vvipHarborId = harborId; mu.vvipExpiresAt = nextBillingDate.toISOString(); saveMemUsers(); }
+        }
+        (logger?.info || console.log)(`[Billing] ✅ VVIP 항구 선점 등록 - ${harbor.name} → ${userName}(${userId})`);  
+      }
+    }
 
-    console.log(`[Billing] ✅ 정기구독 등록 - ${userName}(${userId}) / ${planId} / ${plan.amount}원`);
+    (logger?.info || console.log)(`[Billing] ✅ 정기구독 등록 - ${userName}(${userId}) / ${planId} / ${plan.amount}원`);
     res.json({
       success: true, planId, tier: plan.tier,
       nextBillingDate: nextBillingDate.toISOString(),
       amount: plan.amount,
     });
   } catch (err) {
-    console.error('[POST /api/payment/billing/register]', err.message);
+    (logger?.error || console.error)('[POST /api/payment/billing/register]', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -5614,7 +5796,7 @@ app.delete('/api/payment/subscription/:userId', async (req, res) => {
           await axios.delete(`https://api.iamport.kr/subscribe/customers/${sub.customerUid}`, {
             headers: { Authorization: token },
           });
-        } catch (e) { console.warn('[BillingCancel] 빌링키 삭제 실패:', e.message); }
+        } catch (e) { (logger?.warn || console.warn)('[BillingCancel] 빌링키 삭제 실패:', e.message); }
       }
 
       await Subscription.findOneAndUpdate(
@@ -5635,7 +5817,7 @@ app.delete('/api/payment/subscription/:userId', async (req, res) => {
       }
     }
 
-    console.log(`[Billing] 구독 취소 - ${userId} / 사유: ${reason || '직접취소'}`);
+    logger.info(`[Billing] 구독 취소 - ${userId} / 사유: ${reason || '직접취소'}`);
     res.json({ success: true, message: '구독이 취소되었습니다. 현재 기간 종료 후 해지됩니다.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -5728,8 +5910,10 @@ async function checkSubscriptionValid(req, res, next) {
   } catch { next(); }
 }
 
-// 프리미엄 전용 라우트에 미들웨어 적용
-app.use(['/api/weather/precision', '/api/secret-point-overrides'], checkSubscriptionValid);
+// ✅ BUG-FIX: app.use() 구독 미들웨어 제거
+// /api/weather/precision → 라우트 인라인 checkSubscriptionValid 적용 완료
+// /api/secret-point-overrides → 라우트 내부 수동 tier 검증 완료
+// (라우트 이후 선언된 app.use()는 해당 라우트에 적용 안됨 — Express 규칙)
 
 // ── (5) 결제 내역 조회 API — JWT 인증 필수 ──────────────────────────────────
 app.get('/api/payment/history', async (req, res) => {
@@ -5862,8 +6046,8 @@ try {
   // 검색 API: 1분에 30회
   const searchLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: '검색 요청이 너무 많습니다.' } });
   app.use('/api/community/search', searchLimiter);
-  console.log('✅ Rate Limit 강화 적용 (결제/검색)');
-} catch (e) { console.warn('[RateLimit] express-rate-limit 미설치 또는 적용 실패'); }
+  (logger?.info || console.log)('✅ Rate Limit 강화 적용 (결제/검색)');
+} catch (e) { (logger?.warn || console.warn)('[RateLimit] express-rate-limit 미설치 또는 적용 실패:', e.message); }
 
 // ── (11) 커뮤니티 서버사이드 전문 검색 ──────────────────────────────────────
 app.get('/api/community/search', async (req, res) => {
@@ -6009,7 +6193,7 @@ app.post('/api/admin/alert', verifyToken, (req, res) => {
     time: time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
   };
   io.emit('fishing_alert', payload); // 전체 연결 사용자에게 브로드캐스트
-  console.log(`[Admin Alert] 낚시 알림 발송: ${message}`);
+  (logger?.info || console.log)(`[Admin Alert] 낚시 알림 발송: ${message}`);
   res.json({ success: true, recipients: 'all', payload });
 });
 
@@ -6028,36 +6212,219 @@ app.post('/api/admin/push', verifyToken, (req, res) => {
     time: time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
   };
   io.emit('push_notification', payload); // 클라이언트에서 targetEmail 필터링
-  console.log(`[Admin Push] 개인 알림 → ${targetEmail}: ${message}`);
+  (logger?.info || console.log)(`[Admin Push] 개인 알림 → ${targetEmail}: ${message}`);
   res.json({ success: true, targetEmail, payload });
 });
 
 // ── CCTV 관리 어드민 API (JWT 인증 — 56차 MongoDB 영속화) ────────
 // dbReady는 비동기로 true가 되므로, getter 함수로 전달하여 항상 최신값 참조
-require('./cctv_admin_routes')(app, { getDbReady: () => dbReady, CctvOverrideModel });
+require('./cctv_admin_routes')(app, { getDbReady: () => dbReady, CctvOverrideModel, logger }); // ✅ BUG-FIX: logger 전달 누락 수정
 
-// ─── 서버 시작 ────────────────────────────────────────────────────────────────
+// ─── 쇼핑 API (쿠팡 + 알리 통합) ────────────────────────────────────────────
+
+/**
+ * GET /api/shop/products?source=coupang&category=낚시용품
+ * source: 'coupang' | 'ali' | 'all' (default: 'all')
+ * category: 상품 카테고리 키워드
+ */
+app.get('/api/shop/products', async (req, res) => {
+  const source   = (req.query.source   || 'all').toLowerCase();
+  const category = req.query.category  || '낚시용품';
+
+  try {
+    if (source === 'coupang') {
+      const products = await coupang.getRecommendedProducts(category);
+      return res.json(products.map(p => ({
+        id:       p.productId,
+        name:     p.productName,
+        price:    p.productPrice?.toLocaleString('ko-KR') || '0',
+        discount: p.discountRate ? `${p.discountRate}%` : '0%',
+        img:      p.productImage,
+        link:     p.coupangUrl,
+        badge:    p.badge,
+        source:   'coupang',
+      })));
+    }
+
+    if (source === 'ali') {
+      const products = await ali.getAliProducts(category);
+      return res.json(products.map(p => ({
+        id:       p.productId,
+        name:     p.title,
+        price:    p.salePrice,
+        discount: p.discount,
+        img:      p.imageUrl,
+        link:     p.productUrl,
+        badge:    p.badge,
+        source:   'ali',
+        commission: p.commissionRate,
+      })));
+    }
+
+    // source === 'all' → 쿠팡 고가 + 알리 소모품 병렬 조회
+    const aliKeyword = _mapToAliKeyword(category);
+    const [coupangProducts, aliProducts] = await Promise.all([
+      coupang.getRecommendedProducts(category).catch(() => []),
+      ali.getAliProducts(aliKeyword).catch(() => []),
+    ]);
+
+    const merged = [
+      ...coupangProducts.slice(0, 6).map(p => ({
+        id:       p.productId,
+        name:     p.productName,
+        price:    p.productPrice?.toLocaleString('ko-KR') || '0',
+        discount: p.discountRate ? `${p.discountRate}%` : '0%',
+        img:      p.productImage,
+        link:     p.coupangUrl,
+        badge:    p.badge,
+        source:   'coupang',
+      })),
+      ...aliProducts.slice(0, 6).map(p => ({
+        id:       `ali_${p.productId}`,
+        name:     p.title,
+        price:    p.salePrice,
+        discount: p.discount,
+        img:      p.imageUrl,
+        link:     p.productUrl,
+        badge:    p.badge,
+        source:   'ali',
+        commission: p.commissionRate,
+      })),
+    ];
+
+    res.json(merged);
+  } catch (err) {
+    logger.warn(`[Shop API] 상품 조회 오류: ${err.message}`);
+    res.status(500).json({ error: '상품 로드 실패', message: err.message });
+  }
+});
+
+/**
+ * GET /api/shop/promo
+ * 알리 특가 프로모션 상품 (수수료 50%+ 상품)
+ */
+app.get('/api/shop/promo', async (req, res) => {
+  try {
+    const promoProducts = await ali.getAliPromoProducts(4);
+    res.json(promoProducts.map(p => ({
+      id:       `ali_${p.productId}`,
+      name:     p.title,
+      price:    p.salePrice,
+      original: p.originalPrice,
+      discount: p.discount,
+      img:      p.imageUrl,
+      link:     p.productUrl,
+      badge:    p.badge,
+      commission: p.commissionRate,
+      source:   'ali',
+    })));
+  } catch (err) {
+    logger.warn(`[Shop Promo API] 특가 상품 오류: ${err.message}`);
+    res.status(500).json({ error: '특가 상품 로드 실패' });
+  }
+});
+
+/**
+ * GET /api/shop/recommend?pointType=바다&fish=감성돔
+ * 낚시 포인트 기반 맞춤 상품 추천 (쿠팡 우선)
+ */
+app.get('/api/shop/recommend', async (req, res) => {
+  const pointType = req.query.pointType || '전체';
+  const fish      = req.query.fish      || '';
+
+  // 어종/포인트 → 상품 키워드 매핑
+  const keyword = _buildRecommendKeyword(pointType, fish);
+
+  try {
+    const [coupangRec, aliRec] = await Promise.all([
+      coupang.searchCoupang(keyword, 4).catch(() => []),
+      ali.searchAliExpress(_mapToAliKeyword(keyword), 2).catch(() => []),
+    ]);
+
+    const recommend = [
+      ...coupangRec.map(p => ({
+        id: p.productId, name: p.productName,
+        price: p.productPrice?.toLocaleString('ko-KR') || '0',
+        discount: p.discountRate ? `${p.discountRate}%` : '0%',
+        img: p.productImage, link: p.coupangUrl,
+        badge: `🎣 ${fish || pointType} 추천`, source: 'coupang',
+      })),
+      ...aliRec.map(p => ({
+        id: `ali_${p.productId}`, name: p.title,
+        price: p.salePrice, discount: p.discount,
+        img: p.imageUrl, link: p.productUrl,
+        badge: `💰 ${fish || pointType} 소모품`, source: 'ali',
+        commission: p.commissionRate,
+      })),
+    ];
+
+    res.json({ keyword, products: recommend });
+  } catch (err) {
+    logger.warn(`[Shop Recommend] 추천 오류: ${err.message}`);
+    res.status(500).json({ error: '추천 상품 로드 실패' });
+  }
+});
+
+// 카테고리 → 알리 키워드 변환 헬퍼
+function _mapToAliKeyword(category) {
+  const map = {
+    '낚시용품': '소모품', '스피닝릴': '낚시줄', '베이트릴': '낚시줄',
+    '루어낚시대': '루어', '원투낚시대': '채비', '낚시줄': '낚시줄',
+    '캠핑의자': '소모품', '루어': '루어', '에기': '채비',
+  };
+  return map[category] || '소모품';
+}
+
+// 포인트+어종 → 검색 키워드 변환 헬퍼
+function _buildRecommendKeyword(pointType, fish) {
+  const fishMap = {
+    '감성돔': '감성돔 채비 갯바위', '참돔': '참돔 루어 선상',
+    '광어': '광어 다운샷 루어', '우럭': '우럭 지그헤드',
+    '고등어': '고등어 채비', '무늬오징어': '에기 에깅',
+    '갈치': '갈치 낚시 채비', '농어': '농어 루어 미노우',
+  };
+  if (fish && fishMap[fish]) return fishMap[fish];
+  if (pointType === '바다') return '바다낚시 채비';
+  if (pointType === '민물') return '민물낚시 채비';
+  return '낚시용품';
+}
+
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
   const env = process.env.NODE_ENV || 'development';
-  console.log(`\n🚀 낚시GO 서버 시작 완료`);
-  console.log(`   포트: ${PORT}`);
-  console.log(`   환경: ${env}`);
-  console.log(`   JWT: ${process.env.JWT_SECRET ? '✅ 환경변수 설정됨' : '⚠️  기본값 사용 중 (프로덕션 위험!)'}`);
-  console.log(`   웹훅 서명: ${process.env.PORTONE_WEBHOOK_SECRET ? '✅ 설정됨' : '⚠️  미설정 (포트원 콘솔에서 시크릿 복사 필요)'}`);
-  console.log(`   SMS: ${process.env.SMS_API_KEY ? '✅ CoolSMS 연동됨' : '⚠️  SMS_API_KEY 미설정 → 개발모드'}`);
-  console.log(`   DB: ${process.env.MONGO_PASS || process.env.MONGO_URI ? '✅ MongoDB 연결 중...' : '⚠️  인메모리 모드'}`);
-  if (env === 'production') {
-    console.log(`   [보안] 프로덕션 모드 — /api/debug 차단, 웹훅 서명 검증 활성화`);
-  }
+  logger.info(`🚀 낚시GO 서버 시작 완료 | 포트: ${PORT} | 환경: ${env}`);
+  logger.info(`   웹훅: ${process.env.PORTONE_WEBHOOK_SECRET ? '✅' : '⚠️ 미설정'} | SMS: ${process.env.SMS_API_KEY ? '✅' : '⚠️ 미설정'} | DB: ${process.env.MONGO_PASS || process.env.MONGO_URI ? '✅ MongoDB' : '⚠️ 인메모리'}`);
+  if (env === 'production') logger.info('[보안] 프로덕션 모드 활성화');
+
+
+
   // Render 슬립 방지 Self Keep-Alive (단일 등록)
   if (process.env.RENDER_EXTERNAL_URL) {
     const selfUrl = process.env.RENDER_EXTERNAL_URL;
     setInterval(async () => {
       try { await axios.get(`${selfUrl}/api/health`); }
-      catch (e) { console.warn('[KeepAlive] Self-ping 실패:', e.message); }
+      catch (e) { logger.warn(`[KeepAlive] Self-ping 실패: ${e.message}`); }
     }, 10 * 60 * 1000);
-    console.log(`   ✅ Render Keep-Alive 활성화 (${selfUrl})`);
+    logger.info(`✅ Render Keep-Alive 활성화 (${selfUrl})`);
   }
-  console.log('');
 });
+// ✅ BUG-FIX: flushAllData 함수 정의 — 종료 전 인메모리 데이터 파일 동기화 보장
+function flushAllData() {
+  saveMemUsers();
+  saveMemPosts();
+  saveMemRecords();
+  saveMemCrews();
+  saveChatHistories();
+  saveMemNotices();
+  saveMemBusinessPosts();
+  saveSecretPointOverrides();
+  saveCctvOverrides();
+  saveProSubs();
+  saveVvipSlots();
+  (logger?.info || (() => {}))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
+}
+
+// ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
+// ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
+require('./graceful_shutdown')(server, mongoose, flushAllData);
