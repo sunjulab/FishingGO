@@ -466,6 +466,16 @@ export default function CommunityTab() {
     return () => { removeAllNativeAds(); };
   }, []);
 
+  // ✅ SHARE-SOCKET-CLEANUP: 언마운트 시 캐시된 모든 공유 소켓 연결 해제 (메모리 누수 방지)
+  useEffect(() => {
+    return () => {
+      Object.values(shareSockets.current).forEach(s => {
+        try { s.disconnect(); } catch { }
+      });
+      shareSockets.current = {};
+    };
+  }, []);
+
   // 마운트·카테고리·검색어 변경 시 1페이지부터 재로드 (단 한 번만 실행됨)
   // ENH4-C2: location.search 변화 시 fetchPosts 중복 호출 가능성 업음 (openCategory/debouncedSearch가 파생 커버)
   // 현재는 오픈게시판 사용 시만 fetchPosts 호출, 탭 전환 시 URL이 바끼어도 연동 안 됨 — 탭 활성 조건을 없애면 중복 fetch 발생 감소

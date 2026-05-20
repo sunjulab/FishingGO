@@ -49,12 +49,19 @@ export default function NoticeDetail() {
   }, [id, addToast, navigate]);
 
   useEffect(() => {
-    // state로 데이터가 이미 있으면 API 호출 불필요
     if (location.state?.notice) return;
     fetchNotice();
-    // ✅ 2ND-A5: location.state?.notice는 navigate 시점에 고정 — deps 제외 안전
-    // ✅ 23TH-C4: fetchNotice가 useCallback으로 안정화되어 eslint-disable 없이 deps 포함
   }, [fetchNotice, location.state?.notice]);
+
+  // ✅ SHARE-SOCKET-CLEANUP: 언마운트 시 캐시된 공유 소켓 전체 해제
+  useEffect(() => {
+    return () => {
+      Object.values(shareSockets.current).forEach(s => {
+        try { s.disconnect(); } catch { }
+      });
+      shareSockets.current = {};
+    };
+  }, []);
 
   // ✅ EDIT-FULL: 인라인 모달 → WritePost 전체화면 수정으로 교체
   const handleEditNavigate = () => {

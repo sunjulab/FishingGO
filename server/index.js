@@ -807,13 +807,17 @@ io.on('connection', (socket) => {
     if (data.type === 'post_share') {
       const postId = (data.postId || '').toString().trim();
       if (!postId) return;
+      const rawImage = (data.postImage || '').toString();
+      // ✅ BASE64-FIX: base64 이미지는 실시간 emit에는 전체 전송, DB에는 저장 안 함 (16MB 문서 한도 보호)
+      const isBase64 = rawImage.startsWith('data:');
+      const dbSafeImage = isBase64 ? '' : rawImage.slice(0, 500); // URL은 500자 이내 저장
       const msgData = {
         type: 'post_share',
         sender,
         postId,
         postTitle:   (data.postTitle   || '').toString().slice(0, 100),
         postPreview: (data.postPreview || '').toString().slice(0, 120),
-        postImage:   (data.postImage   || '').toString().slice(0, 300),
+        postImage:   rawImage,  // 실시간 emit: 전체 (base64 포함)
         postCategory:(data.postCategory|| '').toString().slice(0, 20),
         time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
         socketId: socket.id,
@@ -836,7 +840,7 @@ io.on('connection', (socket) => {
             postId: msgData.postId,
             postTitle: msgData.postTitle,
             postPreview: msgData.postPreview,
-            postImage: msgData.postImage,
+            postImage: dbSafeImage,  // ✅ BASE64-FIX: URL만 저장 (base64는 빈 문자열)
             postCategory: msgData.postCategory,
             senderLevel: msgData.senderLevel,
             senderEmoji: msgData.senderEmoji,

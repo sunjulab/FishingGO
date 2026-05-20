@@ -2,31 +2,56 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 
+// 자동 재시도 횟수 키 (sessionStorage — 탭 닫으면 초기화)
+const RETRY_KEY = 'eb_auto_retries';
+const MAX_AUTO_RETRIES = 2;
+
 // ─── 글로벌 에러 바운더리 ────────────────────────────────────────────────────
 class ErrorBoundaryClass extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null, errorInfo: null, autoRetrying: false };
+    this._reloadTimer = null;
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    // sessionStorage에서 현재 재시도 횟수 확인
+    let retries = 0;
+    try { retries = parseInt(sessionStorage.getItem(RETRY_KEY) || '0', 10); } catch { }
+    const canAutoRetry = retries < MAX_AUTO_RETRIES;
+    return { hasError: true, error, autoRetrying: canAutoRetry };
   }
 
   componentDidCatch(error, info) {
     this.setState({ errorInfo: info });
-    if (!import.meta.env.PROD) console.error('[ErrorBoundary] 컴포넌트 오류 감지:', error, info);
+    if (!import.meta.env.PROD) console.error('[ErrorBoundary] 오류 감지:', error, info);
+
+    // 자동 재시도 처리
+    let retries = 0;
+    try { retries = parseInt(sessionStorage.getItem(RETRY_KEY) || '0', 10); } catch { }
+
+    if (retries < MAX_AUTO_RETRIES) {
+      try { sessionStorage.setItem(RETRY_KEY, String(retries + 1)); } catch { }
+      // 800ms 후 자동 새로고침 (스피너가 보이게 약간 딜레이)
+      this._reloadTimer = setTimeout(() => window.location.reload(), 800);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this._reloadTimer) clearTimeout(this._reloadTimer);
   }
 
   // 홈으로 이동 + 상태 초기화
   handleGoHome = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+    try { sessionStorage.removeItem(RETRY_KEY); } catch { }
+    this.setState({ hasError: false, error: null, errorInfo: null, autoRetrying: false });
     if (this.props.navigate) this.props.navigate('/');
   };
 
   // 뒤로가기 + 상태 초기화
   handleGoBack = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+    try { sessionStorage.removeItem(RETRY_KEY); } catch { }
+    this.setState({ hasError: false, error: null, errorInfo: null, autoRetrying: false });
     if (this.props.navigate) {
       // ✅ HISTORY-FIX: history가 없으면 홈 폴백 (에러 직후 히스토리 손상 방지)
       if (window.history.length <= 1) {
@@ -37,8 +62,41 @@ class ErrorBoundaryClass extends React.Component {
     }
   };
 
+  // 수동 새로고침 (재시도 카운트 초기화 후 reload)
+  handleManualReload = () => {
+    try { sessionStorage.removeItem(RETRY_KEY); } catch { }
+    window.location.reload();
+  };
+
   render() {
     if (this.state.hasError) {
+
+      // ── 자동 재시도 중: 로딩 스피너만 표시 ──────────────────
+      if (this.state.autoRetrying) {
+        let retries = 0;
+        try { retries = parseInt(sessionStorage.getItem(RETRY_KEY) || '0', 10); } catch { }
+        return (
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', minHeight: '100dvh', backgroundColor: '#F8F9FA',
+          }}>
+            {/* 회전 스피너 */}
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              border: '4px solid #E5E5EA', borderTopColor: '#0056D2',
+              animation: 'spin 0.8s linear infinite', marginBottom: '20px',
+            }} />
+            <p style={{ fontSize: '15px', fontWeight: '800', color: '#1c1c1e', marginBottom: '6px' }}>
+              🎣 재연결 중...
+            </p>
+            <p style={{ fontSize: '12px', color: '#8E8E93', fontWeight: '600' }}>
+              자동 복구 시도 중 ({retries}/{MAX_AUTO_RETRIES})
+            </p>
+          </div>
+        );
+      }
+
+      // ── 재시도 모두 실패: 오류 화면 표시 ─────────────────────
       const isMaster = this.props.isMaster;
 
       return (
@@ -65,11 +123,11 @@ class ErrorBoundaryClass extends React.Component {
 
           {/* 설명 */}
           <p style={{ fontSize: '14px', color: '#8E8E93', lineHeight: '1.6', marginBottom: '28px', maxWidth: '280px' }}>
-            일시적인 오류가 발생했습니다.<br />
-            뒤로가거나 홈으로 돌아가서 다시 시도해주세요.
+            자동 복구를 {MAX_AUTO_RETRIES}회 시도했지만 실패했습니다.<br />
+            아래 버튼을 눌러 다시 시도해주세요.
           </p>
 
-          {/* ✅ 뒤로가기 버튼 */}
+          {/* 뒤로가기 버튼 */}
           <button
             onClick={this.handleGoBack}
             style={{
@@ -97,7 +155,7 @@ class ErrorBoundaryClass extends React.Component {
 
           {/* 새로고침 버튼 */}
           <button
-            onClick={() => window.location.reload()} // ✅ 17TH-C2: 의도적 풀 리로드
+            onClick={this.handleManualReload}
             style={{
               padding: '14px 32px', backgroundColor: 'transparent',
               color: '#0056D2', border: '1.5px solid #0056D2', borderRadius: '12px',
@@ -141,6 +199,8 @@ class ErrorBoundaryClass extends React.Component {
       );
     }
 
+    // 정상 렌더: 재시도 카운터 초기화
+    try { sessionStorage.removeItem(RETRY_KEY); } catch { }
     return this.props.children;
   }
 }
