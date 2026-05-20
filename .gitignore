@@ -67,3 +67,9 @@ android/app/build/
 build_apk.bat
 copy_logo.bat
 copy_logo.ps1
+
+# Firebase 서비스 계정 키 (보안 - git에 포함 금지)
+android/app/google-services.json
+android/app/*firebase*adminsdk*.json
+server/.env
+

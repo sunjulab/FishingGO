@@ -315,6 +315,13 @@ try { Subscription   = require('./models/Subscription'); } catch (e) { Subscript
 try { PaymentHistory = require('./models/PaymentHistory'); } catch (e) { PaymentHistory = null; }
 // ✅ INSTA-P3: 24h TTL 조황 스토리 모델
 try { Story = require('./models/Story'); } catch (e) { Story = null; }
+// ✅ PUSH: FCM 토큰 모델
+let PushToken = null;
+try { PushToken = require('./models/PushToken'); } catch (e) { PushToken = null; }
+
+// ✅ PUSH: Firebase Admin 설정 (FIREBASE_SERVICE_ACCOUNT 환경변수 값)
+const pushService = require('./push');
+pushService.initFirebase();
 
 
 // ─── 정기결제 스케줄러 (node-cron 또는 자체 폴백) ─────────────────────────────
@@ -924,6 +931,25 @@ io.on('connection', (socket) => {
         if (chatHistories[data.crewId]?.length % 50 === 0) saveChatHistories();
       } catch (e) { logger.error(`[Socket] send_msg DB 저장 실패 (crewId=${data.crewId}): ${e.message}`); }
     } else { saveChatHistories(); }
+
+    // ✅ PUSH: 크루 멤버에게 FCM 알림 (오프라인/백그라운드)
+    try {
+      if (dbReady && Crew) {
+        const crew = await Crew.findById(data.crewId).select('members').lean();
+        if (crew?.members?.length) {
+          const memberIds = crew.members
+            .filter(m => String(m.userId || m) !== String(verifiedUser?.id || verifiedUser?._id))
+            .map(m => m.userId || m);
+          if (memberIds.length) {
+            pushService.sendToUsers(memberIds, {
+              title: `💬 ${sender}`,
+              body: text.length > 50 ? text.slice(0, 50) + '…' : text,
+              data: { route: `/crew/${data.crewId}/chat`, type: 'crew_chat' },
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e) { /* FCM 크루 알림 실패 무시 */ }
   });
 
 
@@ -2004,7 +2030,7 @@ try {
   (logger?.warn || console.warn)('⚠️ CoolSMS SDK 미설치 → 개발 모드(콘솔 출력)');
 }
 
-async function sendAppPushNotification(userEmail, type, title, message) {
+async function sendAppPushNotification(userEmail, type, title, message, data = {}) {
   let user = null;
   if (dbReady && User) {
     user = await User.findOne({ email: userEmail });
@@ -2016,7 +2042,7 @@ async function sendAppPushNotification(userEmail, type, title, message) {
   // 알림 설정 체크 (설정이 없으면 기본 true로 간주, 명시적으로 false인 경우만 발송 제외)
   if (user.notiSettings && user.notiSettings[type] === false) return;
 
-  // socket.io broadcast to all clients. Client filters by targetEmail.
+  // ① socket.io broadcast (포그라운드용)
   io.emit('push_notification', {
     targetEmail: userEmail,
     title: title,
@@ -2024,7 +2050,14 @@ async function sendAppPushNotification(userEmail, type, title, message) {
     type: type,
     time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
   });
-  logger.info(`[앱 푸쉬 알림 전송] 대상:${userEmail}, 제목:${title}`); // ✅ 22TH-C1: console.log → logger.info
+
+  // ② FCM 실제 푸시 (백그라운드/잠금화면용)
+  const userId = user._id || user.id;
+  if (userId) {
+    pushService.sendToUser(userId, { title, body: message, data }).catch(() => {});
+  }
+
+  logger.info(`[앱 푸쉬 알림 전송] 대상:${userEmail}, 제목:${title}`);
 }
 
 // OTP 발송
@@ -6312,6 +6345,54 @@ app.post('/api/admin/push', verifyToken, (req, res) => {
   (logger?.info || console.log)(`[Admin Push] 개인 알림 → ${targetEmail}: ${message}`);
   res.json({ success: true, targetEmail, payload });
 });
+
+// ✅ PUSH-FCM: 전체 FCM 푸시 알림 (Admin 전용)
+app.post('/api/admin/push-fcm', verifyToken, async (req, res) => {
+  if (!isAdminToken(req.user)) return res.status(403).json({ error: '관리자 권한 필요' });
+  const { title, body, route } = req.body;
+  if (!title || !body) return res.status(400).json({ error: 'title, body 필수' });
+  try {
+    await pushService.notifyAnnouncement({ title, body });
+    res.json({ success: true, title, body });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ PUSH-FCM: FCM 토큰 등록 (POST /api/user/push-token)
+app.post('/api/user/push-token', verifyToken, async (req, res) => {
+  const { token, platform = 'android' } = req.body;
+  if (!token) return res.status(400).json({ error: 'token 필수' });
+  const userId = req.user.id || req.user._id;
+  if (!userId) return res.status(400).json({ error: 'userId 로드 실패' });
+  try {
+    if (dbReady && PushToken) {
+      await PushToken.findOneAndUpdate(
+        { token },
+        { userId, token, platform, updatedAt: new Date() },
+        { upsert: true, new: true }
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    (logger?.error || console.error)('[PUSH] 토큰 저장 실패:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ PUSH-FCM: FCM 토큰 삭제 (로그아웃 시, DELETE /api/user/push-token)
+app.delete('/api/user/push-token', verifyToken, async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  try {
+    if (dbReady && PushToken) {
+      await PushToken.deleteMany({ userId });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // ── CCTV 관리 어드민 API (JWT 인증 — 56차 MongoDB 영속화) ────────
 // dbReady는 비동기로 true가 되므로, getter 함수로 전달하여 항상 최신값 참조

@@ -14,6 +14,7 @@ import { useUserStore, TIER_CONFIG, LEVEL_CONFIG, ADMIN_ID, ADMIN_EMAIL } from '
 import LoadingSpinner from './components/LoadingSpinner';
 import KakaoLoader from './components/KakaoLoader';
 import { initAdMob } from './services/AdMobService';
+import { initPushNotifications, setPushHandlers } from './services/PushNotificationService';
 
 // ✅ ADMOB: 앱 시작 시 AdMob 초기화 (Capacitor 네이티브 환경에서만 동작)
 initAdMob().catch(() => {}); // 웹 환경 실패는 무시
@@ -326,6 +327,21 @@ function AuthExpiredChecker() {
   return null;
 }
 
+// ✅ PUSH: 로그인 후 FCM 토큰 등록
+function PushInitializer() {
+  const user = useUserStore((s) => s.user);
+  const addToast = useToastStore((s) => s.addToast);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setPushHandlers({ addToast, navigate });
+    initPushNotifications(user.id);
+  }, [user?.id]); // eslint-disable-line
+
+  return null;
+}
+
 // ENH3-C1: 어드민 라우트 보호 컴포넌트 분리 — App() 에서 불필요한 리렌더 방지
 // ✅ HYDRATION-FIX v2: reactive selector + 1tick hydration delay 조합
 //   - 이전 방식(getState 1회): cleanup 경쟁조건으로 checked 영구 false → null 유지 버그
@@ -374,6 +390,8 @@ export default function App() {
         {/* ✅ POPUP: 이미지 있는 공지 → 앱 시작 시 carousel 팝업 — useNavigate 사용으로 BrowserRouter 내부에 배치 */}
         <AnnouncementPopup />
         <BackButtonHandler />
+        {/* ✅ PUSH: 로그인 후 FCM 토큰 자동 등록 */}
+        <PushInitializer />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<PageLoading />}>

@@ -36,10 +36,22 @@
 
         <!-- AdMob 최적화 (선택) -->
         <meta-data android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT" android:value="true" />
+    <!-- ✅ PUSH: Firebase Cloud Messaging 알림 채널 -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="fishing-go-default" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/ic_launcher_background" />
     </application>
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ✅ PUSH: Android 13+ 푸시 알림 권한 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 카카오맵 현위치 기능 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
