@@ -251,8 +251,14 @@ if (MONGO_URI) {
   dbConnecting = true;
   mongoose.connect(MONGO_URI, {
     serverSelectionTimeoutMS: 10000,
-    family: 4, // IPv4 강제 (DNS SRV 에러 방지용)
-    heartbeatFrequencyMS: 10000, // 10초마다 heartbeat
+    family: 4,                  // IPv4 강제 (DNS SRV 에러 방지용)
+    heartbeatFrequencyMS: 10000,// 10초마다 heartbeat
+    // ✅ SCALE: 커넥션 풀 증가 (기본 5 → 100) — 동시 1만 사용자 DB 쿼리 처리
+    maxPoolSize: 100,
+    minPoolSize: 10,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    waitQueueTimeoutMS: 30000,  // 풀 대기 최대 30초
   })
     .then(async () => {
       dbReady = true; dbConnecting = false;
@@ -665,6 +671,38 @@ setInterval(() => {
 // ✅ IMG-SIZE-FIX: 다중이미지 5장 × 4MB = 최대 20MB → 25mb로 확장 (이전 10mb에서 이미지 탈락 방지)
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
+
+// ✅ SCALE: API 응답 캐시 (메모리) — 날씨/물때/포인트 등 자주 변하지 않는 데이터
+const responseCache = new Map();
+const CACHE_TTL = {
+  weather: 5 * 60 * 1000,   // 날씨: 5분
+  tide:    10 * 60 * 1000,  // 물때: 10분
+  default: 2 * 60 * 1000,   // 기본: 2분
+};
+function getCached(key, type = 'default') {
+  const item = responseCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.ts > (CACHE_TTL[type] || CACHE_TTL.default)) {
+    responseCache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+function setCache(key, data) {
+  if (responseCache.size > 1000) {
+    // 가장 오래된 항목 200개 삭제
+    const keys = [...responseCache.keys()].slice(0, 200);
+    keys.forEach(k => responseCache.delete(k));
+  }
+  responseCache.set(key, { data, ts: Date.now() });
+}
+// 주기적 캐시 정리 (10분마다)
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of responseCache.entries()) {
+    if (now - v.ts > 15 * 60 * 1000) responseCache.delete(k);
+  }
+}, 10 * 60 * 1000);
 
 // ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
 function verifyToken(req, res, next) {
@@ -6613,6 +6651,9 @@ function _buildRecommendKeyword(pointType, fish) {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
   const env = process.env.NODE_ENV || 'development';
+// ✅ SCALE: Keep-Alive 최적화 — 연결 재사용으로 핸드셰이크 비용 절감
+server.keepAliveTimeout = 65000;  // 65초 (로드밸런서 60초보다 길게)
+server.headersTimeout = 66000;    // keepAlive보다 1초 더 길게
   logger.info(`🚀 낚시GO 서버 시작 완료 | 포트: ${PORT} | 환경: ${env}`);
   logger.info(`   웹훅: ${process.env.PORTONE_WEBHOOK_SECRET ? '✅' : '⚠️ 미설정'} | SMS: ${process.env.SMS_API_KEY ? '✅' : '⚠️ 미설정'} | DB: ${process.env.MONGO_PASS || process.env.MONGO_URI ? '✅ MongoDB' : '⚠️ 인메모리'}`);
   if (env === 'production') logger.info('[보안] 프로덕션 모드 활성화');
