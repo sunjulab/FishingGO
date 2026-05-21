@@ -703,7 +703,7 @@ export default function MapHome() {
   // 이전: filter 누락으로 방파제/갯바위/항구 선택해도 목록 미변경 버그
   const PREMIUM_POINTS = useMemo(() => {
     const base = filter === '전체'
-      ? [...ALL_FISHING_POINTS]
+      ? ALL_FISHING_POINTS.filter(p => p.type !== '민물') // ✅ 민물 포인트 제외 (날씨·물때 점수 미지원)
       : ALL_FISHING_POINTS.filter(p => p.type === filter);
     return base
       .map(p => {
