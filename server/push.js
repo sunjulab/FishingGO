@@ -3,6 +3,9 @@ const admin = require('firebase-admin');
 
 let initialized = false;
 
+// FCM 초기화 상태 조회 (health endpoint에서 사용)
+function isInitialized() { return initialized; }
+
 function initFirebase() {
   if (initialized) return;
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -134,6 +137,7 @@ async function notifyAnnouncement({ title, body }) {
 
 module.exports = {
   initFirebase,
+  isInitialized,
   sendToToken,
   sendToUser,
   sendToUsers,

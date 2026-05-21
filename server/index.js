@@ -404,7 +404,15 @@ if (process.env.ALLOWED_ORIGIN) {
 
 // Render 헬스체크 전용 (사전 등록 — CORS 이전에 응답)
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', db: dbReady ? 'mongodb' : 'memory', uptime: Math.floor(process.uptime()), time: new Date().toISOString() });
+  const fcmStatus = pushService?.isInitialized?.() ?? false;
+  res.json({
+    status: 'ok',
+    db: dbReady ? 'mongodb' : 'memory',
+    uptime: Math.floor(process.uptime()),
+    time: new Date().toISOString(),
+    fcm: fcmStatus ? 'ready' : 'disabled',  // FCM 초기화 상태
+    env: process.env.NODE_ENV || 'development',
+  });
 });
 
 // ── ✅ DEV-SEED: 테스트 게시글 시드 엔드포인트 (개발 전용, X-Seed-Secret 헤더 필요) ──
