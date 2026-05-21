@@ -128,11 +128,11 @@ function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const navItems = [
-    { path: '/',              name: '홈',       icon: Home },
-    { path: '/catch-ranking', name: '조황랭킹', icon: Trophy },
-    { path: '/catch-upload',  name: '조황인증', icon: null,   isCenter: true },
-    { path: '/community',     name: '커뮤니티', icon: Users },
-    { path: '/mypage',        name: '마이',     icon: User },
+    { path: '/',          name: '홈',      icon: Home },
+    { path: '/media',     name: '낚시채널', icon: Tv },
+    { path: '/community', name: '커뮤니티', icon: Users },
+    { path: '/shop',      name: '쇼핑',    icon: ShoppingBag },
+    { path: '/mypage',    name: '마이',    icon: User },
   ];
 
   const hideNav = HIDE_OVERLAY_PATHS.some(path => location.pathname.includes(path));
@@ -142,27 +142,6 @@ function BottomNav() {
     <nav className="bottom-nav" style={{ display: 'flex', alignItems: 'center' }}>
       {navItems.map((item) => {
         const Icon = item.icon;
-
-        if (item.isCenter) {
-          return (
-            <button
-              key={item.name}
-              onClick={() => navigate(item.path)}
-              className="nav-item"
-              style={{
-                background: 'linear-gradient(135deg,#0056D2,#003fa3)',
-                border: 'none', borderRadius: '50%',
-                width: '52px', height: '52px', marginTop: '-16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0,
-                boxShadow: '0 4px 14px rgba(0,86,210,0.5)',
-              }}
-            >
-              <Camera size={26} color="#fff" />
-            </button>
-          );
-        }
-
         return (
           <NavLink
             to={item.path}

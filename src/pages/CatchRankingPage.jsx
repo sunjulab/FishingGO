@@ -11,7 +11,7 @@ const PERIOD_TABS = [{ key: 'week', label: '주간' }, { key: 'month', label: '�
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
-export default function CatchRankingPage() {
+export default function CatchRankingPage({ embedded = false }) {
   const navigate   = useNavigate();
   const user       = useUserStore(s => s.user);
   const addToast   = useToastStore(s => s.addToast);
@@ -49,8 +49,9 @@ export default function CatchRankingPage() {
   };
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#f8fafc', paddingBottom: '100px' }}>
-      {/* 헤더 */}
+    <div style={{ minHeight: embedded ? 'auto' : '100dvh', background: embedded ? 'transparent' : '#f8fafc', paddingBottom: '100px' }}>
+      {/* 헤더 — embedded 모드에서는 숨김 */}
+      {!embedded && (
       <div style={{ background: 'linear-gradient(135deg,#0a1628,#0056D2)', padding: '16px', paddingTop: 'calc(env(safe-area-inset-top,0px) + 16px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
           <button onClick={() => navigate(-1)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
@@ -86,6 +87,33 @@ export default function CatchRankingPage() {
           ))}
         </div>
       </div>
+      )}
+
+      {/* embedded 모드 필터 */}
+      {embedded && (
+        <div style={{ padding: '12px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+            {PERIOD_TABS.map(t => (
+              <button key={t.key} onClick={() => setPeriod(t.key)} style={{
+                padding: '5px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`,
+                background: period === t.key ? '#0056D2' : '#f1f5f9',
+                color: period === t.key ? '#fff' : '#555',
+              }}>{t.label}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {FISH_TABS.map(f => (
+              <button key={f} onClick={() => setFish(f)} style={{
+                padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+                fontWeight: '700', fontSize: `calc(11px * var(--fs,1))`, whiteSpace: 'nowrap',
+                background: fish === f ? '#FDE68A' : '#f1f5f9',
+                color: fish === f ? '#78350F' : '#555',
+              }}>{f}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '16px' }}>
         {/* 진행 중 대회 배너 */}

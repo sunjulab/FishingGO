@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2, Share2, X as XIcon, Send } from 'lucide-react';
+const CatchRankingPage = lazy(() => import('./CatchRankingPage'));
 import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
@@ -697,6 +698,18 @@ export default function CommunityTab() {
           >
             선상 배 홍보
           </button>
+          <button
+            onClick={() => setActiveTab('ranking')}
+            style={{
+              flex: 1, padding: '12px 0', backgroundColor: 'transparent',
+              border: 'none', borderBottom: activeTab === 'ranking' ? '3px solid #6366f1' : '3px solid transparent',
+              color: activeTab === 'ranking' ? '#6366f1' : '#999',
+              fontWeight: activeTab === 'ranking' ? '900' : 'bold', fontSize: '1rem', cursor: 'pointer',
+              transition: 'all 0.2s', whiteSpace: 'nowrap'
+            }}
+          >
+            🏆 조황랭킹
+          </button>
         </div>
       </div>
 
@@ -776,9 +789,13 @@ export default function CommunityTab() {
 
 
       {/* 탭 내용 렌더링 영역 */}
-      <div style={{ padding: '16px' }}>
-        {loading ? (
+      <div style={{ padding: activeTab === 'ranking' ? '0' : '16px' }}>
+        {loading && activeTab !== 'ranking' ? (
           <div style={{ padding: '16px' }}><SkeletonCard count={5} /></div>
+        ) : activeTab === 'ranking' ? (
+          <Suspense fallback={<div style={{padding:'32px',textAlign:'center'}}>로딩 중...</div>}>
+            <CatchRankingPage embedded />
+          </Suspense>
         ) : activeTab === 'notice' ? (
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {noticePosts.map(notice => (
