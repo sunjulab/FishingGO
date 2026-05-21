@@ -599,6 +599,19 @@ app.get('/api/admin/user-stats', async (req, res) => {
 
 
 
+// ✅ 계정 기반 로그인 실패 추적 — try 블록 밖 전역 선언 (스코프 오류 방지)
+const loginAttemptMap = new Map(); // email → { count, lockedUntil }
+const MAX_LOGIN_FAIL = 10;         // 계정당 최대 실패 10회
+const LOGIN_LOCK_MS  = 5 * 60 * 1000; // 잠금 5분
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of loginAttemptMap.entries()) {
+    if (val.lockedUntil && now > val.lockedUntil + LOGIN_LOCK_MS) {
+      loginAttemptMap.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
 // ─── Rate Limiter ────────────────────────────────────────────────────
 // ✅ SCALE-FIX: IP 기반 → 완화 (한국 이동통신사 NAT: 수백명이 같은 IP 공유)
 // 실제 브루트포스 보호는 계정 기반으로 처리 (아래 loginAttemptMap)
@@ -652,19 +665,6 @@ try {
   app.use('/api/media/youtube/unified', ytFeedLimiter);    // ✅ 통합 피드: 1분/10회
   (logger?.info || console.log)('✅ Rate Limiter 적용 (로그인 10분/500회, 일반 1분/1000회) — 동시 1만 사용자 지원');
 
-// ✅ SCALE-FIX: 계정 기반 로그인 실패 추적 (IP 대신 이메일 단위)
-// IP 기반 제한은 통신사 NAT로 수백명 차단 → 계정 기반으로 전환
-const loginAttemptMap = new Map(); // email → { count, lockedUntil }
-const MAX_LOGIN_FAIL = 10;          // 계정당 최대 실패 10회
-const LOGIN_LOCK_MS  = 5 * 60 * 1000; // 잠금 5분
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of loginAttemptMap.entries()) {
-    if (val.lockedUntil && now > val.lockedUntil + LOGIN_LOCK_MS) {
-      loginAttemptMap.delete(key); // 만료된 잠금 자동 해제
-    }
-  }
-}, 10 * 60 * 1000); // 10분마다 정리
   (logger?.info || console.log)('✅ YouTube Rate Limit 강화 (검색 1분/3회, 피드 1분/10회)');
 } catch (e) { (logger?.warn || console.warn)('⚠️ express-rate-limit 미설치 → npm install express-rate-limit'); }
 
