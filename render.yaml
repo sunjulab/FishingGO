@@ -112,3 +112,12 @@ services:
       # 예: https://fishing-go-frontend.onrender.com
       - key: ALLOWED_ORIGIN
         sync: false
+      # ── Firebase FCM 푸시 알림 (실기기 알림 필수) ────────────────
+      # Firebase Console → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성
+      # 발급된 JSON을 한 줄로 직렬화하여 입력
+      # 미설정 시 FCM 실기기 알림 완전 비작동 (socket.io 인앱 알림만 동작)
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false          # ✅ 필수! Render 대시보드에서 JSON 문자열로 직접 입력
+      # ── Gemini AI (AI 낚시 가이드, 선택) ────────────────────────
+      - key: GEMINI_API_KEY
+        sync: false
