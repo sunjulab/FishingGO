@@ -92,7 +92,7 @@ function BackButtonHandler() {
   const location = useLocation();
 
   useEffect(() => {
-    const ROOT_PATHS = ['/', '/community', '/media', '/shop', '/mypage', '/catch-ranking', '/catch-upload', '/ai-coach', '/contest'];
+    const ROOT_PATHS = ['/', '/community', '/media', '/shop', '/mypage', '/catch-ranking', '/catch-upload', '/contest'];
     const isRoot = ROOT_PATHS.includes(location.pathname);
 
     const handleBack = () => {
