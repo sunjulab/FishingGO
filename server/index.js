@@ -1633,6 +1633,71 @@ function applyAttendance(user) {
   return { justAttended, leveledUp, expGained, streak: user.streak || 0 };
 }
 
+// --- 이메일 마스킹 헬퍼 ---
+function maskEmail(email) {
+  const [local, domain] = email.split('@');
+  const visible = local.slice(0, 2);
+  const masked = '*'.repeat(Math.max(local.length - 2, 3));
+  return `${visible}${masked}@${domain}`;
+}
+
+// --- 아이디 찾기 ---
+app.post('/api/auth/find-id', async (req, res) => {
+  try {
+    const { realName, phone } = req.body;
+    if (!realName || !phone) return res.status(400).json({ error: '이름과 전화번호를 입력해주세요.' });
+    const normalizedPhone = String(phone).replace(/\D/g, '');
+    await waitForDb(5000);
+    if (dbReady && User) {
+      const users = await User.find({ realName }).lean();
+      const user = users.find(u => String(u.phone || '').replace(/\D/g, '') === normalizedPhone);
+      if (!user) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
+      return res.json({ email: maskEmail(user.email) });
+    }
+    // 인메모리 fallback
+    const user = memUsers.find(u =>
+      u.realName === realName &&
+      String(u.phone || '').replace(/\D/g, '') === normalizedPhone
+    );
+    if (!user) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
+    return res.json({ email: maskEmail(user.email) });
+  } catch (err) {
+    (logger?.error || console.error)('[POST /api/auth/find-id]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// --- 비밀번호 재설정 ---
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { realName, phone, newPassword } = req.body;
+    if (!realName || !phone || !newPassword) return res.status(400).json({ error: '모든 항목을 입력해주세요.' });
+    if (newPassword.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
+    const normalizedPhone = String(phone).replace(/\D/g, '');
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await waitForDb(5000);
+    if (dbReady && User) {
+      const users = await User.find({ realName }).lean();
+      const user = users.find(u => String(u.phone || '').replace(/\D/g, '') === normalizedPhone);
+      if (!user) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
+      await User.updateOne({ _id: user._id }, { $set: { password: hashed } });
+      return res.json({ success: true, message: '비밀번호가 변경되었습니다.' });
+    }
+    // 인메모리 fallback
+    const userIdx = memUsers.findIndex(u =>
+      u.realName === realName &&
+      String(u.phone || '').replace(/\D/g, '') === normalizedPhone
+    );
+    if (userIdx === -1) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
+    memUsers[userIdx].password = hashed;
+    saveMemUsers();
+    return res.json({ success: true, message: '비밀번호가 변경되었습니다.' });
+  } catch (err) {
+    (logger?.error || console.error)('[POST /api/auth/reset-password]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 // --- 아이디(email 필드 활용) 중복 확인 ---
 app.post('/api/auth/check-id', async (req, res) => {
   try {
