@@ -649,67 +649,34 @@ export default function CommunityTab() {
       {/* 프리미엄 헤더 */}
       <div style={{ backgroundColor: '#fff', padding: '24px 20px 0', borderBottom: '1px solid #F0F0F0' }}>
         <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '900', marginBottom: '20px' }}>커뮤니티</h1>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <button
-            onClick={() => setActiveTab('open')}
-            style={{
-              flex: 1, padding: '12px 0', backgroundColor: 'transparent',
-              border: 'none', borderBottom: activeTab === 'open' ? '3px solid #0056D2' : '3px solid transparent',
-              color: activeTab === 'open' ? '#0056D2' : '#999',
-              fontWeight: activeTab === 'open' ? 'bold' : 'normal', fontSize: '1rem', cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            오픈 게시판
-          </button>
-          <button
-            onClick={() => setActiveTab('crew')}
-            style={{
-              flex: 1, padding: '12px 0', backgroundColor: 'transparent',
-              border: 'none', borderBottom: activeTab === 'crew' ? '3px solid #0056D2' : '3px solid transparent',
-              color: activeTab === 'crew' ? '#0056D2' : '#999',
-              fontWeight: activeTab === 'crew' ? 'bold' : 'normal', fontSize: '1rem', cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            크루
-          </button>
-          <button
-            onClick={() => setActiveTab('notice')}
-            style={{
-              flex: 1, padding: '12px 0', backgroundColor: 'transparent',
-              border: 'none', borderBottom: activeTab === 'notice' ? '3px solid #FF3B30' : '3px solid transparent',
-              color: activeTab === 'notice' ? '#FF3B30' : '#999',
-              fontWeight: activeTab === 'notice' ? '900' : 'bold', fontSize: '1rem', cursor: 'pointer',
-              transition: 'all 0.2s', whiteSpace: 'nowrap'
-            }}
-          >
-            공지사항
-          </button>
-          <button
-            onClick={() => setActiveTab('business')}
-            style={{
-              flex: 1, padding: '12px 0', backgroundColor: 'transparent',
-              border: 'none', borderBottom: activeTab === 'business' ? '3px solid #0056D2' : '3px solid transparent',
-              color: activeTab === 'business' ? '#0056D2' : '#999',
-              fontWeight: activeTab === 'business' ? '900' : 'bold', fontSize: '1rem', cursor: 'pointer',
-              transition: 'all 0.2s', whiteSpace: 'nowrap'
-            }}
-          >
-            선상 배 홍보
-          </button>
-          <button
-            onClick={() => setActiveTab('ranking')}
-            style={{
-              flex: 1, padding: '12px 0', backgroundColor: 'transparent',
-              border: 'none', borderBottom: activeTab === 'ranking' ? '3px solid #6366f1' : '3px solid transparent',
-              color: activeTab === 'ranking' ? '#6366f1' : '#999',
-              fontWeight: activeTab === 'ranking' ? '900' : 'bold', fontSize: '1rem', cursor: 'pointer',
-              transition: 'all 0.2s', whiteSpace: 'nowrap'
-            }}
-          >
-            🏆 조황랭킹
-          </button>
+        <div style={{ display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', gap: '0' }}>
+          {[
+            { key: 'open',     label: '오픈게시판',  color: '#0056D2' },
+            { key: 'crew',     label: '크루',       color: '#0056D2' },
+            { key: 'notice',   label: '공지사항',   color: '#FF3B30' },
+            { key: 'business', label: '선상배홍보', color: '#0056D2' },
+            { key: 'ranking',  label: '🏆 조황랭킹', color: '#6366f1' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                flexShrink: 0,
+                padding: '12px 18px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === tab.key ? `3px solid ${tab.color}` : '3px solid transparent',
+                color: activeTab === tab.key ? tab.color : '#999',
+                fontWeight: activeTab === tab.key ? '900' : '600',
+                fontSize: `calc(14px * var(--fs, 1))`,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
