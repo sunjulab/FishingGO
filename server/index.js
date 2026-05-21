@@ -2023,6 +2023,54 @@ app.post('/api/admin/force-tier', async (req, res) => {
   }
 });
 
+// ✅ SECURITY: 미결제 유료 tier 탐지 API — 어드민 전용
+// GET /api/admin/suspicious-tiers
+app.get('/api/admin/suspicious-tiers', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
+
+  const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'];
+
+  try {
+    if (!dbReady || !User || !PaymentHistory) {
+      const suspects = memUsers
+        .filter(u => PAID_TIERS.includes(u.tier))
+        .map(u => ({ id: u.id, email: u.email, name: u.name, tier: u.tier, hasPaid: false, source: 'memory' }));
+      return res.json({ suspects, total: suspects.length, note: 'in-memory — 결제 검증 불가' });
+    }
+
+    const paidUsers = await User.find(
+      { tier: { $in: PAID_TIERS } },
+      { email: 1, id: 1, name: 1, tier: 1, subscriptionExpiresAt: 1, createdAt: 1 }
+    ).lean();
+
+    const paidIds = await PaymentHistory.distinct('userId', { status: 'paid' });
+    const paidIdSet = new Set(paidIds.map(String));
+    const proSubIds = new Set(Object.keys(memProSubs || {}));
+
+    const ADMIN_EMAILS = new Set(['sunjulab.k', 'sunjulab.k@gmail.com']);
+    const suspects = paidUsers
+      .filter(u => {
+        const uid = String(u.email || u.id || '');
+        if (ADMIN_EMAILS.has(uid)) return false;
+        return !paidIdSet.has(uid) && !proSubIds.has(uid);
+      })
+      .map(u => ({
+        email: u.email, id: u.id, name: u.name,
+        tier: u.tier, expiresAt: u.subscriptionExpiresAt, joinedAt: u.createdAt,
+      }))
+      .sort((a, b) => new Date(b.joinedAt || 0) - new Date(a.joinedAt || 0));
+
+    return res.json({ suspects, total: suspects.length });
+  } catch (e) {
+    (logger?.error || console.error)('[suspicious-tiers]', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── FREE 플랜 포인트 입장 일일 3회 제한 체크 ─────────────────────────────────
 // POST /api/user/point-visit-check
 // - 로그인 사용자 전용 (GUEST는 클라이언트 sessionStorage로 처리)

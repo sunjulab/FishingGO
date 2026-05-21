@@ -573,50 +573,160 @@ function CsAdminPanel({ addToast }) {
 }
 
 /* ─── 강제 Tier 변경 패널 (불법 획득 tier 복원) ─── */
+const TIER_COLOR = { FREE: '#8E8E93', BUSINESS_LITE: '#64B5F6', PRO: '#00C48C', BUSINESS_VIP: '#FFD700', MASTER: '#FF9B26' };
+
 function ForceTierPanel({ addToast }) {
   const [target, setTarget] = useState('');
   const [tier, setTier] = useState('FREE');
   const [loading, setLoading] = useState(false);
 
-  const handleForce = async () => {
-    if (!target.trim()) { addToast('이메일/ID/닉네임 입력 필요', 'error'); return; }
-    setLoading(true);
+  // 의심 계정 목록
+  const [suspects, setSuspects] = useState([]);
+  const [suspectLoading, setSuspectLoading] = useState(false);
+  const [suspectNote, setSuspectNote] = useState('');
+  const [resettingId, setResettingId] = useState(null); // 클릭된 계정 row
+
+  const loadSuspects = async () => {
+    setSuspectLoading(true);
     try {
-      const res = await apiClient.post('/api/admin/force-tier', { targetEmail: target.trim(), tier });
+      const res = await apiClient.get('/api/admin/suspicious-tiers');
+      setSuspects(res.data.suspects || []);
+      setSuspectNote(res.data.note || '');
+    } catch (err) {
+      addToast(err.response?.data?.error || '목록 로드 실패', 'error');
+    } finally { setSuspectLoading(false); }
+  };
+
+  // 마운트 시 자동 로드
+  useEffect(() => { loadSuspects(); }, []);
+
+  const handleForce = async (targetEmail, targetTier = tier) => {
+    const t = (targetEmail || target).trim();
+    if (!t) { addToast('이메일/ID/닉네임 입력 필요', 'error'); return; }
+    setLoading(true);
+    if (targetEmail) setResettingId(targetEmail);
+    try {
+      const res = await apiClient.post('/api/admin/force-tier', { targetEmail: t, tier: targetTier });
       addToast(`✅ ${res.data.message}`, 'success');
-      setTarget('');
+      if (!targetEmail) setTarget('');
+      // 목록에서 제거
+      setSuspects(prev => prev.filter(s => s.email !== t && s.id !== t && s.name !== t));
     } catch (err) {
       addToast(err.response?.data?.error || '변경 실패', 'error');
-    } finally { setLoading(false); }
+    } finally { setLoading(false); setResettingId(null); }
   };
 
   return (
     <div style={{ marginTop: '24px', background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.2)', borderRadius: '18px', overflow: 'hidden' }}>
-      <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,59,48,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '18px' }}>🚨</span>
-        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#FF5A5F' }}>불법 Tier 강제 복원 (관리자 전용)</span>
+      {/* 헤더 */}
+      <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,59,48,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '18px' }}>🚨</span>
+          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#FF5A5F' }}>불법 Tier 강제 복원</span>
+          {suspects.length > 0 && (
+            <span style={{ background: '#FF5A5F', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '2px 8px', borderRadius: '20px' }}>
+              의심 {suspects.length}건
+            </span>
+          )}
+        </div>
+        <button onClick={loadSuspects} disabled={suspectLoading}
+          style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          🔄 {suspectLoading ? '...' : '새로고침'}
+        </button>
       </div>
-      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700', lineHeight: 1.5 }}>
-          결제 없이 PRO/VIP를 획득한 계정의 Tier를 강제로 복원합니다.<br/>이메일 · ID · 닉네임 중 하나를 입력하세요.
+
+      {/* 미결제 유료 tier 목록 */}
+      <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,59,48,0.1)' }}>
+        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginBottom: '10px' }}>
+          🔍 결제기록 없이 유료 Tier를 보유한 계정 목록
+          {suspectNote && <span style={{ color: '#FF9B26', marginLeft: '6px' }}>({suspectNote})</span>}
+        </div>
+
+        {suspectLoading ? (
+          <div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.3)', fontSize: `calc(12px * var(--fs, 1))` }}>
+            불러오는 중...
+          </div>
+        ) : suspects.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '16px', color: '#00C48C', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', border: '1px dashed rgba(0,196,140,0.3)', borderRadius: '10px' }}>
+            ✅ 의심 계정 없음 — 모든 유료 티어 계정이 정상 결제됨
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
+            {suspects.map((s, i) => {
+              const uid = s.email || s.id || s.name || '?';
+              const isResetting = resettingId === uid;
+              const joinDate = s.joinedAt ? new Date(s.joinedAt).toLocaleDateString('ko-KR') : '?';
+              const expDate = s.expiresAt ? new Date(s.expiresAt).toLocaleDateString('ko-KR') : '없음';
+              return (
+                <div key={uid + i} style={{
+                  background: 'rgba(255,59,48,0.08)', border: '1px solid rgba(255,59,48,0.25)',
+                  borderRadius: '12px', padding: '12px 14px',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                }}>
+                  {/* 순위 */}
+                  <div style={{ minWidth: '22px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>{i + 1}</div>
+
+                  {/* 계정 정보 */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff', wordBreak: 'break-all' }}>
+                        {s.name || s.id || s.email || '?'}
+                      </span>
+                      <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: `${TIER_COLOR[s.tier] || '#888'}22`, color: TIER_COLOR[s.tier] || '#888', padding: '2px 7px', borderRadius: '6px', fontWeight: '900', border: `1px solid ${TIER_COLOR[s.tier] || '#888'}55` }}>
+                        {s.tier}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>
+                      {s.email || s.id} · 가입 {joinDate}
+                    </div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF9B26', fontWeight: '700', marginTop: '2px' }}>
+                      ⚠️ 결제기록 없음 · 만료 {expDate}
+                    </div>
+                  </div>
+
+                  {/* 빠른 FREE 복원 버튼 */}
+                  <button
+                    onClick={() => handleForce(uid, 'FREE')}
+                    disabled={isResetting}
+                    style={{
+                      flexShrink: 0, padding: '7px 12px', border: 'none', borderRadius: '10px',
+                      background: isResetting ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg,#FF5A5F,#cc2929)',
+                      color: '#fff', fontWeight: '900', fontSize: `calc(11px * var(--fs, 1))`,
+                      cursor: isResetting ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {isResetting ? '⏳' : '🔨 FREE'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 수동 강제 변경 */}
+      <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
+          ✏️ 직접 입력해서 강제 변경
         </div>
         <input
           value={target}
           onChange={e => setTarget(e.target.value)}
-          placeholder="이메일/ID/닉네임 (예: tmdcjf2415)"
-          style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
+          placeholder="이메일/ID/닉네임"
+          style={{ padding: '11px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
         />
         <div style={{ display: 'flex', gap: '8px' }}>
           {['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].map(t => (
-            <button key={t} onClick={() => setTier(t)} style={{ flex: 1, padding: '8px 4px', borderRadius: '10px', border: 'none', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', background: tier === t ? (t === 'FREE' ? '#FF5A5F' : '#00C48C') : 'rgba(255,255,255,0.08)', color: '#fff', transition: 'all 0.15s' }}>
+            <button key={t} onClick={() => setTier(t)} style={{ flex: 1, padding: '7px 4px', borderRadius: '10px', border: 'none', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', background: tier === t ? (t === 'FREE' ? '#FF5A5F' : '#00C48C') : 'rgba(255,255,255,0.08)', color: '#fff', transition: 'all 0.15s' }}>
               {t === 'FREE' ? 'FREE' : t === 'BUSINESS_LITE' ? 'LITE' : t === 'PRO' ? 'PRO' : 'VIP'}
             </button>
           ))}
         </div>
         <button
-          onClick={handleForce}
+          onClick={() => handleForce('', tier)}
           disabled={!target.trim() || loading}
-          style={{ padding: '13px', border: 'none', borderRadius: '12px', background: target.trim() ? 'linear-gradient(135deg,#FF5A5F,#cc2929)' : 'rgba(255,255,255,0.06)', color: '#fff', fontWeight: '950', fontSize: `calc(14px * var(--fs, 1))`, cursor: target.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+          style={{ padding: '12px', border: 'none', borderRadius: '12px', background: target.trim() ? 'linear-gradient(135deg,#FF5A5F,#cc2929)' : 'rgba(255,255,255,0.06)', color: '#fff', fontWeight: '950', fontSize: `calc(13px * var(--fs, 1))`, cursor: target.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
         >
           🔨 {loading ? '처리 중...' : `${target || '계정 입력'} → ${tier} 강제 변경`}
         </button>
