@@ -1948,14 +1948,22 @@ app.put('/api/user/tier', async (req, res) => {
       currentTier = user.tier || 'FREE';
     }
 
-    // ✅ TIER-PROTECT: 어드민이 아닌 경우 다운그레이드 차단
+    // ✅ SECURITY-FIX: 비관리자는 업그레이드 불가 (결제 없이 PRO/VIP 획득 방지)
     if (!isAdmin) {
       // sunjulab 계정은 항상 BUSINESS_VIP 이상 유지
       const isSunjulabVip = email === 'sunjulab';
       if (isSunjulabVip && (TIER_RANK[tier] || 0) < TIER_RANK['BUSINESS_VIP']) {
         return res.status(403).json({ error: '이 계정은 BUSINESS_VIP 구독이 유지됩니다.', currentTier: 'BUSINESS_VIP' });
       }
-      // 유료 구독 중인 계정 → 하위 플랜으로 변경 불가
+      // ✅ 업그레이드 시도 → 결제 없이 불가 (관리자만 직접 변경 가능)
+      if ((TIER_RANK[tier] || 0) > (TIER_RANK[currentTier] || 0)) {
+        return res.status(403).json({
+          error: '플랜 업그레이드는 결제 후 자동 처리됩니다. 직접 변경은 불가합니다.',
+          currentTier,
+          code: 'UPGRADE_REQUIRES_PAYMENT',
+        });
+      }
+      // 유료 구독 중인 계정 → 하위 플랜으로 변경 불가 (고객센터 통해서만)
       if (PROTECTED_TIERS.includes(currentTier) && (TIER_RANK[tier] || 0) < (TIER_RANK[currentTier] || 0)) {
         return res.status(403).json({
           error: `현재 ${currentTier} 구독 중입니다. 구독 해지는 고객센터를 통해 진행해주세요.`,
@@ -1975,6 +1983,43 @@ app.put('/api/user/tier', async (req, res) => {
   } catch (err) {
     (logger?.error || console.error)('[PUT /api/user/tier]', err.message);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// ✅ SECURITY-FIX: 어드민 전용 강제 tier 변경 (결제 없이 획득한 tier 복원용)
+// POST /api/admin/force-tier  { targetEmail, tier }
+app.post('/api/admin/force-tier', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
+
+  const { targetEmail, tier } = req.body;
+  if (!targetEmail || !tier) return res.status(400).json({ error: 'targetEmail, tier 필수' });
+  if (!TIER_RANK.hasOwnProperty(tier)) return res.status(400).json({ error: '유효하지 않은 tier' });
+
+  try {
+    let updated = false;
+    if (dbReady && User) {
+      const result = await User.findOneAndUpdate(
+        { $or: [{ email: targetEmail }, { id: targetEmail }, { name: targetEmail }] },
+        { $set: { tier } },
+        { new: true }
+      );
+      if (result) {
+        updated = true;
+        (logger?.info || console.log)(`[ADMIN force-tier] ${result.email || result.id} → ${tier} (by ${tp.email})`);
+      }
+    }
+    // in-memory fallback
+    const memIdx = memUsers.findIndex(u => u.email === targetEmail || u.id === targetEmail || u.name === targetEmail);
+    if (memIdx !== -1) { memUsers[memIdx].tier = tier; saveMemUsers(); updated = true; }
+
+    if (!updated) return res.status(404).json({ error: '해당 사용자를 찾을 수 없습니다.' });
+    return res.json({ success: true, targetEmail, tier, message: `${targetEmail} → ${tier} 변경 완료` });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
   }
 });
 

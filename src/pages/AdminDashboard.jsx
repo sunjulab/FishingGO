@@ -356,6 +356,9 @@ export default function AdminDashboard() {
         {/* ══ CS 1:1 문의 관리 패널 ══ */}
         <CsAdminPanel addToast={addToast} />
 
+        {/* ══ 불법 tier 강제 복원 패널 ══ */}
+        <ForceTierPanel addToast={addToast} />
+
       </div>
     </div>
   );
@@ -565,6 +568,59 @@ function CsAdminPanel({ addToast }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── 강제 Tier 변경 패널 (불법 획득 tier 복원) ─── */
+function ForceTierPanel({ addToast }) {
+  const [target, setTarget] = useState('');
+  const [tier, setTier] = useState('FREE');
+  const [loading, setLoading] = useState(false);
+
+  const handleForce = async () => {
+    if (!target.trim()) { addToast('이메일/ID/닉네임 입력 필요', 'error'); return; }
+    setLoading(true);
+    try {
+      const res = await apiClient.post('/api/admin/force-tier', { targetEmail: target.trim(), tier });
+      addToast(`✅ ${res.data.message}`, 'success');
+      setTarget('');
+    } catch (err) {
+      addToast(err.response?.data?.error || '변경 실패', 'error');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ marginTop: '24px', background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.2)', borderRadius: '18px', overflow: 'hidden' }}>
+      <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,59,48,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontSize: '18px' }}>🚨</span>
+        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#FF5A5F' }}>불법 Tier 강제 복원 (관리자 전용)</span>
+      </div>
+      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700', lineHeight: 1.5 }}>
+          결제 없이 PRO/VIP를 획득한 계정의 Tier를 강제로 복원합니다.<br/>이메일 · ID · 닉네임 중 하나를 입력하세요.
+        </div>
+        <input
+          value={target}
+          onChange={e => setTarget(e.target.value)}
+          placeholder="이메일/ID/닉네임 (예: tmdcjf2415)"
+          style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
+        />
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].map(t => (
+            <button key={t} onClick={() => setTier(t)} style={{ flex: 1, padding: '8px 4px', borderRadius: '10px', border: 'none', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', background: tier === t ? (t === 'FREE' ? '#FF5A5F' : '#00C48C') : 'rgba(255,255,255,0.08)', color: '#fff', transition: 'all 0.15s' }}>
+              {t === 'FREE' ? 'FREE' : t === 'BUSINESS_LITE' ? 'LITE' : t === 'PRO' ? 'PRO' : 'VIP'}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleForce}
+          disabled={!target.trim() || loading}
+          style={{ padding: '13px', border: 'none', borderRadius: '12px', background: target.trim() ? 'linear-gradient(135deg,#FF5A5F,#cc2929)' : 'rgba(255,255,255,0.06)', color: '#fff', fontWeight: '950', fontSize: `calc(14px * var(--fs, 1))`, cursor: target.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+        >
+          🔨 {loading ? '처리 중...' : `${target || '계정 입력'} → ${tier} 강제 변경`}
+        </button>
+      </div>
     </div>
   );
 }
