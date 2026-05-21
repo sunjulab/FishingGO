@@ -1,24 +1,21 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Upload, Fish, MapPin, Ruler, Weight, Share2, Trophy, ChevronRight, X, CheckCircle, AlertTriangle, Loader } from 'lucide-react';
+import { Camera, Upload, Share2, Trophy, X, AlertTriangle } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
-import { getFishRule, isClosedSeason, getFishEmoji, FISH_RULES } from '../data/fishRules';
+import { getFishRule, isClosedSeason, getFishEmoji } from '../data/fishRules';
 
 const PRIMARY = '#0056D2';
-const GREEN   = '#22c55e';
-const RED     = '#FF3B30';
 const GOLD    = '#F59E0B';
 
 // ─── 공유 카드 생성 (Canvas) ────────────────────────────────────────────────
-async function generateShareCard({ fishName, fishSize, fishWeight, location, weather, userName, imageUrl }) {
+async function generateShareCard({ fishName, fishSize, fishWeight, location, userName, imageUrl }) {
   const canvas = document.createElement('canvas');
   canvas.width  = 900;
   canvas.height = 500;
   const ctx = canvas.getContext('2d');
 
-  // 배경 그라디언트
   const grad = ctx.createLinearGradient(0, 0, 900, 500);
   grad.addColorStop(0, '#0a1628');
   grad.addColorStop(1, '#0056D2');
@@ -26,7 +23,6 @@ async function generateShareCard({ fishName, fishSize, fishWeight, location, wea
   ctx.roundRect(0, 0, 900, 500, 20);
   ctx.fill();
 
-  // 물고기 사진 (있으면 왼쪽에 표시)
   if (imageUrl) {
     try {
       const img = new Image();
@@ -38,12 +34,11 @@ async function generateShareCard({ fishName, fishSize, fishWeight, location, wea
       ctx.clip();
       ctx.drawImage(img, 20, 20, 420, 460);
       ctx.restore();
-    } catch { /* 이미지 로드 실패 시 무시 */ }
+    } catch { /* 무시 */ }
   }
 
   const x = imageUrl ? 460 : 50;
 
-  // 낚시GO 로고
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.roundRect(x, 20, 420, 40, 8);
   ctx.fill();
@@ -52,37 +47,26 @@ async function generateShareCard({ fishName, fishSize, fishWeight, location, wea
   ctx.textAlign = 'center';
   ctx.fillText('🎣 낚시GO 조황 인증', x + 210, 46);
 
-  // 어종 이모지 + 이름
   ctx.font = 'bold 52px sans-serif';
-  ctx.textAlign = 'center';
   ctx.fillText(getFishEmoji(fishName), x + 210, 160);
   ctx.font = 'bold 38px sans-serif';
   ctx.fillStyle = '#FDE68A';
   ctx.fillText(fishName || '미확인 어종', x + 210, 210);
 
-  // 크기 / 무게
   ctx.font = '24px sans-serif';
   ctx.fillStyle = '#E0F2FE';
   if (fishSize)   ctx.fillText(`📏 ${fishSize} cm`, x + 210, 260);
   if (fishWeight) ctx.fillText(`⚖️  ${fishWeight} kg`, x + 210, 295);
-
-  // 장소
   if (location) {
     ctx.font = '20px sans-serif';
     ctx.fillStyle = '#BAE6FD';
     ctx.fillText(`📍 ${location}`, x + 210, 335);
   }
-  if (weather) {
-    ctx.fillStyle = '#BAE6FD';
-    ctx.fillText(`${weather}`, x + 210, 365);
-  }
 
-  // 닉네임
   ctx.font = 'bold 18px sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.fillText(`by ${userName || '낚시인'}`, x + 210, 410);
 
-  // 앱 설치 유도
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.roundRect(x + 60, 440, 300, 40, 20);
   ctx.fill();
@@ -93,25 +77,17 @@ async function generateShareCard({ fishName, fishSize, fishWeight, location, wea
   return canvas.toDataURL('image/png');
 }
 
-// ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
 export default function CatchUploadPage() {
-  const navigate    = useNavigate();
-  const user        = useUserStore(s => s.user);
-  const addToast    = useToastStore(s => s.addToast);
+  const navigate = useNavigate();
+  const user     = useUserStore(s => s.user);
+  const addToast = useToastStore(s => s.addToast);
+  const fileRef  = useRef(null);
 
-  const fileRef     = useRef(null);
-  const canvasRef   = useRef(null);
-
-  const [step, setStep]           = useState(1); // 1=사진, 2=정보입력, 3=완료
+  const [step, setStep]           = useState(1);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageBase64, setImageBase64]   = useState(null);
 
-  // AI 인식 결과
-  const [aiLoading, setAiLoading]   = useState(false);
-  const [aiResult, setAiResult]     = useState(null);
-
-  // 입력 폼
   const [fishName, setFishName]     = useState('');
   const [fishSize, setFishSize]     = useState('');
   const [fishWeight, setFishWeight] = useState('');
@@ -120,60 +96,34 @@ export default function CatchUploadPage() {
   const [contestId, setContestId]   = useState('');
   const [contests, setContests]     = useState([]);
 
-  // 결과
-  const [uploading, setUploading]   = useState(false);
-  const [shareCard, setShareCard]   = useState(null);
-  const [savedRecord, setSavedRecord] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [shareCard, setShareCard] = useState(null);
 
-  const fishRule    = getFishRule(fishName);
-  const closed      = isClosedSeason(fishRule);
+  const fishRule = getFishRule(fishName);
+  const closed   = isClosedSeason(fishRule);
 
-  // 진행 중인 대회 불러오기
   React.useEffect(() => {
     apiClient.get('/api/contest/active')
       .then(r => setContests(r.data.contests || []))
       .catch(() => {});
   }, []);
 
-  // 파일 선택 처리
-  const handleFile = useCallback(async (file) => {
+  const handleFile = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return addToast('이미지 파일을 선택해주세요.', 'error');
     setImageFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
       setImagePreview(e.target.result);
-      // base64 (data:image/jpeg;base64,xxx → xxx만 추출)
-      const b64 = e.target.result.split(',')[1];
-      setImageBase64(b64);
+      setImageBase64(e.target.result.split(',')[1]);
     };
     reader.readAsDataURL(file);
     setStep(2);
-    // AI 어종 자동 인식
-    setAiLoading(true);
-    try {
-      const reader2 = new FileReader();
-      const b64 = await new Promise((res) => { reader2.onload = (e) => res(e.target.result.split(',')[1]); reader2.readAsDataURL(file); });
-      const res = await apiClient.post('/api/ai/fish-identify', { imageBase64: b64, mimeType: file.type }, { timeout: 30000 });
-      setAiResult(res.data);
-      if (res.data.fishName) {
-        setFishName(res.data.fishName);
-        addToast(`🐟 AI 인식: ${res.data.fishName} (신뢰도 ${res.data.confidence}%)`, 'success');
-      } else {
-        addToast('AI가 어종을 인식하지 못했습니다. 직접 입력해주세요.', 'info');
-      }
-    } catch {
-      addToast('AI 인식 서버에 연결 중 오류. 직접 입력해주세요.', 'info');
-    } finally {
-      setAiLoading(false);
-    }
   }, [addToast]);
 
-  // 조황 등록
   const handleSubmit = async () => {
     if (!fishName.trim()) return addToast('어종을 입력해주세요.', 'error');
     setUploading(true);
     try {
-      // 1. 이미지 서버 업로드 (base64로 전송)
       let imageUrl = null;
       if (imageBase64 && imageFile) {
         try {
@@ -182,28 +132,22 @@ export default function CatchUploadPage() {
             avatar: `data:${imageFile.type};base64,${imageBase64}`,
           }, { timeout: 60000 });
           imageUrl = imgRes.data.avatar || null;
-        } catch { /* 이미지 업로드 실패 시 URL 없이 진행 */ }
+        } catch { /* 이미지 업로드 실패 무시 */ }
       }
 
-      // 2. 조황 기록 저장
-      const res = await apiClient.post('/api/catch', {
-        userId:       user?.id || user?._id,
-        userName:     user?.name,
-        userAvatar:   user?.avatar,
-        fishName:     fishName.trim(),
-        fishSize:     fishSize ? parseFloat(fishSize) : null,
-        fishWeight:   fishWeight ? parseFloat(fishWeight) : null,
+      await apiClient.post('/api/catch', {
+        userId:    user?.id || user?._id,
+        userName:  user?.name,
+        userAvatar: user?.avatar,
+        fishName:  fishName.trim(),
+        fishSize:  fishSize ? parseFloat(fishSize) : null,
+        fishWeight: fishWeight ? parseFloat(fishWeight) : null,
         imageUrl,
-        location:     location.trim(),
-        memo:         memo.trim(),
-        contestId:    contestId || null,
-        verified:     !!(aiResult?.fishName),
-        aiConfidence: aiResult?.confidence || 0,
+        location:  location.trim(),
+        memo:      memo.trim(),
+        contestId: contestId || null,
       });
 
-      setSavedRecord(res.data.record);
-
-      // 3. 공유 카드 생성
       const card = await generateShareCard({
         fishName, fishSize, fishWeight, location,
         userName: user?.name,
@@ -211,7 +155,7 @@ export default function CatchUploadPage() {
       });
       setShareCard(card);
       setStep(3);
-      addToast(`🎉 조황 등록 완료! +30 EXP 획득`, 'success');
+      addToast('🎉 조황 등록 완료! +30 EXP 획득', 'success');
     } catch (err) {
       addToast(err.response?.data?.error || '등록 실패. 다시 시도해주세요.', 'error');
     } finally {
@@ -219,7 +163,6 @@ export default function CatchUploadPage() {
     }
   };
 
-  // 공유
   const handleShare = async () => {
     if (navigator.share && shareCard) {
       try {
@@ -227,9 +170,8 @@ export default function CatchUploadPage() {
         const file = new File([blob], 'catch.png', { type: 'image/png' });
         await navigator.share({ title: `낚시GO 조황 인증 - ${fishName}`, files: [file] });
         return;
-      } catch { /* 파일 공유 실패 시 Kakao로 */}
+      } catch { /* Kakao로 폴백 */ }
     }
-    // Kakao 공유
     if (window.Kakao?.isInitialized()) {
       window.Kakao.Share.sendDefault({
         objectType: 'feed',
@@ -242,7 +184,6 @@ export default function CatchUploadPage() {
         buttons: [{ title: '낚시GO 앱 보기', link: { mobileWebUrl: 'https://fishinggo.vercel.app', webUrl: 'https://fishinggo.vercel.app' } }],
       });
     } else {
-      // 링크 복사 폴백
       try {
         await navigator.clipboard.writeText(`🎣 낚시GO 조황 인증\n${fishName} ${fishSize ? fishSize + 'cm' : ''}\nhttps://fishinggo.vercel.app`);
         addToast('링크가 복사되었습니다!', 'success');
@@ -267,7 +208,6 @@ export default function CatchUploadPage() {
       </div>
 
       <div style={{ padding: '0 16px' }}>
-
         {/* ── STEP 1: 사진 선택 ── */}
         {step === 1 && (
           <div>
@@ -278,7 +218,7 @@ export default function CatchUploadPage() {
               onClick={() => fileRef.current?.click()}>
               <div style={{ fontSize: '64px', marginBottom: '12px' }}>🐟</div>
               <div style={{ color: '#fff', fontWeight: '900', fontSize: `calc(18px * var(--fs,1))`, marginBottom: '6px' }}>물고기 사진 업로드</div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: `calc(13px * var(--fs,1))` }}>사진을 찍으면 AI가 어종을 자동 인식합니다</div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: `calc(13px * var(--fs,1))` }}>사진을 찍고 어종/크기를 입력해 랭킹에 올리세요</div>
             </div>
 
             <button onClick={() => fileRef.current?.click()} style={{
@@ -302,24 +242,9 @@ export default function CatchUploadPage() {
         {/* ── STEP 2: 정보 입력 ── */}
         {step === 2 && (
           <div style={{ background: 'rgba(255,255,255,0.97)', borderRadius: '24px', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-            {/* 사진 미리보기 */}
             {imagePreview && (
-              <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', height: '200px' }}>
+              <div style={{ borderRadius: '16px', overflow: 'hidden', height: '200px' }}>
                 <img src={imagePreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                {aiLoading && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
-                    <Loader size={32} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
-                    <div style={{ color: '#fff', fontWeight: '700', fontSize: `calc(13px * var(--fs,1))` }}>🤖 AI 어종 분석 중...</div>
-                  </div>
-                )}
-                {aiResult && aiResult.fishName && !aiLoading && (
-                  <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'rgba(0,0,0,0.75)', borderRadius: '10px', padding: '6px 10px' }}>
-                    <span style={{ color: '#4ade80', fontSize: `calc(12px * var(--fs,1))`, fontWeight: '800' }}>
-                      ✅ AI: {aiResult.fishName} ({aiResult.confidence}%)
-                    </span>
-                  </div>
-                )}
               </div>
             )}
 
@@ -335,7 +260,7 @@ export default function CatchUploadPage() {
 
             {/* 어종 */}
             <div>
-              <span style={labelSt}>어종 {aiLoading && '(AI 분석 중...)'}</span>
+              <span style={labelSt}>어종</span>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
                 {['감성돔','광어','우럭','볼락','참돔','농어','방어','고등어','붕어','잉어'].map(f => (
                   <button key={f} onClick={() => setFishName(f)} style={{
@@ -360,7 +285,7 @@ export default function CatchUploadPage() {
               </div>
             </div>
 
-            {/* 최소 체장 안내 */}
+            {/* 최소 체장 경고 */}
             {fishRule?.minSize && fishSize && parseFloat(fishSize) < fishRule.minSize && (
               <div style={{ background: '#FEE2E2', borderRadius: '10px', padding: '10px 12px', fontSize: `calc(12px * var(--fs,1))`, color: '#DC2626', fontWeight: '700' }}>
                 ⚠️ {fishName} 최소 체장 {fishRule.minSize}cm 미만입니다. 방류를 권장합니다.
@@ -392,7 +317,6 @@ export default function CatchUploadPage() {
               <input style={st} type="text" placeholder="오늘의 채비, 미끼, 날씨 등..." value={memo} onChange={e => setMemo(e.target.value)} maxLength={100} />
             </div>
 
-            {/* 등록 버튼 */}
             <button onClick={handleSubmit} disabled={uploading || !fishName.trim()} style={{
               width: '100%', padding: '16px', borderRadius: '16px', border: 'none',
               background: 'linear-gradient(135deg,#0056D2,#003fa3)', color: '#fff',
@@ -412,7 +336,6 @@ export default function CatchUploadPage() {
             <h2 style={{ fontWeight: '900', fontSize: `calc(22px * var(--fs,1))`, color: '#0d1b2a', marginBottom: '4px' }}>조황 인증 완료!</h2>
             <p style={{ color: '#64748b', fontSize: `calc(13px * var(--fs,1))`, marginBottom: '16px' }}>+30 EXP 획득 · 전국 랭킹에 등록되었습니다</p>
 
-            {/* 공유 카드 미리보기 */}
             {shareCard && (
               <img src={shareCard} alt="share card" style={{ width: '100%', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }} />
             )}
@@ -445,8 +368,6 @@ export default function CatchUploadPage() {
           </div>
         )}
       </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

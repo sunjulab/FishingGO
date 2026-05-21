@@ -55,7 +55,6 @@ const UserProfile      = lazy(() => import('./pages/UserProfile'));
 // ✅ 로상 / AI / 대회 페이지
 const CatchUploadPage  = lazy(() => import('./pages/CatchUploadPage'));
 const CatchRankingPage = lazy(() => import('./pages/CatchRankingPage'));
-const AiCoachPage      = lazy(() => import('./pages/AiCoachPage'));
 const ContestPage      = lazy(() => import('./pages/ContestPage'));
 
 import RealTimeAlert from './components/RealTimeAlert';
