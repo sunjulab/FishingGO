@@ -14,7 +14,11 @@ import { useUserStore, TIER_CONFIG, LEVEL_CONFIG, ADMIN_ID, ADMIN_EMAIL } from '
 import LoadingSpinner from './components/LoadingSpinner';
 import KakaoLoader from './components/KakaoLoader';
 import { initAdMob } from './services/AdMobService';
-import { initPushNotifications, setPushHandlers } from './services/PushNotificationService';
+import {
+  requestAllPermissions,
+  setPushHandlers,
+  initNetworkMonitor,
+} from './services/PermissionService';
 
 // ✅ ADMOB: 앱 시작 시 AdMob 초기화 (Capacitor 네이티브 환경에서만 동작)
 initAdMob().catch(() => {}); // 웹 환경 실패는 무시
@@ -323,17 +327,32 @@ function AuthExpiredChecker() {
   return null;
 }
 
-// ✅ PUSH: 로그인 후 FCM 토큰 등록
-function PushInitializer() {
+// ✅ PERM: 로그인 후 전체 권한 요청 (푸시/위치/카메라) + 네트워크 모니터
+function PermissionInitializer() {
   const user = useUserStore((s) => s.user);
   const addToast = useToastStore((s) => s.addToast);
   const navigate = useNavigate();
 
+  // 푸시 핸들러 주입 (포그라운드 알림 수신 시 토스트 + 라우팅)
   useEffect(() => {
-    if (!user?.id) return;
     setPushHandlers({ addToast, navigate });
-    initPushNotifications(user.id);
+  }, [addToast, navigate]);
+
+  // 로그인 후 권한 일괄 요청
+  useEffect(() => {
+    if (!user?.id || user?.id === 'GUEST') return;
+    requestAllPermissions(user.id).catch(() => {});
   }, [user?.id]); // eslint-disable-line
+
+  // 네트워크 오프라인/온라인 감지
+  useEffect(() => {
+    let cleanup = () => {};
+    initNetworkMonitor(
+      () => addToast('📶 네트워크 연결이 끊어졌습니다.', 'error'),
+      () => addToast('📶 네트워크가 다시 연결되었습니다.', 'success'),
+    ).then((fn) => { cleanup = fn || (() => {}); }).catch(() => {});
+    return () => cleanup();
+  }, []); // eslint-disable-line
 
   return null;
 }
@@ -386,8 +405,8 @@ export default function App() {
         {/* ✅ POPUP: 이미지 있는 공지 → 앱 시작 시 carousel 팝업 — useNavigate 사용으로 BrowserRouter 내부에 배치 */}
         <AnnouncementPopup />
         <BackButtonHandler />
-        {/* ✅ PUSH: 로그인 후 FCM 토큰 자동 등록 */}
-        <PushInitializer />
+        {/* ✅ PERM: 로그인 후 전체 권한 자동 요청 (푸시/위치/카메라) + 네트워크 감지 */}
+        <PermissionInitializer />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<PageLoading />}>

@@ -48,15 +48,37 @@
             android:resource="@color/ic_launcher_background" />
     </application>
 
-    <!-- Permissions -->
+    <!-- ═══ 앱 권한 선언 ═══ -->
+
+    <!-- 네트워크 -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- ✅ PUSH: Android 13+ 푸시 알림 권한 -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- 카카오맵 현위치 기능 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <!-- 위치 (낚시 포인트 지도) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- 햅틱(진동) 피드백 -->
+
+    <!-- 카메라 (조과 사진, 프로필 사진) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- 파일 저장/읽기 (Android 12 이하) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <!-- Android 13+ 미디어 접근 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <!-- 푸시 알림 (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 진동 (알림음) -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- 네트워크 상태 확인 (오프라인 감지) -->
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
 </manifest>
