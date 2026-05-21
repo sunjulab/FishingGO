@@ -594,21 +594,29 @@ app.get('/api/admin/user-stats', async (req, res) => {
 
 
 // ─── Rate Limiter ────────────────────────────────────────────────────
+// ✅ SCALE-FIX: IP 기반 → 완화 (한국 이동통신사 NAT: 수백명이 같은 IP 공유)
+// 실제 브루트포스 보호는 계정 기반으로 처리 (아래 loginAttemptMap)
 try {
   const rateLimit = require('express-rate-limit');
-  // 로그인/회원가입/OTP: 10분당 20회
+  // 로그인/회원가입: IP당 10분/500회 (통신사 NAT 환경 수백명 커버)
   const authLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 20,
-    message: { error: '너무 많은 요청입니다. 10분 후 다시 시도해주세요.' },
+    max: 500,
+    message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+      // OTP 발송은 별도 쿨다운 처리하므로 auth 리미터 제외
+      return req.path.includes('/send-otp') || req.path.includes('/verify-otp');
+    },
   });
-  // 일반 API: 1분당 100회
+  // 일반 API: IP당 1분/1000회 (동시 1만 사용자 커버)
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 100,
+    max: 1000,
     message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+    standardHeaders: true,
+    legacyHeaders: false,
   });
 
   // ✅ YouTube 검색 전용 Rate Limit — IP당 분당 3회
@@ -636,7 +644,21 @@ try {
   app.use('/api/', apiLimiter);
   app.use('/api/media/youtube/search', ytSearchLimiter);   // ✅ 검색: 1분/3회
   app.use('/api/media/youtube/unified', ytFeedLimiter);    // ✅ 통합 피드: 1분/10회
-  (logger?.info || console.log)('✅ Rate Limiter 적용 (로그인 10분/20회, 일반 1분/100회)');
+  (logger?.info || console.log)('✅ Rate Limiter 적용 (로그인 10분/500회, 일반 1분/1000회) — 동시 1만 사용자 지원');
+
+// ✅ SCALE-FIX: 계정 기반 로그인 실패 추적 (IP 대신 이메일 단위)
+// IP 기반 제한은 통신사 NAT로 수백명 차단 → 계정 기반으로 전환
+const loginAttemptMap = new Map(); // email → { count, lockedUntil }
+const MAX_LOGIN_FAIL = 10;          // 계정당 최대 실패 10회
+const LOGIN_LOCK_MS  = 5 * 60 * 1000; // 잠금 5분
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of loginAttemptMap.entries()) {
+    if (val.lockedUntil && now > val.lockedUntil + LOGIN_LOCK_MS) {
+      loginAttemptMap.delete(key); // 만료된 잠금 자동 해제
+    }
+  }
+}, 10 * 60 * 1000); // 10분마다 정리
   (logger?.info || console.log)('✅ YouTube Rate Limit 강화 (검색 1분/3회, 피드 1분/10회)');
 } catch (e) { (logger?.warn || console.warn)('⚠️ express-rate-limit 미설치 → npm install express-rate-limit'); }
 
@@ -2211,6 +2233,14 @@ app.post('/api/auth/login', async (req, res) => {
     const password = req.body.password || '';
     if (!email || !password) return res.status(400).json({ error: '이메일과 비밀번호를 입력해주세요.' });
 
+    // ✅ SCALE-FIX: 계정 기반 브루트포스 보호 (IP 대신 이메일 단위)
+    const attemptKey = email.toLowerCase();
+    const attemptInfo = loginAttemptMap.get(attemptKey) || { count: 0, lockedUntil: null };
+    if (attemptInfo.lockedUntil && Date.now() < attemptInfo.lockedUntil) {
+      const remainSec = Math.ceil((attemptInfo.lockedUntil - Date.now()) / 1000);
+      return res.status(429).json({ error: `로그인 시도가 너무 많습니다. ${remainSec}초 후 다시 시도해주세요.` });
+    }
+
     let user;
     // ✅ DB-FIX: 서버 시작 직후 DB 연결 중이면 최대 8초 대기 (서버 재시작 직후 로그인 실패 방지)
     const dbAvailable = await waitForDb(8000);
@@ -2236,7 +2266,19 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user.password) return res.status(400).json({ error: '이 계정은 소셜 로그인 전용입니다. 구글 로그인을 이용해주세요.' });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+    if (!isMatch) {
+      // 실패 카운트 증가
+      attemptInfo.count += 1;
+      if (attemptInfo.count >= MAX_LOGIN_FAIL) {
+        attemptInfo.lockedUntil = Date.now() + LOGIN_LOCK_MS;
+        attemptInfo.count = 0;
+      }
+      loginAttemptMap.set(attemptKey, attemptInfo);
+      const remain = MAX_LOGIN_FAIL - attemptInfo.count;
+      return res.status(400).json({ error: `이메일 또는 비밀번호가 올바르지 않습니다.${remain <= 3 ? ` (경고: ${remain}회 남음)` : ''}` });
+    }
+    // 로그인 성공 시 실패 카운트 초기화
+    loginAttemptMap.delete(attemptKey);
 
     // ✅ LOGIN-FIX-2: 출석 저장 실패가 로그인 자체를 막지 않도록 try-catch 분리
     const { justAttended, leveledUp, expGained, streak } = applyAttendance(user);
