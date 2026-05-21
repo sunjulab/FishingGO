@@ -1636,9 +1636,8 @@ function applyAttendance(user) {
 // --- 이메일 마스킹 헬퍼 ---
 function maskEmail(email) {
   const [local, domain] = email.split('@');
-  const visible = local.slice(0, 2);
-  const masked = '*'.repeat(Math.max(local.length - 2, 3));
-  return `${visible}${masked}@${domain}`;
+  const visible = local.slice(0, 2); // 앞 2자리만 표시
+  return `${visible}***@${domain}`;  // 항상 *** 3개 고정
 }
 
 // --- 아이디 찾기 ---
@@ -1670,25 +1669,31 @@ app.post('/api/auth/find-id', async (req, res) => {
 // --- 비밀번호 재설정 ---
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
-    const { realName, phone, newPassword } = req.body;
-    if (!realName || !phone || !newPassword) return res.status(400).json({ error: '모든 항목을 입력해주세요.' });
+    const { email, realName, phone, newPassword } = req.body;
+    if (!email || !realName || !phone || !newPassword) return res.status(400).json({ error: '모든 항목을 입력해주세요.' });
     if (newPassword.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
     const normalizedPhone = String(phone).replace(/\D/g, '');
+    const normalizedEmail = email.trim().toLowerCase();
     const hashed = await bcrypt.hash(newPassword, 10);
     await waitForDb(5000);
     if (dbReady && User) {
+      // 이메일 + 실명 + 전화번호 3중 검증
       const users = await User.find({ realName }).lean();
-      const user = users.find(u => String(u.phone || '').replace(/\D/g, '') === normalizedPhone);
-      if (!user) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
+      const user = users.find(u =>
+        (u.email || '').toLowerCase() === normalizedEmail &&
+        String(u.phone || '').replace(/\D/g, '') === normalizedPhone
+      );
+      if (!user) return res.status(400).json({ error: '입력하신 정보와 일치하는 계정이 없습니다.' });
       await User.updateOne({ _id: user._id }, { $set: { password: hashed } });
       return res.json({ success: true, message: '비밀번호가 변경되었습니다.' });
     }
     // 인메모리 fallback
     const userIdx = memUsers.findIndex(u =>
+      (u.email || '').toLowerCase() === normalizedEmail &&
       u.realName === realName &&
       String(u.phone || '').replace(/\D/g, '') === normalizedPhone
     );
-    if (userIdx === -1) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
+    if (userIdx === -1) return res.status(400).json({ error: '입력하신 정보와 일치하는 계정이 없습니다.' });
     memUsers[userIdx].password = hashed;
     saveMemUsers();
     return res.json({ success: true, message: '비밀번호가 변경되었습니다.' });

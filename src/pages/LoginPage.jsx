@@ -10,24 +10,29 @@ const GUEST_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 // ─── 아이디 찾기 / 비밀번호 찾기 모달 ─────────────────────────────────────
 function FindAccountModal({ mode, onClose }) {
   const addToast = useToastStore(s => s.addToast);
-  const [realName, setRealName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [newPass, setNewPass] = useState('');
+  const [email, setEmail]           = useState('');   // 비밀번호 찾기용 아이디
+  const [realName, setRealName]     = useState('');
+  const [phone, setPhone]           = useState('');
+  const [newPass, setNewPass]       = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
   const [showNewPass, setShowNewPass] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading]       = useState(false);
+  const [result, setResult]         = useState(null); // 찾은 마스킹 이메일
 
-  const handlePhoneChange = (e) => {
-    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-    let f = digits;
-    if (digits.length >= 4 && digits.length <= 7) f = `${digits.slice(0,3)}-${digits.slice(3)}`;
-    else if (digits.length > 7) f = `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+  const isFindId = mode === 'findId';
+
+  const fmtPhone = (e) => {
+    const d = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+    let f = d;
+    if (d.length >= 4 && d.length <= 7) f = `${d.slice(0,3)}-${d.slice(3)}`;
+    else if (d.length > 7) f = `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`;
     setPhone(f);
   };
 
   const handleFindId = async () => {
     if (!realName.trim()) return addToast('이름을 입력해주세요.', 'error');
-    if (!phone.trim()) return addToast('전화번호를 입력해주세요.', 'error');
+    if (!phone.trim())    return addToast('전화번호를 입력해주세요.', 'error');
     setLoading(true);
     try {
       const res = await apiClient.post('/api/auth/find-id', {
@@ -41,14 +46,17 @@ function FindAccountModal({ mode, onClose }) {
   };
 
   const handleResetPw = async () => {
+    if (!email.trim())    return addToast('아이디를 입력해주세요.', 'error');
     if (!realName.trim()) return addToast('이름을 입력해주세요.', 'error');
-    if (!phone.trim()) return addToast('전화번호를 입력해주세요.', 'error');
-    if (newPass.length < 8) return addToast('새 비밀번호는 8자 이상이어야 합니다.', 'error');
+    if (!phone.trim())    return addToast('전화번호를 입력해주세요.', 'error');
+    if (newPass.length < 8)      return addToast('새 비밀번호는 8자 이상이어야 합니다.', 'error');
+    if (newPass !== confirmPass) return addToast('새 비밀번호가 일치하지 않습니다.', 'error');
     setLoading(true);
     try {
       await apiClient.post('/api/auth/reset-password', {
-        realName: realName.trim(),
-        phone: phone.replace(/[^0-9]/g, ''),
+        email:       email.trim(),
+        realName:    realName.trim(),
+        phone:       phone.replace(/[^0-9]/g, ''),
         newPassword: newPass,
       });
       addToast('✅ 비밀번호가 변경되었습니다. 로그인해주세요.', 'success');
@@ -58,12 +66,14 @@ function FindAccountModal({ mode, onClose }) {
     } finally { setLoading(false); }
   };
 
-  const isFindId = mode === 'findId';
   const inputSt = {
     width: '100%', padding: '13px 16px 13px 42px', borderRadius: '12px',
     fontSize: `calc(14px * var(--fs, 1))`, border: '1.5px solid #e0e0e0',
     background: '#fafafa', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
   };
+  const labelSt = { fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#94a3b8', display: 'block', marginBottom: '4px' };
+  const pwMatch    = confirmPass.length > 0 && newPass === confirmPass;
+  const pwMismatch = confirmPass.length > 0 && newPass !== confirmPass;
 
   return (
     <div style={{
@@ -75,6 +85,7 @@ function FindAccountModal({ mode, onClose }) {
         width: '100%', maxWidth: '340px', background: '#fff',
         borderRadius: '24px', padding: '28px 22px',
         boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+        maxHeight: '90vh', overflowY: 'auto',
       }}>
         {/* 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -91,7 +102,7 @@ function FindAccountModal({ mode, onClose }) {
                 {isFindId ? '아이디 찾기' : '비밀번호 찾기'}
               </div>
               <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#94a3b8' }}>
-                가입 시 등록한 이름 + 전화번호로 확인
+                가입 시 등록한 정보로 확인
               </div>
             </div>
           </div>
@@ -100,17 +111,18 @@ function FindAccountModal({ mode, onClose }) {
           </button>
         </div>
 
-        {/* 결과 화면 */}
+        {/* 결과 화면 (아이디 찾기 성공) */}
         {result ? (
           <div style={{
             background: 'linear-gradient(135deg,#EBF5FF,#F0FFF8)', borderRadius: '16px',
             padding: '24px', textAlign: 'center', border: '1.5px solid #D0E4FF',
           }}>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#64748b', marginBottom: '8px' }}>
-              🎣 찾은 아이디
-            </div>
-            <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2', letterSpacing: '0.02em' }}>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#64748b', marginBottom: '8px' }}>🎣 찾은 아이디</div>
+            <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2', letterSpacing: '0.04em' }}>
               {result}
+            </div>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#94a3b8', marginTop: '6px' }}>
+              보안을 위해 일부 정보는 *** 처리됩니다
             </div>
             <button onClick={onClose} style={{
               marginTop: '18px', width: '100%', padding: '13px', borderRadius: '12px',
@@ -122,9 +134,22 @@ function FindAccountModal({ mode, onClose }) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {/* 이름 */}
+
+            {/* ─ 아이디 (비밀번호 찾기 전용) ─ */}
+            {!isFindId && (
+              <div>
+                <span style={labelSt}>아이디</span>
+                <div style={{ position: 'relative' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input style={inputSt} type="text" placeholder="가입한 아이디 입력"
+                    value={email} onChange={e => setEmail(e.target.value)} />
+                </div>
+              </div>
+            )}
+
+            {/* ─ 실명 ─ */}
             <div>
-              <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>실명 (가입 시 등록한 이름)</span>
+              <span style={labelSt}>실명 (가입 시 등록한 이름)</span>
               <div style={{ position: 'relative' }}>
                 <User size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                 <input style={inputSt} type="text" placeholder="홍길동"
@@ -132,36 +157,69 @@ function FindAccountModal({ mode, onClose }) {
               </div>
             </div>
 
-            {/* 전화번호 */}
+            {/* ─ 전화번호 ─ */}
             <div>
-              <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>전화번호</span>
+              <span style={labelSt}>전화번호</span>
               <div style={{ position: 'relative' }}>
                 <Phone size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                 <input style={inputSt} type="tel" placeholder="010-XXXX-XXXX"
-                  value={phone} onChange={handlePhoneChange} />
+                  value={phone} onChange={fmtPhone} />
               </div>
             </div>
 
-            {/* 새 비밀번호 (비번 찾기 전용) */}
+            {/* ─ 새 비밀번호 / 확인 (비밀번호 찾기 전용) ─ */}
             {!isFindId && (
-              <div>
-                <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>새 비밀번호 (8자 이상)</span>
-                <div style={{ position: 'relative' }}>
-                  <KeyRound size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                  <input style={{ ...inputSt, paddingRight: '44px' }}
-                    type={showNewPass ? 'text' : 'password'} placeholder="새 비밀번호 입력"
-                    value={newPass} onChange={e => setNewPass(e.target.value)} />
-                  <button onClick={() => setShowNewPass(!showNewPass)} style={{
-                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0,
-                  }}>
-                    {showNewPass ? <EyeOff size={17} /> : <Eye size={17} />}
-                  </button>
+              <>
+                <div>
+                  <span style={labelSt}>새 비밀번호 (8자 이상)</span>
+                  <div style={{ position: 'relative' }}>
+                    <KeyRound size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input style={{ ...inputSt, paddingRight: '44px' }}
+                      type={showNewPass ? 'text' : 'password'} placeholder="새 비밀번호 입력"
+                      value={newPass} onChange={e => setNewPass(e.target.value)} />
+                    <button onClick={() => setShowNewPass(p => !p)} style={{
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0,
+                    }}>
+                      {showNewPass ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+
+                <div>
+                  <span style={{
+                    ...labelSt,
+                    color: pwMatch ? '#22c55e' : pwMismatch ? '#FF3B30' : '#94a3b8',
+                  }}>
+                    새 비밀번호 확인 {pwMatch ? '✅' : pwMismatch ? '❌ 불일치' : ''}
+                  </span>
+                  <div style={{ position: 'relative' }}>
+                    <KeyRound size={16} style={{
+                      position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
+                      color: pwMatch ? '#22c55e' : pwMismatch ? '#FF3B30' : '#94a3b8',
+                    }} />
+                    <input
+                      style={{
+                        ...inputSt, paddingRight: '44px',
+                        border: `1.5px solid ${pwMatch ? '#22c55e' : pwMismatch ? '#FF3B30' : '#e0e0e0'}`,
+                      }}
+                      type={showConfirm ? 'text' : 'password'}
+                      placeholder="비밀번호 다시 입력"
+                      value={confirmPass}
+                      onChange={e => setConfirmPass(e.target.value)}
+                    />
+                    <button onClick={() => setShowConfirm(p => !p)} style={{
+                      position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0,
+                    }}>
+                      {showConfirm ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
-            {/* 확인 버튼 */}
+            {/* ─ 확인 버튼 ─ */}
             <button
               onClick={isFindId ? handleFindId : handleResetPw}
               disabled={loading}
@@ -184,6 +242,7 @@ function FindAccountModal({ mode, onClose }) {
   );
 }
 
+// ─── 메인 로그인 페이지 ───────────────────────────────────────────────────
 export default function LoginPage() {
   const navigate = useNavigate();
   const setUser = useUserStore(state => state.setUser);
@@ -191,17 +250,17 @@ export default function LoginPage() {
   const timerRef = useRef(null);
   const levelTimerRef = useRef(null);
 
-  const [isLogin, setIsLogin] = useState(true);
-  const [userId, setUserId] = useState('');
-  const [password, setPassword] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [realName, setRealName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [showPass, setShowPass] = useState(false);
-  const [idChecked, setIdChecked] = useState(null);
+  const [isLogin, setIsLogin]         = useState(true);
+  const [userId, setUserId]           = useState('');
+  const [password, setPassword]       = useState('');
+  const [nickname, setNickname]       = useState('');
+  const [realName, setRealName]       = useState('');
+  const [phone, setPhone]             = useState('');
+  const [showPass, setShowPass]       = useState(false);
+  const [idChecked, setIdChecked]     = useState(null);
   const [nameChecked, setNameChecked] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [findModal, setFindModal] = useState(null); // null | 'findId' | 'findPw'
+  const [loading, setLoading]         = useState(false);
+  const [findModal, setFindModal]     = useState(null); // null | 'findId' | 'findPw'
 
   const onLoginSuccess = async (data) => {
     const email = data.user?.email;
@@ -211,20 +270,18 @@ export default function LoginPage() {
       try { localStorage.setItem('access_token', accessToken); } catch { /* StorageError 무시 */ }
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     }
-    if (data.refreshToken) { try { localStorage.setItem('refresh_token', data.refreshToken); } catch { /* StorageError 무시 */ } }
+    if (data.refreshToken) { try { localStorage.setItem('refresh_token', data.refreshToken); } catch { /* ignore */ } }
     try {
       const savedAvatar = email ? localStorage.getItem(`avatar_${email}`) : null;
       const serverAvatar = data.user?.avatar || '';
       const isServerDefault = !serverAvatar || serverAvatar.includes('pravatar.cc');
       if (savedAvatar && savedAvatar.startsWith('data:image') && isServerDefault) {
         userToSet = { ...data.user, avatar: savedAvatar, picture: savedAvatar };
-        apiClient.post('/api/user/avatar', { email, avatar: savedAvatar }).catch((err) => {
-          if (!import.meta.env.PROD) console.warn('[Login] 아바타 서버 업로드 실패:', err?.message);
-        });
+        apiClient.post('/api/user/avatar', { email, avatar: savedAvatar }).catch(() => {});
       } else if (serverAvatar && !isServerDefault) {
         if (email) localStorage.setItem(`avatar_${email}`, serverAvatar);
       }
-    } catch(e) { if (!import.meta.env.PROD) console.warn('[Login] 아바타 복원 실패:', e); }
+    } catch { /* ignore */ }
     setUser(userToSet);
     addToast(`환영합니다, ${data.user.name}님! 🎣`, 'success');
     if (data.justAttended) {
@@ -232,12 +289,12 @@ export default function LoginPage() {
       timerRef.current = setTimeout(() => addToast(`🎉 오늘 출석 완료! +${data.expGained || 20} EXP 획득`, 'success'), 800);
     }
     if (data.leveledUp) {
-      const currentLevelIndex = (data.user.level || 1) - 1;
-      const levelReward = LEVEL_CONFIG[currentLevelIndex]?.reward || '소정의 찌(포인트)';
+      const lvIdx = (data.user.level || 1) - 1;
+      const reward = LEVEL_CONFIG[lvIdx]?.reward || '소정의 찌(포인트)';
       if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
       levelTimerRef.current = setTimeout(() => {
         addToast(`⭐ 레벨 ${data.user.level} 달성 기념 보상!`, 'success');
-        addToast(`🎁 보상: [${levelReward}] 지급 완료!`, 'info');
+        addToast(`🎁 보상: [${reward}] 지급 완료!`, 'info');
       }, 1600);
     }
     navigate('/');
@@ -248,8 +305,8 @@ export default function LoginPage() {
     try {
       const res = await apiClient.post('/api/auth/check-id', { email: userId.trim() });
       setIdChecked(res.data.available);
-      if (res.data.banned) { addToast(`❌ ${res.data.error}`, 'error'); }
-      else { addToast(res.data.available ? '✅ 사용 가능한 아이디입니다.' : '❌ 이미 사용 중인 아이디입니다.', res.data.available ? 'success' : 'error'); }
+      if (res.data.banned) addToast(`❌ ${res.data.error}`, 'error');
+      else addToast(res.data.available ? '✅ 사용 가능한 아이디입니다.' : '❌ 이미 사용 중인 아이디입니다.', res.data.available ? 'success' : 'error');
     } catch { addToast('서버 연결 오류', 'error'); }
   };
 
@@ -258,8 +315,8 @@ export default function LoginPage() {
     try {
       const res = await apiClient.post('/api/auth/check-name', { name: nickname.trim() });
       setNameChecked(res.data.available);
-      if (res.data.banned) { addToast(`❌ ${res.data.error}`, 'error'); }
-      else { addToast(res.data.available ? '✅ 사용 가능한 닉네임입니다.' : '❌ 이미 사용 중인 닉네임입니다.', res.data.available ? 'success' : 'error'); }
+      if (res.data.banned) addToast(`❌ ${res.data.error}`, 'error');
+      else addToast(res.data.available ? '✅ 사용 가능한 닉네임입니다.' : '❌ 이미 사용 중인 닉네임입니다.', res.data.available ? 'success' : 'error');
     } catch { addToast('서버 연결 오류', 'error'); }
   };
 
@@ -304,9 +361,9 @@ export default function LoginPage() {
       if (!nickname.trim()) return addToast('닉네임을 입력해주세요.', 'error');
       if (!realName.trim()) return addToast('이름을 입력해주세요.', 'error');
       if (realName.trim().length < 2) return addToast('이름은 2자 이상이어야 합니다.', 'error');
-      const phoneDigits = phone.replace(/[^0-9]/g, '');
-      if (!phoneDigits) return addToast('전화번호를 입력해주세요.', 'error');
-      if (!/^01[016789]\d{7,8}$/.test(phoneDigits)) return addToast('유효한 휴대폰 번호를 입력해주세요. (010-XXXX-XXXX)', 'error');
+      const pd = phone.replace(/[^0-9]/g, '');
+      if (!pd) return addToast('전화번호를 입력해주세요.', 'error');
+      if (!/^01[016789]\d{7,8}$/.test(pd)) return addToast('유효한 휴대폰 번호를 입력해주세요. (010-XXXX-XXXX)', 'error');
       if (password.length < 8) return addToast('비밀번호는 8자 이상이어야 합니다.', 'error');
       if (idChecked === null) return addToast('아이디 중복확인을 완료해주세요.', 'error');
       if (idChecked === false) return addToast('이미 사용 중인 아이디입니다.', 'error');
@@ -318,30 +375,30 @@ export default function LoginPage() {
   };
 
   const switchMode = () => {
-    setIsLogin(prev => !prev);
+    setIsLogin(p => !p);
     setUserId(''); setPassword(''); setNickname(''); setRealName(''); setPhone('');
     setShowPass(false); setIdChecked(null); setNameChecked(null);
   };
 
   const getPasswordStrength = () => {
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    const levels = [
+    let s = 0;
+    if (password.length >= 8) s++;
+    if (/[A-Z]/.test(password)) s++;
+    if (/[0-9]/.test(password)) s++;
+    if (/[^A-Za-z0-9]/.test(password)) s++;
+    const lv = [
       { label: '약함', color: '#FF3B30' }, { label: '보통', color: '#FF9500' },
       { label: '강함', color: '#34C759' }, { label: '매우 강함', color: '#0056D2' },
     ];
-    return { lvl: levels[Math.min(score - 1, 3)] || levels[0], width: `${Math.max(25, (score / 4) * 100)}%` };
+    return { lvl: lv[Math.min(s - 1, 3)] || lv[0], width: `${Math.max(25, (s / 4) * 100)}%` };
   };
 
   const handlePhoneChange = (e) => {
-    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-    let formatted = digits;
-    if (digits.length >= 4 && digits.length <= 7) formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    else if (digits.length > 7) formatted = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-    setPhone(formatted);
+    const d = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+    let f = d;
+    if (d.length >= 4 && d.length <= 7) f = `${d.slice(0, 3)}-${d.slice(3)}`;
+    else if (d.length > 7) f = `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+    setPhone(f);
   };
 
   const inputStyle = {
@@ -369,14 +426,16 @@ export default function LoginPage() {
 
       <div style={{
         position: 'relative', zIndex: 1, minHeight: '100dvh', overflowY: 'auto',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '24px 16px',
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
         boxSizing: 'border-box',
       }}>
         <div style={{
           width: '100%', maxWidth: '360px', background: 'rgba(255,255,255,0.97)',
-          borderRadius: '28px', padding: '28px 22px', boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+          borderRadius: '28px', padding: '28px 22px',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
           marginTop: 'auto', marginBottom: 'auto',
         }}>
           {/* 로고 */}
@@ -466,7 +525,7 @@ export default function LoginPage() {
                   type={showPass ? 'text' : 'password'} placeholder="비밀번호를 입력하세요"
                   value={password} onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-                <button onClick={() => setShowPass(!showPass)} style={{
+                <button onClick={() => setShowPass(p => !p)} style={{
                   position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
                   background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0,
                 }}>
@@ -488,7 +547,7 @@ export default function LoginPage() {
               })()}
             </div>
 
-            {/* ✅ 아이디 찾기 / 비밀번호 찾기 (로그인 탭 전용) */}
+            {/* 아이디 찾기 / 비밀번호 찾기 링크 (로그인 탭 전용) */}
             {isLogin && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '14px', marginTop: '2px' }}>
                 <button id="btn-find-id" onClick={() => setFindModal('findId')} style={{
