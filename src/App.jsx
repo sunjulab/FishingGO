@@ -420,6 +420,8 @@ export default function App() {
               <Route path="/create-crew" element={<CreateCrew />} />
               <Route path="/post/:id" element={<PostDetail />} />
               <Route path="/catch/:id" element={<CatchDetail />} />
+              <Route path="/catch-upload" element={<CatchUploadPage />} />
+              <Route path="/catch-ranking" element={<CatchRankingPage />} />
               <Route path="/crew/:id/chat" element={<CrewChat />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/weather" element={<WeatherDashboard />} />
