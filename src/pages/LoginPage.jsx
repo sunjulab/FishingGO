@@ -120,11 +120,12 @@ function FindAccountModal({ mode, onClose, onFoundId }) {
             padding: '24px', textAlign: 'center', border: '1.5px solid #D0E4FF',
           }}>
             <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#64748b', marginBottom: '8px' }}>🎣 찾은 아이디</div>
-            <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2', letterSpacing: '0.04em' }}>
-              {maskedEmail}
-            </div>
-            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#94a3b8', marginTop: '6px' }}>
-              보안을 위해 일부 정보는 *** 처리됩니다
+            {/* ✅ 전체 아이디 표시 */}
+            <div style={{
+              fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2',
+              letterSpacing: '0.02em', wordBreak: 'break-all',
+            }}>
+              {rawEmail}
             </div>
             <button onClick={() => { onFoundId && onFoundId(rawEmail); onClose(); }} style={{
               marginTop: '18px', width: '100%', padding: '13px', borderRadius: '12px',
@@ -134,6 +135,7 @@ function FindAccountModal({ mode, onClose, onFoundId }) {
               로그인하러 가기
             </button>
           </div>
+
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
