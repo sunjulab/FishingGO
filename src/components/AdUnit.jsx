@@ -50,19 +50,17 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
   useEffect(() => {
     if (!IS_NATIVE || isPremium || !ref.current) return;
     const el = ref.current;
-    // ✅ AD-FIX: 로드 성공/실패 콜백 전달
+    // ✅ AD-FIX: loadNativeAd가 성공 시 resolve, 실패 시 throw (NativeAdService 수정됨)
+    // 성공 → setAdLoaded(true) → div 280px 확장
+    // 실패(광고 없음/AdMob 미승인) → setAdFailed(true) → div 완전 제거 (빈 공간 없음)
     loadNativeAd(slotId, el)
       .then(() => setAdLoaded(true))
       .catch(() => setAdFailed(true));
-    // 3초 후에도 광고 없으면 빈 공간 제거
-    const fallbackTimer = setTimeout(() => {
-      if (!adLoaded) setAdFailed(true);
-    }, 3000);
     return () => {
-      clearTimeout(fallbackTimer);
       removeNativeAd(slotId);
     };
   }, [IS_NATIVE, isPremium, slotId]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // 프리미엄 유저는 광고 없음
   if (isPremium) return null;

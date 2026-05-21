@@ -49,19 +49,19 @@ function getPhysicalRect(el) {
  * @param {HTMLElement} el   - placeholder div 엘리먼트
  */
 export async function loadNativeAd(slotId, el) {
-  if (!IS_NATIVE || !NativeAdPlugin || !el) return;
-  try {
-    const rect = getPhysicalRect(el);
-    await NativeAdPlugin.loadAd({
-      slotId,
-      adUnitId: AD_UNIT_ID,
-      ...rect,
-    });
-    activeSlots.add(slotId);
-    if (!import.meta.env.PROD) console.log(`[NativeAd] 로드 완료: ${slotId}`);
-  } catch (e) {
-    if (!import.meta.env.PROD) console.warn(`[NativeAd] 로드 실패: ${slotId}`, e?.message);
-  }
+  // ✅ AD-FIX: 비네이티브/엘리먼트 없음 → reject (호출자가 실패 감지 가능)
+  if (!IS_NATIVE || !NativeAdPlugin || !el) throw new Error('not_native');
+  const rect = getPhysicalRect(el);
+  // ✅ AD-FIX: try-catch 제거 → Kotlin call.reject() 시 실제로 throw
+  // Kotlin 성공: forNativeAd 콜백 → call.resolve({success:true}) → resolves
+  // Kotlin 실패: onAdFailedToLoad → call.reject(msg) → throws
+  await NativeAdPlugin.loadAd({
+    slotId,
+    adUnitId: AD_UNIT_ID,
+    ...rect,
+  });
+  activeSlots.add(slotId);
+  if (!import.meta.env.PROD) console.log(`[NativeAd] 로드 완료: ${slotId}`);
 }
 
 /**
