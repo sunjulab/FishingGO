@@ -39,6 +39,9 @@ function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
   const ref = useRef();
   const IS_NATIVE = isCapacitorNative();
+  // ✅ AD-FIX: 광고 로드 상태 추적 — 실패 시 빈 공간 제거
+  const [adLoaded, setAdLoaded] = useState(false);   // 광고 로드 성공
+  const [adFailed, setAdFailed] = useState(false);   // 광고 로드 실패
   const isPremium = useUserStore(s =>
     ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) ||
     s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL
@@ -46,36 +49,45 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
 
   useEffect(() => {
     if (!IS_NATIVE || isPremium || !ref.current) return;
-    // placeholder div가 DOM에 마운트되면 NativeAdPlugin에 광고 로드 요청
     const el = ref.current;
-    loadNativeAd(slotId, el);
+    // ✅ AD-FIX: 로드 성공/실패 콜백 전달
+    loadNativeAd(slotId, el)
+      .then(() => setAdLoaded(true))
+      .catch(() => setAdFailed(true));
+    // 3초 후에도 광고 없으면 빈 공간 제거
+    const fallbackTimer = setTimeout(() => {
+      if (!adLoaded) setAdFailed(true);
+    }, 3000);
     return () => {
+      clearTimeout(fallbackTimer);
       removeNativeAd(slotId);
     };
-  }, [IS_NATIVE, isPremium, slotId]);
+  }, [IS_NATIVE, isPremium, slotId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 프리미엄 유저는 광고 없음
   if (isPremium) return null;
+  // ✅ AD-FIX: 광고 로드 실패 시 공간 제거
+  if (adFailed && !adLoaded) return null;
 
   if (IS_NATIVE) {
-    // 앱: NativeAdPlugin이 이 div 위에 AdMob NativeAdView를 오버레이함
-    // → 반드시 렌더해야 함 (null 반환 금지)
     return (
       <div
         ref={ref}
         style={{
           width: '100%',
-          minHeight: 280,
-          margin: '4px 0 12px',
+          minHeight: adLoaded ? 280 : 0, // 로드 전 높이 0 → 성공 시 280px
+          margin: adLoaded ? '4px 0 12px' : 0,
           borderRadius: '16px',
-          background: 'transparent', // 네이티브 뷰가 위에 올라오므로 투명
+          background: 'transparent',
+          overflow: 'hidden',
+          transition: 'min-height 0.3s ease',
           ...style,
         }}
       />
     );
   }
 
-  // 웹 환경: AdSense 제거됨 — 광고 없음
+  // 웹 환경: 광고 없음
   return null;
 }
 
