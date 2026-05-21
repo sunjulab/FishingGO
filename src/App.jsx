@@ -7,7 +7,7 @@ const CapApp = Capacitor.isNativePlatform() ? registerPlugin('App') : null;
 import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, Navigate } from 'react-router-dom';
 
 // import { GoogleOAuthProvider } from '@react-oauth/google'; // 추후 구글 로그인 연동 시 활성화
-import { Home, Tv, Users, ShoppingBag, User, Anchor } from 'lucide-react';
+import { Home, Tv, Users, ShoppingBag, User, Anchor, Camera, Trophy, Bot } from 'lucide-react';
 import Toast from './components/Toast';
 import { useToastStore } from './store/useToastStore';
 import { useUserStore, TIER_CONFIG, LEVEL_CONFIG, ADMIN_ID, ADMIN_EMAIL } from './store/useUserStore';
@@ -52,6 +52,11 @@ const SecretPointAdmin = lazy(() => import('./pages/SecretPointAdmin'));
 const PaymentHistory   = lazy(() => import('./pages/PaymentHistory'));
 const AdminDashboard   = lazy(() => import('./pages/AdminDashboard'));
 const UserProfile      = lazy(() => import('./pages/UserProfile'));
+// ✅ 로상 / AI / 대회 페이지
+const CatchUploadPage  = lazy(() => import('./pages/CatchUploadPage'));
+const CatchRankingPage = lazy(() => import('./pages/CatchRankingPage'));
+const AiCoachPage      = lazy(() => import('./pages/AiCoachPage'));
+const ContestPage      = lazy(() => import('./pages/ContestPage'));
 
 import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -88,17 +93,11 @@ function BackButtonHandler() {
   const location = useLocation();
 
   useEffect(() => {
-    // 최상위 탭 경로 (뒤로가기 잠금 대상)
-    const ROOT_PATHS = ['/', '/community', '/media', '/shop', '/mypage'];
+    const ROOT_PATHS = ['/', '/community', '/media', '/shop', '/mypage', '/catch-ranking', '/catch-upload', '/ai-coach', '/contest'];
     const isRoot = ROOT_PATHS.includes(location.pathname);
 
     const handleBack = () => {
-      if (isRoot) {
-        // 최상위 탭: 뒤로가기 잠금 (앱 종료 방지)
-        return;
-      }
-      // 서브페이지: navigate(-1)로 이전 화면으로 이동
-      // ✅ community_return_post_id + tab 저장 — CommunityTab 스크롤/탭 복원용
+      if (isRoot) return;
       if (location.pathname.startsWith('/post/')) {
         const postId = location.pathname.split('/post/')[1]?.split('?')[0]?.split('#')[0];
         if (postId) {
@@ -106,7 +105,6 @@ function BackButtonHandler() {
           sessionStorage.setItem('community_return_tab', 'open');
         }
       }
-      // ✅ HISTORY-FIX: 딥링크 직접 진입 시 history가 없으면 /community로 폴백
       if (window.history.length <= 1) {
         navigate('/community', { replace: true });
       } else {
@@ -127,35 +125,55 @@ function BackButtonHandler() {
   return null;
 }
 
-
 function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const navItems = [
-    { path: '/', name: '홈', icon: Home },
-    { path: '/media', name: '낚시채널', icon: Tv },
-    { path: '/community', name: '커뮤니티', icon: Users },
-    { path: '/shop', name: '쇼핑', icon: ShoppingBag },
-    { path: '/mypage', name: '마이', icon: User },
+    { path: '/',              name: '홈',       icon: Home },
+    { path: '/catch-ranking', name: '조황랭킹', icon: Trophy },
+    { path: '/catch-upload',  name: '조황인증', icon: null,   isCenter: true },
+    { path: '/community',     name: '커뮤니티', icon: Users },
+    { path: '/mypage',        name: '마이',     icon: User },
   ];
 
-  // 상세/글쓰기 페이지에서는 내비게이션 숨김
-  // ✅ 3RD-B2: HIDE_OVERLAY_PATHS 상수 사용 (✅ 3RD-B1: /media 제외 — MediaTab 네비 정상 노출)
   const hideNav = HIDE_OVERLAY_PATHS.some(path => location.pathname.includes(path));
   if (hideNav) return null;
 
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav" style={{ display: 'flex', alignItems: 'center' }}>
       {navItems.map((item) => {
         const Icon = item.icon;
+
+        if (item.isCenter) {
+          return (
+            <button
+              key={item.name}
+              onClick={() => navigate(item.path)}
+              className="nav-item"
+              style={{
+                background: 'linear-gradient(135deg,#0056D2,#003fa3)',
+                border: 'none', borderRadius: '50%',
+                width: '52px', height: '52px', marginTop: '-16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', flexShrink: 0,
+                boxShadow: '0 4px 14px rgba(0,86,210,0.5)',
+              }}
+            >
+              <Camera size={26} color="#fff" />
+            </button>
+          );
+        }
+
         return (
-          <NavLink 
-            to={item.path} 
-            key={item.name} 
+          <NavLink
+            to={item.path}
+            key={item.name}
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             style={{ textDecoration: 'none' }}
+            end={item.path === '/'}
           >
-            <Icon size={24} />
-            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, marginTop: '4px', fontWeight: '700' }}>
+            <Icon size={22} />
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, marginTop: '3px', fontWeight: '700' }}>
               {item.name}
             </span>
           </NavLink>

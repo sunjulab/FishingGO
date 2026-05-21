@@ -307,7 +307,7 @@ async function waitForDb(maxMs = 8000) {
 }
 
 // ─── 모델 로드 ────────────────────────────────────────────────────────────────
-let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage, Subscription, PaymentHistory, Story;
+let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage, Subscription, PaymentHistory, Story, Contest;
 // ✅ BUG-FIX: 개별 try-catch로 분리 — 하나 실패해도 나머지 모델 정상 로드 보장
 try { User           = require('./models/User');          } catch (e) { User           = null; }
 try { Post           = require('./models/Post');          } catch (e) { Post           = null; }
@@ -316,6 +316,7 @@ try { Notice         = require('./models/Notice');        } catch (e) { Notice  
 try { BusinessPost   = require('./models/BusinessPost');  } catch (e) { BusinessPost   = null; }
 try { CctvOverrideModel = require('./models/CctvOverride'); } catch (e) { CctvOverrideModel = null; }
 try { CatchRecord    = require('./models/CatchRecord');   } catch (e) { CatchRecord    = null; }
+try { Contest        = require('./models/Contest');       } catch (e) { Contest        = null; }
 try { ChatMessage    = require('./models/ChatMessage');   } catch (e) { ChatMessage    = null; }
 try { Subscription   = require('./models/Subscription'); } catch (e) { Subscription   = null; }
 try { PaymentHistory = require('./models/PaymentHistory'); } catch (e) { PaymentHistory = null; }
@@ -6717,6 +6718,222 @@ function _buildRecommendKeyword(pointType, fish) {
   return '낚시용품';
 }
 
+
+// ─── 조황 인증 API ───────────────────────────────────────────────────────────
+
+// POST /api/catch — 조황 등록
+app.post('/api/catch', async (req, res) => {
+  try {
+    const { userId, userName, userAvatar, fishName, fishSize, fishWeight,
+            imageUrl, location, lat, lng, memo, weather, tide, contestId,
+            verified, aiConfidence } = req.body;
+    if (!userId || !fishName) return res.status(400).json({ error: '필수 항목 누락' });
+    await waitForDb(5000);
+    const record = await CatchRecord.create({
+      userId, userName, userAvatar, fishName,
+      fishSize: fishSize || 0, fishWeight: fishWeight || 0,
+      imageUrl, location, lat, lng, memo, weather, tide,
+      contestId, verified: !!verified, aiConfidence: aiConfidence || 0,
+    });
+    // EXP 보상 (+30 EXP)
+    if (dbReady && User) {
+      await User.updateOne({ _id: userId }, { $inc: { exp: 30, totalExp: 30 } }).catch(() => {});
+    }
+    res.json({ success: true, record });
+  } catch (err) {
+    (logger?.error || console.error)('[POST /api/catch]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// GET /api/catch/ranking — 전국 랭킹 (어종별/전체)
+app.get('/api/catch/ranking', async (req, res) => {
+  try {
+    const { fishName, period = 'month', limit = 20 } = req.query;
+    await waitForDb(5000);
+    const now = new Date();
+    let startDate = new Date();
+    if (period === 'week') startDate.setDate(now.getDate() - 7);
+    else if (period === 'month') startDate.setMonth(now.getMonth() - 1);
+    else startDate = new Date(0); // all
+    const query = { createdAt: { $gte: startDate } };
+    if (fishName) query.fishName = fishName;
+    const records = await CatchRecord.find(query)
+      .sort({ fishSize: -1, fishWeight: -1, createdAt: -1 })
+      .limit(parseInt(limit))
+      .lean();
+    res.json({ records });
+  } catch (err) {
+    (logger?.error || console.error)('[GET /api/catch/ranking]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// GET /api/catch/my — 내 조황 목록
+app.get('/api/catch/my', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: 'userId 필요' });
+    await waitForDb(5000);
+    const records = await CatchRecord.find({ userId }).sort({ createdAt: -1 }).limit(50).lean();
+    res.json({ records });
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// POST /api/catch/:id/like — 좋아요
+app.post('/api/catch/:id/like', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const record = await CatchRecord.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: '없는 조황' });
+    const liked = record.likes.includes(userId);
+    if (liked) record.likes.pull(userId);
+    else record.likes.push(userId);
+    await record.save();
+    res.json({ liked: !liked, count: record.likes.length });
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// ─── AI API ──────────────────────────────────────────────────────────────
+
+// POST /api/ai/fish-identify — Gemini Vision으로 어종 식별
+app.post('/api/ai/fish-identify', async (req, res) => {
+  try {
+    const { imageBase64, mimeType = 'image/jpeg' } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: '이미지 필요' });
+    const GEMINI_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini API 키 미설정' });
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mimeType, data: imageBase64 } },
+              { text: `이 사진에 있는 물고기의 어종을 한국어로 분석해주세요.\n반드시 아래 JSON 형식만 응답하세요 (다른 텍스트 없이):\n{\n  "fishName": "어종명(한국어)",\n  "confidence": 신뢰도(0-100 정수),\n  "edible": true/false,\n  "recipes": ["조리법1", "조리법2"],\n  "description": "간단한 특징 설명(1-2문장)"\n}\n물고기가 없으면: {"fishName": null, "confidence": 0}` }
+            ]
+          }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+        })
+      }
+    );
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    // JSON 추출
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { fishName: null, confidence: 0 };
+    res.json(result);
+  } catch (err) {
+    (logger?.error || console.error)('[POST /api/ai/fish-identify]', err.message);
+    res.status(500).json({ error: 'AI 분석 실패', fishName: null, confidence: 0 });
+  }
+});
+
+// POST /api/ai/coach — AI 낚시 코치 (Gemini)
+app.post('/api/ai/coach', async (req, res) => {
+  try {
+    const { message, context } = req.body; // context: { weather, tide, location, season }
+    if (!message) return res.status(400).json({ error: '메시지 필요' });
+    const GEMINI_KEY = process.env.GEMINI_API_KEY;
+    if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini API 키 미설정' });
+
+    const ctx = context || {};
+    const systemPrompt = `당신은 한국 최고의 낚시 전문가 AI 코치입니다.\n현재 상황: ${ctx.location || '위치 미확인'}, 날씨: ${ctx.weather || '미확인'}, 물때: ${ctx.tide || '미확인'}, 계절: ${ctx.season || '봄'}.\n낚시 관련 질문에만 답하며, 어종/채비/미끼/포인트를 구체적으로 추천합니다.\n답변은 친근하고 간결하게 (200자 이내), 이모지를 적절히 사용합니다.`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: systemPrompt }] },
+            { role: 'model', parts: [{ text: '네! 낚시GO AI 코치입니다 🎣 무엇이든 물어보세요!' }] },
+            { role: 'user', parts: [{ text: message }] }
+          ],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+        })
+      }
+    );
+    const data = await response.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '죄송합니다, 답변을 생성하지 못했습니다.';
+    res.json({ reply });
+  } catch (err) {
+    (logger?.error || console.error)('[POST /api/ai/coach]', err.message);
+    res.status(500).json({ error: 'AI 코치 오류' });
+  }
+});
+
+// ─── 전국 대회 API ────────────────────────────────────────────────────────
+
+// POST /api/contest — 대회 등록 (관리자)
+app.post('/api/contest', async (req, res) => {
+  try {
+    const { title, fishName, region, metric, startDate, endDate, description, prize } = req.body;
+    if (!title || !fishName || !startDate || !endDate) return res.status(400).json({ error: '필수 항목 누락' });
+    await waitForDb(5000);
+    const contest = await Contest.create({ title, fishName, region, metric, startDate, endDate, description, prize });
+    res.json({ success: true, contest });
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// GET /api/contest/active — 진행 중 대회 목록
+app.get('/api/contest/active', async (req, res) => {
+  try {
+    await waitForDb(5000);
+    const now = new Date();
+    const contests = await Contest.find({
+      active: true,
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+    }).sort({ endDate: 1 }).lean();
+    // 각 대회의 현재 TOP3 조황 첨부
+    const result = await Promise.all(contests.map(async (c) => {
+      const top3 = await CatchRecord.find({ contestId: c._id.toString() })
+        .sort({ fishSize: -1, fishWeight: -1 })
+        .limit(3).lean();
+      return { ...c, top3 };
+    }));
+    res.json({ contests: result });
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// GET /api/contest/:id/ranking — 대회 랭킹
+app.get('/api/contest/:id/ranking', async (req, res) => {
+  try {
+    await waitForDb(5000);
+    const contest = await Contest.findById(req.params.id).lean();
+    if (!contest) return res.status(404).json({ error: '대회 없음' });
+    const ranking = await CatchRecord.find({ contestId: req.params.id })
+      .sort({ fishSize: -1, fishWeight: -1, createdAt: 1 })
+      .limit(50).lean();
+    res.json({ contest, ranking });
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// GET /api/contest/all — 전체 대회 목록 (관리자)
+app.get('/api/contest/all', async (req, res) => {
+  try {
+    await waitForDb(5000);
+    const contests = await Contest.find().sort({ createdAt: -1 }).limit(50).lean();
+    res.json({ contests });
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
