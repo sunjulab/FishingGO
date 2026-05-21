@@ -8,9 +8,9 @@ import apiClient from '../api/index';
 const GUEST_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23E8F2FF'/%3E%3Ccircle cx='50' cy='36' r='19' fill='%230056D2' opacity='.75'/%3E%3Cellipse cx='50' cy='88' rx='30' ry='22' fill='%230056D2' opacity='.55'/%3E%3C/svg%3E";
 
 // ─── 아이디 찾기 / 비밀번호 찾기 모달 ─────────────────────────────────────
-function FindAccountModal({ mode, onClose }) {
+function FindAccountModal({ mode, onClose, onFoundId }) {
   const addToast = useToastStore(s => s.addToast);
-  const [email, setEmail]           = useState('');   // 비밀번호 찾기용 아이디
+  const [email, setEmail]           = useState('');
   const [realName, setRealName]     = useState('');
   const [phone, setPhone]           = useState('');
   const [newPass, setNewPass]       = useState('');
@@ -18,7 +18,8 @@ function FindAccountModal({ mode, onClose }) {
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading]       = useState(false);
-  const [result, setResult]         = useState(null); // 찾은 마스킹 이메일
+  const [maskedEmail, setMaskedEmail] = useState(null); // 화면 표시용 (su***@gmail.com)
+  const [rawEmail, setRawEmail]     = useState('');     // 로그인 자동입력용 (전체 아이디)
 
   const isFindId = mode === 'findId';
 
@@ -39,7 +40,8 @@ function FindAccountModal({ mode, onClose }) {
         realName: realName.trim(),
         phone: phone.replace(/[^0-9]/g, ''),
       });
-      setResult(res.data.email);
+      setMaskedEmail(res.data.email);   // 화면 표시용 (마스킹)
+      setRawEmail(res.data.rawEmail || res.data.email); // 로그인 자동입력용 (전체)
     } catch (err) {
       addToast(err.response?.data?.error || '일치하는 회원 정보가 없습니다.', 'error');
     } finally { setLoading(false); }
@@ -112,19 +114,19 @@ function FindAccountModal({ mode, onClose }) {
         </div>
 
         {/* 결과 화면 (아이디 찾기 성공) */}
-        {result ? (
+        {maskedEmail ? (
           <div style={{
             background: 'linear-gradient(135deg,#EBF5FF,#F0FFF8)', borderRadius: '16px',
             padding: '24px', textAlign: 'center', border: '1.5px solid #D0E4FF',
           }}>
             <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#64748b', marginBottom: '8px' }}>🎣 찾은 아이디</div>
             <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2', letterSpacing: '0.04em' }}>
-              {result}
+              {maskedEmail}
             </div>
             <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#94a3b8', marginTop: '6px' }}>
               보안을 위해 일부 정보는 *** 처리됩니다
             </div>
-            <button onClick={onClose} style={{
+            <button onClick={() => { onFoundId && onFoundId(rawEmail); onClose(); }} style={{
               marginTop: '18px', width: '100%', padding: '13px', borderRadius: '12px',
               border: 'none', background: 'linear-gradient(135deg,#0056D2,#003fa3)', color: '#fff',
               fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer',
@@ -420,7 +422,11 @@ export default function LoginPage() {
 
   return (
     <>
-      {findModal && <FindAccountModal mode={findModal} onClose={() => setFindModal(null)} />}
+      {findModal && <FindAccountModal
+        mode={findModal}
+        onClose={() => setFindModal(null)}
+        onFoundId={(id) => { setUserId(id); }}  // ✅ 아이디 자동입력
+      />}
 
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'linear-gradient(160deg, #0a1628 0%, #0d2a4a 60%, #0056D2 100%)' }} />
 

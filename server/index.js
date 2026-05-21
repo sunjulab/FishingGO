@@ -1651,15 +1651,15 @@ app.post('/api/auth/find-id', async (req, res) => {
       const users = await User.find({ realName }).lean();
       const user = users.find(u => String(u.phone || '').replace(/\D/g, '') === normalizedPhone);
       if (!user) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
-      return res.json({ email: maskEmail(user.email) });
+      // ✅ masked: 화면 표시용, raw: 로그인 자동입력용
+      return res.json({ email: maskEmail(user.email), rawEmail: user.email });
     }
-    // 인메모리 fallback
     const user = memUsers.find(u =>
       u.realName === realName &&
       String(u.phone || '').replace(/\D/g, '') === normalizedPhone
     );
     if (!user) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
-    return res.json({ email: maskEmail(user.email) });
+    return res.json({ email: maskEmail(user.email), rawEmail: user.email });
   } catch (err) {
     (logger?.error || console.error)('[POST /api/auth/find-id]', err.message);
     res.status(500).json({ error: '서버 오류' });
