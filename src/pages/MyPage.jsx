@@ -608,12 +608,7 @@ export default function MyPage() {
                   borderRadius: '4px', transition: 'width 0.6s ease'
                 }} />
               </div>
-              {/* 다음 레벨 보상 */}
-              {levelInfo.nextLevel && (
-                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#0056D2', fontWeight: '700', marginTop: '6px' }}>
-                  LV.{levelInfo.nextLevel.level} 달성 시: {levelInfo.nextLevel.reward || levelInfo.nextLevel.title}
-                </div>
-              )}
+
             </div>
 
             {/* 연속출석 */}
