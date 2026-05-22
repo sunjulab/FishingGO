@@ -4752,6 +4752,245 @@ app.get('/', (req, res) => {
   res.send('<h1>Fishing GO Backend is running flawlessly! 🚀</h1><p>DB Status: ' + (dbReady ? 'MongoDB Connected ✅' : 'In-Memory Mode ⚠️') + '</p>');
 });
 
+// ── 개인정보처리방침 ────────────────────────────────────────────
+app.get('/privacy', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>낚시GO 개인정보처리방침</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f9fa;color:#212529;line-height:1.8}
+  .wrap{max-width:800px;margin:0 auto;padding:40px 20px}
+  h1{font-size:28px;font-weight:700;color:#1a1a2e;border-bottom:3px solid #c8d400;padding-bottom:16px;margin-bottom:32px}
+  h2{font-size:18px;font-weight:700;color:#1a1a2e;margin:32px 0 12px;padding-left:12px;border-left:4px solid #c8d400}
+  p,li{font-size:15px;color:#444;margin-bottom:8px}
+  ul{padding-left:20px;margin-bottom:12px}
+  .box{background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .date{font-size:13px;color:#888;margin-bottom:24px}
+  .highlight{background:#fffde7;border-left:4px solid #c8d400;padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0}
+  footer{text-align:center;padding:32px 0;font-size:13px;color:#aaa}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎣 낚시GO 개인정보처리방침</h1>
+  <p class="date">시행일: 2025년 1월 1일 &nbsp;|&nbsp; 최종 수정일: 2026년 5월 22일</p>
+
+  <div class="box">
+    <p>썬주이유랩(이하 "회사")은 낚시GO 서비스(이하 "서비스")를 제공함에 있어 이용자의 개인정보를 소중히 여기며, 「개인정보 보호법」 및 관련 법령을 준수합니다.</p>
+  </div>
+
+  <h2>1. 수집하는 개인정보 항목</h2>
+  <div class="box">
+    <ul>
+      <li><strong>필수 항목:</strong> 이메일 주소, 닉네임, 비밀번호(암호화 저장)</li>
+      <li><strong>소셜 로그인:</strong> 구글·카카오 계정 ID, 프로필 사진 URL</li>
+      <li><strong>서비스 이용 정보:</strong> 낚시 포인트 즐겨찾기, 조황 기록, 알림 설정</li>
+      <li><strong>결제 정보:</strong> 구독 플랜, 결제 일시 (카드번호 등 금융정보는 수집하지 않음)</li>
+      <li><strong>기기 정보:</strong> FCM 토큰(푸시 알림), 앱 버전, OS 정보</li>
+      <li><strong>위치 정보:</strong> GPS 좌표 (낚시 포인트 검색 시, 이용자 동의 후 수집)</li>
+    </ul>
+  </div>
+
+  <h2>2. 개인정보의 수집·이용 목적</h2>
+  <div class="box">
+    <ul>
+      <li>회원 가입 및 서비스 이용 관리</li>
+      <li>낚시 포인트, 조황 정보, 날씨 등 맞춤형 서비스 제공</li>
+      <li>구독 결제 처리 및 내역 관리</li>
+      <li>푸시 알림(조황 알림, 이벤트) 발송</li>
+      <li>서비스 개선을 위한 통계 분석</li>
+      <li>불법·부정 이용 방지 및 법적 의무 이행</li>
+    </ul>
+  </div>
+
+  <h2>3. 개인정보의 보유 및 이용 기간</h2>
+  <div class="box">
+    <ul>
+      <li><strong>회원 탈퇴 시:</strong> 즉시 삭제 (단, 관련 법령에 따라 일정 기간 보관)</li>
+      <li><strong>전자상거래 기록:</strong> 5년 (전자상거래법)</li>
+      <li><strong>접속 로그:</strong> 3개월 (통신비밀보호법)</li>
+    </ul>
+  </div>
+
+  <h2>4. 개인정보의 제3자 제공</h2>
+  <div class="box">
+    <div class="highlight">회사는 이용자의 개인정보를 원칙적으로 외부에 제공하지 않습니다.</div>
+    <p>다만, 다음의 경우 예외로 합니다:</p>
+    <ul>
+      <li>이용자가 사전에 동의한 경우</li>
+      <li>법령에 의거하거나 수사기관의 요청이 있는 경우</li>
+    </ul>
+  </div>
+
+  <h2>5. 개인정보 처리 위탁</h2>
+  <div class="box">
+    <ul>
+      <li><strong>MongoDB Atlas (MongoDB Inc.):</strong> 데이터베이스 서비스</li>
+      <li><strong>Google Firebase:</strong> 푸시 알림(FCM) 서비스</li>
+      <li><strong>Google Play:</strong> 인앱 결제 처리</li>
+      <li><strong>Render.com:</strong> 서버 호스팅</li>
+    </ul>
+  </div>
+
+  <h2>6. 이용자의 권리</h2>
+  <div class="box">
+    <p>이용자는 언제든지 다음 권리를 행사할 수 있습니다:</p>
+    <ul>
+      <li>개인정보 열람, 정정, 삭제 요청</li>
+      <li>개인정보 처리 정지 요청</li>
+      <li>회원 탈퇴 (앱 내 마이페이지 → 회원 탈퇴)</li>
+    </ul>
+    <p>문의: <strong>fishing.go.kr@gmail.com</strong></p>
+  </div>
+
+  <h2>7. 위치정보 수집 및 이용</h2>
+  <div class="box">
+    <ul>
+      <li>목적: 낚시 포인트 지도 표시, 주변 포인트 검색</li>
+      <li>수집 방법: 앱 실행 시 권한 동의 후 수집</li>
+      <li>보유 기간: 서비스 이용 기간 (세션 종료 시 삭제)</li>
+      <li>거부 가능: 위치 권한 미허용 시 지도 기능 제한</li>
+    </ul>
+  </div>
+
+  <h2>8. 카메라 및 사진 접근 권한</h2>
+  <div class="box">
+    <ul>
+      <li>목적: 조황 인증 사진 촬영 및 업로드</li>
+      <li>수집 방법: 이용자가 직접 사진 촬영 또는 선택</li>
+      <li>제3자 제공: 없음</li>
+    </ul>
+  </div>
+
+  <h2>9. 쿠키 및 유사 기술</h2>
+  <div class="box">
+    <p>서비스는 로그인 상태 유지를 위해 JWT 토큰을 사용하며, 광고 목적의 쿠키는 사용하지 않습니다.</p>
+  </div>
+
+  <h2>10. 개인정보 보호책임자</h2>
+  <div class="box">
+    <ul>
+      <li><strong>회사명:</strong> 썬주이유랩</li>
+      <li><strong>책임자:</strong> 대표자</li>
+      <li><strong>이메일:</strong> fishing.go.kr@gmail.com</li>
+    </ul>
+  </div>
+
+  <h2>11. 개인정보처리방침 변경</h2>
+  <div class="box">
+    <p>이 방침은 법령·서비스 변경 시 개정될 수 있으며, 변경 시 앱 공지사항을 통해 안내합니다.</p>
+  </div>
+
+  <footer>
+    &copy; 2026 썬주이유랩 · 낚시GO · <a href="/terms" style="color:#c8d400">이용약관</a>
+  </footer>
+</div>
+</body>
+</html>`);
+});
+
+// ── 이용약관 ────────────────────────────────────────────────────
+app.get('/terms', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>낚시GO 이용약관</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f9fa;color:#212529;line-height:1.8}
+  .wrap{max-width:800px;margin:0 auto;padding:40px 20px}
+  h1{font-size:28px;font-weight:700;color:#1a1a2e;border-bottom:3px solid #c8d400;padding-bottom:16px;margin-bottom:32px}
+  h2{font-size:18px;font-weight:700;color:#1a1a2e;margin:32px 0 12px;padding-left:12px;border-left:4px solid #c8d400}
+  p,li{font-size:15px;color:#444;margin-bottom:8px}
+  ul{padding-left:20px;margin-bottom:12px}
+  .box{background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .date{font-size:13px;color:#888;margin-bottom:24px}
+  footer{text-align:center;padding:32px 0;font-size:13px;color:#aaa}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎣 낚시GO 이용약관</h1>
+  <p class="date">시행일: 2025년 1월 1일 &nbsp;|&nbsp; 최종 수정일: 2026년 5월 22일</p>
+
+  <div class="box">
+    <p>본 약관은 썬주이유랩(이하 "회사")이 제공하는 낚시GO 서비스(이하 "서비스") 이용에 관한 조건 및 절차를 규정합니다.</p>
+  </div>
+
+  <h2>제1조 (목적)</h2>
+  <div class="box"><p>이 약관은 회사가 제공하는 낚시GO 앱 서비스의 이용 조건 및 절차에 관한 사항을 규정함을 목적으로 합니다.</p></div>
+
+  <h2>제2조 (서비스 내용)</h2>
+  <div class="box">
+    <ul>
+      <li>전국 낚시 포인트 지도 서비스</li>
+      <li>실시간 해양 기상 및 조황 정보</li>
+      <li>해안 CCTV 영상 서비스</li>
+      <li>조황 커뮤니티 및 인증 서비스</li>
+      <li>유료 구독 서비스 (BASIC · PRO · VVIP)</li>
+    </ul>
+  </div>
+
+  <h2>제3조 (회원 가입)</h2>
+  <div class="box">
+    <p>이용자는 이메일 또는 소셜 계정(구글·카카오)으로 가입할 수 있으며, 만 14세 이상인 경우에만 가입이 가능합니다.</p>
+  </div>
+
+  <h2>제4조 (유료 서비스 및 구독)</h2>
+  <div class="box">
+    <ul>
+      <li>유료 구독은 구글 플레이 인앱 결제를 통해 이루어집니다.</li>
+      <li>구독은 다음 결제일 24시간 전까지 취소 가능합니다.</li>
+      <li>환불은 구글 플레이 환불 정책에 따릅니다.</li>
+      <li>구독 취소 후에도 기간 만료 전까지 서비스가 유지됩니다.</li>
+    </ul>
+  </div>
+
+  <h2>제5조 (이용자 의무)</h2>
+  <div class="box">
+    <ul>
+      <li>타인의 개인정보 도용 금지</li>
+      <li>허위 조황 정보 등록 금지</li>
+      <li>서비스를 통한 상업적 광고 행위 금지 (VVIP 제외)</li>
+      <li>서비스 안정성을 해치는 행위 금지</li>
+    </ul>
+  </div>
+
+  <h2>제6조 (서비스 중단)</h2>
+  <div class="box"><p>회사는 시스템 점검, 천재지변 등 불가피한 경우 서비스를 일시 중단할 수 있으며, 사전에 공지합니다.</p></div>
+
+  <h2>제7조 (면책 조항)</h2>
+  <div class="box">
+    <ul>
+      <li>낚시 포인트 정보는 참고용이며, 실제 조황과 다를 수 있습니다.</li>
+      <li>기상 정보는 외부 API 기반으로 정확도를 보장하지 않습니다.</li>
+      <li>이용자 간 분쟁에 회사는 책임지지 않습니다.</li>
+    </ul>
+  </div>
+
+  <h2>제8조 (분쟁 해결)</h2>
+  <div class="box"><p>본 약관에 관한 분쟁은 대한민국 법률에 따르며, 관할 법원은 서울중앙지방법원으로 합니다.</p></div>
+
+  <h2>문의</h2>
+  <div class="box"><p>이메일: <strong>fishing.go.kr@gmail.com</strong></p></div>
+
+  <footer>
+    &copy; 2026 썬주이유랩 · 낚시GO · <a href="/privacy" style="color:#c8d400">개인정보처리방침</a>
+  </footer>
+</div>
+</body>
+</html>`);
+});
+
+
 app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   const { stationId } = req.query;
   const sid = stationId || 'DT_0001';
