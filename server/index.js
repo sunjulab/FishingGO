@@ -4933,6 +4933,97 @@ app.get('/privacy', (req, res) => {
 });
 
 // ── 이용약관 ────────────────────────────────────────────────────
+// ── 계정 삭제 안내 페이지 (Google Play 데이터 보안 필수) ────────
+app.get('/delete-account', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>낚시GO 계정 삭제</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f9fa;color:#212529;line-height:1.8}
+  .wrap{max-width:700px;margin:0 auto;padding:40px 20px}
+  h1{font-size:26px;font-weight:700;color:#1a1a2e;border-bottom:3px solid #c8d400;padding-bottom:16px;margin-bottom:28px}
+  h2{font-size:17px;font-weight:700;color:#1a1a2e;margin:28px 0 10px;padding-left:12px;border-left:4px solid #c8d400}
+  p,li{font-size:15px;color:#444;margin-bottom:8px}
+  ul{padding-left:20px;margin-bottom:12px}
+  .box{background:#fff;border-radius:12px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .step{background:#fff;border-radius:12px;padding:20px 22px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;gap:16px;align-items:flex-start}
+  .num{width:36px;height:36px;background:#c8d400;color:#1a1a2e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0}
+  .warn{background:#fff8e1;border-left:4px solid #ffc107;padding:14px 16px;border-radius:0 10px 10px 0;margin:12px 0;font-size:14px;color:#5d4037}
+  .contact{background:#1a1a2e;color:#fff;border-radius:12px;padding:20px 22px;margin-top:20px}
+  .contact a{color:#c8d400}
+  footer{text-align:center;padding:28px 0;font-size:13px;color:#aaa;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🗑️ 낚시GO 계정 삭제 안내</h1>
+
+  <div class="box">
+    <p>낚시GO 계정을 삭제하면 모든 개인정보와 서비스 이용 내역이 영구적으로 삭제됩니다.<br>계정 삭제 전 아래 안내사항을 반드시 확인하세요.</p>
+  </div>
+
+  <div class="warn">
+    ⚠️ 계정 삭제 후에는 데이터를 복구할 수 없습니다. 구독 중인 경우 환불이 불가하오니 먼저 구독을 취소해 주세요.
+  </div>
+
+  <h2>앱에서 직접 삭제하기 (권장)</h2>
+
+  <div class="step">
+    <div class="num">1</div>
+    <div><strong>앱 실행</strong> → 하단 탭 <strong>마이페이지</strong> 선택</div>
+  </div>
+  <div class="step">
+    <div class="num">2</div>
+    <div>우측 상단 <strong>⚙️ 설정</strong> 아이콘 클릭</div>
+  </div>
+  <div class="step">
+    <div class="num">3</div>
+    <div>하단의 <strong>"회원 탈퇴"</strong> 버튼 클릭</div>
+  </div>
+  <div class="step">
+    <div class="num">4</div>
+    <div>탈퇴 사유 선택 후 <strong>"탈퇴 확인"</strong> 클릭 → 즉시 삭제 완료</div>
+  </div>
+
+  <h2>이메일로 삭제 요청하기</h2>
+  <div class="box">
+    <p>앱 접근이 어려운 경우 이메일로 삭제를 요청할 수 있습니다.</p>
+    <ul>
+      <li>이메일: <strong>fishing.go.kr@gmail.com</strong></li>
+      <li>제목: <strong>[계정 삭제 요청] 이메일 주소</strong></li>
+      <li>내용: 가입 이메일 주소 및 삭제 요청 사유</li>
+      <li>처리 기간: 요청일로부터 <strong>영업일 3일 이내</strong></li>
+    </ul>
+  </div>
+
+  <h2>삭제되는 데이터</h2>
+  <div class="box">
+    <ul>
+      <li>✅ 이메일 주소, 닉네임, 비밀번호</li>
+      <li>✅ 낚시 포인트 즐겨찾기, 조황 기록</li>
+      <li>✅ 커뮤니티 게시글 및 댓글</li>
+      <li>✅ 구독 정보 및 FCM 토큰</li>
+      <li>⚠️ 전자상거래 결제 기록은 법령에 따라 5년간 보관</li>
+    </ul>
+  </div>
+
+  <div class="contact">
+    <p style="color:#c8d400;font-weight:700;margin-bottom:8px">📧 문의</p>
+    <p>이메일: <a href="mailto:fishing.go.kr@gmail.com">fishing.go.kr@gmail.com</a></p>
+    <p style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:8px">영업일 기준 3일 이내 답변드립니다.</p>
+  </div>
+
+  <footer>&copy; 2026 썬주이유랩 · 낚시GO · <a href="/privacy" style="color:#c8d400">개인정보처리방침</a></footer>
+</div>
+</body>
+</html>`);
+});
+
 app.get('/terms', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!DOCTYPE html>
