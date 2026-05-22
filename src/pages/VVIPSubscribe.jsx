@@ -300,6 +300,38 @@ export default function VVIPSubscribe() {
             {restoring ? '복원 중...' : '이전 구독 복원하기'}
           </button>
 
+          {/* PRO 플랜 안내 (₩110,000/년 — 웹 결제 채널 전용) */}
+          <div style={{ background: 'linear-gradient(135deg,rgba(100,181,246,0.08),rgba(21,101,192,0.06))', border: '1.5px solid rgba(100,181,246,0.3)', borderRadius: '20px', padding: '20px', marginBottom: '12px' }}>
+            {/* 헤더 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg,#64B5F6,#1565C0)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(100,181,246,0.3)' }}>
+                <Crown size={20} color="#fff" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: `calc(16px * var(--fs,1))`, fontWeight: '950', color: '#64B5F6' }}>PRO</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                  <span style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: '#fff' }}>₩110,000</span>
+                  <span style={{ fontSize: `calc(11px * var(--fs,1))`, color: 'rgba(255,255,255,0.4)' }}>/년</span>
+                </div>
+              </div>
+              <div style={{ background: 'rgba(100,181,246,0.15)', border: '1px solid rgba(100,181,246,0.3)', borderRadius: '10px', padding: '4px 10px', fontSize: `calc(10px * var(--fs,1))`, color: '#64B5F6', fontWeight: '900' }}>인기</div>
+            </div>
+            {/* 혜택 */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+              {['베이직 전체 포함', '선상 홍보 게시', '커뮤니티 우선 노출', '조황 보고 무제한', '광고 없는 경험'].map((f, i) => (
+                <div key={i} style={{ background: 'rgba(100,181,246,0.08)', border: '1px solid rgba(100,181,246,0.18)', borderRadius: '8px', padding: '4px 10px', fontSize: `calc(11px * var(--fs,1))`, color: 'rgba(255,255,255,0.7)', fontWeight: '700' }}>✓ {f}</div>
+              ))}
+            </div>
+            {/* 안내 문구 + 문의 버튼 */}
+            <div style={{ background: 'rgba(100,181,246,0.06)', borderRadius: '12px', padding: '10px 14px', marginBottom: '12px', fontSize: `calc(11px * var(--fs,1))`, color: 'rgba(200,220,255,0.7)', lineHeight: 1.6 }}>
+              💡 PRO 플랜은 <strong style={{ color: '#64B5F6' }}>외부 채널</strong>을 통해 신청합니다.<br />
+              유튜브·커뮤니티 링크 또는 이메일로 문의해 주세요.
+            </div>
+            <button onClick={() => { addToast('PRO 플랜 문의: fishing.go.kr@gmail.com', 'info'); }} style={{ width: '100%', padding: '12px', border: '1.5px solid rgba(100,181,246,0.4)', borderRadius: '12px', background: 'rgba(100,181,246,0.1)', color: '#64B5F6', fontWeight: '900', fontSize: `calc(13px * var(--fs,1))`, cursor: 'pointer' }}>
+              📧 PRO 플랜 문의하기
+            </button>
+          </div>
+
           {/* VVIP 항구 섹션 (안내만) */}
           <div style={{ background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
