@@ -2568,6 +2568,44 @@ app.post('/api/auth/verify-otp', (req, res) => {
 });
 
 // --- 회원가입 ---
+// ── 구글 심사관용 테스트 계정 자동 생성 (어드민 전용) ───────────
+app.post('/api/admin/create-test-account', async (req, res) => {
+  const { adminKey } = req.body;
+  if (adminKey !== (process.env.ADMIN_SECRET || 'fishinggo-admin-2024')) {
+    return res.status(403).json({ error: '권한 없음' });
+  }
+  try {
+    const bcrypt = require('bcryptjs');
+    const testEmail = 'reviewer@fishinggo.kr';
+    const testPw    = 'FishingGO2024!';
+    const testName  = '심사관';
+
+    if (dbReady && User) {
+      const exists = await User.findOne({ email: testEmail });
+      if (exists) {
+        // 비밀번호 재설정
+        const hash = await bcrypt.hash(testPw, 10);
+        await User.findOneAndUpdate({ email: testEmail }, {
+          $set: { password: hash, tier: 'BUSINESS_LITE', name: testName, updatedAt: new Date() }
+        });
+        return res.json({ ok: true, message: '기존 계정 업데이트 완료', email: testEmail, password: testPw });
+      }
+      const hash = await bcrypt.hash(testPw, 10);
+      await User.create({
+        email: testEmail, password: hash, name: testName,
+        tier: 'BUSINESS_LITE', createdAt: new Date(), updatedAt: new Date(),
+      });
+      return res.json({ ok: true, message: '테스트 계정 생성 완료', email: testEmail, password: testPw });
+    } else {
+      // 인메모리
+      users.push({ email: testEmail, password: testPw, name: testName, tier: 'BUSINESS_LITE' });
+      return res.json({ ok: true, message: '인메모리 계정 생성', email: testEmail, password: testPw });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, name, phone, realName } = req.body; // ✅ realName 추가 수신
