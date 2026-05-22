@@ -1233,6 +1233,137 @@ app.post('/api/upload/image', async (req, res) => {
 const PLAN_PRICES = { LITE: 9900, PRO: 110000, VVIP: 550000 };
 const PLAN_TIERS = { LITE: 'BUSINESS_LITE', PRO: 'PRO', VVIP: 'BUSINESS_VIP' };
 
+// ══════════════════════════════════════════════════════════════════
+// 🔑 Track A: 구글 플레이 인앱 결제 영수증 검증
+// POST /api/payment/google-iap/verify
+// cordova-plugin-purchase v13이 purchaseToken을 전송
+// Google Play Developer API로 검증 후 tier 업데이트
+// ══════════════════════════════════════════════════════════════════
+app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
+  try {
+    const tp = req.user;                                   // verifyToken이 주입
+    const { purchaseToken, productId } = req.body;
+
+    if (!purchaseToken || !productId) {
+      return res.status(400).json({ error: '필수 항목 누락 (purchaseToken, productId)' });
+    }
+
+    const GOOGLE_IAP_PRODUCT = 'kr.fishinggo.app.lite_monthly';
+    if (productId !== GOOGLE_IAP_PRODUCT) {
+      return res.status(400).json({ error: '유효하지 않은 상품 ID' });
+    }
+
+    // ── Google Play Developer API 검증 ─────────────────────────
+    // GOOGLE_PLAY_SERVICE_ACCOUNT 환경변수가 있을 때만 실제 검증
+    const serviceAccountJson = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT;
+    let verified = false;
+    let autoRenewing = true;
+
+    if (serviceAccountJson) {
+      try {
+        const { google } = require('googleapis');
+        const packageName = 'kr.fishinggo.app';
+        const subscriptionId = GOOGLE_IAP_PRODUCT;
+
+        const credentials = JSON.parse(serviceAccountJson);
+        const auth = new google.auth.GoogleAuth({
+          credentials,
+          scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+        });
+
+        const androidPublisher = google.androidpublisher({ version: 'v3', auth });
+        const result = await androidPublisher.purchases.subscriptions.get({
+          packageName,
+          subscriptionId,
+          token: purchaseToken,
+        });
+
+        const sub = result.data;
+        // paymentState: 0=결제대기, 1=결제완료, 2=무료체험
+        if (sub.paymentState === 1 || sub.paymentState === 2) {
+          verified = true;
+          autoRenewing = sub.autoRenewing !== false;
+        }
+      } catch (e) {
+        (logger?.error || console.error)('[Google IAP] Play API 검증 실패:', e.message);
+        // 개발환경: 검증 실패해도 fallback으로 처리
+        if (!process.env.GOOGLE_PLAY_SERVICE_ACCOUNT) verified = true;
+      }
+    } else {
+      // 서비스 계정 미설정: 개발/테스트 환경에서 영수증 수신만으로 처리
+      (logger?.warn || console.warn)('[Google IAP] GOOGLE_PLAY_SERVICE_ACCOUNT 미설정 — 영수증 신뢰 모드');
+      verified = true;
+    }
+
+    if (!verified) {
+      return res.status(402).json({ error: '결제 검증 실패' });
+    }
+
+    // ── DB 티어 업데이트 ────────────────────────────────────────
+    const newTier = 'BUSINESS_LITE';
+    const expiresAt = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000); // 31일
+
+    if (dbReady && User) {
+      const filter = tp.email
+        ? { email: tp.email }
+        : { id: tp.id };
+      await User.findOneAndUpdate(
+        filter,
+        {
+          $set: {
+            tier: newTier,
+            iapPurchaseToken: purchaseToken,
+            iapProductId: productId,
+            iapExpiresAt: expiresAt,
+            iapAutoRenewing: autoRenewing,
+            updatedAt: new Date(),
+          },
+        },
+        { upsert: false }
+      );
+    }
+
+    // ── 결제 이력 기록 ──────────────────────────────────────────
+    if (dbReady && PaymentHistory) {
+      await PaymentHistory.create({
+        userId: tp.id || tp.email,
+        email: tp.email,
+        pg: 'google_play',
+        method: 'iap',
+        planId: 'LITE',
+        tier: newTier,
+        amount: 9900,
+        purchaseToken,
+        productId,
+        status: 'paid',
+        paidAt: new Date(),
+      }).catch(e => (logger?.warn || console.warn)('[Google IAP] PaymentHistory 저장 실패:', e.message));
+    }
+
+    (logger?.info || console.log)(`[Google IAP] ✅ LITE 구독 완료: ${tp.email || tp.id}`);
+
+    // FCM 알림 발송
+    try {
+      const { sendToUser } = require('./push');
+      await sendToUser(tp.id || tp.email, {
+        title: '🎣 낚시GO 베이직 구독 완료!',
+        body: '이제 프리미엄 낚시 데이터를 무제한으로 이용하세요.',
+      });
+    } catch {}
+
+    return res.json({
+      success: true,
+      tier: newTier,
+      expiresAt,
+      message: '구독이 완료되었습니다.',
+    });
+
+  } catch (err) {
+    (logger?.error || console.error)('[Google IAP] 서버 오류:', err.message);
+    return res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 app.post('/api/payment/verify', async (req, res) => {
   try {
     // JWT 인증: 본인 또는 어드민만 결제 처리 가능
