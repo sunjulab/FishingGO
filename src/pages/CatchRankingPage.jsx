@@ -1,3 +1,4 @@
+import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, ChevronLeft, X, ChevronRight, Trash2 } from 'lucide-react';
@@ -5,6 +6,7 @@ import apiClient from '../api/index';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { getFishEmoji } from '../data/fishRules';
+import { NativeAd } from '../components/AdUnit';
 
 const FISH_TABS = ['전체', '감성돔', '광어', '우럭', '볼락', '참돔', '농어', '방어', '붕어', '고등어'];
 const PERIOD_TABS = [{ key: 'week', label: '주간' }, { key: 'month', label: '월간' }, { key: 'all', label: '전체' }];
@@ -140,6 +142,7 @@ function PhotoViewer({ records, initialIndex, onClose, onLike, onDelete, userId,
 
 /* ─── 메인 페이지 ─────────────────────────────────────────────── */
 export default function CatchRankingPage({ embedded = false }) {
+  const T = useTheme(); // ✅ DARK-MODE
   const navigate = useNavigate();
   const user     = useUserStore(s => s.user);
   const addToast = useToastStore(s => s.addToast);
@@ -281,7 +284,7 @@ export default function CatchRankingPage({ embedded = false }) {
 
         {/* ── embedded 필터 ── */}
         {embedded && (
-          <div style={{ padding: '12px 16px 10px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ padding: '12px 16px 10px', background: T.card, borderBottom: '1px solid #f0f0f0' }}>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
               {PERIOD_TABS.map(t => (
                 <button key={t.key} onClick={() => setPeriod(t.key)} style={{ padding: '5px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`, background: period === t.key ? T.tabActive : T.tabInactive, color: period === t.key ? T.tabActiveTxt : T.tabInactiveTxt, transition: 'all 0.18s' }}>{t.label}</button>
@@ -335,7 +338,8 @@ export default function CatchRankingPage({ embedded = false }) {
                 const isOpen = expanded === r._id;
 
                 return (
-                  <div key={r._id} style={{
+                  <React.Fragment key={r._id}>
+                    <div style={{
                     background: isTop3 ? T.cardBgTop : T.cardBg,
                     borderRadius: '18px',
                     border: isTop3 ? T.cardBorderTop : T.cardBorder,
@@ -457,6 +461,11 @@ export default function CatchRankingPage({ embedded = false }) {
                       </div>
                     </div>
                   </div>
+                  {/* 조황랭킹 목록 사이 네이티브 광고: 5개마다 1번 */}
+                  {(i + 1) % 5 === 0 && (
+                    <NativeAd slotId={`ranking_native_${i}`} style={{ margin: '4px 0' }} />
+                  )}
+                  </React.Fragment>
                 );
               })}
             </div>

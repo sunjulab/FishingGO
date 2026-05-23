@@ -13,10 +13,18 @@
  * 3. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { showRewardedAd } from '../services/AdMobService';
 import { loadNativeAd, removeNativeAd } from '../services/NativeAdService';
+
+// NativeAdPlugin 런타임 참조 — scroll 자가갱신용
+function getNativeAdPlugin() {
+  try {
+    if (!Capacitor.isNativePlatform()) return { NativeAdPlugin: null };
+    return { NativeAdPlugin: registerPlugin('NativeAd') };
+  } catch { return { NativeAdPlugin: null }; }
+}
 
 // Capacitor 네이티브 환경 감지 (3중 체크)
 const isCapacitorNative = () => {
@@ -33,15 +41,23 @@ function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 
 
 // ─────────────────────────────────────────────────────────────────
-//  2. 네이티브(인피드) 광고 — 앱: NativeAdPlugin 오버레이용 placeholder
-//  [핵심] 앱에서 null 반환 금지 — placeholder div가 있어야 NativeAdPlugin.kt가 동작
+//  2. NativeAd — 완전 자가관리형 (Self-Contained) 인피드 광고 컴포넌트
+//
+//  ✅ 100점 구조 4원칙:
+//  1. 초기 렌더부터 280px placeholder 확보 → Kotlin 좌표 즉시 유효
+//  2. scroll + IntersectionObserver + ResizeObserver 내장
+//     → 어느 페이지에 넣어도 스크롤 추적 자동 (페이지별 설정 불필요)
+//  3. 광고 로드 실패 시에만 height collapse (adFailed → null)
+//     → 빈 공간 완전 소멸
+//  4. 언마운트(탭 전환·페이지 이동) 시 removeNativeAd 즉시 호출
+//     → Kotlin 오버레이 즉시 정리 (선상배 빈 공간 버그 해결)
 // ─────────────────────────────────────────────────────────────────
 export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
-  const ref = useRef();
+  const ref       = useRef(null);
+  const loadedRef = useRef(false); // StrictMode 이중실행 방지
   const IS_NATIVE = isCapacitorNative();
-  // ✅ AD-FIX: 광고 로드 상태 추적 — 실패 시 빈 공간 제거
-  const [adLoaded, setAdLoaded] = useState(false);   // 광고 로드 성공
-  const [adFailed, setAdFailed] = useState(false);   // 광고 로드 실패
+  const [adFailed, setAdFailed] = useState(false);
+
   const isPremium = useUserStore(s =>
     ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) ||
     s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL
@@ -49,44 +65,70 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
 
   useEffect(() => {
     if (!IS_NATIVE || isPremium || !ref.current) return;
+    if (loadedRef.current) return;   // 이중 실행 방지
+    loadedRef.current = true;
+
     const el = ref.current;
-    // ✅ AD-FIX: loadNativeAd가 성공 시 resolve, 실패 시 throw (NativeAdService 수정됨)
-    // 성공 → setAdLoaded(true) → div 280px 확장
-    // 실패(광고 없음/AdMob 미승인) → setAdFailed(true) → div 완전 제거 (빈 공간 없음)
-    loadNativeAd(slotId, el)
-      .then(() => setAdLoaded(true))
-      .catch(() => setAdFailed(true));
+
+    // ── [1] 광고 로드 (placeholder는 이미 280px로 렌더됨 → Kotlin 좌표 즉시 유효)
+    loadNativeAd(slotId, el).catch(() => setAdFailed(true));
+
+    // ── [2] Kotlin 위치 자가갱신 헬퍼
+    const { NativeAdPlugin } = getNativeAdPlugin();
+    const updatePos = () => {
+      if (!el) return;
+      const dpr  = window.devicePixelRatio || 1;
+      const rect = el.getBoundingClientRect();
+      const x    = Math.round(rect.left   * dpr);
+      const y    = Math.round(rect.top    * dpr);
+      const inVP = rect.bottom > 0 && rect.top < window.innerHeight;
+      try {
+        NativeAdPlugin?.setVisible({ slotId, visible: inVP });
+        if (inVP) NativeAdPlugin?.updatePosition({ slotId, x, y });
+      } catch { /* 스크롤 중 오류 무시 */ }
+    };
+
+    // ── [3] 자동 위치 추적: scroll + IO + RO
+    window.addEventListener('scroll', updatePos, { passive: true });
+    const io = new IntersectionObserver(updatePos, { threshold: [0, 0.1, 1] });
+    io.observe(el);
+    const ro = new ResizeObserver(updatePos);
+    ro.observe(el);
+
+    // ── [4] 언마운트 즉시 정리 (탭 전환 시 오버레이 제거)
     return () => {
+      window.removeEventListener('scroll', updatePos);
+      io.disconnect();
+      ro.disconnect();
       removeNativeAd(slotId);
+      loadedRef.current = false;
     };
   }, [IS_NATIVE, isPremium, slotId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-
-  // 프리미엄 유저는 광고 없음
+  // 프리미엄 유저: 광고 없음
   if (isPremium) return null;
-  // ✅ AD-FIX: 광고 로드 실패 시 공간 제거
-  if (adFailed && !adLoaded) return null;
-
-  if (IS_NATIVE) {
-    return (
-      <div
-        ref={ref}
-        style={{
-          width: '100%',
-          minHeight: adLoaded ? 280 : 0, // 로드 전 높이 0 → 성공 시 280px
-          margin: adLoaded ? '4px 0 12px' : 0,
-          borderRadius: '16px',
-          background: 'transparent',
-          overflow: 'hidden',
-          transition: 'min-height 0.3s ease',
-          ...style,
-        }}
-      />
-    );
-  }
-
+  // 광고 로드 실패: 빈 공간 없음
+  if (adFailed)  return null;
   // 웹 환경: 광고 없음
-  return null;
+  if (!IS_NATIVE) return null;
+
+  // ── 핵심: 초기부터 280px 고정 확보 → Kotlin 좌표 즉시 유효
+  //    실패 시에만 adFailed=true → null 반환으로 공간 완전 소멸
+  return (
+    <div
+      ref={ref}
+      style={{
+        width: '100%',
+        height: 280,
+        margin: '4px 0 12px',
+        borderRadius: '16px',
+        background: 'transparent',
+        overflow: 'hidden',
+        flexShrink: 0,
+        ...style,
+      }}
+    />
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -209,7 +251,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
     }}>
       <div style={{
-        width: '100%', maxWidth: '480px', backgroundColor: '#fff',
+        width: '100%', maxWidth: '480px', backgroundColor: T.card,
         borderRadius: '24px 24px 0 0', padding: '28px 24px 40px',
         animation: 'slideUp 0.3s ease'
       }}>
@@ -219,7 +261,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         <h2 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>
           {ctx.title}
         </h2>
-        <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#888', textAlign: 'center', marginBottom: '28px' }}>
+        <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: T.textSub, textAlign: 'center', marginBottom: '28px' }}>
           무료로 이용하거나 <strong>LITE 이상</strong>을 구독하세요
         </p>
 
@@ -255,26 +297,26 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
 
         {/* 옵션 2: 무료 광고 시청 */}
         {!adDone ? (
-          <div style={{ border: '1.5px solid #E5E5EA', borderRadius: '18px', padding: '20px' }}>
-            <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '4px', color: '#1c1c1e' }}>
+          <div style={{ border: `1.5px solid ${T.borderMid}`, borderRadius: '18px', padding: '20px' }}>
+            <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '4px', color: T.text }}>
               📺 30초 광고 시청 후 무료 등록
             </div>
-            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#888', marginBottom: '16px' }}>
+            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, marginBottom: '16px' }}>
               광고를 시청하면 1회 무료로 이용하실 수 있어요.
             </div>
 
             {adWatching ? (
               <div>
                 {/* 앱: AdMob 보상형 광고 실행 중 | 웹: 타이머 시뮬레이션 */}
-                <div style={{ backgroundColor: '#F2F2F7', borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ backgroundColor: T.cardSub, borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ fontSize: `calc(24px * var(--fs, 1))` }}>📺</span>
-                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#888', marginLeft: '8px', fontWeight: '600' }}>시청 중...</span>
+                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, marginLeft: '8px', fontWeight: '600' }}>시청 중...</span>
                 </div>
                 {/* 진행 바 */}
-                <div style={{ height: '6px', backgroundColor: '#F2F2F7', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div style={{ height: '6px', backgroundColor: T.cardSub, borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
                   <div style={{ height: '100%', width: `${adProgress}%`, backgroundColor: '#0056D2', borderRadius: '3px', transition: 'width 0.9s linear' }} />
                 </div>
-                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#888', textAlign: 'center' }}>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, textAlign: 'center' }}>
                   {Math.ceil(30 - (adProgress / 100) * 30)}초 후 완료...
                 </div>
               </div>
@@ -300,7 +342,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         {/* 닫기 */}
         <button
           onClick={onClose}
-          style={{ width: '100%', marginTop: '12px', padding: '14px', border: 'none', background: 'none', color: '#aaa', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', fontWeight: '600' }}
+          style={{ width: '100%', marginTop: '12px', padding: '14px', border: 'none', background: 'none', color: T.textLight, fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', fontWeight: '600' }}
         >
           취소
         </button>
