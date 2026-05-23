@@ -55,6 +55,8 @@ function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
   const ref       = useRef(null);
   const loadedRef = useRef(false); // StrictMode 이중실행 방지
+  const retryRef  = useRef(0);     // ✅ FIX-TIMING: 재시도 횟수 추적
+  const retryTimerRef = useRef(null); // 재시도 타이머 ref (언마운트 시 정리)
   const IS_NATIVE = isCapacitorNative();
   const [adFailed, setAdFailed] = useState(false);
 
@@ -70,8 +72,23 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
 
     const el = ref.current;
 
-    // ── [1] 광고 로드 (placeholder는 이미 280px로 렌더됨 → Kotlin 좌표 즉시 유효)
-    loadNativeAd(slotId, el).catch(() => setAdFailed(true));
+    // ── [1] 광고 로드 — SDK 초기화 타이밍 대비 재시도 1회 (2초 딜레이)
+    // 보상형 광고(사용자 클릭 시 요청)와 달리 NativeAd는 렌더 즉시 요청하므로
+    // MobileAds.initialize() 비동기 완료 전에 요청될 수 있음 → 2초 후 재시도로 해결
+    const tryLoad = (attempt) => {
+      loadNativeAd(slotId, el)
+        .then(() => { retryRef.current = 0; }) // 성공 시 카운터 초기화
+        .catch(() => {
+          if (attempt < 1 && loadedRef.current) {
+            // 1회 재시도: 2초 후 (SDK 초기화 완료 대기)
+            retryTimerRef.current = setTimeout(() => tryLoad(attempt + 1), 2000);
+          } else {
+            // 재시도 실패 또는 언마운트됨 → 광고 공간 제거
+            setAdFailed(true);
+          }
+        });
+    };
+    tryLoad(0);
 
     // ── [2] Kotlin 위치 자가갱신 헬퍼
     const { NativeAdPlugin } = getNativeAdPlugin();
@@ -102,8 +119,10 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
       ro.disconnect();
       removeNativeAd(slotId);
       loadedRef.current = false;
+      if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
     };
   }, [IS_NATIVE, isPremium, slotId]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // 프리미엄 유저: 광고 없음
   if (isPremium) return null;

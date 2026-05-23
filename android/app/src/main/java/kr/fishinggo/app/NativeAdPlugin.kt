@@ -19,16 +19,19 @@ import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdLoader
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
 
 private const val TAG = "NativeAdPlugin"
 
-// ✅ NATIVE-AD: 인피드 네이티브 광고 플러그인
+// ✅ NATIVE-AD: 네이티브 광고 플러그인
 // - WebView 콘텐츠의 placeholder div 위에 Google NativeAdView를 오버레이
-// - JS에서 placeholder 좌표(getBoundingClientRect)를 받아 정확히 위치시킴
+// - JS에서 placeholder 좌표(getBoundingClientRect)를 받아 정확한 위치에 배치
 // - 스크롤 시 JS가 updatePosition()을 호출하여 실시간 위치 업데이트
+
 @CapacitorPlugin(name = "NativeAd")
 class NativeAdPlugin : Plugin() {
 
@@ -41,35 +44,49 @@ class NativeAdPlugin : Plugin() {
      */
     @PluginMethod
     fun loadAd(call: PluginCall) {
-        val slotId = call.getString("slotId") ?: "slot_0"
+        val slotId   = call.getString("slotId")   ?: "slot_0"
         val adUnitId = call.getString("adUnitId") ?: "ca-app-pub-9774243773523817/8130405525"
-        val x = call.getInt("x") ?: 0
-        val y = call.getInt("y") ?: 0
-        val width = call.getInt("width") ?: 0
+        val x      = call.getInt("x")      ?: 0
+        val y      = call.getInt("y")      ?: 0
+        val width  = call.getInt("width")  ?: 0
         val height = call.getInt("height") ?: 300
 
         activity.runOnUiThread {
-            // 기존 슬롯 제거
             removeSlot(slotId)
 
-            val adLoader = AdLoader.Builder(context, adUnitId)
-                .forNativeAd { nativeAd ->
-                    activity.runOnUiThread {
-                        placeNativeAd(slotId, nativeAd, x, y, width, height)
-                        call.resolve(JSObject().put("success", true).put("slotId", slotId))
-                    }
-                }
-                .withAdListener(object : AdListener() {
-                    override fun onAdFailedToLoad(error: LoadAdError) {
-                        Log.w(TAG, "네이티브 광고 로드 실패: ${error.message}")
-                        call.reject(error.message)
-                    }
-                })
-                .build()
+            // ✅ FIX-TIMING: MobileAds.initialize() 완료 콜백 내부에서 AdLoader 실행
+            // 보상형 광고(사용자 클릭 시)와 달리 NativeAd는 렌더 즉시 호출되므로
+            // SDK 초기화 전 요청될 수 있음 → initialize() 콜백으로 완료 보장
+            // initialize()는 이미 완료된 경우 콜백을 즉시 실행하므로 오버헤드 없음
+            MobileAds.initialize(context) { _ ->
+                activity.runOnUiThread {
+                    // ✅ FIX-TESTDEVICE: 에뮬레이터 테스트 기기 등록 (테스트 광고 수신용)
+                    val reqConfig = RequestConfiguration.Builder()
+                        .setTestDeviceIds(listOf(AdRequest.DEVICE_ID_EMULATOR))
+                        .build()
+                    MobileAds.setRequestConfiguration(reqConfig)
 
-            adLoader.loadAd(AdRequest.Builder().build())
+                    val adLoader = AdLoader.Builder(context, adUnitId)
+                        .forNativeAd { nativeAd ->
+                            activity.runOnUiThread {
+                                placeNativeAd(slotId, nativeAd, x, y, width, height)
+                                call.resolve(JSObject().put("success", true).put("slotId", slotId))
+                            }
+                        }
+                        .withAdListener(object : AdListener() {
+                            override fun onAdFailedToLoad(error: LoadAdError) {
+                                Log.w(TAG, "네이티브 광고 로드 실패 [${error.code}]: ${error.message}")
+                                call.reject(error.message)
+                            }
+                        })
+                        .build()
+
+                    adLoader.loadAd(AdRequest.Builder().build())
+                }
+            }
         }
     }
+
 
     /**
      * 스크롤 시 광고 위치 업데이트
