@@ -23,6 +23,23 @@ import {
 // ✅ ADMOB: 앱 시작 시 AdMob 초기화 (Capacitor 네이티브 환경에서만 동작)
 initAdMob().catch(() => {}); // 웹 환경 실패는 무시
 
+// ✅ DARK-PURGE: 다크모드 완전 제거 — localStorage/html 속성 잔재 초기화
+// 이전 버전에서 다크모드를 사용했던 사용자의 기기에 잔재가 남아 있으면 검은 화면 발생
+// 앱 시작 시 강제로 라이트 모드로 고정
+try {
+  localStorage.removeItem('fishinggo_theme');
+  localStorage.removeItem('theme');
+  localStorage.removeItem('darkMode');
+  localStorage.removeItem('dark_mode');
+  sessionStorage.removeItem('fishinggo_theme');
+  document.documentElement.removeAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', 'light');
+  document.body.style.backgroundColor = '';
+  document.body.style.color = '';
+} catch { /* 스토리지 차단 무시 */ }
+
+
+
 // ─── 카카오 JS SDK 초기화 (공유/소셜 기능용) ─────────────────────────────────
 if (typeof window !== 'undefined' && window.Kakao && !window.Kakao.isInitialized()) {
   const kakaoKey = import.meta.env.VITE_KAKAO_APP_KEY || 'd353be56977b1c13b03d8981bcf8b5ba';
