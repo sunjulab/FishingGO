@@ -251,7 +251,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
     }}>
       <div style={{
-        width: '100%', maxWidth: '480px', backgroundColor: T.card,
+        width: '100%', maxWidth: '480px', backgroundColor: '#ffffff',
         borderRadius: '24px 24px 0 0', padding: '28px 24px 40px',
         animation: 'slideUp 0.3s ease'
       }}>
@@ -261,7 +261,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         <h2 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>
           {ctx.title}
         </h2>
-        <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: T.textSub, textAlign: 'center', marginBottom: '28px' }}>
+        <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#8E8E93', textAlign: 'center', marginBottom: '28px' }}>
           무료로 이용하거나 <strong>LITE 이상</strong>을 구독하세요
         </p>
 
@@ -297,26 +297,26 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
 
         {/* 옵션 2: 무료 광고 시청 */}
         {!adDone ? (
-          <div style={{ border: `1.5px solid ${T.borderMid}`, borderRadius: '18px', padding: '20px' }}>
-            <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '4px', color: T.text }}>
+          <div style={{ border: `1.5px solid #E5E5EA`, borderRadius: '18px', padding: '20px' }}>
+            <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '4px', color: '#1c1c1e' }}>
               📺 30초 광고 시청 후 무료 등록
             </div>
-            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, marginBottom: '16px' }}>
+            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', marginBottom: '16px' }}>
               광고를 시청하면 1회 무료로 이용하실 수 있어요.
             </div>
 
             {adWatching ? (
               <div>
                 {/* 앱: AdMob 보상형 광고 실행 중 | 웹: 타이머 시뮬레이션 */}
-                <div style={{ backgroundColor: T.cardSub, borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ backgroundColor: '#F2F2F7', borderRadius: '12px', padding: '20px', marginBottom: '12px', textAlign: 'center', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ fontSize: `calc(24px * var(--fs, 1))` }}>📺</span>
-                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, marginLeft: '8px', fontWeight: '600' }}>시청 중...</span>
+                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', marginLeft: '8px', fontWeight: '600' }}>시청 중...</span>
                 </div>
                 {/* 진행 바 */}
-                <div style={{ height: '6px', backgroundColor: T.cardSub, borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div style={{ height: '6px', backgroundColor: '#F2F2F7', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
                   <div style={{ height: '100%', width: `${adProgress}%`, backgroundColor: '#0056D2', borderRadius: '3px', transition: 'width 0.9s linear' }} />
                 </div>
-                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, textAlign: 'center' }}>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', textAlign: 'center' }}>
                   {Math.ceil(30 - (adProgress / 100) * 30)}초 후 완료...
                 </div>
               </div>
@@ -342,7 +342,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         {/* 닫기 */}
         <button
           onClick={onClose}
-          style={{ width: '100%', marginTop: '12px', padding: '14px', border: 'none', background: 'none', color: T.textLight, fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', fontWeight: '600' }}
+          style={{ width: '100%', marginTop: '12px', padding: '14px', border: 'none', background: 'none', color: '#8E8E93', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', fontWeight: '600' }}
         >
           취소
         </button>
