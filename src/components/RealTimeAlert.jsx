@@ -50,7 +50,10 @@ export default function RealTimeAlert() {
     const socket = io(SOCKET_URL, {
       auth: token ? { token } : {},
       reconnection: true,
-      reconnectionDelay: 3000,
+      reconnectionAttempts: 3,       // 최대 3번만 재시도 (무한 스피너 방지)
+      reconnectionDelay: 5000,        // 5초 간격 (기존 3초 → 더 여유)
+      reconnectionDelayMax: 15000,    // 최대 15초 대기
+      timeout: 10000,                 // 10초 연결 타임아웃
     });
 
     // ✅ 서버 실시간 낚시 알람 (관리자/서버 push — 실제 기상·조황 정보)

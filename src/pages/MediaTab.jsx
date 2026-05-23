@@ -18,8 +18,8 @@ const CATEGORY_KEYWORDS = {
 };
 
 // ✅ BUG-FIX: VideoCard/SectionHeader 모듈 레벨 추출 — 내부 정의 시 렌더마다 새 컴포넌트 타입 생성 → 완전 재마운트 버그
-// navigate/setSelectedVideo는 props로 전달
-function VideoCard({ video, onSelect, onNavigate }) {
+// T를 props로 전달받아 모듈 레벨에서 useTheme() 미사용 문제 해결
+function VideoCard({ video, onSelect, onNavigate, T }) {
   const isRecent = video.tag === 'recent';
   return (
     <div className="card fade-up" style={{ marginBottom: '20px', backgroundColor: T.card, borderRadius: '28px', overflow: 'hidden', boxShadow: '0 6px 24px rgba(0,0,0,0.07)' }}>
@@ -99,7 +99,7 @@ function VideoCard({ video, onSelect, onNavigate }) {
 }
 
 // ✅ BUG-FIX: SectionHeader 모듈 레벨 추출
-function SectionHeader({ icon, title, subtitle, color }) {
+function SectionHeader({ icon, title, subtitle, color, T }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', marginTop: '8px' }}>
       <div style={{ width: '4px', height: '24px', backgroundColor: color, borderRadius: '2px' }} />
@@ -334,23 +334,23 @@ export default function MediaTab() {
                   <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800' }}>검색 결과가 없습니다</div>
                 </div>
               )}
-              {searchResults.map(v => <VideoCard key={v.youtubeId} video={{ ...v, tag: 'recent' }} onSelect={setSelectedVideo} onNavigate={navigate} />)}
+              {searchResults.map(v => <VideoCard key={v.youtubeId} video={{ ...v, tag: 'recent' }} onSelect={setSelectedVideo} onNavigate={navigate} T={T} />)}
             </>
           ) : (
             <>
               {/* 이번 주 최신 영상 섹션 */}
               {recentVideos.length > 0 && (
                 <>
-                  <SectionHeader icon="🕐" title="이번 주 업로드" subtitle="최근 7일 · 2분 이상 낚시 영상" color="#34C759" />
-                  {recentVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} />)}
+                  <SectionHeader icon="🕐" title="이번 주 업로드" subtitle="최근 7일 · 2분 이상 낚시 영상" color="#34C759" T={T} />
+                  {recentVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} T={T} />)}
                 </>
               )}
 
               {/* 인기 영상 섹션 */}
               {popularVideos.length > 0 && (
                 <div style={{ marginTop: recentVideos.length > 0 ? '8px' : '0' }}>
-                  <SectionHeader icon="🔥" title="이달의 인기 낚시 영상" subtitle="최근 1개월 최고 조회수 · 2분 이상" color="#FF3B30" />
-                  {popularVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} />)}
+                  <SectionHeader icon="🔥" title="이달의 인기 낚시 영상" subtitle="최근 1개월 최고 조회수 · 2분 이상" color="#FF3B30" T={T} />
+                  {popularVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} T={T} />)}
                 </div>
               )}
 
