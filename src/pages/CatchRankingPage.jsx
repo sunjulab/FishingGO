@@ -1,4 +1,4 @@
-import { useTheme } from '../hooks/useTheme';
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, ChevronLeft, X, ChevronRight, Trash2 } from 'lucide-react';
@@ -142,7 +142,7 @@ function PhotoViewer({ records, initialIndex, onClose, onLike, onDelete, userId,
 
 /* ─── 메인 페이지 ─────────────────────────────────────────────── */
 export default function CatchRankingPage({ embedded = false }) {
-  const T = useTheme(); // ✅ DARK-MODE
+
   const navigate = useNavigate();
   const user     = useUserStore(s => s.user);
   const addToast = useToastStore(s => s.addToast);
