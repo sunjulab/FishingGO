@@ -13,6 +13,7 @@
  * 3. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { useTheme } from '../hooks/useTheme';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { showRewardedAd } from '../services/AdMobService';
@@ -136,6 +137,7 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
 //  [정지 방지] 유저 자발적 선택만 허용 — 강제 팝업 금지
 // ─────────────────────────────────────────────────────────────────
 export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe, context = 'post' }) {
+  const T = useTheme(); // ✅ DARK-MODE
   const [adWatching, setAdWatching] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
   const [adDone, setAdDone] = useState(false);

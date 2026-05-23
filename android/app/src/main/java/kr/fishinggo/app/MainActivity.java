@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 
+import com.google.android.gms.ads.MobileAds;
+
 import androidx.activity.OnBackPressedCallback;
 
 import com.getcapacitor.BridgeActivity;
@@ -19,6 +21,12 @@ public class MainActivity extends BridgeActivity {
         // ✅ NATIVE-AD: 인피드 네이티브 광고 플러그인 등록 (super.onCreate 전에 호출)
         registerPlugin(NativeAdPlugin.class);
         super.onCreate(savedInstanceState);
+
+        // ✅ ADMOB-INIT: AdMob SDK 초기화 (광고 로드 전 반드시 호출 필수)
+        // initialize() 호출 없이 loadAd() 하면 광고 서버 연결 자체가 불가
+        MobileAds.initialize(this, initializationStatus -> {
+            android.util.Log.d("AdMob", "AdMob SDK initialized: " + initializationStatus);
+        });
 
         // ✅ 결제 연동: intent:// / market:// URL 처리 (카카오페이, 네이버페이, 토스 등)
         // BridgeWebViewClient 상속 → Capacitor 기본 동작 유지 + 결제 앱 전환 추가
