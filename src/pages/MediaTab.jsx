@@ -1,3 +1,4 @@
+import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Tv, Search, X, ShoppingBag as BagIcon, Maximize2, Clock, User2, Loader2 } from 'lucide-react';
@@ -21,7 +22,7 @@ const CATEGORY_KEYWORDS = {
 function VideoCard({ video, onSelect, onNavigate }) {
   const isRecent = video.tag === 'recent';
   return (
-    <div className="card fade-up" style={{ marginBottom: '20px', backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 6px 24px rgba(0,0,0,0.07)' }}>
+    <div className="card fade-up" style={{ marginBottom: '20px', backgroundColor: T.card, borderRadius: '28px', overflow: 'hidden', boxShadow: '0 6px 24px rgba(0,0,0,0.07)' }}>
       {/* 썸네일 */}
       <div style={{ position: 'relative', paddingTop: '56.25%', backgroundColor: '#000', cursor: 'pointer' }} onClick={() => onSelect(video)}>
         <img src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`} alt={video.title}
@@ -58,14 +59,14 @@ function VideoCard({ video, onSelect, onNavigate }) {
             </div>
           )}
           {video.publishedAt && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>
               <Clock size={11} />{timeAgo(video.publishedAt)}
             </div>
           )}
         </div>
-        <h2 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E', marginBottom: '7px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h2>
+        <h2 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: T.text, marginBottom: '7px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h2>
         {video.description && (
-          <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.description}</p>
+          <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, fontWeight: '600', marginBottom: '16px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.description}</p>
         )}
 
         {/* 쿠팡 상품 */}
@@ -73,15 +74,15 @@ function VideoCard({ video, onSelect, onNavigate }) {
           <div style={{ borderTop: '1px solid #F2F2F7', paddingTop: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
               <BagIcon size={15} color="#FF5A5F" />
-              <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E' }}>필수 장비 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span>종</span>
+              <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: T.text }}>필수 장비 <span style={{ color: '#FF5A5F' }}>{video.products.length}</span>종</span>
             </div>
             {video.products.slice(0, 1).map((item, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: '#F8F9FA', padding: '10px', borderRadius: '16px', border: '1.5px solid #F2F2F7' }}>
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: T.cardSub, padding: '10px', borderRadius: '16px', border: `1.5px solid ${T.border}` }}>
                 <div style={{ width: '54px', height: '54px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }}>
                   <img src={item.img} alt={item.name || '낚시 장비'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1C1C1E', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: T.text, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950' }}>{item.price}</span>
                     {item.discount && <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 5px', borderRadius: '5px' }}>{item.discount} ↓</span>}
@@ -103,8 +104,8 @@ function SectionHeader({ icon, title, subtitle, color }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', marginTop: '8px' }}>
       <div style={{ width: '4px', height: '24px', backgroundColor: color, borderRadius: '2px' }} />
       <div>
-        <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E' }}>{icon} {title}</div>
-        {subtitle && <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', marginTop: '2px' }}>{subtitle}</div>}
+        <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: T.text }}>{icon} {title}</div>
+        {subtitle && <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: T.textSub, marginTop: '2px' }}>{subtitle}</div>}
       </div>
     </div>
   );
@@ -121,6 +122,7 @@ function timeAgo(dateStr) {
 }
 
 export default function MediaTab() {
+  const T = useTheme(); // ✅ DARK-MODE
   const [activeChip, setActiveChip] = useState('전체');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -233,7 +235,7 @@ export default function MediaTab() {
   // VideoCard, SectionHeader → 모듈 레벨 컴포넌트 (위로 이동됨 — 렌더마다 재생성 방지)
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F2F2F7', overflowX: 'hidden' }}>
+    <div className="page-container" style={{ backgroundColor: T.cardSub, overflowX: 'hidden' }}>
 
       {/* 전체화면 모달 */}
       {selectedVideo && (
@@ -269,11 +271,11 @@ export default function MediaTab() {
       )}
 
       {/* 헤더 */}
-      <div style={{ backgroundColor: '#fff', padding: '30px 20px 10px', borderBottom: '1px solid #E5E5EA' }}>
+      <div style={{ backgroundColor: T.card, padding: '30px 20px 10px', borderBottom: '1px solid #E5E5EA' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ padding: '8px', backgroundColor: '#0056D2', borderRadius: '14px', color: '#fff' }}><Tv size={22} /></div>
-            <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E', margin: 0 }}>낚시채널</h1>
+            <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '950', color: T.text, margin: 0 }}>낚시채널</h1>
           </div>
           {/* 통합 피드 안내 뱃지 */}
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
@@ -282,18 +284,18 @@ export default function MediaTab() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-          <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>📅 이번 주 최신 + 🔥 이달의 인기 · 2분 이상 영상</span>
+          <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>📅 이번 주 최신 + 🔥 이달의 인기 · 2분 이상 영상</span>
         </div>
         <div style={{ position: 'relative', marginBottom: '16px' }}>
-          <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#8E8E93' }} size={18} />
+          <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: T.textSub }} size={18} />
           <input type="text" placeholder="검색어 입력 후 Enter (예: 돌돔 낚시)"
             value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={handleSearch}
-            style={{ width: '100%', padding: '16px 16px 16px 48px', backgroundColor: '#F2F2F7', border: 'none', borderRadius: '18px', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+            style={{ width: '100%', padding: '16px 16px 16px 48px', backgroundColor: T.cardSub, border: 'none', borderRadius: '18px', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
         </div>
       </div>
 
       {/* 카테고리 */}
-      <div style={{ backgroundColor: '#fff', padding: '0 0 14px', borderBottom: '1px solid #E5E5EA', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100 }}>
+      <div style={{ backgroundColor: T.card, padding: '0 0 14px', borderBottom: '1px solid #E5E5EA', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100 }}>
         <div style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '12px 20px 0', scrollbarWidth: 'none' }}>
           {CATEGORIES.map(c => (
             <button key={c} onClick={() => handleChipClick(c)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', backgroundColor: activeChip === c ? '#0056D2' : '#F2F2F7', color: activeChip === c ? '#fff' : '#8E8E93', whiteSpace: 'nowrap', transition: 'all 0.2s', cursor: 'pointer' }}>
@@ -307,7 +309,7 @@ export default function MediaTab() {
       {loading && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 0', gap: '14px' }}>
           <Loader2 size={32} style={{ animation: 'spin 0.8s linear infinite' }} color="#0056D2" />
-          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93' }}>최신 + 인기 낚시 영상 불러오는 중... 🐟</span>
+          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: T.textSub }}>최신 + 인기 낚시 영상 불러오는 중... 🐟</span>
         </div>
       )}
 
@@ -327,7 +329,7 @@ export default function MediaTab() {
                 color={searchChannelId ? '#FF0000' : '#0056D2'}
               />
               {searchResults.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#8E8E93' }}>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: T.textSub }}>
                   <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '12px' }}>🎣</div>
                   <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800' }}>검색 결과가 없습니다</div>
                 </div>
@@ -354,9 +356,9 @@ export default function MediaTab() {
 
               {/* 완전 비어있는 경우 */}
               {recentVideos.length === 0 && popularVideos.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8E8E93' }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: T.textSub }}>
                   <div style={{ fontSize: `calc(48px * var(--fs, 1))`, marginBottom: '16px' }}>🎣</div>
-                  <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', marginBottom: '8px', color: '#1C1C1E' }}>영상을 불러오는 중입니다</div>
+                  <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', marginBottom: '8px', color: T.text }}>영상을 불러오는 중입니다</div>
                   <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '600' }}>잠시 후 다시 시도해주세요</div>
                 </div>
               )}

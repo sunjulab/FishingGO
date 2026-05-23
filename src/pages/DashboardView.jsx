@@ -1,3 +1,4 @@
+import { useTheme } from '../hooks/useTheme';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -53,6 +54,7 @@ export default function DashboardView({
   setShowCCTV,
 }) {
   const navigate = useNavigate();
+  const T = useTheme(); // ✅ DARK-MODE
 
   return (
     <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
@@ -60,24 +62,24 @@ export default function DashboardView({
 
         {/* 검색바 + 드롭다운 */}
         <div style={{ padding: '16px 16px 0', position: 'relative', zIndex: 50 }} ref={searchRef}>
-          <div style={{ height: '48px', backgroundColor: '#fff', borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '10px', border: '1.5px solid #EBF2FF', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+          <div style={{ height: '48px', backgroundColor: T.card, borderRadius: '14px', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '10px', border: '1.5px solid #EBF2FF', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
             <Search size={16} color="#1565C0" strokeWidth={3} />
             <input
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => searchQuery && setShowSearch(true)}
               placeholder="포인트, 어종, 지역 검색하여 현재 화면에 반영"
-              style={{ border: 'none', background: 'none', fontSize: `calc(13.5px * var(--fs, 1))`, fontWeight: '800', outline: 'none', width: '100%', color: '#1A1A2E' }}
+              style={{ border: 'none', background: 'none', fontSize: `calc(13.5px * var(--fs, 1))`, fontWeight: '800', outline: 'none', width: '100%', color: T.text }}
             />
             {searchQuery && (
-              <button onClick={() => { setSearchQuery(''); setSearchResults([]); setShowSearch(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#AAB0BE', padding: 0 }}>
+              <button onClick={() => { setSearchQuery(''); setSearchResults([]); setShowSearch(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textLight, padding: 0 }}>
                 <X size={16} />
               </button>
             )}
           </div>
 
           {showSearch && searchResults.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff', borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, maxHeight: '280px', overflowY: 'auto', marginTop: '6px' }}>
+            <div style={{ position: 'absolute', top: '100%', left: '16px', right: '16px', background: T.card, borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, maxHeight: '280px', overflowY: 'auto', marginTop: '6px' }}>
               {searchResults.map((p, i) => (
                 <div key={p.id}
                   onClick={() => { handlePointClick(p, true); setShowSearch(false); setSearchQuery(''); setSearchResults([]); }}
@@ -89,8 +91,8 @@ export default function DashboardView({
                     {EMOJI_MAP[p.type] || '⚓'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
+                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textSub, fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
                   </div>
                   {(() => {
                     const _st = findNearestStation(p.lat, p.lng);
@@ -105,7 +107,7 @@ export default function DashboardView({
                         <div style={{ background: _col, borderRadius: '6px', padding: '3px 8px' }}>
                           <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{_label}</span>
                         </div>
-                        <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700' }}>{_sc}점</span>
+                        <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: T.textLight, fontWeight: '700' }}>{_sc}점</span>
                       </div>
                     );
                   })()}
@@ -114,9 +116,9 @@ export default function DashboardView({
             </div>
           )}
           {showSearch && searchResults.length === 0 && searchQuery && (
-            <div style={{ position: 'absolute', top: '100%', left: '16px', right: '16px', background: '#fff', borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, padding: '20px', textAlign: 'center', marginTop: '6px' }}>
+            <div style={{ position: 'absolute', top: '100%', left: '16px', right: '16px', background: T.card, borderRadius: '14px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #F0F2F7', zIndex: 100, padding: '20px', textAlign: 'center', marginTop: '6px' }}>
               <AlertCircle size={24} color="#AAB0BE" style={{ margin: '0 auto 8px' }} />
-              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800' }}>검색 결과가 없어요</div>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, fontWeight: '800' }}>검색 결과가 없어요</div>
             </div>
           )}
         </div>
@@ -216,7 +218,7 @@ export default function DashboardView({
                     style={{ flexShrink: 0, background: canAccessPremium ? 'rgba(255,215,0,0.9)' : 'rgba(255,255,255,0.15)', border: canAccessPremium ? 'none' : '1px solid rgba(255,255,255,0.2)', borderRadius: '30px', padding: '6px 14px', display: 'inline-flex', flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', userSelect: 'none', WebkitUserSelect: 'none' }}
                   >
                     <Tv size={13} color="#1A1A2E" style={{ flexShrink: 0, display: 'block' }} />
-                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', lineHeight: 1, flexShrink: 0, whiteSpace: 'nowrap' }}>실시간 영상</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: T.text, lineHeight: 1, flexShrink: 0, whiteSpace: 'nowrap' }}>실시간 영상</span>
                   </div>
                 )}
               </div>
@@ -229,11 +231,11 @@ export default function DashboardView({
 
         {/* AI 낚시 적합도 게이지 */}
         <div style={{ padding: '12px 16px 0' }}>
-          <div style={{ background: '#fff', borderRadius: '20px', padding: '16px 18px', border: '1.5px solid #F0F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
+          <div style={{ background: T.card, borderRadius: '20px', padding: '16px 18px', border: '1.5px solid #F0F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: `calc(15px * var(--fs, 1))` }}>🎯</span>
-                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E' }}>AI 낚시 적합도</span>
+                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: T.text }}>AI 낚시 적합도</span>
               </div>
               <div style={{ background: score >= 90 ? 'linear-gradient(135deg, #00C48C, #00897B)' : score >= 75 ? 'linear-gradient(135deg, #1565C0, #1E88E5)' : score >= 50 ? 'linear-gradient(135deg, #FF9B26, #F57F17)' : 'linear-gradient(135deg, #FF5A5F, #D32F2F)', borderRadius: '20px', padding: '4px 12px' }}>
                 <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>
@@ -246,9 +248,9 @@ export default function DashboardView({
                 <div style={{ height: '100%', width: `${score}%`, background: score >= 90 ? 'linear-gradient(90deg, #00C48C, #00E5A8)' : score >= 75 ? 'linear-gradient(90deg, #1565C0, #42A5F5)' : score >= 50 ? 'linear-gradient(90deg, #FF9B26, #FFD54F)' : 'linear-gradient(90deg, #FF5A5F, #FF8A80)', borderRadius: '6px', transition: 'width 1s cubic-bezier(0.25, 1, 0.5, 1)', boxShadow: score >= 90 ? '0 0 8px rgba(0,196,140,0.6)' : 'none' }} className={score >= 90 ? 'gauge-pulse' : ''} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-                <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700' }}>0</span>
+                <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: T.textLight, fontWeight: '700' }}>0</span>
                 <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', color: score >= 90 ? '#00C48C' : score >= 75 ? '#1565C0' : score >= 50 ? '#FF9B26' : '#FF5A5F' }}>{score}점</span>
-                <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700' }}>100</span>
+                <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: T.textLight, fontWeight: '700' }}>100</span>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
@@ -259,7 +261,7 @@ export default function DashboardView({
                 { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물') },
               ].map(item => (
                 <div key={item.label} style={{ background: item.ok ? 'rgba(0,196,140,0.08)' : 'rgba(255,90,95,0.08)', border: `1px solid ${item.ok ? 'rgba(0,196,140,0.25)' : 'rgba(255,90,95,0.25)'}`, borderRadius: '10px', padding: '7px 4px', textAlign: 'center' }}>
-                  <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{item.label}</div>
+                  <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>{item.label}</div>
                   <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', color: item.ok ? '#00C48C' : '#FF5A5F', marginTop: '2px' }}>{item.val}</div>
                   <div style={{ fontSize: `calc(8px * var(--fs, 1))`, color: item.ok ? '#00C48C' : '#FF5A5F', fontWeight: '800' }}>{item.ok ? '✓ 양호' : '✗ 주의'}</div>
                 </div>
@@ -296,7 +298,7 @@ export default function DashboardView({
               },
             ].map((m, index) => (
               <div key={index} onClick={m.action} style={{ textAlign: 'center', cursor: 'pointer' }}>
-                <div style={{ width: '100%', aspectRatio: '1/1', backgroundColor: '#fff', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px', boxShadow: (!m.locked && m.label === '비밀포인트') ? '0 3px 14px rgba(255,200,0,0.25)' : '0 2px 8px rgba(0,0,0,0.05)', border: (!m.locked && m.label === '비밀포인트') ? '1.5px solid rgba(255,215,0,0.45)' : '1px solid #F0F2F7', transition: 'transform 0.15s' }}
+                <div style={{ width: '100%', aspectRatio: '1/1', backgroundColor: T.card, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px', boxShadow: (!m.locked && m.label === '비밀포인트') ? '0 3px 14px rgba(255,200,0,0.25)' : '0 2px 8px rgba(0,0,0,0.05)', border: (!m.locked && m.label === '비밀포인트') ? '1.5px solid rgba(255,215,0,0.45)' : '1px solid #F0F2F7', transition: 'transform 0.15s' }}
                   onMouseDown={e => e.currentTarget.style.transform = 'scale(0.93)'}
                   onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -315,10 +317,10 @@ export default function DashboardView({
 
         {/* 피딩 타임 */}
         <div style={{ padding: '10px 16px 6px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '12px 14px', border: '1.5px solid #F0F2F7' }}>
+          <div style={{ background: T.card, borderRadius: '16px', padding: '12px 14px', border: '1.5px solid #F0F2F7' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
               <Zap size={13} color="#FFB300" fill="#FFB300" />
-              <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginLeft: '5px' }}>피딩 타임</span>
+              <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: T.text, marginLeft: '5px' }}>피딩 타임</span>
               <span style={{ marginLeft: 'auto', fontSize: `calc(10px * var(--fs, 1))`, color: isGolden ? '#E65100' : '#8E8E93', fontWeight: '800' }}>
                 {isGolden ? '🌟 황금물때' : phase.split('(')[0]}
               </span>
@@ -396,8 +398,8 @@ export default function DashboardView({
                 <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,215,0,0.75)', fontWeight: '700' }}>비밀 포인트 · CCTV · 히트맵 이용</div>
               </div>
               <div style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(135deg, #FFD700, #FFA000)', borderRadius: '30px', padding: '9px 16px', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, boxShadow: '0 4px 14px rgba(255,215,0,0.4)' }}>
-                <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap' }}>구독하러 가기</span>
-                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#1A1A2E', fontWeight: '900' }}>›</span>
+                <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', color: T.text, whiteSpace: 'nowrap' }}>구독하러 가기</span>
+                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.text, fontWeight: '900' }}>›</span>
               </div>
             </div>
           )}
@@ -406,7 +408,7 @@ export default function DashboardView({
         {/* 우수 포인트 랭킹 */}
         <div style={{ marginTop: '14px' }}>
           <div style={{ padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h3 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <h3 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: T.text, margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
               {filter === '전체' ? '실시간 우수 포인트' : `${EMOJI_MAP[filter] || ''} ${filter} 점수 순위`}
               <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#E8F4FF', color: '#1565C0', padding: '2px 7px', borderRadius: '10px', fontWeight: '900' }}>LIVE</span>
             </h3>
@@ -414,7 +416,7 @@ export default function DashboardView({
           </div>
           <div style={{ display: 'flex', overflowX: 'auto', gap: '10px', padding: '2px 16px 10px', scrollbarWidth: 'none' }}>
             {PREMIUM_POINTS.length === 0 ? (
-              <div style={{ padding: '24px 16px', textAlign: 'center', color: '#AAB0BE', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>
+              <div style={{ padding: '24px 16px', textAlign: 'center', color: T.textLight, fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>
                 {filter} 포인트 데이터가 없습니다.<br />
                 <span style={{ fontSize: `calc(11px * var(--fs, 1))` }}>전체 보기로 전환하거나 다른 타입을 선택해주세요.</span>
               </div>
@@ -425,7 +427,7 @@ export default function DashboardView({
               return (
                 <div key={point.id}
                   onClick={() => { setViewMode('map'); handlePointClick(point); }}
-                  style={{ minWidth: '140px', background: '#fff', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(0,0,0,0.06)', border: `1px solid ${rank === 0 ? 'rgba(0,196,140,0.35)' : '#F0F2F7'}`, cursor: 'pointer', transition: 'transform 0.15s' }}
+                  style={{ minWidth: '140px', background: T.card, borderRadius: '15px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(0,0,0,0.06)', border: `1px solid ${rank === 0 ? 'rgba(0,196,140,0.35)' : '#F0F2F7'}`, cursor: 'pointer', transition: 'transform 0.15s' }}
                   onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
                   onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -439,10 +441,10 @@ export default function DashboardView({
                     </div>
                   </div>
                   <div style={{ padding: '8px 10px' }}>
-                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{point.name}</div>
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: T.text, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{point.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: `calc(8px * var(--fs, 1))`, background: '#F0F5FF', color: '#1565C0', padding: '1px 5px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>{point.type}</span>
-                      <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{point.region} · {point.fish.split(',')[0]}</span>
+                      <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: T.textLight, fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{point.region} · {point.fish.split(',')[0]}</span>
                     </div>
                   </div>
                 </div>
@@ -453,27 +455,27 @@ export default function DashboardView({
 
         {/* 조황 보고 */}
         <div style={{ padding: '10px 16px' }}>
-          <h3 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>방금 올라온 조황</h3>
+          <h3 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: T.text, marginBottom: '10px' }}>방금 올라온 조황</h3>
           {recentPosts.length > 0 ? recentPosts.map(post => (
             <div
               key={String(post._id || post.id)}
               onClick={() => navigate(`/community?tab=open&postId=${String(post._id || post.id)}`)}
-              style={{ background: '#fff', borderRadius: '12px', padding: '10px 12px', marginBottom: '8px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #F0F2F7', cursor: 'pointer', transition: 'all 0.18s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+              style={{ background: T.card, borderRadius: '12px', padding: '10px 12px', marginBottom: '8px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #F0F2F7', cursor: 'pointer', transition: 'all 0.18s ease', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
               onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,86,210,0.13)'; e.currentTarget.style.borderColor = '#C8D8F5'; }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = '#F0F2F7'; }}
             >
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #0056D2, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: `calc(18px * var(--fs, 1))` }}>🎣</div>
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(post.content || '').slice(0, 80)}</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(post.content || '').slice(0, 80)}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                  <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700' }}>@{post.author}</span>
+                  <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textLight, fontWeight: '700' }}>@{post.author}</span>
                   <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#F0F5FF', color: '#0056D2', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
                 </div>
               </div>
               <div style={{ color: '#C8D8F5', flexShrink: 0 }}>›</div>
             </div>
           )) : (
-            <div style={{ padding: '14px', textAlign: 'center', color: '#AAB0BE', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', border: '1px dotted #D0D5E0', borderRadius: '12px' }}>
+            <div style={{ padding: '14px', textAlign: 'center', color: T.textLight, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', border: '1px dotted #D0D5E0', borderRadius: '12px' }}>
               오늘의 첫 조황을 공유해보세요! 🎣
             </div>
           )}

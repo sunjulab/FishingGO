@@ -1,3 +1,4 @@
+import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Zap, ShoppingBag, Search, SlidersHorizontal, X } from 'lucide-react';
 import apiClient from '../api/index';
@@ -23,6 +24,7 @@ const SOURCE_STYLE = {
 };
 
 export default function Shop() {
+  const T = useTheme(); // ✅ DARK-MODE
   const [products,     setProducts]     = useState([]);
   const [promos,       setPromos]       = useState([]);
   const [search,       setSearch]       = useState('');
@@ -110,16 +112,16 @@ export default function Shop() {
     : `${activeCat} 상품`;
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '80px' }}>
+    <div className="page-container" style={{ backgroundColor: T.cardSub, paddingBottom: '80px' }}>
 
       {/* ── 헤더 + 검색 ── */}
-      <div style={{ backgroundColor: '#fff', padding: '10px 16px 8px', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
+      <div style={{ backgroundColor: T.card, padding: '10px 16px 8px', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <ShoppingBag size={16} color="#0056D2" />
-          <h1 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.03em', margin: 0 }}>
+          <h1 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: T.text, letterSpacing: '-0.03em', margin: 0 }}>
             낚시 장비 쇼핑
           </h1>
-          <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', marginLeft: 'auto' }}>
+          <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: T.textSub, marginLeft: 'auto' }}>
             Coupang + AliExpress 🎣
           </span>
         </div>
@@ -129,7 +131,7 @@ export default function Shop() {
             placeholder="낚시 장비 검색"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '10px 40px 10px 40px', backgroundColor: '#F2F2F7', border: `1.5px solid ${searchQuery ? '#0056D2' : 'transparent'}`, borderRadius: '14px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+            style={{ width: '100%', padding: '10px 40px 10px 40px', backgroundColor: T.cardSub, border: `1.5px solid ${searchQuery ? '#0056D2' : 'transparent'}`, borderRadius: '14px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
           />
           <Search size={16} color="#8E8E93" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           {/* 검색어 있을 때 X 버튼 */}
@@ -152,7 +154,7 @@ export default function Shop() {
       </div>
 
       {/* ── 카테고리 탭 ── */}
-      <div style={{ backgroundColor: '#fff', padding: '6px 16px 8px', borderBottom: '1px solid #F0F0F0' }}>
+      <div style={{ backgroundColor: T.card, padding: '6px 16px 8px', borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
           {CATEGORIES.map((c) => (
             <div
@@ -178,7 +180,7 @@ export default function Shop() {
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <Zap size={15} color="#FF6900" fill="#FF6900" />
-            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>AliExpress 오늘 특가 🔥</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: T.text }}>AliExpress 오늘 특가 🔥</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '4px' }}>
             {promoLoading
@@ -194,7 +196,7 @@ export default function Shop() {
                     <img src={p.img} alt={p.name} style={{ width: '54px', height: '54px', objectFit: 'cover', borderRadius: '10px', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#FF6900', fontWeight: '900', marginBottom: '2px' }}>{p.badge}</div>
-                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: T.text, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {p.name}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
@@ -211,7 +213,7 @@ export default function Shop() {
       {/* ── 상품 그리드 (Coupang + AliExpress 통합) ── */}
       <div style={{ padding: '12px 12px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingLeft: '4px' }}>
-          <h3 style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', margin: 0 }}>
+          <h3 style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: T.text, margin: 0 }}>
             {gridTitle}
           </h3>
           <SlidersHorizontal size={15} color="#8E8E93" />
@@ -242,9 +244,9 @@ export default function Shop() {
               ))
             : products.length === 0
             ? (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: '#8E8E93' }}>
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: T.textSub }}>
                   <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '8px' }}>🎣</div>
-                  <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', marginBottom: '4px' }}>상품을 불러오지 못했습니다</div>
+                  <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: T.text, marginBottom: '4px' }}>상품을 불러오지 못했습니다</div>
                   <div style={{ fontSize: `calc(12px * var(--fs, 1))` }}>잠시 후 다시 시도해주세요</div>
                 </div>
               )
@@ -254,7 +256,7 @@ export default function Shop() {
                   <div
                     key={p.id}
                     onClick={() => handleProductClick(p)}
-                    style={{ backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #F2F2F7', cursor: 'pointer', position: 'relative' }}
+                    style={{ backgroundColor: T.card, borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: `1px solid ${T.border}`, cursor: 'pointer', position: 'relative' }}
                   >
                     {/* 플랫폼 라벨 */}
                     <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: srcStyle.bg, color: srcStyle.text, padding: '2px 5px', borderRadius: '5px', fontSize: `calc(8px * var(--fs, 1))`, fontWeight: '900', zIndex: 2 }}>
@@ -273,12 +275,12 @@ export default function Shop() {
                     {/* 정보 */}
                     <div style={{ padding: '8px' }}>
                       <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: srcStyle.bg, fontWeight: '900', marginBottom: '2px' }}>{p.badge}</div>
-                      <h3 style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', margin: '0 0 4px' }}>
+                      <h3 style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '850', color: T.text, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', margin: '0 0 4px' }}>
                         {p.name}
                       </h3>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
                         <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
-                        <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>원</span>
+                        <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: T.text }}>원</span>
                       </div>
                       {/* AliExpress: 수수료율 표시 */}
                       {p.source === 'ali' && p.commission && (

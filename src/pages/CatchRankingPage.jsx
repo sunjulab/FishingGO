@@ -282,7 +282,7 @@ export default function CatchRankingPage({ embedded = false }) {
 
         {/* ── embedded 필터 ── */}
         {embedded && (
-          <div style={{ padding: '12px 16px 10px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ padding: '12px 16px 10px', background: T.card, borderBottom: '1px solid #f0f0f0' }}>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
               {PERIOD_TABS.map(t => (
                 <button key={t.key} onClick={() => setPeriod(t.key)} style={{ padding: '5px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`, background: period === t.key ? T.tabActive : T.tabInactive, color: period === t.key ? T.tabActiveTxt : T.tabInactiveTxt, transition: 'all 0.18s' }}>{t.label}</button>

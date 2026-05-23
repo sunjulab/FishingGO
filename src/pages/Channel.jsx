@@ -1,3 +1,4 @@
+import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useMemo } from 'react'; // ✅ 12TH-B5: useMemo 추가
 import ReactPlayer from 'react-player';
 // ✅ 12TH-B3: Info, Star dead import 2개 제거
@@ -70,6 +71,7 @@ const TUTORIAL_VIDEOS = [
 const CATEGORIES = ['전체', '감성돔', '무늬오징어', '광어/우럭', '쭈꾸미/갑오징어', '루어'];
 
 export default function Channel() {
+  const T = useTheme(); // ✅ DARK-MODE
   const [filter, setFilter] = useState('전체');
   const [playingVideo, setPlayingVideo] = useState(null);
   // NEW-C1: 서버 fetch + 정적 fallback
@@ -127,7 +129,7 @@ export default function Channel() {
   );
 
   return (
-    <div style={{ backgroundColor: '#F8F9FA', minHeight: '100vh', paddingBottom: '100px' }}>
+    <div style={{ backgroundColor: T.cardSub, minHeight: '100vh', paddingBottom: '100px' }}>
       {/* Premium Header */}
       <div style={{ background: 'linear-gradient(135deg, #0056D2 0%, #00308F 100%)', padding: '60px 24px 40px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
@@ -180,7 +182,7 @@ export default function Channel() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
             {filteredVideos.map((video, index) => (
               <React.Fragment key={video.id}>
-                <div style={{ backgroundColor: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7' }}>
+                <div style={{ backgroundColor: T.card, borderRadius: '32px', overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.04)', border: `1.5px solid ${T.border}` }}>
                     {/* Thumbnail Area */}
                     <div style={{ position: 'relative', width: '100%', height: '200px', cursor: 'pointer' }} onClick={() => setPlayingVideo(video)}>
                         <img
@@ -199,7 +201,7 @@ export default function Channel() {
 
                     <div style={{ padding: '20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                             <h3 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1C1C1E', flex: 1, marginRight: '10px' }}>{video.title}</h3>
+                             <h3 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: T.text, flex: 1, marginRight: '10px' }}>{video.title}</h3>
                              {/* NEW-B1: 북마크 버튼 — localStorage 저장 */}
                              <Bookmark
                                size={18}
@@ -209,17 +211,17 @@ export default function Channel() {
                                style={{ cursor: 'pointer', flexShrink: 0, transition: 'color 0.2s' }}
                              />
                         </div>
-                        <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '500', marginBottom: '20px', lineHeight: 1.4 }}>{video.description}</p>
+                        <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, fontWeight: '500', marginBottom: '20px', lineHeight: 1.4 }}>{video.description}</p>
                         
                         {/* Shopping Tag Section (Coupang Partners Structure) */}
-                        <div style={{ backgroundColor: '#F8F9FA', borderRadius: '24px', padding: '16px' }}>
+                        <div style={{ backgroundColor: T.cardSub, borderRadius: '24px', padding: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                 <ShoppingBag size={16} color="#0056D2" />
                                 <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#0056D2' }}>영상 속 추천 장비</span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                              {video.gear.map(item => (
-                                    <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '10px 16px', borderRadius: '16px', border: '1px solid #F2F2F7' }}>
+                                    <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: T.card, padding: '10px 16px', borderRadius: '16px', border: `1px solid ${T.border}` }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                             <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800' }}>{item.name}</span>
                                             <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#FF5A5F', fontWeight: '900' }}>{item.price}</span>
@@ -232,7 +234,7 @@ export default function Channel() {
                                               : `https://www.coupang.com/np/search?q=${encodeURIComponent(item.name)}${COUPANG_PID ? `&sourceType=affiliate&affiliateCode=${COUPANG_PID}` : ''}`;
                                             window.open(searchUrl, '_blank', 'noopener,noreferrer');
                                           }}
-                                          style={{ padding: '8px 12px', borderRadius: '12px', backgroundColor: '#F2F2F7', border: 'none', color: '#1C1C1E', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                                          style={{ padding: '8px 12px', borderRadius: '12px', backgroundColor: T.cardSub, border: 'none', color: T.text, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
                                         >
                                             보러가기 <ExternalLink size={12} />
                                         </button>
@@ -253,10 +255,10 @@ export default function Channel() {
 
         {/* NEW-B2: 프리미엄 Empty State */}
         {filteredVideos.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: '32px', border: '1.5px dashed #E0E0E0' }}>
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: T.card, borderRadius: '32px', border: '1.5px dashed #E0E0E0' }}>
             <div style={{ fontSize: `calc(48px * var(--fs, 1))`, marginBottom: '16px' }}>🎬</div>
-            <p style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1C1C1E', marginBottom: '8px' }}>영상을 준비 중입니다</p>
-            <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', lineHeight: 1.5 }}>
+            <p style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: T.text, marginBottom: '8px' }}>영상을 준비 중입니다</p>
+            <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, fontWeight: '700', lineHeight: 1.5 }}>
               [<span style={{ fontWeight: '900' }}>{filter}</span>] 카테고리의 튜토리얼이<br />준비 중입니다. 다른 카테고리를 확인해보세요!
               {/* ✅ 2ND-C2: "공비" → "준비" 오타 수정 */}
             </p>

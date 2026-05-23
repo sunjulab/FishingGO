@@ -1,3 +1,4 @@
+import { useTheme } from '../hooks/useTheme';
 import React, { useMemo } from 'react'; // ✅ 16TH-C3: useMemo 추가
 
 /**
@@ -5,6 +6,7 @@ import React, { useMemo } from 'react'; // ✅ 16TH-C3: useMemo 추가
  * CSS .skeleton 클래스는 index.css에 정의됨
  */
 export default function SkeletonCard({ count = 5 }) {
+  const T = useTheme(); // ✅ DARK-MODE
   // ✅ 16TH-C3: [...Array(count)] 매 렌더마다 새로운 배열 생성 막기 — count 변경 시에만 재생성
   const items = useMemo(() => Array.from({ length: count }, (_, i) => i), [count]);
   return (
@@ -14,7 +16,7 @@ export default function SkeletonCard({ count = 5 }) {
           key={`skeleton-${i}`}
           className="fade-in"
           style={{
-            background: '#fff',
+            background: T.card,
             borderRadius: '16px',
             padding: '20px',
             marginBottom: '12px',

@@ -1,13 +1,13 @@
 /**
  * GoogleIAPService.js
  * cordova-plugin-purchase v13 — 구글 플레이 인앱결제
- * BASIC(9,900/월) · PRO(110,000/년) · VVIP(550,000/월) 전 플랜 지원
+ * BASIC(9,900/월) · PRO(110,000/월) · VVIP(550,000/월) 전 플랜 지원
  */
 
 // ── 상품 ID (Google Play Console에 등록된 값과 동일해야 함) ──────
 export const IAP_PRODUCTS = {
   BASIC: { id: 'kr.fishinggo.app.lite_monthly',  type: 'PAID_SUBSCRIPTION', price: 9900,   label: 'BASIC', tier: 'BUSINESS_LITE' },
-  PRO:   { id: 'kr.fishinggo.app.pro_yearly',    type: 'PAID_SUBSCRIPTION', price: 110000, label: 'PRO',   tier: 'PRO'           },
+  PRO:   { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 110000, label: 'PRO',   tier: 'PRO'           },
   VVIP:  { id: 'kr.fishinggo.app.vvip_monthly',  type: 'PAID_SUBSCRIPTION', price: 550000, label: 'VVIP',  tier: 'BUSINESS_VIP'  },
 };
 
