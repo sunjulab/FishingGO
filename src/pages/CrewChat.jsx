@@ -1,4 +1,3 @@
-import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -29,7 +28,6 @@ const RoleTag = ({ role }) => {
 };
 
 export default function CrewChat() {
-  const T = useTheme(); // ✅ DARK-MODE
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useUserStore(s => s.user);
@@ -228,9 +226,9 @@ export default function CrewChat() {
   };
 
   return (
-    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: T.card, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', backgroundColor: '#fff', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {/* Header — ✅ SAFE-AREA: 상단 상태바 자동 회피 */}
-      <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '12px', background: T.card, borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 100 }}>
+      <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <ChevronLeft size={24} />
         </button>
@@ -250,7 +248,7 @@ export default function CrewChat() {
         {/* 멤버 목록 버튼 */}
         <button
           onClick={() => { setShowMemberPanel(true); loadMembers(); }}
-          style={{ border: 'none', background: T.cardSub, padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
           title="멤버 목록"
         >
           <Users size={18} color={members.length >= crewLimit ? '#FF3B30' : '#0056D2'} />
@@ -369,7 +367,7 @@ export default function CrewChat() {
       </div>
 
       {/* Input Area — overflow:hidden으로 버튼 가림 방지 */}
-      <div style={{ padding: '12px 16px', background: T.card, borderTop: '1px solid #eee', display: 'flex', gap: '8px', alignItems: 'center', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', background: '#fff', borderTop: '1px solid #eee', display: 'flex', gap: '8px', alignItems: 'center', overflow: 'hidden' }}>
         {/* 크루장: 삭제 버튼 / 일반: 나가기 버튼 */}
         {isOwner ? (
           <button
@@ -419,15 +417,15 @@ export default function CrewChat() {
       {/* ── 멤버 목록 패널 ── */}
       {showMemberPanel && (
         <div
-          style={{ position: 'fixed', inset: 0, background: T.overlay, zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowMemberPanel(false); }}
         >
-          <div style={{ width: '100%', maxWidth: '480px', background: T.card, borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', maxHeight: '75vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ width: '100%', maxWidth: '480px', background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', maxHeight: '75vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ width: '40px', height: '4px', background: '#E5E5EA', borderRadius: '2px', margin: '0 auto 20px' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', color: T.text }}>
+              <h3 style={{ margin: 0, fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>
                 크루원 {members.length}명
-                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '600', color: T.textLight, marginLeft: '6px' }}>/ {crewLimit}명 정원</span>
+                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '600', color: '#aaa', marginLeft: '6px' }}>/ {crewLimit}명 정원</span>
               </h3>
               <button onClick={() => setShowMemberPanel(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
                 <X size={22} color="#666" />
@@ -435,16 +433,16 @@ export default function CrewChat() {
             </div>
 
             {/* 범례 */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub }}>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', fontSize: `calc(11px * var(--fs, 1))`, color: '#888' }}>
               <span>👑 <span style={{ color: '#FF3B30', fontWeight: '800' }}>크루장</span></span>
               <span>🫅 <span style={{ color: '#FF2D8B', fontWeight: '800' }}>간부</span></span>
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {loadingMembers ? (
-                <div style={{ textAlign: 'center', padding: '24px', color: T.textLight }}>불러오는 중...</div>
+                <div style={{ textAlign: 'center', padding: '24px', color: '#aaa' }}>불러오는 중...</div>
               ) : members.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px', color: T.textLight, fontSize: `calc(14px * var(--fs, 1))` }}>멤버 정보가 없습니다.</div>
+                <div style={{ textAlign: 'center', padding: '24px', color: '#aaa', fontSize: `calc(14px * var(--fs, 1))` }}>멤버 정보가 없습니다.</div>
               ) : members.map((m, i) => {
                 const isThisOwner = m.role === 'owner' || m.email === crewOwner;
                 const isThisOfficer = m.role === 'officer';
@@ -470,11 +468,11 @@ export default function CrewChat() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                         <RoleBadge role={isThisOwner ? 'owner' : m.role} />
-                        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: T.text }}>{m.name}</span>
+                        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>{m.name}</span>
                         <RoleTag role={isThisOwner ? 'owner' : m.role} />
                         {isMe && !isThisOwner && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#0056D2', color: '#fff', padding: '2px 6px', borderRadius: '6px', fontWeight: '900' }}>나</span>}
                       </div>
-                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textLight, marginTop: '2px' }}>
+                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#aaa', marginTop: '2px' }}>
                         {m.joinedAt ? `가입 ${new Date(m.joinedAt).toLocaleDateString('ko-KR')}` : ''}
                       </div>
                     </div>
@@ -522,13 +520,13 @@ export default function CrewChat() {
 
       {/* ── 나가기 확인 다이얼로그 ── */}
       {showLeaveConfirm && (
-        <div style={{ position: 'fixed', inset: 0, background: T.overlay, zIndex: 9001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: T.card, borderRadius: '20px', padding: '28px 24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', padding: '28px 24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
             <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '12px' }}>🚪</div>
-            <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: T.text, marginBottom: '8px' }}>크루를 탈퇴할까요?</div>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textLight, marginBottom: '24px' }}>탈퇴 후 재입장하려면 다시 비밀번호를 입력해야 합니다.</div>
+            <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>크루를 탈퇴할까요?</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#aaa', marginBottom: '24px' }}>탈퇴 후 재입장하려면 다시 비밀번호를 입력해야 합니다.</div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowLeaveConfirm(false)} style={{ flex: 1, padding: '13px', border: `1.5px solid ${T.borderMid}`, borderRadius: '12px', background: T.card, fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: T.textSub }}>취소</button>
+              <button onClick={() => setShowLeaveConfirm(false)} style={{ flex: 1, padding: '13px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: '#666' }}>취소</button>
               <button onClick={handleLeaveCrew} disabled={leavingCrew} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: '#FF3B30', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', color: '#fff' }}>
                 {leavingCrew ? '처리 중...' : '탈퇴하기'}
               </button>
@@ -539,15 +537,15 @@ export default function CrewChat() {
 
       {/* ── 크루장 위임 확인 다이얼로그 ── */}
       {showTransferModal && transferTarget && (
-        <div style={{ position: 'fixed', inset: 0, background: T.overlay, zIndex: 9002, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: T.card, borderRadius: '20px', padding: '28px 24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9002, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', padding: '28px 24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
             <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '12px' }}>👑</div>
-            <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: T.text, marginBottom: '8px' }}>크루장을 위임할까요?</div>
+            <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>크루장을 위임할까요?</div>
             <div style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', marginBottom: '6px' }}>{transferTarget.name}</div>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textLight, marginBottom: '24px' }}>위임 후 회원님은 일반 크루원으로 변경됩니다.</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#aaa', marginBottom: '24px' }}>위임 후 회원님은 일반 크루원으로 변경됩니다.</div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => { setShowTransferModal(false); setTransferTarget(null); }} style={{ flex: 1, padding: '13px', border: `1.5px solid ${T.borderMid}`, borderRadius: '12px', background: T.card, fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: T.textSub }}>취소</button>
-              <button onClick={handleTransferCrew} disabled={transferring} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: 'linear-gradient(135deg,#FFD700,#FFA000)', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', color: T.text }}>
+              <button onClick={() => { setShowTransferModal(false); setTransferTarget(null); }} style={{ flex: 1, padding: '13px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: '#666' }}>취소</button>
+              <button onClick={handleTransferCrew} disabled={transferring} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: 'linear-gradient(135deg,#FFD700,#FFA000)', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', color: '#1c1c1e' }}>
                 {transferring ? '처리 중...' : '위임하기'}
               </button>
             </div>
@@ -557,13 +555,13 @@ export default function CrewChat() {
 
       {/* ── 크루 삭제 확인 다이얼로그 (크루장 전용) ── */}
       {showDeleteConfirm && (
-        <div style={{ position: 'fixed', inset: 0, background: T.overlay, zIndex: 9001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: T.card, borderRadius: '20px', padding: '28px 24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', padding: '28px 24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
             <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '12px' }}>🗑️</div>
             <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#FF3B30', marginBottom: '8px' }}>크루를 삭제할까요?</div>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textLight, marginBottom: '24px' }}>삭제된 크루와 채팅 기록은 복구할 수 없습니다.</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#aaa', marginBottom: '24px' }}>삭제된 크루와 채팅 기록은 복구할 수 없습니다.</div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '13px', border: `1.5px solid ${T.borderMid}`, borderRadius: '12px', background: T.card, fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: T.textSub }}>취소</button>
+              <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '13px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: '#666' }}>취소</button>
               <button onClick={handleDeleteCrew} disabled={deletingCrew} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: '#FF3B30', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', color: '#fff' }}>
                 {deletingCrew ? '삭제 중...' : '삭제하기'}
               </button>

@@ -1,4 +1,3 @@
-import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useCallback } from 'react';
 import { MessageSquare, ChevronDown, ChevronUp, Lock, Send, RefreshCw, CheckCircle, Clock } from 'lucide-react';
 import apiClient from '../api/index';
@@ -21,11 +20,10 @@ const TEMPLATE = `[문의 기본 양식]
 const STATUS_CONFIG = {
   pending:  { label: '답변 대기', color: '#FF9B26', bg: '#FFF3E0', icon: <Clock size={11}/> },
   answered: { label: '답변 완료', color: '#00C48C', bg: '#E8F5E9', icon: <CheckCircle size={11}/> },
-  closed:   { label: '처리 완료', color: T.textSub, bg: '#F5F5F5', icon: <CheckCircle size={11}/> },
+  closed:   { label: '처리 완료', color: '#8E8E93', bg: '#F5F5F5', icon: <CheckCircle size={11}/> },
 };
 
 export default function CsInquirySection({ user, isAdmin }) {
-  const T = useTheme(); // ✅ DARK-MODE
   const addToast = useToastStore(s => s.addToast);
 
   const [open, setOpen] = useState(false);
@@ -135,7 +133,7 @@ export default function CsInquirySection({ user, isAdmin }) {
 
       {/* 펼쳐지는 콘텐츠 */}
       {open && (
-        <div style={{ background: T.card, borderRadius: '0 0 18px 18px', border: '1px solid #E8EDF5', borderTop: 'none', overflow: 'hidden' }}>
+        <div style={{ background: '#fff', borderRadius: '0 0 18px 18px', border: '1px solid #E8EDF5', borderTop: 'none', overflow: 'hidden' }}>
 
           {/* 탭 — 마스터는 문의 작성 불필요 (AdminDashboard에서 전담 관리) */}
           <div style={{ display: 'flex', borderBottom: '1px solid #F0F2F7' }}>
@@ -189,7 +187,7 @@ export default function CsInquirySection({ user, isAdmin }) {
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ ...labelStyle, display: 'flex', justifyContent: 'space-between' }}>
                   <span>문의 내용 *</span>
-                  <span style={{ fontWeight: '600', color: T.textLight }}>{form.content.length}자</span>
+                  <span style={{ fontWeight: '600', color: '#AEAEB2' }}>{form.content.length}자</span>
                 </label>
                 <textarea
                   style={{ ...inputStyle, height: '180px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
@@ -204,7 +202,7 @@ export default function CsInquirySection({ user, isAdmin }) {
               >
                 <Send size={16} /> {submitting ? '제출 중...' : '문의 접수하기'}
               </button>
-              <p style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textLight, textAlign: 'center', marginTop: '10px', fontWeight: '600' }}>
+              <p style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AEAEB2', textAlign: 'center', marginTop: '10px', fontWeight: '600' }}>
                 ※ 영업일 기준 1~2일 내 답변 | 긴급 문의: 앱 내 알림 확인
               </p>
             </div>
@@ -214,7 +212,7 @@ export default function CsInquirySection({ user, isAdmin }) {
           {tab === 'list' && (
             <div style={{ padding: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: T.text }}>
+                <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E' }}>
                   {isAdmin ? `전체 문의 (${inquiries.length}건)` : `내 문의 내역 (${inquiries.length}건)`}
                 </span>
                 <button onClick={fetchInquiries} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0056D2', display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800' }}>
@@ -223,9 +221,9 @@ export default function CsInquirySection({ user, isAdmin }) {
               </div>
 
               {loading ? (
-                <div style={{ textAlign: 'center', padding: '30px', color: T.textLight, fontSize: `calc(12px * var(--fs, 1))` }}>불러오는 중...</div>
+                <div style={{ textAlign: 'center', padding: '30px', color: '#AEAEB2', fontSize: `calc(12px * var(--fs, 1))` }}>불러오는 중...</div>
               ) : inquiries.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '30px', color: T.textLight, fontSize: `calc(12px * var(--fs, 1))`, border: '1px dashed #E0E0E0', borderRadius: '12px' }}>
+                <div style={{ textAlign: 'center', padding: '30px', color: '#AEAEB2', fontSize: `calc(12px * var(--fs, 1))`, border: '1px dashed #E0E0E0', borderRadius: '12px' }}>
                   📭 등록된 문의가 없습니다.<br/>
                   <button onClick={() => setTab('write')} style={{ marginTop: '8px', background: 'none', border: 'none', color: '#0056D2', fontWeight: '800', cursor: 'pointer', fontSize: `calc(12px * var(--fs, 1))` }}>첫 문의 작성하기 →</button>
                 </div>
@@ -241,10 +239,10 @@ export default function CsInquirySection({ user, isAdmin }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#E8F0FF', color: '#0056D2', padding: '2px 7px', borderRadius: '6px', fontWeight: '800' }}>{item.category}</span>
                             <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: cfg.bg, color: cfg.color, padding: '2px 7px', borderRadius: '6px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '3px' }}>{cfg.icon}{cfg.label}</span>
-                            {isAdmin && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: T.textLight, fontWeight: '700' }}>{item.nickname || item.authorEmail}</span>}
+                            {isAdmin && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '700' }}>{item.nickname || item.authorEmail}</span>}
                           </div>
-                          <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: T.text }}>{item.title}</div>
-                          <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textLight, fontWeight: '600', marginTop: '3px' }}>
+                          <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E' }}>{item.title}</div>
+                          <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', marginTop: '3px' }}>
                             {new Date(item.createdAt).toLocaleDateString('ko-KR')} · {item.id}
                           </div>
                         </div>
@@ -255,11 +253,11 @@ export default function CsInquirySection({ user, isAdmin }) {
                       {isExpanded && (
                         <div style={{ padding: '14px', borderTop: '1px solid #F0F2F7' }}>
                           {/* 문의 내용 */}
-                          <div style={{ background: T.cardSub, borderRadius: '10px', padding: '12px', marginBottom: '10px' }}>
+                          <div style={{ background: '#F8F9FA', borderRadius: '10px', padding: '12px', marginBottom: '10px' }}>
                             <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#0056D2', marginBottom: '6px' }}>📝 문의 내용</div>
                             <pre style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#444', fontFamily: 'inherit', whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{item.content}</pre>
                             {(item.realName || item.phone) && (
-                              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E8EDF5', fontSize: `calc(10px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>
+                              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E8EDF5', fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>
                                 {item.realName && <span>성함: {item.realName} · </span>}
                                 {item.phone && <span>연락처: {item.phone}</span>}
                               </div>
@@ -270,7 +268,7 @@ export default function CsInquirySection({ user, isAdmin }) {
                           {item.reply && (
                             <div style={{ background: 'linear-gradient(135deg, #E8F5E9, #F1F8FF)', borderRadius: '10px', padding: '12px', marginBottom: '10px', border: '1px solid #C8F0E0' }}>
                               <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#00C48C', marginBottom: '6px' }}>✅ 관리자 답변 · {new Date(item.repliedAt).toLocaleDateString('ko-KR')}</div>
-                              <pre style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.text, fontFamily: 'inherit', whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{item.reply}</pre>
+                              <pre style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#1A1A2E', fontFamily: 'inherit', whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{item.reply}</pre>
                             </div>
                           )}
 

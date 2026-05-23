@@ -1,4 +1,3 @@
-import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Trophy, Clock, Fish, Award } from 'lucide-react';
@@ -75,7 +74,6 @@ function ContestCard({ contest, onPress }) {
 }
 
 export default function ContestPage() {
-  const T = useTheme(); // ✅ DARK-MODE
   const navigate = useNavigate();
   const user     = useUserStore(s => s.user);
   const isAdmin  = useUserStore(s => s.userTier === 'MASTER' || s.user?.email === 'sunjulab.k@gmail.com');
@@ -152,7 +150,7 @@ export default function ContestPage() {
       <div style={{ padding: '16px' }}>
         {/* 관리자 대회 등록 폼 */}
         {showAdmin && (
-          <div style={{ background: T.card, borderRadius: '16px', padding: '16px', marginBottom: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '16px', marginBottom: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
             <div style={{ fontWeight: '900', fontSize: `calc(16px * var(--fs,1))`, marginBottom: '12px' }}>대회 등록</div>
             {[
               { label: '대회명', key: 'title', placeholder: '5월 감성돔 왕중왕전' },

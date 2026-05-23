@@ -72,7 +72,7 @@ const PLANS = [
     key: 'PRO',
     label: 'PRO',
     price: '₩110,000',
-    period: '/ 월',
+    period: '/ 년',
     color: '#64B5F6',
     border: 'rgba(100,181,246,0.4)',
     bg: 'rgba(21,101,192,0.08)',
@@ -376,7 +376,6 @@ export default function VVIPSubscribe() {
           {/* 구독 안내 */}
           <div style={{ padding: '14px', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', marginBottom: '8px' }}>
             <div style={{ fontSize: `calc(11px * var(--fs,1))`, color: 'rgba(255,255,255,0.25)', lineHeight: 1.7 }}>
-              · 3가지 플랜 모두 매월 자동결제됩니다 (BASIC ₩9,900 / PRO ₩110,000 / VVIP ₩550,000).<br />
               · 구글 플레이 계정으로 자동 결제됩니다.<br />
               · 다음 결제일 24시간 전까지 구글 플레이에서 해지 가능합니다.<br />
               · 해지 후에도 기간 만료 전까지 혜택이 유지됩니다.<br />

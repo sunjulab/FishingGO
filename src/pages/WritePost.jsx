@@ -1,4 +1,3 @@
-import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, MapPin, Send, ChevronDown, CheckCircle2, Scan } from 'lucide-react';
@@ -10,7 +9,6 @@ import apiClient from '../api/index';
 import { fileToCompressedBase64 } from '../utils/imageUtils';
 
 export default function WritePost() {
-  const T = useTheme(); // ✅ DARK-MODE
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const postType = searchParams.get('type') || 'open';
@@ -183,7 +181,7 @@ export default function WritePost() {
   };
 
   return (
-    <div className="page-container" style={{ backgroundColor: T.card, height: '100dvh', zIndex: 2000 }}>
+    <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
       {/* 고정 헤더 */}
       <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
         <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}>
@@ -256,14 +254,14 @@ export default function WritePost() {
                   if (saved) { setContent(saved); addToast('✅ 임시저장 내용을 복원했습니다.', 'success'); }
                   setShowDraftBanner(false);
                 }}
-                style={{ padding: '6px 12px', borderRadius: '10px', border: 'none', background: '#FFD60A', color: T.text, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}
+                style={{ padding: '6px 12px', borderRadius: '10px', border: 'none', background: '#FFD60A', color: '#1A1A2E', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}
               >복원</button>
               <button
                 onClick={() => {
                   try { localStorage.removeItem(DRAFT_KEY); } catch { /* StorageError 무시 */ }
                   setShowDraftBanner(false);
                 }}
-                style={{ padding: '6px 10px', borderRadius: '10px', border: `1px solid ${T.borderMid}`, background: T.card, color: T.textSub, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
+                style={{ padding: '6px 10px', borderRadius: '10px', border: '1px solid #E5E5EA', background: '#fff', color: '#8E8E93', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
               >삭제</button>
             </div>
           </div>
@@ -289,7 +287,7 @@ export default function WritePost() {
               placeholder="공지 제목을 입력하세요"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              style={{ width: '100%', border: 'none', borderBottom: '1.5px solid #eee', fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '800', padding: '0 0 14px', marginBottom: '10px', outline: 'none', color: T.text }}
+              style={{ width: '100%', border: 'none', borderBottom: '1.5px solid #eee', fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '800', padding: '0 0 14px', marginBottom: '10px', outline: 'none', color: '#1A1A2E' }}
             />
             {/* ✅ POPUP-CTRL: 홈화면 팝업 지정 체크박스 */}
             <div
@@ -322,7 +320,7 @@ export default function WritePost() {
                   🔔 홈화면 팝업으로 노출
                 </div>
 
-                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, marginTop: '2px' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', marginTop: '2px' }}>
                   체크 시 홈화면 시작 시 팝업으로 표시됩니다 (이미지 첨부 권장)
                 </div>
               </div>
@@ -382,7 +380,7 @@ export default function WritePost() {
             {/* 취소 버튼 */}
             <button
               onClick={() => { setLocEditMode(false); setLocDraft(''); }}
-              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: T.textSub, fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             ><X size={14} /></button>
           </div>
         )}
@@ -427,7 +425,7 @@ export default function WritePost() {
             {/* 취소 */}
             <button
               onClick={() => setLocEditMode(false)}
-              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: T.textSub, fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             ><X size={14} /></button>
           </div>
         )}
@@ -455,7 +453,7 @@ export default function WritePost() {
             {/* ❌ 제거 버튼 */}
             <button
               onClick={() => { setLocation(null); setLocDraft(''); addToast('📍 위치가 제거되었습니다.', 'info'); }}
-              style={{ flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: T.textSub, fontSize: `calc(12px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ flexShrink: 0, width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: '#f0f0f0', color: '#888', fontSize: `calc(12px * var(--fs, 1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             ><X size={12} /></button>
           </div>
         )}
@@ -466,7 +464,7 @@ export default function WritePost() {
           left: '50%', transform: 'translateX(-50%)',
           width: '100%', maxWidth: '480px',
           padding: '12px 20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
-          backgroundColor: T.card,
+          backgroundColor: '#fff',
           borderTop: '1px solid #f0f0f0',
           zIndex: 200,
         }}>

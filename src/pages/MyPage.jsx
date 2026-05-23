@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTheme } from '../hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/index';
 import { compressAvatar } from '../utils/imageUtils';
@@ -40,7 +39,6 @@ const PROTECTED_TIERS_CLIENT = ['PRO', 'BUSINESS_VIP', 'MASTER'];
 
 export default function MyPage() {
   const navigate = useNavigate();
-  const T = useTheme(); // ✅ DARK-MODE: 다크/라이트 색상 토큰
   // ✅ 6TH-B1: 셀렉터별 분리 구독 — 전체 store 구독 시 store 내 어떤 값 변경도 57KB MyPage 전체 리렌더 유발
   const user              = useUserStore(s => s.user);
   const updateUser        = useUserStore(s => s.updateUser);
@@ -474,9 +472,9 @@ export default function MyPage() {
   // 비로그인 상태면 로그인 페이지로
   if (!user) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: T.cardSub, gap: '16px' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#F8F9FA', gap: '16px' }}>
         <div style={{ fontSize: `calc(48px * var(--fs, 1))` }}>🎣</div>
-        <p style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', color: T.text }}>로그인이 필요합니다</p>
+        <p style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>로그인이 필요합니다</p>
         <button
           onClick={() => navigate('/login')}
           style={{ padding: '14px 32px', background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, cursor: 'pointer' }}
@@ -497,7 +495,7 @@ export default function MyPage() {
   }));
 
   return (
-    <div className="page-container" style={{ backgroundColor: T.cardSub }}>
+    <div className="page-container" style={{ backgroundColor: '#F8F9FA' }}>
       {/* 🟦 Top Profile Card 🟦 */}
       <div style={{ background: 'linear-gradient(180deg, #fff 0%, #F8F9FA 100%)', padding: '40px 24px 30px', borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -568,17 +566,17 @@ export default function MyPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {isEditing ? (
                 <div style={{ position: 'relative', width: '100%' }}>
-                  <input value={newName} onChange={e => setNewName(e.target.value)} style={{ background: T.card, border: '2px solid #0056D2', borderRadius: '12px', padding: '8px 40px 8px 12px', fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', width: '100%', outline: 'none' }} />
+                  <input value={newName} onChange={e => setNewName(e.target.value)} style={{ background: '#fff', border: '2px solid #0056D2', borderRadius: '12px', padding: '8px 40px 8px 12px', fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', width: '100%', outline: 'none' }} />
                   <Check size={18} color="#00C48C" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }} onClick={handleNicknameChange} />
                 </div>
               ) : (
                 <>
-                  <h2 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: T.text }}>{user.name}</h2>
-                  <div onClick={() => setIsEditing(true)} style={{ backgroundColor: T.cardSub, padding: '6px', borderRadius: '8px', cursor: 'pointer' }}><Edit3 size={14} color="#8E8E93" /></div>
+                  <h2 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{user.name}</h2>
+                  <div onClick={() => setIsEditing(true)} style={{ backgroundColor: '#F2F2F7', padding: '6px', borderRadius: '8px', cursor: 'pointer' }}><Edit3 size={14} color="#8E8E93" /></div>
                 </>
               )}
             </div>
-            <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, fontWeight: '600', marginTop: '2px' }}>{user.email}</p>
+            <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{user.email}</p>
 
             {/* 레벨 카드 */}
             <div
@@ -591,14 +589,14 @@ export default function MyPage() {
                   <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>{levelInfo.emoji}</span>
                   <div>
                     <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#0056D2', fontWeight: '900', letterSpacing: '0.04em' }}>LV.{levelInfo.level}</div>
-                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: T.text, lineHeight: 1.2 }}>{levelInfo.title}</div>
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', lineHeight: 1.2 }}>{levelInfo.title}</div>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   {levelInfo.isMaxLevel ? (
                     <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#FFD700' }}>MAX LEVEL 🏆</span>
                   ) : (
-                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>
                       {levelInfo.expInCurrentLevel} / {levelInfo.expNeededForNext} XP
                     </span>
                   )}
@@ -626,19 +624,19 @@ export default function MyPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', backgroundColor: T.cardSub, borderRadius: '24px', overflow: 'hidden', marginTop: '24px', border: `1.5px solid ${T.border}` }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', backgroundColor: '#F2F2F7', borderRadius: '24px', overflow: 'hidden', marginTop: '24px', border: '1.5px solid #F2F2F7' }}>
            {[
              { label: '조과기록', val: realRecords.length, icon: Trophy, color: '#FF9B26', onClick: () => setActiveTab('records') },
              { label: '팔로워', val: user.followers?.length || 0, icon: Star, color: '#0056D2', onClick: () => handleOpenFollowModal('followers') },
              { label: '팔로잉', val: user.following?.length || 0, icon: Heart, color: '#FF5A5F', onClick: () => handleOpenFollowModal('following') },
              { label: '연속출석', val: `${user.streak || 0}일`, icon: Calendar, color: '#00C48C', onClick: null },
            ].map(s => (
-             <div key={s.label} onClick={s.onClick} style={{ backgroundColor: T.card, padding: '14px 6px', textAlign: 'center', cursor: s.onClick ? 'pointer' : 'default' }}>
+             <div key={s.label} onClick={s.onClick} style={{ backgroundColor: '#fff', padding: '14px 6px', textAlign: 'center', cursor: s.onClick ? 'pointer' : 'default' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}>
                    <s.icon size={11} color={s.color} fill={s.color} />
-                   <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: T.text }}>{s.val}</span>
+                   <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
                 </div>
-                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>{s.label}</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
              </div>
            ))}
         </div>
@@ -712,19 +710,19 @@ export default function MyPage() {
                    { label: '어종 수', val: entries.length, emoji: '🐟', color: '#FF9B26' },
                    { label: '대표 어종', val: entries[0]?.[0] || '-', emoji: '🏆', color: '#FF5A5F' },
                  ].map(s => (
-                   <div key={s.label} style={{ background: T.card, borderRadius: '16px', padding: '14px 10px', textAlign: 'center', border: `1.5px solid ${T.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
+                   <div key={s.label} style={{ background: '#fff', borderRadius: '16px', padding: '14px 10px', textAlign: 'center', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
                      <div style={{ fontSize: `calc(20px * var(--fs, 1))`, marginBottom: '4px' }}>{s.emoji}</div>
                      <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: s.color, wordBreak: 'keep-all' }}>{s.val}</div>
-                     <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textSub, fontWeight: '700', marginTop: '2px' }}>{s.label}</div>
+                     <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', marginTop: '2px' }}>{s.label}</div>
                    </div>
                  ))}
                </div>
 
                {/* 월별 조과 추이 */}
-               <div style={{ background: T.card, borderRadius: '24px', padding: '20px', marginBottom: '14px', border: `1.5px solid ${T.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                 <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '16px', color: T.text }}>📈 월별 조과 추이</div>
+               <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '14px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                 <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>📈 월별 조과 추이</div>
                  {realRecords.length === 0 ? (
-                   <p style={{ color: T.textSub, fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
+                   <p style={{ color: '#8E8E93', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
                  ) : (
                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '80px' }}>
                      {monthEntries.map(([month, cnt]) => (
@@ -737,7 +735,7 @@ export default function MyPage() {
                            transition: 'height 0.8s ease',
                            minHeight: '2px',
                          }} />
-                         <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>{month}</div>
+                         <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{month}</div>
                        </div>
                      ))}
                    </div>
@@ -745,17 +743,17 @@ export default function MyPage() {
                </div>
 
                {/* 어종별 바 차트 */}
-               <div style={{ background: T.card, borderRadius: '24px', padding: '20px', marginBottom: '14px', border: `1.5px solid ${T.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                 <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '16px', color: T.text }}>🐟 어종별 조과</div>
+               <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', marginBottom: '14px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                 <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '16px', color: '#1c1c1e' }}>🐟 어종별 조과</div>
                  {entries.length === 0 ? (
-                   <p style={{ color: T.textSub, fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
+                   <p style={{ color: '#8E8E93', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', textAlign: 'center', padding: '20px 0' }}>조과 기록이 없습니다.</p>
                  ) : entries.map(([sp, cnt], i) => (
                    <div key={sp} style={{ marginBottom: '12px' }}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                       <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: T.text }}>{sp}</span>
+                       <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>{sp}</span>
                        <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: BAR_COLORS[i] }}>{cnt}회</span>
                      </div>
-                     <div style={{ height: '8px', background: T.cardSub, borderRadius: '4px', overflow: 'hidden' }}>
+                     <div style={{ height: '8px', background: '#F2F2F7', borderRadius: '4px', overflow: 'hidden' }}>
                        <div style={{ height: '100%', width: `${(cnt / max) * 100}%`, background: BAR_COLORS[i], borderRadius: '4px', transition: 'width 0.8s ease' }} />
                      </div>
                    </div>
@@ -764,8 +762,8 @@ export default function MyPage() {
 
                {/* 단골 포인트 TOP3 */}
                {topSpots.length > 0 && (
-                 <div style={{ background: T.card, borderRadius: '24px', padding: '20px', border: `1.5px solid ${T.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                   <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '14px', color: T.text }}>⭐ 단골 포인트 TOP3</div>
+                 <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: '1.5px solid #F2F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                   <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', marginBottom: '14px', color: '#1c1c1e' }}>⭐ 단골 포인트 TOP3</div>
                    {topSpots.map(([spot, cnt], i) => (
                      <div key={spot} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: i < topSpots.length - 1 ? '12px' : 0 }}>
                        <div style={{
@@ -775,7 +773,7 @@ export default function MyPage() {
                          fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#fff',
                        }}>{i + 1}</div>
                        <div style={{ flex: 1 }}>
-                         <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: T.text }}>{spot}</div>
+                         <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>{spot}</div>
                        </div>
                        <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#0056D2' }}>{cnt}회</div>
                      </div>
@@ -789,7 +787,7 @@ export default function MyPage() {
               {realRecords.length > 0 ? realRecords.map(r => (
                 <div key={String(r._id || r.id)}
                   onClick={() => navigate(`/catch/${String(r._id || r.id)}`)}
-                  style={{ backgroundColor: T.card, borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: `1.5px solid ${T.border}`, cursor: 'pointer' }}
+                  style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7', cursor: 'pointer' }}
                 >
                    {r.image
                      ? <img src={r.image} style={{ width: '100%', height: '140px', objectFit: 'cover' }} alt="" />
@@ -799,15 +797,15 @@ export default function MyPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
                         <span style={{ fontSize: `calc(12px * var(--fs, 1))`, background: '#EBF5FF', color: '#0056D2', padding: '2px 8px', borderRadius: '8px', fontWeight: '800' }}>{r.fish || '어종 미입력'}</span>
                       </div>
-                      <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.location || r.memo || '장소 미입력'}</div>
-                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: T.textLight, fontWeight: '600', marginTop: '2px' }}>{r.date || (r.createdAt ? String(r.createdAt).slice(0,10) : '')}</div>
+                      <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#555', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.location || r.memo || '장소 미입력'}</div>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', marginTop: '2px' }}>{r.date || (r.createdAt ? String(r.createdAt).slice(0,10) : '')}</div>
                    </div>
                 </div>
               )) : (
-                <div style={{ gridColumn: 'span 2', padding: '40px', textAlign: 'center', color: T.textSub }}>
+                <div style={{ gridColumn: 'span 2', padding: '40px', textAlign: 'center', color: '#8E8E93' }}>
                    <div style={{ fontSize: `calc(40px * var(--fs, 1))`, marginBottom: '10px' }}>🎣</div>
                    <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>아직 등록된 조과 기록이 없습니다.</p>
-                   <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textLight, fontWeight: '600', marginTop: '4px' }}>첫 번째 조과를 등록해보세요!</p>
+                   <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', marginTop: '4px' }}>첫 번째 조과를 등록해보세요!</p>
                 </div>
               )}
               <div
@@ -816,7 +814,7 @@ export default function MyPage() {
               >
                  <Camera size={28} color="#00C48C" />
                  <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#00C48C' }}>조과 기록 추가하기</span>
-                 <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: T.textSub, textAlign: 'center' }}>낚시 포인트 선택 → 조과 기록 남기기</span>
+                 <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', textAlign: 'center' }}>낚시 포인트 선택 → 조과 기록 남기기</span>
               </div>
            </div>
           ) : activeTab === 'crews' ? (
@@ -824,20 +822,20 @@ export default function MyPage() {
              {myCrews.length === 0 ? (
                <div style={{ padding: '48px 20px', textAlign: 'center' }}>
                  <div style={{ fontSize: `calc(48px * var(--fs, 1))`, marginBottom: '12px' }}>⚓</div>
-                 <p style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: T.textSub, marginBottom: '6px' }}>아직 가입한 크루가 없습니다</p>
-                 <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, marginBottom: '20px' }}>커뮤니티에서 크루에 참여해보세요!</p>
+                 <p style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#555', marginBottom: '6px' }}>아직 가입한 크루가 없습니다</p>
+                 <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', marginBottom: '20px' }}>커뮤니티에서 크루에 참여해보세요!</p>
                  <button onClick={() => navigate('/community?tab=crew')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg,#0056D2,#0096FF)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer' }}>크루 찾아보기 🎣</button>
                </div>
              ) : myCrews.map(crew => {
                const crewId = String(crew._id || crew.id);
                const isOwner = crew.owner === user?.email;
                return (
-                 <div key={crewId} style={{ background: T.card, borderRadius: '20px', padding: '18px 20px', border: `1.5px solid ${T.border}`, marginBottom: '12px' }}>
+                 <div key={crewId} style={{ background: '#fff', borderRadius: '20px', padding: '18px 20px', border: '1.5px solid #F2F2F7', marginBottom: '12px' }}>
                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isOwner ? 0 : '10px' }}>
                      <div>
                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                         {isOwner && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#FFD700', color: T.text, padding: '2px 6px', borderRadius: '6px', fontWeight: '900' }}>크루장</span>}
-                         <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', color: T.text }}>{crew.name}</span>
+                         {isOwner && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#FFD700', color: '#1c1c1e', padding: '2px 6px', borderRadius: '6px', fontWeight: '900' }}>크루장</span>}
+                         <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>{crew.name}</span>
                        </div>
                        <div style={{ display: 'flex', gap: '10px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93' }}>
                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Users size={12} /> {crew.members}/{crew.limit || 20}명</span>
@@ -866,16 +864,16 @@ export default function MyPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {realPosts.length > 0 ? realPosts.map(p => (
-                <div key={String(p._id || p.id)} style={{ backgroundColor: T.card, padding: '20px', borderRadius: '28px', border: `1.5px solid ${T.border}` }}>
-                   <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight: '600', marginBottom: '8px' }}>{p.time}</div>
-                   <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: T.text, margin: '0 0 16px' }}>{p.content}</p>
+                <div key={String(p._id || p.id)} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '28px', border: '1.5px solid #F2F2F7' }}>
+                   <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '8px' }}>{p.time}</div>
+                   <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', margin: '0 0 16px' }}>{p.content}</p>
                    <div style={{ display: 'flex', gap: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700' }}><Heart size={14} color="#FF5A5F" /> {p.likes}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700' }}><MessageSquare size={14} /> {p.comments.length}</div>
                    </div>
                 </div>
               )) : (
-                <div style={{ padding: '40px', textAlign: 'center', color: T.textSub }}>
+                <div style={{ padding: '40px', textAlign: 'center', color: '#8E8E93' }}>
                    <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>등록된 게시글이 없습니다.</p>
                 </div>
               )}
@@ -886,7 +884,7 @@ export default function MyPage() {
       {/* 🟦 비즈니스 파트너 센터 (BUSINESS LITE/PRO/VIP 한정) 🟦 */}
       {canAccessPartnerCenter && (
         <div className="fade-in" style={{ padding: '10px 24px 20px' }}>
-          <h3 style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', marginBottom: '14px', color: T.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', marginBottom: '14px', color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: `calc(20px * var(--fs, 1))` }}>👑</span> 비즈니스 파트너 센터
           </h3>
           <div style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #2A2A4A 100%)', borderRadius: '28px', padding: '24px', color: '#fff', boxShadow: '0 12px 30px rgba(26,26,46,0.2)' }}>
@@ -900,7 +898,7 @@ export default function MyPage() {
               </div>
               <button
                 onClick={handleOpenBizPhone}
-                style={{ backgroundColor: '#FFD700', color: T.text, border: 'none', padding: '12px 16px', borderRadius: '14px', fontWeight: '900', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,215,0,0.3)', whiteSpace: 'nowrap' }}
+                style={{ backgroundColor: '#FFD700', color: '#1A1A2E', border: 'none', padding: '12px 16px', borderRadius: '14px', fontWeight: '900', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,215,0,0.3)', whiteSpace: 'nowrap' }}
               >연락처 확인</button>
             </div>
 
@@ -1005,15 +1003,15 @@ export default function MyPage() {
              setFontScale(key); // 리렌더 → 활성 버튼 즉시 업데이트
            };
            return (
-             <div style={{ backgroundColor: T.card, borderRadius: '28px', overflow: 'hidden', border: `1.5px solid ${T.border}`, marginBottom: '12px' }}>
-               <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}` }}>
+             <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7', marginBottom: '12px' }}>
+               <div style={{ padding: '18px 24px', borderBottom: '1px solid #F8F9FA' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
                    <div style={{ backgroundColor: '#EBF2FF', padding: '10px', borderRadius: '12px' }}>
                      <span style={{ fontSize: `calc(20px * var(--fs, 1))` }}>🔤</span>
                    </div>
                    <div>
-                     <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: T.text }}>글씨 크기</div>
-                     <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight: '600' }}>눈에 편한 크기로 조절하세요</div>
+                     <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e' }}>글씨 크기</div>
+                     <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>눈에 편한 크기로 조절하세요</div>
                    </div>
                  </div>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -1035,7 +1033,7 @@ export default function MyPage() {
                      </button>
                    ))}
                  </div>
-                 <div style={{ marginTop: '12px', padding: '10px 14px', background: T.cardSub, borderRadius: '10px', fontSize: 'calc(13px * var(--fs, 1))', color: T.textSub, fontWeight: '700' }}>
+                 <div style={{ marginTop: '12px', padding: '10px 14px', background: '#F8F9FC', borderRadius: '10px', fontSize: 'calc(13px * var(--fs, 1))', color: '#555', fontWeight: '700' }}>
                    미리보기 — 낚시GO 글씨 크기가 이렇게 표시됩니다.
                  </div>
                </div>
@@ -1043,14 +1041,14 @@ export default function MyPage() {
            );
          })()}
 
-         <div style={{ backgroundColor: T.card, borderRadius: '28px', overflow: 'hidden', border: `1.5px solid ${T.border}` }}>
+         <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7' }}>
             {menuItems.map((item) => ( // ✅ 26TH-C3: key를 item.id로 교체
               <div key={item.id} onClick={() => item.id === 'history' ? navigate('/payment-history') : setShowModal(item.id)} style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: item.id !== 'security' ? '1px solid #F8F9FA' : 'none', cursor: 'pointer' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ backgroundColor: `${item.color}15`, padding: '10px', borderRadius: '12px' }}><item.icon size={20} color={item.color} strokeWidth={2.5} /></div>
                     <div>
-                        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: T.text }}>{item.title}</div>
-                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight: '600' }}>{item.desc}</div>
+                        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e' }}>{item.title}</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>{item.desc}</div>
                     </div>
                  </div>
                  <ChevronRight size={18} color="#C7C7CC" />
@@ -1074,8 +1072,8 @@ export default function MyPage() {
 
       {/* 🟦 Settings Modals (Bottom Sheets) 🟦 */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: T.overlay, zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setShowModal(null)}>
-           <div style={{ width: '100%', maxWidth: '480px', backgroundColor: T.card, borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '32px 24px 60px', borderRadius: 'inherit', animation: 'slideUp 0.3s ease-out' }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setShowModal(null)}>
+           <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#fff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '32px 24px 60px', borderRadius: 'inherit', animation: 'slideUp 0.3s ease-out' }} onClick={e => e.stopPropagation()}>
               <div style={{ width: '40px', height: '5px', background: '#E5E5EA', borderRadius: '3px', margin: '0 auto 24px' }}></div>
               
               {showModal === 'noti' && (
@@ -1154,7 +1152,7 @@ export default function MyPage() {
                 return (
                   <>
                     <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>구독 관리</h3>
-                    <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, fontWeight: '600', marginBottom: '20px' }}>
+                    <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '20px' }}>
                       현재 플랜: <strong style={{ color: '#0056D2' }}>{planNames[userTier] || '무료'}</strong>
                       {!isFree && <span style={{ marginLeft: '8px', fontSize: `calc(11px * var(--fs, 1))`, color: '#FF5A5F' }}>· 구독 중</span>}
                     </p>
@@ -1227,7 +1225,7 @@ export default function MyPage() {
 
                     </div>
 
-                    <p style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textLight, textAlign: 'center', fontWeight: '600' }}>
+                    <p style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#AEAEB2', textAlign: 'center', fontWeight: '600' }}>
                       * 일반 피드 광고는 플랜과 무관하게 표시됩니다.<br/>
                       * 유료 플랜은 게시글·크루 등록 시 광고 시청이 면제됩니다.
                     </p>
@@ -1248,15 +1246,15 @@ export default function MyPage() {
              { id: 'dark',  label: '다크', emoji: '🌙', desc: '블랙 배경' },
            ];
            return (
-             <div style={{ backgroundColor: T.card, borderRadius: '28px', overflow: 'hidden', border: `1.5px solid ${T.border}`, marginBottom: '12px' }}>
+             <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7', marginBottom: '12px' }}>
                <div style={{ padding: '18px 24px' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
                    <div style={{ backgroundColor: darkMode ? '#1C1C1E' : '#EBF2FF', padding: '10px', borderRadius: '12px', transition: 'background 0.3s' }}>
                      <span style={{ fontSize: `calc(20px * var(--fs, 1))` }}>{darkMode ? '🌙' : '☀️'}</span>
                    </div>
                    <div>
-                     <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: T.text }}>배경 모드</div>
-                     <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight: '600' }}>화이트 / 다크 모드를 선택하세요</div>
+                     <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e' }}>배경 모드</div>
+                     <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>화이트 / 다크 모드를 선택하세요</div>
                    </div>
                  </div>
                  {/* 토글 스위치 */}
@@ -1294,7 +1292,7 @@ export default function MyPage() {
                        position: 'absolute', top: '3px',
                        left: darkMode ? '25px' : '3px',
                        width: '24px', height: '24px', borderRadius: '50%',
-                       background: T.card,
+                       background: '#fff',
                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                        transition: 'left 0.3s ease',
                      }} />
@@ -1324,7 +1322,7 @@ export default function MyPage() {
                         <ChevronRight size={18} color="#C7C7CC" style={{ transform: secTab === 'pwd' ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
                     </div>
                     {secTab === 'pwd' && (
-                      <div style={{ padding: '16px', background: T.cardSub, borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ padding: '16px', background: '#F8F9FA', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <input type="password" placeholder="현재 비밀번호" value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #D1D1D6', outline: 'none' }} />
                         <input type="password" placeholder="새 비밀번호" value={newPwd} onChange={e => setNewPwd(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #D1D1D6', outline: 'none' }} />
                         <button onClick={handlePasswordChange} style={{ padding: '12px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>변경하기</button>
@@ -1344,19 +1342,19 @@ export default function MyPage() {
                     </div>
 
                     {secTab === 'block' && (
-                      <div style={{ padding: '16px', background: T.cardSub, borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ padding: '16px', background: '#F8F9FA', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <input placeholder="차단할 닉네임 입력" value={blockName} onChange={e => setBlockName(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #D1D1D6', outline: 'none' }} />
                           <button onClick={handleBlockUser} style={{ padding: '12px 16px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>차단</button>
                         </div>
                         <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {blockedUsers.map(bu => (
-                            <div key={bu} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.card, padding: '10px 14px', borderRadius: '8px', border: '1px solid #F0F0F0' }}>
+                            <div key={bu} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #F0F0F0' }}>
                               <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>{bu}</span>
                               <button onClick={() => handleUnblockUser(bu)} style={{ padding: '6px 10px', fontSize: `calc(12px * var(--fs, 1))`, background: '#FF5A5F15', color: '#FF5A5F', border: 'none', borderRadius: '6px', fontWeight: '800', cursor: 'pointer' }}>해제</button>
                             </div>
                           ))}
-                          {blockedUsers.length === 0 && <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, textAlign: 'center', padding: '10px' }}>차단한 사용자가 없습니다.</div>}
+                          {blockedUsers.length === 0 && <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', textAlign: 'center', padding: '10px' }}>차단한 사용자가 없습니다.</div>}
                         </div>
                       </div>
                     )}
@@ -1372,11 +1370,11 @@ export default function MyPage() {
       {/* 🟦 팔로워 / 팔로잉 목록 모달 🟦 */}
       {followModal && (
         <div
-          style={{ position: 'fixed', inset: 0, background: T.overlay, zIndex: 1100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
           onClick={() => setFollowModal(null)}
         >
           <div
-            style={{ width: '100%', maxWidth: '480px', backgroundColor: T.card, borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '28px 24px 48px', animation: 'slideUp 0.3s ease-out' }}
+            style={{ width: '100%', maxWidth: '480px', backgroundColor: '#fff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '28px 24px 48px', animation: 'slideUp 0.3s ease-out' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ width: '40px', height: '5px', background: '#E5E5EA', borderRadius: '3px', margin: '0 auto 20px' }} />
@@ -1387,15 +1385,15 @@ export default function MyPage() {
                   {followList.length}명
                 </span>
               </h3>
-              <button onClick={() => setFollowModal(null)} style={{ background: 'none', border: 'none', fontSize: `calc(22px * var(--fs, 1))`, cursor: 'pointer', color: T.textSub }}>✕</button>
+              <button onClick={() => setFollowModal(null)} style={{ background: 'none', border: 'none', fontSize: `calc(22px * var(--fs, 1))`, cursor: 'pointer', color: '#8E8E93' }}>✕</button>
             </div>
 
             {followLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: T.textSub, fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>불러오는 중...</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#8E8E93', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700' }}>불러오는 중...</div>
             ) : followList.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
                 <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '10px' }}>👤</div>
-                <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: T.textSub }}>
+                <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93' }}>
                   {followModal === 'followers' ? '아직 팔로워가 없습니다.' : '팔로잉 중인 사용자가 없습니다.'}
                 </p>
               </div>
@@ -1405,7 +1403,7 @@ export default function MyPage() {
                   <div
                     key={u.email}
                     onClick={() => { setFollowModal(null); navigate(`/user/${encodeURIComponent(u.name)}`); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', background: T.cardSub, borderRadius: '16px', cursor: 'pointer' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', background: '#F8F9FA', borderRadius: '16px', cursor: 'pointer' }}
                   >
                     <div style={{
                       width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
@@ -1418,8 +1416,8 @@ export default function MyPage() {
                       }
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: T.text }}>{u.name || '이름 없음'}</div>
-                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight: '600', marginTop: '2px' }}>{u.email}</div>
+                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>{u.name || '이름 없음'}</div>
+                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginTop: '2px' }}>{u.email}</div>
                     </div>
                   </div>
                 ))}
@@ -1433,14 +1431,14 @@ export default function MyPage() {
       {/* BIZ-ENH: 연락처 확인 모달 */}
       {bizPhoneModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setBizPhoneModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px' }}>
             <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
             <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', marginBottom:'6px' }}>📞 내 연락처 정보</div>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, fontWeight:'600', marginBottom:'20px' }}>예약 문의 고객에게 노출되는 번호입니다</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>예약 문의 고객에게 노출되는 번호입니다</div>
             {bizPhone.shipName && (
-              <div style={{ background: T.cardSub, borderRadius:'16px', padding:'14px 18px', marginBottom:'12px' }}>
-                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight:'700', marginBottom:'4px' }}>선박명</div>
-                <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight:'900', color: T.text }}>🚢 {bizPhone.shipName}</div>
+              <div style={{ background:'#F8F9FA', borderRadius:'16px', padding:'14px 18px', marginBottom:'12px' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'700', marginBottom:'4px' }}>선박명</div>
+                <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight:'900', color:'#1c1c1e' }}>🚢 {bizPhone.shipName}</div>
               </div>
             )}
             <div style={{ background:'#EBF5FF', borderRadius:'16px', padding:'18px', marginBottom:'20px', textAlign:'center' }}>
@@ -1453,14 +1451,14 @@ export default function MyPage() {
                   </div>
                 </>
               ) : (
-                <div style={{ color: T.textSub, fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'700', padding:'10px 0' }}>
+                <div style={{ color:'#8E8E93', fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'700', padding:'10px 0' }}>
                   <div style={{ fontSize: `calc(28px * var(--fs, 1))`, marginBottom:'8px' }}>📵</div>
                   등록된 연락처가 없습니다.<br/>선박 홍보글 등록 시 연락처를 입력해주세요.
                   <button onClick={() => { setBizPhoneModal(false); navigate('/write-business'); }} style={{ display:'block', width:'100%', marginTop:'14px', padding:'12px', background:'#0056D2', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>홍보글 등록하기</button>
                 </div>
               )}
             </div>
-            <button onClick={() => setBizPhoneModal(false)} style={{ width:'100%', padding:'14px', border: `1.5px solid ${T.borderMid}`, borderRadius:'14px', background: T.card, fontWeight:'800', cursor:'pointer', color: T.textSub }}>닫기</button>
+            <button onClick={() => setBizPhoneModal(false)} style={{ width:'100%', padding:'14px', border:'1.5px solid #E5E5EA', borderRadius:'14px', background:'#fff', fontWeight:'800', cursor:'pointer', color:'#666' }}>닫기</button>
           </div>
         </div>
       )}
@@ -1468,34 +1466,34 @@ export default function MyPage() {
       {/* BIZ-ENH: 내 선박 홍보글 목록 모달 */}
       {bizPostsModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setBizPostsModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px', maxHeight:'80vh', overflowY:'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px 40px', width:'100%', maxWidth:'480px', maxHeight:'80vh', overflowY:'auto' }}>
             <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
-              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', color: T.text }}>🚢 내 선박 홍보글</div>
-              <button onClick={() => setBizPostsModal(false)} style={{ background:'none', border:'none', fontSize: `calc(22px * var(--fs, 1))`, cursor:'pointer', color: T.textSub }}>✕</button>
+              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', color:'#1c1c1e' }}>🚢 내 선박 홍보글</div>
+              <button onClick={() => setBizPostsModal(false)} style={{ background:'none', border:'none', fontSize: `calc(22px * var(--fs, 1))`, cursor:'pointer', color:'#8E8E93' }}>✕</button>
             </div>
-            {bizPostsLoading ? <div style={{ textAlign:'center', padding:'40px 0', color: T.textSub }}>불러오는 중...</div>
+            {bizPostsLoading ? <div style={{ textAlign:'center', padding:'40px 0', color:'#8E8E93' }}>불러오는 중...</div>
             : myBizPosts.length === 0 ? (
               <div style={{ textAlign:'center', padding:'40px 0' }}>
                 <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom:'10px' }}>🚢</div>
-                <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'700', color: T.textSub }}>등록된 홍보글이 없습니다.</p>
+                <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'700', color:'#8E8E93' }}>등록된 홍보글이 없습니다.</p>
                 <button onClick={() => { setBizPostsModal(false); navigate('/write-business'); }} style={{ marginTop:'14px', padding:'12px 24px', background:'#0056D2', color:'#fff', border:'none', borderRadius:'14px', fontWeight:'900', cursor:'pointer' }}>홍보글 등록하기</button>
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
                 {myBizPosts.map(p => (
-                  <div key={String(p._id || p.id)} style={{ background: T.cardSub, borderRadius:'18px', padding:'16px' }}>
+                  <div key={String(p._id || p.id)} style={{ background:'#F8F9FA', borderRadius:'18px', padding:'16px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
                       <div>
-                        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight:'900', color: T.text }}>{p.shipName || '선박명 미입력'}</div>
-                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight:'600', marginTop:'2px' }}>{p.region} · {p.type || p.boatType}</div>
+                        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight:'900', color:'#1c1c1e' }}>{p.shipName || '선박명 미입력'}</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginTop:'2px' }}>{p.region} · {p.type || p.boatType}</div>
                       </div>
                       <div style={{ display:'flex', gap:'6px' }}>
                         <button onClick={() => { setBizPostsModal(false); navigate(`/write-business?editId=${p._id || p.id}`); }} style={{ padding:'6px 10px', background:'#EBF5FF', color:'#0056D2', border:'none', borderRadius:'8px', fontWeight:'800', fontSize: `calc(12px * var(--fs, 1))`, cursor:'pointer' }}>수정</button>
                         <button onClick={() => handleDeleteBizPost(p._id || p.id)} disabled={deletingBizId === (p._id || p.id)} style={{ padding:'6px 10px', background:'#FFF0F0', color:'#FF3B30', border:'none', borderRadius:'8px', fontWeight:'800', fontSize: `calc(12px * var(--fs, 1))`, cursor:'pointer' }}>{deletingBizId === (p._id || p.id) ? '...' : '삭제'}</button>
                       </div>
                     </div>
-                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, fontWeight:'600', lineHeight:'1.5', overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{p.content}</div>
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color:'#555', fontWeight:'600', lineHeight:'1.5', overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{p.content}</div>
                     {p.phone && <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color:'#0056D2', fontWeight:'800', marginTop:'8px' }}>📞 {p.phone}</div>}
                   </div>
                 ))}
@@ -1510,17 +1508,17 @@ export default function MyPage() {
       <input ref={galleryFileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleGalleryImageChange} />
       {galleryModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:9100, display:'flex', alignItems:'flex-end', justifyContent:'center' }} onClick={() => setGalleryModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius:'28px 28px 0 0', padding:'28px 24px', paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 40px)', width:'100%', maxWidth:'480px', maxHeight:'90vh', overflowY:'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'28px 28px 0 0', padding:'28px 24px', paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 40px)', width:'100%', maxWidth:'480px', maxHeight:'90vh', overflowY:'auto' }}>
             <div style={{ width:'40px', height:'4px', background:'#E5E5EA', borderRadius:'2px', margin:'0 auto 20px' }} />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
-              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', color: T.text }}>🎣 조과 갤러리 등록</div>
-              <button onClick={() => setGalleryModal(false)} style={{ background:'none', border:'none', fontSize: `calc(22px * var(--fs, 1))`, cursor:'pointer', color: T.textSub }}>✕</button>
+              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', color:'#1c1c1e' }}>🎣 조과 갤러리 등록</div>
+              <button onClick={() => setGalleryModal(false)} style={{ background:'none', border:'none', fontSize: `calc(22px * var(--fs, 1))`, cursor:'pointer', color:'#8E8E93' }}>✕</button>
             </div>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, fontWeight:'600', marginBottom:'20px' }}>오픈게시판 선상 카테고리에 자동으로 등록됩니다 🚢</div>
-            <div onClick={() => galleryFileRef.current?.click()} style={{ width:'100%', height:'150px', background: T.cardSub, borderRadius:'18px', border:'2px dashed #D1D1D6', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', marginBottom:'16px', overflow:'hidden' }}>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>오픈게시판 선상 카테고리에 자동으로 등록됩니다 🚢</div>
+            <div onClick={() => galleryFileRef.current?.click()} style={{ width:'100%', height:'150px', background:'#F8F9FA', borderRadius:'18px', border:'2px dashed #D1D1D6', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', marginBottom:'16px', overflow:'hidden' }}>
               {galleryForm.image
                 ? <img src={galleryForm.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'16px' }} />
-                : <div style={{ textAlign:'center', color: T.textSub }}><Camera size={32} style={{ marginBottom:'8px' }} /><div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight:'700' }}>사진 추가 (선택)</div></div>
+                : <div style={{ textAlign:'center', color:'#8E8E93' }}><Camera size={32} style={{ marginBottom:'8px' }} /><div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight:'700' }}>사진 추가 (선택)</div></div>
               }
             </div>
             {[
@@ -1532,7 +1530,7 @@ export default function MyPage() {
             ].map(({ key, label, placeholder }) => (
               <div key={key} style={{ marginBottom:'12px' }}>
                 <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight:'800', color:'#444', marginBottom:'6px' }}>{label}</div>
-                <input value={galleryForm[key]} onChange={e => setGalleryForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={placeholder} style={{ width:'100%', padding:'12px 14px', borderRadius:'12px', border: `1.5px solid ${T.borderMid}`, fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'600', outline:'none', boxSizing:'border-box' }} />
+                <input value={galleryForm[key]} onChange={e => setGalleryForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={placeholder} style={{ width:'100%', padding:'12px 14px', borderRadius:'12px', border:'1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, fontWeight:'600', outline:'none', boxSizing:'border-box' }} />
               </div>
             ))}
             <button onClick={handleGallerySubmit} disabled={gallerySubmitting} style={{ width:'100%', padding:'15px', background: gallerySubmitting ? '#ccc' : 'linear-gradient(135deg,#00C48C,#00897B)', color:'#fff', border:'none', borderRadius:'16px', fontWeight:'900', fontSize: `calc(15px * var(--fs, 1))`, cursor: gallerySubmitting ? 'not-allowed' : 'pointer', marginTop:'4px' }}>

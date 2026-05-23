@@ -16,7 +16,7 @@ export const UCB_ENABLED = import.meta.env.VITE_UCB_ENABLED === 'true';
 /** 페이플 상품 정보 */
 export const PAYPLE_PRODUCTS = {
   BASIC: { planId: 'BASIC', price: 9900,   label: 'BASIC 월 구독',  period: '월',  tier: 'BUSINESS_LITE' },
-  PRO:   { planId: 'PRO',   price: 110000, label: 'PRO 월 구독',   period: '월',  tier: 'PRO'           },
+  PRO:   { planId: 'PRO',   price: 110000, label: 'PRO 연간 구독',  period: '년',  tier: 'PRO'           },
   VVIP:  { planId: 'VVIP',  price: 550000, label: 'VVIP 월 구독',  period: '월',  tier: 'BUSINESS_VIP'  },
 };
 

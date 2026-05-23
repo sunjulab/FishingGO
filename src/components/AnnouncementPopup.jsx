@@ -1,4 +1,3 @@
-import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -28,7 +27,6 @@ function getHideAllKey() {
 // - "모두 닫기": 오늘 전체 숨김
 // - 이미지/제목/자세히보기 클릭 시 해당 공지 상세로 navigate
 export default function AnnouncementPopup() {
-  const T = useTheme(); // ✅ DARK-MODE
   const navigate = useNavigate();
   const [notices, setNotices] = useState([]);   // 팝업 대상 공지 배열
   const [idx, setIdx] = useState(0);             // 현재 표시 인덱스
@@ -126,7 +124,7 @@ export default function AnnouncementPopup() {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: '400px',
-          background: T.card,
+          background: '#fff',
           borderRadius: '24px',
           overflow: 'hidden',
           boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
@@ -147,11 +145,11 @@ export default function AnnouncementPopup() {
             )}
           </div>
           {total > 1 && (
-            <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textLight, fontWeight: '700' }}>
+            <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700' }}>
               {idx + 1} / {total}
             </span>
           )}
-          <button onClick={handleClose} style={{ background: T.cardSub, border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={handleClose} style={{ background: '#F2F2F7', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={16} color="#555" />
           </button>
         </div>
@@ -170,12 +168,12 @@ export default function AnnouncementPopup() {
           {total > 1 && (
             <>
               {idx > 0 && (
-                <button onClick={goPrev} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: T.overlay, border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button onClick={goPrev} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ChevronLeft size={18} color="#fff" />
                 </button>
               )}
               {idx < total - 1 && (
-                <button onClick={goNext} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: T.overlay, border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button onClick={goNext} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ChevronRight size={18} color="#fff" />
                 </button>
               )}
@@ -196,10 +194,10 @@ export default function AnnouncementPopup() {
 
         {/* ── 제목 + 내용 요약 ── */}
         <div onClick={handleNoticeClick} style={{ padding: '16px 20px 12px', cursor: 'pointer' }}>
-          <h2 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: T.text, margin: '0 0 8px', lineHeight: '1.4', wordBreak: 'keep-all' }}>
+          <h2 style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e', margin: '0 0 8px', lineHeight: '1.4', wordBreak: 'keep-all' }}>
             {notice.title}
           </h2>
-          <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, lineHeight: '1.6', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <p style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#666', lineHeight: '1.6', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {notice.content}
           </p>
         </div>
@@ -218,16 +216,16 @@ export default function AnnouncementPopup() {
                 </svg>
               )}
             </div>
-            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>오늘 하루 안 보기</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#555', fontWeight: '700' }}>오늘 하루 안 보기</span>
           </label>
 
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
             {total > 1 && (
-              <button onClick={handleHideAll} style={{ padding: '9px 12px', border: `1.5px solid ${T.borderMid}`, borderRadius: '12px', background: T.card, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: T.textSub, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button onClick={handleHideAll} style={{ padding: '9px 12px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#888', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 모두 닫기
               </button>
             )}
-            <button onClick={handleClose} style={{ padding: '9px 16px', border: 'none', borderRadius: '12px', background: T.cardSub, fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: T.textSub, cursor: 'pointer' }}>
+            <button onClick={handleClose} style={{ padding: '9px 16px', border: 'none', borderRadius: '12px', background: '#F2F2F7', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#555', cursor: 'pointer' }}>
               닫기
             </button>
             <button onClick={handleNoticeClick} style={{ padding: '9px 16px', border: 'none', borderRadius: '12px', background: 'linear-gradient(135deg, #0056D2, #003FA3)', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,86,210,0.3)' }}>

@@ -1,4 +1,3 @@
-import { useTheme } from '../hooks/useTheme';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Calendar, MapPin, Waves, Wind, Anchor, ChevronLeft, Droplets, Share2 } from 'lucide-react';
@@ -17,7 +16,6 @@ const formatDate = (raw) => {
 
 
 export default function CatchDetail() {
-  const T = useTheme(); // ✅ DARK-MODE
   const navigate = useNavigate();
   const { id } = useParams();
   const addToast = useToastStore(s => s.addToast);
@@ -56,8 +54,8 @@ export default function CatchDetail() {
   }, [record?.fish, record?.species, record?.content, record?.image, addToast]);
 
   return (
-    <div className="page-container" style={{ backgroundColor: T.card, height: '100dvh', zIndex: 2000 }}>
-      <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f0f0', backgroundColor: T.card }}>
+    <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
+      <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f0f0', backgroundColor: '#fff' }}>
         <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none', padding: '8px' }}>
           <ChevronLeft size={24} color="#1c1c1e" />
         </button>
@@ -71,7 +69,7 @@ export default function CatchDetail() {
         ) : !record ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: '16px' }}>
             <div style={{ fontSize: `calc(48px * var(--fs, 1))` }}>🎣</div>
-            <p style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', color: T.text }}>기록을 찾을 수 없습니다</p>
+            <p style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>기록을 찾을 수 없습니다</p>
             <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ padding: '12px 24px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: '800', cursor: 'pointer' }}>
               돌아가기
             </button>
@@ -169,7 +167,7 @@ export default function CatchDetail() {
 
               <button
                 onClick={handleShare}
-                style={{ width: '100%', padding: '18px', borderRadius: '16px', border: '1px solid #0056D2', color: '#0056D2', background: T.card, fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginTop: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{ width: '100%', padding: '18px', borderRadius: '16px', border: '1px solid #0056D2', color: '#0056D2', background: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginTop: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
                 <Share2 size={18} /> 이 기록 공유하기
               </button>

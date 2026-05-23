@@ -1,4 +1,3 @@
-import { useTheme } from '../hooks/useTheme';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import apiClient from '../api/index';
 import { evaluateFishingCondition } from '../utils/evaluator';
@@ -100,23 +99,23 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
   const set = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: T.overlay, zIndex: 9200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius: '28px 28px 0 0', padding: '28px 20px 48px', width: '100%', maxWidth: '480px', maxHeight: '92vh', overflowY: 'auto' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '28px 28px 0 0', padding: '28px 20px 48px', width: '100%', maxWidth: '480px', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ width: '40px', height: '4px', background: '#E5E5EA', borderRadius: '2px', margin: '0 auto 20px' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: T.text }}>🎣 조과 기록 남기기</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: `calc(22px * var(--fs, 1))`, cursor: 'pointer', color: T.textSub }}>✕</button>
+          <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>🎣 조과 기록 남기기</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: `calc(22px * var(--fs, 1))`, cursor: 'pointer', color: '#8E8E93' }}>✕</button>
         </div>
-        <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, fontWeight: '600', marginBottom: '20px' }}>
+        <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '20px' }}>
           📍 {point?.name} · 기록은 마이페이지 조과통계에 반영됩니다
         </div>
 
         {/* 사진 업로드 */}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImage} />
-        <div onClick={() => fileRef.current?.click()} style={{ width: '100%', height: '140px', background: T.cardSub, borderRadius: '16px', border: '2px dashed #D1D1D6', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '16px', overflow: 'hidden' }}>
+        <div onClick={() => fileRef.current?.click()} style={{ width: '100%', height: '140px', background: '#F8F9FA', borderRadius: '16px', border: '2px dashed #D1D1D6', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '16px', overflow: 'hidden' }}>
           {form.image
             ? <img src={form.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }} />
-            : <div style={{ textAlign: 'center', color: T.textSub }}>
+            : <div style={{ textAlign: 'center', color: '#8E8E93' }}>
                 <div style={{ fontSize: `calc(28px * var(--fs, 1))`, marginBottom: '6px' }}>📷</div>
                 <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700' }}>사진 추가 (선택)</div>
               </div>
@@ -126,25 +125,25 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
         {/* 어종 */}
         <div style={{ marginBottom: '12px' }}>
           <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#444', marginBottom: '6px' }}>어종 *</div>
-          <input value={form.fish} onChange={e => set('fish', e.target.value)} placeholder="예: 감성돔" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: `1.5px solid ${T.borderMid}`, fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
+          <input value={form.fish} onChange={e => set('fish', e.target.value)} placeholder="예: 감성돔" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
         {/* 사이즈 / 무게 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
           <div>
             <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#444', marginBottom: '6px' }}>사이즈 (cm)</div>
-            <input value={form.size} onChange={e => set('size', e.target.value)} placeholder="예: 45" type="number" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: `1.5px solid ${T.borderMid}`, fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
+            <input value={form.size} onChange={e => set('size', e.target.value)} placeholder="예: 45" type="number" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
           </div>
           <div>
             <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#444', marginBottom: '6px' }}>무게 (kg)</div>
-            <input value={form.weight} onChange={e => set('weight', e.target.value)} placeholder="예: 2.3" type="number" step="0.1" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: `1.5px solid ${T.borderMid}`, fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
+            <input value={form.weight} onChange={e => set('weight', e.target.value)} placeholder="예: 2.3" type="number" step="0.1" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
           </div>
         </div>
 
         {/* 미끼 */}
         <div style={{ marginBottom: '12px' }}>
           <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#444', marginBottom: '6px' }}>미끼/루어</div>
-          <input value={form.bait} onChange={e => set('bait', e.target.value)} placeholder="예: 크릴, 갯지렁이, 타이라바" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: `1.5px solid ${T.borderMid}`, fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
+          <input value={form.bait} onChange={e => set('bait', e.target.value)} placeholder="예: 크릴, 갯지렁이, 타이라바" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
         {/* 날씨 선택 */}
@@ -163,13 +162,13 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
         {/* 날짜 */}
         <div style={{ marginBottom: '12px' }}>
           <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#444', marginBottom: '6px' }}>출조 날짜</div>
-          <input value={form.date} onChange={e => set('date', e.target.value)} type="date" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: `1.5px solid ${T.borderMid}`, fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
+          <input value={form.date} onChange={e => set('date', e.target.value)} type="date" style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
         {/* 메모 */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#444', marginBottom: '6px' }}>한마디 메모</div>
-          <textarea value={form.memo} onChange={e => set('memo', e.target.value)} placeholder="예: 새벽 4시 물때 맞춰 대박! 다음엔 타이라바 도전" rows={3} style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: `1.5px solid ${T.borderMid}`, fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+          <textarea value={form.memo} onChange={e => set('memo', e.target.value)} placeholder="예: 새벽 4시 물때 맞춰 대박! 다음엔 타이라바 도전" rows={3} style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(14px * var(--fs, 1))`, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
         </div>
 
         {/* ✅ SHARE-OPT: 오픈게시판 동시 공유 체크 옵션 */}
@@ -202,7 +201,7 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
             <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: form.shareToBoard ? '#0056D2' : '#1c1c1e' }}>
               🌊 오픈게시판에도 공유하기
             </div>
-            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, marginTop: '2px', fontWeight: '600' }}>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', marginTop: '2px', fontWeight: '600' }}>
               체크 시 조과 내용이 오픈게시판 '조황 공유' 카테고리에 자동 등록됩니다
             </div>
           </div>
@@ -219,7 +218,6 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
 }
 
 export default function FishingPointBottomSheet({ selectedPoint, onClose, onConditionReady }) {
-  const T = useTheme(); // ✅ DARK-MODE
   const [marineData, setMarineData] = useState({
     tide: null,
     waterTemp: '-',
@@ -447,10 +445,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
   }, [fishingCondition, selectedPoint?.id]);
 
   return (
-    <div style={{ padding: '0', backgroundColor: T.card, borderRadius: '24px 24px 0 0', height: '100%' }}>
+    <div style={{ padding: '0', backgroundColor: '#fff', borderRadius: '24px 24px 0 0', height: '100%' }}>
       {/* 바텀 시트 닫기 X 버튼 - 직접 추가함 (UI 완전성) */}
       <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '1.4rem', margin: 0, fontWeight: '900', color: T.text }}>
+        <h2 style={{ fontSize: '1.4rem', margin: 0, fontWeight: '900', color: '#1A1A2E' }}>
           {selectedPoint.name}
         </h2>
         {onClose && (
@@ -546,7 +544,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             <div style={{ position: 'absolute', inset: 0, backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10, background: 'rgba(10,10,15,0.7)' }}>
               <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '12px', filter: 'drop-shadow(0 2px 8px rgba(255,255,255,0.2))' }}>🔐</div>
               <div style={{ fontSize: `calc(16px * var(--fs, 1))`, color: '#fff', fontWeight: '950', marginBottom: '8px' }}>LITE 플랜 이상 전용 영상</div>
-              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textLight, fontWeight: '600', marginBottom: '20px', textAlign: 'center', padding: '0 20px' }}>
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#aaa', fontWeight: '600', marginBottom: '20px', textAlign: 'center', padding: '0 20px' }}>
                 현장의 파도와 분위기를 1초 단위로 <br/> 파악할 수 있는 인라인 라이브 시스템입니다.
               </div>
               <button 
@@ -613,15 +611,15 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                   </div>
                 </div>
              ) : (
-                <div style={{ color: T.textSub, fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>현재 송출 가능한 영상이 없습니다.</div>
+                <div style={{ color: '#888', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>현재 송출 가능한 영상이 없습니다.</div>
              )
           ) : (
-             <div style={{ color: T.textSub, fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>시스템 오류 (데이터를 불러올 수 없습니다.)</div>
+             <div style={{ color: '#888', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>시스템 오류 (데이터를 불러올 수 없습니다.)</div>
           )}
 
           {/* LIVE 배지 (고퀄리티) */}
           <div style={{ position: 'absolute', top: '14px', left: '14px', background: 'rgba(230,0,0,0.95)', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '950', padding: '5px 10px', borderRadius: '8px', zIndex: 5, display: 'flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(230,0,0,0.5)' }}>
-            <span style={{ display: 'inline-block', width: '5px', height: '5px', background: T.card, borderRadius: '50%', marginRight: '6px', animation: 'pulse 1.2s infinite' }}></span>
+            <span style={{ display: 'inline-block', width: '5px', height: '5px', background: '#fff', borderRadius: '50%', marginRight: '6px', animation: 'pulse 1.2s infinite' }}></span>
             L I V E
           </div>
           
@@ -635,7 +633,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
         {/* 2. API 데이터 렌더링 영역 */}
         {loading ? (
-          <div style={{ padding: '40px 20px', textAlign: 'center', color: T.textSub, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#888', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '28px', height: '28px', border: '3px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: 'bold' }}>해양 데이터를 분석 중입니다...</span>
           </div>
@@ -645,7 +643,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             {(() => {
               const cond = fishingCondition; // ✅ 3RD-B7: useMemo 연산 결과 사용
               return (
-                <div style={{ backgroundColor: T.card, border: `2px solid ${cond.color}`, borderRadius: '20px', padding: '20px', marginBottom: '10px', boxShadow: `0 8px 24px ${cond.color}20`, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ backgroundColor: '#fff', border: `2px solid ${cond.color}`, borderRadius: '20px', padding: '20px', marginBottom: '10px', boxShadow: `0 8px 24px ${cond.color}20`, position: 'relative', overflow: 'hidden' }}>
                   {/* 상단 헤더 및 점수 */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -657,7 +655,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                   </div>
 
                   {/* 냉정한 조언 텍스트 */}
-                  <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: T.text, marginBottom: '18px', lineHeight: 1.5, letterSpacing: '-0.04em', whiteSpace: 'pre-line' }}>
+                  <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginBottom: '18px', lineHeight: 1.5, letterSpacing: '-0.04em', whiteSpace: 'pre-line' }}>
                     "{cond.advice}"
                   </div>
 
@@ -671,18 +669,18 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                   </div>
 
                   {/* 냉정한 장비 가이드 가로바 */}
-                  <div style={{ backgroundColor: T.cardSub, padding: '14px', borderRadius: '16px', border: '1px solid #F0F2F7', display: 'flex', gap: '10px', alignItems: 'start' }}>
+                  <div style={{ backgroundColor: '#F8F9FC', padding: '14px', borderRadius: '16px', border: '1px solid #F0F2F7', display: 'flex', gap: '10px', alignItems: 'start' }}>
                     <div style={{ fontSize: `calc(20px * var(--fs, 1))`, flexShrink: 0 }}>🧰</div>
                     <div>
-                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: T.textSub, marginBottom: '3px' }}>전문가 권장 채비</div>
-                      <div style={{ fontSize: `calc(12.5px * var(--fs, 1))`, fontWeight: '800', color: T.text, lineHeight: 1.4 }}>{cond.gear}</div>
+                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#8E8E93', marginBottom: '3px' }}>전문가 권장 채비</div>
+                      <div style={{ fontSize: `calc(12.5px * var(--fs, 1))`, fontWeight: '800', color: '#1A1A2E', lineHeight: 1.4 }}>{cond.gear}</div>
                     </div>
                   </div>
 
                   {/* 쇼핑 아이템 추천 영역 */}
                   {Array.isArray(shoppingItems) && shoppingItems.length > 0 && (
                     <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed rgba(0,0,0,0.06)' }}>
-                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: T.textSub, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#8E8E93', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         🛒 이 포인트 권장 채비 쇼핑
                       </div>
                       <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '4px' }}>
@@ -692,7 +690,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                             onClick={() => window.open(item.link || item.coupangUrl, '_blank')}
                             style={{ 
                               minWidth: '120px', width: '120px', 
-                              backgroundColor: T.card, borderRadius: '12px', padding: '8px',
+                              backgroundColor: '#fff', borderRadius: '12px', padding: '8px',
                               boxShadow: '0 2px 10px rgba(0,0,0,0.05)', border: '1px solid #EBF2FF',
                               cursor: 'pointer', flexShrink: 0, transition: 'transform 0.15s'
                             }}
@@ -706,7 +704,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                               style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px' }}
                               onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; }}
                             />
-                            <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3, marginBottom: '6px', height: '26px' }}>
+                            <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3, marginBottom: '6px', height: '26px' }}>
                               {item.name || item.productName}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -724,7 +722,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             })()}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-              <span style={{ fontWeight: '800', color: T.textSub }}>현재 실측 수온</span>
+              <span style={{ fontWeight: '800', color: '#555' }}>현재 실측 수온</span>
               <span style={{ color: '#0056D2', fontWeight: '900', fontSize: `calc(18px * var(--fs, 1))` }}>{marineData.sst || marineData.waterTemp || '-'}°C</span>
             </div>
 
@@ -736,8 +734,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                   { label: '중층', val: marineData.sst ? (parseFloat(marineData.sst) - 1.2).toFixed(1) : '-', color: '#42A5F5' },
                   { label: '저층', val: marineData.sst ? (parseFloat(marineData.sst) - 3.4).toFixed(1) : '-', color: '#1E88E5' },
                 ].map(l => (
-                  <div key={l.label} style={{ flex: 1, backgroundColor: T.card, padding: '10px 6px', borderRadius: '10px', textAlign: 'center', border: '1.5px solid #F0F2F7' }}>
-                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: T.textSub, marginBottom: '4px' }}>{l.label}</div>
+                  <div key={l.label} style={{ flex: 1, backgroundColor: '#fff', padding: '10px 6px', borderRadius: '10px', textAlign: 'center', border: '1.5px solid #F0F2F7' }}>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>{l.label}</div>
                     <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: l.color }}>{l.val !== '-' ? `${l.val}°C` : '-'}</div>
                   </div>
                 ))}
@@ -746,7 +744,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
             <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
               <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>오늘의 물때 (만조/간조)</span>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.95rem', color: T.textSub }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.95rem', color: '#555' }}>
                 {marineData.tide && (marineData.tide.phase || marineData.tide_predictions) ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', borderBottom: '1px solid #ddd', paddingBottom: '4px', marginBottom: '4px' }}>
@@ -763,7 +761,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                     ))}
                   </div>
                 ) : (
-                  <li style={{ color: T.textSub, fontSize: `calc(13px * var(--fs, 1))` }}>현장 물때 데이터를 실시간 분석 중입니다.</li>
+                  <li style={{ color: '#888', fontSize: `calc(13px * var(--fs, 1))` }}>현장 물때 데이터를 실시간 분석 중입니다.</li>
                 )}
               </ul>
             </div>
@@ -772,7 +770,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
                 <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>바다 낙시지수</span>
                 {/* ✅ 3RD-A4: JSON.stringify raw 제거 — key:value 일반어 표시 */}
-                <div style={{ fontSize: '0.9rem', color: T.textSub, lineHeight: 1.6 }}>
+                <div style={{ fontSize: '0.9rem', color: '#555', lineHeight: 1.6 }}>
                   {typeof marineData.fishingIndex === 'object'
                     ? Object.entries(marineData.fishingIndex).map(([k, v]) => `${k}: ${v}`).join(' · ')
                     : String(marineData.fishingIndex)}
@@ -801,14 +799,14 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>🚢</span>
-                  <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: T.text, letterSpacing: '-0.03em' }}>이 구역 선상배 예약</span>
+                  <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', letterSpacing: '-0.03em' }}>이 구역 선상배 예약</span>
                   {selectedPoint.region && (
                     <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', background: '#EBF2FF', color: '#1565C0', padding: '3px 8px', borderRadius: '20px' }}>
                       {(selectedPoint.region || '').split(' ')[0]}
                     </span>
                   )}
                 </div>
-                <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: T.textSub, cursor: 'pointer' }}>
+                <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', cursor: 'pointer' }}>
                   전체보기 →
                 </button>
               </div>
@@ -816,13 +814,13 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               {bizLoading ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '10px' }}>
                   <div style={{ width: '20px', height: '20px', border: '2.5px solid #1565C0', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: T.textSub, fontWeight: '700' }}>선상배 정보 불러오는 중...</span>
+                  <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>선상배 정보 불러오는 중...</span>
                 </div>
               ) : businessPosts.length === 0 ? (
                 <div style={{ background: 'linear-gradient(135deg, #F8F9FC, #F0F4FF)', borderRadius: '16px', padding: '24px', textAlign: 'center', border: '1.5px dashed #D0D8F0' }}>
                   <div style={{ fontSize: `calc(28px * var(--fs, 1))`, marginBottom: '8px' }}>⚓</div>
-                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: T.textSub }}>이 구역 등록된 선상배가 없습니다</div>
-                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textLight, fontWeight: '600', marginTop: '4px' }}>VVIP 구독 후 내 선상을 등록해보세요!</div>
+                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93' }}>이 구역 등록된 선상배가 없습니다</div>
+                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '600', marginTop: '4px' }}>VVIP 구독 후 내 선상을 등록해보세요!</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -927,7 +925,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
             {/* ✅ CATCH-ENH: 조과 기록 남기기 버튼 */}
             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F0F0F5' }}>
-              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: T.text, marginBottom: '10px' }}>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e', marginBottom: '10px' }}>
                 🎣 이 포인트에서 잡으셨나요?
               </div>
               <button
@@ -952,7 +950,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                 <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>🎣</span>
                 조과 기록 남기기
               </button>
-              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: T.textSub, fontWeight: '600', textAlign: 'center', marginTop: '8px' }}>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', textAlign: 'center', marginTop: '8px' }}>
                 기록은 마이페이지 조과통계에 자동 반영됩니다
               </div>
             </div>
