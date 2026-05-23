@@ -332,23 +332,23 @@ export default function MediaTab() {
                   <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800' }}>검색 결과가 없습니다</div>
                 </div>
               )}
-              {searchResults.map(v => <VideoCard key={v.youtubeId} video={{ ...v, tag: 'recent' }} onSelect={setSelectedVideo} onNavigate={navigate} T={T} />)}
+              {searchResults.map(v => <VideoCard key={v.youtubeId} video={{ ...v, tag: 'recent' }} onSelect={setSelectedVideo} onNavigate={navigate} />)}
             </>
           ) : (
             <>
               {/* 이번 주 최신 영상 섹션 */}
               {recentVideos.length > 0 && (
                 <>
-                  <SectionHeader icon="🕐" title="이번 주 업로드" subtitle="최근 7일 · 2분 이상 낚시 영상" color="#34C759" T={T} />
-                  {recentVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} T={T} />)}
+                  <SectionHeader icon="🕐" title="이번 주 업로드" subtitle="최근 7일 · 2분 이상 낚시 영상" color="#34C759" />
+                  {recentVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} />)}
                 </>
               )}
 
               {/* 인기 영상 섹션 */}
               {popularVideos.length > 0 && (
                 <div style={{ marginTop: recentVideos.length > 0 ? '8px' : '0' }}>
-                  <SectionHeader icon="🔥" title="이달의 인기 낚시 영상" subtitle="최근 1개월 최고 조회수 · 2분 이상" color="#FF3B30" T={T} />
-                  {popularVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} T={T} />)}
+                  <SectionHeader icon="🔥" title="이달의 인기 낚시 영상" subtitle="최근 1개월 최고 조회수 · 2분 이상" color="#FF3B30" />
+                  {popularVideos.map(v => <VideoCard key={v.youtubeId} video={v} onSelect={setSelectedVideo} onNavigate={navigate} />)}
                 </div>
               )}
 
