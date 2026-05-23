@@ -3,6 +3,7 @@ import ReactPlayer from 'react-player';
 // ✅ 12TH-B3: Info, Star dead import 2개 제거
 import { Play, ShoppingBag, ChevronRight, Video, Bookmark, ExternalLink } from 'lucide-react';
 import apiClient from '../api/index';
+import { NativeAd } from '../components/AdUnit';
 
 // NEW-A2: 얉팔 파트너스 타겟 타입닝 파라미터 (수익 완결)
 const COUPANG_PID = import.meta.env.VITE_COUPANG_PARTNERS_ID || '';
@@ -177,8 +178,9 @@ export default function Channel() {
 
         {/* Video List */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-            {filteredVideos.map(video => (
-                <div key={video.id} style={{ backgroundColor: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7' }}>
+            {filteredVideos.map((video, index) => (
+              <React.Fragment key={video.id}>
+                <div style={{ backgroundColor: '#fff', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.04)', border: '1.5px solid #F2F2F7' }}>
                     {/* Thumbnail Area */}
                     <div style={{ position: 'relative', width: '100%', height: '200px', cursor: 'pointer' }} onClick={() => setPlayingVideo(video)}>
                         <img
@@ -241,6 +243,11 @@ export default function Channel() {
                         </div>
                     </div>
                 </div>
+                {/* 채널 목록 사이 네이티브 광고: 2개마다 1번 */}
+                {(index + 1) % 2 === 0 && (
+                  <NativeAd slotId={`channel_native_${index}`} style={{ margin: '0 0 4px' }} />
+                )}
+              </React.Fragment>
             ))}
         </div>
 

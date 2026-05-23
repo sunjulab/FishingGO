@@ -89,6 +89,21 @@ function FontScaleInit() {
   return null;
 }
 
+// ✅ DARK-MODE: 앱 시작 시 localStorage → html[data-theme] 속성 동기화
+function DarkModeInit() {
+  useEffect(() => {
+    const apply = (theme) => {
+      const v = theme === 'dark' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', v);
+    };
+    apply(localStorage.getItem('fishinggo_theme') || 'light');
+    const onStorage = (e) => { if (e.key === 'fishinggo_theme') apply(e.newValue || 'light'); };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  return null;
+}
+
 
 // ✅ BACK-FIX: 물리 뒤로가기 — 서브페이지(/post/,/crew/ 등)는 navigate(-1), 최상위 탭은 잠금
 function BackButtonHandler() {
@@ -393,6 +408,7 @@ export default function App() {
     <BrowserRouter>
       <ErrorBoundary>
         <FontScaleInit />
+        <DarkModeInit />
         <KakaoLoader />
         <Toast />
         <SubscriptionFailBanner />

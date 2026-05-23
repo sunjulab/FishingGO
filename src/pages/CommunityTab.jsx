@@ -1310,11 +1310,12 @@ export default function CommunityTab() {
                 <div style={{ fontSize: `calc(13px * var(--fs, 1))` }}>'{crewSearch}' 에 해당하는 크루가 없습니다</div>
               </div>
             )}
-            {filteredCrews.map(crew => {
+            {filteredCrews.map((crew, crewIndex) => {
               const crewId = String(crew._id || crew.id);
               const isMyCrew = myCrewIds.has(crewId);
               return (
-              <div key={crewId} style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '16px', marginBottom: '12px', flexDirection: 'column', boxShadow: isMyCrew ? '0 2px 10px rgba(0,86,210,0.12)' : '0 2px 10px rgba(0,0,0,0.03)', border: isMyCrew ? '1.5px solid #0056D2' : '1px solid #f0f0f0' }}>
+              <React.Fragment key={crewId}>
+              <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '16px', marginBottom: '12px', flexDirection: 'column', boxShadow: isMyCrew ? '0 2px 10px rgba(0,86,210,0.12)' : '0 2px 10px rgba(0,0,0,0.03)', border: isMyCrew ? '1.5px solid #0056D2' : '1px solid #f0f0f0' }}>
                 {/* 상단: 정보 + 입장 버튼 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1371,6 +1372,11 @@ export default function CommunityTab() {
                   </div>
                 )}
               </div>
+              {/* 크루 목록 사이 네이티브 광고: 3개마다 1번 */}
+              {(crewIndex + 1) % 3 === 0 && (
+                <NativeAd slotId={`crew_native_${crewIndex}`} style={{ margin: '0 0 8px' }} />
+              )}
+              </React.Fragment>
               );
             })}
 

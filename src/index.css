@@ -36,6 +36,60 @@ html[data-fs="1.15"]{ --fs: 1.15; }
 html[data-fs="1.3"] { --fs: 1.3;  }
 html[data-fs="1.5"] { --fs: 1.5;  }
 
+/* ✅ DARK-MODE: 다크 테마 — html[data-theme="dark"] 시 전역 색상 오버라이드 */
+html[data-theme="dark"] {
+  --bg-gray:    #000000;
+  --text-main:  #F2F2F7;
+  --text-muted: #AEAEB2;
+  --text-light: #636366;
+  --border:     #2C2C2E;
+  --glass:      rgba(28, 28, 30, 0.85);
+  --glass-dark: rgba(0, 0, 0, 0.9);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.4);
+  --shadow-md:  0 8px 24px rgba(0,0,0,0.6);
+  --shadow-lg:  0 16px 48px rgba(0,0,0,0.8);
+}
+
+/* 다크모드: 앱 루트 배경 */
+html[data-theme="dark"] body      { background-color: #000; }
+html[data-theme="dark"] #root     { background-color: #000; }
+
+/* 다크모드: 페이지 컨테이너 */
+html[data-theme="dark"] .page-container { background-color: #000; }
+
+/* 다크모드: 바텀 내비게이션 */
+html[data-theme="dark"] .bottom-nav {
+  background: rgba(28, 28, 30, 0.92);
+  border-top-color: #2C2C2E;
+}
+
+/* 다크모드: 헤더 */
+html[data-theme="dark"] .premium-header {
+  background: rgba(18, 18, 18, 0.92);
+  border-bottom-color: #2C2C2E;
+}
+
+/* 다크모드: 공통 카드 */
+html[data-theme="dark"] .card {
+  background: #1C1C1E;
+  border-color: #2C2C2E;
+}
+
+/* 다크모드: 스켈레톤 shimmer */
+html[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #2C2C2E 25%, #3A3A3C 50%, #2C2C2E 75%);
+  background-size: 200% 100%;
+}
+
+/* 다크모드: 화이트 배경 div들 자동 대응 (인라인 style은 컴포넌트별 처리) */
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea {
+  background-color: #1C1C1E;
+  color: #F2F2F7;
+  border-color: #2C2C2E;
+}
+
+
 * {
   box-sizing: border-box;
   margin: 0;
