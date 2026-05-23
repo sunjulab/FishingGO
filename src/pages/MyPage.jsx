@@ -101,8 +101,6 @@ export default function MyPage() {
   const [notiSetting, setNotiSetting] = useState(DEFAULT_NOTI);
   // ✅ FONT-SCALE: 리렌더 트리거용 (CSS 변수 변경 후 활성 버튼 상태 즉시 반영)
   const [fontScale, setFontScale] = useState(() => localStorage.getItem('fishinggo_fs') || '1');
-  // 화이트/다크 모드: localStorage 저장, html[data-theme] 속성 + CSS 수식 변수
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('fishinggo_theme') === 'dark');
 
   // NEW-B3: 카메라 오버레이 hover 상태 — DOM 직접 조작 anti-pattern 제거
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
@@ -1232,80 +1230,6 @@ export default function MyPage() {
                   </>
                 );
               })()}
-
-         {/* ✅ DARK-MODE: 배경 모드 선택 카드 (글씨 크기 아래) */}
-         {(() => {
-           const applyTheme = (isDark) => {
-             const theme = isDark ? 'dark' : 'light';
-             localStorage.setItem('fishinggo_theme', theme);
-             document.documentElement.setAttribute('data-theme', theme);
-             setDarkMode(isDark);
-           };
-           const MODES = [
-             { id: 'light', label: '일반', emoji: '☀️', desc: '백색 배경' },
-             { id: 'dark',  label: '다크', emoji: '🌙', desc: '블랙 배경' },
-           ];
-           return (
-             <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7', marginBottom: '12px' }}>
-               <div style={{ padding: '18px 24px' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                   <div style={{ backgroundColor: darkMode ? '#1C1C1E' : '#EBF2FF', padding: '10px', borderRadius: '12px', transition: 'background 0.3s' }}>
-                     <span style={{ fontSize: `calc(20px * var(--fs, 1))` }}>{darkMode ? '🌙' : '☀️'}</span>
-                   </div>
-                   <div>
-                     <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e' }}>배경 모드</div>
-                     <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>화이트 / 다크 모드를 선택하세요</div>
-                   </div>
-                 </div>
-                 {/* 토글 스위치 */}
-                 <div
-                   onClick={() => applyTheme(!darkMode)}
-                   style={{
-                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                     padding: '14px 18px', borderRadius: '18px', cursor: 'pointer',
-                     background: darkMode
-                       ? 'linear-gradient(135deg, #1C1C1E, #2C2C2E)'
-                       : 'linear-gradient(135deg, #F2F7FF, #EBF2FF)',
-                     border: darkMode ? '1.5px solid #3A3A3C' : '1.5px solid #C8DBFF',
-                     transition: 'all 0.3s ease',
-                   }}
-                 >
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                     <span style={{ fontSize: '22px' }}>{darkMode ? '🌙' : '☀️'}</span>
-                     <div>
-                       <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: darkMode ? '#fff' : '#1c1c1e' }}>
-                         {darkMode ? '다크 모드' : '라이트 모드'}
-                       </div>
-                       <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: darkMode ? 'rgba(255,255,255,0.5)' : '#8E8E93', fontWeight: '600' }}>
-                         {darkMode ? '블랙 배경 활성화' : '하이트 색상 활성화'}
-                       </div>
-                     </div>
-                   </div>
-                   {/* 슬라이더 토글 */}
-                   <div style={{
-                     width: '52px', height: '30px', borderRadius: '15px', position: 'relative',
-                     background: darkMode ? 'linear-gradient(135deg, #0056D2, #0096FF)' : '#E5E5EA',
-                     transition: 'background 0.3s ease',
-                     flexShrink: 0,
-                   }}>
-                     <div style={{
-                       position: 'absolute', top: '3px',
-                       left: darkMode ? '25px' : '3px',
-                       width: '24px', height: '24px', borderRadius: '50%',
-                       background: '#fff',
-                       boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                       transition: 'left 0.3s ease',
-                     }} />
-                   </div>
-                 </div>
-                 {/* 프리븷 메시지 */}
-                 <div style={{ marginTop: '10px', padding: '8px 12px', background: darkMode ? 'rgba(255,255,255,0.05)' : '#F8F9FC', borderRadius: '10px', fontSize: `calc(11px * var(--fs, 1))`, color: darkMode ? 'rgba(255,255,255,0.5)' : '#888', fontWeight: '600', textAlign: 'center' }}>
-                   {darkMode ? '🌙 다크 모드 적용 중 — 눈의 피로를 줄여줍니다' : '☀️ 라이트 모드 적용 중 — 터치하여 다크로 전환'}
-                 </div>
-               </div>
-             </div>
-           );
-         })()}
 
 
               {showModal === 'security' && (

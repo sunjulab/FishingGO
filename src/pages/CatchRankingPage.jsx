@@ -5,7 +5,6 @@ import apiClient from '../api/index';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { getFishEmoji } from '../data/fishRules';
-import { NativeAd } from '../components/AdUnit';
 
 const FISH_TABS = ['전체', '감성돔', '광어', '우럭', '볼락', '참돔', '농어', '방어', '붕어', '고등어'];
 const PERIOD_TABS = [{ key: 'week', label: '주간' }, { key: 'month', label: '월간' }, { key: 'all', label: '전체' }];
@@ -336,8 +335,7 @@ export default function CatchRankingPage({ embedded = false }) {
                 const isOpen = expanded === r._id;
 
                 return (
-                  <React.Fragment key={r._id}>
-                    <div style={{
+                  <div key={r._id} style={{
                     background: isTop3 ? T.cardBgTop : T.cardBg,
                     borderRadius: '18px',
                     border: isTop3 ? T.cardBorderTop : T.cardBorder,
@@ -459,11 +457,6 @@ export default function CatchRankingPage({ embedded = false }) {
                       </div>
                     </div>
                   </div>
-                  {/* 조황랭킹 목록 사이 네이티브 광고: 5개마다 1번 */}
-                  {(i + 1) % 5 === 0 && (
-                    <NativeAd slotId={`ranking_native_${i}`} style={{ margin: '4px 0' }} />
-                  )}
-                  </React.Fragment>
                 );
               })}
             </div>

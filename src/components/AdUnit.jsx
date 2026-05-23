@@ -13,19 +13,10 @@
  * 3. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { useTheme } from '../hooks/useTheme';
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { showRewardedAd } from '../services/AdMobService';
 import { loadNativeAd, removeNativeAd } from '../services/NativeAdService';
-
-// NativeAdPlugin 런타임 참조 — scroll 자가갱신용
-function getNativeAdPlugin() {
-  try {
-    if (!Capacitor.isNativePlatform()) return { NativeAdPlugin: null };
-    return { NativeAdPlugin: registerPlugin('NativeAd') };
-  } catch { return { NativeAdPlugin: null }; }
-}
 
 // Capacitor 네이티브 환경 감지 (3중 체크)
 const isCapacitorNative = () => {
@@ -42,23 +33,15 @@ function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 
 
 // ─────────────────────────────────────────────────────────────────
-//  2. NativeAd — 완전 자가관리형 (Self-Contained) 인피드 광고 컴포넌트
-//
-//  ✅ 100점 구조 4원칙:
-//  1. 초기 렌더부터 280px placeholder 확보 → Kotlin 좌표 즉시 유효
-//  2. scroll + IntersectionObserver + ResizeObserver 내장
-//     → 어느 페이지에 넣어도 스크롤 추적 자동 (페이지별 설정 불필요)
-//  3. 광고 로드 실패 시에만 height collapse (adFailed → null)
-//     → 빈 공간 완전 소멸
-//  4. 언마운트(탭 전환·페이지 이동) 시 removeNativeAd 즉시 호출
-//     → Kotlin 오버레이 즉시 정리 (선상배 빈 공간 버그 해결)
+//  2. 네이티브(인피드) 광고 — 앱: NativeAdPlugin 오버레이용 placeholder
+//  [핵심] 앱에서 null 반환 금지 — placeholder div가 있어야 NativeAdPlugin.kt가 동작
 // ─────────────────────────────────────────────────────────────────
 export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
-  const ref       = useRef(null);
-  const loadedRef = useRef(false); // StrictMode 이중실행 방지
+  const ref = useRef();
   const IS_NATIVE = isCapacitorNative();
-  const [adFailed, setAdFailed] = useState(false);
-
+  // ✅ AD-FIX: 광고 로드 상태 추적 — 실패 시 빈 공간 제거
+  const [adLoaded, setAdLoaded] = useState(false);   // 광고 로드 성공
+  const [adFailed, setAdFailed] = useState(false);   // 광고 로드 실패
   const isPremium = useUserStore(s =>
     ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) ||
     s.user?.id === ADMIN_ID || s.user?.email === ADMIN_EMAIL
@@ -66,70 +49,44 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
 
   useEffect(() => {
     if (!IS_NATIVE || isPremium || !ref.current) return;
-    if (loadedRef.current) return;   // 이중 실행 방지
-    loadedRef.current = true;
-
     const el = ref.current;
-
-    // ── [1] 광고 로드 (placeholder는 이미 280px로 렌더됨 → Kotlin 좌표 즉시 유효)
-    loadNativeAd(slotId, el).catch(() => setAdFailed(true));
-
-    // ── [2] Kotlin 위치 자가갱신 헬퍼
-    const { NativeAdPlugin } = getNativeAdPlugin();
-    const updatePos = () => {
-      if (!el) return;
-      const dpr  = window.devicePixelRatio || 1;
-      const rect = el.getBoundingClientRect();
-      const x    = Math.round(rect.left   * dpr);
-      const y    = Math.round(rect.top    * dpr);
-      const inVP = rect.bottom > 0 && rect.top < window.innerHeight;
-      try {
-        NativeAdPlugin?.setVisible({ slotId, visible: inVP });
-        if (inVP) NativeAdPlugin?.updatePosition({ slotId, x, y });
-      } catch { /* 스크롤 중 오류 무시 */ }
-    };
-
-    // ── [3] 자동 위치 추적: scroll + IO + RO
-    window.addEventListener('scroll', updatePos, { passive: true });
-    const io = new IntersectionObserver(updatePos, { threshold: [0, 0.1, 1] });
-    io.observe(el);
-    const ro = new ResizeObserver(updatePos);
-    ro.observe(el);
-
-    // ── [4] 언마운트 즉시 정리 (탭 전환 시 오버레이 제거)
+    // ✅ AD-FIX: loadNativeAd가 성공 시 resolve, 실패 시 throw (NativeAdService 수정됨)
+    // 성공 → setAdLoaded(true) → div 280px 확장
+    // 실패(광고 없음/AdMob 미승인) → setAdFailed(true) → div 완전 제거 (빈 공간 없음)
+    loadNativeAd(slotId, el)
+      .then(() => setAdLoaded(true))
+      .catch(() => setAdFailed(true));
     return () => {
-      window.removeEventListener('scroll', updatePos);
-      io.disconnect();
-      ro.disconnect();
       removeNativeAd(slotId);
-      loadedRef.current = false;
     };
   }, [IS_NATIVE, isPremium, slotId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 프리미엄 유저: 광고 없음
-  if (isPremium) return null;
-  // 광고 로드 실패: 빈 공간 없음
-  if (adFailed)  return null;
-  // 웹 환경: 광고 없음
-  if (!IS_NATIVE) return null;
 
-  // ── 핵심: 초기부터 280px 고정 확보 → Kotlin 좌표 즉시 유효
-  //    실패 시에만 adFailed=true → null 반환으로 공간 완전 소멸
-  return (
-    <div
-      ref={ref}
-      style={{
-        width: '100%',
-        height: 280,
-        margin: '4px 0 12px',
-        borderRadius: '16px',
-        background: 'transparent',
-        overflow: 'hidden',
-        flexShrink: 0,
-        ...style,
-      }}
-    />
-  );
+  // 프리미엄 유저는 광고 없음
+  if (isPremium) return null;
+  // ✅ AD-FIX: 광고 로드 실패 시 공간 제거
+  if (adFailed && !adLoaded) return null;
+
+  if (IS_NATIVE) {
+    return (
+      <div
+        ref={ref}
+        style={{
+          width: '100%',
+          minHeight: adLoaded ? 280 : 0, // 로드 전 높이 0 → 성공 시 280px
+          margin: adLoaded ? '4px 0 12px' : 0,
+          borderRadius: '16px',
+          background: 'transparent',
+          overflow: 'hidden',
+          transition: 'min-height 0.3s ease',
+          ...style,
+        }}
+      />
+    );
+  }
+
+  // 웹 환경: 광고 없음
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -137,7 +94,6 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
 //  [정지 방지] 유저 자발적 선택만 허용 — 강제 팝업 금지
 // ─────────────────────────────────────────────────────────────────
 export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe, context = 'post' }) {
-  const T = useTheme(); // ✅ DARK-MODE
   const [adWatching, setAdWatching] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
   const [adDone, setAdDone] = useState(false);
