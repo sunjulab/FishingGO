@@ -30,6 +30,8 @@ const kakaoAppKey = env.VITE_KAKAO_APP_KEY || '';
 const siteUrl     = env.VITE_SITE_URL      || 'https://fishing-go.vercel.app';
 const apiUrl      = env.VITE_API_URL       || 'https://api.fishinggo.kr';
 const tideKey     = env.VITE_TIDE_API_KEY  || '';
+// ✅ AUTO-VERSION: package.json에서 버전 읽기 — ForceUpdateChecker.__APP_VERSION__ 치환
+const appVersion  = JSON.parse(readFileSync('package.json', 'utf8')).version;
 
 // ─── dist 초기화 (rmSync 없이, 덮어쓰기) ─────────────────
 mkdirSync('dist/assets', { recursive: true });
@@ -64,6 +66,8 @@ await esbuild.build({
     'import.meta.env.VITE_KAKAO_APP_KEY':JSON.stringify(kakaoAppKey),
     'import.meta.env.VITE_TIDE_API_KEY': JSON.stringify(tideKey),
     'import.meta.env.VITE_SITE_URL':     JSON.stringify(siteUrl),
+    // ✅ AUTO-VERSION: ForceUpdateChecker에서 사용하는 빌드타임 버전 상수
+    '__APP_VERSION__':                   JSON.stringify(appVersion),
   },
   minify: false,
   treeShaking: true,
