@@ -8,7 +8,7 @@
  */
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
-const APP_LOGO_URL = 'https://fishing-go.vercel.app/og-image.png';
+const APP_LOGO_URL = 'https://fishing-go.vercel.app/og-image.png?v=20260526';
 const APP_ID = 'kr.fishinggo.app'; // ✅ capacitor.config.json appId
 
 /**
