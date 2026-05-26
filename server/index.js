@@ -43,6 +43,7 @@ const NOTICES_FILE = path.join(__dirname, 'notices.json');
 const BUSINESS_FILE = path.join(__dirname, 'business.json');
 const SECRET_OVERRIDES_FILE = path.join(__dirname, 'secretPointOverrides.json');
 const CCTV_OVERRIDES_FILE = path.join(__dirname, 'cctvOverrides.json');
+const APP_CONFIG_FILE = path.join(__dirname, 'appConfig.json');
 const PRO_SUBS_FILE = path.join(__dirname, 'proSubscriptions.json');
 const VVIP_SLOTS_FILE = path.join(__dirname, 'vvipSlots.json');
 
@@ -61,6 +62,7 @@ let memBusinessPosts = [];
 // ⚠️ 아래 4개 변수는 파일 로드 코드(55줄) 이전에 선언해야 TDZ 에러가 없습니다
 let secretPointOverrides = {};
 let cctvOverrides = {};
+let appConfig = { min_version: "1.0.0", store_url: "market://details?id=com.fishinggo.app" };
 let memProSubs = {};
 let memVvipSlots = {};
 
@@ -74,6 +76,7 @@ try {
   if (fs.existsSync(BUSINESS_FILE)) memBusinessPosts = JSON.parse(fs.readFileSync(BUSINESS_FILE, 'utf-8'));
   if (fs.existsSync(SECRET_OVERRIDES_FILE)) secretPointOverrides = JSON.parse(fs.readFileSync(SECRET_OVERRIDES_FILE, 'utf-8'));
   if (fs.existsSync(CCTV_OVERRIDES_FILE)) cctvOverrides = JSON.parse(fs.readFileSync(CCTV_OVERRIDES_FILE, 'utf-8'));
+  if (fs.existsSync(APP_CONFIG_FILE)) appConfig = Object.assign(appConfig, JSON.parse(fs.readFileSync(APP_CONFIG_FILE, 'utf-8')));
   if (fs.existsSync(PRO_SUBS_FILE)) memProSubs = JSON.parse(fs.readFileSync(PRO_SUBS_FILE, 'utf-8'));
   if (fs.existsSync(VVIP_SLOTS_FILE)) memVvipSlots = JSON.parse(fs.readFileSync(VVIP_SLOTS_FILE, 'utf-8'));
   // 로컬 보존 파일 로드 완료 (logger 초기화 이전)
@@ -106,6 +109,7 @@ function saveMemNotices()        { _saveFile(NOTICES_FILE, memNotices); }
 function saveMemBusinessPosts()  { _saveFile(BUSINESS_FILE, memBusinessPosts); }
 function saveSecretPointOverrides() { _saveFile(SECRET_OVERRIDES_FILE, secretPointOverrides); }
 function saveCctvOverrides()     { _saveFile(CCTV_OVERRIDES_FILE, cctvOverrides); }
+function saveAppConfig()         { _saveFile(APP_CONFIG_FILE, appConfig); }
 function saveProSubs()           { _saveFile(PRO_SUBS_FILE, memProSubs); }
 function saveVvipSlots()         { _saveFile(VVIP_SLOTS_FILE, memVvipSlots); }
 
@@ -413,6 +417,26 @@ app.get('/api/health', (req, res) => {
     fcm: fcmStatus ? 'ready' : 'disabled',  // FCM 초기화 상태
     env: process.env.NODE_ENV || 'development',
   });
+});
+
+// ✅ DEEPLINK-VERIFY: Android App Links 검증 파일
+// https://fishing-go.vercel.app/.well-known/assetlinks.json
+// 이 응답이 있어야 autoVerify="true" HTTPS 딥링크가 동작함
+// SHA256: 앱 빌드 후 keytool -printcert -jarfile app-release.aab 로 확인 후 업데이트 필요
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json([{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+      namespace: 'android_app',
+      package_name: 'kr.fishinggo.app',
+      // SHA-256: fishinggo-release.jks signingReport로 추출 완료
+      sha256_cert_fingerprints: [
+        // ✅ fishinggo-release.jks 릴리즈 키 SHA-256 (signingReport로 추출)
+        '0B:14:2F:90:F1:E9:EE:32:C6:DD:93:99:94:98:1A:C8:90:F4:63:26:E7:DE:8A:63:B2:CE:08:6C:0B:5F:8F:85'
+      ]
+    }
+  }]);
 });
 
 // ── ✅ DEV-SEED: 테스트 게시글 시드 엔드포인트 (개발 전용, X-Seed-Secret 헤더 필요) ──
@@ -777,6 +801,26 @@ app.delete('/api/secret-point-overrides/:id', (req, res) => {
   delete secretPointOverrides[id];
   saveSecretPointOverrides();
   res.json({ ok: true, overrides: secretPointOverrides });
+});
+
+// ─── 앱 설정 (강제 업데이트용) ──────────────────────────────────────────────────
+app.get('/api/app-config', (req, res) => {
+  res.json(appConfig);
+});
+
+app.post('/api/admin/app-config', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  
+  if (req.body.min_version) appConfig.min_version = req.body.min_version;
+  if (req.body.store_url) appConfig.store_url = req.body.store_url;
+  
+  saveAppConfig();
+  res.json({ ok: true, appConfig });
 });
 
 app.get('/api/debug', async (req, res) => {
