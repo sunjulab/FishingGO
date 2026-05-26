@@ -1,5 +1,15 @@
 {
   "rewrites": [
+    {
+      "source": "/catch/:id",
+      "destination": "/api/og?type=catch&id=:id",
+      "missing": [{ "type": "query", "key": "ref" }]
+    },
+    {
+      "source": "/post/:id",
+      "destination": "/api/og?type=post&id=:id",
+      "missing": [{ "type": "query", "key": "ref" }]
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
