@@ -170,25 +170,31 @@ export default function CatchUploadPage() {
         const file = new File([blob], 'catch.png', { type: 'image/png' });
         await navigator.share({ title: `낚시GO 조황 인증 - ${fishName}`, files: [file] });
         return;
-      } catch { /* Kakao로 폴백 */ }
+      } catch { /* 링크 복사 방식으로 폴백 */ }
     }
-    if (window.Kakao?.isInitialized()) {
-      window.Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-          title: `🎣 ${fishName} 조황 인증!`,
-          description: `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`,
-          imageUrl: shareCard || 'https://fishinggo.vercel.app/logo.png',
-          link: { mobileWebUrl: 'https://fishinggo.vercel.app', webUrl: 'https://fishinggo.vercel.app' },
-        },
-        buttons: [{ title: '낚시GO 앱 보기', link: { mobileWebUrl: 'https://fishinggo.vercel.app', webUrl: 'https://fishinggo.vercel.app' } }],
-      });
-    } else {
+    // 링크 복사 + 카카오톡 열기 (Kakao SDK 이미지 전송 문제 방지)
+    const shareUrl = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      copied = true;
+    } catch {
       try {
-        await navigator.clipboard.writeText(`🎣 낚시GO 조황 인증\n${fishName} ${fishSize ? fishSize + 'cm' : ''}\nhttps://fishinggo.vercel.app`);
-        addToast('링크가 복사되었습니다!', 'success');
-      } catch { addToast('공유를 지원하지 않는 환경입니다.', 'error'); }
+        const el = document.createElement('textarea');
+        el.value = shareUrl;
+        el.style.cssText = 'position:fixed;top:-9999px';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        copied = true;
+      } catch { /* noop */ }
     }
+    addToast(
+      copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
+      copied ? 'success' : 'error'
+    );
+    if (copied) setTimeout(() => { window.location.href = 'kakaotalk://'; }, 400);
   };
 
   const st = { padding: '14px 16px', borderRadius: '14px', fontSize: `calc(15px * var(--fs,1))`, border: '1.5px solid #e0e0e0', background: '#fafafa', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' };
