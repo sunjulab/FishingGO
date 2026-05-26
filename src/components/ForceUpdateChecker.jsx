@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { AppUpdate } from '@capawesome/capacitor-app-update';
 
-// ✅ 앱 빌드 시 capacitor.config.json의 version과 반드시 동기화할 것
-const CURRENT_APP_VERSION = '2.1.11';
+// ✅ AUTO-VERSION: 빌드 타임에 vite.config.js → package.json에서 자동 주입
+// 앞으로 package.json의 "version"만 올리면 여기 자동 반영 (하드코딩 불필요)
+const CURRENT_APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.11';
 
 // semver 단순 비교 헬퍼 (v1이 v2보다 작으면 true)
 function isVersionLower(v1, v2) {

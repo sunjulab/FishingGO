@@ -1,7 +1,7 @@
 {
   "name": "fishing-go",
   "private": true,
-  "version": "2.1.4",
+  "version": "2.1.11",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,11 @@
     "preview": "vite preview",
     "cap:sync": "npx cap sync android",
     "cap:android": "npx cap open android",
-    "apk": "npm run build && npx cap sync android"
+    "apk": "npm run build && npx cap sync android",
+    "version:apply": "node update-version.cjs",
+    "release:patch": "npm version patch --no-git-tag-version && node update-version.cjs && git add -A && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git push origin main",
+    "release:minor": "npm version minor --no-git-tag-version && node update-version.cjs && git add -A && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git push origin main",
+    "release:major": "npm version major --no-git-tag-version && node update-version.cjs && git add -A && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git push origin main"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",
@@ -22,6 +26,7 @@
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
+    "@capawesome/capacitor-app-update": "^8.0.3",
     "@react-oauth/google": "^0.13.4",
     "axios": "^1.14.0",
     "cordova-plugin-purchase": "^13.16.0",

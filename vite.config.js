@@ -1,6 +1,11 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'fs'
+
+// ✅ AUTO-VERSION: package.json에서 버전 자동 읽기 — 앱 빌드 시 자동 반영
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const APP_VERSION = pkg.version;
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -12,6 +17,8 @@ export default defineConfig(({ mode }) => {
     '__VITE_KAKAO_APP_KEY__': JSON.stringify(env.VITE_KAKAO_APP_KEY || ''),
     // ✅ 20TH-A1: OG/Twitter URL 플레이스홀더 치환 — .env에 VITE_SITE_URL=https://your-domain.com 설정
     '__VITE_SITE_URL__': JSON.stringify(env.VITE_SITE_URL || 'https://fishing-go.vercel.app'),
+    // ✅ AUTO-VERSION: 빌드 타임에 package.json 버전 자동 주입 → ForceUpdateChecker에서 사용
+    '__APP_VERSION__': JSON.stringify(APP_VERSION),
   },
   plugins: [
     react(),
