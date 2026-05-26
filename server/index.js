@@ -392,17 +392,8 @@ try {
 global.logger = logger;
 
 // ─── CORS: 허용 도메인 화이트리스트 ──────────────────────────────
-const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://fishing-go.vercel.app',
-  'https://fishing-go-mbqp.vercel.app',
-  'https://www.fishing-go.com',   // 신규 커스텀 도메인
-  'https://fishing-go.com',       // 루트 도메인
-  /\.vercel\.app$/,               // Vercel 프리뷰 배포 URL
-  /\.onrender\.com$/,             // Render 서버/프론트 도메인
-  /\.fishing-go\.com$/,           // 서브도메인 전체 허용
-];
+// 모든 origin 허용 (모바일 앱 특성 상 JWT로 인증, origin 제한 불필요)
+const ALLOWED_ORIGINS = [/.*/];  // 전체 허용
 
 // 환경변수로 추가 허용 도메인 설정 (프로덕션 배포 시 사용)
 if (process.env.ALLOWED_ORIGIN) {
@@ -617,21 +608,7 @@ app.post('/api/channel/videos', (req, res) => {
 });
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) {
-      if (process.env.NODE_ENV === 'production') {
-        (logger?.warn || console.warn)('[CORS] Origin 없는 요청 차단 (프로덕션)');
-        return callback(new Error('직접 API 접근이 허용되지 않습니다.'));
-      }
-      return callback(null, true); // 개발환경: Postman/curl 허용
-    }
-    const allowed = ALLOWED_ORIGINS.some(o =>
-      typeof o === 'string' ? o === origin : o.test(origin)
-    );
-    if (allowed) return callback(null, true);
-    (logger?.warn || console.warn)(`[CORS] 차단된 origin: ${origin}`);
-    return callback(new Error('CORS 차단'));
-  },
+  origin: true,        // 모든 origin 허용 (JWT 인증으로 벴안 유지)
   credentials: true,
 }));
 
