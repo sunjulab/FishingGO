@@ -38,6 +38,23 @@ async function copyToClipboard(text) {
   } catch { return false; }
 }
 
+// ✅ KAKAO-OPEN: AppLauncher(공식) → window.open(_system) → location.href 순 폴백
+async function openKakaoTalk() {
+  // 1순위: @capacitor/app-launcher (Capacitor 공식 앱 실행 방법)
+  try {
+    const { AppLauncher } = await import('@capacitor/app-launcher');
+    const { value: canOpen } = await AppLauncher.canOpenUrl({ url: 'kakaotalk://' });
+    if (canOpen) {
+      await AppLauncher.openUrl({ url: 'kakaotalk://' });
+      return;
+    }
+  } catch { /* noop */ }
+  // 2순위: window.open _system (Capacitor WebView 외부 URL 처리)
+  try { window.open('kakaotalk://', '_system'); return; } catch { /* noop */ }
+  // 3순위: location.href (브라우저 환경)
+  try { window.location.href = 'kakaotalk://'; } catch { /* noop */ }
+}
+
 /**
  * URL에서 postId / catchId 추출
  * /post/abc123  →  { type: 'post', id: 'abc123' }
@@ -205,8 +222,7 @@ export async function shareExternal({ title, text, url, imgUrl, postId, catchId,
             : '💛 카카오톡을 열어 링크를 붙여넣기 해주세요.',
           'success'
         );
-        // _system: Capacitor WebView에서 시스템 인텐트로 KakaoTalk 실행
-        setTimeout(() => { window.open('kakaotalk://', '_system'); }, 400);
+        setTimeout(() => { openKakaoTalk(); }, 400);
       }
     );
 

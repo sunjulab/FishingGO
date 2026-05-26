@@ -18,6 +18,17 @@ async function copyToClipboard(text) {
   } catch { return false; }
 }
 
+// ✅ KAKAO-OPEN: AppLauncher(공식) → window.open(_system) → location.href 순 폴백
+async function openKakaoTalk() {
+  try {
+    const { AppLauncher } = await import('@capacitor/app-launcher');
+    const { value: canOpen } = await AppLauncher.canOpenUrl({ url: 'kakaotalk://' });
+    if (canOpen) { await AppLauncher.openUrl({ url: 'kakaotalk://' }); return; }
+  } catch { /* noop */ }
+  try { window.open('kakaotalk://', '_system'); return; } catch { /* noop */ }
+  try { window.location.href = 'kakaotalk://'; } catch { /* noop */ }
+}
+
 const PRIMARY = '#0056D2';
 const GOLD    = '#F59E0B';
 
@@ -191,7 +202,7 @@ export default function CatchUploadPage() {
       copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
       copied ? 'success' : 'error'
     );
-    if (copied) setTimeout(() => { window.open('kakaotalk://', '_system'); }, 400);
+    if (copied) setTimeout(() => { openKakaoTalk(); }, 400);
   };
 
   const st = { padding: '14px 16px', borderRadius: '14px', fontSize: `calc(15px * var(--fs,1))`, border: '1.5px solid #e0e0e0', background: '#fafafa', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' };
