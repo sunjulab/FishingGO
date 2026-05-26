@@ -21,10 +21,12 @@ function parseEnvFile(p) {
   }
   return obj;
 }
+// ✅ APK 빌드 시 .env.local(dev 전용)이 .env.production을 덮어쓰지 않도록
+// .env → .env.local → .env.production 순으로 읽어 production이 최종 우선
 const env = {
   ...parseEnvFile('.env'),
-  ...parseEnvFile('.env.production'),
-  ...parseEnvFile('.env.local'),
+  ...parseEnvFile('.env.local'),      // dev 기본값
+  ...parseEnvFile('.env.production'), // 프로덕션이 최종 우선 (APK 빌드 핵심)
 };
 const kakaoAppKey = env.VITE_KAKAO_APP_KEY || '';
 const siteUrl     = env.VITE_SITE_URL      || 'https://fishing-go.vercel.app';
