@@ -5,7 +5,7 @@ import { AppUpdate } from '@capawesome/capacitor-app-update';
 // ✅ AUTO-VERSION: 빌드 타임에 vite.config.js → package.json에서 자동 주입
 // 앞으로 package.json의 "version"만 올리면 여기 자동 반영 (하드코딩 불필요)
 // eslint-disable-next-line no-undef
-const CURRENT_APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.14';
+const CURRENT_APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.17';
 
 // semver 단순 비교 헬퍼 (v1이 v2보다 작으면 true)
 function isVersionLower(v1, v2) {
@@ -20,9 +20,23 @@ function isVersionLower(v1, v2) {
   return false;
 }
 
+// ✅ UPDATE-DISMISS: localStorage에 24시간 쿨다운 저장 — 앱 재시작해도 하루 한 번만 표시
+const DISMISS_KEY    = 'fishing_update_dismissed_at';
+const DISMISS_HOURS  = 24; // 24시간 후 다시 알림
+function isDismissed() {
+  try {
+    const ts = localStorage.getItem(DISMISS_KEY);
+    if (!ts) return false;
+    return (Date.now() - Number(ts)) < DISMISS_HOURS * 60 * 60 * 1000;
+  } catch { return false; }
+}
+function setDismissed() {
+  try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* noop */ }
+}
+
 export default function ForceUpdateChecker() {
   const [needsUpdate, setNeedsUpdate] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [hidden, setHidden]           = useState(false); // 이번 세션에서 X 클릭 시
   const [storeUrl, setStoreUrl] = useState('https://play.google.com/apps/internaltest/4701312289208373704');
 
   useEffect(() => {
@@ -59,7 +73,8 @@ export default function ForceUpdateChecker() {
     checkUpdate();
   }, []);
 
-  if (!needsUpdate || dismissed) return null;
+  // 24시간 내 이미 닫은 경우 또는 이번 세션에서 닫은 경우
+  if (!needsUpdate || hidden || isDismissed()) return null;
 
   const handleUpdateClick = () => {
     window.location.href = storeUrl;
@@ -82,7 +97,7 @@ export default function ForceUpdateChecker() {
         <button style={styles.button} onClick={handleUpdateClick}>
           업데이트 하러 가기
         </button>
-        <button style={styles.dismissButton} onClick={() => setDismissed(true)}>
+        <button style={styles.dismissButton} onClick={() => { setDismissed(); setHidden(true); }}>
           다음에 업데이트할게요
         </button>
       </div>
