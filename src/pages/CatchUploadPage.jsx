@@ -6,6 +6,18 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import { getFishRule, isClosedSeason, getFishEmoji } from '../data/fishRules';
 
+// ✅ CLIPBOARD: Capacitor → 브라우저 API → execCommand 순 폴백
+async function copyToClipboard(text) {
+  try { const { Clipboard } = await import('@capacitor/clipboard'); await Clipboard.write({ string: text }); return true; } catch { /* noop */ }
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* noop */ }
+  try {
+    const el = document.createElement('textarea');
+    el.value = text; el.style.cssText = 'position:fixed;top:-9999px;opacity:0';
+    document.body.appendChild(el); el.focus(); el.select();
+    document.execCommand('copy'); document.body.removeChild(el); return true;
+  } catch { return false; }
+}
+
 const PRIMARY = '#0056D2';
 const GOLD    = '#F59E0B';
 
@@ -172,24 +184,9 @@ export default function CatchUploadPage() {
         return;
       } catch { /* 링크 복사 방식으로 폴백 */ }
     }
-    // 링크 복사 + 카카오톡 열기 (Kakao SDK 이미지 전송 문제 방지)
+    // Capacitor 클립보드로 링크 복사 + 카카오톡 열기
     const shareUrl = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
-    let copied = false;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      copied = true;
-    } catch {
-      try {
-        const el = document.createElement('textarea');
-        el.value = shareUrl;
-        el.style.cssText = 'position:fixed;top:-9999px';
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el);
-        copied = true;
-      } catch { /* noop */ }
-    }
+    const copied = await copyToClipboard(shareUrl);
     addToast(
       copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
       copied ? 'success' : 'error'

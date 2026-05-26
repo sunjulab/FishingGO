@@ -11,6 +11,33 @@ const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/47013122892083
 const APP_LOGO_URL = 'https://fishing-go.vercel.app/og-image.png?v=20260526';
 const APP_ID = 'kr.fishinggo.app'; // ✅ capacitor.config.json appId
 
+// ✅ CLIPBOARD: Capacitor 전용 클립보드 → 브라우저 API → execCommand 순서로 폴백
+async function copyToClipboard(text) {
+  // 1순위: @capacitor/clipboard (Android Capacitor WebView에서 가장 신뢰)
+  try {
+    const { Clipboard } = await import('@capacitor/clipboard');
+    await Clipboard.write({ string: text });
+    return true;
+  } catch { /* noop */ }
+  // 2순위: 브라우저 Clipboard API (HTTPS 환경)
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch { /* noop */ }
+  // 3순위: execCommand 폴백
+  try {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.cssText = 'position:fixed;top:-9999px;opacity:0';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    return true;
+  } catch { return false; }
+}
+
 /**
  * URL에서 postId / catchId 추출
  * /post/abc123  →  { type: 'post', id: 'abc123' }
@@ -171,35 +198,14 @@ export async function shareExternal({ title, text, url, imgUrl, postId, catchId,
       `<span style="font-size:20px;">💛</span> 카카오톡으로 공유`,
       '#FEE500', '#191919',
       async () => {
-        // 1. 링크 클립보드 복사
-        let copied = false;
-        try {
-          await navigator.clipboard.writeText(pageUrl);
-          copied = true;
-        } catch {
-          // clipboard API 실패 시 execCommand 폴백
-          try {
-            const el = document.createElement('textarea');
-            el.value = pageUrl;
-            el.style.cssText = 'position:fixed;top:-9999px';
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            copied = true;
-          } catch { /* noop */ }
-        }
-
-        // 2. 카카오톡 앱 열기 시도 (딜레이로 토스트 먼저 표시)
+        const copied = await copyToClipboard(pageUrl);
         addToast?.(
           copied
             ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.'
             : '💛 카카오톡을 열어 링크를 붙여넣기 해주세요.',
           'success'
         );
-        setTimeout(() => {
-          window.location.href = 'kakaotalk://';
-        }, 400);
+        setTimeout(() => { window.location.href = 'kakaotalk://'; }, 400);
       }
     );
 
