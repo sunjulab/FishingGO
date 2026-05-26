@@ -183,11 +183,11 @@ export default function CatchUploadPage() {
         memo:      memo.trim(),
         contestId: contestId || null,
       });
-      // catch 고유 URL 저장 (카카오 공유용)
+      // catch 고유 URL 저장 — 백엔드 OG 엔드포인트로 공유 (크롤러: 사진+제목 미리보기)
       const catchId = catchRes.data?.record?._id || catchRes.data?.record?.id;
-      const siteBase = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
-      if (catchId) setCatchUrl(`${siteBase}/catch/${catchId}`);
-      else setCatchUrl(siteBase);
+      const backendBase = import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com';
+      if (catchId) setCatchUrl(`${backendBase}/og/catch/${catchId}`);
+      else setCatchUrl(import.meta.env.VITE_SITE_URL || 'https://fishing-go-frontend.onrender.com');
 
       const card = await generateShareCard({
         fishName, fishSize, fishWeight, location,

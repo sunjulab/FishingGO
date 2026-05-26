@@ -419,6 +419,100 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ── 동적 OG 태그 라우트 ─────────────────────────────────────────────────────
+// KakaoTalk/WhatsApp/Telegram 등 크롤러: OG HTML 반환
+// 일반 브라우저: 프론트엔드 SPA로 리다이렉트
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://fishing-go-frontend.onrender.com';
+const DEFAULT_OG_IMG = `${FRONTEND_URL}/og-image.png`;
+
+function isBotUA(ua = '') {
+  return /facebookexternalhit|Twitterbot|WhatsApp|KakaoTalk|Kakao|Telegram|Slack|Discord|LinkedInBot|googlebot|bingbot|Applebot|crawl|spider|bot|python|curl/i.test(ua);
+}
+function escHtml(s = '') {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function ogHtml({ title, desc, img, pageUrl, spaUrl }) {
+  const t = escHtml(title), d = escHtml(desc), i = escHtml(img), u = escHtml(pageUrl), s = escHtml(spaUrl);
+  return `<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><title>${t}</title>
+<meta name="description" content="${d}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="낚시GO">
+<meta property="og:title" content="${t}">
+<meta property="og:description" content="${d}">
+<meta property="og:image" content="${i}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="${u}">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${t}">
+<meta name="twitter:description" content="${d}">
+<meta name="twitter:image" content="${i}">
+<meta http-equiv="refresh" content="0;url=${s}">
+</head><body>
+<script>window.location.replace('${s}');</script>
+<a href="${s}">낚시GO에서 보기</a>
+</body></html>`;
+}
+
+// GET /og/catch/:id
+app.get('/og/catch/:id', async (req, res) => {
+  const { id } = req.params;
+  const pageUrl = `${FRONTEND_URL}/catch/${id}`;
+  const spaUrl  = `${pageUrl}?ref=og`;
+  const ua = req.headers['user-agent'] || '';
+
+  if (!isBotUA(ua)) {
+    return res.redirect(302, spaUrl);
+  }
+  let title = '🎣 낚시GO 조황 기록', desc = '낚시GO에서 조황 기록을 확인하세요!', img = DEFAULT_OG_IMG;
+  try {
+    let record = null;
+    if (dbReady && CatchRecord) {
+      try { record = await CatchRecord.findById(id).lean(); } catch (_) {}
+    }
+    if (record) {
+      const fish = record.fishName || '조황';
+      const size = record.fishSize ? `${record.fishSize}cm` : '';
+      title = `🎣 ${fish}${size ? ' ' + size : ''} 조황 인증! | 낚시GO`;
+      desc  = [record.memo, record.location].filter(Boolean).join(' · ') || desc;
+      if (record.imageUrl?.startsWith('http')) img = record.imageUrl;
+    }
+  } catch (_) {}
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 's-maxage=3600');
+  return res.send(ogHtml({ title, desc, img, pageUrl, spaUrl }));
+});
+
+// GET /og/post/:id
+app.get('/og/post/:id', async (req, res) => {
+  const { id } = req.params;
+  const pageUrl = `${FRONTEND_URL}/post/${id}`;
+  const spaUrl  = `${pageUrl}?ref=og`;
+  const ua = req.headers['user-agent'] || '';
+
+  if (!isBotUA(ua)) {
+    return res.redirect(302, spaUrl);
+  }
+  let title = '낚시GO 커뮤니티', desc = '낚시GO 커뮤니티 게시글입니다.', img = DEFAULT_OG_IMG;
+  try {
+    let post = null;
+    if (dbReady && Post) {
+      try { post = await Post.findById(id).lean(); } catch (_) {}
+    }
+    if (post) {
+      title = `${post.title || post.content?.slice(0, 40) || '게시글'} | 낚시GO`;
+      desc  = post.content?.slice(0, 100) || desc;
+      const postImg = post.image || post.images?.[0];
+      if (postImg?.startsWith('http')) img = postImg;
+    }
+  } catch (_) {}
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 's-maxage=3600');
+  return res.send(ogHtml({ title, desc, img, pageUrl, spaUrl }));
+});
+
 // ✅ DEEPLINK-VERIFY: Android App Links 검증 파일
 // https://fishing-go.vercel.app/.well-known/assetlinks.json
 // 이 응답이 있어야 autoVerify="true" HTTPS 딥링크가 동작함
