@@ -382,7 +382,7 @@ export default function CatchUploadPage() {
                 fontWeight: '900', fontSize: `calc(15px * var(--fs,1))`, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               }}>
-                <Share2 size={18} /> 카카오톡/SNS 공유
+                <Share2 size={18} /> 공유하기
               </button>
               <button onClick={() => navigate('/catch-ranking')} style={{
                 width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
