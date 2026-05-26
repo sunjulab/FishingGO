@@ -1,153 +1,19 @@
 package kr.fishinggo.app
 
-import android.graphics.Color
-import android.util.Log
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.RatingBar
-import android.widget.TextView
-import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import com.google.android.gms.ads.AdListener
-import com.google.android.gms.ads.AdLoader
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.RequestConfiguration
-import com.google.android.gms.ads.nativead.MediaView
-import com.google.android.gms.ads.nativead.NativeAd
-import com.google.android.gms.ads.nativead.NativeAdView
 
-private const val TAG = "NativeAdPlugin"
-
-// ✅ NATIVE-AD: 네이티브 광고 플러그인
-// - WebView 콘텐츠의 placeholder div 위에 Google NativeAdView를 오버레이
-// - JS에서 placeholder 좌표(getBoundingClientRect)를 받아 정확한 위치에 배치
-// - 스크롤 시 JS가 updatePosition()을 호출하여 실시간 위치 업데이트
-
+/**
+ * NativeAdPlugin — 네이티브 공유 시트 전용 플러그인
+ * (광고 기능 제거, shareText만 유지)
+ */
 @CapacitorPlugin(name = "NativeAd")
 class NativeAdPlugin : Plugin() {
 
-    // slotId → NativeAdView 맵 (복수 광고 슬롯 지원)
-    private val adViews = mutableMapOf<String, NativeAdView>()
-
     /**
-     * 네이티브 광고 로드 + 배치
-     * JS 호출: NativeAd.loadAd({ slotId, adUnitId, x, y, width, height })
-     */
-    @PluginMethod
-    fun loadAd(call: PluginCall) {
-        val slotId   = call.getString("slotId")   ?: "slot_0"
-        val adUnitId = call.getString("adUnitId") ?: "ca-app-pub-9774243773523817/8130405525"
-        val x      = call.getInt("x")      ?: 0
-        val y      = call.getInt("y")      ?: 0
-        val width  = call.getInt("width")  ?: 0
-        val height = call.getInt("height") ?: 300
-
-        activity.runOnUiThread {
-            removeSlot(slotId)
-
-            // ✅ FIX-TIMING: MobileAds.initialize() 완료 콜백 내부에서 AdLoader 실행
-            // 보상형 광고(사용자 클릭 시)와 달리 NativeAd는 렌더 즉시 호출되므로
-            // SDK 초기화 전 요청될 수 있음 → initialize() 콜백으로 완료 보장
-            // initialize()는 이미 완료된 경우 콜백을 즉시 실행하므로 오버헤드 없음
-            MobileAds.initialize(context) { _ ->
-                activity.runOnUiThread {
-                    // Removed MobileAds.setRequestConfiguration to prevent overwriting testingDevices set by AdMobService.
-
-                    val adLoader = AdLoader.Builder(context, adUnitId)
-                        .forNativeAd { nativeAd ->
-                            activity.runOnUiThread {
-                                placeNativeAd(slotId, nativeAd, x, y, width, height)
-                                call.resolve(JSObject().put("success", true).put("slotId", slotId))
-                            }
-                        }
-                        .withAdListener(object : AdListener() {
-                            override fun onAdFailedToLoad(error: LoadAdError) {
-                                Log.w(TAG, "네이티브 광고 로드 실패 [${error.code}]: ${error.message}")
-                                call.reject(error.message)
-                            }
-                        })
-                        .build()
-
-                    adLoader.loadAd(AdRequest.Builder().build())
-                }
-            }
-        }
-    }
-
-
-    /**
-     * 스크롤 시 광고 위치 업데이트
-     * JS 호출: NativeAd.updatePosition({ slotId, x, y })
-     */
-    @PluginMethod
-    fun updatePosition(call: PluginCall) {
-        val slotId = call.getString("slotId") ?: return
-        val x = call.getInt("x") ?: 0
-        val y = call.getInt("y") ?: 0
-
-        activity.runOnUiThread {
-            val view = adViews[slotId] ?: return@runOnUiThread
-            // WebView 실제 화면 위치 offset 보정
-            val webLoc = IntArray(2)
-            bridge.webView.getLocationOnScreen(webLoc)
-            (view.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { params ->
-                params.leftMargin = x + webLoc[0]
-                params.topMargin  = y + webLoc[1]
-                view.requestLayout()
-            }
-            call.resolve()
-        }
-    }
-
-    /**
-     * 광고 가시성 제어 (viewport 밖으로 나가면 숨김)
-     */
-    @PluginMethod
-    fun setVisible(call: PluginCall) {
-        val slotId = call.getString("slotId") ?: return
-        val visible = call.getBoolean("visible") ?: true
-
-        activity.runOnUiThread {
-            adViews[slotId]?.visibility = if (visible) View.VISIBLE else View.INVISIBLE
-            call.resolve()
-        }
-    }
-
-    /**
-     * 광고 슬롯 제거
-     */
-    @PluginMethod
-    fun removeAd(call: PluginCall) {
-        val slotId = call.getString("slotId") ?: return
-        activity.runOnUiThread {
-            removeSlot(slotId)
-            call.resolve()
-        }
-    }
-
-    /**
-     * 모든 광고 슬롯 제거 (페이지 전환 시)
-     */
-    @PluginMethod
-    fun removeAll(call: PluginCall) {
-        activity.runOnUiThread {
-            adViews.keys.toList().forEach { removeSlot(it) }
-            call.resolve()
-        }
-    }
-
-
-    /**
-     * 네이티브 공유 시트 직접 실행
+     * Android OS 공유 시트 직접 실행
      * JS 호출: NativeAd.shareText({ text, title })
      */
     @PluginMethod
@@ -162,87 +28,6 @@ class NativeAdPlugin : Plugin() {
             }
             activity.startActivity(android.content.Intent.createChooser(intent, title))
             call.resolve()
-        }
-    }
-
-    // ─── Private helpers ────────────────────────────────────────────
-
-    private fun placeNativeAd(slotId: String, nativeAd: NativeAd, x: Int, y: Int, w: Int, h: Int) {
-        val adView = LayoutInflater.from(context)
-            .inflate(R.layout.native_ad_view, null) as NativeAdView
-
-        bindNativeAd(adView, nativeAd)
-
-        // WebView 실제 화면 위치 offset 보정 (상태바 등 offset 포함)
-        val webLoc = IntArray(2)
-        bridge.webView.getLocationOnScreen(webLoc)
-
-        val params = FrameLayout.LayoutParams(
-            if (w > 0) w else FrameLayout.LayoutParams.MATCH_PARENT, h
-        ).apply {
-            leftMargin = x + webLoc[0]
-            topMargin  = y + webLoc[1]
-            gravity = Gravity.TOP or Gravity.START
-        }
-
-        val container = activity.findViewById<FrameLayout>(android.R.id.content)
-        container?.addView(adView, params)
-        adViews[slotId] = adView
-        Log.d(TAG, "네이티브 광고 배치: slotId=$slotId x=${x+webLoc[0]} y=${y+webLoc[1]} w=$w h=$h")
-    }
-
-    private fun bindNativeAd(adView: NativeAdView, ad: NativeAd) {
-        // 헤드라인
-        adView.headlineView = adView.findViewById<TextView>(R.id.ad_headline).also {
-            it.text = ad.headline ?: ""
-        }
-        // 광고주
-        adView.advertiserView = adView.findViewById<TextView>(R.id.ad_advertiser).also {
-            it.text = ad.advertiser ?: ""
-            it.visibility = if (ad.advertiser != null) View.VISIBLE else View.GONE
-        }
-        // 본문
-        adView.bodyView = adView.findViewById<TextView>(R.id.ad_body).also {
-            it.text = ad.body ?: ""
-            it.visibility = if (ad.body != null) View.VISIBLE else View.GONE
-        }
-        // CTA 버튼
-        adView.callToActionView = adView.findViewById<Button>(R.id.ad_call_to_action).also {
-            it.text = ad.callToAction ?: "더 보기"
-            it.visibility = if (ad.callToAction != null) View.VISIBLE else View.GONE
-        }
-        // 미디어 (이미지/영상)
-        adView.mediaView = adView.findViewById<MediaView>(R.id.ad_media).also {
-            ad.mediaContent?.let { mc -> it.mediaContent = mc }
-        }
-        // 아이콘
-        adView.iconView = adView.findViewById<ImageView>(R.id.ad_icon).also {
-            val icon = ad.icon
-            if (icon != null) {
-                it.setImageDrawable(icon.drawable)
-                it.visibility = View.VISIBLE
-            } else {
-                it.visibility = View.GONE
-            }
-        }
-        // 별점
-        adView.starRatingView = adView.findViewById<RatingBar>(R.id.ad_stars).also {
-            val stars = ad.starRating
-            if (stars != null) {
-                it.rating = stars.toFloat()
-                it.visibility = View.VISIBLE
-            } else {
-                it.visibility = View.GONE
-            }
-        }
-
-        // NativeAd 최종 등록 (명시적 Java 메서드 호출)
-        adView.setNativeAd(ad)
-    }
-
-    private fun removeSlot(slotId: String) {
-        adViews.remove(slotId)?.let { view: NativeAdView ->
-            (view.parent as? android.view.ViewGroup)?.removeView(view)
         }
     }
 }
