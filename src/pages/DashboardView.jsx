@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Map, BarChart2, Ship, Crown, Zap, Search, Clock,
-  Waves, Wind, Tv, AlertCircle, X, MapPin, Lock,
+  Waves, Wind, Tv, AlertCircle, X, MapPin, Lock, Play,
 } from 'lucide-react';
 import apiClient from '../api/index';
 import CsInquirySection from '../components/CsInquirySection';
-import { NativeAd } from '../components/AdUnit';
+import { RewardGateModal } from '../components/AdUnit';
 
 export default function DashboardView({
   viewMode,
@@ -54,7 +54,64 @@ export default function DashboardView({
 }) {
   const navigate = useNavigate();
 
+  // ── 포인트 확인 광고 게이트 ──────────────────────────────────────────
+  const [showPointAdGate, setShowPointAdGate] = useState(false);
+  const [pendingPoint, setPendingPoint] = useState(null);
+  const [pointAdContext, setPointAdContext] = useState('point');
+  // 이번 세션에서 광고로 잠금 해제된 포인트 ID Set
+  const [unlockedPoints, setUnlockedPoints] = useState(() => new Set());
+
+  // 하루 최대 광고 시청 횟수 체크 (localStorage 기반)
+  const canWatchPointAd = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const key = `point_ad_${today}`;
+    const count = parseInt(localStorage.getItem(key) || '0', 10);
+    return count < 5; // 하루 5회 무료
+  };
+  const recordPointAdWatch = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const key = `point_ad_${today}`;
+    const count = parseInt(localStorage.getItem(key) || '0', 10);
+    localStorage.setItem(key, String(count + 1));
+  };
+
+  // 포인트 카드 클릭 핸들러 (비프리미엄: 광고 게이트)
+  const handlePremiumPointClick = (point) => {
+    if (canAccessPremium || unlockedPoints.has(point.id)) {
+      setViewMode('map');
+      handlePointClick(point);
+      return;
+    }
+    if (!canWatchPointAd()) {
+      addToast('📍 오늘 광고 시청 한도(5회)에 도달했습니다. 내일 다시 시도하거나 구독하세요!', 'info');
+      return;
+    }
+    setPendingPoint(point);
+    setPointAdContext('point');
+    setShowPointAdGate(true);
+  };
+
+  // 보상 광고 완료 후 포인트 언락
+  const handlePointAdComplete = () => {
+    if (!pendingPoint) return;
+    recordPointAdWatch();
+    setUnlockedPoints(prev => new Set([...prev, pendingPoint.id]));
+    addToast(`📍 ${pendingPoint.name} 포인트가 해제됐습니다! 🎉`, 'success');
+    if (pointAdContext === 'secret') {
+      setViewMode('map');
+      setShowSecretPoints(true);
+      addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');
+    } else {
+      setViewMode('map');
+      handlePointClick(pendingPoint);
+    }
+    setPendingPoint(null);
+  };
+  // ──────────────────────────────────────────────────────────────────
+
+
   return (
+    <>
     <div style={{ display: viewMode === 'dashboard' ? 'flex' : 'none', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))', scrollbarWidth: 'none' }}>
 
@@ -224,8 +281,7 @@ export default function DashboardView({
           </div>
         )}
 
-        {/* 네이티브 광고 */}
-        <NativeAd style={{ margin: '0 16px 4px' }} />
+
 
         {/* AI 낚시 적합도 게이지 */}
         <div style={{ padding: '12px 16px 0' }}>
@@ -280,7 +336,16 @@ export default function DashboardView({
                 label: '비밀포인트',
                 locked: !canAccessPremium,
                 action: () => {
-                  if (!canAccessPremium) { addToast('🔒 LITE 플랜 이상에서 비밀 포인트를 확인할 수 있어요!', 'error'); return; }
+                  if (!canAccessPremium && !canWatchPointAd()) {
+                    addToast('📍 오늘 광고 시청 한도(5회)에 도달했습니다. 내일 다시 시도하거나 구독하세요!', 'info');
+                    return;
+                  }
+                  if (!canAccessPremium) {
+                    setPendingPoint({ id: 'secret', name: '비밀 포인트' });
+                    setPointAdContext('secret');
+                    setShowPointAdGate(true);
+                    return;
+                  }
                   setViewMode('map'); setShowSecretPoints(true); addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');
                 },
                 customIcon: (
@@ -424,7 +489,7 @@ export default function DashboardView({
               const statusLabel = liveScore >= 90 ? '최고' : liveScore >= 75 ? '활발' : liveScore >= 50 ? '보통' : 'POOR';
               return (
                 <div key={point.id}
-                  onClick={() => { setViewMode('map'); handlePointClick(point); }}
+                  onClick={() => handlePremiumPointClick(point)}
                   style={{ minWidth: '140px', background: '#fff', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 3px 10px rgba(0,0,0,0.06)', border: `1px solid ${rank === 0 ? 'rgba(0,196,140,0.35)' : '#F0F2F7'}`, cursor: 'pointer', transition: 'transform 0.15s' }}
                   onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
                   onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -479,8 +544,7 @@ export default function DashboardView({
           )}
         </div>
 
-        {/* 두 번째 네이티브 광고 */}
-        <NativeAd slotId="home_native_2" style={{ margin: '0 16px 4px' }} />
+
 
         {/* 미끼 팁 */}
         <div style={{ padding: '4px 16px 20px' }}>
@@ -504,5 +568,15 @@ export default function DashboardView({
 
       </div>
     </div>
+
+    {/* 포인트 확인 보상형 광고 게이트 */}
+    <RewardGateModal
+      isOpen={showPointAdGate}
+      onClose={() => { setShowPointAdGate(false); setPendingPoint(null); }}
+      onRewardComplete={handlePointAdComplete}
+      onSubscribe={() => { setShowPointAdGate(false); navigate('/vvip-subscribe'); }}
+      context={pointAdContext}
+    />
+    </>
   );
 }

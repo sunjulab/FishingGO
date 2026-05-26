@@ -9,7 +9,7 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
 import { NativeAd } from '../components/AdUnit';
-import { loadNativeAd, updateNativeAdPositions, removeNativeAd, removeAllNativeAds } from '../services/NativeAdService';
+// NativeAdService 제거됨 (네이티브 광고 기능 삭제)
 import ImageGallery from '../components/ImageGallery';
 import StorySlider from '../components/StorySlider';
 import { io } from 'socket.io-client';
@@ -457,18 +457,7 @@ export default function CommunityTab() {
 
 
 
-  // ✅ NATIVE-AD: 스크롤 시 인피드 네이티브 광고 위치 실시간 업데이트 (앱 전용)
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    const handleScroll = () => updateNativeAdPositions(nativeAdSlotMapRef.current);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // ✅ NATIVE-AD: 페이지 언마운트 시 모든 네이티브 광고 제거
-  useEffect(() => {
-    return () => { removeAllNativeAds(); };
-  }, []);
+  // NativeAd 스크롤/언마운트 이벤트 제거 (네이티브 광고 삭제됨)
 
   // ✅ SHARE-SOCKET-CLEANUP: 언마운트 시 캐시된 모든 공유 소켓 연결 해제 (메모리 누수 방지)
   useEffect(() => {

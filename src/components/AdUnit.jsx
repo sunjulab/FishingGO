@@ -16,7 +16,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { showRewardedAd } from '../services/AdMobService';
-import { loadNativeAd, removeNativeAd } from '../services/NativeAdService';
+// NativeAdService 제거 (네이티브 광고 기능 삭제)
 
 // NativeAdPlugin 런타임 참조 — scroll 자가갱신용
 function getNativeAdPlugin() {
@@ -41,6 +41,7 @@ function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 
 
 // ─────────────────────────────────────────────────────────────────
+// NativeAd — 네이티브 광고 제거됨, 하위호환을 위해 null 반환 유지
 //  2. NativeAd — 완전 자가관리형 (Self-Contained) 인피드 광고 컴포넌트
 //
 //  ✅ 100점 구조 4원칙:
@@ -52,7 +53,14 @@ function loadAdSense() { /* REMOVED: AdMob 전용으로 전환 */ }
 //  4. 언마운트(탭 전환·페이지 이동) 시 removeNativeAd 즉시 호출
 //     → Kotlin 오버레이 즉시 정리 (선상배 빈 공간 버그 해결)
 // ─────────────────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
+  // 네이티브 광고 기능 제거 — 빈 컴포넌트 반환
+  return null;
+}
+
+/** @deprecated 네이티브 광고 제거됨 — 아래 원본 코드는 참조 보존 */
+function _NativeAdLegacy({ style = {}, slotId = 'native_ad_default' }) {
   const ref       = useRef(null);
   const loadedRef = useRef(false); // StrictMode 이중실행 방지
   const retryRef  = useRef(0);     // ✅ FIX-TIMING: 재시도 횟수 추적
@@ -163,6 +171,8 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
   const CONTEXT_TEXT = {
     post:  { title: '🎣 게시글 무료 등록', action: '글 등록 완료!' },
     crew:  { title: '🏕️ 크루 방 무료 개설', action: '크루 개설 완료!' },
+    point: { title: '📍 낚시 포인트 확인', action: '포인트 확인 완료!' },
+    secret: { title: '⭐ 비밀 포인트 확인', action: '비밀 포인트 오픈!' },
   };
   const ctx = CONTEXT_TEXT[context] || CONTEXT_TEXT.post;
 
