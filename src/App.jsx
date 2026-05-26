@@ -44,9 +44,25 @@ try {
 
 
 // ─── 카카오 JS SDK 초기화 (공유/소셜 기능용) ─────────────────────────────────
-if (typeof window !== 'undefined' && window.Kakao && !window.Kakao.isInitialized()) {
-  const kakaoKey = import.meta.env.VITE_KAKAO_APP_KEY || 'd353be56977b1c13b03d8981bcf8b5ba';
-  if (kakaoKey) window.Kakao.init(kakaoKey);
+// 모듈 로드 시점에는 SDK가 아직 async 로드 전 → useEffect로 재시도 (아래 KakaoSdkInit 참조)
+function KakaoSdkInit() {
+  useEffect(() => {
+    const key = 'd353be56977b1c13b03d8981bcf8b5ba';
+    const tryInit = () => {
+      if (window.Kakao) {
+        if (!window.Kakao.isInitialized()) {
+          try { window.Kakao.init(key); } catch (e) { /* 도메인/키 오류 */ }
+        }
+        return true;
+      }
+      return false;
+    };
+    if (tryInit()) return;          // 이미 로드됨
+    const t1 = setTimeout(tryInit, 800);
+    const t2 = setTimeout(tryInit, 2500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+  return null;
 }
 
 // ✅ 3RD-A1: Header 프로필 fallback — pravatar.cc 외부 의존 제거 (LoginPage NEW-A2와 동일 패턴)
@@ -461,6 +477,7 @@ export default function App() {
         <AppBanner />           {/* ✅ Android 브라우저에서 앱 설치/실행 유도 배너 */}
         <ForceUpdateChecker />
         <FontScaleInit />
+        <KakaoSdkInit />     {/* ✅ KAKAO-SDK: useEffect 재시도 초기화 (onload 보완) */}
         <KakaoLoader />
         <Toast />
         <SubscriptionFailBanner />

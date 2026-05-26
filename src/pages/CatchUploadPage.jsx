@@ -205,16 +205,23 @@ export default function CatchUploadPage() {
   };
 
   const handleShare = async () => {
+    const shareLink = catchUrl || (import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app');
+    const shareTitle = `🎣 ${fishName} 조황 인증!`;
+    const shareDesc = `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`;
+
     // 1순위: 카카오 공유 SDK (카톡방 선택창)
     const ready = ensureKakaoReady();
+    if (!ready) {
+      // SDK 미초기화 시 상태 토스트 (진단용)
+      addToast(`💛 카카오 공유 준비중... 링크 공유로 전환합니다`, 'info');
+    }
     if (ready) {
       try {
-        const shareLink = catchUrl || (import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app');
         window.Kakao.Share.sendDefault({
           objectType: 'feed',
           content: {
-            title: `🎣 ${fishName} 조황 인증!`,
-            description: `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`,
+            title: shareTitle,
+            description: shareDesc,
             imageUrl: (uploadedImageUrl && uploadedImageUrl.startsWith('http'))
               ? uploadedImageUrl
               : 'https://fishing-go.vercel.app/og-image.png?v=3',
@@ -225,15 +232,14 @@ export default function CatchUploadPage() {
         return;
       } catch (e) { console.warn('sendDefault failed:', e); }
     }
-    // 2순위: Web Share API (이미지 파일)
-    if (navigator.share && shareCard) {
+    // 2순위: Web Share API — URL+텍스트로 공유 (링크 확실히 전달, OS 공유 시트)
+    if (navigator.share) {
       try {
-        const blob = await (await fetch(shareCard)).blob();
-        const file = new File([blob], 'catch.png', { type: 'image/png' });
-        await navigator.share({ title: `낙시GO 조황 인증 - ${fishName}`, files: [file] });
+        await navigator.share({ title: shareTitle, text: shareDesc, url: shareLink });
         return;
-      } catch { /* 링크 복사 폴백 */ }
+      } catch (e) { if (e.name !== 'AbortError') console.warn('navigator.share failed:', e); else return; }
     }
+
     // 3순위: 링크 복사 fallback
     const shareUrl = catchUrl || import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
     const copied = await copyToClipboard(shareUrl);
