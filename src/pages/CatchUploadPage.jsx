@@ -209,10 +209,10 @@ export default function CatchUploadPage() {
     const shareTitle = `🎣 ${fishName} 조황 인증!`;
     const shareDesc = `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`;
 
-    // 1순위: OS 공유 시트 (카톡 포함 — 링크+텍스트 직접 전달)
+    // 1순위: OS 공유 시트 — text로만 전달 (이미지 미리보기 없이 링크 텍스트만 전송)
     if (navigator.share) {
       try {
-        await navigator.share({ title: shareTitle, text: shareDesc, url: shareLink });
+        await navigator.share({ text: `🎣 ${fishName} 조황 인증!\n${shareLink}` });
         return;
       } catch (e) { if (e.name === 'AbortError') return; /* 취소 시 무시 */ }
     }
