@@ -3,7 +3,7 @@
   "appName": "낚시GO",
   "webDir": "dist",
   "server": {
-    "url": "https://fishing-go.vercel.app",
+    "url": "https://www.fishing-go.com",
     "cleartext": false
   },
   "android": {
