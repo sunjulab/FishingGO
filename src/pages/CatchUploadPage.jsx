@@ -209,46 +209,22 @@ export default function CatchUploadPage() {
     const shareTitle = `🎣 ${fishName} 조황 인증!`;
     const shareDesc = `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`;
 
-    // 1순위: 카카오 공유 SDK (카톡방 선택창)
-    const ready = ensureKakaoReady();
-    if (!ready) {
-      // SDK 미초기화 시 상태 토스트 (진단용)
-      addToast(`💛 카카오 공유 준비중... 링크 공유로 전환합니다`, 'info');
-    }
-    if (ready) {
-      try {
-        window.Kakao.Share.sendDefault({
-          objectType: 'feed',
-          content: {
-            title: shareTitle,
-            description: shareDesc,
-            imageUrl: (uploadedImageUrl && uploadedImageUrl.startsWith('http'))
-              ? uploadedImageUrl
-              : 'https://fishing-go.vercel.app/og-image.png?v=3',
-            link: { mobileWebUrl: shareLink, webUrl: shareLink },
-          },
-          buttons: [{ title: '🎣 낚시GO에서 보기', link: { mobileWebUrl: shareLink, webUrl: shareLink } }],
-        });
-        return;
-      } catch (e) { console.warn('sendDefault failed:', e); }
-    }
-    // 2순위: Web Share API — URL+텍스트로 공유 (링크 확실히 전달, OS 공유 시트)
+    // 1순위: OS 공유 시트 (카톡 포함 — 링크+텍스트 직접 전달)
     if (navigator.share) {
       try {
         await navigator.share({ title: shareTitle, text: shareDesc, url: shareLink });
         return;
-      } catch (e) { if (e.name !== 'AbortError') console.warn('navigator.share failed:', e); else return; }
+      } catch (e) { if (e.name === 'AbortError') return; /* 취소 시 무시 */ }
     }
-
-    // 3순위: 링크 복사 fallback
-    const shareUrl = catchUrl || import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
-    const copied = await copyToClipboard(shareUrl);
+    // 2순위: 링크 복사 + 카카오톡 열기
+    const copied = await copyToClipboard(shareLink);
     addToast(
-      copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
+      copied ? '💛 링크 복사 완료! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
       copied ? 'success' : 'error'
     );
     if (copied) setTimeout(() => { openKakaoTalk(); }, 400);
   };
+
 
   const st = { padding: '14px 16px', borderRadius: '14px', fontSize: `calc(15px * var(--fs,1))`, border: '1.5px solid #e0e0e0', background: '#fafafa', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' };
   const labelSt = { fontSize: `calc(11px * var(--fs,1))`, fontWeight: '700', color: '#94a3b8', display: 'block', marginBottom: '4px', textTransform: 'uppercase' };
