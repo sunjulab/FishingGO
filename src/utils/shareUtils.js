@@ -222,47 +222,19 @@ export async function shareExternal({ title, text, url, imgUrl, postId, catchId,
       return btn;
     };
 
-    // ① 카카오톡 공유 — sendDefault로 카톡방 선택창 표시
-    // imageUrl 반드시 HTTPS URL (base64 불가) / SDK 미초기화 시 링크복사 fallback
+    // ① 카카오톡 공유 — 링크 텍스트로 전달 (이미지 카드 없음)
     const btnKakao = createBtn(
       `<span style="font-size:20px;">💛</span> 카카오톡으로 공유`,
       '#FEE500', '#191919',
       async () => {
-        const ready = ensureKakaoReady();
-        if (ready) {
+        // navigator.share(text만) → OS 공유 시트 → 카톡 선택 시 링크 텍스트로 전달
+        if (navigator.share) {
           try {
-            window.Kakao.Share.sendDefault({
-              objectType: 'feed',
-              content: {
-                title: title || '낚시GO 조황 기록',
-                description: text ? text.slice(0, 80) : '낚시GO에서 조과 기록을 확인하세요!',
-                imageUrl: (shareImg && shareImg.startsWith('http')) ? shareImg : APP_LOGO_URL,
-                link: {
-                  mobileWebUrl: pageUrl,
-                  webUrl: pageUrl,
-                  androidExecutionParams: execParams,
-                  iosExecutionParams: execParams,
-                },
-              },
-              buttons: [
-                {
-                  title: '🎣 앱에서 바로 보기',
-                  link: {
-                    mobileWebUrl: pageUrl,
-                    webUrl: pageUrl,
-                    androidExecutionParams: execParams,
-                    iosExecutionParams: execParams,
-                  },
-                },
-                { title: '🌐 웹에서 보기', link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
-              ],
-            });
+            await navigator.share({ text: `${title || '낚시GO'}\n${pageUrl}` });
             return;
-          } catch (e) {
-            console.warn('Kakao.Share.sendDefault failed:', e);
-          }
+          } catch (e) { if (e.name === 'AbortError') return; }
         }
-        // SDK 없거나 실패 시 — 링크 복사 + 카카오톡 열기 fallback
+        // fallback: 링크 복사 + 카카오톡 열기
         const copied = await copyToClipboard(pageUrl);
         addToast?.(
           copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '💛 카카오톡을 열어 링크를 붙여넣기 해주세요.',
