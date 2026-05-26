@@ -187,7 +187,7 @@ export default function CatchUploadPage() {
       const catchId = catchRes.data?.record?._id || catchRes.data?.record?.id;
       const backendBase = import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com';
       if (catchId) setCatchUrl(`${backendBase}/og/catch/${catchId}`);
-      else setCatchUrl(import.meta.env.VITE_SITE_URL || 'https://fishing-go-frontend.onrender.com');
+      else setCatchUrl(import.meta.env.VITE_SITE_URL || 'https://www.fishing-go.com');
 
       const card = await generateShareCard({
         fishName, fishSize, fishWeight, location,

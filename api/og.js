@@ -4,7 +4,7 @@
  */
 
 const BACKEND_URL = 'https://fishing-go-backend.onrender.com';
-const SITE_URL    = 'https://fishing-go.vercel.app';
+const SITE_URL    = 'https://www.fishing-go.com';
 // 사진 없을 경우 앱 아이콘으로 대체 (182KB)
 const DEFAULT_IMG = `${SITE_URL}/icon-192.png`;
 

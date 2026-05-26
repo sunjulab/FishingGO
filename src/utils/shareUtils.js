@@ -9,6 +9,7 @@
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
 const APP_LOGO_URL = 'https://www.fishing-go.com/og-image.png?v=20260526';
+const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://www.fishing-go.com';
 const APP_ID = 'kr.fishinggo.app'; // ✅ capacitor.config.json appId
 
 // ✅ CLIPBOARD: Capacitor 전용 클립보드 → 브라우저 API → execCommand 순서로 폴백
@@ -128,23 +129,27 @@ function openAppOrStore(pageUrl) {
 }
 
 /**
- * 프론트엔드 URL → 백엔드 OG URL 변환
- * https://.../post/:id  →  https://fishing-go-backend.onrender.com/og/post/:id
- * https://.../catch/:id →  https://fishing-go-backend.onrender.com/og/catch/:id
- * 크롤러가 OG 태그(사진+제목)를 읽을 수 있도록 함
+ * 프론트엔드 URL → 클린 도메인 OG URL 변환
+ * vercel.json이 봇을 backend로 자동 리다이렉트하므로
+ * 공유 링크는 www.fishing-go.com 주소를 사용
  */
 function toOgUrl(rawUrl) {
-  const BACKEND = 'https://fishing-go-backend.onrender.com';
   try {
     const u = new URL(rawUrl);
-    // 이미 백엔드 OG URL이면 그대로
-    if (u.hostname.includes('fishing-go-backend')) return rawUrl;
+    // 이미 fishing-go.com URL이면 그대로
+    if (u.hostname.includes('fishing-go.com')) return rawUrl;
+    // 백엔드 OG URL이면 클린 도메인으로 변환
+    const ogPostMatch  = u.pathname.match(/\/og\/post\/([^/?#]+)/);
+    if (ogPostMatch)  return `${SITE_URL}/post/${ogPostMatch[1]}`;
+    const ogCatchMatch = u.pathname.match(/\/og\/catch\/([^/?#]+)/);
+    if (ogCatchMatch) return `${SITE_URL}/catch/${ogCatchMatch[1]}`;
+    // 일반 프론트엔드 URL → 클린 도메인으로 교체
     const postMatch  = u.pathname.match(/\/post\/([^/?#]+)/);
-    if (postMatch)  return `${BACKEND}/og/post/${postMatch[1]}`;
+    if (postMatch)  return `${SITE_URL}/post/${postMatch[1]}`;
     const catchMatch = u.pathname.match(/\/catch\/([^/?#]+)/);
-    if (catchMatch) return `${BACKEND}/og/catch/${catchMatch[1]}`;
+    if (catchMatch) return `${SITE_URL}/catch/${catchMatch[1]}`;
   } catch { /* noop */ }
-  return rawUrl; // 변환 불가시 원본 유지
+  return rawUrl;
 }
 
 /**
