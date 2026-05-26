@@ -61,29 +61,11 @@ export default function DashboardView({
   // 이번 세션에서 광고로 잠금 해제된 포인트 ID Set
   const [unlockedPoints, setUnlockedPoints] = useState(() => new Set());
 
-  // 하루 최대 광고 시청 횟수 체크 (localStorage 기반)
-  const canWatchPointAd = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const key = `point_ad_${today}`;
-    const count = parseInt(localStorage.getItem(key) || '0', 10);
-    return count < 5; // 하루 5회 무료
-  };
-  const recordPointAdWatch = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const key = `point_ad_${today}`;
-    const count = parseInt(localStorage.getItem(key) || '0', 10);
-    localStorage.setItem(key, String(count + 1));
-  };
-
   // 포인트 카드 클릭 핸들러 (비프리미엄: 광고 게이트)
   const handlePremiumPointClick = (point) => {
     if (canAccessPremium || unlockedPoints.has(point.id)) {
       setViewMode('map');
       handlePointClick(point);
-      return;
-    }
-    if (!canWatchPointAd()) {
-      addToast('📍 오늘 광고 시청 한도(5회)에 도달했습니다. 내일 다시 시도하거나 구독하세요!', 'info');
       return;
     }
     setPendingPoint(point);
@@ -94,7 +76,6 @@ export default function DashboardView({
   // 보상 광고 완료 후 포인트 언락
   const handlePointAdComplete = () => {
     if (!pendingPoint) return;
-    recordPointAdWatch();
     setUnlockedPoints(prev => new Set([...prev, pendingPoint.id]));
     addToast(`📍 ${pendingPoint.name} 포인트가 해제됐습니다! 🎉`, 'success');
     if (pointAdContext === 'secret') {
@@ -336,10 +317,6 @@ export default function DashboardView({
                 label: '비밀포인트',
                 locked: !canAccessPremium,
                 action: () => {
-                  if (!canAccessPremium && !canWatchPointAd()) {
-                    addToast('📍 오늘 광고 시청 한도(5회)에 도달했습니다. 내일 다시 시도하거나 구독하세요!', 'info');
-                    return;
-                  }
                   if (!canAccessPremium) {
                     setPendingPoint({ id: 'secret', name: '비밀 포인트' });
                     setPointAdContext('secret');
