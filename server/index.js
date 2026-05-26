@@ -423,7 +423,8 @@ app.get('/api/health', (req, res) => {
 // KakaoTalk/WhatsApp/Telegram 등 크롤러: OG HTML 반환
 // 일반 브라우저: 프론트엔드 SPA로 리다이렉트
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://fishing-go-frontend.onrender.com';
-const DEFAULT_OG_IMG = `${FRONTEND_URL}/og-image.png`;
+// 사진 없을 경우 앱 아이콘으로 대체 (182KB — og-image.png 2MB보다 처리 빠름)
+const DEFAULT_OG_IMG = `${FRONTEND_URL}/icon-192.png`;
 
 function isBotUA(ua = '') {
   return /facebookexternalhit|Twitterbot|WhatsApp|KakaoTalk|Kakao|Telegram|Slack|Discord|LinkedInBot|googlebot|bingbot|Applebot|crawl|spider|bot|python|curl/i.test(ua);

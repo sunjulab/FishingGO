@@ -10,6 +10,9 @@
       "destination": "/api/og?type=post&id=:id",
       "missing": [{ "type": "query", "key": "ref" }]
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
