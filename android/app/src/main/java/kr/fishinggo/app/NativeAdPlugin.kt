@@ -96,9 +96,12 @@ class NativeAdPlugin : Plugin() {
 
         activity.runOnUiThread {
             val view = adViews[slotId] ?: return@runOnUiThread
+            // WebView 실제 화면 위치 offset 보정
+            val webLoc = IntArray(2)
+            bridge.webView.getLocationOnScreen(webLoc)
             (view.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { params ->
-                params.leftMargin = x
-                params.topMargin = y
+                params.leftMargin = x + webLoc[0]
+                params.topMargin  = y + webLoc[1]
                 view.requestLayout()
             }
             call.resolve()
@@ -145,25 +148,27 @@ class NativeAdPlugin : Plugin() {
     // ─── Private helpers ────────────────────────────────────────────
 
     private fun placeNativeAd(slotId: String, nativeAd: NativeAd, x: Int, y: Int, w: Int, h: Int) {
-        // NativeAdView 생성 (XML 레이아웃 inflate)
         val adView = LayoutInflater.from(context)
             .inflate(R.layout.native_ad_view, null) as NativeAdView
 
-        // 광고 데이터 바인딩
         bindNativeAd(adView, nativeAd)
 
-        // 화면 밀도 (이미 물리px로 받음)
-        val params = FrameLayout.LayoutParams(if (w > 0) w else FrameLayout.LayoutParams.MATCH_PARENT, h).apply {
-            leftMargin = x
-            topMargin = y
+        // WebView 실제 화면 위치 offset 보정 (상태바 등 offset 포함)
+        val webLoc = IntArray(2)
+        bridge.webView.getLocationOnScreen(webLoc)
+
+        val params = FrameLayout.LayoutParams(
+            if (w > 0) w else FrameLayout.LayoutParams.MATCH_PARENT, h
+        ).apply {
+            leftMargin = x + webLoc[0]
+            topMargin  = y + webLoc[1]
             gravity = Gravity.TOP or Gravity.START
         }
 
-        // 루트 뷰에 추가 (android.R.id.content를 사용하여 FrameLayout 보장)
         val container = activity.findViewById<FrameLayout>(android.R.id.content)
         container?.addView(adView, params)
         adViews[slotId] = adView
-        Log.d(TAG, "네이티브 광고 배치: slotId=$slotId x=$x y=$y w=$w h=$h")
+        Log.d(TAG, "네이티브 광고 배치: slotId=$slotId x=${x+webLoc[0]} y=${y+webLoc[1]} w=$w h=$h")
     }
 
     private fun bindNativeAd(adView: NativeAdView, ad: NativeAd) {

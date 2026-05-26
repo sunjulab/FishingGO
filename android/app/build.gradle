@@ -4,13 +4,13 @@ apply plugin: 'kotlin-android'
 android {
     namespace = "kr.fishinggo.app"
     compileSdk = rootProject.ext.compileSdkVersion
-    ndkVersion "25.1.8937393" // ✅ NDK 버전 명시 (디버그 심볼 자동 추출 강제화)
+    ndkVersion "25.1.8937393" // ??NDK 버전 명시 (?�버�??�볼 ?�동 추출 강제??
     defaultConfig {
         applicationId "kr.fishinggo.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 98
-        versionName "2.1.29"
+        versionCode 100
+        versionName "2.1.31"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -32,11 +32,11 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            // ✅ R8 최적화 활성화 — APK 크기 감소 + 가독화 파일 자동 생성
+            // ??R8 최적???�성????APK ?�기 감소 + 가?�화 ?�일 ?�동 ?�성
             minifyEnabled true
-            shrinkResources false  // WebView 앱은 false 유지 (리소스 삭제 시 오류 가능)
+            shrinkResources false  // WebView ?��? false ?��? (리소????�� ???�류 가??
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // ✅ Play Store 디버그 심볼 경고 제거 — 네이티브 심볼 AAB에 자동 포함
+            // ??Play Store ?�버�??�볼 경고 ?�거 ???�이?�브 ?�볼 AAB???�동 ?�함
             ndk { debugSymbolLevel 'FULL' }
         }
         debug {
@@ -60,7 +60,7 @@ dependencies {
     implementation "com.google.android.gms:play-services-ads:24.9.0"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
-    // ✅ PUSH: Firebase Cloud Messaging
+    // ??PUSH: Firebase Cloud Messaging
     implementation platform('com.google.firebase:firebase-bom:33.1.0')
     implementation 'com.google.firebase:firebase-messaging'
     testImplementation "junit:junit:$junitVersion"
@@ -79,3 +79,5 @@ try {
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+
+
