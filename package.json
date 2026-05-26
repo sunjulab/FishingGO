@@ -12,9 +12,9 @@
     "cap:android": "npx cap open android",
     "apk": "npm run build && npx cap sync android",
     "version:apply": "node update-version.cjs",
-    "release:patch": "npm version patch --no-git-tag-version && node update-version.cjs && git add -A && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git push origin main",
-    "release:minor": "npm version minor --no-git-tag-version && node update-version.cjs && git add -A && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git push origin main",
-    "release:major": "npm version major --no-git-tag-version && node update-version.cjs && git add -A && git commit -m \"chore: release v$(node -p \"require('./package.json').version\")\" && git push origin main"
+    "release:patch": "npm version patch --no-git-tag-version && node update-version.cjs --push",
+    "release:minor": "npm version minor --no-git-tag-version && node update-version.cjs --push",
+    "release:major": "npm version major --no-git-tag-version && node update-version.cjs --push"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",
