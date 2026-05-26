@@ -55,6 +55,25 @@ async function openKakaoTalk() {
   try { window.location.href = 'kakaotalk://'; } catch { /* noop */ }
 }
 
+// ✅ KAKAO-INIT: SDK가 async로 늦게 로드되는 타이밍 문제 해결
+// sendDefault() 호출 전 반드시 이 함수로 초기화 보장
+async function ensureKakaoReady() {
+  // SDK 스크립트 로드 대기 (최대 3초)
+  for (let i = 0; i < 30; i++) {
+    if (window.Kakao) break;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  if (!window.Kakao) return false;
+  if (!window.Kakao.isInitialized()) {
+    try {
+      const key = (typeof __KAKAO_KEY__ !== 'undefined' && __KAKAO_KEY__)
+        || 'd353be56977b1c13b03d8981bcf8b5ba';
+      window.Kakao.init(key);
+    } catch { return false; }
+  }
+  return window.Kakao.isInitialized();
+}
+
 /**
  * URL에서 postId / catchId 추출
  * /post/abc123  →  { type: 'post', id: 'abc123' }
@@ -209,22 +228,56 @@ export async function shareExternal({ title, text, url, imgUrl, postId, catchId,
       return btn;
     };
 
-    // ① 카카오톡 공유 — 링크 복사 후 카카오톡에서 붙여넣기
-    // Kakao SDK sendDefault()는 이미지로 전송되는 문제 있어 링크 공유 방식으로 변경
+    // ① 카카오톡 공유 — sendDefault로 카톡방 선택창 표시
+    // imageUrl 반드시 HTTPS URL (base64 불가) / SDK 미초기화 시 링크복사 fallback
     const btnKakao = createBtn(
       `<span style="font-size:20px;">💛</span> 카카오톡으로 공유`,
       '#FEE500', '#191919',
       async () => {
+        const ready = await ensureKakaoReady();
+        if (ready) {
+          try {
+            window.Kakao.Share.sendDefault({
+              objectType: 'feed',
+              content: {
+                title: title || '낚시GO 조황 기록',
+                description: text ? text.slice(0, 80) : '낚시GO에서 조과 기록을 확인하세요!',
+                imageUrl: (shareImg && shareImg.startsWith('http')) ? shareImg : APP_LOGO_URL,
+                link: {
+                  mobileWebUrl: pageUrl,
+                  webUrl: pageUrl,
+                  androidExecutionParams: execParams,
+                  iosExecutionParams: execParams,
+                },
+              },
+              buttons: [
+                {
+                  title: '🎣 앱에서 바로 보기',
+                  link: {
+                    mobileWebUrl: pageUrl,
+                    webUrl: pageUrl,
+                    androidExecutionParams: execParams,
+                    iosExecutionParams: execParams,
+                  },
+                },
+                { title: '🌐 웹에서 보기', link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
+              ],
+            });
+            return;
+          } catch (e) {
+            console.warn('Kakao.Share.sendDefault failed:', e);
+          }
+        }
+        // SDK 없거나 실패 시 — 링크 복사 + 카카오톡 열기 fallback
         const copied = await copyToClipboard(pageUrl);
         addToast?.(
-          copied
-            ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.'
-            : '💛 카카오톡을 열어 링크를 붙여넣기 해주세요.',
+          copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '💛 카카오톡을 열어 링크를 붙여넣기 해주세요.',
           'success'
         );
         setTimeout(() => { openKakaoTalk(); }, 400);
       }
     );
+
 
     // ② 일반 외부 앱 공유 (Web Share API)
     const btnOther = createBtn(

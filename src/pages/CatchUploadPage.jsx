@@ -121,6 +121,7 @@ export default function CatchUploadPage() {
 
   const [uploading, setUploading] = useState(false);
   const [shareCard, setShareCard] = useState(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState(null); // 서버 업로드 실제 URL (카카오 공유 시 사용)
 
   const fishRule = getFishRule(fishName);
   const closed   = isClosedSeason(fishRule);
@@ -155,6 +156,7 @@ export default function CatchUploadPage() {
             avatar: `data:${imageFile.type};base64,${imageBase64}`,
           }, { timeout: 60000 });
           imageUrl = imgRes.data.avatar || null;
+          setUploadedImageUrl(imageUrl); // 카카오 공유용 저장
         } catch { /* 이미지 업로드 실패 무시 */ }
       }
 
@@ -187,15 +189,36 @@ export default function CatchUploadPage() {
   };
 
   const handleShare = async () => {
+    // 1순위: 카카오 공유 SDK (카톡방 선택창)
+    const ready = await ensureKakaoReady();
+    if (ready) {
+      try {
+        const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
+        window.Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title: `개어 ${fishName} 조황 인증!`,
+            description: `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`,
+            imageUrl: (uploadedImageUrl && uploadedImageUrl.startsWith('http'))
+              ? uploadedImageUrl
+              : 'https://fishing-go.vercel.app/og-image.png?v=3',
+            link: { mobileWebUrl: siteUrl, webUrl: siteUrl },
+          },
+          buttons: [{ title: '개어 낙시GO 앱 보기', link: { mobileWebUrl: siteUrl, webUrl: siteUrl } }],
+        });
+        return;
+      } catch (e) { console.warn('sendDefault failed:', e); }
+    }
+    // 2순위: Web Share API (이미지 파일)
     if (navigator.share && shareCard) {
       try {
         const blob = await (await fetch(shareCard)).blob();
         const file = new File([blob], 'catch.png', { type: 'image/png' });
-        await navigator.share({ title: `낚시GO 조황 인증 - ${fishName}`, files: [file] });
+        await navigator.share({ title: `낙시GO 조황 인증 - ${fishName}`, files: [file] });
         return;
-      } catch { /* 링크 복사 방식으로 폴백 */ }
+      } catch { /* 링크 복사 폴백 */ }
     }
-    // Capacitor 클립보드로 링크 복사 + 카카오톡 열기
+    // 3순위: 링크 복사 fallback
     const shareUrl = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
     const copied = await copyToClipboard(shareUrl);
     addToast(
