@@ -165,47 +165,41 @@ export async function shareExternal({ title, text, url, imgUrl, postId, catchId,
       return btn;
     };
 
-    // ① 카카오톡 공유 (딥링크 포함 — 앱 설치 시 게시글로 바로 이동)
+    // ① 카카오톡 공유 — 링크 복사 후 카카오톡에서 붙여넣기
+    // Kakao SDK sendDefault()는 이미지로 전송되는 문제 있어 링크 공유 방식으로 변경
     const btnKakao = createBtn(
       `<span style="font-size:20px;">💛</span> 카카오톡으로 공유`,
       '#FEE500', '#191919',
-      () => {
-        if (window.Kakao?.isInitialized()) {
+      async () => {
+        // 1. 링크 클립보드 복사
+        let copied = false;
+        try {
+          await navigator.clipboard.writeText(pageUrl);
+          copied = true;
+        } catch {
+          // clipboard API 실패 시 execCommand 폴백
           try {
-            window.Kakao.Share.sendDefault({
-              objectType: 'feed',
-              content: {
-                title: title || '낚시GO 조황 기록',
-                description: text ? text.slice(0, 80) : '낚시GO에서 조과 기록을 확인하세요!',
-                imageUrl: shareImg, // ✅ 게시글 사진 또는 앱 로고
-                link: {
-                  mobileWebUrl: pageUrl,
-                  webUrl: pageUrl,
-                  // ✅ 앱 설치 시 fishinggo:// 딥링크로 해당 게시글 화면 직접 이동
-                  androidExecutionParams: execParams,
-                  iosExecutionParams: execParams,
-                },
-              },
-              buttons: [
-                {
-                  title: '🎣 앱에서 바로 보기',
-                  link: {
-                    mobileWebUrl: pageUrl,
-                    webUrl: pageUrl,
-                    androidExecutionParams: execParams,
-                    iosExecutionParams: execParams,
-                  },
-                },
-                {
-                  title: '🌐 웹에서 보기',
-                  link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
-                },
-              ],
-            });
-          } catch { addToast?.('카카오톡 공유를 실패했습니다.', 'error'); }
-        } else {
-          addToast?.('카카오톡 SDK가 초기화되지 않았습니다.', 'error');
+            const el = document.createElement('textarea');
+            el.value = pageUrl;
+            el.style.cssText = 'position:fixed;top:-9999px';
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            copied = true;
+          } catch { /* noop */ }
         }
+
+        // 2. 카카오톡 앱 열기 시도 (딜레이로 토스트 먼저 표시)
+        addToast?.(
+          copied
+            ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.'
+            : '💛 카카오톡을 열어 링크를 붙여넣기 해주세요.',
+          'success'
+        );
+        setTimeout(() => {
+          window.location.href = 'kakaotalk://';
+        }, 400);
       }
     );
 
