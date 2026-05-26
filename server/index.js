@@ -397,8 +397,11 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'https://fishing-go.vercel.app',
   'https://fishing-go-mbqp.vercel.app',
-  /\.vercel\.app$/,  // Vercel 프리뷰 배포 URL
-  /\.onrender\.com$/, // BUG-33: Render 서버/프론트 도메인
+  'https://www.fishing-go.com',   // 신규 커스텀 도메인
+  'https://fishing-go.com',       // 루트 도메인
+  /\.vercel\.app$/,               // Vercel 프리뷰 배포 URL
+  /\.onrender\.com$/,             // Render 서버/프론트 도메인
+  /\.fishing-go\.com$/,           // 서브도메인 전체 허용
 ];
 
 // 환경변수로 추가 허용 도메인 설정 (프로덕션 배포 시 사용)
