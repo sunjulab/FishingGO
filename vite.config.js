@@ -22,6 +22,18 @@ export default defineConfig(({ mode }) => {
   },
   plugins: [
     react(),
+    // ✅ HTML-REPLACE: Vite의 define은 JS만 치환함 — HTML 플레이스홀더는 이 플러그인으로 직접 치환
+    // Vercel(vite build)과 로컬(build-esbuild.mjs) 모두 동일하게 적용됨
+    {
+      name: 'html-placeholder-replace',
+      transformIndexHtml(html) {
+        const siteUrl   = env.VITE_SITE_URL      || 'https://fishing-go.vercel.app';
+        const kakaoKey  = env.VITE_KAKAO_APP_KEY || '';
+        return html
+          .replace(/__VITE_SITE_URL__/g,      siteUrl)
+          .replace(/__VITE_KAKAO_APP_KEY__/g,  kakaoKey);
+      },
+    },
     // ✅ APK 빌드 시 VITE_DISABLE_PWA=true 환경변수로 PWA 비활성화 가능
     // ✅ DEV-FIX: 개발 모드에서는 PWA 서비스워커 완전 비활성화 (API 요청 차단 방지)
     ...(env.VITE_DISABLE_PWA === 'true' || mode !== 'production' ? [] : [VitePWA({
