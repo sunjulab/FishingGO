@@ -86,6 +86,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SubscriptionFailBanner from './components/SubscriptionFailBanner';
 import AnnouncementPopup from './components/AnnouncementPopup'; // ✅ POPUP: 앱 시작 시 공지 이미지 팝업
 import ForceUpdateChecker from './components/ForceUpdateChecker'; // ✅ 강제 업데이트 체커
+import AppBanner from './components/AppBanner'; // ✅ 스마트 앱 배너 (Android 브라우저 전용)
 
 // ENH3-A1: index.css의 @keyframes spin 사용 — 중복 인라인 <style> 제거
 // ✅ 3RD-C2: PageLoading → LoadingSpinner 재사용 — 동일한 UI를 별도 인라인 정의 불필요
@@ -457,6 +458,7 @@ export default function App() {
     // 이전 구조: <ErrorBoundary><BrowserRouter>... → useNavigate가 Router 바깥에서 호출돼 앱 전체 크래시
     <BrowserRouter>
       <ErrorBoundary>
+        <AppBanner />           {/* ✅ Android 브라우저에서 앱 설치/실행 유도 배너 */}
         <ForceUpdateChecker />
         <FontScaleInit />
         <KakaoLoader />
