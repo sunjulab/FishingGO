@@ -205,7 +205,8 @@ export async function shareExternal({ title, text, url, imgUrl, postId, catchId,
             : '💛 카카오톡을 열어 링크를 붙여넣기 해주세요.',
           'success'
         );
-        setTimeout(() => { window.location.href = 'kakaotalk://'; }, 400);
+        // _system: Capacitor WebView에서 시스템 인텐트로 KakaoTalk 실행
+        setTimeout(() => { window.open('kakaotalk://', '_system'); }, 400);
       }
     );
 

@@ -191,7 +191,7 @@ export default function CatchUploadPage() {
       copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
       copied ? 'success' : 'error'
     );
-    if (copied) setTimeout(() => { window.location.href = 'kakaotalk://'; }, 400);
+    if (copied) setTimeout(() => { window.open('kakaotalk://', '_system'); }, 400);
   };
 
   const st = { padding: '14px 16px', borderRadius: '14px', fontSize: `calc(15px * var(--fs,1))`, border: '1.5px solid #e0e0e0', background: '#fafafa', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' };
