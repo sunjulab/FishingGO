@@ -129,21 +129,30 @@ function openAppOrStore(pageUrl) {
 
 /**
  * 외부 앱 공유 (B안: OS 공유 시트 바로 실행)
- * navigator.share 미지원 시 링크 복사 + 카카오톡 열기 fallback
+ * @capacitor/share → navigator.share → 링크 복사 순 fallback
  */
 export async function shareExternal({ title, url, addToast }) {
   const pageUrl = url || window.location.href;
-  // OS 공유 시트 직접 실행
+  const shareText = `${title || '낚시GO'}\n${pageUrl}`;
+
+  // 1순위: @capacitor/share (Capacitor 네이티브 공유 시트)
+  try {
+    const { Share } = await import('@capacitor/share');
+    await Share.share({ title: title || '낚시GO', text: shareText, dialogTitle: '공유하기' });
+    return;
+  } catch (e) {
+    if (e?.message?.includes('cancel') || e?.errorMessage?.includes('cancel')) return; // 취소
+  }
+  // 2순위: navigator.share (브라우저 환경)
   if (navigator.share) {
     try {
-      await navigator.share({ text: `${title || '낚시GO'}\n${pageUrl}` });
+      await navigator.share({ text: shareText });
       return;
     } catch (e) { if (e.name === 'AbortError') return; }
   }
-  // fallback: 링크 복사 + 카카오톡 열기
+  // 3순위: 링크 복사 + 카카오톡 열기
   const copied = await copyToClipboard(pageUrl);
   addToast?.(copied ? '🔗 링크가 복사됐어요!' : '복사 실패', copied ? 'success' : 'error');
   if (copied) setTimeout(() => { openKakaoTalk(); }, 400);
 }
-
 

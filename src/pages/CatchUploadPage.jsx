@@ -207,23 +207,26 @@ export default function CatchUploadPage() {
   const handleShare = async () => {
     const shareLink = catchUrl || (import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app');
     const shareTitle = `🎣 ${fishName} 조황 인증!`;
-    const shareDesc = `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`;
+    const shareText = `${shareTitle}\n${shareLink}`;
 
-    // 1순위: OS 공유 시트 — text로만 전달 (이미지 미리보기 없이 링크 텍스트만 전송)
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: `🎣 ${fishName} 조황 인증!\n${shareLink}` });
-        return;
-      } catch (e) { if (e.name === 'AbortError') return; /* 취소 시 무시 */ }
+    // 1순위: @capacitor/share (네이티브 OS 공유 시트)
+    try {
+      const { Share } = await import('@capacitor/share');
+      await Share.share({ title: shareTitle, text: shareText, dialogTitle: '공유하기' });
+      return;
+    } catch (e) {
+      if (e?.message?.includes('cancel') || e?.errorMessage?.includes('cancel')) return;
     }
-    // 2순위: 링크 복사 + 카카오톡 열기
+    // 2순위: navigator.share (브라우저)
+    if (navigator.share) {
+      try { await navigator.share({ text: shareText }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    // 3순위: 링크 복사 + 카카오톡 열기
     const copied = await copyToClipboard(shareLink);
-    addToast(
-      copied ? '💛 링크 복사 완료! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
-      copied ? 'success' : 'error'
-    );
+    addToast(copied ? '💛 링크 복사 완료! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.', copied ? 'success' : 'error');
     if (copied) setTimeout(() => { openKakaoTalk(); }, 400);
   };
+
 
 
   const st = { padding: '14px 16px', borderRadius: '14px', fontSize: `calc(15px * var(--fs,1))`, border: '1.5px solid #e0e0e0', background: '#fafafa', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' };

@@ -28,6 +28,7 @@
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
+    "@capacitor/share": "^8.0.1",
     "@capawesome/capacitor-app-update": "^8.0.3",
     "@react-oauth/google": "^0.13.4",
     "axios": "^1.14.0",
