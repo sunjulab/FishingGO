@@ -128,11 +128,32 @@ function openAppOrStore(pageUrl) {
 }
 
 /**
- * 외부 앱 공유 — NativeAdPlugin.shareText() 직접 호출 (가장 확실한 새단 공유 시트)
+ * 프론트엔드 URL → 백엔드 OG URL 변환
+ * https://.../post/:id  →  https://fishing-go-backend.onrender.com/og/post/:id
+ * https://.../catch/:id →  https://fishing-go-backend.onrender.com/og/catch/:id
+ * 크롤러가 OG 태그(사진+제목)를 읽을 수 있도록 함
+ */
+function toOgUrl(rawUrl) {
+  const BACKEND = 'https://fishing-go-backend.onrender.com';
+  try {
+    const u = new URL(rawUrl);
+    // 이미 백엔드 OG URL이면 그대로
+    if (u.hostname.includes('fishing-go-backend')) return rawUrl;
+    const postMatch  = u.pathname.match(/\/post\/([^/?#]+)/);
+    if (postMatch)  return `${BACKEND}/og/post/${postMatch[1]}`;
+    const catchMatch = u.pathname.match(/\/catch\/([^/?#]+)/);
+    if (catchMatch) return `${BACKEND}/og/catch/${catchMatch[1]}`;
+  } catch { /* noop */ }
+  return rawUrl; // 변환 불가시 원본 유지
+}
+
+/**
+ * 외부 앱 공유 — NativeAdPlugin.shareText() 직접 호출 (가장 확실한 네이티브 공유 시트)
  * fallback: navigator.share → 링크 복사
  */
 export async function shareExternal({ title, url, addToast }) {
-  const pageUrl = url || window.location.href;
+  const rawUrl  = url || window.location.href;
+  const pageUrl = toOgUrl(rawUrl);           // ← OG URL로 자동 변환
   const shareText = `${title || '낚시GO'}\n${pageUrl}`;
   const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
 
@@ -162,4 +183,3 @@ export async function shareExternal({ title, url, addToast }) {
   addToast?.(copied ? '🔗 링크가 복사됐어요!' : '복사 실패', copied ? 'success' : 'error');
   if (copied) setTimeout(() => { openKakaoTalk(); }, 400);
 }
-
