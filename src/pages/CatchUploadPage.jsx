@@ -131,7 +131,8 @@ export default function CatchUploadPage() {
 
   const [uploading, setUploading] = useState(false);
   const [shareCard, setShareCard] = useState(null);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState(null); // 서버 업로드 실제 URL (카카오 공유 시 사용)
+  const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
+  const [catchUrl, setCatchUrl] = useState(null); // 등록된 catch 고유 URL
 
   const fishRule = getFishRule(fishName);
   const closed   = isClosedSeason(fishRule);
@@ -170,7 +171,7 @@ export default function CatchUploadPage() {
         } catch { /* 이미지 업로드 실패 무시 */ }
       }
 
-      await apiClient.post('/api/catch', {
+      const catchRes = await apiClient.post('/api/catch', {
         userId:    user?.id || user?._id,
         userName:  user?.name,
         userAvatar: user?.avatar,
@@ -182,6 +183,11 @@ export default function CatchUploadPage() {
         memo:      memo.trim(),
         contestId: contestId || null,
       });
+      // catch 고유 URL 저장 (카카오 공유용)
+      const catchId = catchRes.data?.record?._id || catchRes.data?.record?.id;
+      const siteBase = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
+      if (catchId) setCatchUrl(`${siteBase}/catch/${catchId}`);
+      else setCatchUrl(siteBase);
 
       const card = await generateShareCard({
         fishName, fishSize, fishWeight, location,
@@ -203,18 +209,18 @@ export default function CatchUploadPage() {
     const ready = ensureKakaoReady();
     if (ready) {
       try {
-        const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
+        const shareLink = catchUrl || (import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app');
         window.Kakao.Share.sendDefault({
           objectType: 'feed',
           content: {
-            title: `개어 ${fishName} 조황 인증!`,
+            title: `🎣 ${fishName} 조황 인증!`,
             description: `${location ? location + ' · ' : ''}${fishSize ? fishSize + 'cm' : ''}${fishWeight ? ' / ' + fishWeight + 'kg' : ''}`,
             imageUrl: (uploadedImageUrl && uploadedImageUrl.startsWith('http'))
               ? uploadedImageUrl
               : 'https://fishing-go.vercel.app/og-image.png?v=3',
-            link: { mobileWebUrl: siteUrl, webUrl: siteUrl },
+            link: { mobileWebUrl: shareLink, webUrl: shareLink },
           },
-          buttons: [{ title: '개어 낙시GO 앱 보기', link: { mobileWebUrl: siteUrl, webUrl: siteUrl } }],
+          buttons: [{ title: '🎣 낚시GO에서 보기', link: { mobileWebUrl: shareLink, webUrl: shareLink } }],
         });
         return;
       } catch (e) { console.warn('sendDefault failed:', e); }
@@ -229,7 +235,7 @@ export default function CatchUploadPage() {
       } catch { /* 링크 복사 폴백 */ }
     }
     // 3순위: 링크 복사 fallback
-    const shareUrl = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
+    const shareUrl = catchUrl || import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
     const copied = await copyToClipboard(shareUrl);
     addToast(
       copied ? '💛 링크가 복사됐어요! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.',
