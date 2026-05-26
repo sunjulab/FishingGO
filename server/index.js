@@ -62,7 +62,7 @@ let memBusinessPosts = [];
 // ⚠️ 아래 4개 변수는 파일 로드 코드(55줄) 이전에 선언해야 TDZ 에러가 없습니다
 let secretPointOverrides = {};
 let cctvOverrides = {};
-let appConfig = { min_version: "1.0.0", store_url: "market://details?id=com.fishinggo.app" };
+let appConfig = { min_version: "2.1.11", store_url: "https://play.google.com/apps/internaltest/4701312289208373704" };
 let memProSubs = {};
 let memVvipSlots = {};
 
