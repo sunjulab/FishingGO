@@ -145,6 +145,26 @@ class NativeAdPlugin : Plugin() {
         }
     }
 
+
+    /**
+     * 네이티브 공유 시트 직접 실행
+     * JS 호출: NativeAd.shareText({ text, title })
+     */
+    @PluginMethod
+    fun shareText(call: PluginCall) {
+        val text  = call.getString("text")  ?: ""
+        val title = call.getString("title") ?: "공유하기"
+        activity.runOnUiThread {
+            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, text)
+                putExtra(android.content.Intent.EXTRA_SUBJECT, title)
+            }
+            activity.startActivity(android.content.Intent.createChooser(intent, title))
+            call.resolve()
+        }
+    }
+
     // ─── Private helpers ────────────────────────────────────────────
 
     private fun placeNativeAd(slotId: String, nativeAd: NativeAd, x: Int, y: Int, w: Int, h: Int) {

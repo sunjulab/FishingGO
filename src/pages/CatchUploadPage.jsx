@@ -210,21 +210,16 @@ export default function CatchUploadPage() {
     const shareText = `${shareTitle}\n${shareLink}`;
     const isNative = window.Capacitor?.isNativePlatform?.();
 
-    // 1순위: @capacitor/share (네이티브 OS 공유 시트)
+    // 1순위: NativeAdPlugin.shareText (이미 등록, 가장 확실)
     if (isNative) {
       try {
-        const { Share } = await import('@capacitor/share');
-        await Share.share({ title: shareTitle, text: shareText, url: shareLink, dialogTitle: '공유하기' });
+        const { registerPlugin } = await import('@capacitor/core');
+        const NativeAd = registerPlugin('NativeAd');
+        await NativeAd.shareText({ text: shareText, title: shareTitle });
         return;
       } catch (e) {
-        const msg = e?.message || e?.errorMessage || '';
+        const msg = e?.message || '';
         if (msg.toLowerCase().includes('cancel')) return;
-        // 우회: intent:// 직접 트리거
-        try {
-          const encoded = encodeURIComponent(shareText);
-          window.location.href = `intent://sharing#Intent;action=android.intent.action.SEND;type=text/plain;S.android.intent.extra.TEXT=${encoded};end`;
-          return;
-        } catch { /* 누락 */ }
       }
     }
     // 2순위: navigator.share (브라우저)
@@ -236,6 +231,7 @@ export default function CatchUploadPage() {
     addToast(copied ? '💛 링크 복사 완료! 카카오톡에서 붙여넣기 해주세요.' : '공유를 지원하지 않는 환경입니다.', copied ? 'success' : 'error');
     if (copied) setTimeout(() => { openKakaoTalk(); }, 400);
   };
+
 
 
 
