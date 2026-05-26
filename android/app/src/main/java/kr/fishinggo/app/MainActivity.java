@@ -39,8 +39,14 @@ public class MainActivity extends BridgeActivity {
                 if (url.startsWith("intent://")) {
                     try {
                         Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
-                        startActivity(intent);
+                        // ACTION_SEND → createChooser로 공유 앱 목록 표시
+                        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+                            startActivity(Intent.createChooser(intent, "공유하기"));
+                        } else {
+                            startActivity(intent);
+                        }
                         return true;
+
                     } catch (ActivityNotFoundException e) {
                         // 결제 앱 미설치 시 browser_fallback_url로 폴백
                         String fallback = request.getUrl().getQueryParameter("browser_fallback_url");

@@ -129,20 +129,37 @@ function openAppOrStore(pageUrl) {
 
 /**
  * 외부 앱 공유 (B안: OS 공유 시트 바로 실행)
- * @capacitor/share → navigator.share → 링크 복사 순 fallback
+ * @capacitor/share → intent:// → 링크 복사 순 fallback
  */
 export async function shareExternal({ title, url, addToast }) {
   const pageUrl = url || window.location.href;
   const shareText = `${title || '낚시GO'}\n${pageUrl}`;
+  const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
 
-  // 1순위: @capacitor/share (Capacitor 네이티브 공유 시트)
-  try {
-    const { Share } = await import('@capacitor/share');
-    await Share.share({ title: title || '낚시GO', text: shareText, dialogTitle: '공유하기' });
-    return;
-  } catch (e) {
-    if (e?.message?.includes('cancel') || e?.errorMessage?.includes('cancel')) return; // 취소
+  // 1순위: @capacitor/share (네이티브 OS 공유 시트)
+  if (isNative) {
+    try {
+      const { Share } = await import('@capacitor/share');
+      await Share.share({
+        title: title || '낚시GO',
+        text: shareText,
+        url: pageUrl,
+        dialogTitle: '공유하기',
+      });
+      return;
+    } catch (e) {
+      const msg = e?.message || e?.errorMessage || '';
+      if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('취소')) return;
+      // 우회체: intent:// 직접 트리거
+      try {
+        const encoded = encodeURIComponent(shareText);
+        const intentUrl = `intent://sharing#Intent;action=android.intent.action.SEND;type=text/plain;S.android.intent.extra.TEXT=${encoded};end`;
+        window.location.href = intentUrl;
+        return;
+      } catch { /* 논이키지 않음 */ }
+    }
   }
+
   // 2순위: navigator.share (브라우저 환경)
   if (navigator.share) {
     try {
