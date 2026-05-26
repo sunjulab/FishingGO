@@ -49,8 +49,11 @@
     <link rel="dns-prefetch" href="https://t1.kakaocdn.net" />
     <link rel="dns-prefetch" href="https://cdn.iamport.kr" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-    <!-- 카카오 JS SDK (공유/소셜) — KakaoLoader.jsx가 Maps SDK를 동적 주입하므로 여기선 공유 SDK만 로드 -->
-    <script async src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>
+    <!-- 카카오 JS SDK (공유/소셜) — onload에서 즉시 초기화하여 sendDefault() 호출 시 user gesture 보장 -->
+    <script>window.__kakaoAppKey='d353be56977b1c13b03d8981bcf8b5ba';</script>
+    <script async src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+      crossorigin="anonymous"
+      onload="try{if(window.Kakao&&!window.Kakao.isInitialized())window.Kakao.init(window.__kakaoAppKey)}catch(e){}"></script>
     <!-- 포트원(구 아임포트) 결제 SDK — async로 렌더 블로킹 제거 -->
     <script defer src="https://cdn.iamport.kr/v1/iamport.js"></script>
   </head>

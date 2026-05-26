@@ -55,19 +55,13 @@ async function openKakaoTalk() {
   try { window.location.href = 'kakaotalk://'; } catch { /* noop */ }
 }
 
-// ✅ KAKAO-INIT: SDK가 async로 늦게 로드되는 타이밍 문제 해결
-// sendDefault() 호출 전 반드시 이 함수로 초기화 보장
-async function ensureKakaoReady() {
-  // SDK 스크립트 로드 대기 (최대 3초)
-  for (let i = 0; i < 30; i++) {
-    if (window.Kakao) break;
-    await new Promise(r => setTimeout(r, 100));
-  }
+// ✅ KAKAO-INIT: 동기(sync) 초기화 — await 없이 user gesture context 보존
+// sendDefault()는 반드시 user gesture 내 동기 호출이어야 함 (async 차단 대상)
+function ensureKakaoReady() {
   if (!window.Kakao) return false;
   if (!window.Kakao.isInitialized()) {
     try {
-      const key = (typeof __KAKAO_KEY__ !== 'undefined' && __KAKAO_KEY__)
-        || 'd353be56977b1c13b03d8981bcf8b5ba';
+      const key = window.__kakaoAppKey || 'd353be56977b1c13b03d8981bcf8b5ba';
       window.Kakao.init(key);
     } catch { return false; }
   }
@@ -234,7 +228,7 @@ export async function shareExternal({ title, text, url, imgUrl, postId, catchId,
       `<span style="font-size:20px;">💛</span> 카카오톡으로 공유`,
       '#FEE500', '#191919',
       async () => {
-        const ready = await ensureKakaoReady();
+        const ready = ensureKakaoReady();
         if (ready) {
           try {
             window.Kakao.Share.sendDefault({

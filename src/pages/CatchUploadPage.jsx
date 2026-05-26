@@ -29,6 +29,16 @@ async function openKakaoTalk() {
   try { window.location.href = 'kakaotalk://'; } catch { /* noop */ }
 }
 
+// ✅ KAKAO-INIT: 동기(sync) — user gesture context 보존 (await 없이 sendDefault 호출 보장)
+function ensureKakaoReady() {
+  if (!window.Kakao) return false;
+  if (!window.Kakao.isInitialized()) {
+    try { window.Kakao.init(window.__kakaoAppKey || 'd353be56977b1c13b03d8981bcf8b5ba'); } catch { return false; }
+  }
+  return window.Kakao.isInitialized();
+}
+
+
 const PRIMARY = '#0056D2';
 const GOLD    = '#F59E0B';
 
@@ -190,7 +200,7 @@ export default function CatchUploadPage() {
 
   const handleShare = async () => {
     // 1순위: 카카오 공유 SDK (카톡방 선택창)
-    const ready = await ensureKakaoReady();
+    const ready = ensureKakaoReady();
     if (ready) {
       try {
         const siteUrl = import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app';
