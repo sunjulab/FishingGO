@@ -29,8 +29,13 @@ console.log(`\n🎣 낚시GO 버전 업데이트: v${VERSION}\n`);
 // ─── 1. server/appConfig.json 업데이트 ────────────────────────────────────
 function updateAppConfigFile() {
   const cfgPath = path.join(__dirname, 'server', 'appConfig.json');
-  fs.writeFileSync(cfgPath, JSON.stringify({ min_version: VERSION, store_url: PLAY_STORE_URL }, null, 2));
-  console.log(`✅ server/appConfig.json → min_version: ${VERSION}`);
+  // ✅ min_version은 자동으로 올리지 않음 — 강제 업데이트 필요 시에만 수동 변경
+  // store_url만 최신으로 유지
+  let existing = { min_version: '1.0.0', store_url: PLAY_STORE_URL };
+  try { existing = JSON.parse(fs.readFileSync(cfgPath, 'utf-8')); } catch {}
+  const cfg = { min_version: existing.min_version, store_url: PLAY_STORE_URL };
+  fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+  console.log(`✅ server/appConfig.json → min_version: ${cfg.min_version} (유지), store_url: 최신`);
 }
 
 // ─── 2. Git commit & push ──────────────────────────────────────────────────
