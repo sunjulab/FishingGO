@@ -1,37 +1,20 @@
-name: FishingGO Server Keepalive
+name: Render Keep-Alive Ping
 
 on:
   schedule:
-    # 매 14분마다 실행 (Render Free 플랜 15분 슬립 방지)
-    # UTC 기준 — 한국 시간 00:00~08:00 (새벽) 제외해 Actions 무료 한도 절약
-    - cron: '*/14 0-14 * * *'   # UTC 00:00~14:59 = KST 09:00~23:59
-  workflow_dispatch:              # 수동 실행 허용
+    - cron: '*/5 * * * *'   # 5분마다 실행
+  workflow_dispatch:         # 수동 실행도 가능
 
 jobs:
-  keepalive:
-    name: "Render 서버 슬립 방지 Ping"
-    runs-on: ubuntu-22.04
+  ping:
+    runs-on: ubuntu-latest
     steps:
-      - name: Health Check Ping
+      - name: Ping Render Server
         run: |
-          URL="${{ secrets.RENDER_BACKEND_URL }}/api/health"
-          echo "🏓 Ping → $URL"
-          
-          RESPONSE=$(curl --silent --max-time 30 --write-out "\n%{http_code}" "$URL")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -1)
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ 서버 정상 (HTTP $HTTP_CODE)"
-            echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
-          elif [ "$HTTP_CODE" -eq 000 ]; then
-            echo "⚠️ 서버 응답 없음 (타임아웃) — 콜드스타트 중일 수 있음"
-            # 콜드스타트 중이면 재시도
-            sleep 30
-            RETRY=$(curl --silent --max-time 60 --write-out "\n%{http_code}" "$URL")
-            RETRY_CODE=$(echo "$RETRY" | tail -1)
-            echo "🔄 재시도 결과: HTTP $RETRY_CODE"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://fishing-go-backend.onrender.com/api/health)
+          echo "Response: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Render 서버 정상"
           else
-            echo "❌ 비정상 응답 (HTTP $HTTP_CODE)"
-            exit 1
+            echo "⚠️ Render 응답: $STATUS"
           fi

@@ -7751,14 +7751,17 @@ server.headersTimeout = 66000;    // keepAlive보다 1초 더 길게
 
 
 
-  // Render 슬립 방지 Self Keep-Alive (단일 등록)
+  // Render 슬립 방지 Self Keep-Alive (5분 간격 — Render 슬립 15분 기준 안전마진)
   if (process.env.RENDER_EXTERNAL_URL) {
     const selfUrl = process.env.RENDER_EXTERNAL_URL;
     setInterval(async () => {
-      try { await axios.get(`${selfUrl}/api/health`); }
-      catch (e) { logger.warn(`[KeepAlive] Self-ping 실패: ${e.message}`); }
-    }, 10 * 60 * 1000);
-    logger.info(`✅ Render Keep-Alive 활성화 (${selfUrl})`);
+      try {
+        await axios.get(`${selfUrl}/api/health`, { timeout: 8000 });
+      } catch (e) {
+        logger.warn(`[KeepAlive] Self-ping 실패: ${e.message}`);
+      }
+    }, 5 * 60 * 1000); // 5분마다 ping
+    logger.info(`✅ Render Keep-Alive 활성화 — 5분 간격 (${selfUrl})`);
   }
 });
 // ✅ BUG-FIX: flushAllData 함수 정의 — 종료 전 인메모리 데이터 파일 동기화 보장
