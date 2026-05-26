@@ -99,7 +99,7 @@ const PLANS = [
     features: [
       { icon: '✅', text: 'PRO 전체 포함' },
       { icon: '👑', text: '항구 독점 선점 (1인)' },
-      { icon: '📌', text: '선상 최상단 영구 고정' },
+      { icon: '📌', text: '선상 최상단 고정' },
       { icon: '🏅', text: 'VVIP 전용 배지' },
     ],
   },
@@ -136,6 +136,13 @@ export default function VVIPSubscribe() {
   /* ── IAP 초기화 ───────────────────────────────────────────── */
   useEffect(() => {
     if (!isNative) return;
+    let isMounted = true;
+    
+    // 무한 대기 방지: 최대 3초 대기 후 결제 모듈 준비 상태로 전환
+    const timer = setTimeout(() => {
+      if (isMounted) setIapReady(true);
+    }, 3000);
+
     initIAP({
       onSuccess: async () => {
         addToast('✅ 구독이 완료되었습니다!', 'success');
@@ -149,8 +156,18 @@ export default function VVIPSubscribe() {
         if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
         setLoading(null);
       },
-    }).then(() => setIapReady(true));
-  }, [isNative]);
+    })
+    .then(() => { if (isMounted) setIapReady(true); })
+    .catch((err) => { 
+      console.warn('[IAP] init fail:', err); 
+      if (isMounted) setIapReady(true); 
+    });
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [isNative, addToast, setUser]);
 
   /* ── VVIP 항구 데이터 ─────────────────────────────────────── */
   useEffect(() => {
@@ -398,7 +415,7 @@ export default function VVIPSubscribe() {
           <div style={{ margin: '12px 16px 0', background: 'linear-gradient(135deg,#1A1A2E,#0F3460)', borderRadius: '18px', padding: '18px 20px', color: '#fff' }}>
             <Crown size={28} color="#FFD700" style={{ marginBottom: '8px' }} />
             <div style={{ fontSize: `calc(16px * var(--fs,1))`, fontWeight: '900', marginBottom: '4px' }}>항구별 선착순 1명 독점</div>
-            <div style={{ fontSize: `calc(12px * var(--fs,1))`, opacity: 0.75, lineHeight: 1.6, marginBottom: '12px' }}>선상 홍보 피드 <strong style={{ color: '#FFD700' }}>최상단 영구 고정</strong></div>
+            <div style={{ fontSize: `calc(12px * var(--fs,1))`, opacity: 0.75, lineHeight: 1.6, marginBottom: '12px' }}>선상 홍보 피드 <strong style={{ color: '#FFD700' }}>최상단 고정</strong></div>
             <div style={{ display: 'flex', gap: '16px' }}>
               <div><div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: '#FFD700' }}>₩550,000</div><div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>월 정액</div></div>
               <div><div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: availableCount > 0 ? '#00C48C' : '#FF5A5F' }}>{availableCount}석</div><div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>전국 잔여</div></div>

@@ -7,7 +7,7 @@
 // ── 상품 ID (Google Play Console에 등록된 값과 동일해야 함) ──────
 export const IAP_PRODUCTS = {
   BASIC: { id: 'kr.fishinggo.app.lite_monthly',  type: 'PAID_SUBSCRIPTION', price: 9900,   label: 'BASIC', tier: 'BUSINESS_LITE' },
-  PRO:   { id: 'kr.fishinggo.app.pro_yearly',    type: 'PAID_SUBSCRIPTION', price: 110000, label: 'PRO',   tier: 'PRO'           },
+  PRO:   { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 110000, label: 'PRO',   tier: 'PRO'           },
   VVIP:  { id: 'kr.fishinggo.app.vvip_monthly',  type: 'PAID_SUBSCRIPTION', price: 550000, label: 'VVIP',  tier: 'BUSINESS_VIP'  },
 };
 
@@ -63,9 +63,14 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
       _onPurchaseError?.(err);
     });
 
-  await store.initialize([window.CdvPurchase.Platform.GOOGLE_PLAY]);
-  storeInitialized = true;
-  console.log('[IAP] ✅ Google Play Billing 초기화 완료 (3개 상품)');
+  try {
+    await store.initialize([window.CdvPurchase.Platform.GOOGLE_PLAY]);
+    storeInitialized = true;
+    console.log('[IAP] ✅ Google Play Billing 초기화 완료 (3개 상품)');
+  } catch (err) {
+    console.error('[IAP] 초기화 실패:', err);
+    throw new Error('구글 플레이 결제 모듈 초기화 실패');
+  }
 }
 
 /**
@@ -75,16 +80,16 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
 export async function purchasePlan(planKey) {
   if (!isNative()) throw new Error('NATIVE_ONLY');
   const store = getStore();
-  if (!store || !storeInitialized) throw new Error('IAP_NOT_INITIALIZED');
+  if (!store || !storeInitialized) throw new Error('구글 플레이 결제 시스템이 아직 준비되지 않았습니다.');
 
   const product = IAP_PRODUCTS[planKey];
-  if (!product) throw new Error('INVALID_PLAN');
+  if (!product) throw new Error('잘못된 플랜입니다.');
 
   const storeProduct = store.get(product.id, window.CdvPurchase.Platform.GOOGLE_PLAY);
-  if (!storeProduct) throw new Error('PRODUCT_NOT_FOUND');
+  if (!storeProduct) throw new Error('상품 정보를 불러올 수 없습니다. (PRODUCT_NOT_FOUND)');
 
   const offer = storeProduct.getOffer();
-  if (!offer) throw new Error('OFFER_NOT_FOUND');
+  if (!offer) throw new Error('현재 구매 가능한 옵션이 없습니다. (OFFER_NOT_FOUND)');
 
   return offer.order();
 }

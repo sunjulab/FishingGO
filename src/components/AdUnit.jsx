@@ -79,9 +79,9 @@ export function NativeAd({ style = {}, slotId = 'native_ad_default' }) {
       loadNativeAd(slotId, el)
         .then(() => { retryRef.current = 0; }) // 성공 시 카운터 초기화
         .catch(() => {
-          if (attempt < 1 && loadedRef.current) {
-            // 1회 재시도: 2초 후 (SDK 초기화 완료 대기)
-            retryTimerRef.current = setTimeout(() => tryLoad(attempt + 1), 2000);
+          if (attempt < 2 && loadedRef.current) {
+            // 2회 재시도: 3초 후 (SDK 초기화 대기 시간 늘림)
+            retryTimerRef.current = setTimeout(() => tryLoad(attempt + 1), 3000);
           } else {
             // 재시도 실패 또는 언마운트됨 → 광고 공간 제거
             setAdFailed(true);

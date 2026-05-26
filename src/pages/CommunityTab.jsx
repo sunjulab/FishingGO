@@ -1164,11 +1164,16 @@ export default function CommunityTab() {
                         <span
                           onClick={e => {
                             e.stopPropagation();
+                            // ✅ SHARE-V2: postId 명시 + 게시글 사진 또는 앱 로고 자동 처리
+                            const firstImg = Array.isArray(post.images) && post.images.length > 0
+                              ? post.images[0]
+                              : (post.image || null);
                             shareExternal({
                               title: `낚시GO | ${post.author}님의 조황`,
                               text:  (post.content || '').slice(0, 80),
                               url:   `${window.location.origin}/post/${postId}`,
-                              imgUrl: Array.isArray(post.images) ? post.images[0] : post.image,
+                              imgUrl: firstImg, // null이면 shareUtils에서 앱 로고로 대체
+                              postId,
                               addToast,
                             });
                           }}

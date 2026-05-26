@@ -24,8 +24,8 @@ const IS_TESTING = import.meta.env.VITE_ADMOB_TESTING !== 'false';
 
 // 네이티브 광고 단위 ID
 const AD_UNIT_ID = IS_TESTING
-  ? 'ca-app-pub-3940256099942544/2247696314'   // Google 공식 테스트 Native ID
-  : (ADMOB_CONFIG.NATIVE_ID || 'ca-app-pub-3940256099942544/2247696314');
+  ? 'ca-app-pub-3940256099942544/2247696110'   // Google 공식 테스트 Native ID (표준형)
+  : (ADMOB_CONFIG.NATIVE_ID || 'ca-app-pub-3940256099942544/2247696110');
 
 /**
  * placeholder div의 화면 좌표를 물리 픽셀(px)로 반환

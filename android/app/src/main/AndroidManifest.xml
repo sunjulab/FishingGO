@@ -18,6 +18,25 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- ✅ DEEPLINK-HTTPS: HTTPS App Link — 앱 설치 시 게시글 직접 이동 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="fishing-go.vercel.app" />
+                <data android:scheme="https" android:host="fishinggo.vercel.app" />
+            </intent-filter>
+
+            <!-- ✅ DEEPLINK-SCHEME: 커스텀 스킴 fishinggo:// — 카카오톡 딥링크 직접 실행 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fishinggo" android:host="post" />
+                <data android:scheme="fishinggo" android:host="catch" />
+                <data android:scheme="fishinggo" android:host="community" />
+            </intent-filter>
         </activity>
 
         <provider
@@ -36,16 +55,19 @@
 
         <!-- AdMob 최적화 (선택) -->
         <meta-data android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT" android:value="true" />
-    <!-- ✅ PUSH: Firebase Cloud Messaging 알림 채널 -->
+        <!-- ✅ PUSH: Firebase Cloud Messaging 알림 채널 -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="fishing-go-default" />
+            android:value="fishing-go-default"
+        />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@mipmap/ic_launcher"
+        />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
-            android:resource="@color/ic_launcher_background" />
+            android:resource="@color/ic_launcher_background"
+        />
     </application>
 
     <!-- ═══ 앱 권한 선언 ═══ -->
@@ -66,10 +88,8 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <!-- 파일 저장/읽기 (Android 12 이하) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <!-- Android 13+ 미디어 접근 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
@@ -80,5 +100,4 @@
     <!-- 진동 (알림음) -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
 </manifest>

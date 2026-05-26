@@ -6,6 +6,38 @@ import apiClient from '../api/index';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { shareExternal } from '../utils/shareUtils';
 
+const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
+const APP_ID = 'kr.fishinggo.app';
+
+// ✅ APP-BANNER: 모바일 브라우저 접근 시 앱 설치 유도 배너
+function AppInstallBanner({ catchId }) {
+  const [visible, setVisible] = React.useState(true);
+  const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
+  const isAndroid = /android/i.test(navigator.userAgent);
+  if (isNative || !isAndroid || !visible) return null;
+
+  const handleOpen = () => {
+    const intentUrl = `intent://catch?catchId=${catchId}#Intent;scheme=fishinggo;package=${APP_ID};S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
+    window.location.href = intentUrl;
+  };
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '10px',
+      background: 'linear-gradient(135deg, #0B1F3A, #0056D2)',
+      padding: '10px 14px',
+    }}>
+      <img src="/og-image.png" alt="낚시GO" style={{ width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>낚시GO 앱에서 보기</div>
+        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>앱에서 더 편리하게 확인하세요!</div>
+      </div>
+      <button onClick={handleOpen} style={{ flexShrink: 0, background: '#FEE500', border: 'none', borderRadius: '10px', padding: '7px 13px', fontSize: '12px', fontWeight: '900', color: '#191919', cursor: 'pointer' }}>앱 열기</button>
+      <button onClick={() => setVisible(false)} style={{ flexShrink: 0, background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
+    </div>
+  );
+}
+
 // ✅ 2ND-C1: 날짜 포맷 IIFE JSX → 유틸 함수로 추출 — 가독성 향상
 const formatDate = (raw) => {
   try {
@@ -42,19 +74,22 @@ export default function CatchDetail() {
   }, [id, addToast]); // ✅ 15TH-C2: eslint-disable 불필요 주석 제거 (id, addToast 모두 deps에 포함됨)
 
 
-  // ✅ SHARE-EXT: shareUtils 유틸 사용 — Web Share API(네이티브 공유 시트) 우선
+  // ✅ SHARE-EXT: catchId 파라미터 추가 + 사진 있으면 표시, 없으면 앱 로고
   const handleShare = useCallback(async () => {
     await shareExternal({
       title: `${record?.fish || record?.species || '조과'} 낚시 기록 | 낚시GO`,
       text:  record?.content?.slice(0, 80) || '낚시GO에서 조과 기록을 확인하세요!',
       url:   window.location.href,
-      imgUrl: record?.image,
+      imgUrl: record?.image || null, // null이면 shareUtils에서 앱 로고로 대체
       addToast,
+      catchId: id,
     });
-  }, [record?.fish, record?.species, record?.content, record?.image, addToast]);
+  }, [record?.fish, record?.species, record?.content, record?.image, addToast, id]);
 
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
+      {/* ✅ APP-BANNER: 모바일 브라우저 접근 시 앱 설치 유도 */}
+      <AppInstallBanner catchId={id} />
       <div style={{ padding: '16px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)', display: 'flex', alignItems: 'center', borderBottom: '1px solid #f0f0f0', backgroundColor: '#fff' }}>
         <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none', padding: '8px' }}>
           <ChevronLeft size={24} color="#1c1c1e" />

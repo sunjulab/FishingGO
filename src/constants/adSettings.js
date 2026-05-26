@@ -9,7 +9,7 @@ export const ADMOB_CONFIG = {
   // 네이티브 광고 — 커뮤니티 피드 중간 삽입
   NATIVE_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/8130405525'
-    : 'ca-app-pub-3940256099942544/2247696314', // 개발 테스트 ID
+    : 'ca-app-pub-3940256099942544/2247696110', // 개발 테스트 ID (표준형)
   // 배너 광고 — 하단 고정 (AdMobService.showBannerAd)
   BANNER_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/8130405525'  // 네이티브와 동일 단위 사용 (배너용 별도 단위 없을 때)

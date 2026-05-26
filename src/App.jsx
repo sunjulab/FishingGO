@@ -6,6 +6,9 @@ import { registerPlugin, Capacitor } from '@capacitor/core';
 const CapApp = Capacitor.isNativePlatform() ? registerPlugin('App') : null;
 import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, Navigate } from 'react-router-dom';
 
+// ✅ DEEPLINK: Play Store 내부 테스트 URL (앱 미설치 시 유도)
+const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
+
 // import { GoogleOAuthProvider } from '@react-oauth/google'; // 추후 구글 로그인 연동 시 활성화
 import { Home, Tv, Users, ShoppingBag, User, Anchor, Camera, Trophy, Bot } from 'lucide-react';
 import Toast from './components/Toast';
@@ -82,6 +85,7 @@ import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
 import SubscriptionFailBanner from './components/SubscriptionFailBanner';
 import AnnouncementPopup from './components/AnnouncementPopup'; // ✅ POPUP: 앱 시작 시 공지 이미지 팝업
+import ForceUpdateChecker from './components/ForceUpdateChecker'; // ✅ 강제 업데이트 체커
 
 // ENH3-A1: index.css의 @keyframes spin 사용 — 중복 인라인 <style> 제거
 // ✅ 3RD-C2: PageLoading → LoadingSpinner 재사용 — 동일한 UI를 별도 인라인 정의 불필요
@@ -141,6 +145,50 @@ function BackButtonHandler() {
       return () => document.removeEventListener('backbutton', domBack, false);
     }
   }, [location.pathname, navigate]);
+
+  return null;
+}
+
+// ✅ DEEPLINK-HANDLER: appUrlOpen 이벤트로 딥링크 URL 파싱 → React Router 이동
+// 카카오톡에서 공유 링크 클릭 시 앱 실행 후 해당 게시글로 바로 이동
+function DeepLinkHandler() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!CapApp) return;
+
+    // fishinggo://post?postId=xxx  또는  https://fishing-go.vercel.app/post/xxx
+    const parseAndNavigate = (url) => {
+      try {
+        const u = new URL(url);
+        // 커스텀 스킴: fishinggo://post?postId=xxx
+        if (u.protocol === 'fishinggo:') {
+          const postId = u.searchParams.get('postId');
+          const catchId = u.searchParams.get('catchId');
+          if (postId) { navigate(`/post/${postId}`, { replace: true }); return; }
+          if (catchId) { navigate(`/catch/${catchId}`, { replace: true }); return; }
+          if (u.host === 'community') { navigate('/community', { replace: true }); return; }
+        }
+        // HTTPS 스킴: https://fishing-go.vercel.app/post/xxx
+        const path = u.pathname + u.search;
+        if (path && path !== '/') {
+          navigate(path, { replace: true });
+        }
+      } catch { /* URL 파싱 실패 무시 */ }
+    };
+
+    // 앱이 이미 실행 중인 상태에서 딥링크 수신
+    const listenerP = CapApp.addListener('appUrlOpen', (data) => {
+      if (data?.url) parseAndNavigate(data.url);
+    });
+
+    // 앱 최초 실행 시 딥링크 확인
+    CapApp.getLaunchUrl?.().then((res) => {
+      if (res?.url) parseAndNavigate(res.url);
+    }).catch(() => {});
+
+    return () => { listenerP?.then?.(l => l?.remove?.()).catch?.(() => {}); };
+  }, [navigate]);
 
   return null;
 }
@@ -409,6 +457,7 @@ export default function App() {
     // 이전 구조: <ErrorBoundary><BrowserRouter>... → useNavigate가 Router 바깥에서 호출돼 앱 전체 크래시
     <BrowserRouter>
       <ErrorBoundary>
+        <ForceUpdateChecker />
         <FontScaleInit />
         <KakaoLoader />
         <Toast />
@@ -422,6 +471,8 @@ export default function App() {
         {/* ✅ POPUP: 이미지 있는 공지 → 앱 시작 시 carousel 팝업 — useNavigate 사용으로 BrowserRouter 내부에 배치 */}
         <AnnouncementPopup />
         <BackButtonHandler />
+        {/* ✅ DEEPLINK-HANDLER: 카카오톡 공유 링크 → 앱 내 게시글 직접 이동 */}
+        <DeepLinkHandler />
         {/* ✅ PERM: 로그인 후 전체 권한 자동 요청 (푸시/위치/카메라) + 네트워크 감지 */}
         <PermissionInitializer />
         <Header />

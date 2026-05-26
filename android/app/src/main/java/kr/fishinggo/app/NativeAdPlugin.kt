@@ -60,11 +60,7 @@ class NativeAdPlugin : Plugin() {
             // initialize()는 이미 완료된 경우 콜백을 즉시 실행하므로 오버헤드 없음
             MobileAds.initialize(context) { _ ->
                 activity.runOnUiThread {
-                    // ✅ FIX-TESTDEVICE: 에뮬레이터 테스트 기기 등록 (테스트 광고 수신용)
-                    val reqConfig = RequestConfiguration.Builder()
-                        .setTestDeviceIds(listOf(AdRequest.DEVICE_ID_EMULATOR))
-                        .build()
-                    MobileAds.setRequestConfiguration(reqConfig)
+                    // Removed MobileAds.setRequestConfiguration to prevent overwriting testingDevices set by AdMobService.
 
                     val adLoader = AdLoader.Builder(context, adUnitId)
                         .forNativeAd { nativeAd ->
@@ -100,7 +96,7 @@ class NativeAdPlugin : Plugin() {
 
         activity.runOnUiThread {
             val view = adViews[slotId] ?: return@runOnUiThread
-            (view.layoutParams as? FrameLayout.LayoutParams)?.let { params ->
+            (view.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { params ->
                 params.leftMargin = x
                 params.topMargin = y
                 view.requestLayout()
@@ -163,8 +159,8 @@ class NativeAdPlugin : Plugin() {
             gravity = Gravity.TOP or Gravity.START
         }
 
-        // 루트 뷰에 추가 (Capacitor 5+: bridge.rootView → webView.parent as FrameLayout)
-        val container = bridge.webView.parent as? FrameLayout
+        // 루트 뷰에 추가 (android.R.id.content를 사용하여 FrameLayout 보장)
+        val container = activity.findViewById<FrameLayout>(android.R.id.content)
         container?.addView(adView, params)
         adViews[slotId] = adView
         Log.d(TAG, "네이티브 광고 배치: slotId=$slotId x=$x y=$y w=$w h=$h")
@@ -221,8 +217,7 @@ class NativeAdPlugin : Plugin() {
 
     private fun removeSlot(slotId: String) {
         adViews.remove(slotId)?.let { view: NativeAdView ->
-            val container = bridge.webView.parent as? FrameLayout
-            container?.removeView(view)
+            (view.parent as? android.view.ViewGroup)?.removeView(view)
         }
     }
 }

@@ -7,6 +7,48 @@ import apiClient from '../api/index';
 import ImageGallery from '../components/ImageGallery';
 import { shareExternal } from '../utils/shareUtils';
 
+const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
+const APP_ID = 'kr.fishinggo.app';
+
+// ✅ APP-BANNER: 모바일 브라우저에서 접근 시 앱 설치 유도 배너 컴포넌트
+function AppInstallBanner({ postId }) {
+  const [visible, setVisible] = useState(true);
+  const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
+  const isAndroid = /android/i.test(navigator.userAgent);
+  if (isNative || !isAndroid || !visible) return null;
+
+  const handleOpen = () => {
+    const intentUrl = `intent://post?postId=${postId}#Intent;scheme=fishinggo;package=${APP_ID};S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
+    window.location.href = intentUrl;
+  };
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '10px',
+      background: 'linear-gradient(135deg, #0B1F3A, #0056D2)',
+      padding: '10px 14px', position: 'sticky', top: 0, zIndex: 200,
+    }}>
+      <img src="/og-image.png" alt="낚시GO" style={{ width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: '900', color: '#fff' }}>낚시GO 앱에서 보기</div>
+        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>앱에서 더 편리하게 확인하세요!</div>
+      </div>
+      <button
+        onClick={handleOpen}
+        style={{ flexShrink: 0, background: '#FEE500', border: 'none', borderRadius: '10px', padding: '7px 13px', fontSize: '12px', fontWeight: '900', color: '#191919', cursor: 'pointer' }}
+      >
+        앱 열기
+      </button>
+      <button
+        onClick={() => setVisible(false)}
+        style={{ flexShrink: 0, background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
@@ -250,6 +292,8 @@ export default function PostDetail() {
 
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      {/* ✅ APP-BANNER: 모바일 브라우저 접근 시 앱 설치 유도 */}
+      <AppInstallBanner postId={id} />
       {/* 헤더 — ✅ SAFE-AREA: 노치/다이나믹아일랜드 자동 회피 */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff', borderBottom: '1px solid #F0F2F7', position: 'sticky', top: 0, zIndex: 100 }}>
         <button onClick={goBack} style={{ border: 'none', background: '#F2F2F7', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex' }}>
