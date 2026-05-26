@@ -8,7 +8,7 @@
  */
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
-const APP_LOGO_URL = 'https://fishing-go.vercel.app/og-image.png?v=20260526';
+const APP_LOGO_URL = 'https://www.fishing-go.com/og-image.png?v=20260526';
 const APP_ID = 'kr.fishinggo.app'; // ✅ capacitor.config.json appId
 
 // ✅ CLIPBOARD: Capacitor 전용 클립보드 → 브라우저 API → execCommand 순서로 폴백

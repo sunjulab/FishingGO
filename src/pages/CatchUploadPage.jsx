@@ -205,7 +205,7 @@ export default function CatchUploadPage() {
   };
 
   const handleShare = async () => {
-    const shareLink = catchUrl || (import.meta.env.VITE_SITE_URL || 'https://fishing-go.vercel.app');
+    const shareLink = catchUrl || (import.meta.env.VITE_SITE_URL || 'https://www.fishing-go.com');
     const shareTitle = `🎣 ${fishName} 조황 인증!`;
     const shareText = `${shareTitle}\n${shareLink}`;
     const isNative = window.Capacitor?.isNativePlatform?.();
