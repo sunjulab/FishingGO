@@ -22,6 +22,7 @@ function isVersionLower(v1, v2) {
 
 export default function ForceUpdateChecker() {
   const [needsUpdate, setNeedsUpdate] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [storeUrl, setStoreUrl] = useState('https://play.google.com/apps/internaltest/4701312289208373704');
 
   useEffect(() => {
@@ -58,7 +59,7 @@ export default function ForceUpdateChecker() {
     checkUpdate();
   }, []);
 
-  if (!needsUpdate) return null;
+  if (!needsUpdate || dismissed) return null;
 
   const handleUpdateClick = () => {
     window.location.href = storeUrl;
@@ -80,6 +81,9 @@ export default function ForceUpdateChecker() {
         </p>
         <button style={styles.button} onClick={handleUpdateClick}>
           업데이트 하러 가기
+        </button>
+        <button style={styles.dismissButton} onClick={() => setDismissed(true)}>
+          다음에 업데이트할게요
         </button>
       </div>
     </div>
@@ -142,5 +146,17 @@ const styles = {
     fontSize: '16px',
     fontWeight: '700',
     cursor: 'pointer',
+  },
+  dismissButton: {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: 'transparent',
+    color: '#999',
+    border: 'none',
+    borderRadius: '12px',
+    fontSize: '14px',
+    fontWeight: '400',
+    cursor: 'pointer',
+    marginTop: '4px',
   }
 };
