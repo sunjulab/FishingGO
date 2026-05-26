@@ -1,18 +1,19 @@
 {
-  "rewrites": [
+  "redirects": [
     {
       "source": "/catch/:id",
-      "destination": "/api/og?type=catch&id=:id",
+      "destination": "https://fishing-go-backend.onrender.com/og/catch/:id",
+      "permanent": false,
       "missing": [{ "type": "query", "key": "ref" }]
     },
     {
       "source": "/post/:id",
-      "destination": "/api/og?type=post&id=:id",
+      "destination": "https://fishing-go-backend.onrender.com/og/post/:id",
+      "permanent": false,
       "missing": [{ "type": "query", "key": "ref" }]
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
     }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

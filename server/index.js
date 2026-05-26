@@ -422,8 +422,9 @@ app.get('/api/health', (req, res) => {
 // ── 동적 OG 태그 라우트 ─────────────────────────────────────────────────────
 // KakaoTalk/WhatsApp/Telegram 등 크롤러: OG HTML 반환
 // 일반 브라우저: 프론트엔드 SPA로 리다이렉트
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://fishing-go-frontend.onrender.com';
-// 사진 없을 경우 앱 아이콘으로 대체 (182KB — og-image.png 2MB보다 처리 빠름)
+// 브라우저 리다이렉트 대상: ?ref=og 붙여서 Vercel의 missing 조건 우회 → index.html 서빙
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://fishing-go.vercel.app';
+// 사진 없을 경우 앱 아이콘으로 대체 (182KB)
 const DEFAULT_OG_IMG = `${FRONTEND_URL}/icon-192.png`;
 
 function isBotUA(ua = '') {
