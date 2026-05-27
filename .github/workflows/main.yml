@@ -138,12 +138,15 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build Vite (프론트엔드)
+      - name: Build (esbuild — Linux 호환 빌드)
         env:
           VITE_API_URL:        ${{ secrets.VITE_API_URL }}
           VITE_KAKAO_APP_KEY:  ${{ secrets.VITE_KAKAO_APP_KEY }}
+          VITE_TIDE_API_KEY:   ${{ secrets.VITE_TIDE_API_KEY }}
+          VITE_ADMOB_TESTING:  'true'
+          VITE_SITE_URL:       'https://www.fishing-go.com'
           VITE_DISABLE_PWA:    'true'
-        run: npm run build
+        run: node build-esbuild.mjs
 
       - name: Capacitor Sync (웹 → Android)
         run: npx cap sync android
