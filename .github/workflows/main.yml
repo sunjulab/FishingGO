@@ -133,27 +133,31 @@ jobs:
           echo "=== build.gradle signing config ==="
           grep -A5 'keystoreFile' android/app/build.gradle | head -10
 
-      - name: Build Release APK
+      - name: Build Release AAB
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
         run: |
           set -eo pipefail
-          ./gradlew assembleRelease --no-daemon 2>&1
+          ./gradlew bundleRelease --no-daemon 2>&1
         working-directory: android
 
 
-      - name: Upload APK
+      - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: fishinggo-release-${{ github.run_number }}
-          path: android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
 
       - name: Build summary
         run: |
-          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -f "$APK" ]; then
-            echo "APK built: $(basename $APK) ($(du -sh $APK | cut -f1))"
+          AAB=$(find android/app/build/outputs/bundle/release -name "*.aab" | head -1)
+          if [ -f "$AAB" ]; then
+            echo "✅ AAB built: $(basename $AAB) ($(du -sh $AAB | cut -f1))"
+            echo "## ✅ AAB Build Success" >> $GITHUB_STEP_SUMMARY
+            echo "- File: $(basename $AAB)" >> $GITHUB_STEP_SUMMARY
+            echo "- Size: $(du -sh $AAB | cut -f1)" >> $GITHUB_STEP_SUMMARY
+            echo "- Run: #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           fi
