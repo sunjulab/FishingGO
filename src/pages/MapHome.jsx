@@ -16,7 +16,7 @@ import { useToastStore } from '../store/useToastStore';
 import { ALL_FISHING_POINTS, SECRET_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
 import { useUserStore, TIER_CONFIG, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import CsInquirySection from '../components/CsInquirySection';
-import { NativeAd } from '../components/AdUnit';
+import { NativeAd, RewardGateModal } from '../components/AdUnit';
 import CctvModal from '../components/CctvModal';
 import UpgradeModal from '../components/UpgradeModal';
 import DashboardView from './DashboardView';
@@ -83,6 +83,9 @@ export default function MapHome() {
   const [showSecretPoints, setShowSecretPoints] = useState(false);
   const [precisionData, setPrecisionData]       = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  // ✅ REWARD-GATE: 무료 유저 포인트 입장 시 보상형 광고 게이트
+  const [showRewardGate, setShowRewardGate]     = useState(false);
+  const [pendingPoint, setPendingPoint]         = useState(null); // { point, fromDashboard }
   // ✅ REALTIME-FIX: 실시간 점수 갱신 용 tick (10분마다 증가 → useMemo 재계산 트리거)
   const [rankTick, setRankTick] = useState(0);
   const [weatherCache, setWeatherCache]   = useState({}); // ✅ FIX-HEATMAP: 히트맵 실시간 날씨 캐시 (stationId → precisionData)
@@ -353,20 +356,8 @@ export default function MapHome() {
     }
   }, [user?.email, user?.id]);
 
-  /* ── 포인트 클릭 ── */
-  // ✅ 5TH-B1: useCallback — 마커 useEffect 업데이트 시 매 렌더마다 새 함수 생성 방지
-  // ✅ FIX-TDZ: 마커 렌더링 useEffect보다 먼저 선언해야 TDZ(Cannot access before initialization) 방지
-  const handlePointClick = useCallback(async (point, fromDashboard = false) => {
-    // ✅ FREE-LIMIT: 무료 플랜 일일 3회 제한 게이팅
-    if (!canAccessPremium && !isAdmin) {
-      const allowed = await checkDailyPointVisit();
-      if (!allowed) {
-        addToast('🔒 오늘 무료 입장 횟수를 모두 사용했습니다. LITE 플랜에서 무제한 입장!', 'error');
-        setShowUpgradeModal(true);
-        return;
-      }
-    }
-
+  /* ── 포인트 실제 진입 (광고 완료 or 프리미엄 유저) ── */
+  const _enterPoint = useCallback(async (point, fromDashboard = false) => {
     setSelectedPoint(point);
     setPrecisionData(null);
     setLoading(true);
@@ -375,7 +366,6 @@ export default function MapHome() {
       if (mapRef.current) mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
     }
     const nearest = findNearestStation(point.lat, point.lng);
-    // ✅ 민물 포인트는 해양 날씨/수온 정보 없음 → API 호출 스킵
     if (point.type === '민물') {
       setPrecisionData(null);
       setLoading(false);
@@ -389,7 +379,23 @@ export default function MapHome() {
       setPrecisionData(getPointSpecificData(point));
     } finally { setLoading(false); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAccessPremium, isAdmin, checkDailyPointVisit]);
+  }, []);
+
+  /* ── 포인트 클릭 ── */
+  // ✅ 5TH-B1: useCallback — 마커 useEffect 업데이트 시 매 렌더마다 새 함수 생성 방지
+  // ✅ FIX-TDZ: 마커 렌더링 useEffect보다 먼저 선언해야 TDZ(Cannot access before initialization) 방지
+  // ✅ REWARD-GATE: 무료 유저 → 보상형 광고 시청 후 입장 (3회 일일 제한 제거)
+  const handlePointClick = useCallback(async (point, fromDashboard = false) => {
+    // 프리미엄/관리자: 광고 없이 바로 입장
+    if (canAccessPremium || isAdmin) {
+      await _enterPoint(point, fromDashboard);
+      return;
+    }
+    // 무료 유저: 보상형 광고 게이트 오픈
+    setPendingPoint({ point, fromDashboard });
+    setShowRewardGate(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAccessPremium, isAdmin, _enterPoint]);
 
   /* ── 마커 렌더링 (최적화) ── */
   useEffect(() => {
@@ -1062,6 +1068,21 @@ export default function MapHome() {
         {showUpgradeModal && (
           <UpgradeModal onClose={() => setShowUpgradeModal(false)} />
         )}
+
+        {/* ── 보상형 광고 게이트 (무료 유저 포인트 입장) ── */}
+        <RewardGateModal
+          isOpen={showRewardGate}
+          context="point"
+          onClose={() => { setShowRewardGate(false); setPendingPoint(null); }}
+          onRewardComplete={() => {
+            setShowRewardGate(false);
+            if (pendingPoint) {
+              _enterPoint(pendingPoint.point, pendingPoint.fromDashboard);
+              setPendingPoint(null);
+            }
+          }}
+          onSubscribe={() => { setShowRewardGate(false); setShowUpgradeModal(true); }}
+        />
 
         {/* ── 바텀 시트 (포인트 상세) ── */}
         {/* 배경 오버레이 */}
