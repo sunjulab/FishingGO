@@ -127,7 +127,14 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tail -50
+        run: |
+          ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle.log
+          GRADLE_EXIT=${PIPESTATUS[0]}
+          if [ $GRADLE_EXIT -ne 0 ]; then
+            echo "=== BUILD FAILED — Last 40 lines ==="
+            tail -40 /tmp/gradle.log
+            exit $GRADLE_EXIT
+          fi
         working-directory: android
 
       - name: Upload APK
