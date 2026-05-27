@@ -76,9 +76,9 @@ export default defineConfig(({ mode }) => {
         ],
       },
       manifest: {
-        name: '?싳떆GO Premium',
-        short_name: '?싳떆GO',
-        description: '援?궡 理쒓퀬 ?꾨━誘몄뾼 ?댁뼇 ?싳떆 ?명뀛由ъ쟾?????ㅼ떆媛?臾쇰븣쨌?좎뵪쨌?ъ씤?맞룹빱裕ㅻ땲??,
+        name: '낚시GO Premium',
+        short_name: '낚시GO',
+        description: '낚시GO — 실시간 조황 정보, 낚시 기록, 낚시터 지도 앱',
         theme_color: '#0B1F3A',
         background_color: '#0B1F3A',
         display: 'standalone',
