@@ -4,7 +4,7 @@ apply plugin: 'kotlin-android'
 android {
     namespace = "kr.fishinggo.app"
     compileSdk = rootProject.ext.compileSdkVersion
-    ndkVersion "25.1.8937393" // ??NDK 버전 명시 (?�버�??�볼 ?�동 추출 강제??
+    ndkVersion = "25.1.8937393" // NDK 버전 명시
     defaultConfig {
         applicationId "kr.fishinggo.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -36,8 +36,6 @@ android {
             minifyEnabled true
             shrinkResources false  // WebView ?��? false ?��? (리소????�� ???�류 가??
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // ??Play Store ?�버�??�볼 경고 ?�거 ???�이?�브 ?�볼 AAB???�동 ?�함
-            ndk { debugSymbolLevel 'FULL' }
         }
         debug {
             minifyEnabled false
