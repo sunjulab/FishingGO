@@ -132,7 +132,7 @@ jobs:
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
         run: |
           set -eo pipefail
-          ./gradlew assembleRelease --no-daemon --info 2>&1
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
         working-directory: android
 
 
