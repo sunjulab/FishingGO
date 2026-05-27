@@ -8,7 +8,7 @@ if (!import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30s — Render 무료 플랜 콜드스타트(최대 60s) 대응, 앱 환경 흰 화면 방지
+  timeout: 60000, // 60s — Render 무료 플랜 콜드스타트(최대 50s) + 모바일 LTE 지연 대응
   // ENH-B1: heavy 요청(이미지 업로드 등)은 개별 호출 시 timeout 오버라이드 사용
   // 예: apiClient.post('/api/user/avatar', data, { timeout: 60000 })
 });

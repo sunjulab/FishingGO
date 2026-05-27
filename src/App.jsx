@@ -26,6 +26,15 @@ import {
 // ✅ ADMOB: 앱 시작 시 AdMob 초기화 (Capacitor 네이티브 환경에서만 동작)
 initAdMob().catch(() => {}); // 웹 환경 실패는 무시
 
+// ✅ SERVER-PREWARM: 앱 시작 즉시 Render 서버 깨우기 (콜드스타트 방지)
+// 모바일 LTE 환경에서 30초 타임아웃 초과로 로그인 실패하는 문제 사전 방지
+(async () => {
+  try {
+    const apiBase = import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com';
+    await fetch(`${apiBase}/api/health`, { signal: AbortSignal.timeout(55000) });
+  } catch { /* 무시 — 백그라운드 예열, 실패해도 앱 동작에 영향 없음 */ }
+})();
+
 // ✅ DARK-PURGE: 다크모드 완전 제거 — localStorage/html 속성 잔재 초기화
 // 이전 버전에서 다크모드를 사용했던 사용자의 기기에 잔재가 남아 있으면 검은 화면 발생
 // 앱 시작 시 강제로 라이트 모드로 고정
