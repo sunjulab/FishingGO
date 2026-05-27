@@ -273,12 +273,22 @@ export default function WritePost() {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             padding: '8px 16px', backgroundColor: '#f8f9fa', borderRadius: '12px',
-            marginBottom: '20px', cursor: 'pointer', border: '1px solid #eee'
+            marginBottom: '16px', cursor: 'pointer', border: '1px solid #eee'
           }}
         >
           <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#0056D2' }}>{category}</span>
           <ChevronDown size={14} color="#0056D2" />
         </div>
+
+        {/* ✅ PHOTO-UX: 사진 업로드를 스크롤 본문에 배치 — fixed 툴바 실록 제거 */}
+        {/* 사진이 늘어나도 textarea가 키보드에 가려지지 않음 */}
+        <MultiImageUpload
+          images={images}
+          onChange={setImages}
+          maxCount={5}
+          isLoading={imageLoading}
+          label="사진 추가"
+        />
 
         {/* 공지사항 제목 입력 */}
         {isNoticeType && (
@@ -332,7 +342,7 @@ export default function WritePost() {
         {/* 텍스트 입력 영역 */}
         <textarea
           placeholder={isNoticeType ? '공지 내용을 입력하세요.' : '현장 상황이나 조과를 자유롭게 공유해보세요. (예: 현재 강릉항 파고가 높습니다!)'}
-          style={{ width: '100%', minHeight: '200px', border: 'none', fontSize: `calc(16px * var(--fs, 1))`, lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+          style={{ width: '100%', minHeight: '160px', border: 'none', fontSize: `calc(16px * var(--fs, 1))`, lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box', marginTop: '12px' }}
           onChange={(e) => setContent(e.target.value)}
           value={content}
         />
@@ -468,14 +478,7 @@ export default function WritePost() {
           borderTop: '1px solid #f0f0f0',
           zIndex: 200,
         }}>
-          {/* ✅ MULTI-IMG: 다중 이미지 업로드 */}
-          <MultiImageUpload
-            images={images}
-            onChange={setImages}
-            maxCount={5}
-            isLoading={imageLoading}
-            label="사진 추가"
-          />
+          {/* 툴바: 위치 추가 + AI 자동 일지만 유지 (사진은 본문 영역으로 이동됨) */}
 
           {/* 하단 액션 행 */}
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px', alignItems: 'center' }}>
