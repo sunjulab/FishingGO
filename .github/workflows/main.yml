@@ -104,7 +104,10 @@ jobs:
         run: node_modules/.bin/cap sync android || echo "cap sync skipped"
 
       - name: Make gradlew executable
-        run: chmod +x android/gradlew
+        run: |
+          chmod +x android/gradlew
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "local.properties: $(cat android/local.properties)"
 
       - name: Restore google-services.json
         env:
@@ -136,11 +139,20 @@ jobs:
           ./gradlew assembleRelease --no-daemon 2>&1 | tee /tmp/gradle.log
           GRADLE_EXIT=${PIPESTATUS[0]}
           if [ $GRADLE_EXIT -ne 0 ]; then
-            echo "=== BUILD FAILED — Last 40 lines ==="
-            tail -40 /tmp/gradle.log
+            echo "=== BUILD FAILED — Last 60 lines ==="
+            tail -60 /tmp/gradle.log
             exit $GRADLE_EXIT
           fi
         working-directory: android
+
+      - name: Upload Gradle Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-log-${{ github.run_number }}
+          path: /tmp/gradle.log
+          retention-days: 3
+          if-no-files-found: ignore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
