@@ -17,6 +17,10 @@ import { shareExternal } from '../utils/shareUtils';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+// ✅ CACHE-FIX: 모듈레벨 캐시 — 탭 재진입 시 스켈레톤 없이 즉시 이전 데이터 표시
+// 언마운트/재마운트(뒤로가기 후 재진입) 시 데이터가 이미 있으면 loading=false로 시작
+let _communityCache = { business: [], crews: [], notices: [], stories: [] };
+
 // ✅ 3RD-B5: InFeedAd 컴포넌트 함수 내부 인라인 정의 → 외부 추출 — 렌더마다 재생성 방지
 function InFeedAd() {
   const addToast = useToastStore(s => s.addToast);
@@ -210,18 +214,18 @@ export default function CommunityTab() {
   const [commentOpenMap, setCommentOpenMap] = useState({}); // postId → 입력창 열림 여부
   const [commentSubmittingMap, setCommentSubmittingMap] = useState({}); // postId → 제출 중
   // ✅ INSTA-P3: 스토리 상태
-  const [stories, setStories] = useState([]);
+  const [stories, setStories] = useState(_communityCache.stories);
   const [storyViewer, setStoryViewer] = useState(null); // 현재 보고 있는 story
   // ✅ 7TH-B1: OPEN_CATEGORIES는 컴포넌트 외부 상수로 이동 (L31)
   const [crewPassModal, setCrewPassModal] = useState(null); // { crew } | null
   const [crewPassInput, setCrewPassInput]  = useState('');
   const [crewPassLoading, setCrewPassLoading] = useState(false);
-  const [crews, setCrews] = useState([]);
+  const [crews, setCrews] = useState(_communityCache.crews);
   // ✅ CREW-ENH: 내가 가입한 크루 ID Set — 배지 표시 및 비번 스킵용
   const [myCrewIds, setMyCrewIds] = useState(new Set());
   const [crewSearch, setCrewSearch] = useState(''); // ✅ 크루명 검색어
 
-  const [businessPosts, setBusinessPosts] = useState([]);
+  const [businessPosts, setBusinessPosts] = useState(_communityCache.business);
   const [selectedBusinessRegion, setSelectedBusinessRegion] = useState('전체'); // 시도 필터
   const [selectedHarbor, setSelectedHarbor] = useState(''); // 항구 필터 (비어있으면 시도에서 전체)
   const [selectedBusinessPost, setSelectedBusinessPost] = useState(null); // 상세 모달용
@@ -302,8 +306,8 @@ export default function CommunityTab() {
   const businessRegions = useMemo(() => ['전체', ...HARBOR_DATA.map(h => h.region)], []);
 
 
-  const [noticePosts, setNoticePosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [noticePosts, setNoticePosts] = useState(_communityCache.notices);
+  const [loading, setLoading] = useState(_communityCache.business.length === 0 && _communityCache.crews.length === 0);
 
   // ✅ 크루 검색 필터 — 이름·오너명 부분일치 (대소문자 무시)
   const filteredCrews = useMemo(() => {
@@ -403,7 +407,9 @@ export default function CommunityTab() {
   // ✅ 7TH-B2: React.useEffect → useEffect 통일
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      // ✅ CACHE-FIX: 캐시된 데이터가 없을 때만 스켈레톤 표시 (재진입 시 깜빡임 방지)
+      const hasCache = _communityCache.business.length > 0 || _communityCache.crews.length > 0;
+      if (!hasCache) setLoading(true);
       try {
         // ✅ FIX-COMMUNITY: Promise.all → Promise.allSettled
         // 하나의 API 실패가 나머지 크루/공지/사업글 로딩을 막지 않도록 독립 처리
@@ -428,13 +434,27 @@ export default function CommunityTab() {
         // ✅ FIX-EMPTY: ?.length 조건 제거 — 빈 배열([])도 항상 setState 호출
         // 이전: [].length === 0 (falsy) → setCrews 미호출 → 구버전 state 유지 버그
         // ✅ BUG-FIX: 차단 필터 ownerName → owner(이메일) — blockedUsers는 이메일 목록
-        if (Array.isArray(crewsRes.data)) setCrews(crewsRes.data.filter(c => !blocked.includes(c.owner)));
-        if (Array.isArray(noticesRes.data)) setNoticePosts(noticesRes.data);
-        if (Array.isArray(businessRes.data)) setBusinessPosts(businessRes.data.filter(p => !blocked.includes(p.author)));
+        if (Array.isArray(crewsRes.data)) {
+          const filtered = crewsRes.data.filter(c => !blocked.includes(c.owner));
+          _communityCache.crews = filtered;
+          setCrews(filtered);
+        }
+        if (Array.isArray(noticesRes.data)) {
+          _communityCache.notices = noticesRes.data;
+          setNoticePosts(noticesRes.data);
+        }
+        if (Array.isArray(businessRes.data)) {
+          const filtered = businessRes.data.filter(p => !blocked.includes(p.author));
+          _communityCache.business = filtered;
+          setBusinessPosts(filtered);
+        }
 
         // ✅ INSTA-P3: 24h 스토리 로드 (오류는 조용히 무시)
         apiClient.get('/api/stories').then(r => {
-          if (Array.isArray(r.data)) setStories(r.data);
+          if (Array.isArray(r.data)) {
+            _communityCache.stories = r.data;
+            setStories(r.data);
+          }
         }).catch(() => { /* 스토리 API 없어도 무시 */ });
 
         // ✅ CREW-ENH: 내 크루 ID Set 구성
