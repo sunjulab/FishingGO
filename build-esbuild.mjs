@@ -28,10 +28,10 @@ const env = {
   ...parseEnvFile('.env.local'),      // dev 기본값
   ...parseEnvFile('.env.production'), // 프로덕션이 최종 우선 (APK 빌드 핵심)
 };
-const kakaoAppKey = env.VITE_KAKAO_APP_KEY || '';
-const siteUrl     = env.VITE_SITE_URL      || 'https://fishing-go.vercel.app';
-const apiUrl      = env.VITE_API_URL       || 'https://api.fishinggo.kr';
-const tideKey     = env.VITE_TIDE_API_KEY  || '';
+const kakaoAppKey = process.env.VITE_KAKAO_APP_KEY || env.VITE_KAKAO_APP_KEY || '';
+const siteUrl     = process.env.VITE_SITE_URL      || env.VITE_SITE_URL      || 'https://fishing-go.vercel.app';
+const apiUrl      = process.env.VITE_API_URL        || env.VITE_API_URL       || 'https://fishing-go-backend.onrender.com';
+const tideKey     = process.env.VITE_TIDE_API_KEY   || env.VITE_TIDE_API_KEY  || '';
 // ✅ AUTO-VERSION: package.json에서 버전 읽기 — ForceUpdateChecker.__APP_VERSION__ 치환
 const appVersion  = JSON.parse(readFileSync('package.json', 'utf8')).version;
 
