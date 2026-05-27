@@ -386,6 +386,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     );
   }
 
+  return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9000,
       backgroundColor: 'rgba(0,0,0,0.7)',
