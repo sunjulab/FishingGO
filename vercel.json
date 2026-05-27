@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/catch/:id",
@@ -14,6 +20,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
