@@ -70,6 +70,14 @@ jobs:
       - name: Install NDK
         run: sdkmanager "ndk;25.2.9519653"
 
+      - name: Install SDK components + show installed
+        run: |
+          echo "=== Pre-installed platforms ==="
+          sdkmanager --list 2>/dev/null | grep -E 'platforms;android|build-tools' | head -20 || true
+          echo "=== Installing API 35 + build-tools 35.0.0 ==="
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" || true
+          echo "=== Done ==="
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -132,7 +140,7 @@ jobs:
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
         run: |
           set -eo pipefail
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1
         working-directory: android
 
 
