@@ -25,12 +25,41 @@ jobs:
           fi
 
   # ══════════════════════════════════════════════════════════════
-  # 🗄️  Job 2: MongoDB 마이그레이션 자동 실행
+  # 🌐  Job 2: Vercel 프론트엔드 배포
+  #   - VERCEL_TOKEN 시크릿 필요 (없으면 자동 스킵)
+  #   - 설정: https://vercel.com/account/tokens 에서 토큰 생성
+  #   - GitHub Secrets에 VERCEL_TOKEN 추가 필요
+  # ══════════════════════════════════════════════════════════════
+  deploy-vercel:
+    name: "② Vercel 프론트엔드 배포"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel Production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_tgUYwp8FC1EdVmVFJ3M5yy23
+          VERCEL_PROJECT_ID: prj_B1vBzBHEHqXs2MOH7nJFd8MlTbM9
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "⏭️ VERCEL_TOKEN 미설정 — Vercel 배포 스킵"
+            echo "   설정 방법: https://vercel.com/account/tokens → 토큰 생성"
+            echo "   GitHub Secrets에 VERCEL_TOKEN 추가 후 자동 배포됩니다"
+            exit 0
+          fi
+          echo "🚀 Vercel 프론트엔드 배포 시작..."
+          npx vercel@latest --prod --token "$VERCEL_TOKEN" --yes
+          echo "✅ Vercel 배포 완료"
+
+  # ══════════════════════════════════════════════════════════════
+  # 🗄️  Job 3: MongoDB 마이그레이션 자동 실행
   #   - Render 배포 완료(90초) 후 migrate.js 실행
   #   - MONGO_URI 시크릿이 없으면 스킵 (인메모리 모드)
   # ══════════════════════════════════════════════════════════════
   run-migration:
-    name: "② MongoDB 마이그레이션"
+    name: "③ MongoDB 마이그레이션"
     runs-on: ubuntu-22.04
     needs: deploy-backend          # 백엔드 배포 후 실행
     if: ${{ secrets.MONGO_URI != '' }}
@@ -71,7 +100,7 @@ jobs:
   #       VITE_KAKAO_APP_KEY : 카카오 앱 키
   # ══════════════════════════════════════════════════════════════
   build-apk:
-    name: "③ Android APK 빌드"
+    name: "④ Android APK 빌드"
     runs-on: ubuntu-22.04
     needs: deploy-backend
     steps:
