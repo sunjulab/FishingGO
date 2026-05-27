@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Trigger Render Deploy Hook
         run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+            echo "⏭️ RENDER_DEPLOY_HOOK_URL 미설정 — Render 백엔드 배포 스킵"
+            exit 0
+          fi
           response=$(curl --fail --silent --show-error -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
           http_code="${response: -3}"
           if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
