@@ -3,111 +3,52 @@ name: FishingGO Auto Deploy
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:   # 수동 실행 허용
+  workflow_dispatch:
 
 jobs:
-  # ══════════════════════════════════════════════════════════════
-  # ⚙️  Job 1: Render 백엔드 재배포 트리거
-  # ══════════════════════════════════════════════════════════════
+
   deploy-backend:
-    name: "① Render 백엔드 재배포"
+    name: "Render Backend Deploy"
     runs-on: ubuntu-22.04
-    continue-on-error: true   # 실패해도 다른 job 차단 안 함
+    continue-on-error: true
     steps:
       - name: Trigger Render Deploy Hook
         run: |
           if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
-            echo "⏭️ RENDER_DEPLOY_HOOK_URL 미설정 — Render 백엔드 배포 스킵"
+            echo "RENDER_DEPLOY_HOOK_URL not set - skipping"
             exit 0
           fi
           http_code=$(curl --silent --output /dev/null --write-out "%{http_code}" \
             --max-time 30 -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
           if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-            echo "✅ Render 서버 재배포 트리거 완료 (HTTP $http_code)"
+            echo "Render deploy triggered (HTTP $http_code)"
           else
-            echo "⚠️ Render 배포 트리거 응답: HTTP $http_code (스킵)"
+            echo "Render deploy response: HTTP $http_code"
           fi
 
-  # ══════════════════════════════════════════════════════════════
-  # 🌐  Job 2: Vercel 프론트엔드 배포
-  # ══════════════════════════════════════════════════════════════
   deploy-vercel:
-    name: "② Vercel 프론트엔드 배포"
+    name: "Vercel Frontend Deploy"
     runs-on: ubuntu-22.04
-    continue-on-error: true   # 실패해도 다른 job 차단 안 함
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to Vercel Production
+      - name: Deploy to Vercel
         env:
           VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID:     team_tgUYwp8FC1EdVmVFJ3M5yy23
           VERCEL_PROJECT_ID: prj_B1vBzBHEHqXs2MOH7nJFd8MlTbM9
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo "⏭️ VERCEL_TOKEN 미설정 — Vercel 배포 스킵"
+            echo "VERCEL_TOKEN not set - skipping"
             exit 0
           fi
-          echo "🚀 Vercel 프론트엔드 배포 시작..."
           npx vercel@latest --prod --token "$VERCEL_TOKEN" --yes
-          echo "✅ Vercel 배포 완료"
 
-  # ══════════════════════════════════════════════════════════════
-  # 🗄️  Job 3: MongoDB 마이그레이션 (선택)
-  # ══════════════════════════════════════════════════════════════
-  run-migration:
-    name: "③ MongoDB 마이그레이션"
-    runs-on: ubuntu-22.04
-    needs: deploy-backend
-    if: always()             # deploy-backend 실패해도 조건만 체크
-    continue-on-error: true
-    steps:
-      - name: MONGO_URI 설정 여부 확인
-        run: |
-          if [ -z "${{ secrets.MONGO_URI }}" ]; then
-            echo "⏭️ MONGO_URI 미설정 — 마이그레이션 스킵"
-            exit 0
-          fi
-          echo "MONGO_URI 설정됨 — 마이그레이션 진행"
-
-      - name: Checkout
-        if: ${{ secrets.MONGO_URI != '' }}
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 20
-        if: ${{ secrets.MONGO_URI != '' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: server/package-lock.json
-
-      - name: Install server dependencies
-        if: ${{ secrets.MONGO_URI != '' }}
-        run: npm install
-        working-directory: server
-
-      - name: Wait for Render deploy (60s)
-        if: ${{ secrets.MONGO_URI != '' }}
-        run: sleep 60
-
-      - name: Run migration script
-        if: ${{ secrets.MONGO_URI != '' }}
-        env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          NODE_ENV: production
-        run: node migrate.js
-        working-directory: server
-
-  # ══════════════════════════════════════════════════════════════
-  # 📱  Job 4: Android APK 자동 빌드 (독립 실행)
-  #   - deploy-backend 성공/실패 무관하게 항상 빌드
-  # ══════════════════════════════════════════════════════════════
   build-apk:
-    name: "④ Android APK 빌드"
+    name: "Android APK Build"
     runs-on: ubuntu-22.04
-    # needs 제거 — 독립 실행 (배포 실패와 무관)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -127,7 +68,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK 25
+      - name: Install NDK
         run: sdkmanager "ndk;25.2.9519653"
 
       - name: Cache Gradle
@@ -142,7 +83,7 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build (esbuild — Linux 호환)
+      - name: Build frontend (esbuild)
         env:
           VITE_API_URL:       ${{ secrets.VITE_API_URL }}
           VITE_KAKAO_APP_KEY: ${{ secrets.VITE_KAKAO_APP_KEY }}
@@ -152,21 +93,21 @@ jobs:
           VITE_DISABLE_PWA:   'true'
         run: node build-esbuild.mjs
 
-      - name: Capacitor Sync (웹 → Android)
+      - name: Capacitor sync
         run: npx cap sync android
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Restore google-services.json (Firebase 설정)
+      - name: Restore google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
             echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
-            echo "✅ google-services.json 복원 완료"
+            echo "google-services.json restored"
           else
-            echo "⏭️ GOOGLE_SERVICES_JSON 미설정 — Firebase 없이 빌드"
+            echo "GOOGLE_SERVICES_JSON not set - Firebase disabled"
           fi
 
       - name: Restore Keystore
@@ -175,9 +116,9 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > android/fishinggo-release.jks
-            echo "✅ 키스토어 복원 완료"
+            echo "Keystore restored"
           else
-            echo "⏭️ KEYSTORE_BASE64 미설정 — 서명 스킵 (디버그 모드)"
+            echo "KEYSTORE_BASE64 not set - debug build"
           fi
 
       - name: Build Release APK
@@ -188,22 +129,16 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon
         working-directory: android
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: fishinggo-release-${{ github.run_number }}
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
 
-      - name: APK 빌드 완료 요약
+      - name: Build summary
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -f "$APK_PATH" ]; then
-            APK_SIZE=$(du -sh "$APK_PATH" | cut -f1)
-            echo "✅ APK 빌드 완료"
-            echo "   파일: $(basename $APK_PATH)"
-            echo "   크기: $APK_SIZE"
-            echo "   위치: Actions → 해당 워크플로 → Artifacts 탭"
-          else
-            echo "⚠️ APK 파일을 찾을 수 없습니다"
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -f "$APK" ]; then
+            echo "APK built: $(basename $APK) ($(du -sh $APK | cut -f1))"
           fi
