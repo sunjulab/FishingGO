@@ -52,6 +52,24 @@
       onload="try{if(window.Kakao&&!window.Kakao.isInitialized())window.Kakao.init(window.__kakaoAppKey)}catch(e){}"></script>
     <!-- 포트원(구 아임포트) 결제 SDK — async로 렌더 블로킹 제거 -->
     <script defer src="https://cdn.iamport.kr/v1/iamport.js"></script>
+
+    <!-- ✅ ADSENSE: Google AdSense 소유권 인증 + 웹 보상형 광고 (H5 Ad Placement API) -->
+    <!-- 퍼블리셔 ID: ca-pub-9774243773523817 -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9774243773523817"
+      crossorigin="anonymous"></script>
+    <!-- H5 Ad Placement API 초기화 (adBreak/adConfig 전역 등록) -->
+    <script>
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.__adBreakReady = false;
+      // adConfig: 보상형 광고 사전 로드 설정
+      function adConfig(o) { (window.adsbygoogle = window.adsbygoogle || []).push(o); }
+      function adBreak(o)  { (window.adsbygoogle = window.adsbygoogle || []).push(o); }
+      window.adConfig = adConfig;
+      window.adBreak  = adBreak;
+      adConfig({ preloadAdBreaks: 'on', sound: 'off' });
+      window.__adBreakReady = true;
+    </script>
+
   </head>
   <body>
     <div id="root"></div>
