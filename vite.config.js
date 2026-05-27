@@ -1,4 +1,4 @@
-﻿// vercel-force-rebuild: 2026-05-27 17:26:23
+// vercel-force-rebuild: 2026-05-27 17:26:23
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -13,17 +13,20 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
   define: {
-    // SEC-05: index.html ?몃씪???ㅽ겕由쏀듃???뚮젅?댁뒪??붾? 鍮뚮뱶 ??꾩뿉 移섑솚
-    // loadEnv濡?.env.local ?ы븿 VITE_* 蹂?섎? ?뺥솗???쎌쓬 (process.env??VITE_ 蹂??誘명룷??
+    // SEC-05: index.html ?몃씪???ㅽ겕由쏀듃???뚮젅?댁뒪?€?붾? 鍮뚮뱶 ?€?꾩뿉 移섑솚
+    // loadEnv濡?.env.local ?ы븿 VITE_* 蹂€?섎? ?뺥솗???쎌쓬 (process.env??VITE_ 蹂€??誘명룷??
     '__VITE_KAKAO_APP_KEY__': JSON.stringify(env.VITE_KAKAO_APP_KEY || ''),
-    // ??20TH-A1: OG/Twitter URL ?뚮젅?댁뒪???移섑솚 ??.env??VITE_SITE_URL=https://your-domain.com ?ㅼ젙
+    // ??20TH-A1: OG/Twitter URL ?뚮젅?댁뒪?€??移섑솚 ??.env??VITE_SITE_URL=https://your-domain.com ?ㅼ젙
     '__VITE_SITE_URL__': JSON.stringify(env.VITE_SITE_URL || 'https://fishing-go.vercel.app'),
-    // ??AUTO-VERSION: 鍮뚮뱶 ??꾩뿉 package.json 踰꾩쟾 ?먮룞 二쇱엯 ??ForceUpdateChecker?먯꽌 ?ъ슜
+    // ??AUTO-VERSION: 鍮뚮뱶 ?€?꾩뿉 package.json 踰꾩쟾 ?먮룞 二쇱엯 ??ForceUpdateChecker?먯꽌 ?ъ슜
     '__APP_VERSION__': JSON.stringify(APP_VERSION),
+    // ✅ FIX-APIURL: import.meta.env.VITE_API_URL을 빌드 타임에 직접 주입
+    // 환경변수 파일 로딩 실패 시에도 올바른 백엔드 URL 보장 (Vercel/Render 공통)
+    'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'https://fishing-go-backend.onrender.com'),
   },
   plugins: [
     react(),
-    // ??HTML-REPLACE: Vite??define? JS留?移섑솚????HTML ?뚮젅?댁뒪??붾뒗 ???뚮윭洹몄씤?쇰줈 吏곸젒 移섑솚
+    // ??HTML-REPLACE: Vite??define?€ JS留?移섑솚????HTML ?뚮젅?댁뒪?€?붾뒗 ???뚮윭洹몄씤?쇰줈 吏곸젒 移섑솚
     // Vercel(vite build)怨?濡쒖뺄(build-esbuild.mjs) 紐⑤몢 ?숈씪?섍쾶 ?곸슜??    {
       name: 'html-placeholder-replace',
       transformIndexHtml(html) {
