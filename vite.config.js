@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => {
   plugins: [
     react(),
     // ??HTML-REPLACE: Vite??define?€ JS留?移섑솚????HTML ?뚮젅?댁뒪?€?붾뒗 ???뚮윭洹몄씤?쇰줈 吏곸젒 移섑솚
-    // Vercel(vite build)怨?濡쒖뺄(build-esbuild.mjs) 紐⑤몢 ?숈씪?섍쾶 ?곸슜??    {
+    // Vercel(vite build) 및 로컬빌드(build-esbuild.mjs) 모두 같아야 적용됨
+    {
       name: 'html-placeholder-replace',
       transformIndexHtml(html) {
         const siteUrl   = env.VITE_SITE_URL      || 'https://fishing-go.vercel.app';
