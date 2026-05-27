@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com';
 // ✅ 14TH-C2: PROD 가드 추가 — 프로덕션 콘솔에 환경변수 경고 미노출
 if (!import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
   console.warn('[apiClient] ⚠️ VITE_API_URL 미설정 — localhost:5000으로 요청 중. 배포 환경에서 반드시 설정하세요.');
