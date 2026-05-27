@@ -166,7 +166,9 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
   const [adWatching, setAdWatching] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
   const [adDone, setAdDone] = useState(false);
-  const [autoCount, setAutoCount] = useState(0); // ✅ FIX-AUTO: 자동 등록 카운트다운
+  const [autoCount, setAutoCount] = useState(0);
+  const [webAdFullscreen, setWebAdFullscreen] = useState(false); // ✅ WEB-AD: 웹 전체화면 광고 오버레이
+  const [skipVisible, setSkipVisible] = useState(false);        // ✅ WEB-AD: 5초 후 스킵 버튼 표시
 
   const CONTEXT_TEXT = {
     post:  { title: '🎣 게시글 무료 등록', action: '글 등록 완료!' },
@@ -187,6 +189,8 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       setAdProgress(0);
       setAdDone(false);
       setAutoCount(0);
+      setWebAdFullscreen(false);
+      setSkipVisible(false);
       calledRef.current = false;
     } else {
       // 모달 닫힐 때 타이머 전부 정리
@@ -272,7 +276,116 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
 
   if (!isOpen) return null;
 
-  return (
+  // ✅ WEB-AD: 웹 전체화면 광고 오버레이 (adBreak 실패 또는 fallback 시)
+  const remaining = Math.ceil(30 - (adProgress / 100) * 30);
+
+  if (webAdFullscreen) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'linear-gradient(135deg, #0A1628 0%, #0d2240 50%, #0A1628 100%)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        {/* 상단: 광고 표시 배지 + 카운트다운 */}
+        <div style={{
+          position: 'absolute', top: 16, left: 0, right: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 20px', zIndex: 10,
+        }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.12)', borderRadius: '8px',
+            padding: '5px 12px', fontSize: '12px', color: 'rgba(255,255,255,0.8)',
+            fontWeight: '700', backdropFilter: 'blur(4px)',
+          }}>AD</div>
+          {/* 원형 카운트다운 */}
+          <div style={{ position: 'relative', width: 52, height: 52 }}>
+            <svg width="52" height="52" viewBox="0 0 52 52" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="4"/>
+              <circle cx="26" cy="26" r="22" fill="none" stroke="#00C48C" strokeWidth="4"
+                strokeDasharray={`${2 * Math.PI * 22}`}
+                strokeDashoffset={`${2 * Math.PI * 22 * (1 - adProgress / 100)}`}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.9s linear' }}
+              />
+            </svg>
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              fontSize: '15px', fontWeight: '900', color: '#fff',
+            }}>{remaining}</div>
+          </div>
+        </div>
+
+        {/* 중앙: 낙시GO 화면 현시 */}
+        <div style={{ textAlign: 'center', padding: '0 32px', marginTop: '-20px' }}>
+          {/* 로고 영역 */}
+          <div style={{
+            width: 90, height: 90, borderRadius: '24px',
+            background: 'linear-gradient(135deg, #0056D2, #00A3FF)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 24px',
+            boxShadow: '0 0 40px rgba(0,86,210,0.5)',
+            fontSize: '44px',
+            animation: 'adPulse 2s ease-in-out infinite',
+          }}>🎣</div>
+          <div style={{ fontSize: '28px', fontWeight: '900', color: '#fff', marginBottom: '10px', lineHeight: 1.2 }}>
+            낙시GO
+          </div>
+          <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.75)', fontWeight: '600', marginBottom: '8px' }}>
+            국내 최고 프리미엄 낙시 인텔리전스
+          </div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', fontWeight: '500' }}>
+            실시간 물때 · 날씨 · 해양 CCTV · 낙시 포인트 지도
+          </div>
+
+          {/* 프로그레스 바 */}
+          <div style={{ marginTop: '36px', width: '100%', maxWidth: 280, margin: '36px auto 0' }}>
+            <div style={{ height: '4px', background: 'rgba(255,255,255,0.15)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${adProgress}%`,
+                background: 'linear-gradient(90deg, #0056D2, #00C48C)',
+                borderRadius: '2px', transition: 'width 0.9s linear',
+              }}/>
+            </div>
+            <div style={{ marginTop: '10px', fontSize: '13px', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+              {remaining > 0 ? `${remaining}초 시청 후 보상 지급` : '시청 완료!'}
+            </div>
+          </div>
+        </div>
+
+        {/* 하단: 스킵 버튼 (및 페이드인 애니메이션) */}
+        {skipVisible && (
+          <button
+            onClick={() => {
+              if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+              setAdWatching(false);
+              setWebAdFullscreen(false);
+              // 스킵 시 보상 없음
+            }}
+            style={{
+              position: 'absolute', bottom: 40, right: 24,
+              background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
+              color: '#fff', padding: '10px 20px', borderRadius: '24px',
+              fontSize: '14px', fontWeight: '700', cursor: 'pointer',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            광고 끄기 ›
+          </button>
+        )}
+
+        <style>{`
+          @keyframes adPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(0,86,210,0.5); }
+            50% { transform: scale(1.06); box-shadow: 0 0 60px rgba(0,163,255,0.7); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9000,
       backgroundColor: 'rgba(0,0,0,0.7)',
