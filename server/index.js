@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -4397,6 +4397,39 @@ app.get('/api/community/crews/:id', async (req, res) => {
     if (mem) { const { password: _pw, ...safe } = mem; return res.json(safe); }
     return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
   } catch (err) { res.status(500).json({ error: '서버 오류' }); }
+});
+
+// ── ✅ CREW-LOGO: 크루 로고 업로드 (방장 전용) ─────────────────────────────
+app.put('/api/community/crews/:id/logo', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+    const { logo } = req.body;
+    if (!logo) return res.status(400).json({ error: '이미지 데이터가 필요합니다.' });
+    if (logo.length > 2 * 1024 * 1024) return res.status(413).json({ error: '이미지 크기가 너무 큽니다. (최대 약 1.5MB)' });
+    if (!logo.startsWith('data:image/')) return res.status(400).json({ error: '올바른 이미지 형식이 아닙니다.' });
+
+    if (dbReady && Crew) {
+      const crew = await Crew.findById(req.params.id);
+      if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+      if (crew.owner !== tp.email && !isAdminToken(tp)) return res.status(403).json({ error: '방장만 로고를 수정할 수 있습니다.' });
+      crew.logo = logo;
+      await crew.save();
+      return res.json({ success: true, logo });
+    }
+    // 인메모리 fallback
+    const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
+    if (!mem) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
+    if (mem.owner !== tp.email && !isAdminToken(tp)) return res.status(403).json({ error: '방장만 로고를 수정할 수 있습니다.' });
+    mem.logo = logo;
+    res.json({ success: true, logo });
+  } catch (err) {
+    (logger?.error || console.error)('[PUT /api/community/crews/:id/logo]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
 });
 
 // ── ✅ CREW-ENH: 크루 가입 (비번 검증 + 멤버 DB 저장) ──────────────────────────

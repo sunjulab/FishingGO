@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { ChevronLeft, Send, Users, ShieldCheck, Wifi, WifiOff, X, LogOut, Trash2, ExternalLink, CornerUpLeft } from 'lucide-react';
+import { ChevronLeft, Send, Users, ShieldCheck, Wifi, WifiOff, X, LogOut, Trash2, ExternalLink, CornerUpLeft, Camera } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
+import { compressAvatar } from '../utils/imageUtils';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -85,6 +86,11 @@ export default function CrewChat() {
   const [deletingCrew, setDeletingCrew] = useState(false);
   const [transferring, setTransferring] = useState(false);
 
+  // ✅ CREW-LOGO
+  const [crewLogo, setCrewLogo] = useState(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoFileRef = useRef(null);
+
   // ✅ REPLY STATE
   const [replyTo, setReplyTo] = useState(null);        // { sender, text }
   const [contextMenu, setContextMenu] = useState(null); // { msg, x, y }
@@ -113,9 +119,29 @@ export default function CrewChat() {
         setCrewName(res.data?.name || '');
         setCrewOwner(res.data?.owner || '');
         setCrewLimit(res.data?.limit != null ? res.data.limit : 1000);
+        setCrewLogo(res.data?.logo || null); // ✅ CREW-LOGO
       }).catch(() => {});
     loadMembers();
   }, [id, loadMembers]);
+
+  // ✅ CREW-LOGO: 로고 업로드 핸들러 (방장 전용)
+  const handleLogoUpload = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return addToast('이미지 파일만 업로드 가능합니다.', 'error');
+    setUploadingLogo(true);
+    try {
+      const base64 = await compressAvatar(file, 512, 0.75); // 512x512, 75% 품질
+      await apiClient.put(`/api/community/crews/${id}/logo`, { logo: base64 });
+      setCrewLogo(base64);
+      addToast('✅ 크루 로고가 업데이트되었습니다!', 'success');
+    } catch (err) {
+      addToast(err.response?.data?.error || '로고 업로드에 실패했습니다.', 'error');
+    } finally {
+      setUploadingLogo(false);
+      if (logoFileRef.current) logoFileRef.current.value = '';
+    }
+  }, [id, addToast]);
 
   useEffect(() => {
     let accessToken;
@@ -304,7 +330,54 @@ export default function CrewChat() {
         <button onClick={() => window.history.length <= 1 ? navigate('/community', { replace: true }) : navigate(-1)} style={{ border: 'none', background: 'none' }}>
           <ChevronLeft size={24} />
         </button>
-        <div style={{ flex: 1 }}>
+
+        {/* ✅ CREW-LOGO: 원형 로고 (방장은 탭하여 변경) */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div
+            onClick={() => isOwner && logoFileRef.current?.click()}
+            style={{
+              width: '40px', height: '40px', borderRadius: '50%',
+              overflow: 'hidden', flexShrink: 0,
+              background: crewLogo ? 'transparent' : 'linear-gradient(135deg, #0056D2, #00C48C)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: isOwner ? 'pointer' : 'default',
+              border: '2px solid #E5E5EA',
+              opacity: uploadingLogo ? 0.5 : 1,
+            }}
+          >
+            {crewLogo
+              ? <img src={crewLogo} alt="크루 로고" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ fontSize: '20px' }}>⚓</span>
+            }
+          </div>
+          {/* 방장 카메라 오버레이 */}
+          {isOwner && (
+            <div
+              onClick={() => logoFileRef.current?.click()}
+              style={{
+                position: 'absolute', bottom: -2, right: -2,
+                width: '16px', height: '16px', borderRadius: '50%',
+                background: uploadingLogo ? '#AEAEB2' : '#0056D2',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', border: '1.5px solid #fff',
+              }}
+            >
+              {uploadingLogo
+                ? <span style={{ fontSize: '8px' }}>⏳</span>
+                : <Camera size={9} color="#fff" />
+              }
+            </div>
+          )}
+          <input
+            ref={logoFileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleLogoUpload}
+          />
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
             {crewName || '크루 채팅방'}
             {isOwner && <span style={{ fontSize: `calc(16px * var(--fs, 1))` }}>👑</span>}

@@ -11,6 +11,7 @@ const crewSchema = new mongoose.Schema({
   // ✅ BUG-52: limit 필드 추가 (CreateCrew.jsx에서 이미 전송 중이었지만 모델에 누락 → 저장 안 됨 버그)
   limit:     { type: Number, default: 100 },        // 최대 인원 (기본 100명)
   lastActive:{ type: Date,   default: null },       // ✅ 복원: 마지막 활동 시각
+  logo:      { type: String, default: null },       // ✅ CREW-LOGO: 원형 크루 로고 (base64)
   // ✅ CREW-ENH: 실제 멤버 목록 — 기존 members(숫자)는 카운트 캐시로 유지
   memberList: [{
     email:    { type: String, required: true },
