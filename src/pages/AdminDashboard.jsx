@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Users, CreditCard, DollarSign, RefreshCw, AlertCircle, BellRing, Send, MessageSquare, CheckCircle, Clock, ChevronDown, ChevronUp, Filter, Wifi, WifiOff, UserCheck, UserPlus, Activity } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, CreditCard, DollarSign, RefreshCw, AlertCircle, BellRing, Send, MessageSquare, CheckCircle, Clock, ChevronDown, ChevronUp, Filter, Wifi, WifiOff, UserCheck, UserPlus, Activity, Eye, Globe } from 'lucide-react';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A1: ADMIN_ID/EMAIL import
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
@@ -184,6 +184,23 @@ export default function AdminDashboard() {
                 <div>
                   <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#FF9B26' }}>{userStats.newUsers7d || 0}</div>
                   <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>신규 가입 (7일)</div>
+                </div>
+              </div>
+            </div>
+            {/* ✅ VISITOR: 투데이 + 토탈투데이 (IP 기반 유니크 방문자) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ background: 'rgba(100,210,255,0.06)', border: '1px solid rgba(100,210,255,0.18)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Eye size={16} color="#64D2FF" />
+                <div>
+                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#64D2FF' }}>{(userStats.todayVisitors ?? '-').toLocaleString?.() ?? userStats.todayVisitors ?? '-'}</div>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>투데이 (IP 기준)</div>
+                </div>
+              </div>
+              <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.18)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Globe size={16} color="#A78BFA" />
+                <div>
+                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#A78BFA' }}>{(userStats.totalVisitors ?? '-').toLocaleString?.() ?? userStats.totalVisitors ?? '-'}</div>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>토탈투데이 (누적)</div>
                 </div>
               </div>
             </div>

@@ -329,6 +329,12 @@ try { Story = require('./models/Story'); } catch (e) { Story = null; }
 // ✅ PUSH: FCM 토큰 모델
 let PushToken = null;
 try { PushToken = require('./models/PushToken'); } catch (e) { PushToken = null; }
+// ✅ VISITOR: IP 해시 방문자 로그 모델 (투데이/토탈투데이 카운트)
+let VisitorLog = null;
+try { VisitorLog = require('./models/VisitorLog'); } catch (e) { VisitorLog = null; }
+// 인메모리 fallback: MongoDB 미연결 시 Set으로 유니크 카운트
+const memVisitorToday = new Set(); // 'YYYY-MM-DD:ipHash'
+const memVisitorTotal = new Set(); // 'ipHash'
 
 // ✅ PUSH: Firebase Admin 설정 (FIREBASE_SERVICE_ACCOUNT 환경변수 값)
 const pushService = require('./push');
@@ -637,6 +643,55 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// ── 방문자 추적 미들웨어 (가입/미가입 모두 IP 해시 기록) ─────────────────────────
+// 투데이: KST 오늘 날짜 유니크 IP 수 / 토탈: 전체 누적 유니크 IP 수
+const crypto = require('crypto');
+const visitorCache = new Map(); // ipHash → lastTrackedDate (중복 DB쓰기 방지)
+function getKstDateStr() {
+  const d = new Date();
+  d.setTime(d.getTime() + 9 * 60 * 60 * 1000); // UTC+9
+  return d.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+}
+function hashIp(ip) {
+  return crypto.createHash('sha256').update(String(ip || 'unknown')).digest('hex').slice(0, 32);
+}
+app.use((req, res, next) => {
+  try {
+    if (req.path === '/api/health' || req.path === '/favicon.ico') return next();
+    if (isBotUA(req.headers['user-agent'] || '')) return next();
+
+    const rawIp =
+      (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() ||
+      req.headers['x-real-ip'] ||
+      req.ip ||
+      req.connection?.remoteAddress ||
+      'unknown';
+    const ipHash   = hashIp(rawIp);
+    const todayStr = getKstDateStr();
+
+    if (visitorCache.get(ipHash) === todayStr) return next();
+    visitorCache.set(ipHash, todayStr);
+
+    let userId = null;
+    const auth = req.headers.authorization || '';
+    if (auth.startsWith('Bearer ')) {
+      try { const p = jwt.verify(auth.slice(7), JWT_SECRET); userId = p.email || p.id || null; } catch {}
+    }
+
+    if (dbReady && VisitorLog) {
+      VisitorLog.updateOne(
+        { ipHash, date: todayStr },
+        { $setOnInsert: { ipHash, date: todayStr, userId } },
+        { upsert: true }
+      ).exec().catch(() => {});
+    } else {
+      memVisitorToday.add(`${todayStr}:${ipHash}`);
+      memVisitorTotal.add(ipHash);
+    }
+  } catch {}
+  next();
+});
+
 // ── GET /api/admin/user-stats — 사용자 통계 (마스터 전용, CORS 이후) ─────────────
 app.get('/api/admin/user-stats', async (req, res) => {
   try {
@@ -681,9 +736,21 @@ app.get('/api/admin/user-stats', async (req, res) => {
       tierCounts.forEach(t => {
         const raw = t._id || 'FREE';
         s.rawTiers[raw] = (s.rawTiers[raw] || 0) + (t.count || 0);
-        const norm = TIER_NORMALIZE[raw] || 'FREE'; // 알 수 없는 티어 → FREE로 귀속
+        const norm = TIER_NORMALIZE[raw] || 'FREE';
         s.tierBreakdown[norm] = (s.tierBreakdown[norm] || 0) + (t.count || 0);
       });
+      // ✅ VISITOR STATS: 투데이(오늘 유니크 IP) + 토탈투데이(전체 누적 유니크 IP)
+      if (VisitorLog) {
+        try {
+          const todayStr = getKstDateStr();
+          const [todayCount, allIps] = await Promise.all([
+            VisitorLog.countDocuments({ date: todayStr }),
+            VisitorLog.distinct('ipHash'),
+          ]);
+          s.todayVisitors = todayCount;
+          s.totalVisitors = allIps.length;
+        } catch { s.todayVisitors = 0; s.totalVisitors = 0; }
+      }
     } else {
       const all = memUsers;
       s.totalUsers  = all.length;
@@ -697,6 +764,10 @@ app.get('/api/admin/user-stats', async (req, res) => {
         const norm = TIER_NORMALIZE[raw] || 'FREE';
         s.tierBreakdown[norm] = (s.tierBreakdown[norm] || 0) + 1;
       });
+      // ✅ VISITOR STATS fallback (인메모리 모드)
+      const todayStr = getKstDateStr();
+      s.todayVisitors = [...memVisitorToday].filter(k => k.startsWith(todayStr + ':')).length;
+      s.totalVisitors = memVisitorTotal.size;
     }
     res.json(s);
   } catch (err) {
