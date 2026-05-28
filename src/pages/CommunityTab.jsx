@@ -9,6 +9,7 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
 import { NativeAd } from '../components/AdUnit';
+import { KakaoAd } from '../components/ads/KakaoAd';
 // NativeAdService 제거됨 (네이티브 광고 기능 삭제)
 import ImageGallery from '../components/ImageGallery';
 import StorySlider from '../components/StorySlider';
@@ -21,23 +22,16 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // 언마운트/재마운트(뒤로가기 후 재진입) 시 데이터가 이미 있으면 loading=false로 시작
 let _communityCache = { business: [], crews: [], notices: [], stories: [] };
 
-// ✅ 3RD-B5: InFeedAd 컴포넌트 함수 내부 인라인 정의 → 외부 추출 — 렌더마다 재생성 방지
+// ✅ KAKAO-ADFIT: 실제 카카오 애드핏 인피드 광고 (DAN-GlROpjPfXauFLUgU)
+// 더미 광고 → 실제 광고로 교체
 function InFeedAd() {
-  const addToast = useToastStore(s => s.addToast);
   return (
-    <div
-      onClick={() => addToast('제휴 낚시점 상세 페이지로 이동', 'info')}
-      style={{ backgroundColor: '#F8F9FA', borderRadius: '16px', padding: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', border: '1px solid #E5E5EA' }}
-    >
-      <div style={{ width: '60px', height: '60px', backgroundColor: '#0056D2', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Award size={24} color="#fff" />
-      </div>
-      <div>
-        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '900', marginBottom: '4px', display: 'inline-block', backgroundColor: 'rgba(0,86,210,0.1)', padding: '2px 8px', borderRadius: '6px' }}>가장 가까운 제휴 낚시점</div>
-        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, color: '#1c1c1e', fontWeight: '950', marginBottom: '4px' }}>동해 낚시 1번지 24시 할인마트</div>
-        <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#555', fontWeight: '700' }}>현재 위치에서 2.4km (밑밥/미끼 상시 할인)</div>
-      </div>
-    </div>
+    <KakaoAd
+      unitId="DAN-GlROpjPfXauFLUgU"
+      width={320}
+      height={50}
+      style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden' }}
+    />
   );
 }
 
