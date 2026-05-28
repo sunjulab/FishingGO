@@ -23,6 +23,7 @@ import UpgradeModal from '../components/UpgradeModal';
 import DashboardView from './DashboardView';
 import NotifPanel from '../components/NotifPanel';
 import { useNotifStore } from '../store/useNotifStore';
+import SpotLocationEditor from '../components/SpotLocationEditor';
 
 
 // ✅ 5TH-C4: EMOJI_MAP — WeatherDashboard와 동일 객체; 향후 constants/ui.js 추출 검토 권장
@@ -116,6 +117,10 @@ export default function MapHome() {
   const [sheetVisible, setSheetVisible]     = useState(false);
   const [heatmapMode, setHeatmapMode]       = useState('sst');
   const [effectiveSecretPoints, setEffectiveSecretPoints] = useState(SECRET_FISHING_POINTS);
+  // ✅ MASTER: 일반 포인트 좌표 오버라이드 (서버에서 로드)
+  const [effectiveAllPoints, setEffectiveAllPoints] = useState(ALL_FISHING_POINTS);
+  const [spotLocOverrides, setSpotLocOverrides]     = useState({});
+  const [showLocationEditor, setShowLocationEditor] = useState(false);
   // ✅ 5TH-A5: currentTime 상태 제거 — 매분 전체 리렌더 방지, useClock hook으로 분리
   // 시간 표시는 컴포넌트 내 LiveClock 컴포넌트가 도맡
   const [showSecretPoints, setShowSecretPoints] = useState(false);
@@ -255,7 +260,6 @@ export default function MapHome() {
 
   /* ── 서버에서 비밀포인트 좌표 오버라이드 fetch (프리미엄 이상만 호출) ── */
   useEffect(() => {
-    // 무료/GUEST 사용자는 401 발생 — 서버 미들웨어와 클라이언트 권한 일치
     if (!canAccessPremium && !isAdmin) return;
     apiClient.get('/api/secret-point-overrides')
       .then(res => {
@@ -267,13 +271,27 @@ export default function MapHome() {
         setEffectiveSecretPoints(applied);
       })
       .catch(() => {
-        // 서버 오프라인 시 localStorage fallback
         try {
           const ov = JSON.parse(localStorage.getItem('secretPointOverrides') || '{}');
           setEffectiveSecretPoints(SECRET_FISHING_POINTS.map(p => ov[p.id] ? { ...p, lat: ov[p.id].lat, lng: ov[p.id].lng } : p));
         } catch { /* 기본값 유지 */ }
       });
   }, [canAccessPremium, isAdmin]);
+
+  /* ── MASTER 전용: 일반 포인트 좌표 오버라이드 로드 ── */
+  useEffect(() => {
+    apiClient.get('/api/spot-location-overrides')
+      .then(res => {
+        const ov = res.data || {};
+        setSpotLocOverrides(ov);
+        const applied = ALL_FISHING_POINTS.map(p => {
+          const key = String(p.id);
+          return ov[key] ? { ...p, lat: ov[key].lat, lng: ov[key].lng } : p;
+        });
+        setEffectiveAllPoints(applied);
+      })
+      .catch(() => { /* 오버라이드 없으면 원본 사용 */ });
+  }, []);
 
   /* ── 카카오맵 초기화 (viewMode=map 진입 시, kakao.maps.load 공식 콜백) ── */
   useEffect(() => {
@@ -443,7 +461,7 @@ export default function MapHome() {
       clustererRef.current.clear();
     }
     
-    const pts = filter === '전체' ? ALL_FISHING_POINTS : ALL_FISHING_POINTS.filter(p => p.type === filter);
+    const pts = filter === '전체' ? effectiveAllPoints : effectiveAllPoints.filter(p => p.type === filter);
     
     // 대규모 데이터 렌더링 최적화
     const newMarkers = pts.map(point => {
@@ -1150,6 +1168,52 @@ export default function MapHome() {
             cctvData={cctvData}
             selectedPoint={selectedPoint}
             onClose={() => { setShowCCTV(false); setCctvData(null); }}
+          />
+        )}
+
+        {/* ── MASTER 전용: 위치 수정 플로팅 버튼 ── */}
+        {isAdmin && selectedPoint && sheetVisible && (
+          <button
+            onClick={() => setShowLocationEditor(true)}
+            style={{
+              position: 'absolute', bottom: '52%', right: '12px',
+              zIndex: 1200,
+              background: 'linear-gradient(135deg, #1A1A2E, #0056D2)',
+              border: 'none', borderRadius: '50px',
+              color: '#fff', fontWeight: '900', fontSize: '12px',
+              padding: '8px 14px',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 4px 20px rgba(0,86,210,0.5)',
+              cursor: 'pointer',
+              animation: 'fadeInUp 0.3s ease',
+            }}
+          >
+            <MapPin size={14} /> 위치 수정
+          </button>
+        )}
+
+        {/* ── MASTER 위치 편집 모달 ── */}
+        {showLocationEditor && selectedPoint && (
+          <SpotLocationEditor
+            spot={selectedPoint}
+            onClose={() => setShowLocationEditor(false)}
+            onSaved={(updated) => {
+              // 오버라이드 적용 후 effectiveAllPoints 갱신
+              const key = String(updated.id);
+              const newOv = { ...spotLocOverrides };
+              if (updated.lat === updated._origLat && updated.lng === updated._origLng) {
+                delete newOv[key];
+              } else {
+                newOv[key] = { lat: updated.lat, lng: updated.lng };
+              }
+              setSpotLocOverrides(newOv);
+              setEffectiveAllPoints(ALL_FISHING_POINTS.map(p => {
+                const k = String(p.id);
+                return newOv[k] ? { ...p, lat: newOv[k].lat, lng: newOv[k].lng } : p;
+              }));
+              setSelectedPoint(updated);
+              setShowLocationEditor(false);
+            }}
           />
         )}
 

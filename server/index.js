@@ -45,6 +45,7 @@ const BUSINESS_FILE = path.join(__dirname, 'business.json');
 const SECRET_OVERRIDES_FILE = path.join(__dirname, 'secretPointOverrides.json');
 const CCTV_OVERRIDES_FILE = path.join(__dirname, 'cctvOverrides.json');
 const APP_CONFIG_FILE = path.join(__dirname, 'appConfig.json');
+const SPOT_LOC_OVERRIDES_FILE = path.join(__dirname, 'spotLocationOverrides.json');
 const PRO_SUBS_FILE = path.join(__dirname, 'proSubscriptions.json');
 const VVIP_SLOTS_FILE = path.join(__dirname, 'vvipSlots.json');
 
@@ -66,6 +67,7 @@ let cctvOverrides = {};
 let appConfig = { min_version: "1.0.0", store_url: "https://play.google.com/apps/internaltest/4701312289208373704" };
 let memProSubs = {};
 let memVvipSlots = {};
+let spotLocationOverrides = {}; // ✅ MASTER 좌표 오버라이드
 
 try {
   if (fs.existsSync(USERS_FILE)) memUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
@@ -80,6 +82,7 @@ try {
   if (fs.existsSync(APP_CONFIG_FILE)) appConfig = Object.assign(appConfig, JSON.parse(fs.readFileSync(APP_CONFIG_FILE, 'utf-8')));
   if (fs.existsSync(PRO_SUBS_FILE)) memProSubs = JSON.parse(fs.readFileSync(PRO_SUBS_FILE, 'utf-8'));
   if (fs.existsSync(VVIP_SLOTS_FILE)) memVvipSlots = JSON.parse(fs.readFileSync(VVIP_SLOTS_FILE, 'utf-8'));
+  if (fs.existsSync(SPOT_LOC_OVERRIDES_FILE)) spotLocationOverrides = JSON.parse(fs.readFileSync(SPOT_LOC_OVERRIDES_FILE, 'utf-8'));
   // 로컬 보존 파일 로드 완료 (logger 초기화 이전)
 } catch (e) {
   // 로컬 JSON 로드 실패, 빈 배열로 시작
@@ -113,6 +116,7 @@ function saveCctvOverrides()     { _saveFile(CCTV_OVERRIDES_FILE, cctvOverrides)
 function saveAppConfig()         { _saveFile(APP_CONFIG_FILE, appConfig); }
 function saveProSubs()           { _saveFile(PRO_SUBS_FILE, memProSubs); }
 function saveVvipSlots()         { _saveFile(VVIP_SLOTS_FILE, memVvipSlots); }
+function saveSpotLocationOverrides() { _saveFile(SPOT_LOC_OVERRIDES_FILE, spotLocationOverrides); }
 
 let dbReady = false;
 
@@ -949,6 +953,47 @@ app.delete('/api/secret-point-overrides/:id', (req, res) => {
   delete secretPointOverrides[id];
   saveSecretPointOverrides();
   res.json({ ok: true, overrides: secretPointOverrides });
+});
+
+// ─── 낚시 포인트 좌표 오버라이드 (MASTER 전용) ─────────────────────────────────
+// GET: 모든 오버라이드 반환 (공개)
+app.get('/api/spot-location-overrides', (req, res) => {
+  res.json(spotLocationOverrides);
+});
+
+// POST: 좌표 저장 (MASTER 전용)
+app.post('/api/spot-location-overrides', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { id, lat, lng, name } = req.body;
+  if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
+  spotLocationOverrides[String(id)] = {
+    lat: parseFloat(lat),
+    lng: parseFloat(lng),
+    name: name || undefined,
+    updatedAt: new Date().toISOString(),
+  };
+  saveSpotLocationOverrides();
+  (logger?.info || console.log)(`[SpotLocation] id=${id} 좌표 수정: (${lat}, ${lng})`);
+  res.json({ ok: true, id, lat: parseFloat(lat), lng: parseFloat(lng) });
+});
+
+// DELETE: 특정 포인트 원래대로 초기화 (MASTER 전용)
+app.delete('/api/spot-location-overrides/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { id } = req.params;
+  delete spotLocationOverrides[id];
+  saveSpotLocationOverrides();
+  res.json({ ok: true, reset: id });
 });
 
 // ─── 앱 설정 (강제 업데이트용) ──────────────────────────────────────────────────
