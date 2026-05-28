@@ -6,6 +6,7 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import ImageGallery from '../components/ImageGallery';
 import { shareExternal } from '../utils/shareUtils';
+import { KakaoAd } from '../components/ads/KakaoAd';
 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
 const APP_ID = 'kr.fishinggo.app';
@@ -437,6 +438,16 @@ export default function PostDetail() {
               <MessageSquare size={18} /><span>{commentCount}</span>
             </div>
           </div>
+        </div>
+
+        {/* ✅ KAKAO-ADFIT: 게시글 본문 아래 광고 (인피드-1 DAN-gn794LUdF3Y21yM2 / 320×50) */}
+        <div style={{ margin: '8px 12px' }}>
+          <KakaoAd
+            unitId="DAN-gn794LUdF3Y21yM2"
+            width={320}
+            height={50}
+            style={{ borderRadius: '12px', overflow: 'hidden' }}
+          />
         </div>
 
         {/* ──────────────────────────────────────────

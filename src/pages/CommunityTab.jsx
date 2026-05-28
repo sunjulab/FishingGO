@@ -22,14 +22,14 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // 언마운트/재마운트(뒤로가기 후 재진입) 시 데이터가 이미 있으면 loading=false로 시작
 let _communityCache = { business: [], crews: [], notices: [], stories: [] };
 
-// ✅ KAKAO-ADFIT: 실제 카카오 애드핏 인피드 광고 (DAN-GlROpjPfXauFLUgU)
+// ✅ KAKAO-ADFIT: 실제 카카오 애드핏 인피드 광고 (DAN-M6CEA2Ch9AzCohm9 / 320×100)
 // 더미 광고 → 실제 광고로 교체
 function InFeedAd() {
   return (
     <KakaoAd
-      unitId="DAN-GlROpjPfXauFLUgU"
+      unitId="DAN-M6CEA2Ch9AzCohm9"
       width={320}
-      height={50}
+      height={100}
       style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden' }}
     />
   );
