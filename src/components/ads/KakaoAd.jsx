@@ -8,6 +8,11 @@
  */
 import { useEffect, useRef } from 'react';
 
+// 네이티브 앱(Capacitor) 여부 — 앱에서는 AdMob이 광고 처리하므로 카카오 광고 스킵
+const isNativeApp = (() => {
+  try { return window?.Capacitor?.isNativePlatform?.() === true; } catch { return false; }
+})();
+
 const DEFAULT_UNIT   = 'DAN-GlROpjPfXauFLUgU';
 const DEFAULT_WIDTH  = 320;
 const DEFAULT_HEIGHT = 50;
@@ -45,6 +50,9 @@ export function KakaoAd({
   height  = DEFAULT_HEIGHT,
   style   = {},
 }) {
+  // ✅ 네이티브 앱(Android/iOS)에서는 AdMob이 광고를 담당 → 카카오 광고 스킵
+  if (isNativeApp) return null;
+
   const containerRef = useRef(null);
   const mountedRef   = useRef(false);
 
