@@ -187,13 +187,16 @@ export default function CrewChat() {
 
   // ── 꾹 누르기 (모바일 터치) ──────────────────────────────────
   const handleTouchStart = useCallback((e, msg) => {
+    // ✅ TOUCH-FIX: 좌표를 setTimeout 등록 전에 즉시 캡처 (600ms 후 e.touches 빈 배열 race condition 방지)
+    const touch = e.touches?.[0];
+    const capturedX = touch?.clientX ?? window.innerWidth / 2;
+    const capturedY = touch?.clientY ?? window.innerHeight / 2;
     longPressTimer.current = setTimeout(() => {
       if (navigator.vibrate) navigator.vibrate(40);
-      const touch = e.touches?.[0];
       setContextMenu({
         msg,
-        x: Math.min((touch?.clientX ?? window.innerWidth / 2), window.innerWidth - 160),
-        y: Math.min((touch?.clientY ?? window.innerHeight / 2), window.innerHeight - 110),
+        x: Math.min(capturedX, window.innerWidth - 160),
+        y: Math.min(capturedY, window.innerHeight - 110),
       });
     }, 600);
   }, []);
@@ -532,7 +535,7 @@ export default function CrewChat() {
             position: 'fixed',
             top: contextMenu.y,
             left: contextMenu.x,
-            zIndex: 9999,
+            zIndex: 19999, // ✅ Z-FIX: 멤버 패널(9000)/모달(9001~9002) 위에 표시
             background: '#fff',
             borderRadius: '14px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
