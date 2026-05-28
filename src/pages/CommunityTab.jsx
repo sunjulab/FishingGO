@@ -1642,27 +1642,7 @@ export default function CommunityTab() {
                     </div>
                   </div>
                 ) : null}
-                {/* ✅ NATIVE-AD: VVIP 카드 아래 인피드 네이티브 광고 (앱 전용) */}
-                {post.isPinned && !canAccessPremium && Capacitor.isNativePlatform() && (() => {
-                  const slotId = `business_ad_${index}`;
-                  return (
-                    <div
-                      ref={el => {
-                        if (el && !nativeAdSlotMapRef.current.has(slotId)) {
-                          nativeAdSlotMapRef.current.set(slotId, el);
-                          loadNativeAd(slotId, el);
-                        } else if (!el) {
-                          nativeAdSlotMapRef.current.delete(slotId);
-                          removeNativeAd(slotId);
-                        }
-                      }}
-                      style={{
-                        width: '100%', height: 300, marginBottom: 16,
-                        borderRadius: 16, background: 'transparent',
-                      }}
-                    />
-                  );
-                })()}
+                {/* ✅ NATIVE-AD 제거됨 (loadNativeAd 미정의 → 모바일 크래시 버그 수정) */}
                 {!post.isPinned && (
 
                   <div style={{
