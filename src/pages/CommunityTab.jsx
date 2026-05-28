@@ -1335,7 +1335,20 @@ export default function CommunityTab() {
               return (
               <div key={crewId} style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '16px', marginBottom: '12px', flexDirection: 'column', boxShadow: isMyCrew ? '0 2px 10px rgba(0,86,210,0.12)' : '0 2px 10px rgba(0,0,0,0.03)', border: isMyCrew ? '1.5px solid #0056D2' : '1px solid #f0f0f0' }}>
                 {/* 상단: 정보 + 입장 버튼 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                  {/* ✅ CREW-LOGO: 원형 로고 */}
+                  <div style={{
+                    width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
+                    overflow: 'hidden',
+                    background: crew.logo ? 'transparent' : 'linear-gradient(135deg, #0056D2, #00C48C)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '2px solid #E5E5EA',
+                  }}>
+                    {crew.logo
+                      ? <img src={crew.logo} alt="크루 로고" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: '22px' }}>⚓</span>
+                    }
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                       {isMyCrew && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', background: '#0056D2', color: '#fff', padding: '2px 7px', borderRadius: '8px', flexShrink: 0 }}>내 크루</span>}

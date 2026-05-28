@@ -5,7 +5,7 @@ import { ChevronLeft, Send, Users, ShieldCheck, Wifi, WifiOff, X, LogOut, Trash2
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
-import { compressAvatar } from '../utils/imageUtils';
+import { fileToCompressedBase64 } from '../utils/imageUtils';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -131,7 +131,7 @@ export default function CrewChat() {
     if (!file.type.startsWith('image/')) return addToast('이미지 파일만 업로드 가능합니다.', 'error');
     setUploadingLogo(true);
     try {
-      const base64 = await compressAvatar(file, 512, 0.75); // 512x512, 75% 품질
+      const base64 = await fileToCompressedBase64(file, { maxWidth: 512, maxHeight: 512, preset: 'avatar' });
       await apiClient.put(`/api/community/crews/${id}/logo`, { logo: base64 });
       setCrewLogo(base64);
       addToast('✅ 크루 로고가 업데이트되었습니다!', 'success');
