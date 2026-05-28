@@ -4,6 +4,7 @@ import apiClient from '../api/index';
 import { compressAvatar } from '../utils/imageUtils';
 import { useUserStore, TIER_CONFIG, getLevelInfo, EXP_REWARDS, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
+import { KakaoAd } from '../components/ads/KakaoAd';
 import { 
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
   ShieldAlert, ChevronRight, LayoutGrid, Edit3, Check, X, 
@@ -639,6 +640,14 @@ export default function MyPage() {
            ))}
         </div>
       </div>
+
+      {/* ✅ KAKAO-ADFIT: 프로필 헤더 아래 광고 (무료 유저만) */}
+      {userTier === 'FREE' && (
+        <div style={{ padding: '16px 24px 0' }}>
+          <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
+            style={{ borderRadius: '12px', overflow: 'hidden' }} />
+        </div>
+      )}
 
       {/* 🟦 Tabs Switcher 🟦 */}
       <div style={{ display: 'flex', padding: '20px 24px 10px', gap: '24px', overflowX: 'auto' }}>

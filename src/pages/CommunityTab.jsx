@@ -1389,9 +1389,23 @@ export default function CommunityTab() {
                     </button>
                   </div>
                 )}
+              {/* ✅ KAKAO-ADFIT: 크루 목록 5개마다 광고 */}
+              {!canAccessPremium && (filteredCrews.indexOf(crew) + 1) % 5 === 0 && (
+                <div style={{ margin: '4px 0 4px' }}>
+                  <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
+                    style={{ borderRadius: '12px', overflow: 'hidden' }} />
+                </div>
+              )}
               </div>
               );
             })}
+            {/* ✅ KAKAO-ADFIT: 크루 목록 끝 고정 광고 */}
+            {!canAccessPremium && filteredCrews.length > 0 && (
+              <div style={{ margin: '8px 0' }}>
+                <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
+                  style={{ borderRadius: '12px', overflow: 'hidden' }} />
+              </div>
+            )}
 
           </div>
         ) : (
@@ -1722,8 +1736,22 @@ export default function CommunityTab() {
                     </div>
                   </div>
                 )}
+              {/* ✅ KAKAO-ADFIT: 선상배 홍보 5개마다 광고 */}
+              {!canAccessPremium && (index + 1) % 5 === 0 && (
+                <div style={{ margin: '4px 0 12px' }}>
+                  <KakaoAd unitId="DAN-M6CEA2Ch9AzCohm9" width={320} height={100}
+                    style={{ borderRadius: '12px', overflow: 'hidden' }} />
+                </div>
+              )}
               </React.Fragment>
             ))}
+            {/* ✅ KAKAO-ADFIT: 선상배 목록 끝 고정 광고 */}
+            {!canAccessPremium && effectiveBusinessPosts.length > 0 && (
+              <div style={{ margin: '4px 0 12px' }}>
+                <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
+                  style={{ borderRadius: '12px', overflow: 'hidden' }} />
+              </div>
+            )}
             {/* 무한스크롤 sentinel (더 보기 버튼 대체) */}
             <div ref={sentinelRef} style={{ height: 20 }} />
             {loadingMore && (

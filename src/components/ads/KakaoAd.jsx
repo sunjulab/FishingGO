@@ -2,13 +2,11 @@
  * KakaoAd.jsx - 카카오 애드핏 광고 컴포넌트
  * - 광고가 채워질 때만 공간 차지 (빈 공간 방지)
  * - MutationObserver로 ins 요소 변화 감지 → 광고 채워지면 컨테이너 표시
+ * - 플랫폼: 모바일웹 ✅ / 데스크탑웹 ✅ / Android앱(WebView) ✅ / iPhone웹 ✅
+ *   → capacitor.config.json server.url = fishing-go.com 이므로
+ *     앱 WebView도 동일 도메인으로 작동, 카카오 SDK 정상 인식
  */
 import { useEffect, useRef } from 'react';
-
-// 네이티브 앱(Capacitor) 여부 — 앱에서는 AdMob이 광고 처리하므로 카카오 광고 스킵
-const isNativeApp = (() => {
-  try { return window?.Capacitor?.isNativePlatform?.() === true; } catch { return false; }
-})();
 
 const DEFAULT_UNIT   = 'DAN-GlROpjPfXauFLUgU';
 const DEFAULT_WIDTH  = 320;
@@ -47,9 +45,6 @@ export function KakaoAd({
   height  = DEFAULT_HEIGHT,
   style   = {},
 }) {
-  // ✅ 네이티브 앱(Android/iOS)에서는 AdMob이 광고를 담당 → 카카오 광고 스킵
-  if (isNativeApp) return null;
-
   const containerRef = useRef(null);
   const mountedRef   = useRef(false);
 

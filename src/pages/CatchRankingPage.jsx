@@ -7,6 +7,7 @@ import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { getFishEmoji } from '../data/fishRules';
 import { NativeAd } from '../components/AdUnit';
+import { KakaoAd } from '../components/ads/KakaoAd';
 
 const FISH_TABS = ['전체', '감성돔', '광어', '우럭', '볼락', '참돔', '농어', '방어', '붕어', '고등어'];
 const PERIOD_TABS = [{ key: 'week', label: '주간' }, { key: 'month', label: '월간' }, { key: 'all', label: '전체' }];
@@ -317,6 +318,12 @@ export default function CatchRankingPage({ embedded = false }) {
           >
             📸 내 조황 인증하러 가기
           </button>
+
+          {/* ✅ KAKAO-ADFIT: 조황 인증 버튼 아래 광고 */}
+          <div style={{ marginBottom: '14px' }}>
+            <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
+              style={{ borderRadius: '12px', overflow: 'hidden' }} />
+          </div>
 
           {/* 랭킹 목록 */}
           {loading ? (
