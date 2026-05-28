@@ -167,6 +167,8 @@ export default function CrewChat() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
+      // ✅ LEAK-FIX: 언마운트 시 longPressTimer 정리 (메모리 리크 방지)
+      clearTimeout(longPressTimer.current);
       newSocket.disconnect();
     };
   }, [id]);

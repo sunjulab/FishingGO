@@ -111,22 +111,26 @@ export default function RealTimeAlert() {
 
       const time = data.time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
-      // 브라우저 Notification
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(`↩ ${data.fromSender}님이 답장했습니다`, {
-          body: data.replyText || '',
-          icon: '/favicon.ico',
+      // ✅ IN-CHAT-SUPPRESS: 해당 크루 채팅방 안에 있으면 토스트/브라우저 알림 생략 (이미 화면에서 보임)
+      const isInChat = data.crewId && window.location.pathname === `/crew/${data.crewId}/chat`;
+
+      if (!isInChat) {
+        // 브라우저 Notification (채팅방 밖에 있을 때만)
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(`↩ ${data.fromSender}님이 답장했습니다`, {
+            body: data.replyText || '',
+            icon: '/favicon.ico',
+          });
+        }
+        showAlert({
+          message: `${data.fromSender}: "${(data.replyText || '').slice(0, 40)}"`,
+          level:   'reply',
+          time,
+          link:    data.crewId ? `/crew/${data.crewId}/chat` : null,
         });
       }
 
-      showAlert({
-        message: `${data.fromSender}: "${(data.replyText || '').slice(0, 40)}"`,
-        level:   'reply',
-        time,
-        link:    data.crewId ? `/crew/${data.crewId}/chat` : null,
-      });
-
-      // 알림 스토어에 저장
+      // 알림 스토어는 항상 저장 (채팅방 안/밖 구분 없이)
       addNotif({
         type:  'reply',
         icon:  '↩',
