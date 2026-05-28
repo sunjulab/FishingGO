@@ -3,11 +3,11 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # 수동 트리거 허용
+  workflow_dispatch:
 
 # GitHub Pages 배포 권한
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -28,11 +28,13 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true   # ✅ GitHub Pages 자동 활성화 (수동 설정 불필요)
 
       - name: Upload dist/ as Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'   # 로컬에서 빌드한 dist/ 직접 사용
+          path: './dist'
 
       - name: Deploy to GitHub Pages
         id: deployment
