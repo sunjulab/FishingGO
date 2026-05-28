@@ -1279,10 +1279,21 @@ export default function CommunityTab() {
                     )}
                   </div>
                   {(index + 1) % 4 === 0 && <NativeAd slotId={`feed_native_${index}`} />}
-                  {!canAccessPremium && (index + 1) % AD_CONFIG.FREE_USER.FEED_AD_INTERVAL === 0 && <InFeedAd />}
+                  {!canAccessPremium && (index + 1) % 3 === 0 && <InFeedAd />}
                 </React.Fragment>
               );
             })}
+            {/* ✅ KAKAO-ADFIT: 게시글 목록 끝 고정 광고 — 게시글 수 무관 항상 1개 노출 */}
+            {!canAccessPremium && posts.length > 0 && (
+              <div style={{ padding: '0 16px 8px' }}>
+                <KakaoAd
+                  unitId="DAN-M6CEA2Ch9AzCohm9"
+                  width={320}
+                  height={100}
+                  style={{ borderRadius: '12px', overflow: 'hidden' }}
+                />
+              </div>
+            )}
 
             {/* 무한스크롤 sentinel */}
             <div ref={sentinelRef} style={{ height: 20 }} />
