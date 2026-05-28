@@ -7,9 +7,9 @@ services:
   - type: web
     name: fishing-go-frontend
     env: static
-    rootDir: .                   # 루트에서 vite build 실행
-    buildCommand: npm ci && npm run build  # ✅ 10TH-C4: npm install → npm ci (package-lock.json 기반 재현 가능한 빌드)
-    staticPublishPath: ./dist    # Vite 빌드 결과물 경로
+    rootDir: .                   # 로컬 빌드 후 dist/ 직접 포함
+    buildCommand: echo "Using pre-built dist — no build step needed"  # ✅ 로컬 빌드 dist/ git 포함으로 파이프라인 분 절약
+    staticPublishPath: ./dist    # 로컬 빌드 결과물 경로 (git에 포함)
     pullRequestPreviewsEnabled: false
     routes:
       # SPA 라우터 — 모든 경로를 index.html로 폴백
