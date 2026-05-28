@@ -226,41 +226,84 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     return () => { clearInterval(countId); };
   }, [adDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // [정지 방지] 광고 시청은 타이머 기반 시뮬레이션 (실제 애드몹 SDK 연동 시 교체)
-  const handleWatchAd = () => {
-    // ✅ ADMOB: 네이티브 앱에서는 실제 AdMob 보상형 광고 실행
-    const isNativeApp = (() => {
-      try { return Capacitor.isNativePlatform(); } catch { return false; }
-    })();
-
-    if (isNativeApp) {
-      setAdWatching(true);
-      showRewardedAd(
-        () => { setAdWatching(false); setAdDone(true); },  // 보상 수령
-        () => { setAdWatching(false); }                   // 실패/취소
-      );
-      return;
-    }
-
-
-    // 웹 환경 — 30초 타이머 시뮬레이션 (광고 없음, 앱에서는 showRewardedAd로 실제 AdMob 보상형 실행)
+  // ✅ WEB-AD: 웹 fallback 타이머 — 전체화면 오버레이와 함께 실행
+  const startWebTimerFallback = () => {
     setAdWatching(true);
     setAdProgress(0);
+    setSkipVisible(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
-
+    const skipTimer = setTimeout(() => setSkipVisible(true), 5000);
     const intervalId = setInterval(() => {
       setAdProgress(prev => {
         if (prev >= 100) {
           clearInterval(intervalId);
+          clearTimeout(skipTimer);
           intervalRef.current = null;
           setAdWatching(false);
+          setWebAdFullscreen(false);
           setAdDone(true);
           return 100;
         }
-        return prev + (100 / 30); // 30초 광고
+        return prev + (100 / 30);
       });
     }, 1000);
     intervalRef.current = intervalId;
+  };
+
+  // [광고 시청하기] 버튼 핸들러
+  const handleWatchAd = () => {
+    const isNativeApp = (() => {
+      try { return Capacitor.isNativePlatform(); } catch { return false; }
+    })();
+
+    // ─ 1. 네이티브 앱 → AdMob SDK ─
+    if (isNativeApp) {
+      setAdWatching(true);
+      showRewardedAd(
+        () => { setAdWatching(false); setAdDone(true); },
+        () => { setAdWatching(false); }
+      );
+      return;
+    }
+
+    // ─ 2. 웹 환경 → AdSense adBreak() 시도 → 없으면 전체화면 타이머 ─
+    let googleAdShowing = false;
+    let fallbackStarted = false;
+
+    const startFallback = () => {
+      if (fallbackStarted) return;
+      fallbackStarted = true;
+      setWebAdFullscreen(true);   // ← 전체화면 오버레이 ON
+      startWebTimerFallback();    // ← 30초 타이머 시작
+    };
+
+    if (typeof window.adBreak === 'function') {
+      window.adBreak({
+        type: 'reward',
+        name: 'fishing-point-reward',
+        beforeReward: (showAdFn) => {
+          googleAdShowing = true;
+          showAdFn(); // AdSense가 자체 전체화면 광고 UI 표시
+        },
+        adViewed: () => {
+          setAdWatching(false);
+          setWebAdFullscreen(false);
+          setAdDone(true);
+        },
+        adDismissed: () => {
+          setAdWatching(false);
+          setWebAdFullscreen(false);
+        },
+        afterAd: () => {
+          if (!googleAdShowing) startFallback();
+        },
+      });
+      // 800ms 내 adBreak 콜백 없으면 fallback 강제 실행
+      setTimeout(() => { if (!googleAdShowing && !fallbackStarted) startFallback(); }, 800);
+    } else {
+      // adBreak 함수 자체가 없으면 즉시 fallback
+      startFallback();
+    }
   };
 
   // ✅ FIX-DUP: calledRef로 중복 호출 방지 (자동 타이머 + 수동 버튼 동시 방지)
