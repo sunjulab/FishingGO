@@ -1097,6 +1097,8 @@ io.on('connection', (socket) => {
           senderLevel: m.senderLevel || '',
           senderEmoji: m.senderEmoji || '',
           senderTitle: m.senderTitle || '',
+          // ✅ REPLY-HISTORY: 채팅방 입장 시 과거 답장 메시지에도 인용 버블 표시
+          replyTo: (m.replyTo && m.replyTo.sender) ? { sender: m.replyTo.sender, text: m.replyTo.text || '' } : null,
         }));
       } catch (e) { logger.warn(`[Socket] join_crew 채팅 히스토리 DB 로드 실패 (crewId=${crewId}): ${e.message}`); } // ✅ 21TH-B2: silent catch → logger.warn
     }
