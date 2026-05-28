@@ -72,7 +72,7 @@ const PLANS = [
     key: 'PRO',
     label: 'PRO',
     price: '₩110,000',
-    period: '/ 년',
+    period: '/ 월',
     color: '#64B5F6',
     border: 'rgba(100,181,246,0.4)',
     bg: 'rgba(21,101,192,0.08)',
