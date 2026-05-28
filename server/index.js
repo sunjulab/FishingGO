@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -1030,7 +1030,7 @@ function getServerLevel(totalExp = 0) {
   return { level: 'LV.1', emoji: '\uD83E\uDEB1', title: '\uCD08\uBCF4 \uB099\uC2DC\uAFBC' };
 }
 
-// 실시간 낙시 인원 서버 로직 (chatHistories는 상단에서 선언되었습니다)
+// 실시간 낚시 인원 서버 로직 (chatHistories는 상단에서 선언되었습니다)
 
 io.on('connection', (socket) => {
   // ✅ OPT-5: 연결 시 핸드셰이크 토큰 검증 (발신자 위조 방지)
@@ -6138,12 +6138,12 @@ setInterval(() => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * GET /api/products?category=낙시용품
+ * GET /api/products?category=낚시용품
  * Shop 탭 메인 상품 목록 (Shop.jsx 전용)
  */
 app.get('/api/products', async (req, res) => {
   try {
-    const category = req.query.category || '낙시용품';
+    const category = req.query.category || '낚시용품';
     const products = await coupang.getRecommendedProducts(category);
 
     // Shop.jsx가 기대하는 포맷으로 변환
@@ -6154,7 +6154,7 @@ app.get('/api/products', async (req, res) => {
       discount: p.discountRate > 0 ? `${p.discountRate}%` : '0%',
       img: p.productImage,
       link: p.coupangUrl,
-      badge: p.badge || '낙시GO 추천',
+      badge: p.badge || '낚시GO 추천',
     }));
 
     res.json(formatted);
@@ -6165,7 +6165,7 @@ app.get('/api/products', async (req, res) => {
 });
 
 /**
- * GET /api/commerce/coupang/search?keyword=루어 낙시 장비
+ * GET /api/commerce/coupang/search?keyword=루어 낚시 장비
  * 미디어 탭 영상 콴텐츠 연동 상품 (MediaTab.jsx 전용)
  */
 app.get('/api/commerce/coupang/search', async (req, res) => {

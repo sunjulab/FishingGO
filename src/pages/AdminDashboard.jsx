@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, Users, CreditCard, DollarSign, RefreshCw, AlertCircle, BellRing, Send, MessageSquare, CheckCircle, Clock, ChevronDown, ChevronUp, Filter, Wifi, WifiOff, UserCheck, UserPlus, Activity, Eye, Globe } from 'lucide-react';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A1: ADMIN_ID/EMAIL import
@@ -334,7 +334,7 @@ export default function AdminDashboard() {
                     setAlertSending(true);
                     try {
                       await apiClient.post('/api/admin/alert', { message: alertMsg.trim(), location: alertLocation.trim() });
-                      // ENH3-B6: '낙시' → '낚시' 오타 수정
+                      // ENH3-B6: '낚시' → '낚시' 오타 수정
                       addToast('🔔 전체 낚시 알림 발송 완료!', 'success');
                       setAlertMsg(''); setAlertLocation('');
                     } catch (err) { addToast(err.response?.data?.error || '발송 실패', 'error'); }

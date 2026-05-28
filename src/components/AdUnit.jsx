@@ -361,7 +361,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
           </div>
         </div>
 
-        {/* 중앙: 낙시GO 화면 현시 */}
+        {/* 중앙: 낚시GO 화면 현시 */}
         <div style={{ textAlign: 'center', padding: '0 32px', marginTop: '-20px' }}>
           {/* 로고 영역 */}
           <div style={{
@@ -374,13 +374,13 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
             animation: 'adPulse 2s ease-in-out infinite',
           }}>🎣</div>
           <div style={{ fontSize: '28px', fontWeight: '900', color: '#fff', marginBottom: '10px', lineHeight: 1.2 }}>
-            낙시GO
+            낚시GO
           </div>
           <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.75)', fontWeight: '600', marginBottom: '8px' }}>
-            국내 최고 프리미엄 낙시 인텔리전스
+            국내 최고 프리미엄 낚시 인텔리전스
           </div>
           <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', fontWeight: '500' }}>
-            실시간 물때 · 날씨 · 해양 CCTV · 낙시 포인트 지도
+            실시간 물때 · 날씨 · 해양 CCTV · 낚시 포인트 지도
           </div>
 
           {/* 프로그레스 바 */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import apiClient from '../api/index';
 import { evaluateFishingCondition } from '../utils/evaluator';
 import { useNavigate } from 'react-router-dom';
@@ -428,7 +428,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
   if (!selectedPoint) return null;
 
-  // ✅ 3RD-B7: AI 낙시 컨디션 연산 IIFE → useMemo — 매 렌더마다 재계산 방지
+  // ✅ 3RD-B7: AI 낚시 컨디션 연산 IIFE → useMemo — 매 렌더마다 재계산 방지
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fishingCondition = useMemo(
     () => evaluateFishingCondition(marineData, selectedPoint),
@@ -639,7 +639,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* AI 낙시 컨디션 (냉정한 평가) */}
+            {/* AI 낚시 컨디션 (냉정한 평가) */}
             {(() => {
               const cond = fishingCondition; // ✅ 3RD-B7: useMemo 연산 결과 사용
               return (
@@ -768,7 +768,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
             {marineData.fishingIndex && (
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>바다 낙시지수</span>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>바다 낚시지수</span>
                 {/* ✅ 3RD-A4: JSON.stringify raw 제거 — key:value 일반어 표시 */}
                 <div style={{ fontSize: '0.9rem', color: '#555', lineHeight: 1.6 }}>
                   {typeof marineData.fishingIndex === 'object'
