@@ -31,7 +31,7 @@ const safeLS = {
 };
 
 // 알림 설정 기본값 (컴포넌트 외부 상수 — 렌더마다 새 객체 생성 방지)
-const DEFAULT_NOTI = { flow: true, bait: true, comm: true };
+const DEFAULT_NOTI = { flow: true, bait: true, comm: true, chat: true };
 
 // ✅ TIER-PROTECT: 티어 우선순위 맵 (0=무료, 4=마스터) — 컨포넌트 외부 상수
 const TIER_RANK_CLIENT = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
@@ -1083,27 +1083,71 @@ export default function MyPage() {
            <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#fff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '32px 24px 60px', borderRadius: 'inherit', animation: 'slideUp 0.3s ease-out' }} onClick={e => e.stopPropagation()}>
               <div style={{ width: '40px', height: '5px', background: '#E5E5EA', borderRadius: '3px', margin: '0 auto 24px' }}></div>
               
-              {showModal === 'noti' && (
-                <>
-                  <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', marginBottom: '24px' }}>알림 설정</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {[
-                        { key: 'flow', label: '물때 및 피딩 타임 알림', icon: History },
-                        { key: 'bait', label: '실시간 미끼 추천 알림', icon: Trophy },
-                        { key: 'comm', label: '커뮤니티 댓글 알림', icon: MessageSquare }
-                    ].map(n => (
-                        <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <n.icon size={18} color="#8E8E93" /><span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '750' }}>{n.label}</span>
-                            </div>
-                            <div onClick={() => handleToggleNoti(n.key)} style={{ cursor: 'pointer' }}>
-                                {notiSetting[n.key] ? <ToggleRight size={32} color="#0056D2" fill="#0056D2" /> : <ToggleLeft size={32} color="#E5E5EA" />}
-                            </div>
-                        </div>
-                    ))}
-                  </div>
-                </>
-              )}
+              {showModal === 'noti' && (() => {
+                // 브라우저 알림 권한 상태
+                const notiPerm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+                const permColor = notiPerm === 'granted' ? '#00C48C' : notiPerm === 'denied' ? '#FF3B30' : '#FF9B26';
+                const permLabel = notiPerm === 'granted' ? '✅ 허용됨' : notiPerm === 'denied' ? '❌ 차단됨 (설정에서 허용 필요)' : '⚠️ 미설정 (탭하여 허용)';
+                return (
+                  <>
+                    <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', marginBottom: '8px' }}>알림 설정</h3>
+
+                    {/* 브라우저 알림 권한 상태 */}
+                    <div
+                      onClick={async () => {
+                        if (notiPerm === 'default') {
+                          const result = await Notification.requestPermission();
+                          if (result === 'granted') addToast('✅ 알림이 허용되었습니다!', 'success');
+                          else addToast('알림 허용이 필요합니다. 브라우저 설정에서 허용해주세요.', 'error');
+                        } else if (notiPerm === 'denied') {
+                          addToast('브라우저 설정(주소창 자물쇠 아이콘)에서 직접 허용해주세요.', 'info');
+                        }
+                      }}
+                      style={{
+                        marginBottom: '20px', padding: '12px 16px',
+                        background: notiPerm === 'granted' ? '#F0FFF8' : notiPerm === 'denied' ? '#FFF0F0' : '#FFF8E6',
+                        border: `1.5px solid ${permColor}40`,
+                        borderRadius: '14px', cursor: notiPerm !== 'granted' ? 'pointer' : 'default',
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                      }}
+                    >
+                      <Bell size={18} color={permColor} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: permColor }}>기기 알림 권한</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#555', marginTop: '2px' }}>{permLabel}</div>
+                      </div>
+                      {notiPerm !== 'granted' && <ChevronRight size={16} color={permColor} />}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {[
+                          { key: 'flow', label: '물때 및 피딩 타임 알림', icon: History },
+                          { key: 'bait', label: '실시간 미끼 추천 알림', icon: Trophy },
+                          { key: 'comm', label: '커뮤니티 댓글 알림',    icon: MessageSquare },
+                          { key: 'chat', label: '채팅방 답장 · 멘션 알림', icon: Bell },
+                      ].map(n => (
+                          <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <n.icon size={18} color="#8E8E93" />
+                                  <span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '750' }}>{n.label}</span>
+                              </div>
+                              <div onClick={() => handleToggleNoti(n.key)} style={{ cursor: 'pointer' }}>
+                                  {notiSetting[n.key] !== false
+                                    ? <ToggleRight size={32} color="#0056D2" fill="#0056D2" />
+                                    : <ToggleLeft  size={32} color="#E5E5EA" />}
+                              </div>
+                          </div>
+                      ))}
+                    </div>
+
+                    {/* 닫기 버튼 */}
+                    <button
+                      onClick={() => setShowModal(null)}
+                      style={{ width: '100%', marginTop: '28px', padding: '16px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, cursor: 'pointer' }}
+                    >닫기</button>
+                  </>
+                );
+              })()}
 
               {showModal === 'premium' && (() => {
                 const planNames = {

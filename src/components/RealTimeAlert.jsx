@@ -109,6 +109,9 @@ export default function RealTimeAlert() {
       if (data.repliedToSender !== myName) return;
       if (data.fromSender === myName) return; // 자기 자신 답장 알림 방지
 
+      // ✅ CHAT-NOTI-SETTING: 채팅 알림 설정이 꺼져있으면 전체 무시
+      if (user?.notiSettings?.chat === false) return;
+
       const time = data.time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
       // ✅ IN-CHAT-SUPPRESS: 해당 크루 채팅방 안에 있으면 토스트/브라우저 알림 생략 (이미 화면에서 보임)
