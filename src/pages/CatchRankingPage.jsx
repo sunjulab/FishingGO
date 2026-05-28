@@ -157,6 +157,7 @@ export default function CatchRankingPage({ embedded = false }) {
   const [expanded, setExpanded] = useState(null);
 
   const isMaster = user?.tier === 'MASTER' || user?.tier === 'BUSINESS_VIP' || user?.role === 'admin';
+  const canAccessPremium = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(user?.tier);
 
   const load = async () => {
     setLoading(true);
@@ -319,11 +320,13 @@ export default function CatchRankingPage({ embedded = false }) {
             📸 내 조황 인증하러 가기
           </button>
 
-          {/* ✅ KAKAO-ADFIT: 조황 인증 버튼 아래 광고 */}
-          <div style={{ marginBottom: '14px' }}>
-            <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
-              style={{ borderRadius: '12px', overflow: 'hidden' }} />
-          </div>
+          {/* ✅ KAKAO-ADFIT: 조황 인증 버튼 아래 광고 (무료 유저만) */}
+          {!canAccessPremium && (
+            <div style={{ marginBottom: '14px' }}>
+              <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
+                style={{ borderRadius: '12px', overflow: 'hidden' }} />
+            </div>
+          )}
 
           {/* 랭킹 목록 */}
           {loading ? (
@@ -468,8 +471,8 @@ export default function CatchRankingPage({ embedded = false }) {
                       </div>
                     </div>
                   </div>
-                  {/* 조황랭킹 목록 사이 네이티브 광고: 5개마다 1번 */}
-                  {(i + 1) % 5 === 0 && (
+                  {/* 조황랭킹 목록 사이 네이티브 광고: 5개마다 1번 (무료 유저만) */}
+                  {!canAccessPremium && (i + 1) % 5 === 0 && (
                     <NativeAd slotId={`ranking_native_${i}`} style={{ margin: '4px 0' }} />
                   )}
                   </React.Fragment>

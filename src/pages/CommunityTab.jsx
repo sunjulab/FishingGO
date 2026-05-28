@@ -1278,7 +1278,7 @@ export default function CommunityTab() {
                       </div>
                     )}
                   </div>
-                  {(index + 1) % 4 === 0 && <NativeAd slotId={`feed_native_${index}`} />}
+                  {!canAccessPremium && (index + 1) % 4 === 0 && <NativeAd slotId={`feed_native_${index}`} />}
                   {!canAccessPremium && (index + 1) % 3 === 0 && <InFeedAd />}
                 </React.Fragment>
               );

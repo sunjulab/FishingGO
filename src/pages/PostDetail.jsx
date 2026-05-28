@@ -100,6 +100,7 @@ export default function PostDetail() {
     });
   };
   const user = useUserStore((state) => state.user);
+  const canAccessPremium = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(user?.tier);
   const addToast = useToastStore((state) => state.addToast);
   const [post, setPost] = useState(null);
   const [comment, setComment] = useState('');
@@ -440,15 +441,17 @@ export default function PostDetail() {
           </div>
         </div>
 
-        {/* ✅ KAKAO-ADFIT: 게시글 본문 아래 광고 (인피드-1 DAN-gn794LUdF3Y21yM2 / 320×50) */}
-        <div style={{ margin: '8px 12px' }}>
-          <KakaoAd
-            unitId="DAN-gn794LUdF3Y21yM2"
-            width={320}
-            height={50}
-            style={{ borderRadius: '12px', overflow: 'hidden' }}
-          />
-        </div>
+        {/* ✅ KAKAO-ADFIT: 게시글 본문 아래 광고 (무료 유저만) */}
+        {!canAccessPremium && (
+          <div style={{ margin: '8px 12px' }}>
+            <KakaoAd
+              unitId="DAN-gn794LUdF3Y21yM2"
+              width={320}
+              height={50}
+              style={{ borderRadius: '12px', overflow: 'hidden' }}
+            />
+          </div>
+        )}
 
         {/* ──────────────────────────────────────────
             🛒 추천 낚시용품 (쿠팡) — 게시글 키워드 기반
