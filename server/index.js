@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const dns = require('dns');
+const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
 
 // 통신사/로컬망 DNS에서 SRV 레코드 조회를 차단하는 경우를 우회하기 위해 Google Public DNS 강제 사용
 try {
@@ -645,7 +646,7 @@ app.use(async (req, res, next) => {
 
 // ── 방문자 추적 미들웨어 (가입/미가입 모두 IP 해시 기록) ─────────────────────────
 // 투데이: KST 오늘 날짜 유니크 IP 수 / 토탈: 전체 누적 유니크 IP 수
-const crypto = require('crypto');
+// crypto는 파일 최상단에서 이미 require됨
 const visitorCache = new Map(); // ipHash → lastTrackedDate (중복 DB쓰기 방지)
 function getKstDateStr() {
   const d = new Date();
@@ -5630,7 +5631,8 @@ app.post('/api/admin/cctv/auto-sync', async (req, res) => {
 
 
 // --- 쿠팡 파트너스 자동 연동 엔진 (HMAC Open API) ---
-const crypto = require('crypto');
+// crypto는 파일 최상단에서 이미 require됨 (중복 선언 제거)
+
 
 app.get('/api/commerce/coupang/search', async (req, res) => {
   const { keyword } = req.query;
