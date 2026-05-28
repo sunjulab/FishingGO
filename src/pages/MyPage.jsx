@@ -110,13 +110,16 @@ export default function MyPage() {
   const [secTab, setSecTab] = useState(null); // 'pwd', 'block'
   const [currentPwd, setCurrentPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState(''); // ✅ PWD-CONFIRM: 새 비밀번호 확인
   const [blockName, setBlockName] = useState('');
   const [blockedUsers, setBlockedUsers] = useState([]);
 
   const handlePasswordChange = async () => {
     if (!currentPwd || !newPwd.trim()) return addToast('비밀번호를 입력해주세요.', 'error');
-    if (newPwd.trim().length < 8) return addToast('새 비밀번호는 8자 이상이어야 합니다.', 'error'); // ✅ 6TH-C2: trim() 적용
+    if (newPwd.trim().length < 8) return addToast('새 비밀번호는 8자 이상이어야 합니다.', 'error');
     if (currentPwd === newPwd.trim()) return addToast('새 비밀번호는 현재 비밀번호와 다른 것으로 설정해주세요.', 'error');
+    // ✅ PWD-CONFIRM: 새 비밀번호 2회 입력 일치 검증
+    if (newPwd.trim() !== confirmPwd.trim()) return addToast('새 비밀번호가 일치하지 않습니다. 다시 확인해주세요.', 'error');
     try {
       const res = await apiClient.put('/api/user/password', { email: user.email, currentPassword: currentPwd, newPassword: newPwd });
       if (res.data.success) {
@@ -124,6 +127,7 @@ export default function MyPage() {
         setSecTab(null);
         setCurrentPwd('');
         setNewPwd('');
+        setConfirmPwd(''); // ✅ PWD-CONFIRM: 확인 입력 초기화
       }
     } catch (err) {
       addToast(err.response?.data?.error || '비밀번호 변경 실패', 'error');
@@ -1300,9 +1304,49 @@ export default function MyPage() {
                     </div>
                     {secTab === 'pwd' && (
                       <div style={{ padding: '16px', background: '#F8F9FA', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <input type="password" placeholder="현재 비밀번호" value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #D1D1D6', outline: 'none' }} />
-                        <input type="password" placeholder="새 비밀번호" value={newPwd} onChange={e => setNewPwd(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #D1D1D6', outline: 'none' }} />
-                        <button onClick={handlePasswordChange} style={{ padding: '12px', background: '#0056D2', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}>변경하기</button>
+                        <input type="password" placeholder="현재 비밀번호" value={currentPwd} onChange={e => setCurrentPwd(e.target.value)}
+                          style={{ padding: '12px', borderRadius: '8px', border: '1px solid #D1D1D6', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+                        <input type="password" placeholder="새 비밀번호 (8자 이상)" value={newPwd} onChange={e => setNewPwd(e.target.value)}
+                          style={{ padding: '12px', borderRadius: '8px', border: '1px solid #D1D1D6', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+                        {/* ✅ PWD-CONFIRM: 새 비밀번호 확인 입력 */}
+                        <div style={{ position: 'relative' }}>
+                          <input type="password" placeholder="새 비밀번호 확인" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)}
+                            style={{
+                              padding: '12px', paddingRight: '44px',
+                              borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box',
+                              border: confirmPwd.length === 0
+                                ? '1px solid #D1D1D6'
+                                : newPwd.trim() === confirmPwd.trim()
+                                  ? '1.5px solid #00C48C'
+                                  : '1.5px solid #FF3B30',
+                            }} />
+                          {confirmPwd.length > 0 && (
+                            <span style={{
+                              position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                              fontSize: '16px', pointerEvents: 'none',
+                            }}>
+                              {newPwd.trim() === confirmPwd.trim() ? '✅' : '❌'}
+                            </span>
+                          )}
+                        </div>
+                        {/* 일치 안내 문구 */}
+                        {confirmPwd.length > 0 && newPwd.trim() !== confirmPwd.trim() && (
+                          <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#FF3B30', fontWeight: '700', marginTop: '-4px', paddingLeft: '4px' }}>
+                            ⚠️ 새 비밀번호가 일치하지 않습니다
+                          </div>
+                        )}
+                        <button
+                          onClick={handlePasswordChange}
+                          disabled={!currentPwd || !newPwd || !confirmPwd || newPwd.trim() !== confirmPwd.trim()}
+                          style={{
+                            padding: '12px', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer',
+                            background: (!currentPwd || !newPwd || !confirmPwd || newPwd.trim() !== confirmPwd.trim())
+                              ? '#E5E5EA' : '#0056D2',
+                            color: (!currentPwd || !newPwd || !confirmPwd || newPwd.trim() !== confirmPwd.trim())
+                              ? '#AEAEB2' : '#fff',
+                            transition: 'all 0.2s',
+                          }}
+                        >변경하기</button>
                       </div>
                     )}
 
