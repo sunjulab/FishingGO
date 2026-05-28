@@ -17,6 +17,11 @@ const chatMessageSchema = new mongoose.Schema({
   senderLevel: { type: String, default: '' },
   senderEmoji: { type: String, default: '' },
   senderTitle: { type: String, default: '' },
+  // ✅ REPLY: 답장 대상 (카카오톡/인스타 스타일 인용)
+  replyTo: {
+    sender: { type: String, default: '' },
+    text:   { type: String, default: '' },
+  },
 }, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps 자동 관리 (TTL 인덱스 정상 작동)
 
 // 채팅은 최근 30일만 보존 (TTL 인덱스)

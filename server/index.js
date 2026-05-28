@@ -1208,7 +1208,20 @@ io.on('connection', (socket) => {
 
     if (dbReady && ChatMessage) {
       try {
-        await new ChatMessage({ crewId: data.crewId, sender: msgData.sender, text: msgData.text, time: msgData.time }).save();
+        await new ChatMessage({
+          crewId: data.crewId,
+          sender: msgData.sender,
+          text: msgData.text,
+          time: msgData.time,
+          senderLevel: msgData.senderLevel,
+          senderEmoji: msgData.senderEmoji,
+          senderTitle: msgData.senderTitle,
+          // ✅ REPLY-FIX: replyTo DB 저장 포함 — 서버 재시작 후에도 인용 버블 유지
+          replyTo: msgData.replyTo ? {
+            sender: msgData.replyTo.sender || '',
+            text:   msgData.replyTo.text   || '',
+          } : undefined,
+        }).save();
         if (chatHistories[data.crewId]?.length % 50 === 0) saveChatHistories();
       } catch (e) { logger.error(`[Socket] send_msg DB 저장 실패 (crewId=${data.crewId}): ${e.message}`); }
     } else { saveChatHistories(); }

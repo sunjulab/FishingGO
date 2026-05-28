@@ -105,7 +105,9 @@ export default function RealTimeAlert() {
       const user = useUserStore.getState().user;
       if (!alive || !user) return;
       const myName = user.name || user.email;
-      if (data.repliedToSender !== myName) return; // 내 메시지에 답장한 경우만
+      // ✅ SELF-REPLY-FIX: 내 메시지에 답장 받은 경우만 + 자기가 보낸 답장은 제외
+      if (data.repliedToSender !== myName) return;
+      if (data.fromSender === myName) return; // 자기 자신 답장 알림 방지
 
       const time = data.time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
