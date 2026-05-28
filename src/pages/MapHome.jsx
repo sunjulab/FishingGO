@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import {
   Map, Anchor, Droplets, Wind, Waves, Ship, Crown, Navigation,
   Search, Clock, Compass, BarChart2, Zap, ChevronRight, Bell,
@@ -20,6 +21,9 @@ import { NativeAd, RewardGateModal } from '../components/AdUnit';
 import CctvModal from '../components/CctvModal';
 import UpgradeModal from '../components/UpgradeModal';
 import DashboardView from './DashboardView';
+import NotifPanel from '../components/NotifPanel';
+import { useNotifStore } from '../store/useNotifStore';
+
 
 // ✅ 5TH-C4: EMOJI_MAP — WeatherDashboard와 동일 객체; 향후 constants/ui.js 추출 검토 권장
 
@@ -29,7 +33,41 @@ const STATUS_COLOR = { '최고': '#00C48C', '피딩중': '#FFB300', '활발': '#
 // ✅ 26TH-B2: DEFAULT_AVATAR_SVG 모듈 레벨 상수 — pravatar.cc 외부 의존 제거 (6TH-A2 MyPage 패턴)
 const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
 
-// ✅ BUG-FIX: 헤더 시계 고정 버그 수정 — 마운트 후 new Date() 직접 사용 시 시계 정지 → 별도 컴포넌트로 1분 인터벌 갱신
+// ✅ NOTIF BELL: 알림 센터 버튼 (미읽음 수 뱃지 + 패널 슬라이드)
+function NotifBell() {
+  const [open, setOpen] = React.useState(false);
+  const notifs = useNotifStore(s => s.notifs);
+  const unread = notifs.filter(n => !n.read).length;
+  return (
+    <>
+      <div
+        onClick={() => setOpen(true)}
+        style={{ position: 'relative', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Bell size={20} color="#333" strokeWidth={2} />
+        {unread > 0 && (
+          <span style={{
+            position: 'absolute', top: '-2px', right: '-2px',
+            minWidth: unread > 9 ? '16px' : '14px', height: '14px',
+            background: '#FF3B30', borderRadius: '7px',
+            border: '1.5px solid #fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '8px', fontWeight: '900', color: '#fff',
+            padding: '0 2px',
+          }}>
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+        {unread === 0 && (
+          <span style={{ position: 'absolute', top: '-1px', right: '-1px', width: '6px', height: '6px', background: '#E5E5EA', borderRadius: '50%', border: '1.5px solid #fff' }} />
+        )}
+      </div>
+      {open && <NotifPanel onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+// ✅ BUG-FIX: 헤더 시계 고정 버그 수정
 function HeaderClock() {
   const [clockStr, setClockStr] = React.useState(() =>
     new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -913,10 +951,8 @@ export default function MapHome() {
                 <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#1565C0', letterSpacing: '-0.02em', marginRight: '-6px' }}>
                   <HeaderClock />
                 </div>
-                <div style={{ position: 'relative', cursor: 'pointer' }}>
-                  <Bell size={20} color="#333" strokeWidth={2} />
-                  <span style={{ position: 'absolute', top: '-1px', right: '-1px', width: '6px', height: '6px', background: '#FF3B30', borderRadius: '50%', border: '1.5px solid #fff' }} />
-                </div>
+                {/* ✅ NOTIF BELL: 알림 센터 오픈 버튼 */}
+                <NotifBell />
                 <div
                   onClick={() => navigate('/mypage')}
                   style={{ position: 'relative', cursor: 'pointer' }}

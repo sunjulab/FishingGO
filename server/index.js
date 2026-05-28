@@ -1193,6 +1193,19 @@ io.on('connection', (socket) => {
     chatHistories[data.crewId].push(msgData);
     if (chatHistories[data.crewId].length > 500) chatHistories[data.crewId] = chatHistories[data.crewId].slice(-500);
     io.to(data.crewId).emit('new_msg', msgData);
+
+    // ✅ REPLY NOTIF: 답장 메시지 수신 시 크루 룸 전체에 알림 브로드캐스트
+    // 클라이언트가 repliedToSender === 자신 닉네임 여부를 체크해 알림 표시
+    if (msgData.replyTo?.sender) {
+      io.to(data.crewId).emit('crew_reply_notification', {
+        repliedToSender: msgData.replyTo.sender,  // 답장 받은 사람 (원글 작성자)
+        fromSender:      msgData.sender,           // 답장 보낸 사람
+        replyText:       msgData.text.slice(0, 80),
+        crewId:          data.crewId,
+        time:            msgData.time,
+      });
+    }
+
     if (dbReady && ChatMessage) {
       try {
         await new ChatMessage({ crewId: data.crewId, sender: msgData.sender, text: msgData.text, time: msgData.time }).save();
