@@ -12,6 +12,7 @@ class ErrorBoundaryClass extends React.Component {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null, autoRetrying: false };
     this._reloadTimer = null;
+    this._clearTimer  = null; // ✅ EB-FIX: 안정화 후 카운터 초기화 타이머
   }
 
   static getDerivedStateFromError(error) {
@@ -37,8 +38,19 @@ class ErrorBoundaryClass extends React.Component {
     }
   }
 
+  componentDidMount() {
+    // ✅ EB-FIX: 에러 없이 3초 안정적으로 렌더되면 카운터 완전 초기화
+    // render() 내 즐시 호출 시 에러 발생 직전 이미 인크리먼트한 카운터가 리셋되는 무한 루프 방지
+    if (!this.state.hasError) {
+      this._clearTimer = setTimeout(() => {
+        try { sessionStorage.removeItem(RETRY_KEY); } catch { }
+      }, 3000);
+    }
+  }
+
   componentWillUnmount() {
     if (this._reloadTimer) clearTimeout(this._reloadTimer);
+    if (this._clearTimer)  clearTimeout(this._clearTimer);
   }
 
   // 홈으로 이동 + 상태 초기화
@@ -199,8 +211,7 @@ class ErrorBoundaryClass extends React.Component {
       );
     }
 
-    // 정상 렌더: 재시도 카운터 초기화
-    try { sessionStorage.removeItem(RETRY_KEY); } catch { }
+    // ✅ EB-FIX: render()에서 즘시 호출 제거 → componentDidMount 안정화 3초 후 클리어로 이동
     return this.props.children;
   }
 }

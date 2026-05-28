@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, MapPin, Waves, Wind, Anchor, ChevronLeft, Droplets, Share2 } from 'lucide-react';
+import { Calendar, MapPin, Waves, Wind, Anchor, ChevronLeft, Droplets, Share2, Trash2 } from 'lucide-react';
+import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -51,9 +52,12 @@ export default function CatchDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const addToast = useToastStore(s => s.addToast);
+  const user = useUserStore(s => s.user); // ✅ DELETE: 내 기록 확인용
 
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -71,7 +75,7 @@ export default function CatchDetail() {
       })
       .finally(() => setLoading(false));
     // ✅ 2ND-B2: addToast deps 추가 — eslint exhaustive-deps 안정
-  }, [id, addToast]); // ✅ 15TH-C2: eslint-disable 불필요 주석 제거 (id, addToast 모두 deps에 포함됨)
+  }, [id, addToast]);
 
 
   // ✅ SHARE-EXT: catchId 파라미터 추가 + 사진 있으면 표시, 없으면 앱 로고
@@ -85,6 +89,30 @@ export default function CatchDetail() {
       catchId: id,
     });
   }, [record?.fish, record?.species, record?.content, record?.image, addToast, id]);
+
+  // ✅ DELETE: 내 기록 삭제
+  const handleDelete = useCallback(async () => {
+    setDeleting(true);
+    try {
+      await apiClient.delete(`/api/user/records/${id}`, { data: { email: user?.email } });
+      addToast('해당 조과 기록을 삭제했습니다.', 'success');
+      // 뒤로가기 (마이페이지 조과 스크롤로)
+      if (window.history.length <= 1) navigate('/', { replace: true });
+      else navigate(-1);
+    } catch (err) {
+      addToast(err.response?.data?.error || '삭제에 실패했습니다.', 'error');
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  }, [id, user?.email, addToast, navigate]);
+
+  // 내 기록인지 확인
+  const isMyRecord = record && user && (
+    record.author_email === user.email ||
+    record.userId === user.id ||
+    record.email === user.email
+  );
 
   return (
     <div className="page-container" style={{ backgroundColor: '#fff', height: '100dvh', zIndex: 2000 }}>
@@ -200,12 +228,48 @@ export default function CatchDetail() {
                 </div>
               )}
 
-              <button
-                onClick={handleShare}
-                style={{ width: '100%', padding: '18px', borderRadius: '16px', border: '1px solid #0056D2', color: '#0056D2', background: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginTop: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                <Share2 size={18} /> 이 기록 공유하기
-              </button>
+              {/* ―― 버튼 그룹: 공유 + (내 기록이면) 삭제 ―― */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                <button
+                  onClick={handleShare}
+                  style={{ flex: 1, padding: '18px', borderRadius: '16px', border: '1.5px solid #0056D2', color: '#0056D2', background: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  <Share2 size={18} /> 이 기록 공유하기
+                </button>
+                {isMyRecord && (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    style={{ padding: '18px 20px', borderRadius: '16px', border: '1.5px solid #FF3B30', color: '#FF3B30', background: '#FFF0F0', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexShrink: 0 }}
+                  >
+                    <Trash2 size={18} /> 삭제
+                  </button>
+                )}
+              </div>
+
+              {/* ―― 삭제 확인 모달 ―― */}
+              {showDeleteConfirm && (
+                <div
+                  onClick={() => setShowDeleteConfirm(false)}
+                  style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+                >
+                  <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '320px', background: '#fff', borderRadius: '24px', padding: '28px 24px', textAlign: 'center' }}>
+                    <div style={{ fontSize: `calc(40px * var(--fs, 1))`, marginBottom: '12px' }}>🗑️</div>
+                    <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', marginBottom: '8px' }}>조과 기록을 삭제하시겠어요?</div>
+                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginBottom: '24px', lineHeight: '1.5' }}>삭제하면 복구할 수 없습니다.</div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        style={{ flex: 1, padding: '14px', border: '1.5px solid #E5E5EA', borderRadius: '14px', background: '#fff', fontWeight: '800', fontSize: `calc(14px * var(--fs, 1))`, cursor: 'pointer', color: '#1c1c1e' }}
+                      >취소</button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        style={{ flex: 1, padding: '14px', border: 'none', borderRadius: '14px', background: deleting ? '#E5E5EA' : '#FF3B30', color: deleting ? '#AEAEB2' : '#fff', fontWeight: '900', fontSize: `calc(14px * var(--fs, 1))`, cursor: deleting ? 'not-allowed' : 'pointer' }}
+                      >{deleting ? '삭제 중...' : '삭제'}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
