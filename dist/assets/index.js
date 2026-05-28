@@ -36229,6 +36229,12 @@ function TideChart({ data: data2 }) {
 function WeatherDashboard() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
+  const canAccessSatellite = useUserStore(
+    (s2) => {
+      var _a, _b;
+      return ["PRO", "BUSINESS_VIP", "MASTER"].includes(s2.userTier) || ((_a = s2.user) == null ? void 0 : _a.id) === ADMIN_ID || ((_b = s2.user) == null ? void 0 : _b.email) === ADMIN_EMAIL;
+    }
+  );
   const [activeRegion, setActiveRegion] = (0, import_react37.useState)("\uB0A8\uD574");
   const [searchQuery, setSearchQuery] = (0, import_react37.useState)("");
   const [searchResults, setSearchResults] = (0, import_react37.useState)([]);
@@ -36480,10 +36486,32 @@ function WeatherDashboard() {
         /* @__PURE__ */ (0, import_jsx_runtime34.jsxs)(
           "button",
           {
-            onClick: () => addToast("\uC0C1\uC138 \uD574\uB958\uB3C4 \uBC0F \uAE30\uC0C1 \uC704\uC131 \uC601\uC0C1\uC740 \uC720\uB8CC \uD50C\uB79C\uC5D0\uC11C \uC81C\uACF5\uB429\uB2C8\uB2E4.", "info"),
-            style: { width: "100%", padding: "14px", background: "#F4F6FA", color: "#1565C0", border: "none", borderRadius: "14px", fontSize: `calc(14px * var(--fs, 1))`, fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" },
+            onClick: () => {
+              if (canAccessSatellite) {
+                window.open("https://www.weather.go.kr/weather/radar/local.jsp", "_blank");
+              } else {
+                addToast("\uC0C1\uC138 \uD574\uB958\uB3C4 \uBC0F \uAE30\uC0C1 \uC704\uC131 \uC601\uC0C1\uC740 PRO \uC774\uC0C1 \uD50C\uB79C\uC5D0\uC11C \uC81C\uACF5\uB429\uB2C8\uB2E4.", "info");
+              }
+            },
+            style: {
+              width: "100%",
+              padding: "14px",
+              borderRadius: "14px",
+              fontSize: `calc(14px * var(--fs, 1))`,
+              fontWeight: "800",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              border: "none",
+              background: canAccessSatellite ? "linear-gradient(135deg, #0056D2, #00C48C)" : "#F4F6FA",
+              color: canAccessSatellite ? "#fff" : "#1565C0",
+              boxShadow: canAccessSatellite ? "0 4px 15px rgba(0,86,210,0.3)" : "none"
+            },
             children: [
-              "\uC0C1\uC138 \uC704\uC131 \uB808\uC774\uB354\uB9DD \uBCF4\uAE30 ",
+              canAccessSatellite ? "\u{1F6F0}\uFE0F \uC704\uC131 \uB808\uC774\uB354 \uBCF4\uAE30" : "\uC0C1\uC138 \uC704\uC131 \uB808\uC774\uB354\uB9DD \uBCF4\uAE30",
+              " ",
               /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(ChevronDown, { size: 16 })
             ]
           }
@@ -36499,6 +36527,7 @@ var init_WeatherDashboard = __esm({
     init_dist2();
     init_lucide_react();
     init_useToastStore();
+    init_useUserStore();
     init_fishingData();
     init_evaluator();
     init_api();
@@ -42123,7 +42152,7 @@ var AppUpdate = registerPlugin("AppUpdate", {
 
 // src/components/ForceUpdateChecker.jsx
 var import_jsx_runtime7 = __toESM(require_jsx_runtime(), 1);
-var CURRENT_APP_VERSION = true ? "2.1.47" : "2.1.17";
+var CURRENT_APP_VERSION = true ? "2.1.48" : "2.1.17";
 function isVersionLower(v1, v2) {
   const p1 = v1.split(".").map(Number);
   const p2 = v2.split(".").map(Number);

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Wind, Waves, Droplets, Sunrise, Sunset, Navigation, Map as MapIcon, ChevronDown, Search, X, AlertCircle, Loader2 } from 'lucide-react';
 import { useToastStore } from '../store/useToastStore';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 // ✅ 19TH-A1: recharts 제거(12TH-B1) — 순수 SVG TideChart로 교체하여 빌드 오류 해소
 import { ALL_FISHING_POINTS, getPointSpecificData } from '../constants/fishingData';
 import { evaluateFishingCondition } from '../utils/evaluator';
@@ -128,6 +129,13 @@ function TideChart({ data }) {
 export default function WeatherDashboard() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
+
+  // ✅ 위성 레이더 접근 권한 — MASTER/PRO/VVIP/ADMIN만 허용
+  const canAccessSatellite = useUserStore(s =>
+    ['PRO', 'BUSINESS_VIP', 'MASTER'].includes(s.userTier) ||
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL
+  );
 
   const [activeRegion, setActiveRegion]     = useState('남해');
   const [searchQuery, setSearchQuery]       = useState('');
@@ -409,10 +417,25 @@ export default function WeatherDashboard() {
             </div>
 
             <button
-              onClick={() => addToast('상세 해류도 및 기상 위성 영상은 유료 플랜에서 제공됩니다.', 'info')}
-              style={{ width: '100%', padding: '14px', background: '#F4F6FA', color: '#1565C0', border: 'none', borderRadius: '14px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              onClick={() => {
+                if (canAccessSatellite) {
+                  // ✅ MASTER/PRO/VVIP: 기상청 위성 레이더 실제 연결
+                  window.open('https://www.weather.go.kr/weather/radar/local.jsp', '_blank');
+                } else {
+                  addToast('상세 해류도 및 기상 위성 영상은 PRO 이상 플랜에서 제공됩니다.', 'info');
+                }
+              }}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '14px',
+                fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800',
+                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: '6px', border: 'none',
+                background: canAccessSatellite ? 'linear-gradient(135deg, #0056D2, #00C48C)' : '#F4F6FA',
+                color: canAccessSatellite ? '#fff' : '#1565C0',
+                boxShadow: canAccessSatellite ? '0 4px 15px rgba(0,86,210,0.3)' : 'none',
+              }}
             >
-              상세 위성 레이더망 보기 <ChevronDown size={16} />
+              {canAccessSatellite ? '🛰️ 위성 레이더 보기' : '상세 위성 레이더망 보기'} <ChevronDown size={16} />
             </button>
           </div>
 
