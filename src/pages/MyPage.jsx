@@ -1144,11 +1144,6 @@ export default function MyPage() {
                       ))}
                     </div>
 
-                    {/* 닫기 버튼 */}
-                    <button
-                      onClick={() => setShowModal(null)}
-                      style={{ width: '100%', marginTop: '28px', padding: '16px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, cursor: 'pointer' }}
-                    >닫기</button>
                   </>
                 );
               })()}
