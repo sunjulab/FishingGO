@@ -1181,6 +1181,13 @@ io.on('connection', (socket) => {
       senderLevel: cachedLevel.level,
       senderEmoji: cachedLevel.emoji,
       senderTitle: cachedLevel.title,
+      // ✅ REPLY: 답장 대상 (sender + text 100자 이내로 제한, XSS 방지)
+      replyTo: (data.replyTo && typeof data.replyTo === 'object')
+        ? {
+            sender: (data.replyTo.sender || '').toString().slice(0, 30),
+            text:   (data.replyTo.text   || '').toString().slice(0, 100),
+          }
+        : null,
     };
     if (!chatHistories[data.crewId]) chatHistories[data.crewId] = [];
     chatHistories[data.crewId].push(msgData);
