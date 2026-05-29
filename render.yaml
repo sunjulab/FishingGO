@@ -70,6 +70,12 @@ services:
     startCommand: node --max-old-space-size=512 index.js  # ✅ 10TH-B5: 메모리 제한 512MB — 미처리 예외시 서버 다운 방지
     healthCheckPath: /api/health   # ✅ ENH-B6: 실제 엔드포인트로 수정 (/api/status → /api/health)
     plan: free          # ⚠️ 27TH-C3: Free 플랜 — 15분 비활동 시 슬립(cold start ~60초). 실서비스 전 plan: starter 이상으로 변경 권장
+    # ✅ DEPLOY-OPT: dist/ 변경 시 백엔드 재배포 방지 (프론트 빌드 파일 push와 무관)
+    autoDeploy: true
+    # 백엔드는 server/ 폴더 또는 render.yaml 변경 시에만 재배포
+    deployFilterIncludePaths:
+      - server
+      - render.yaml
     envVars:
       - key: NODE_ENV
         value: production
