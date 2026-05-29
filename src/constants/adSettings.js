@@ -10,9 +10,10 @@ export const ADMOB_CONFIG = {
   NATIVE_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/8130405525'
     : 'ca-app-pub-3940256099942544/2247696110', // 개발 테스트 ID (표준형)
-  // 배너 광고 — 하단 고정 (AdMobService.showBannerAd)
+  // 배너 광고 — 인라인/고정 배너 (320×50)
+  // ✅ 2026-05-29 신규 발급: AdMob 콘솔 > 광고 단위 > 배너
   BANNER_ID: import.meta.env.PROD
-    ? 'ca-app-pub-9774243773523817/8130405525'  // 네이티브와 동일 단위 사용 (배너용 별도 단위 없을 때)
+    ? 'ca-app-pub-9774243773523817/7590161071'  // ✅ 배너 전용 단위 (신규 발급)
     : 'ca-app-pub-3940256099942544/6300978111', // 구글 공식 테스트 배너 ID
   // 전면(인터스티셜) 광고 — 선상배홍보 탭 진입 시 FREE 유저
   INTERSTITIAL_ID: import.meta.env.PROD

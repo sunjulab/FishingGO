@@ -9,7 +9,7 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
 import { NativeAd } from '../components/AdUnit';
-import { KakaoAd } from '../components/ads/KakaoAd';
+import { AdSenseDisplay, AdSenseInFeed } from '../components/ads/AdSenseAd';
 // NativeAdService 제거됨 (네이티브 광고 기능 삭제)
 import ImageGallery from '../components/ImageGallery';
 import StorySlider from '../components/StorySlider';
@@ -22,16 +22,10 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // 언마운트/재마운트(뒤로가기 후 재진입) 시 데이터가 이미 있으면 loading=false로 시작
 let _communityCache = { business: [], crews: [], notices: [], stories: [] };
 
-// ✅ KAKAO-ADFIT: 실제 카카오 애드핏 인피드 광고 (DAN-M6CEA2Ch9AzCohm9 / 320×100)
-// 더미 광고 → 실제 광고로 교체
+// ✅ ADSENSE: 인피드 광고 (오픈게시판 목록 사이 삽입)
 function InFeedAd() {
   return (
-    <KakaoAd
-      unitId="DAN-M6CEA2Ch9AzCohm9"
-      width={320}
-      height={100}
-      style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden' }}
-    />
+    <AdSenseInFeed style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden' }} />
   );
 }
 
@@ -1283,15 +1277,10 @@ export default function CommunityTab() {
                 </React.Fragment>
               );
             })}
-            {/* ✅ KAKAO-ADFIT: 게시글 목록 끝 고정 광고 — 게시글 수 무관 항상 1개 노출 */}
+            {/* ✅ ADSENSE: 게시글 목록 끝 고정 광고 */}
             {!canAccessPremium && posts.length > 0 && (
               <div style={{ padding: '0 16px 8px' }}>
-                <KakaoAd
-                  unitId="DAN-M6CEA2Ch9AzCohm9"
-                  width={320}
-                  height={100}
-                  style={{ borderRadius: '12px', overflow: 'hidden' }}
-                />
+                <AdSenseDisplay style={{ borderRadius: '12px', overflow: 'hidden' }} />
               </div>
             )}
 
@@ -1402,21 +1391,19 @@ export default function CommunityTab() {
                     </button>
                   </div>
                 )}
-              {/* ✅ KAKAO-ADFIT: 크루 목록 5개마다 광고 */}
+              {/* ✅ ADSENSE: 크루 목록 5개마다 광고 */}
               {!canAccessPremium && (filteredCrews.indexOf(crew) + 1) % 5 === 0 && (
                 <div style={{ margin: '4px 0 4px' }}>
-                  <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
-                    style={{ borderRadius: '12px', overflow: 'hidden' }} />
+                  <AdSenseDisplay style={{ borderRadius: '12px', overflow: 'hidden' }} />
                 </div>
               )}
               </div>
               );
             })}
-            {/* ✅ KAKAO-ADFIT: 크루 목록 끝 고정 광고 */}
+            {/* ✅ ADSENSE: 크루 목록 끝 고정 광고 */}
             {!canAccessPremium && filteredCrews.length > 0 && (
               <div style={{ margin: '8px 0' }}>
-                <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
-                  style={{ borderRadius: '12px', overflow: 'hidden' }} />
+                <AdSenseDisplay style={{ borderRadius: '12px', overflow: 'hidden' }} />
               </div>
             )}
 
@@ -1729,20 +1716,18 @@ export default function CommunityTab() {
                     </div>
                   </div>
                 )}
-              {/* ✅ KAKAO-ADFIT: 선상배 홍보 5개마다 광고 */}
+              {/* ✅ ADSENSE: 선상배 홍보 5개마다 광고 */}
               {!canAccessPremium && (index + 1) % 5 === 0 && (
                 <div style={{ margin: '4px 0 12px' }}>
-                  <KakaoAd unitId="DAN-M6CEA2Ch9AzCohm9" width={320} height={100}
-                    style={{ borderRadius: '12px', overflow: 'hidden' }} />
+                  <AdSenseInFeed style={{ borderRadius: '12px', overflow: 'hidden' }} />
                 </div>
               )}
               </React.Fragment>
             ))}
-            {/* ✅ KAKAO-ADFIT: 선상배 목록 끝 고정 광고 */}
+            {/* ✅ ADSENSE: 선상배 목록 끝 고정 광고 */}
             {!canAccessPremium && effectiveBusinessPosts.length > 0 && (
               <div style={{ margin: '4px 0 12px' }}>
-                <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
-                  style={{ borderRadius: '12px', overflow: 'hidden' }} />
+                <AdSenseDisplay style={{ borderRadius: '12px', overflow: 'hidden' }} />
               </div>
             )}
             {/* 무한스크롤 sentinel (더 보기 버튼 대체) */}

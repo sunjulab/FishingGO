@@ -7,7 +7,7 @@ import {
 import apiClient from '../api/index';
 import CsInquirySection from '../components/CsInquirySection';
 import { RewardGateModal } from '../components/AdUnit';
-import { KakaoAd } from '../components/ads/KakaoAd';
+import { AdSenseDisplay } from '../components/ads/AdSenseAd';
 
 export default function DashboardView({
   viewMode,
@@ -541,11 +541,10 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* ✅ KAKAO-ADFIT: 홈화면 하단 고정 광고 (몴료 유저만) */}
+        {/* ✅ ADSENSE: 홈화면 하단 고정 광고 (무료 유저만) */}
         {!canAccessPremium && (
           <div style={{ padding: '0 16px 16px' }}>
-            <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
-              style={{ borderRadius: '12px', overflow: 'hidden' }} />
+            <AdSenseDisplay style={{ borderRadius: '12px', overflow: 'hidden' }} />
           </div>
         )}
 

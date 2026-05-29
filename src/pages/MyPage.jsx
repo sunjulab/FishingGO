@@ -4,7 +4,7 @@ import apiClient from '../api/index';
 import { compressAvatar } from '../utils/imageUtils';
 import { useUserStore, TIER_CONFIG, getLevelInfo, EXP_REWARDS, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
-import { KakaoAd } from '../components/ads/KakaoAd';
+import { AdSenseDisplay } from '../components/ads/AdSenseAd';
 import { 
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
   ShieldAlert, ChevronRight, LayoutGrid, Edit3, Check, X, 
@@ -645,11 +645,10 @@ export default function MyPage() {
         </div>
       </div>
 
-      {/* ✅ KAKAO-ADFIT: 프로필 헤더 아래 광고 (무료 유저만) */}
+      {/* ✅ ADSENSE: 프로필 헤더 아래 광고 (무료 유저만) */}
       {userTier === 'FREE' && (
         <div style={{ padding: '16px 24px 0' }}>
-          <KakaoAd unitId="DAN-GlROpjPfXauFLUgU" width={320} height={50}
-            style={{ borderRadius: '12px', overflow: 'hidden' }} />
+          <AdSenseDisplay style={{ borderRadius: '12px', overflow: 'hidden' }} />
         </div>
       )}
 
@@ -980,6 +979,20 @@ export default function MyPage() {
                 <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>주소 검색으로 정확한 좌표 직접 지정</div>
               </div>
               <ChevronRight size={16} color="#FFD700" />
+            </button>
+            {/* ✅ NEW: 일반 낚시 포인트 위치 수정 버튼 (항구/갯바위/방파제/민물 전체) */}
+            <button
+              onClick={() => navigate('/point-admin')}
+              style={{ width: '100%', padding: '14px 16px', background: 'rgba(100,181,246,0.08)', border: '1px solid rgba(100,181,246,0.3)', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: '#fff', textAlign: 'left', marginTop: '8px' }}
+            >
+              <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #64B5F6, #0D47A1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>📍</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#64B5F6' }}>낚시 포인트 위치 수정</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '600', marginTop: '2px' }}>항구 · 갯바위 · 방파제 · 민물 — 지도 클릭으로 이동</div>
+              </div>
+              <ChevronRight size={16} color="#64B5F6" />
             </button>
             {/* 수익 대시보드 버튼 */}
             <button

@@ -105,6 +105,7 @@ const UserProfile      = lazy(() => import('./pages/UserProfile'));
 const CatchUploadPage  = lazy(() => import('./pages/CatchUploadPage'));
 const CatchRankingPage = lazy(() => import('./pages/CatchRankingPage'));
 const ContestPage      = lazy(() => import('./pages/ContestPage'));
+const PointLocationAdmin = lazy(() => import('./pages/PointLocationAdmin')); // ✅ MASTER: 일반 포인트 위치 수정
 
 import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -527,6 +528,7 @@ export default function App() {
               <Route path="/cctv-admin" element={<AdminRoute><CctvAdmin /></AdminRoute>} />
               <Route path="/notice/:id" element={<NoticeDetail />} />
               <Route path="/secret-admin" element={<AdminRoute><SecretPointAdmin /></AdminRoute>} />
+              <Route path="/point-admin" element={<AdminRoute><PointLocationAdmin /></AdminRoute>} />
               <Route path="/payment-history" element={<PaymentHistory />} />
               <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               <Route path="/user/:name" element={<UserProfile />} />
