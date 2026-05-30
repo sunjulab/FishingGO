@@ -187,7 +187,14 @@ export default function PointLocationAdmin() {
     };
   }, [inputMode, mapReady, placeMarker, activeTab]);
 
-  // ── 포인트 선택 → 지도 이동 ─────────────────────────────────────────
+  // ── 탭 전환 시 지도 높이 변경 → relayout 필수 (CSS transition 후 실행) ──
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+    const t = setTimeout(() => mapInstanceRef.current?.relayout(), 310); // 300ms transition 완료 후
+    return () => clearTimeout(t);
+  }, [activeTab, mapReady]);
+
+
   useEffect(() => {
     if (!selectedPoint || !mapReady || !mapInstanceRef.current) return;
     const ov = overrides[String(selectedPoint.id)];

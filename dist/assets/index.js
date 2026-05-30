@@ -41629,6 +41629,15 @@ function PointLocationAdmin() {
     };
   }, [inputMode, mapReady, placeMarker, activeTab]);
   (0, import_react49.useEffect)(() => {
+    if (!mapReady || !mapInstanceRef.current)
+      return;
+    const t = setTimeout(() => {
+      var _a2;
+      return (_a2 = mapInstanceRef.current) == null ? void 0 : _a2.relayout();
+    }, 310);
+    return () => clearTimeout(t);
+  }, [activeTab, mapReady]);
+  (0, import_react49.useEffect)(() => {
     if (!selectedPoint || !mapReady || !mapInstanceRef.current)
       return;
     const ov = overrides[String(selectedPoint.id)];
