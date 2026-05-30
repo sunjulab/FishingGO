@@ -121,6 +121,7 @@ export default function MapHome() {
   const [effectiveAllPoints, setEffectiveAllPoints] = useState(ALL_FISHING_POINTS);
   const [spotLocOverrides, setSpotLocOverrides]     = useState({});
   const [showLocationEditor, setShowLocationEditor] = useState(false);
+  const [customPoints, setCustomPoints]             = useState([]); // ✅ MASTER 신규 커스텀 포인트
   // ✅ 5TH-A5: currentTime 상태 제거 — 매분 전체 리렌더 방지, useClock hook으로 분리
   // 시간 표시는 컴포넌트 내 LiveClock 컴포넌트가 도맡
   const [showSecretPoints, setShowSecretPoints] = useState(false);
@@ -293,6 +294,13 @@ export default function MapHome() {
       .catch(() => { /* 오버라이드 없으면 원본 사용 */ });
   }, []);
 
+  /* ── 커스텀 포인트 로드 (신규 추가된 포인트) ── */
+  useEffect(() => {
+    apiClient.get('/api/custom-points')
+      .then(res => { if (Array.isArray(res.data) && res.data.length > 0) setCustomPoints(res.data); })
+      .catch(() => {});
+  }, []);
+
   /* ── 카카오맵 초기화 (viewMode=map 진입 시, kakao.maps.load 공식 콜백) ── */
   useEffect(() => {
     if (viewMode !== 'map') return;
@@ -453,7 +461,7 @@ export default function MapHome() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAccessPremium, isAdmin, _enterPoint]);
 
-  /* ── 마커 렌더링 (최적화) ── */
+  /* ── 마커 렌더링 (일반 + 커스텀 포인트 병합) ── */
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
     
@@ -461,25 +469,31 @@ export default function MapHome() {
       clustererRef.current.clear();
     }
     
-    const pts = filter === '전체' ? effectiveAllPoints : effectiveAllPoints.filter(p => p.type === filter);
+    const basePts   = filter === '전체' ? effectiveAllPoints : effectiveAllPoints.filter(p => p.type === filter);
+    const customPts = filter === '전체' ? customPoints       : customPoints.filter(p => p.type === filter);
+    const pts = [...basePts, ...customPts];
     
     // 대규모 데이터 렌더링 최적화
     const newMarkers = pts.map(point => {
       if (!window.kakao?.maps) return null;
-      
-      const color = point.type === '방파제' ? '#00C48C' : point.type === '갯바위' ? '#0056D2' : point.type === '항구' ? '#9B59B6' : point.type === '민물' ? '#43A047' : '#FF9B26';
+      const isCustom = !!point.isCustom;
+      const color = isCustom ? '#FF6B35'
+        : point.type === '방파제' ? '#00C48C'
+        : point.type === '갯바위' ? '#0056D2'
+        : point.type === '항구' ? '#9B59B6'
+        : point.type === '민물' ? '#43A047' : '#FF9B26';
       const el = document.createElement('div');
       el.style.cssText = `
         background: ${color};
-        width: 24px; height: 24px;
+        width: ${isCustom ? '28px' : '24px'}; height: ${isCustom ? '28px' : '24px'};
         display: flex; align-items: center; justify-content: center;
         color: #fff; font-weight: 950;
-        border: 2px solid #fff; border-radius: 50%;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        cursor: pointer; font-size: calc(10px * var(--fs, 1));
+        border: ${isCustom ? '2.5px solid #FFD700' : '2px solid #fff'}; border-radius: 50%;
+        box-shadow: ${isCustom ? '0 4px 16px rgba(255,107,53,0.6)' : '0 4px 12px rgba(0,0,0,0.15)'};
+        cursor: pointer; font-size: calc(${isCustom ? '11px' : '10px'} * var(--fs, 1));
         transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       `;
-      el.textContent = point.type.charAt(0);
+      el.textContent = isCustom ? '★' : point.type.charAt(0);
       
       el.onmouseenter = () => { el.style.transform = 'scale(1.3) translateY(-2px)'; el.style.zIndex = '50'; };
       el.onmouseleave = () => { el.style.transform = 'scale(1)'; el.style.zIndex = '10'; };
@@ -488,7 +502,7 @@ export default function MapHome() {
       return new window.kakao.maps.CustomOverlay({
         position: new window.kakao.maps.LatLng(point.lat, point.lng),
         content: el,
-        zIndex: 10
+        zIndex: isCustom ? 20 : 10
       });
     }).filter(m => m !== null);
     
@@ -496,8 +510,9 @@ export default function MapHome() {
       clustererRef.current.addMarkers(newMarkers);
     }
     markersRef.current = newMarkers;
-  // ✅ 26TH-C2: handlePointClick이 useCallback으로 안정화됨 — eslint-disable 제거 후 deps에 명시적 포함
-  }, [mapLoaded, filter, handlePointClick]);
+  // ✅ customPoints deps 추가 — 커스텀 포인트 추가 시 즉시 마커 갱신
+  }, [mapLoaded, filter, handlePointClick, effectiveAllPoints, customPoints]);
+
 
   /* ── 비밀 포인트 마커 렌더링 (LITE 이상 전용) ── */
   useEffect(() => {
@@ -725,9 +740,16 @@ export default function MapHome() {
       p.type.toLowerCase().includes(low) ||
       (p.region?.toLowerCase().includes(low))
     );
-    setSearchResults(filtered);
+    const customFiltered = customPoints.filter(p =>
+      p.name.toLowerCase().includes(low) ||
+      (p.fish || '').toLowerCase().includes(low) ||
+      p.type.toLowerCase().includes(low) ||
+      (p.region?.toLowerCase().includes(low))
+    );
+    setSearchResults([...filtered, ...customFiltered]);
     setShowSearch(true);
   };
+
 
 
   const closeSheet = () => {

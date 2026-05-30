@@ -46,6 +46,7 @@ const SECRET_OVERRIDES_FILE = path.join(__dirname, 'secretPointOverrides.json');
 const CCTV_OVERRIDES_FILE = path.join(__dirname, 'cctvOverrides.json');
 const APP_CONFIG_FILE = path.join(__dirname, 'appConfig.json');
 const SPOT_LOC_OVERRIDES_FILE = path.join(__dirname, 'spotLocationOverrides.json');
+const CUSTOM_POINTS_FILE      = path.join(__dirname, 'customPoints.json');
 const PRO_SUBS_FILE = path.join(__dirname, 'proSubscriptions.json');
 const VVIP_SLOTS_FILE = path.join(__dirname, 'vvipSlots.json');
 
@@ -68,6 +69,7 @@ let appConfig = { min_version: "1.0.0", store_url: "https://play.google.com/apps
 let memProSubs = {};
 let memVvipSlots = {};
 let spotLocationOverrides = {}; // ✅ MASTER 좌표 오버라이드
+let customPoints          = {}; // ✅ MASTER 신규 포인트 추가
 
 try {
   if (fs.existsSync(USERS_FILE)) memUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
@@ -83,6 +85,7 @@ try {
   if (fs.existsSync(PRO_SUBS_FILE)) memProSubs = JSON.parse(fs.readFileSync(PRO_SUBS_FILE, 'utf-8'));
   if (fs.existsSync(VVIP_SLOTS_FILE)) memVvipSlots = JSON.parse(fs.readFileSync(VVIP_SLOTS_FILE, 'utf-8'));
   if (fs.existsSync(SPOT_LOC_OVERRIDES_FILE)) spotLocationOverrides = JSON.parse(fs.readFileSync(SPOT_LOC_OVERRIDES_FILE, 'utf-8'));
+  if (fs.existsSync(CUSTOM_POINTS_FILE))      customPoints          = JSON.parse(fs.readFileSync(CUSTOM_POINTS_FILE, 'utf-8'));
   // 로컬 보존 파일 로드 완료 (logger 초기화 이전)
 } catch (e) {
   // 로컬 JSON 로드 실패, 빈 배열로 시작
@@ -117,6 +120,7 @@ function saveAppConfig()         { _saveFile(APP_CONFIG_FILE, appConfig); }
 function saveProSubs()           { _saveFile(PRO_SUBS_FILE, memProSubs); }
 function saveVvipSlots()         { _saveFile(VVIP_SLOTS_FILE, memVvipSlots); }
 function saveSpotLocationOverrides() { _saveFile(SPOT_LOC_OVERRIDES_FILE, spotLocationOverrides); }
+function saveCustomPoints()          { _saveFile(CUSTOM_POINTS_FILE, customPoints); }
 
 let dbReady = false;
 
@@ -994,6 +998,100 @@ app.delete('/api/spot-location-overrides/:id', (req, res) => {
   delete spotLocationOverrides[id];
   saveSpotLocationOverrides();
   res.json({ ok: true, reset: id });
+});
+
+// ─── 커스텀 낚시 포인트 (MASTER 신규 추가) ─────────────────────────────────────────
+// GET: 모든 커스텀 포인트 반환 (공개)
+app.get('/api/custom-points', (req, res) => {
+  res.json(Object.values(customPoints));
+});
+
+// POST: 새 포인트 추가 (MASTER 전용)
+app.post('/api/custom-points', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { name, type, region, lat, lng, fish, obsCode, aiDescription, season, recommend, status } = req.body;
+  if (!name || !type || lat == null || lng == null) return res.status(400).json({ error: 'name, type, lat, lng 필수' });
+  const id = `custom_${Date.now()}`;
+  customPoints[id] = {
+    id,
+    name,
+    type,
+    region: region || '미지정',
+    lat: parseFloat(lat),
+    lng: parseFloat(lng),
+    fish: fish || '미확인',
+    score: 80,
+    status: status || '보통',
+    obsCode: obsCode || null,
+    aiDescription: aiDescription || null,
+    season: season || null,
+    recommend: recommend || null,
+    isCustom: true,
+    createdAt: new Date().toISOString(),
+  };
+  saveCustomPoints();
+  (logger?.info || console.log)(`[CustomPoint] 추가: ${name} (${type}) @ ${lat},${lng}`);
+  res.json({ ok: true, point: customPoints[id] });
+});
+
+// DELETE: 커스텀 포인트 삭제 (MASTER 전용)
+app.delete('/api/custom-points/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { id } = req.params;
+  if (!customPoints[id]) return res.status(404).json({ error: '포인트 없음' });
+  const name = customPoints[id].name;
+  delete customPoints[id];
+  saveCustomPoints();
+  (logger?.info || console.log)(`[CustomPoint] 삭제: ${name} (${id})`);
+  res.json({ ok: true });
+});
+
+// POST: AI 낚시 포인트 정보 자동 생성 (MASTER 전용)
+app.post('/api/ai/generate-point-info', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { name, type, region, lat, lng, obsCode } = req.body;
+  if (!name || !type) return res.status(400).json({ error: 'name, type 필수' });
+  const GEMINI_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini API 키 미설정' });
+  const stationInfo = obsCode ? (observationData[obsCode] || {}) : {};
+  const regionLabel = stationInfo.region || region || '미지정';
+  const prompt = `당신은 한국 낚시 전문가입니다. 다음 낚시 포인트에 대한 정보를 생성해주세요.\n포인트명: ${name}\n타입: ${type} (${regionLabel} 권역)\n위치: 위도 ${lat}, 경도 ${lng}\n인근 관측소: ${stationInfo.name || '미확인'}\n\n반드시 아래 JSON 형식만 응답하세요 (다른 텍스트 없이):\n{\n  "fish": "이 포인트에서 주로 잡히는 어종 3~5가지 (쉼표 구분, 한국어)",\n  "description": "이 낚시 포인트의 특징과 낚시 방법 설명 (2~3문장)",\n  "season": "최적 낚시 시즌 설명",\n  "recommend": "추천 채비 및 미끼 (1~2가지)",\n  "status": "최고|피딩중|활발|보통 중 하나"\n}`;
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+        })
+      }
+    );
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    res.json(result);
+  } catch (err) {
+    (logger?.error || console.error)('[POST /api/ai/generate-point-info]', err.message);
+    res.status(500).json({ error: 'AI 생성 실패' });
+  }
 });
 
 // ─── 앱 설정 (강제 업데이트용) ──────────────────────────────────────────────────

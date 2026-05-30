@@ -8,8 +8,8 @@ android {
         applicationId "kr.fishinggo.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 119
-        versionName "2.1.40"
+        versionCode 120
+        versionName "2.1.50"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -31,9 +31,9 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            // ??R8 최적???�성????APK ?�기 감소 + 가?�화 ?�일 ?�동 ?�성
+            // ??R8 理쒖쟻???占쎌꽦????APK ?占쎄린 媛먯냼 + 媛?占쏀솕 ?占쎌씪 ?占쎈룞 ?占쎌꽦
             minifyEnabled true
-            shrinkResources false  // WebView ?��? false ?��? (리소????�� ???�류 가??
+            shrinkResources false  // WebView ?占쏙옙? false ?占쏙옙? (由ъ냼????占쏙옙 ???占쎈쪟 媛??
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
@@ -76,6 +76,7 @@ try {
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+
 
 
 
