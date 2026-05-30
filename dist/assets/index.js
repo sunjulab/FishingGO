@@ -24840,7 +24840,7 @@ function DashboardView({
                   " \xB7 ",
                   p.type,
                   " \xB7 ",
-                  p.fish.split(",")[0]
+                  (p.fish || "").split(",")[0]
                 ] })
               ] }),
               (() => {
@@ -25177,7 +25177,7 @@ function DashboardView({
                     /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { style: { fontSize: `calc(9px * var(--fs, 1))`, color: "#AAB0BE", fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [
                       point.region,
                       " \xB7 ",
-                      point.fish.split(",")[0]
+                      (point.fish || "").split(",")[0]
                     ] })
                   ] })
                 ] })

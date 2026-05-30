@@ -129,7 +129,7 @@ export default function DashboardView({
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {(p.fish || '').split(',')[0]}</div>
                   </div>
                   {(() => {
                     const _st = findNearestStation(p.lat, p.lng);
@@ -485,7 +485,7 @@ export default function DashboardView({
                     <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{point.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: `calc(8px * var(--fs, 1))`, background: '#F0F5FF', color: '#1565C0', padding: '1px 5px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>{point.type}</span>
-                      <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{point.region} · {point.fish.split(',')[0]}</span>
+                      <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{point.region} · {(point.fish || '').split(',')[0]}</span>
                     </div>
                   </div>
                 </div>
