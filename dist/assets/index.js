@@ -23370,7 +23370,8 @@ function FishingPointBottomSheet({ selectedPoint, onClose, onConditionReady }) {
         const reg = selectedPoint.region || "\uB0A8\uD574";
         const profile = { "\uC81C\uC8FC": 18.2, "\uB0A8\uD574": 16.5, "\uB3D9\uD574": 14.2, "\uC11C\uD574": 11.8 };
         const baseSst = profile[reg] || 16;
-        const seed = (parseInt(selectedPoint.id) % 10 - 5) / 10 || 0;
+        const _idNum = typeof selectedPoint.id === "number" ? selectedPoint.id : String(selectedPoint.id).split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+        const seed = (_idNum % 10 - 5) / 10;
         const finalSst = (baseSst + seed).toFixed(1);
         setMarineData((prev) => ({
           ...prev,
@@ -26206,9 +26207,10 @@ function MapHome() {
   }, [mapLoaded, showSecretPoints, effectiveSecretPoints, handlePointClick]);
   (0, import_react21.useEffect)(() => {
     const timer = setTimeout(() => {
-      const uniqueStationIds = [...new Set(
-        ALL_FISHING_POINTS.map((p) => findNearestStation(p.lat, p.lng).id)
-      )];
+      const uniqueStationIds = [.../* @__PURE__ */ new Set([
+        ...ALL_FISHING_POINTS.map((p) => findNearestStation(p.lat, p.lng).id),
+        ...customPoints.map((p) => findNearestStation(p.lat, p.lng).id)
+      ])];
       Promise.allSettled(
         uniqueStationIds.map(
           (id) => api_default.get(`/api/weather/precision?stationId=${id}`).then((res) => ({ id, data: res.data }))
@@ -26230,7 +26232,7 @@ function MapHome() {
       });
     }, 2e3);
     return () => clearTimeout(timer);
-  }, [rankTick]);
+  }, [rankTick, customPoints]);
   const heatmapData = (0, import_react21.useMemo)(() => {
     const allPts = [...ALL_FISHING_POINTS, ...customPoints];
     return allPts.map((point) => {

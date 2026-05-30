@@ -560,9 +560,12 @@ export default function MapHome() {
   // 히트맵 · 대시보드 카드 · 바텀시트 점수가 동일한 서버 데이터 기준으로 동기화
   useEffect(() => {
     const timer = setTimeout(() => {
-      const uniqueStationIds = [...new Set(
-        ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id)
-      )];
+      // ✅ CUSTOM-FIX: 커스텀 포인트 관측소도 캐시 대상에 포함 (실시간 날씨 완전 통합)
+      const uniqueStationIds = [...new Set([
+        ...ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id),
+        ...customPoints.map(p => findNearestStation(p.lat, p.lng).id),
+      ])];
+
       Promise.allSettled(
         uniqueStationIds.map(id =>
           apiClient.get(`/api/weather/precision?stationId=${id}`)
@@ -584,7 +587,8 @@ export default function MapHome() {
       }).catch(() => {}); // 실패 시 정적 데이터 fallback 유지
     }, 2000); // 2초 딕레이 — 초기 페이지 로드 성능 보호
     return () => clearTimeout(timer);
-  }, [rankTick]); // rankTick: 10분마다 자동 갱신
+  }, [rankTick, customPoints]); // rankTick: 10분마다, customPoints: 포인트 추가 시 즉시 갱신
+
 
   /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
   // ✅ FIX-HEATMAP-SCORE-v2: weatherCache 실시간 우선 → 서버 기상 데이터로 점수 계산

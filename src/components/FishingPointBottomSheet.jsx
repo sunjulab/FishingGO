@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import apiClient from '../api/index';
 import { evaluateFishingCondition } from '../utils/evaluator';
 import { useNavigate } from 'react-router-dom';
@@ -337,7 +337,12 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           const reg = selectedPoint.region || '남해';
           const profile = { '제주': 18.2, '남해': 16.5, '동해': 14.2, '서해': 11.8 };
           const baseSst = profile[reg] || 16.0;
-          const seed = (parseInt(selectedPoint.id) % 10 - 5) / 10 || 0;
+          // ✅ CUSTOM-FIX: 커스텀 포인트 id가 'custom_...' 문자열일 경우 parseInt → NaN 방지
+          const _idNum = typeof selectedPoint.id === 'number'
+            ? selectedPoint.id
+            : String(selectedPoint.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+          const seed = (_idNum % 10 - 5) / 10;
+
           const finalSst = (baseSst + seed).toFixed(1);
           setMarineData(prev => ({
             ...prev,
