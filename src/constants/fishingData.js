@@ -144,7 +144,12 @@ export const getPointSpecificData = (point) => {
   // 포인트 고유 미세 변동 (축소: ±1°C, ±0.5m/s, ±0.1m 수준)
   // ✅ 4TH-C2: evaluator.js calcPointSeed()와 동일 계산식 — circular dep 방지를 위해 인라인 유지 (utils/seed.js 분리 검토 수동)
   // ✅ 13TH-B2: 의도된 정적(static) 계산 — 같은 포인트는 항상 같은 날씨/물때 반환 (Math.random() 미사용, 사용자 신뢰도 유지)
-  const pointSeed = (point.id * 7 + Math.floor(point.lat * 100)) % 100;
+  // ✅ CUSTOM-FIX: 커스텀 포인트는 id가 'custom_1234567890' 같은 문자열 → 숫자 변환 필요
+  const idNum = typeof point.id === 'number'
+    ? point.id
+    : String(point.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const pointSeed = (idNum * 7 + Math.floor(point.lat * 100)) % 100;
+
   const microSst  = Math.max(7, Math.min(28, p.sst  + (pointSeed % 11 - 5) / 5)).toFixed(1);
   const microWind = Math.max(0.5, p.wind + (pointSeed % 7  - 3) / 6).toFixed(1);
   const microWave = Math.max(0.1, p.wave + (pointSeed % 5  - 2) / 20).toFixed(2);

@@ -24176,7 +24176,8 @@ var init_fishingData = __esm({
         "\uC6B8\uC0B0": { sst: 13.2, wind: 5, wave: 0.75 }
       };
       const p = profile[reg] || profile[REGION_TO_ZONE[reg] || "\uB0A8\uD574"] || profile["\uB0A8\uD574"];
-      const pointSeed = (point.id * 7 + Math.floor(point.lat * 100)) % 100;
+      const idNum = typeof point.id === "number" ? point.id : String(point.id).split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+      const pointSeed = (idNum * 7 + Math.floor(point.lat * 100)) % 100;
       const microSst = Math.max(7, Math.min(28, p.sst + (pointSeed % 11 - 5) / 5)).toFixed(1);
       const microWind = Math.max(0.5, p.wind + (pointSeed % 7 - 3) / 6).toFixed(1);
       const microWave = Math.max(0.1, p.wave + (pointSeed % 5 - 2) / 20).toFixed(2);
@@ -26230,8 +26231,9 @@ function MapHome() {
     }, 2e3);
     return () => clearTimeout(timer);
   }, [rankTick]);
-  const heatmapData = (0, import_react21.useMemo)(
-    () => ALL_FISHING_POINTS.map((point) => {
+  const heatmapData = (0, import_react21.useMemo)(() => {
+    const allPts = [...ALL_FISHING_POINTS, ...customPoints];
+    return allPts.map((point) => {
       const st = findNearestStation(point.lat, point.lng);
       const staticData = getPointSpecificData(point);
       const liveData = weatherCache[st.id];
@@ -26239,9 +26241,8 @@ function MapHome() {
       const sst = parseFloat((weatherData == null ? void 0 : weatherData.sst) || 13);
       const condition = evaluateFishingCondition(weatherData, point);
       return { point, sst, score: condition.score };
-    }),
-    [rankTick, weatherCache]
-  );
+    });
+  }, [rankTick, weatherCache, customPoints]);
   (0, import_react21.useEffect)(() => {
     if (!mapLoaded || !mapRef.current)
       return;
@@ -26428,7 +26429,9 @@ function MapHome() {
   const tideData = currentData;
   const phase = ((_a = tideData.tide) == null ? void 0 : _a.phase) || "7\uBB3C(\uC0AC\uB9AC)";
   const PREMIUM_POINTS = (0, import_react21.useMemo)(() => {
-    const base = filter2 === "\uC804\uCCB4" ? ALL_FISHING_POINTS.filter((p) => p.type !== "\uBBFC\uBB3C") : ALL_FISHING_POINTS.filter((p) => p.type === filter2);
+    const baseStatic = filter2 === "\uC804\uCCB4" ? ALL_FISHING_POINTS.filter((p) => p.type !== "\uBBFC\uBB3C") : ALL_FISHING_POINTS.filter((p) => p.type === filter2);
+    const baseCustom = filter2 === "\uC804\uCCB4" ? customPoints.filter((p) => p.type !== "\uBBFC\uBB3C") : customPoints.filter((p) => p.type === filter2);
+    const base = [...baseStatic, ...baseCustom];
     return base.map((p) => {
       const st = findNearestStation(p.lat, p.lng);
       const staticData = getPointSpecificData(p);
@@ -26437,7 +26440,7 @@ function MapHome() {
       const liveScore = evaluateFishingCondition(weatherData, p).score;
       return { ...p, _liveScore: liveScore };
     }).sort((a, b) => b._liveScore - a._liveScore).slice(0, 8);
-  }, [rankTick, filter2, weatherCache]);
+  }, [rankTick, filter2, weatherCache, customPoints]);
   const getScoreCircleStyle = (s2) => {
     if (s2 >= 90)
       return { bg: "rgba(0,196,140,0.18)", border: "rgba(0,196,140,0.7)", glow: "0 0 18px rgba(0,196,140,0.5)", numColor: "#00E5A8", label: "PERFECT" };

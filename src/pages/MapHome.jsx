@@ -589,8 +589,10 @@ export default function MapHome() {
   /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
   // ✅ FIX-HEATMAP-SCORE-v2: weatherCache 실시간 우선 → 서버 기상 데이터로 점수 계산
   // 캐시 없으면 정적 getPointSpecificData fallback (히트맵 첫 로드 전 임시 표시)
-  const heatmapData = useMemo(() =>
-    ALL_FISHING_POINTS.map(point => {
+  // ✅ CUSTOM-MERGE: 커스텀 포인트(신규 추가)도 히트맵에 포함
+  const heatmapData = useMemo(() => {
+    const allPts = [...ALL_FISHING_POINTS, ...customPoints];
+    return allPts.map(point => {
       const st = findNearestStation(point.lat, point.lng);
       const staticData = getPointSpecificData(point);
       // 실시간 캐시 우선 사용, 없으면 정적 fallback
@@ -601,8 +603,8 @@ export default function MapHome() {
       const sst = parseFloat(weatherData?.sst || 13);
       const condition = evaluateFishingCondition(weatherData, point);
       return { point, sst, score: condition.score };
-    })
-  , [rankTick, weatherCache]); // weatherCache 갱신 즉시 히트맵 점수 재계산
+    });
+  }, [rankTick, weatherCache, customPoints]); // customPoints 갱신 시 즉시 재계산
 
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
@@ -785,10 +787,15 @@ export default function MapHome() {
   const phase       = tideData.tide?.phase || '7물(사리)';
   // ✅ FILTER-FIX: filter 상태를 deps에 포함 + 필터 적용 후 실시간 점수 정렬
   // 이전: filter 누락으로 방파제/갯바위/항구 선택해도 목록 미변경 버그
+  // ✅ CUSTOM-MERGE: 커스텀 포인트도 TOP 8 대시보드에 포함 (실시간 날씨/점수 반영)
   const PREMIUM_POINTS = useMemo(() => {
-    const base = filter === '전체'
-      ? ALL_FISHING_POINTS.filter(p => p.type !== '민물') // ✅ 민물 포인트 제외 (날씨·물때 점수 미지원)
+    const baseStatic = filter === '전체'
+      ? ALL_FISHING_POINTS.filter(p => p.type !== '민물')
       : ALL_FISHING_POINTS.filter(p => p.type === filter);
+    const baseCustom  = filter === '전체'
+      ? customPoints.filter(p => p.type !== '민물')
+      : customPoints.filter(p => p.type === filter);
+    const base = [...baseStatic, ...baseCustom];
     return base
       .map(p => {
         const st = findNearestStation(p.lat, p.lng);
@@ -803,7 +810,7 @@ export default function MapHome() {
       })
       .sort((a, b) => b._liveScore - a._liveScore)
       .slice(0, 8);
-  }, [rankTick, filter, weatherCache]); // weatherCache 갱신 시 즉시 재계산
+  }, [rankTick, filter, weatherCache, customPoints]); // customPoints 갱신 시 재계산
 
   /* ── 낚시점수 원 색상 계산 ── */
   const getScoreCircleStyle = (s) => {
