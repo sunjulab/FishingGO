@@ -41474,13 +41474,12 @@ __export(PointLocationAdmin_exports, {
   default: () => PointLocationAdmin
 });
 function PointLocationAdmin() {
-  var _a, _b;
   const navigate = useNavigate();
   const addToast = useToastStore((s2) => s2.addToast);
   const isAdmin = useUserStore(
     (s2) => {
-      var _a2, _b2, _c;
-      return ((_a2 = s2.user) == null ? void 0 : _a2.id) === ADMIN_ID || ((_b2 = s2.user) == null ? void 0 : _b2.email) === ADMIN_EMAIL || ((_c = s2.user) == null ? void 0 : _c.email) === "sunjulab.k@gmail.com" || s2.userTier === "MASTER";
+      var _a, _b, _c;
+      return ((_a = s2.user) == null ? void 0 : _a.id) === ADMIN_ID || ((_b = s2.user) == null ? void 0 : _b.email) === ADMIN_EMAIL || ((_c = s2.user) == null ? void 0 : _c.email) === "sunjulab.k@gmail.com" || s2.userTier === "MASTER";
     }
   );
   const [authChecked, setAuthChecked] = (0, import_react49.useState)(false);
@@ -41528,14 +41527,14 @@ function PointLocationAdmin() {
   const initDoneRef = (0, import_react49.useRef)(false);
   const [mapReady, setMapReady] = (0, import_react49.useState)(false);
   const fetchOverrides = (0, import_react49.useCallback)(async () => {
-    var _a2;
+    var _a;
     try {
       const res = await api_default.get("/api/spot-location-overrides");
       setOverrides(res.data || {});
       setServerOnline(true);
       setSaveError(null);
     } catch (err) {
-      const st = (_a2 = err == null ? void 0 : err.response) == null ? void 0 : _a2.status;
+      const st = (_a = err == null ? void 0 : err.response) == null ? void 0 : _a.status;
       if (st === 401) {
         setSaveError("\uD1A0\uD070 \uB9CC\uB8CC. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574\uC8FC\uC138\uC694.");
         return;
@@ -41562,7 +41561,7 @@ function PointLocationAdmin() {
     }
   }, [authChecked, isAdmin, fetchOverrides, fetchCustomList]);
   const mapCallbackRef = (0, import_react49.useCallback)((node) => {
-    var _a2, _b2, _c;
+    var _a, _b, _c;
     if (!node || initDoneRef.current)
       return;
     initDoneRef.current = true;
@@ -41574,14 +41573,14 @@ function PointLocationAdmin() {
       mapInstanceRef.current = map;
       setMapReady(true);
     };
-    if ((_b2 = (_a2 = window.kakao) == null ? void 0 : _a2.maps) == null ? void 0 : _b2.Map)
+    if ((_b = (_a = window.kakao) == null ? void 0 : _a.maps) == null ? void 0 : _b.Map)
       doInit();
     else if ((_c = window.kakao) == null ? void 0 : _c.maps)
       window.kakao.maps.load(doInit);
     else {
       const retry = setInterval(() => {
-        var _a3, _b3, _c2;
-        if ((_b3 = (_a3 = window.kakao) == null ? void 0 : _a3.maps) == null ? void 0 : _b3.Map) {
+        var _a2, _b2, _c2;
+        if ((_b2 = (_a2 = window.kakao) == null ? void 0 : _a2.maps) == null ? void 0 : _b2.Map) {
           clearInterval(retry);
           doInit();
         } else if ((_c2 = window.kakao) == null ? void 0 : _c2.maps) {
@@ -41632,8 +41631,8 @@ function PointLocationAdmin() {
     if (!mapReady || !mapInstanceRef.current)
       return;
     const t = setTimeout(() => {
-      var _a2;
-      return (_a2 = mapInstanceRef.current) == null ? void 0 : _a2.relayout();
+      var _a;
+      return (_a = mapInstanceRef.current) == null ? void 0 : _a.relayout();
     }, 310);
     return () => clearTimeout(t);
   }, [activeTab, mapReady]);
@@ -41675,7 +41674,7 @@ function PointLocationAdmin() {
     });
   };
   const handleSave = async () => {
-    var _a2;
+    var _a;
     if (!selectedPoint || !previewCoords)
       return;
     setSaving(true);
@@ -41690,7 +41689,7 @@ function PointLocationAdmin() {
       });
       setServerOnline(true);
     } catch (err) {
-      const st = (_a2 = err == null ? void 0 : err.response) == null ? void 0 : _a2.status;
+      const st = (_a = err == null ? void 0 : err.response) == null ? void 0 : _a.status;
       if (st === 401) {
         setSaveError("\u26A0\uFE0F \uD1A0\uD070 \uB9CC\uB8CC. \uB85C\uADF8\uC544\uC6C3 \uD6C4 \uC7AC\uB85C\uADF8\uC778 \uD544\uC694.");
         setSaving(false);
@@ -41718,12 +41717,12 @@ function PointLocationAdmin() {
     }, 2200);
   };
   const handleReset = async (id) => {
-    var _a2;
+    var _a;
     try {
       await api_default.delete(`/api/spot-location-overrides/${id}`);
       setSaveError(null);
     } catch (err) {
-      const st = (_a2 = err == null ? void 0 : err.response) == null ? void 0 : _a2.status;
+      const st = (_a = err == null ? void 0 : err.response) == null ? void 0 : _a.status;
       if (st === 401 || st === 403) {
         setSaveError("\u26A0\uFE0F \uAD8C\uD55C \uC624\uB958\uB85C \uCD08\uAE30\uD654 \uC2E4\uD328.");
         return;
@@ -41892,10 +41891,15 @@ function PointLocationAdmin() {
         /* @__PURE__ */ (0, import_jsx_runtime46.jsx)(MousePointer, { size: 13 }),
         " \uD0ED\uD558\uC5EC \uC0C8 \uC704\uCE58 \uC120\uD0DD"
       ] }),
-      (previewCoords || addCoords) && /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)("div", { style: { position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", color: activeTab === "add" ? "#FF6B35" : "#00C48C", fontSize: "12px", fontWeight: "800", padding: "6px 14px", borderRadius: "20px", pointerEvents: "none", whiteSpace: "nowrap", fontFamily: "monospace" }, children: [
-        (_a = activeTab === "add" ? addCoords : previewCoords) == null ? void 0 : _a.lat.toFixed(5),
+      activeTab === "add" && addCoords && /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)("div", { style: { position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", color: "#FF6B35", fontSize: "12px", fontWeight: "800", padding: "6px 14px", borderRadius: "20px", pointerEvents: "none", whiteSpace: "nowrap", fontFamily: "monospace" }, children: [
+        addCoords.lat.toFixed(5),
         ", ",
-        (_b = activeTab === "add" ? addCoords : previewCoords) == null ? void 0 : _b.lng.toFixed(5)
+        addCoords.lng.toFixed(5)
+      ] }),
+      activeTab === "edit" && previewCoords && /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)("div", { style: { position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", color: "#00C48C", fontSize: "12px", fontWeight: "800", padding: "6px 14px", borderRadius: "20px", pointerEvents: "none", whiteSpace: "nowrap", fontFamily: "monospace" }, children: [
+        previewCoords.lat.toFixed(5),
+        ", ",
+        previewCoords.lng.toFixed(5)
       ] })
     ] }),
     activeTab === "edit" && /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)(import_jsx_runtime46.Fragment, { children: [
@@ -42168,9 +42172,9 @@ function PointLocationAdmin() {
                 onChange: (e) => setNewPoint((p) => ({ ...p, type: e.target.value })),
                 style: { width: "100%", padding: "10px 12px", background: "#1A2340", border: "1.5px solid rgba(255,255,255,0.12)", borderRadius: "10px", color: "#fff", fontSize: "13px", outline: "none" },
                 children: POINT_TYPES.map((t) => {
-                  var _a2;
+                  var _a;
                   return /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)("option", { value: t, children: [
-                    (_a2 = TYPE_META[t]) == null ? void 0 : _a2.emoji,
+                    (_a = TYPE_META[t]) == null ? void 0 : _a.emoji,
                     " ",
                     t
                   ] }, t);
@@ -42253,7 +42257,7 @@ function PointLocationAdmin() {
           "\uAC1C)"
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime46.jsx)("div", { style: { display: "flex", flexDirection: "column", gap: "6px" }, children: customList.map((p) => {
-          var _a2, _b2;
+          var _a, _b;
           const meta = getMeta(p.type);
           return /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)("div", { style: { background: "rgba(255,107,53,0.06)", border: "1px solid rgba(255,107,53,0.15)", borderRadius: "12px", padding: "10px 13px", display: "flex", alignItems: "center", gap: "10px" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime46.jsx)("span", { style: { fontSize: "18px" }, children: "\u2605" }),
@@ -42266,9 +42270,9 @@ function PointLocationAdmin() {
                 " \xB7 ",
                 p.region,
                 " \xB7 ",
-                (_a2 = p.lat) == null ? void 0 : _a2.toFixed(4),
+                (_a = p.lat) == null ? void 0 : _a.toFixed(4),
                 ", ",
-                (_b2 = p.lng) == null ? void 0 : _b2.toFixed(4)
+                (_b = p.lng) == null ? void 0 : _b.toFixed(4)
               ] }),
               p.fish && /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)("div", { style: { fontSize: "10px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }, children: [
                 "\u{1F41F} ",

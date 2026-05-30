@@ -446,11 +446,18 @@ export default function PointLocationAdmin() {
             <MousePointer size={13} /> 탭하여 새 위치 선택
           </div>
         )}
-        {(previewCoords || addCoords) && (
-          <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', color: activeTab === 'add' ? '#FF6B35' : '#00C48C', fontSize: '12px', fontWeight: '800', padding: '6px 14px', borderRadius: '20px', pointerEvents: 'none', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
-            {(activeTab === 'add' ? addCoords : previewCoords)?.lat.toFixed(5)}, {(activeTab === 'add' ? addCoords : previewCoords)?.lng.toFixed(5)}
+        {/* ✅ CRASH-FIX: 탭별 좌표만 표시 — (previewCoords||addCoords) 혼합 조건은 반대 탭 coords null 시 .toFixed() TypeError */}
+        {activeTab === 'add' && addCoords && (
+          <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', color: '#FF6B35', fontSize: '12px', fontWeight: '800', padding: '6px 14px', borderRadius: '20px', pointerEvents: 'none', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+            {addCoords.lat.toFixed(5)}, {addCoords.lng.toFixed(5)}
           </div>
         )}
+        {activeTab === 'edit' && previewCoords && (
+          <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', color: '#00C48C', fontSize: '12px', fontWeight: '800', padding: '6px 14px', borderRadius: '20px', pointerEvents: 'none', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+            {previewCoords.lat.toFixed(5)}, {previewCoords.lng.toFixed(5)}
+          </div>
+        )}
+
       </div>
 
       {/* ═══════════ 탭: 위치 수정 ═══════════ */}
