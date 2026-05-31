@@ -185,8 +185,33 @@ class ErrorBoundaryClass extends React.Component {
               background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)',
               borderRadius: '16px', padding: '16px', textAlign: 'left',
             }}>
-              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#DC2626', marginBottom: '8px' }}>
-                🔐 MASTER 전용 — 오류 상세
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#DC2626' }}>
+                  🔐 MASTER 전용 — 오류 상세
+                </div>
+                <button
+                  onClick={() => {
+                    const text = [
+                      this.state.error?.stack || this.state.error?.message || '',
+                      this.state.errorInfo?.componentStack
+                        ? '\n\n─── Component Stack ───\n' + this.state.errorInfo.componentStack
+                        : '',
+                      '\n\n─── URL ───\n' + window.location.href,
+                    ].join('');
+                    navigator.clipboard.writeText(text).then(() => {
+                      const btn = document.getElementById('eb-copy-btn');
+                      if (btn) { btn.textContent = '✅ 복사됨!'; setTimeout(() => { btn.textContent = '📋 전체 복사'; }, 2000); }
+                    }).catch(() => {});
+                  }}
+                  id="eb-copy-btn"
+                  style={{
+                    background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)',
+                    borderRadius: '8px', color: '#DC2626', fontSize: `calc(10px * var(--fs, 1))`,
+                    fontWeight: '800', padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  📋 전체 복사
+                </button>
               </div>
               <details open>
                 <summary style={{ cursor: 'pointer', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
@@ -207,6 +232,7 @@ class ErrorBoundaryClass extends React.Component {
               </details>
             </div>
           )}
+
         </div>
       );
     }
