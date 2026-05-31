@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node build-esbuild.mjs",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "redirects": [
     {

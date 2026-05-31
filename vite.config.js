@@ -1,4 +1,4 @@
-// vercel-force-rebuild: 2026-05-27 17:26:23
+// vercel-force-rebuild: 2026-06-01 00:30:00
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
   define: {
+    // FORCE-REBUILD: 매 배포마다 변경 → Vercel 번들 캐시 무효화
+    '__FORCE_REBUILD__': JSON.stringify('2026-06-01-v1'),
     // SEC-05: index.html ?몃씪???ㅽ겕由쏀듃???뚮젅?댁뒪?€?붾? 鍮뚮뱶 ?€?꾩뿉 移섑솚
     // loadEnv濡?.env.local ?ы븿 VITE_* 蹂€?섎? ?뺥솗???쎌쓬 (process.env??VITE_ 蹂€??誘명룷??
     '__VITE_KAKAO_APP_KEY__': JSON.stringify(env.VITE_KAKAO_APP_KEY || ''),
