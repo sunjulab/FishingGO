@@ -99,9 +99,24 @@
         <p style="color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:12px;">로딩이 오래 걸리고 있습니다</p>
         <button onclick="location.reload()" style="background:#00C48C;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">새로고침</button>
       </div>
-      <script>setTimeout(function(){var h=document.getElementById('reload-hint');if(h)h.style.display='block';},15000);</script>
+      <div id="err-msg" style="display:none;margin-top:20px;max-width:90vw;background:rgba(255,0,0,0.2);border:1px solid #ff6b6b;border-radius:8px;padding:12px;font-size:11px;color:#ff9999;word-break:break-all;text-align:left;"></div>
+      <script>
+        // 전역 JS 오류를 preloader에 표시
+        window.onerror=function(msg,src,line,col,err){
+          var e=document.getElementById('err-msg');
+          if(e){e.style.display='block';e.textContent='오류: '+msg+' ('+src+':'+line+')';}
+          var sp=document.querySelector('#app-preloader > div:nth-child(3)');
+          if(sp)sp.style.display='none';
+          return false;
+        };
+        window.addEventListener('unhandledrejection',function(ev){
+          var e=document.getElementById('err-msg');
+          if(e){e.style.display='block';e.textContent='Promise오류: '+(ev.reason?.message||ev.reason||'unknown');}
+        });
+        setTimeout(function(){var h=document.getElementById('reload-hint');if(h)h.style.display='block';},15000);
+      </script>
     </div>
-    <link rel="stylesheet" href="/assets/index.css?v=1780231366442" />
-    <script type="module" src="/assets/index.js?v=1780231366442"></script>
+    <link rel="stylesheet" href="/assets/index.css?v=1780232129792" />
+    <script type="module" src="/assets/index.js?v=1780232129792"></script>
   </body>
 </html>
