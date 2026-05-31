@@ -60,16 +60,25 @@ function updateBuildGradle() {
   console.log(`✅ android/app/build.gradle → versionCode: ${currentCode} → ${newCode}, versionName: "${VERSION}"`);
 }
 
-// ─── 3. Git commit & push ──────────────────────────────────────────────────
+// ─── 3. Git commit & push + gh-pages 안전 배포 ──────────────────────────────
 function gitPush() {
   console.log('📦 Git commit & push 중...');
   try {
     execSync('git add -A', { stdio: 'inherit' });
     execSync(`git commit -m "chore: release v${VERSION}"`, { stdio: 'inherit' });
     execSync('git push origin main', { stdio: 'inherit' });
-    console.log('✅ Git push 완료 → Vercel 자동 배포 시작됨');
+    console.log('✅ Git push 완료');
   } catch (e) {
     console.warn('⚠️ Git push 실패 (변경 없거나 수동 push 필요):', e.message);
+  }
+
+  // ✅ SAFE-DEPLOY: dist 폴더만 gh-pages에 배포 (main 전체 push 금지 — CNAME 날아감)
+  console.log('🚀 gh-pages 안전 배포 중 (dist/ 폴더만)...');
+  try {
+    execSync('npx gh-pages -d dist --nojekyll', { stdio: 'inherit' });
+    console.log('✅ gh-pages 배포 완료 → www.fishing-go.com 반영');
+  } catch (e) {
+    console.warn('⚠️ gh-pages 배포 실패:', e.message);
   }
 }
 
