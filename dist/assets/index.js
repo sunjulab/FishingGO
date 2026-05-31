@@ -27961,7 +27961,7 @@ ${pageUrl}`;
 var SITE_URL;
 var init_shareUtils = __esm({
   "src/utils/shareUtils.js"() {
-    SITE_URL = "https://fishing-go.vercel.app";
+    SITE_URL = "https://www.fishing-go.com";
   }
 });
 
@@ -40948,7 +40948,7 @@ function CatchUploadPage() {
       if (catchId)
         setCatchUrl(`${backendBase}/og/catch/${catchId}`);
       else
-        setCatchUrl("https://fishing-go.vercel.app");
+        setCatchUrl("https://www.fishing-go.com");
       const card = await generateShareCard({
         fishName,
         fishSize,
@@ -40968,7 +40968,7 @@ function CatchUploadPage() {
   };
   const handleShare = async () => {
     var _a, _b;
-    const shareLink = catchUrl || "https://fishing-go.vercel.app";
+    const shareLink = catchUrl || "https://www.fishing-go.com";
     const shareTitle = `\u{1F3A3} ${fishName} \uC870\uD669 \uC778\uC99D!`;
     const shareText = `${shareTitle}
 ${shareLink}`;

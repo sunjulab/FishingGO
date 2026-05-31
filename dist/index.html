@@ -27,9 +27,9 @@
     <meta property="og:title" content="낚시GO - 국내 최고 프리미엄 해양 낚시 인텔리전스" />
     <meta property="og:description" content="실시간 물때, 날씨, 해양 CCTV, 낚시 포인트 지도, 커뮤니티까지. 낚시GO 하나로!" />
     <!-- ✅ 20TH-A1: OG/Twitter URL — VITE_SITE_URL 환경변수 기반 플레이스홀더로 교체 (하드코딩 제거) -->
-    <!-- vite.config.js define에 https://fishing-go.vercel.app 주입, .env에 VITE_SITE_URL=https://your-domain.com 설정 필요 -->
+    <!-- vite.config.js define에 https://www.fishing-go.com 주입, .env에 VITE_SITE_URL=https://your-domain.com 설정 필요 -->
     <!-- og:image 제거 — KakaoTalk 링크 공유 시 이미지 카드 대신 텍스트 링크만 표시 -->
-    <meta property="og:url" content="https://fishing-go.vercel.app" />
+    <meta property="og:url" content="https://www.fishing-go.com" />
     <meta property="og:locale" content="ko_KR" />
 
     <!-- Twitter Card -->
@@ -84,19 +84,24 @@
 
   </head>
   <body>
-    <div id="root">
-      <!-- ✅ 앱 마운트 전 로딩 화면 (React가 대체하기 전까지 표시) -->
-      <div id="app-preloader" style="
-        position:fixed;inset:0;background:#0B1F3A;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;
-        font-family:'Pretendard',sans-serif;z-index:9999;">
-        <div style="font-size:48px;margin-bottom:16px;">🎣</div>
-        <div style="color:#00C48C;font-size:20px;font-weight:900;letter-spacing:-0.04em;margin-bottom:24px;">낚시GO</div>
-        <div style="width:40px;height:40px;border:3px solid rgba(0,196,140,0.2);border-top-color:#00C48C;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    <div id="root"></div>
+    <!-- ✅ PRELOADER: #root 밖에 배치 — React 18 Concurrent Mode DOM 충돌 방지 -->
+    <div id="app-preloader" style="
+      position:fixed;inset:0;background:#0B1F3A;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      font-family:'Pretendard',sans-serif;z-index:9999;">
+      <div style="font-size:48px;margin-bottom:16px;">🎣</div>
+      <div style="color:#00C48C;font-size:20px;font-weight:900;letter-spacing:-0.04em;margin-bottom:24px;">낚시GO</div>
+      <div style="width:40px;height:40px;border:3px solid rgba(0,196,140,0.2);border-top-color:#00C48C;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      <!-- 15초 후 자동 새로고침 버튼 표시 -->
+      <div id="reload-hint" style="display:none;margin-top:32px;text-align:center;">
+        <p style="color:rgba(255,255,255,0.6);font-size:13px;margin-bottom:12px;">로딩이 오래 걸리고 있습니다</p>
+        <button onclick="location.reload()" style="background:#00C48C;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">새로고침</button>
       </div>
+      <script>setTimeout(function(){var h=document.getElementById('reload-hint');if(h)h.style.display='block';},15000);</script>
     </div>
-    <link rel="stylesheet" href="/assets/index.css?v=1780229970778" />
-    <script type="module" src="/assets/index.js?v=1780229970778"></script>
+    <link rel="stylesheet" href="/assets/index.css?v=1780230450538" />
+    <script type="module" src="/assets/index.js?v=1780230450538"></script>
   </body>
 </html>

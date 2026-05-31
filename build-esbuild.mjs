@@ -1,6 +1,6 @@
-#!/usr/bin/env node
-// build-esbuild.mjs — esbuild 직접 빌드 (Rollup WASM 크래시 우회)
-// 핵심: rmSync 대신 파일 덮어쓰기, 상대경로 사용
+﻿#!/usr/bin/env node
+// build-esbuild.mjs ??esbuild 吏곸젒 鍮뚮뱶 (Rollup WASM ?щ옒???고쉶)
+// ?듭떖: rmSync ????뚯씪 ??뼱?곌린, ?곷?寃쎈줈 ?ъ슜
 import * as esbuild from 'esbuild';
 import {
   readFileSync, writeFileSync, existsSync,
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// ─── 환경 변수 ────────────────────────────────────────────
+// ??? ?섍꼍 蹂??????????????????????????????????????????????
 function parseEnvFile(p) {
   if (!existsSync(p)) return {};
   const obj = {};
@@ -21,26 +21,26 @@ function parseEnvFile(p) {
   }
   return obj;
 }
-// ✅ APK 빌드 시 .env.local(dev 전용)이 .env.production을 덮어쓰지 않도록
-// .env → .env.local → .env.production 순으로 읽어 production이 최종 우선
+// ??APK 鍮뚮뱶 ??.env.local(dev ?꾩슜)??.env.production????뼱?곗? ?딅룄濡?
+// .env ??.env.local ??.env.production ?쒖쑝濡??쎌뼱 production??理쒖쥌 ?곗꽑
 const env = {
   ...parseEnvFile('.env'),
-  ...parseEnvFile('.env.local'),      // dev 기본값
-  ...parseEnvFile('.env.production'), // 프로덕션이 최종 우선 (APK 빌드 핵심)
+  ...parseEnvFile('.env.local'),      // dev 湲곕낯媛?
+  ...parseEnvFile('.env.production'), // ?꾨줈?뺤뀡??理쒖쥌 ?곗꽑 (APK 鍮뚮뱶 ?듭떖)
 };
 const kakaoAppKey = process.env.VITE_KAKAO_APP_KEY || env.VITE_KAKAO_APP_KEY || '';
-const siteUrl     = process.env.VITE_SITE_URL      || env.VITE_SITE_URL      || 'https://fishing-go.vercel.app';
+const siteUrl     = process.env.VITE_SITE_URL      || env.VITE_SITE_URL      || 'https://www.fishing-go.com';
 const apiUrl      = process.env.VITE_API_URL        || env.VITE_API_URL       || 'https://fishing-go-backend.onrender.com';
 const tideKey     = process.env.VITE_TIDE_API_KEY   || env.VITE_TIDE_API_KEY  || '';
-// ✅ AUTO-VERSION: package.json에서 버전 읽기 — ForceUpdateChecker.__APP_VERSION__ 치환
+// ??AUTO-VERSION: package.json?먯꽌 踰꾩쟾 ?쎄린 ??ForceUpdateChecker.__APP_VERSION__ 移섑솚
 const appVersion  = JSON.parse(readFileSync('package.json', 'utf8')).version;
 
-// ─── dist 초기화 (rmSync 없이, 덮어쓰기) ─────────────────
+// ??? dist 珥덇린??(rmSync ?놁씠, ??뼱?곌린) ?????????????????
 mkdirSync('dist/assets', { recursive: true });
-console.log('🔧 esbuild 빌드 시작 (API:', apiUrl, ')');
+console.log('?뵩 esbuild 鍮뚮뱶 ?쒖옉 (API:', apiUrl, ')');
 
-// ─── JS 번들 ─────────────────────────────────────────────
-console.log('📦 JS 번들링...');
+// ??? JS 踰덈뱾 ?????????????????????????????????????????????
+console.log('?벀 JS 踰덈뱾留?..');
 await esbuild.build({
   entryPoints: ['src/main.jsx'],
   bundle: true,
@@ -68,7 +68,7 @@ await esbuild.build({
     'import.meta.env.VITE_KAKAO_APP_KEY':JSON.stringify(kakaoAppKey),
     'import.meta.env.VITE_TIDE_API_KEY': JSON.stringify(tideKey),
     'import.meta.env.VITE_SITE_URL':     JSON.stringify(siteUrl),
-    // ✅ AUTO-VERSION: ForceUpdateChecker에서 사용하는 빌드타임 버전 상수
+    // ??AUTO-VERSION: ForceUpdateChecker?먯꽌 ?ъ슜?섎뒗 鍮뚮뱶???踰꾩쟾 ?곸닔
     '__APP_VERSION__':                   JSON.stringify(appVersion),
   },
   minify: false,
@@ -77,16 +77,16 @@ await esbuild.build({
   mainFields: ['browser', 'module', 'main'],
   conditions: ['browser', 'import', 'module', 'default'],
 });
-console.log('✅ JS 완료:', (statSync('dist/assets/index.js').size / 1024 / 1024).toFixed(2), 'MB');
+console.log('??JS ?꾨즺:', (statSync('dist/assets/index.js').size / 1024 / 1024).toFixed(2), 'MB');
 
-// ─── CSS 번들 ─────────────────────────────────────────────
-console.log('🎨 CSS 복사...');
+// ??? CSS 踰덈뱾 ?????????????????????????????????????????????
+console.log('?렓 CSS 蹂듭궗...');
 if (existsSync('src/index.css')) {
   copyFileSync('src/index.css', 'dist/assets/index.css');
 }
-console.log('✅ CSS 완료');
+console.log('??CSS ?꾨즺');
 
-// ─── Public 복사 ──────────────────────────────────────────
+// ??? Public 蹂듭궗 ??????????????????????????????????????????
 function copyDir(src, dst) {
   if (!existsSync(src)) return;
   mkdirSync(dst, { recursive: true });
@@ -96,27 +96,28 @@ function copyDir(src, dst) {
   }
 }
 copyDir('public', 'dist');
-console.log('✅ Public 복사 완료');
+console.log('??Public 蹂듭궗 ?꾨즺');
 
-// ─── index.html ───────────────────────────────────────────
+// ??? index.html ???????????????????????????????????????????
 let html = readFileSync('index.html', 'utf8');
 html = html.replace(/__VITE_KAKAO_APP_KEY__/g, JSON.stringify(kakaoAppKey));
 html = html.replace(/__VITE_SITE_URL__/g, siteUrl);
-// ✅ CACHE-BUST: 빌드 타임스탬프 쿼리로 WebView 캐시 강제 갱신
+// ??CACHE-BUST: 鍮뚮뱶 ??꾩뒪?ы봽 荑쇰━濡?WebView 罹먯떆 媛뺤젣 媛깆떊
 const buildTs = Date.now();
 html = html.replace(
   /<script type="module" src="\/src\/main\.jsx"><\/script>/,
   `<link rel="stylesheet" href="/assets/index.css?v=${buildTs}" />\n    <script type="module" src="/assets/index.js?v=${buildTs}"></script>`
 );
 writeFileSync('dist/index.html', html, 'utf8');
-console.log('✅ index.html 완료');
+console.log('??index.html ?꾨즺');
 
-// ─── 요약 ────────────────────────────────────────────────
+// ??? ?붿빟 ????????????????????????????????????????????????
 const jsMB  = (statSync('dist/assets/index.js').size  / 1024 / 1024).toFixed(2);
 const cssKB = existsSync('dist/assets/index.css')
   ? (statSync('dist/assets/index.css').size / 1024).toFixed(1) + ' KB'
-  : '(없음)';
-console.log(`\n🎉 빌드 성공!`);
+  : '(?놁쓬)';
+console.log(`\n?럦 鍮뚮뱶 ?깃났!`);
 console.log(`   JS : dist/assets/index.js  (${jsMB} MB)`);
 console.log(`   CSS: dist/assets/index.css (${cssKB})`);
 console.log(`   HTML: dist/index.html`);
+
