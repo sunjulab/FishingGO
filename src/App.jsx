@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { registerPlugin, Capacitor } from '@capacitor/core';
 
 // ✅ BACK-FIX: 모듈 로드 시점(React 마운트 전)에 App 플러그인 등록 — 타이밍 문제 완전 해결
@@ -80,32 +80,32 @@ const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2
 // ✅ 3RD-B2: hideNav/hideHeader 경로 배열 통합 — 한 곳에서 관리 (✅ 3RD-B1: /media 제거 — MediaTab 네비게이션 정상 노출)
 const HIDE_OVERLAY_PATHS = ['/write', '/write-business', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin', '/payment-history', '/vvip-subscribe', '/admin-dashboard', '/weather', '/user/'];
 
-// 라우트 레이지 로딩 (코드 스플리팅)
-const MapHome = lazy(() => import('./pages/MapHome')); 
-const MediaTab = lazy(() => import('./pages/MediaTab'));
-const CommunityTab = lazy(() => import('./pages/CommunityTab'));
-const Shop = lazy(() => import('./pages/Shop')); 
-const MyPage = lazy(() => import('./pages/MyPage'));
-const WritePost = lazy(() => import('./pages/WritePost'));
-const CreateCrew = lazy(() => import('./pages/CreateCrew'));
-const PostDetail = lazy(() => import('./pages/PostDetail'));
-const CatchDetail = lazy(() => import('./pages/CatchDetail'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const CrewChat = lazy(() => import('./pages/CrewChat'));
-const WeatherDashboard = lazy(() => import('./pages/WeatherDashboard'));
-const VVIPSubscribe = lazy(() => import('./pages/VVIPSubscribe'));
-const WriteBusinessPost = lazy(() => import('./pages/WriteBusinessPost'));
-const CctvAdmin = lazy(() => import('./pages/CctvAdmin'));
-const NoticeDetail = lazy(() => import('./pages/NoticeDetail'));
-const SecretPointAdmin = lazy(() => import('./pages/SecretPointAdmin'));
-const PaymentHistory   = lazy(() => import('./pages/PaymentHistory'));
-const AdminDashboard   = lazy(() => import('./pages/AdminDashboard'));
-const UserProfile      = lazy(() => import('./pages/UserProfile'));
-// ✅ 로상 / AI / 대회 페이지
-const CatchUploadPage  = lazy(() => import('./pages/CatchUploadPage'));
-const CatchRankingPage = lazy(() => import('./pages/CatchRankingPage'));
-const ContestPage      = lazy(() => import('./pages/ContestPage'));
-const PointLocationAdmin = lazy(() => import('./pages/PointLocationAdmin')); // ✅ MASTER: 일반 포인트 위치 수정
+// ✅ STATIC IMPORTS: esbuild 단일 번들에서 lazy() + 동적 import() → 404 에러
+// splitting: false 환경에서 동적 chunk 파일이 없으므로 정적 import로 통일
+import MapHome from './pages/MapHome';
+import MediaTab from './pages/MediaTab';
+import CommunityTab from './pages/CommunityTab';
+import Shop from './pages/Shop';
+import MyPage from './pages/MyPage';
+import WritePost from './pages/WritePost';
+import CreateCrew from './pages/CreateCrew';
+import PostDetail from './pages/PostDetail';
+import CatchDetail from './pages/CatchDetail';
+import LoginPage from './pages/LoginPage';
+import CrewChat from './pages/CrewChat';
+import WeatherDashboard from './pages/WeatherDashboard';
+import VVIPSubscribe from './pages/VVIPSubscribe';
+import WriteBusinessPost from './pages/WriteBusinessPost';
+import CctvAdmin from './pages/CctvAdmin';
+import NoticeDetail from './pages/NoticeDetail';
+import SecretPointAdmin from './pages/SecretPointAdmin';
+import PaymentHistory from './pages/PaymentHistory';
+import AdminDashboard from './pages/AdminDashboard';
+import UserProfile from './pages/UserProfile';
+import CatchUploadPage from './pages/CatchUploadPage';
+import CatchRankingPage from './pages/CatchRankingPage';
+import ContestPage from './pages/ContestPage';
+import PointLocationAdmin from './pages/PointLocationAdmin';
 
 import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -506,7 +506,7 @@ export default function App() {
         <PermissionInitializer />
         <Header />
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <Suspense fallback={<PageLoading />}>
+          <>
             <Routes>
               <Route path="/" element={<MapHome />} />
               <Route path="/media" element={<MediaTab />} />
@@ -533,7 +533,7 @@ export default function App() {
               <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               <Route path="/user/:name" element={<UserProfile />} />
             </Routes>
-          </Suspense>
+          </>
         </div>
         <BottomNav />
       </ErrorBoundary>
