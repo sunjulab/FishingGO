@@ -30,10 +30,15 @@ const envBase = parseEnvFile('.env');
 const envProd = parseEnvFile('.env.production');
 
 // .env.production 값이 있으면 무조건 우선, 없으면 .env 기본값, 없으면 하드코딩 기본값
-const kakaoAppKey = envProd.VITE_KAKAO_APP_KEY || envBase.VITE_KAKAO_APP_KEY || '';
-const siteUrl     = envProd.VITE_SITE_URL       || envBase.VITE_SITE_URL      || 'https://www.fishing-go.com';
-const apiUrl      = envProd.VITE_API_URL         || envBase.VITE_API_URL       || 'https://fishing-go-backend.onrender.com';
-const tideKey     = envProd.VITE_TIDE_API_KEY    || envBase.VITE_TIDE_API_KEY  || '';
+const kakaoAppKey      = envProd.VITE_KAKAO_APP_KEY          || envBase.VITE_KAKAO_APP_KEY          || '';
+const siteUrl          = envProd.VITE_SITE_URL                || envBase.VITE_SITE_URL               || 'https://www.fishing-go.com';
+const apiUrl           = envProd.VITE_API_URL                 || envBase.VITE_API_URL                || 'https://fishing-go-backend.onrender.com';
+const tideKey          = envProd.VITE_TIDE_API_KEY            || envBase.VITE_TIDE_API_KEY           || '';
+const admobTesting     = envProd.VITE_ADMOB_TESTING           || envBase.VITE_ADMOB_TESTING          || 'true';
+const portoneId        = envProd.VITE_PORTONE_MERCHANT_ID     || envBase.VITE_PORTONE_MERCHANT_ID    || '';
+const portoneKey       = envProd.VITE_PORTONE_CHANNEL_KEY     || envBase.VITE_PORTONE_CHANNEL_KEY    || '';
+const adsenseDisplay   = envProd.VITE_ADSENSE_SLOT_DISPLAY    || envBase.VITE_ADSENSE_SLOT_DISPLAY   || '';
+const adsenseInfeed    = envProd.VITE_ADSENSE_SLOT_INFEED     || envBase.VITE_ADSENSE_SLOT_INFEED    || '';
 
 // ✅ AUTO-VERSION: package.json에서 버전 읽기 → ForceUpdateChecker.__APP_VERSION__ 치환
 const appVersion  = JSON.parse(readFileSync('package.json', 'utf8')).version;
@@ -62,18 +67,27 @@ await esbuild.build({
     '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl',
   },
   define: {
-    'process.env.NODE_ENV':               '"production"',
-    'import.meta.env.PROD':               'true',
-    'import.meta.env.DEV':                'false',
-    'import.meta.env.SSR':                'false',
-    'import.meta.env.MODE':               '"production"',
-    'import.meta.env.BASE_URL':           '"/"',
-    'import.meta.env.VITE_API_URL':       JSON.stringify(apiUrl),
-    'import.meta.env.VITE_KAKAO_APP_KEY': JSON.stringify(kakaoAppKey),
-    'import.meta.env.VITE_TIDE_API_KEY':  JSON.stringify(tideKey),
-    'import.meta.env.VITE_SITE_URL':      JSON.stringify(siteUrl),
+    'process.env.NODE_ENV':                        '"production"',
+    // ✅ import.meta.env 전체 객체로 정의 — 브라우저에서 undefined 방지
+    'import.meta.env': JSON.stringify({
+      PROD: true,
+      DEV: false,
+      SSR: false,
+      MODE: 'production',
+      BASE_URL: '/',
+      VITE_API_URL:               apiUrl,
+      VITE_KAKAO_APP_KEY:         kakaoAppKey,
+      VITE_TIDE_API_KEY:          tideKey,
+      VITE_SITE_URL:              siteUrl,
+      VITE_ADMOB_TESTING:         admobTesting,
+      VITE_PORTONE_MERCHANT_ID:   portoneId,
+      VITE_PORTONE_CHANNEL_KEY:   portoneKey,
+      VITE_ADSENSE_SLOT_DISPLAY:  adsenseDisplay,
+      VITE_ADSENSE_SLOT_INFEED:   adsenseInfeed,
+      VITE_DISABLE_PWA:           'true',
+    }),
     // ✅ AUTO-VERSION: ForceUpdateChecker에서 사용하는 빌드타임 버전 상수
-    '__APP_VERSION__':                    JSON.stringify(appVersion),
+    '__APP_VERSION__':  JSON.stringify(appVersion),
   },
   minify: true,
   treeShaking: true,
