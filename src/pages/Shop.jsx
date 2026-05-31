@@ -25,16 +25,18 @@ const SOURCE_STYLE = {
 export default function Shop() {
   const [products,     setProducts]     = useState([]);
   const [promos,       setPromos]       = useState([]);
+  const [manualItems,  setManualItems]  = useState([]);  // ✅ 수동 등록 상품
   const [search,       setSearch]       = useState('');
   const [activeCat,    setActiveCat]    = useState('전체');
   const [loading,      setLoading]      = useState(true);
   const [promoLoading, setPromoLoading] = useState(true);
   const [searchQuery,  setSearchQuery]  = useState(''); // ✅ 실제 검색 중인 키워드
 
-  // 최초 마운트 시 전체 + 특가 동시 로드
   useEffect(() => {
     fetchProducts('낚시용품', 'all');
     fetchPromo();
+    // 수동 등록 상품 로드
+    apiClient.get('/api/shop/manual').then(r => setManualItems(r.data || [])).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -172,6 +174,39 @@ export default function Shop() {
           ))}
         </div>
       </div>
+
+      {/* ✅ 쿠팡 파트너스 수동 등록 상품 (iframe 위젯) */}
+      {manualItems.length > 0 && (
+        <div style={{ padding: '12px 12px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '16px' }}>🛒</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>쿠팡 파트너스 추천</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+            {manualItems.map(item => (
+              <a
+                key={item._id}
+                href={item.shortUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ flexShrink: 0, display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
+              >
+                <iframe
+                  src={item.iframeSrc}
+                  width={120} height={240}
+                  frameBorder={0} scrolling="no"
+                  referrerPolicy="unsafe-url"
+                  title={`쿠팡 상품 ${item.tag}`}
+                  style={{ display: 'block', pointerEvents: 'none' }}
+                />
+              </a>
+            ))}
+          </div>
+          <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '4px', paddingLeft: '2px' }}>
+            이 상품은 쿠팡 파트너스를 통해 제공되며 구매 시 일정객의 수수료를 받을 수 있습니다.
+          </div>
+        </div>
+      )}
 
       {/* ── AliExpress 오늘 특가 배너 (검색 중엔 숨김) ── */}
       {!searchQuery && promos.length > 0 && (

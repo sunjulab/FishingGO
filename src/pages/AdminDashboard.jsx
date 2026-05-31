@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, Users, CreditCard, DollarSign, RefreshCw, AlertCircle, BellRing, Send, MessageSquare, CheckCircle, Clock, ChevronDown, ChevronUp, Filter, Wifi, WifiOff, UserCheck, UserPlus, Activity, Eye, Globe } from 'lucide-react';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A1: ADMIN_ID/EMAIL import
@@ -48,6 +48,42 @@ export default function AdminDashboard() {
     msg: '', location: '',
     pushEmail: '', pushTitle: '', pushMsg: '',
   });
+
+  // ✅ 수동 쇼핑 상품 관리
+  const [manualItems,   setManualItems]   = useState([]);
+  const [shopForm,      setShopForm]      = useState({ shortUrl: '', iframeCode: '', tag: '낚시용품' });
+  const [shopLoading,   setShopLoading]   = useState(false);
+  const [shopMsg,       setShopMsg]       = useState('');
+
+  const fetchManualItems = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/shop/manual');
+      setManualItems(res.data || []);
+    } catch { /* 무시 */ }
+  }, []);
+
+  const handleShopAdd = async () => {
+    if (!shopForm.shortUrl.trim() || !shopForm.iframeCode.trim()) {
+      setShopMsg('단축 URL과 iframe 코드를 모두 입력하세요.'); return;
+    }
+    setShopLoading(true); setShopMsg('');
+    try {
+      await apiClient.post('/api/shop/manual', shopForm);
+      setShopForm({ shortUrl: '', iframeCode: '', tag: '낚시용품' });
+      setShopMsg('✅ 등록 완료!');
+      await fetchManualItems();
+    } catch (e) {
+      setShopMsg('❌ ' + (e.response?.data?.error || '등록 실패'));
+    } finally { setShopLoading(false); }
+  };
+
+  const handleShopDelete = async (id) => {
+    if (!window.confirm('삭제하시겠습니까?')) return;
+    try {
+      await apiClient.delete(`/api/shop/manual/${id}`);
+      await fetchManualItems();
+    } catch { alert('삭제 실패'); }
+  };
   const { tab: alertTab, sending: alertSending, msg: alertMsg, location: alertLocation,
     pushEmail, pushTitle, pushMsg } = alertState;
   const setAlertField = (field) => (val) => setAlertState(s => ({ ...s, [field]: val }));
@@ -65,9 +101,10 @@ export default function AdminDashboard() {
       if (!isAdmin) { navigate('/'); return; }
       setAuthChecked(true);
       fetchStats();
+      fetchManualItems();
     }, 0);
     return () => clearTimeout(t);
-  }, [isAdmin, navigate]);
+  }, [isAdmin, navigate, fetchManualItems]);
 
   const fetchStats = async () => {
     setLoading(true); setError('');
@@ -747,6 +784,69 @@ function ForceTierPanel({ addToast }) {
         >
           🔨 {loading ? '처리 중...' : `${target || '계정 입력'} → ${tier} 강제 변경`}
         </button>
+      </div>
+
+      {/* ✅ 쇼핑 수동 상품 등록 */}
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '20px', marginTop: '16px' }}>
+        <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '14px' }}>🛒 쇼핑 상품 수동 등록 (쿠팡 파트너스)</div>
+
+        {/* 입력 폼 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+          <input
+            placeholder="단축 URL (예: https://link.coupang.com/a/ecF5QJXQjc)"
+            value={shopForm.shortUrl}
+            onChange={e => setShopForm(s => ({ ...s, shortUrl: e.target.value }))}
+            style={{ padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
+          />
+          <textarea
+            placeholder={`iframe 코드 전체 붙여넣기\n예: <iframe src="https://coupa.ng/cna2eE" width="120" height="240" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics></iframe>`}
+            value={shopForm.iframeCode}
+            onChange={e => setShopForm(s => ({ ...s, iframeCode: e.target.value }))}
+            rows={3}
+            style={{ padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '600', outline: 'none', resize: 'vertical', fontFamily: 'monospace' }}
+          />
+          <input
+            placeholder="태그/카테고리 (예: 낚시용품, 루어, 릴)"
+            value={shopForm.tag}
+            onChange={e => setShopForm(s => ({ ...s, tag: e.target.value }))}
+            style={{ padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
+          />
+          <button
+            onClick={handleShopAdd}
+            disabled={shopLoading}
+            style={{ padding: '13px', borderRadius: '12px', border: 'none', background: shopLoading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#0056D2,#0098FF)', color: '#fff', fontWeight: '950', fontSize: `calc(13px * var(--fs, 1))`, cursor: shopLoading ? 'not-allowed' : 'pointer' }}
+          >
+            {shopLoading ? '등록 중...' : '➕ 쇼핑탭에 등록'}
+          </button>
+          {shopMsg && <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: shopMsg.startsWith('✅') ? '#00C48C' : '#FF6B6B', fontWeight: '700' }}>{shopMsg}</div>}
+        </div>
+
+        {/* 등록된 상품 목록 */}
+        {manualItems.length > 0 && (
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px' }}>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginBottom: '10px' }}>등록된 상품 {manualItems.length}개</div>
+            {manualItems.map(item => (
+              <div key={item._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '10px 12px' }}>
+                <iframe
+                  src={item.iframeSrc}
+                  width={60} height={90}
+                  frameBorder={0} scrolling="no"
+                  referrerPolicy="unsafe-url"
+                  style={{ borderRadius: '6px', flexShrink: 0 }}
+                  title="product"
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.7)', fontWeight: '700', marginBottom: '4px', wordBreak: 'break-all' }}>{item.shortUrl}</div>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>#{item.tag}</div>
+                </div>
+                <button
+                  onClick={() => handleShopDelete(item._id)}
+                  style={{ background: 'rgba(255,80,80,0.15)', border: 'none', borderRadius: '8px', color: '#FF6B6B', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', padding: '6px 10px', cursor: 'pointer', flexShrink: 0 }}
+                >삭제</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

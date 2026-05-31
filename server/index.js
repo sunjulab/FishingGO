@@ -7759,6 +7759,87 @@ app.get('/api/shop/recommend', async (req, res) => {
   }
 });
 
+// ─── 쇼핑 수동 상품 관리 (관리자 전용) ──────────────────────────────────────
+// 컬렉션: manual_shop_items
+// 필드: { _id, shortUrl, iframeSrc, tag, order, createdAt }
+
+/**
+ * GET /api/shop/manual
+ * 수동 등록 상품 목록 (전체 공개)
+ */
+app.get('/api/shop/manual', async (req, res) => {
+  try {
+    if (!dbReady) return res.json([]);
+    const items = await mongoose.connection.db
+      .collection('manual_shop_items')
+      .find({})
+      .sort({ order: 1, createdAt: -1 })
+      .toArray();
+    res.json(items);
+  } catch (err) {
+    logger.warn('[Shop Manual] 조회 실패:', err.message);
+    res.json([]);
+  }
+});
+
+/**
+ * POST /api/shop/manual
+ * 수동 상품 등록 (관리자 전용)
+ * body: { shortUrl, iframeCode, tag }
+ */
+app.post('/api/shop/manual', requireAuth, async (req, res) => {
+  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
+    return res.status(403).json({ error: '관리자 권한 필요' });
+  }
+  try {
+    const { shortUrl, iframeCode, tag } = req.body;
+    if (!shortUrl || !iframeCode) {
+      return res.status(400).json({ error: '단축 URL과 iframe 코드 필수' });
+    }
+    // iframe src 파싱 (보안: src만 추출해서 저장)
+    const srcMatch = iframeCode.match(/src=["']([^"']+)["']/i);
+    if (!srcMatch) return res.status(400).json({ error: 'iframe src 추출 실패' });
+    const iframeSrc = srcMatch[1];
+
+    const doc = {
+      shortUrl:  shortUrl.trim(),
+      iframeSrc: iframeSrc.trim(),
+      tag:       (tag || '낚시용품').trim(),
+      order:     Date.now(),
+      createdAt: new Date(),
+    };
+    const result = await mongoose.connection.db
+      .collection('manual_shop_items')
+      .insertOne(doc);
+    res.json({ ok: true, id: result.insertedId });
+  } catch (err) {
+    logger.error('[Shop Manual] 등록 실패:', err.message);
+    res.status(500).json({ error: '등록 실패' });
+  }
+});
+
+/**
+ * DELETE /api/shop/manual/:id
+ * 수동 상품 삭제 (관리자 전용)
+ */
+app.delete('/api/shop/manual/:id', requireAuth, async (req, res) => {
+  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
+    return res.status(403).json({ error: '관리자 권한 필요' });
+  }
+  try {
+    const { ObjectId } = require('mongodb');
+    await mongoose.connection.db
+      .collection('manual_shop_items')
+      .deleteOne({ _id: new ObjectId(req.params.id) });
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('[Shop Manual] 삭제 실패:', err.message);
+    res.status(500).json({ error: '삭제 실패' });
+  }
+});
+
 // 카테고리 → 알리 키워드 변환 헬퍼
 function _mapToAliKeyword(category) {
   const map = {
