@@ -25,14 +25,6 @@ function StatCard({ label, value, icon: Icon, color, sub }) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  // ✅ FIX-ADMIN: 4중 보장 (id/email/gmail/MASTER tier) — 이전 2중체크로 인해 Gmail 로그인 시 리다이렉트 버그 수정
-  const isAdmin = useUserStore((state) =>
-    state.user?.id === ADMIN_ID ||
-    state.user?.email === ADMIN_EMAIL ||
-    state.user?.email === 'sunjulab.k@gmail.com' ||
-    state.userTier === 'MASTER'
-  );
-
   const addToast = useToastStore((s) => s.addToast);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +32,9 @@ export default function AdminDashboard() {
   const [authChecked, setAuthChecked] = useState(false);
   const [userStats, setUserStats] = useState(null);
   const [userStatsLoading, setUserStatsLoading] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true); // ✅ REALTIME-FIX: 진입 시 개시 자동갱신
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // ✅ NEW-B7: 알림 관련 state 6개 → 단일 객체로 응집
+  // ✅ 알림 관련 state
   const [alertState, setAlertState] = useState({
     tab: 'broadcast', sending: false,
     msg: '', location: '',
@@ -84,6 +76,7 @@ export default function AdminDashboard() {
       await fetchManualItems();
     } catch { alert('삭제 실패'); }
   };
+
   const { tab: alertTab, sending: alertSending, msg: alertMsg, location: alertLocation,
     pushEmail, pushTitle, pushMsg } = alertState;
   const setAlertField = (field) => (val) => setAlertState(s => ({ ...s, [field]: val }));
@@ -96,17 +89,34 @@ export default function AdminDashboard() {
   const setPushMsg       = setAlertField('pushMsg');
 
   useEffect(() => {
-    // ✅ isAdmin은 반응형 Zustand 셀렉터 — MASTER 뱃지와 동일한 체크
-    // setTimeout으로 첫 렌더 후 확인 (hydration 완료 대기)
-    const t = setTimeout(() => {
-      if (!isAdmin) { navigate('/'); return; }
-      setAuthChecked(true);
-      fetchStats();
-      fetchManualItems();
-    }, 500); // 500ms: 충분한 hydration 대기
-    return () => clearTimeout(t);
+    // ✅ 서버 API 기반 권한 확인 — 클라이언트 isAdmin 체크 완전 제거
+    // /api/admin/revenue가 성공 = 관리자, 403 = 비관리자
+    const check = async () => {
+      try {
+        const res = await apiClient.get('/api/admin/revenue');
+        // 서버가 정상 응답 → 관리자 확인됨
+        setStats(res.data);
+        setAuthChecked(true);
+        fetchManualItems();
+        // user-stats도 병렬 로드
+        apiClient.get('/api/admin/user-stats')
+          .then(r => setUserStats(r.data))
+          .catch(() => {});
+      } catch (err) {
+        if (err.response?.status === 403 || err.response?.status === 401) {
+          navigate('/');
+        } else {
+          // 네트워크 오류 등 → 일단 표시 (서버 일시 장애)
+          setAuthChecked(true);
+          setError('데이터 로드 실패 — 잠시 후 새로고침해주세요');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    check();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]);
+  }, []);
 
   const fetchStats = async () => {
     setLoading(true); setError('');
