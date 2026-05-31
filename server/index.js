@@ -7794,6 +7794,7 @@ app.post('/api/shop/manual', requireAuth, async (req, res) => {
     return res.status(403).json({ error: '관리자 권한 필요' });
   }
   try {
+    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중입니다. 잠시 후 다시 시도해주세요.' });
     const { source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.body;
     if (!shortUrl) return res.status(400).json({ error: '단축 URL 필수' });
 
