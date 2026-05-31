@@ -324,6 +324,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px' }}>최근 결제 내역</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {stats.recentPayments.map((p, i) => (
+                    <div key={String(p._id || p.merchant_uid || i)} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div>
                         <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{p.userName || p.userId}</div>
                         <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>
@@ -340,6 +341,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   ))}
+
                 </div>
               </div>
             )}
