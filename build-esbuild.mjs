@@ -102,9 +102,11 @@ console.log('✅ Public 복사 완료');
 let html = readFileSync('index.html', 'utf8');
 html = html.replace(/__VITE_KAKAO_APP_KEY__/g, JSON.stringify(kakaoAppKey));
 html = html.replace(/__VITE_SITE_URL__/g, siteUrl);
+// ✅ CACHE-BUST: 빌드 타임스탬프 쿼리로 WebView 캐시 강제 갱신
+const buildTs = Date.now();
 html = html.replace(
   /<script type="module" src="\/src\/main\.jsx"><\/script>/,
-  `<link rel="stylesheet" href="/assets/index.css" />\n    <script type="module" src="/assets/index.js"></script>`
+  `<link rel="stylesheet" href="/assets/index.css?v=${buildTs}" />\n    <script type="module" src="/assets/index.js?v=${buildTs}"></script>`
 );
 writeFileSync('dist/index.html', html, 'utf8');
 console.log('✅ index.html 완료');
