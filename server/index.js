@@ -432,7 +432,7 @@ app.get('/api/health', (req, res) => {
 // KakaoTalk/WhatsApp/Telegram 등 크롤러: OG HTML 반환
 // 일반 브라우저: 프론트엔드 SPA로 리다이렉트
 // 브라우저 리다이렉트 대상: ?ref=og 붙여서 Vercel의 missing 조건 우회 → index.html 서빙
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://fishing-go.vercel.app';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.fishing-go.com';
 // 사진 없을 경우 앱 아이콘으로 대체 (182KB)
 const DEFAULT_OG_IMG = `${FRONTEND_URL}/icon-192.png`;
 
@@ -6423,7 +6423,7 @@ const ytCache = new Map();
 const YT_CACHE_TTL_MS = 4 * 60 * 60 * 1000; // ✅ 4시간 캐시 (30분→4시간: 일일 쿼터 초과 방지)
 // ✅ 프로덕션 URL 환경변수 지원 (기본값: 알려진 배포 URL)
 // YouTube API는 API 키로 인증, Referer는 확인용 헤더 (필수값 아님)
-const YT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.ALLOWED_ORIGIN || 'https://fishing-go.vercel.app';
+const YT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.ALLOWED_ORIGIN || 'https://www.fishing-go.com';
 // 30분 TTL: 48회/일 × 201 units = 9,648 units → 쿼터 초과 위험
 // 4시간 TTL:  6회/일 × 201 units = 1,206 units → 안전권 유지
 
