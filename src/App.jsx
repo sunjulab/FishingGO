@@ -457,23 +457,51 @@ function AdminRoute({ children }) {
   const [status, setStatus] = useState('loading'); // 'loading' | 'ok' | 'deny'
 
   useEffect(() => {
-    // ✅ FIX: 0ms 클로저 stale 문제 → getState()로 현재 상태 직접 읽기
-    // localStorage 동기 초기화이므로 300ms면 충분
-    const t = setTimeout(() => {
+    const check = async () => {
+      // 1) localStorage 빠른 체크
       const s = useUserStore.getState();
-      const ok =
+      const localOk =
         s.user?.id    === ADMIN_ID ||
         s.user?.email === ADMIN_EMAIL ||
         s.user?.email === 'sunjulab.k@gmail.com' ||
         s.userTier    === 'MASTER';
-      setStatus(ok ? 'ok' : 'deny');
-    }, 300);
+
+      if (localOk) { setStatus('ok'); return; }
+
+      // 2) localStorage 실패 → access_token으로 서버에서 재확인
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) { setStatus('deny'); return; }
+
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/user/me`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) { setStatus('deny'); return; }
+
+        const data = await res.json();
+        const serverOk =
+          data?.tier    === 'MASTER' ||
+          data?.email   === 'sunjulab.k@gmail.com' ||
+          data?.id      === ADMIN_ID;
+
+        if (serverOk) {
+          // 서버 확인 성공 → store 동기화
+          useUserStore.getState().setUser?.(data);
+        }
+        setStatus(serverOk ? 'ok' : 'deny');
+      } catch {
+        setStatus('deny');
+      }
+    };
+
+    const t = setTimeout(check, 100);
     return () => clearTimeout(t);
   }, []);
 
-  if (status === 'loading') return null;           // 판단 대기
-  if (status === 'deny')   return <Navigate to="/" replace />; // 권한 없음
-  return children;                                 // 권한 있음
+  if (status === 'loading') return null;
+  if (status === 'deny')   return <Navigate to="/" replace />;
+  return children;
 }
 
 
