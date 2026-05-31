@@ -43336,7 +43336,7 @@ var AppUpdate = registerPlugin("AppUpdate", {
 
 // src/components/ForceUpdateChecker.jsx
 var import_jsx_runtime7 = __toESM(require_jsx_runtime(), 1);
-var CURRENT_APP_VERSION = true ? "2.1.50" : "2.1.17";
+var CURRENT_APP_VERSION = true ? "2.1.51" : "2.1.17";
 function isVersionLower(v1, v2) {
   const p1 = v1.split(".").map(Number);
   const p2 = v2.split(".").map(Number);
