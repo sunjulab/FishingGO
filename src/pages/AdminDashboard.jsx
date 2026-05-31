@@ -96,23 +96,17 @@ export default function AdminDashboard() {
   const setPushMsg       = setAlertField('pushMsg');
 
   useEffect(() => {
-    // ✅ FIX: isAdmin은 첫 렌더 시 false(stale)일 수 있으므로
-    //    useUserStore.getState()로 직접 현재 상태를 읽음 (클로저 캡처 문제 방지)
+    // ✅ isAdmin은 반응형 Zustand 셀렉터 — MASTER 뱃지와 동일한 체크
+    // setTimeout으로 첫 렌더 후 확인 (hydration 완료 대기)
     const t = setTimeout(() => {
-      const s = useUserStore.getState();
-      const adminNow =
-        s.user?.id    === ADMIN_ID ||
-        s.user?.email === ADMIN_EMAIL ||
-        s.user?.email === 'sunjulab.k@gmail.com' ||
-        s.userTier    === 'MASTER';
-      if (!adminNow) { navigate('/'); return; }
+      if (!isAdmin) { navigate('/'); return; }
       setAuthChecked(true);
       fetchStats();
       fetchManualItems();
-    }, 200); // 200ms: Zustand localStorage hydration 완료 대기
+    }, 500); // 500ms: 충분한 hydration 대기
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ✅ 마운트 1회만 실행 (isAdmin 의존성 제거로 재실행 방지)
+  }, [isAdmin]);
 
   const fetchStats = async () => {
     setLoading(true); setError('');

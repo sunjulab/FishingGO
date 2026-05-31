@@ -558,7 +558,7 @@ export default function App() {
               <Route path="/secret-admin" element={<AdminRoute><SecretPointAdmin /></AdminRoute>} />
               <Route path="/point-admin" element={<AdminRoute><PointLocationAdmin /></AdminRoute>} />
               <Route path="/payment-history" element={<PaymentHistory />} />
-              <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/user/:name" element={<UserProfile />} />
             </Routes>
           </>
