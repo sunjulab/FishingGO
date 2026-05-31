@@ -175,36 +175,66 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* ✅ 쿠팡 파트너스 수동 등록 상품 (iframe 위젯) */}
+      {/* ✅ 수동 등록 상품 (쿠팡 파트너스 + 알리익스프레스) */}
       {manualItems.length > 0 && (
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <span style={{ fontSize: '16px' }}>🛒</span>
-            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>쿠팡 파트너스 추천</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
           </div>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {manualItems.map(item => (
-              <a
-                key={item._id}
-                href={item.shortUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ flexShrink: 0, display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
-              >
-                <iframe
-                  src={item.iframeSrc}
-                  width={120} height={240}
-                  frameBorder={0} scrolling="no"
-                  referrerPolicy="unsafe-url"
-                  title={`쿠팡 상품 ${item.tag}`}
-                  style={{ display: 'block', pointerEvents: 'none' }}
-                />
-              </a>
+              item.source === 'ali' ? (
+                /* 알리익스프레스 카드 */
+                <a
+                  key={item._id}
+                  href={item.shortUrl}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', width: '120px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
+                >
+                  <div style={{ position: 'relative' }}>
+                    <img src={item.imageUrl} alt={item.productName || '알리 상품'} width={120} height={120} style={{ display: 'block', objectFit: 'cover', width: '100%', height: '120px' }} />
+                    <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
+                  </div>
+                  {item.productName && (
+                    <div style={{ padding: '6px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {item.productName}
+                    </div>
+                  )}
+                </a>
+              ) : (
+                /* 쿠팡 파트너스 iframe 카드 */
+                <a
+                  key={item._id}
+                  href={item.shortUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flexShrink: 0, display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
+                >
+                  <iframe
+                    src={item.iframeSrc}
+                    width={120} height={240}
+                    frameBorder={0} scrolling="no"
+                    referrerPolicy="unsafe-url"
+                    title={`쿠팡 상품 ${item.tag}`}
+                    style={{ display: 'block', pointerEvents: 'none' }}
+                  />
+                </a>
+              )
             ))}
           </div>
-          <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '4px', paddingLeft: '2px' }}>
-            이 상품은 쿠팡 파트너스를 통해 제공되며 구매 시 일정객의 수수료를 받을 수 있습니다.
-          </div>
+          {/* 면책 문구 */}
+          {manualItems.some(i => !i.source || i.source === 'coupang') && (
+            <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '4px', paddingLeft: '2px' }}>
+              이 상품은 쿠팡 파트너스를 통해 제공되며 구매 시 일정액의 수수료를 받을 수 있습니다.
+            </div>
+          )}
+          {manualItems.some(i => i.source === 'ali') && (
+            <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '2px', paddingLeft: '2px' }}>
+              AliExpress 제휴 링크를 포함하며 구매 시 수수료를 받을 수 있습니다.
+            </div>
+          )}
         </div>
       )}
 

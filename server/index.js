@@ -7785,7 +7785,8 @@ app.get('/api/shop/manual', async (req, res) => {
 /**
  * POST /api/shop/manual
  * 수동 상품 등록 (관리자 전용)
- * body: { shortUrl, iframeCode, tag }
+ * body: { source, shortUrl, iframeCode, imageUrl, productName, tag }
+ *   source: 'coupang'(기본) | 'ali'
  */
 app.post('/api/shop/manual', requireAuth, async (req, res) => {
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
@@ -7793,22 +7794,30 @@ app.post('/api/shop/manual', requireAuth, async (req, res) => {
     return res.status(403).json({ error: '관리자 권한 필요' });
   }
   try {
-    const { shortUrl, iframeCode, tag } = req.body;
-    if (!shortUrl || !iframeCode) {
-      return res.status(400).json({ error: '단축 URL과 iframe 코드 필수' });
-    }
-    // iframe src 파싱 (보안: src만 추출해서 저장)
-    const srcMatch = iframeCode.match(/src=["']([^"']+)["']/i);
-    if (!srcMatch) return res.status(400).json({ error: 'iframe src 추출 실패' });
-    const iframeSrc = srcMatch[1];
+    const { source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.body;
+    if (!shortUrl) return res.status(400).json({ error: '단축 URL 필수' });
 
     const doc = {
-      shortUrl:  shortUrl.trim(),
-      iframeSrc: iframeSrc.trim(),
-      tag:       (tag || '낚시용품').trim(),
-      order:     Date.now(),
-      createdAt: new Date(),
+      source:      source.trim(),
+      shortUrl:    shortUrl.trim(),
+      tag:         (tag || '낚시용품').trim(),
+      order:       Date.now(),
+      createdAt:   new Date(),
     };
+
+    if (source === 'ali') {
+      // 알리익스프레스: 이미지 URL + 상품명
+      if (!imageUrl) return res.status(400).json({ error: '알리 상품 이미지 URL 필수' });
+      doc.imageUrl     = imageUrl.trim();
+      doc.productName  = (productName || '').trim();
+    } else {
+      // 쿠팡: iframe 코드에서 src 파싱
+      if (!iframeCode) return res.status(400).json({ error: '쿠팡 iframe 코드 필수' });
+      const srcMatch = iframeCode.match(/src=["']([^"']+)["']/i);
+      if (!srcMatch) return res.status(400).json({ error: 'iframe src 추출 실패' });
+      doc.iframeSrc = srcMatch[1].trim();
+    }
+
     const result = await mongoose.connection.db
       .collection('manual_shop_items')
       .insertOne(doc);
