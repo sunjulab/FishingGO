@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="ko">
   <head>
+    <!-- ✅ HTTPS 강제 리다이렉트: http 또는 www 없는 apex 도메인 접속 시 즉시 이동 -->
+    <script>
+      (function(){
+        var h = location.hostname;
+        var proto = location.protocol;
+        if (proto !== 'https:' || h === 'fishing-go.com') {
+          location.replace('https://www.fishing-go.com' + location.pathname + location.search + location.hash);
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Fishing GO - 낚시GO | 국내 최고 프리미엄 해양 낚시 인텔리전스</title>

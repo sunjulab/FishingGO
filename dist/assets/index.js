@@ -16242,7 +16242,7 @@ var API_BASE_URL, apiClient, isRefreshing, failedQueue, MAX_QUEUE, processQueue,
 var init_api = __esm({
   "src/api/index.js"() {
     init_axios2();
-    API_BASE_URL = "https://fishing-go-backend.onrender.com";
+    API_BASE_URL = "http://localhost:5000";
     if (false) {
       console.warn("[apiClient] \u26A0\uFE0F VITE_API_URL \uBBF8\uC124\uC815 \u2014 localhost:5000\uC73C\uB85C \uC694\uCCAD \uC911. \uBC30\uD3EC \uD658\uACBD\uC5D0\uC11C \uBC18\uB4DC\uC2DC \uC124\uC815\uD558\uC138\uC694.");
     }
@@ -23906,7 +23906,7 @@ var init_FishingPointBottomSheet = __esm({
     init_dist();
     init_marineApi();
     import_jsx_runtime10 = __toESM(require_jsx_runtime(), 1);
-    API_BASE = "https://fishing-go-backend.onrender.com";
+    API_BASE = "http://localhost:5000";
     YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   }
 });
@@ -27961,7 +27961,7 @@ ${pageUrl}`;
 var SITE_URL;
 var init_shareUtils = __esm({
   "src/utils/shareUtils.js"() {
-    SITE_URL = "https://www.fishing-go.com";
+    SITE_URL = "https://fishing-go.vercel.app";
   }
 });
 
@@ -30696,7 +30696,7 @@ var init_CommunityTab = __esm({
     init_shareUtils();
     import_jsx_runtime24 = __toESM(require_jsx_runtime(), 1);
     CatchRankingPage2 = (0, import_react27.lazy)(() => Promise.resolve().then(() => (init_CatchRankingPage(), CatchRankingPage_exports)));
-    SOCKET_URL2 = "https://fishing-go-backend.onrender.com";
+    SOCKET_URL2 = "http://localhost:5000";
     _communityCache = { business: [], crews: [], notices: [], stories: [] };
     OPEN_CATEGORIES = ["\uC804\uCCB4", "\uB8E8\uC5B4", "\uCC0C\uB09A\uC2DC", "\uC6D0\uD22C", "\uB9B4\uCC0C", "\uC120\uC0C1", "\uC5D0\uAE45", "\uC870\uD669 \uACF5\uC720"];
     HARBOR_DATA = [
@@ -36381,7 +36381,7 @@ var init_CrewChat = __esm({
     init_api();
     init_imageUtils();
     import_jsx_runtime34 = __toESM(require_jsx_runtime(), 1);
-    SOCKET_URL3 = "https://fishing-go-backend.onrender.com";
+    SOCKET_URL3 = "http://localhost:5000";
     formatMsgTime = (msg) => {
       if (msg.time)
         return msg.time;
@@ -36982,7 +36982,7 @@ async function verifyReceiptOnServer(transaction) {
   const productId = ((_b = (_a = transaction == null ? void 0 : transaction.products) == null ? void 0 : _a[0]) == null ? void 0 : _b.id) || ((_c = transaction == null ? void 0 : transaction.nativePurchase) == null ? void 0 : _c.productId) || "";
   const purchaseToken = (transaction == null ? void 0 : transaction.purchaseId) || ((_d = transaction == null ? void 0 : transaction.nativePurchase) == null ? void 0 : _d.purchaseToken) || (transaction == null ? void 0 : transaction.transactionId);
   const res = await fetch(
-    "https://fishing-go-backend.onrender.com/api/payment/google-iap/verify",
+    "http://localhost:5000/api/payment/google-iap/verify",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37021,7 +37021,7 @@ async function openPayplePayment(planKey, userInfo) {
   if (!product)
     throw new Error("INVALID_PLAN");
   const res = await fetch(
-    "https://fishing-go-backend.onrender.com/api/payment/payple/request",
+    "http://localhost:5000/api/payment/payple/request",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39018,7 +39018,7 @@ var init_NoticeDetail = __esm({
     init_esm11();
     init_shareUtils();
     import_jsx_runtime39 = __toESM(require_jsx_runtime(), 1);
-    SOCKET_URL4 = "https://fishing-go-backend.onrender.com";
+    SOCKET_URL4 = "http://localhost:5000";
   }
 });
 
@@ -40944,11 +40944,11 @@ function CatchUploadPage() {
         contestId: contestId || null
       });
       const catchId = ((_b = (_a = catchRes.data) == null ? void 0 : _a.record) == null ? void 0 : _b._id) || ((_d = (_c = catchRes.data) == null ? void 0 : _c.record) == null ? void 0 : _d.id);
-      const backendBase = "https://fishing-go-backend.onrender.com";
+      const backendBase = "http://localhost:5000";
       if (catchId)
         setCatchUrl(`${backendBase}/og/catch/${catchId}`);
       else
-        setCatchUrl("https://www.fishing-go.com");
+        setCatchUrl("https://fishing-go.vercel.app");
       const card = await generateShareCard({
         fishName,
         fishSize,
@@ -40968,7 +40968,7 @@ function CatchUploadPage() {
   };
   const handleShare = async () => {
     var _a, _b;
-    const shareLink = catchUrl || "https://www.fishing-go.com";
+    const shareLink = catchUrl || "https://fishing-go.vercel.app";
     const shareTitle = `\u{1F3A3} ${fishName} \uC870\uD669 \uC778\uC99D!`;
     const shareText = `${shareTitle}
 ${shareLink}`;
@@ -42580,7 +42580,7 @@ init_lucide_react();
 init_useUserStore();
 init_useNotifStore();
 var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
-var SOCKET_URL = "https://fishing-go-backend.onrender.com";
+var SOCKET_URL = "http://localhost:5000";
 var LEVEL_UI = {
   danger: { label: "\u26A1 \uAE34\uAE09 \uAE30\uC0C1\uD2B9\uBCF4", iconBg: "#FF3B30", iconColor: "#fff", border: "rgba(255,59,48,0.4)", bg: "rgba(255,59,48,0.06)", labelColor: "#FF3B30", Icon: CloudLightning },
   warning: { label: "\u26A0\uFE0F \uAE30\uC0C1 \uC704\uD5D8 \uC54C\uB9BC", iconBg: "#FF9B26", iconColor: "#fff", border: "rgba(255,155,38,0.35)", bg: "rgba(255,155,38,0.06)", labelColor: "#FF9B26", Icon: AlertTriangle },
@@ -43375,7 +43375,7 @@ function ForceUpdateChecker() {
   (0, import_react10.useEffect)(() => {
     const checkUpdate = async () => {
       try {
-        const res = await fetch(`${"https://fishing-go-backend.onrender.com"}/api/app-config`);
+        const res = await fetch(`${"http://localhost:5000"}/api/app-config`);
         if (!res.ok)
           return;
         const data2 = await res.json();
@@ -43646,7 +43646,7 @@ initAdMob().catch(() => {
 });
 (async () => {
   try {
-    const apiBase = "https://fishing-go-backend.onrender.com";
+    const apiBase = "http://localhost:5000";
     await fetch(`${apiBase}/api/health`, { signal: AbortSignal.timeout(55e3) });
   } catch {
   }
