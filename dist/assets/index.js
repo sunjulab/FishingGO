@@ -44101,9 +44101,16 @@ function App() {
 
 // src/main.jsx
 var import_jsx_runtime48 = __toESM(require_jsx_runtime(), 1);
-import_client.default.createRoot(document.getElementById("root")).render(
+var root = import_client.default.createRoot(document.getElementById("root"));
+root.render(
   /* @__PURE__ */ (0, import_jsx_runtime48.jsx)(import_react51.default.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime48.jsx)(App, {}) })
 );
+var preloader = document.getElementById("app-preloader");
+if (preloader) {
+  preloader.style.transition = "opacity 0.3s";
+  preloader.style.opacity = "0";
+  setTimeout(() => preloader.remove(), 300);
+}
 /*! Bundled license information:
 
 react/cjs/react.production.min.js:
