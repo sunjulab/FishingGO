@@ -484,7 +484,7 @@ function CsAdminPanel({ addToast }) {
   const [filterCat, setFilterCat] = useState('전체');
   const [filterSt, setFilterSt]   = useState('all');  // all | pending | answered
   const [expandId, setExpandId]   = useState(null);
-  const [replyMap, setReplyMap]   = useState({});     // id → reply text
+  const [replyMap, setReplyMap]   = useState({});     // build: 2026-05-31 cache-bust
   const [sendingId, setSendingId] = useState(null);
   const [showFilter, setShowFilter] = useState(false);
 
