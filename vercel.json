@@ -1,5 +1,6 @@
 {
-  "buildCommand": "rm -rf node_modules/.vite && npm run build",
+  "buildCommand": "node build-esbuild.mjs",
+  "outputDirectory": "dist",
   "redirects": [
     {
       "source": "/catch/:id",
