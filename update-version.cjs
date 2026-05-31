@@ -2,7 +2,7 @@
  * update-version.cjs — 낚시GO 버전 자동화 스크립트
  *
  * 사용법:
- *   node update-version.cjs          # appConfig.json + Render 재배포만
+ *   node update-version.cjs          # appConfig.json + build.gradle + Render 재배포
  *   node update-version.cjs --push   # 위 + git commit & push (npm run release:* 에서 호출)
  *
  * npm scripts:
@@ -38,7 +38,29 @@ function updateAppConfigFile() {
   console.log(`✅ server/appConfig.json → min_version: ${cfg.min_version} (유지), store_url: 최신`);
 }
 
-// ─── 2. Git commit & push ──────────────────────────────────────────────────
+// ─── 2. android/app/build.gradle versionCode & versionName 자동 업데이트 ──
+function updateBuildGradle() {
+  const gradlePath = path.join(__dirname, 'android', 'app', 'build.gradle');
+  if (!fs.existsSync(gradlePath)) {
+    console.warn('⚠️ android/app/build.gradle 없음 - 스킵');
+    return;
+  }
+  let content = fs.readFileSync(gradlePath, 'utf-8');
+
+  // 현재 versionCode 읽기 후 +1
+  const codeMatch = content.match(/versionCode\s+(\d+)/);
+  const currentCode = codeMatch ? parseInt(codeMatch[1], 10) : 0;
+  const newCode = currentCode + 1;
+
+  // versionCode, versionName 모두 교체
+  content = content.replace(/versionCode\s+\d+/, `versionCode ${newCode}`);
+  content = content.replace(/versionName\s+"[^"]+"/, `versionName "${VERSION}"`);
+
+  fs.writeFileSync(gradlePath, content, 'utf-8');
+  console.log(`✅ android/app/build.gradle → versionCode: ${currentCode} → ${newCode}, versionName: "${VERSION}"`);
+}
+
+// ─── 3. Git commit & push ──────────────────────────────────────────────────
 function gitPush() {
   console.log('📦 Git commit & push 중...');
   try {
@@ -91,6 +113,7 @@ async function triggerRenderDeploy() {
 // ─── 메인 ─────────────────────────────────────────────────────────────────
 async function main() {
   updateAppConfigFile();
+  updateBuildGradle();
   if (PUSH_MODE) gitPush();
   await triggerRenderDeploy();
 
