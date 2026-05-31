@@ -96,15 +96,23 @@ export default function AdminDashboard() {
   const setPushMsg       = setAlertField('pushMsg');
 
   useEffect(() => {
-    // ✅ NEW-A5: setTimeout(0)으로 Zustand hydration 완료 대기 — isAdmin stale read 방지
+    // ✅ FIX: isAdmin은 첫 렌더 시 false(stale)일 수 있으므로
+    //    useUserStore.getState()로 직접 현재 상태를 읽음 (클로저 캡처 문제 방지)
     const t = setTimeout(() => {
-      if (!isAdmin) { navigate('/'); return; }
+      const s = useUserStore.getState();
+      const adminNow =
+        s.user?.id    === ADMIN_ID ||
+        s.user?.email === ADMIN_EMAIL ||
+        s.user?.email === 'sunjulab.k@gmail.com' ||
+        s.userTier    === 'MASTER';
+      if (!adminNow) { navigate('/'); return; }
       setAuthChecked(true);
       fetchStats();
       fetchManualItems();
-    }, 0);
+    }, 200); // 200ms: Zustand localStorage hydration 완료 대기
     return () => clearTimeout(t);
-  }, [isAdmin, navigate, fetchManualItems]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ 마운트 1회만 실행 (isAdmin 의존성 제거로 재실행 방지)
 
   const fetchStats = async () => {
     setLoading(true); setError('');
