@@ -493,7 +493,7 @@ export default function MapHome() {
         cursor: pointer; font-size: calc(${isCustom ? '11px' : '10px'} * var(--fs, 1));
         transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       `;
-      el.textContent = isCustom ? '★' : point.type.charAt(0);
+      el.textContent = isCustom ? '★' : (point.type || '?').charAt(0);
       
       el.onmouseenter = () => { el.style.transform = 'scale(1.3) translateY(-2px)'; el.style.zIndex = '50'; };
       el.onmouseleave = () => { el.style.transform = 'scale(1)'; el.style.zIndex = '10'; };
@@ -602,7 +602,7 @@ export default function MapHome() {
       // 실시간 캐시 우선 사용, 없으면 정적 fallback
       const liveData = weatherCache[st.id];
       const weatherData = liveData
-        ? { ...liveData, stationId: st.id, tide: staticData.tide, pointName: point.name }
+        ? { ...liveData, stationId: st.id, tide: staticData?.tide, pointName: point.name }
         : staticData;
       const sst = parseFloat(weatherData?.sst || 13);
       const condition = evaluateFishingCondition(weatherData, point);
@@ -780,7 +780,7 @@ export default function MapHome() {
   const _cachedLive   = weatherCache[_nearestSt?.id];
   const _staticData   = getPointSpecificData(_selectedPt);
   const currentData   = precisionData
-    || (_cachedLive ? { ..._cachedLive, stationId: _nearestSt?.id, tide: _staticData.tide, pointName: _selectedPt.name } : null)
+    || (_cachedLive ? { ..._cachedLive, stationId: _nearestSt?.id, tide: _staticData?.tide, pointName: _selectedPt.name } : null)
     || _staticData;
   // ✅ SHARE-COND: 바텀시트 AI 컨디션 우선 → weatherCache/precisionData 순 fallback
   const cond = (sharedCond?.pointId === _selectedPt?.id ? sharedCond.cond : null)
@@ -807,7 +807,7 @@ export default function MapHome() {
         // ✅ FIX-SCORE-ALL: weatherCache 우선 → 히트맵·대시보드 점수 전체 동기화
         const liveData = weatherCache[st.id];
         const weatherData = liveData
-          ? { ...liveData, stationId: st.id, tide: staticData.tide, pointName: p.name }
+          ? { ...liveData, stationId: st.id, tide: staticData?.tide, pointName: p.name }
           : staticData;
         const liveScore = evaluateFishingCondition(weatherData, p).score;
         return { ...p, _liveScore: liveScore };

@@ -343,7 +343,7 @@ export default function PointLocationAdmin() {
     if (filterRegion !== '전체' && p.region !== filterRegion) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      if (!p.name.toLowerCase().includes(q) && !p.region.toLowerCase().includes(q)) return false;
+      if (!(p.name || '').toLowerCase().includes(q) && !(p.region || '').toLowerCase().includes(q)) return false;
     }
     return true;
   });

@@ -24847,7 +24847,7 @@ function DashboardView({
                 const _st = findNearestStation2(p.lat, p.lng);
                 const _live = weatherCache[_st == null ? void 0 : _st.id];
                 const _sd = getPointSpecificData2(p);
-                const _wd = _live ? { ..._live, stationId: _st.id, tide: _sd.tide, pointName: p.name } : _sd;
+                const _wd = _live ? { ..._live, stationId: _st.id, tide: _sd == null ? void 0 : _sd.tide, pointName: p.name } : _sd;
                 const _sc = evaluateFishingCondition2(_wd, p).score;
                 const _label = _sc >= 90 ? "\uCD5C\uACE0" : _sc >= 75 ? "\uD65C\uBC1C" : _sc >= 50 ? "\uBCF4\uD1B5" : _sc >= 30 ? "\uC800\uC870" : "\uC704\uD5D8";
                 const _col = _sc >= 90 ? "#00C48C" : _sc >= 75 ? "#1565C0" : _sc >= 50 ? "#FF9B26" : _sc >= 30 ? "#FF5A5F" : "#D32F2F";
@@ -26149,7 +26149,7 @@ function MapHome() {
         cursor: pointer; font-size: calc(${isCustom ? "11px" : "10px"} * var(--fs, 1));
         transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       `;
-      el.textContent = isCustom ? "\u2605" : point.type.charAt(0);
+      el.textContent = isCustom ? "\u2605" : (point.type || "?").charAt(0);
       el.onmouseenter = () => {
         el.style.transform = "scale(1.3) translateY(-2px)";
         el.style.zIndex = "50";
@@ -26239,7 +26239,7 @@ function MapHome() {
       const st = findNearestStation(point.lat, point.lng);
       const staticData = getPointSpecificData(point);
       const liveData = weatherCache[st.id];
-      const weatherData = liveData ? { ...liveData, stationId: st.id, tide: staticData.tide, pointName: point.name } : staticData;
+      const weatherData = liveData ? { ...liveData, stationId: st.id, tide: staticData == null ? void 0 : staticData.tide, pointName: point.name } : staticData;
       const sst = parseFloat((weatherData == null ? void 0 : weatherData.sst) || 13);
       const condition = evaluateFishingCondition(weatherData, point);
       return { point, sst, score: condition.score };
@@ -26424,7 +26424,7 @@ function MapHome() {
   const _nearestSt = findNearestStation(_selectedPt.lat, _selectedPt.lng);
   const _cachedLive = weatherCache[_nearestSt == null ? void 0 : _nearestSt.id];
   const _staticData = getPointSpecificData(_selectedPt);
-  const currentData = precisionData || (_cachedLive ? { ..._cachedLive, stationId: _nearestSt == null ? void 0 : _nearestSt.id, tide: _staticData.tide, pointName: _selectedPt.name } : null) || _staticData;
+  const currentData = precisionData || (_cachedLive ? { ..._cachedLive, stationId: _nearestSt == null ? void 0 : _nearestSt.id, tide: _staticData == null ? void 0 : _staticData.tide, pointName: _selectedPt.name } : null) || _staticData;
   const cond = ((sharedCond == null ? void 0 : sharedCond.pointId) === (_selectedPt == null ? void 0 : _selectedPt.id) ? sharedCond.cond : null) || evaluateFishingCondition(currentData, _selectedPt);
   const score = cond.score;
   const isGolden = score >= 90;
@@ -26438,7 +26438,7 @@ function MapHome() {
       const st = findNearestStation(p.lat, p.lng);
       const staticData = getPointSpecificData(p);
       const liveData = weatherCache[st.id];
-      const weatherData = liveData ? { ...liveData, stationId: st.id, tide: staticData.tide, pointName: p.name } : staticData;
+      const weatherData = liveData ? { ...liveData, stationId: st.id, tide: staticData == null ? void 0 : staticData.tide, pointName: p.name } : staticData;
       const liveScore = evaluateFishingCondition(weatherData, p).score;
       return { ...p, _liveScore: liveScore };
     }).sort((a, b) => b._liveScore - a._liveScore).slice(0, 8);
@@ -41818,7 +41818,7 @@ function PointLocationAdmin() {
       return false;
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      if (!p.name.toLowerCase().includes(q) && !p.region.toLowerCase().includes(q))
+      if (!(p.name || "").toLowerCase().includes(q) && !(p.region || "").toLowerCase().includes(q))
         return false;
     }
     return true;
