@@ -11,6 +11,22 @@
         }
       })();
     </script>
+    <!-- ✅ GH Pages SPA 라우팅: 404.html이 저장한 URL 복원 -->
+    <script>
+      (function(){
+        var redirect = sessionStorage.redirect;
+        if (redirect) {
+          delete sessionStorage.redirect;
+          // 저장된 전체 URL에서 pathname+search+hash만 추출해 복원
+          try {
+            var url = new URL(redirect);
+            if (url.pathname !== '/' && url.pathname !== location.pathname) {
+              history.replaceState(null, null, url.pathname + url.search + url.hash);
+            }
+          } catch(e) {}
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Fishing GO - 낚시GO | 국내 최고 프리미엄 해양 낚시 인텔리전스</title>
@@ -116,7 +132,7 @@
         setTimeout(function(){var h=document.getElementById('reload-hint');if(h)h.style.display='block';},15000);
       </script>
     </div>
-    <link rel="stylesheet" href="/assets/index.css?v=1780236677480" />
-    <script type="module" src="/assets/index.js?v=1780236677480"></script>
+    <link rel="stylesheet" href="/assets/index.css?v=1780237037265" />
+    <script type="module" src="/assets/index.js?v=1780237037265"></script>
   </body>
 </html>
