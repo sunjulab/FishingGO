@@ -205,7 +205,7 @@ export default function WeatherDashboard() {
       const low = q.toLowerCase();
       const filtered = ALL_FISHING_POINTS.filter(p =>
         p.name.toLowerCase().includes(low) ||
-        p.fish.toLowerCase().includes(low) ||
+        (p.fish || '').toLowerCase().includes(low) ||
         p.type.toLowerCase().includes(low) ||
         (p.region && p.region.toLowerCase().includes(low))
       );
@@ -319,7 +319,7 @@ export default function WeatherDashboard() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {p.fish.split(',')[0]}</div>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {(p.fish || '').split(',')[0]}</div>
                     </div>
                   </div>
                 ))}

@@ -742,7 +742,7 @@ export default function MapHome() {
     const low = q.toLowerCase();
     const filtered = ALL_FISHING_POINTS.filter(p =>
       p.name.toLowerCase().includes(low) ||
-      p.fish.toLowerCase().includes(low) ||
+      (p.fish || '').toLowerCase().includes(low) ||
       p.type.toLowerCase().includes(low) ||
       (p.region?.toLowerCase().includes(low))
     );

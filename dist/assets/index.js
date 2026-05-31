@@ -26398,7 +26398,7 @@ function MapHome() {
     const filtered = ALL_FISHING_POINTS.filter(
       (p) => {
         var _a2;
-        return p.name.toLowerCase().includes(low) || p.fish.toLowerCase().includes(low) || p.type.toLowerCase().includes(low) || ((_a2 = p.region) == null ? void 0 : _a2.toLowerCase().includes(low));
+        return p.name.toLowerCase().includes(low) || (p.fish || "").toLowerCase().includes(low) || p.type.toLowerCase().includes(low) || ((_a2 = p.region) == null ? void 0 : _a2.toLowerCase().includes(low));
       }
     );
     const customFiltered = customPoints.filter(
@@ -36607,7 +36607,7 @@ function WeatherDashboard() {
     searchTimerRef.current = setTimeout(() => {
       const low = q.toLowerCase();
       const filtered = ALL_FISHING_POINTS.filter(
-        (p) => p.name.toLowerCase().includes(low) || p.fish.toLowerCase().includes(low) || p.type.toLowerCase().includes(low) || p.region && p.region.toLowerCase().includes(low)
+        (p) => p.name.toLowerCase().includes(low) || (p.fish || "").toLowerCase().includes(low) || p.type.toLowerCase().includes(low) || p.region && p.region.toLowerCase().includes(low)
       );
       setSearchResults(filtered);
       setShowSearch(true);
@@ -36703,7 +36703,7 @@ function WeatherDashboard() {
                   " \xB7 ",
                   p.type,
                   " \xB7 ",
-                  p.fish.split(",")[0]
+                  (p.fish || "").split(",")[0]
                 ] })
               ] })
             ]
