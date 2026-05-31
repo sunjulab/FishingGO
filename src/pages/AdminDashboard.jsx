@@ -25,6 +25,13 @@ function StatCard({ label, value, icon: Icon, color, sub }) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  // ✅ 4중 보장 (id/email/gmail/MASTER tier)
+  const isAdmin = useUserStore((state) =>
+    state.user?.id === ADMIN_ID ||
+    state.user?.email === ADMIN_EMAIL ||
+    state.user?.email === 'sunjulab.k@gmail.com' ||
+    state.userTier === 'MASTER'
+  );
   const addToast = useToastStore((s) => s.addToast);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -89,34 +96,17 @@ export default function AdminDashboard() {
   const setPushMsg       = setAlertField('pushMsg');
 
   useEffect(() => {
-    // ✅ 서버 API 기반 권한 확인 — 클라이언트 isAdmin 체크 완전 제거
-    // /api/admin/revenue가 성공 = 관리자, 403 = 비관리자
-    const check = async () => {
-      try {
-        const res = await apiClient.get('/api/admin/revenue');
-        // 서버가 정상 응답 → 관리자 확인됨
-        setStats(res.data);
-        setAuthChecked(true);
-        fetchManualItems();
-        // user-stats도 병렬 로드
-        apiClient.get('/api/admin/user-stats')
-          .then(r => setUserStats(r.data))
-          .catch(() => {});
-      } catch (err) {
-        if (err.response?.status === 403 || err.response?.status === 401) {
-          navigate('/');
-        } else {
-          // 네트워크 오류 등 → 일단 표시 (서버 일시 장애)
-          setAuthChecked(true);
-          setError('데이터 로드 실패 — 잠시 후 새로고침해주세요');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    check();
+    // ✅ NEW-A5: setTimeout(0)으로 Zustand hydration 완료 대기
+    // 핵심: isAdmin이 false→true 로 업데이트될 때 cleanup이 기존 타이머 취소 후 재실행 → 통과
+    const t = setTimeout(() => {
+      if (!isAdmin) { navigate('/'); return; }
+      setAuthChecked(true);
+      fetchStats();
+      fetchManualItems();
+    }, 0);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAdmin, navigate]);
 
   const fetchStats = async () => {
     setLoading(true); setError('');
@@ -334,7 +324,6 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px' }}>최근 결제 내역</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {stats.recentPayments.map((p, i) => (
-                    <div key={String(p._id || p.merchant_uid || i)} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div>
                         <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{p.userName || p.userId}</div>
                         <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>

@@ -454,53 +454,25 @@ function PermissionInitializer() {
 //   - 이전 방식(getState 1회): cleanup 경쟁조건으로 checked 영구 false → null 유지 버그
 //   - 새 방식: Zustand selector(반응형) + hydrated flag(미수화 오판 방지)
 function AdminRoute({ children }) {
-  const [status, setStatus] = useState('loading');
+  // ✅ 반응형: store 업데이트 시 자동 재계산 (setUser, syncFromServer 후에도 즉시 반영)
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === 'sunjulab.k@gmail.com' ||
+    s.userTier === 'MASTER'
+  );
+  // ✅ 미수화 오판 방지: 첫 렌더에서 isAdmin=false → 즉시 redirect 막음
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const check = () => {
-      // ── 방법 1: Zustand store (user/userTier)
-      const s = useUserStore.getState();
-      if (
-        s.user?.id    === ADMIN_ID ||
-        s.user?.email === 'sunjulab.k@gmail.com' ||
-        s.userTier    === 'MASTER'
-      ) { setStatus('ok'); return; }
-
-      // ── 방법 2: JWT access_token 페이로드 직접 디코딩
-      try {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          if (
-            payload?.tier  === 'MASTER' ||
-            payload?.email === 'sunjulab.k@gmail.com' ||
-            payload?.id    === ADMIN_ID
-          ) { setStatus('ok'); return; }
-        }
-      } catch { /* JWT 파싱 실패 무시 */ }
-
-      // ── 방법 3: localStorage 키 직접 확인
-      try {
-        if (localStorage.getItem('userTier') === 'MASTER') { setStatus('ok'); return; }
-        const raw = localStorage.getItem('user');
-        if (raw) {
-          const u = JSON.parse(raw);
-          if (u?.tier === 'MASTER' || u?.email === 'sunjulab.k@gmail.com' || u?.id === ADMIN_ID) {
-            setStatus('ok'); return;
-          }
-        }
-      } catch { /* 파싱 실패 무시 */ }
-
-      setStatus('deny');
-    };
-
-    const t = setTimeout(check, 200);
+    // 1tick 후 수화 완료 플래그 — localStorage 동기 초기화 완료 보장
+    const t = setTimeout(() => setHydrated(true), 0);
     return () => clearTimeout(t);
   }, []);
 
-  if (status === 'loading') return null;
-  if (status === 'deny')   return <Navigate to="/" replace />;
-  return children;
+  if (!hydrated) return null;                    // 수화 전: 빈 화면
+  if (!isAdmin) return <Navigate to="/" replace />; // 수화 후: 권한 없으면 홈
+  return children;                               // 권한 있으면 자식 렌더
 }
 
 
@@ -558,7 +530,7 @@ export default function App() {
               <Route path="/secret-admin" element={<AdminRoute><SecretPointAdmin /></AdminRoute>} />
               <Route path="/point-admin" element={<AdminRoute><PointLocationAdmin /></AdminRoute>} />
               <Route path="/payment-history" element={<PaymentHistory />} />
-              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               <Route path="/user/:name" element={<UserProfile />} />
             </Routes>
           </>
