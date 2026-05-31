@@ -454,25 +454,26 @@ function PermissionInitializer() {
 //   - 이전 방식(getState 1회): cleanup 경쟁조건으로 checked 영구 false → null 유지 버그
 //   - 새 방식: Zustand selector(반응형) + hydrated flag(미수화 오판 방지)
 function AdminRoute({ children }) {
-  // ✅ 반응형: store 업데이트 시 자동 재계산 (setUser, syncFromServer 후에도 즉시 반영)
-  const isAdmin = useUserStore(s =>
-    s.user?.id === ADMIN_ID ||
-    s.user?.email === ADMIN_EMAIL ||
-    s.user?.email === 'sunjulab.k@gmail.com' ||
-    s.userTier === 'MASTER'
-  );
-  // ✅ 미수화 오판 방지: 첫 렌더에서 isAdmin=false → 즉시 redirect 막음
-  const [hydrated, setHydrated] = useState(false);
+  const [status, setStatus] = useState('loading'); // 'loading' | 'ok' | 'deny'
 
   useEffect(() => {
-    // 1tick 후 수화 완료 플래그 — localStorage 동기 초기화 완료 보장
-    const t = setTimeout(() => setHydrated(true), 0);
+    // ✅ FIX: 0ms 클로저 stale 문제 → getState()로 현재 상태 직접 읽기
+    // localStorage 동기 초기화이므로 300ms면 충분
+    const t = setTimeout(() => {
+      const s = useUserStore.getState();
+      const ok =
+        s.user?.id    === ADMIN_ID ||
+        s.user?.email === ADMIN_EMAIL ||
+        s.user?.email === 'sunjulab.k@gmail.com' ||
+        s.userTier    === 'MASTER';
+      setStatus(ok ? 'ok' : 'deny');
+    }, 300);
     return () => clearTimeout(t);
   }, []);
 
-  if (!hydrated) return null;                    // 수화 전: 빈 화면
-  if (!isAdmin) return <Navigate to="/" replace />; // 수화 후: 권한 없으면 홈
-  return children;                               // 권한 있으면 자식 렌더
+  if (status === 'loading') return null;           // 판단 대기
+  if (status === 'deny')   return <Navigate to="/" replace />; // 권한 없음
+  return children;                                 // 권한 있음
 }
 
 
