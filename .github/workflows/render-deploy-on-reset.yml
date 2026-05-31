@@ -1,0 +1,51 @@
+name: 🚀 Render 자동 배포 (매월 1일 KST 09:01)
+
+on:
+  # UTC 00:01 = 한국시간 09:01 — Render 무료 플랜 pipeline minutes 월 리셋 직후
+  schedule:
+    - cron: '1 0 1 * *'   # 매월 1일 UTC 00:01 (KST 09:01)
+
+  # 수동 실행도 가능 (GitHub Actions 탭에서 "Run workflow" 클릭)
+  workflow_dispatch:
+
+jobs:
+  trigger-render-deploy:
+    name: Render 배포 트리거
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🕐 현재 시각 출력
+        run: echo "배포 트리거 시각 (UTC): $(date -u)"
+
+      - name: 🚀 Render 배포 트리거 (API)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: srv-d7cjb3v7f7vs739h54r0
+        run: |
+          echo "Render 서비스 배포 시작: $RENDER_SERVICE_ID"
+          RESPONSE=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Accept: application/json" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys")
+          echo "HTTP 상태: $RESPONSE"
+          cat response.json
+          if [ "$RESPONSE" = "201" ]; then
+            echo "✅ 배포 트리거 성공!"
+          else
+            echo "❌ 배포 트리거 실패 (HTTP $RESPONSE)"
+            exit 1
+          fi
+
+      - name: ⏳ 배포 완료 대기 (5분)
+        run: sleep 300
+
+      - name: 🔍 서버 상태 확인
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://fishing-go-backend.onrender.com/api/shop/manual")
+          echo "GET /api/shop/manual → HTTP $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ 서버 배포 완료! /api/shop/manual 정상"
+          else
+            echo "⚠️ 서버 아직 시작 중 (HTTP $STATUS) — 잠시 후 자동 완료됩니다"
+          fi
