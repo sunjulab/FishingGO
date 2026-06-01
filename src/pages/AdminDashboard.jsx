@@ -104,23 +104,15 @@ export default function AdminDashboard() {
     });
 
     try {
-      setShopMsg('⏳ 등록 중... (새 탭이 열립니다)');
-      const r1 = await doRegisterTab(30000);
+      setShopMsg('⏳ 등록 중... (새 탭이 열립니다 — 서버가 응답하면 자동 닫힘)');
+      const r1 = await doRegisterTab(120000); // 120초: 콜드스타트 완전 커버
       if (r1.ok) {
         setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
         setShopMsg('✅ 등록 완료!');
         await fetchManualItems();
         return;
       }
-      if (!r1._timeout) { setShopMsg(`❌ ${r1.data?.error || '등록 실패'}`); return; }
-
-      // 타임아웃: 서버 슬립 → 재시도
-      setShopMsg('⏳ 서버 깨우는 중... (재시도 중)');
-      const r2 = await doRegisterTab(90000);
-      if (!r2.ok) { setShopMsg(`❌ ${r2.data?.error || '서버 응답 없음'}`); return; }
-      setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
-      setShopMsg('✅ 등록 완료!');
-      await fetchManualItems();
+      setShopMsg(`❌ ${r1.data?.error || '서버 응답 없음 (120초 초과)'}`);
 
     } catch (e) {
       setShopMsg(`❌ [NET] ${e.message}`);
