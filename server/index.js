@@ -7761,7 +7761,19 @@ app.get('/api/shop/recommend', async (req, res) => {
 
 // ─── 쇼핑 수동 상품 관리 (관리자 전용) ──────────────────────────────────────
 // 컬렉션: manual_shop_items
-// 필드: { _id, shortUrl, iframeSrc, tag, order, createdAt }
+// 필드: { _id, source, shortUrl, iframeSrc, imageUrl, productName, tag, order, createdAt }
+const ManualShopItem = mongoose.models.ManualShopItem || mongoose.model('ManualShopItem',
+  new mongoose.Schema({
+    source:      { type: String, default: 'coupang' },
+    shortUrl:    { type: String, required: true },
+    iframeSrc:   { type: String },
+    imageUrl:    { type: String },
+    productName: { type: String },
+    tag:         { type: String, default: '낚시용품' },
+    order:       { type: Number, default: Date.now },
+    createdAt:   { type: Date,   default: Date.now },
+  }, { collection: 'manual_shop_items' })
+);
 
 /**
  * GET /api/shop/manual
@@ -7770,11 +7782,7 @@ app.get('/api/shop/recommend', async (req, res) => {
 app.get('/api/shop/manual', async (req, res) => {
   try {
     if (!dbReady) return res.json([]);
-    const items = await mongoose.connection.db
-      .collection('manual_shop_items')
-      .find({})
-      .sort({ order: 1, createdAt: -1 })
-      .toArray();
+    const items = await ManualShopItem.find({}).sort({ order: 1, createdAt: -1 }).lean();
     res.json(items);
   } catch (err) {
     logger.warn('[Shop Manual] 조회 실패:', err.message);
@@ -7798,34 +7806,36 @@ app.post('/api/shop/manual', verifyToken, async (req, res) => {
     const { source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.body;
     if (!shortUrl) return res.status(400).json({ error: '단축 URL 필수' });
 
-    const doc = {
-      source:      source.trim(),
-      shortUrl:    shortUrl.trim(),
-      tag:         (tag || '낚시용품').trim(),
-      order:       Date.now(),
-      createdAt:   new Date(),
+    const docData = {
+      source:    source.trim(),
+      shortUrl:  shortUrl.trim(),
+      tag:       (tag || '낚시용품').trim(),
+      order:     Date.now(),
+      createdAt: new Date(),
     };
 
     if (source === 'ali') {
-      // 알리익스프레스: 이미지 URL + 상품명
       if (!imageUrl) return res.status(400).json({ error: '알리 상품 이미지 URL 필수' });
-      doc.imageUrl     = imageUrl.trim();
-      doc.productName  = (productName || '').trim();
+      docData.imageUrl     = imageUrl.trim();
+      docData.productName  = (productName || '').trim();
     } else {
-      // 쿠팡: iframe 코드에서 src 파싱
       if (!iframeCode) return res.status(400).json({ error: '쿠팡 iframe 코드 필수' });
       const srcMatch = iframeCode.match(/src=["']([^"']+)["']/i);
       if (!srcMatch) return res.status(400).json({ error: 'iframe src 추출 실패' });
-      doc.iframeSrc = srcMatch[1].trim();
+      docData.iframeSrc = srcMatch[1].trim();
     }
 
-    const result = await mongoose.connection.db
-      .collection('manual_shop_items')
-      .insertOne(doc);
-    res.json({ ok: true, id: result.insertedId });
+    // Mongoose Model.create — 연결 상태 자동 관리, 10초 타임아웃
+    const saved = await Promise.race([
+      ManualShopItem.create(docData),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('DB 저장 시간 초과 (10s) — 잠시 후 재시도')), 10000)
+      )
+    ]);
+    res.json({ ok: true, id: saved._id });
   } catch (err) {
     logger.error('[Shop Manual] 등록 실패:', err.message);
-    res.status(500).json({ error: '등록 실패' });
+    res.status(500).json({ error: err.message || '등록 실패' });
   }
 });
 
@@ -7839,10 +7849,7 @@ app.delete('/api/shop/manual/:id', verifyToken, async (req, res) => {
     return res.status(403).json({ error: '관리자 권한 필요' });
   }
   try {
-    const { ObjectId } = require('mongodb');
-    await mongoose.connection.db
-      .collection('manual_shop_items')
-      .deleteOne({ _id: new ObjectId(req.params.id) });
+    await ManualShopItem.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (err) {
     logger.error('[Shop Manual] 삭제 실패:', err.message);
