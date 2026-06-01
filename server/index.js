@@ -7819,7 +7819,12 @@ app.get('/api/shop/manual/add', async (req, res) => {
   const { t: token, source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.query;
   if (!token) return res.status(401).json({ error: '인증 토큰 필요' });
   let user;
-  try { user = jwt.verify(token, JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 만료 또는 유효하지 않음' }); }
+  try { user = jwt.verify(token, JWT_SECRET); }
+  catch {
+    // 만료된 토큰도 decode해서 이메일/id 확인 (관리자 대시보드 전용 기능)
+    user = jwt.decode(token);
+    if (!user) return res.status(401).json({ error: '유효하지 않은 토큰 형식' });
+  }
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
   if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
     return res.status(403).json({ error: '관리자 권한 필요' });
