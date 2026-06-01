@@ -73,7 +73,9 @@ export default function AdminDashboard() {
       setShopMsg('✅ 등록 완료!');
       await fetchManualItems();
     } catch (e) {
-      setShopMsg('❌ ' + (e.response?.data?.error || '등록 실패'));
+      const status = e.response?.status;
+      const msg = e.response?.data?.error || e.message || '등록 실패';
+      setShopMsg(`❌ [${status ?? 'NET'}] ${msg}`);
     } finally { setShopLoading(false); }
   };
 
