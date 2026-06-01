@@ -7788,7 +7788,7 @@ app.get('/api/shop/manual', async (req, res) => {
  * body: { source, shortUrl, iframeCode, imageUrl, productName, tag }
  *   source: 'coupang'(기본) | 'ali'
  */
-app.post('/api/shop/manual', requireAuth, async (req, res) => {
+app.post('/api/shop/manual', verifyToken, async (req, res) => {
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
   if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
     return res.status(403).json({ error: '관리자 권한 필요' });
@@ -7833,7 +7833,7 @@ app.post('/api/shop/manual', requireAuth, async (req, res) => {
  * DELETE /api/shop/manual/:id
  * 수동 상품 삭제 (관리자 전용)
  */
-app.delete('/api/shop/manual/:id', requireAuth, async (req, res) => {
+app.delete('/api/shop/manual/:id', verifyToken, async (req, res) => {
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
   if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
     return res.status(403).json({ error: '관리자 권한 필요' });
