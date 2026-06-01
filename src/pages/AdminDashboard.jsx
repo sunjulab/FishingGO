@@ -66,32 +66,60 @@ export default function AdminDashboard() {
     if (!shopForm.shortUrl.trim()) { setShopMsg('단축 URL을 입력하세요.'); return; }
     if (shopForm.source === 'coupang' && !shopForm.iframeCode.trim()) { setShopMsg('쿠팡 iframe 코드를 입력하세요.'); return; }
     if (shopForm.source === 'ali' && !shopForm.imageUrl.trim()) { setShopMsg('알리 상품 이미지 URL을 입력하세요.'); return; }
-    setShopLoading(true); setShopMsg('⏳ 등록 중...');
-    try {
-      // apiClient 인터셉터 완전 우회 — fetch() 직접 호출 (30초 타임아웃)
-      const token = (() => { try { return localStorage.getItem('access_token') || ''; } catch { return ''; } })();
-      const API = 'https://fishing-go-backend.onrender.com';
+    setShopLoading(true);
+
+    const API   = 'https://fishing-go-backend.onrender.com';
+    const token = (() => { try { return localStorage.getItem('access_token') || ''; } catch { return ''; } })();
+
+    // POST 실행 함수 (타임아웃 ms 지정 가능)
+    const doPost = async (timeoutMs) => {
       const ctrl = new AbortController();
-      const tId  = setTimeout(() => ctrl.abort(), 30000);
-      let r;
+      const tId  = setTimeout(() => ctrl.abort(), timeoutMs);
       try {
-        r = await fetch(`${API}/api/shop/manual`, {
+        const r = await fetch(`${API}/api/shop/manual`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body:    JSON.stringify(shopForm),
           signal:  ctrl.signal,
         });
+        const data = await r.json().catch(() => ({}));
+        return { ok: r.ok, status: r.status, data };
       } finally { clearTimeout(tId); }
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setShopMsg(`❌ [${r.status}] ${data.error || '등록 실패'}`);
+    };
+
+    try {
+      // 1차 시도 (30초)
+      setShopMsg('⏳ 등록 중...');
+      try {
+        const { ok, status, data } = await doPost(30000);
+        if (!ok) { setShopMsg(`❌ [${status}] ${data.error || '등록 실패'}`); return; }
+        setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
+        setShopMsg('✅ 등록 완료!');
+        await fetchManualItems();
         return;
+      } catch (e1) {
+        if (e1.name !== 'AbortError') throw e1; // AbortError 아니면 바로 throw
       }
+
+      // 서버 슬립 상태 → GET으로 웨이크업 후 재시도
+      setShopMsg('⏳ 서버 깨우는 중... (최대 60초)');
+      try {
+        const wCtrl = new AbortController();
+        const wTId  = setTimeout(() => wCtrl.abort(), 60000);
+        try { await fetch(`${API}/api/shop/manual`, { signal: wCtrl.signal }); }
+        finally { clearTimeout(wTId); }
+      } catch { /* 웨이크업 실패도 무시하고 재시도 */ }
+
+      // 2차 시도 (30초)
+      setShopMsg('⏳ 재시도 중...');
+      const { ok, status, data } = await doPost(30000);
+      if (!ok) { setShopMsg(`❌ [${status}] ${data.error || '등록 실패'}`); return; }
       setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
       setShopMsg('✅ 등록 완료!');
       await fetchManualItems();
+
     } catch (e) {
-      const msg = e.name === 'AbortError' ? '30초 타임아웃 — 서버 슬립 중, 다시 시도해주세요' : e.message;
+      const msg = e.name === 'AbortError' ? '서버 응답 없음 — 잠시 후 다시 시도해주세요' : e.message;
       setShopMsg(`❌ [NET] ${msg}`);
     } finally { setShopLoading(false); }
   };
