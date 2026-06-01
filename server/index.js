@@ -7816,60 +7816,53 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
  * Authorization 헤더 대신 ?t=<JWT> 쿼리파라미터 사용
  */
 app.get('/api/shop/manual/add', async (req, res) => {
-  const { t: token, source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.query;
-  if (!token) return res.status(401).json({ error: '인증 토큰 필요' });
+  const { t: token, source = 'coupang', shortUrl, iframeSrc, imageUrl, productName, tag, callback: cb } = req.query;
+  // JSONP helper
+  const send = (status, obj) => {
+    if (cb && /^[a-zA-Z0-9_$]+$/.test(cb)) {
+      return res.type('text/javascript').send(`${cb}(${JSON.stringify(obj)})`);
+    }
+    return res.status(status).json(obj);
+  };
+
+  if (!token) return send(401, { error: '인증 토큰 필요' });
   let user;
   try { user = jwt.verify(token, JWT_SECRET); }
   catch {
-    // 만료된 토큰도 decode해서 이메일/id 확인 (관리자 대시보드 전용 기능)
     user = jwt.decode(token);
-    if (!user) return res.status(401).json({ error: '유효하지 않은 토큰 형식' });
+    if (!user) return send(401, { error: '유효하지 않은 토큰 형식' });
   }
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
   if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
-    return res.status(403).json({ error: '관리자 권한 필요' });
+    return send(403, { error: '관리자 권한 필요' });
   }
   try {
-    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중' });
-    if (!shortUrl) return res.status(400).json({ error: '단축 URL 필수' });
+    if (!dbReady) return send(503, { error: '서버 초기화 중' });
+    if (!shortUrl) return send(400, { error: '단축 URL 필수' });
     const docData = {
       source:    (source || 'coupang').trim(),
-      shortUrl:  decodeURIComponent(shortUrl).trim(),
-      tag:       (tag ? decodeURIComponent(tag) : '낚시용품').trim(),
+      shortUrl:  shortUrl.trim(),
+      tag:       (tag || '낚시용품').trim(),
       order:     Date.now(),
       createdAt: new Date(),
     };
     if (source === 'ali') {
-      if (!imageUrl) return res.status(400).json({ error: '알리 이미지 URL 필수' });
-      docData.imageUrl    = decodeURIComponent(imageUrl).trim();
-      docData.productName = (productName ? decodeURIComponent(productName) : '').trim();
+      if (!imageUrl) return send(400, { error: '알리 이미지 URL 필수' });
+      docData.imageUrl    = imageUrl.trim();
+      docData.productName = (productName || '').trim();
     } else {
-      if (!iframeCode) return res.status(400).json({ error: 'iframe 코드 필수' });
-      const decoded = decodeURIComponent(iframeCode);
-      const m = decoded.match(/src=["']([^"']+)["']/i);
-      if (!m) return res.status(400).json({ error: 'iframe src 추출 실패' });
-      docData.iframeSrc = m[1].trim();
+      if (!iframeSrc) return send(400, { error: 'iframeSrc 필수 (iframe 코드 확인)' });
+      docData.iframeSrc = iframeSrc.trim();
     }
     const saved = await Promise.race([
       ManualShopItem.create(docData),
       new Promise((_, rej) => setTimeout(() => rej(new Error('DB 저장 시간 초과')), 10000))
     ]);
     const result = { ok: true, id: String(saved._id) };
-    const cb = req.query.callback;
-    if (cb && /^[a-zA-Z0-9_]+$/.test(cb)) {
-      res.type('text/javascript').send(`${cb}(${JSON.stringify(result)})`);
-    } else {
-      res.json(result);
-    }
+    return send(200, result);
   } catch (err) {
     logger.error('[Shop GET-add] 실패:', err.message);
-    const errResult = { error: err.message || '등록 실패' };
-    const cb = req.query.callback;
-    if (cb && /^[a-zA-Z0-9_]+$/.test(cb)) {
-      res.type('text/javascript').send(`${cb}(${JSON.stringify(errResult)})`);
-    } else {
-      res.status(500).json(errResult);
-    }
+    return send(500, { error: err.message || '등록 실패' });
   }
 });
 

@@ -93,12 +93,14 @@ export default function AdminDashboard() {
         resolve({ ok: false, status: 0, data: { error: '서버 응답 없음 (timeout)' }, _timeout: true });
       }, timeoutMs);
 
+      // iframe HTML→src URL만 추출 (Chrome이 URL의 HTML 태그를 XSS로 감지해 블록 방지)
+      const iframeSrc = (shopForm.iframeCode || '').match(/src=["']([^"']+)["']/i)?.[1] || '';
       const params = new URLSearchParams({
         t:           token,
         callback:    cbName,
         source:      shopForm.source,
         shortUrl:    shopForm.shortUrl,
-        iframeCode:  shopForm.iframeCode || '',
+        iframeSrc:   iframeSrc,
         imageUrl:    shopForm.imageUrl   || '',
         productName: shopForm.productName || '',
         tag:         shopForm.tag,
