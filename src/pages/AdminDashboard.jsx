@@ -66,9 +66,12 @@ export default function AdminDashboard() {
     if (!shopForm.shortUrl.trim()) { setShopMsg('단축 URL을 입력하세요.'); return; }
     if (shopForm.source === 'coupang' && !shopForm.iframeCode.trim()) { setShopMsg('쿠팡 iframe 코드를 입력하세요.'); return; }
     if (shopForm.source === 'ali' && !shopForm.imageUrl.trim()) { setShopMsg('알리 상품 이미지 URL을 입력하세요.'); return; }
-    setShopLoading(true); setShopMsg('');
+    setShopLoading(true); setShopMsg('⏳ 서버 연결 중...');
     try {
-      await apiClient.post('/api/shop/manual', shopForm);
+      // Render 무료 플랜 슬립 대응: POST 전 GET으로 서버 웨이크업 (최대 90초 대기)
+      try { await apiClient.get('/api/shop/manual', { timeout: 90000 }); } catch { /* 웨이크업 실패 무시 */ }
+      setShopMsg('⏳ 등록 중...');
+      await apiClient.post('/api/shop/manual', shopForm, { timeout: 120000 });
       setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
       setShopMsg('✅ 등록 완료!');
       await fetchManualItems();
@@ -78,6 +81,7 @@ export default function AdminDashboard() {
       setShopMsg(`❌ [${status ?? 'NET'}] ${msg}`);
     } finally { setShopLoading(false); }
   };
+
 
   const handleShopDelete = async (id) => {
     if (!window.confirm('삭제하시겠습니까?')) return;
