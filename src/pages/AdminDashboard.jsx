@@ -71,70 +71,53 @@ export default function AdminDashboard() {
     const API   = 'https://fishing-go-backend.onrender.com';
     const token = (() => { try { return localStorage.getItem('access_token') || ''; } catch { return ''; } })();
 
-    // JSONP 방식: <script> 태그 로딩 — fetch() 블록/CORS 제한 완전 우회
-    const doRegister = (timeoutMs) => new Promise((resolve) => {
-      const cbName = '__shopCb_' + Date.now();
-      let tId;
+    // window.open + postMessage 방식 — Chrome 확장도 차단 불가 (새 탭 네비게이션)
+    const iframeSrc = (shopForm.iframeCode || '').match(/src=["']([^"']+)["']/i)?.[1] || '';
+    const params = new URLSearchParams({
+      t:           token,
+      source:      shopForm.source,
+      shortUrl:    shopForm.shortUrl,
+      iframeSrc:   iframeSrc,
+      imageUrl:    shopForm.imageUrl   || '',
+      productName: shopForm.productName || '',
+      tag:         shopForm.tag,
+    });
+    const tabUrl = `${API}/api/shop/manual/add-tab?${params.toString()}`;
 
-      const cleanup = () => {
-        clearTimeout(tId);
-        delete window[cbName];
-        const el = document.getElementById(cbName);
-        if (el) el.remove();
-      };
-
-      window[cbName] = (data) => {
-        cleanup();
-        resolve({ ok: !data.error, status: data.error ? 400 : 200, data });
-      };
-
-      tId = setTimeout(() => {
-        cleanup();
-        resolve({ ok: false, status: 0, data: { error: '서버 응답 없음 (timeout)' }, _timeout: true });
+    const doRegisterTab = (timeoutMs) => new Promise((resolve) => {
+      let msgListener;
+      const tId = setTimeout(() => {
+        window.removeEventListener('message', msgListener);
+        resolve({ ok: false, _timeout: true, data: { error: '서버 응답 없음 (timeout)' } });
       }, timeoutMs);
 
-      // iframe HTML→src URL만 추출 (Chrome이 URL의 HTML 태그를 XSS로 감지해 블록 방지)
-      const iframeSrc = (shopForm.iframeCode || '').match(/src=["']([^"']+)["']/i)?.[1] || '';
-      const params = new URLSearchParams({
-        t:           token,
-        callback:    cbName,
-        source:      shopForm.source,
-        shortUrl:    shopForm.shortUrl,
-        iframeSrc:   iframeSrc,
-        imageUrl:    shopForm.imageUrl   || '',
-        productName: shopForm.productName || '',
-        tag:         shopForm.tag,
-      });
-      const script = document.createElement('script');
-      script.id  = cbName;
-      script.src = `${API}/api/shop/manual/add?${params.toString()}`;
-      script.onerror = () => {
-        cleanup();
-        resolve({ ok: false, status: 0, data: { error: '스크립트 로드 실패' } });
+      msgListener = (e) => {
+        // Render 서버에서 오는 메시지만 처리 (ok 또는 error 키가 있는)
+        if (e.data && ('ok' in e.data || 'error' in e.data)) {
+          clearTimeout(tId);
+          window.removeEventListener('message', msgListener);
+          resolve({ ok: e.data.ok === true, data: e.data });
+        }
       };
-      document.head.appendChild(script);
+      window.addEventListener('message', msgListener);
+      window.open(tabUrl, '_blank', 'width=300,height=200,noopener=no');
     });
 
     try {
-      // 1차 시도 (30초)
-      setShopMsg('⏳ 등록 중...');
-      const r1 = await doRegister(30000);
+      setShopMsg('⏳ 등록 중... (새 탭이 열립니다)');
+      const r1 = await doRegisterTab(30000);
       if (r1.ok) {
         setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
         setShopMsg('✅ 등록 완료!');
         await fetchManualItems();
         return;
       }
-      // 타임아웃이 아닌 실제 오류면 즉시 표시
-      if (!r1._timeout) { setShopMsg(`❌ [${r1.status}] ${r1.data?.error || '등록 실패'}`); return; }
+      if (!r1._timeout) { setShopMsg(`❌ ${r1.data?.error || '등록 실패'}`); return; }
 
-      // 서버 슬립 → 웨이크업 후 재시도
-      setShopMsg('⏳ 서버 깨우는 중... (최대 60초)');
-      await doRegister(60000); // wakeup only (token없이 timeout이면 무시)
-
-      setShopMsg('⏳ 재시도 중...');
-      const r2 = await doRegister(30000);
-      if (!r2.ok) { setShopMsg(`❌ [${r2.status}] ${r2.data?.error || '서버 응답 없음'}`); return; }
+      // 타임아웃: 서버 슬립 → 재시도
+      setShopMsg('⏳ 서버 깨우는 중... (재시도 중)');
+      const r2 = await doRegisterTab(90000);
+      if (!r2.ok) { setShopMsg(`❌ ${r2.data?.error || '서버 응답 없음'}`); return; }
       setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
       setShopMsg('✅ 등록 완료!');
       await fetchManualItems();

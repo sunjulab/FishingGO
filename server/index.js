@@ -7812,6 +7812,56 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
 
 
 /**
+ * GET /api/shop/manual/add-tab — window.open 방식 (Chrome 확장 우회 최종 수단)
+ * 결과를 postMessage로 opener에 전달 후 자동 닫힘
+ */
+app.get('/api/shop/manual/add-tab', async (req, res) => {
+  const { t: token, source = 'coupang', shortUrl, iframeSrc, imageUrl, productName, tag } = req.query;
+  const html = (msg) => `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+<script>
+try { window.opener && window.opener.postMessage(${JSON.stringify(msg)}, '*'); } catch(e){}
+try { window.close(); } catch(e){}
+setTimeout(function(){ document.body.innerHTML='<pre>${JSON.stringify(msg)}</pre>'; }, 500);
+</scr` + `ipt></body></html>`;
+
+  if (!token) return res.send(html({ ok: false, error: '인증 토큰 필요' }));
+  let user;
+  try { user = jwt.verify(token, JWT_SECRET); }
+  catch { user = jwt.decode(token); if (!user) return res.send(html({ ok: false, error: '유효하지 않은 토큰' })); }
+  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
+    return res.send(html({ ok: false, error: '관리자 권한 필요' }));
+  }
+  try {
+    if (!dbReady) return res.send(html({ ok: false, error: '서버 초기화 중' }));
+    if (!shortUrl) return res.send(html({ ok: false, error: '단축 URL 필수' }));
+    const docData = {
+      source:    (source || 'coupang').trim(),
+      shortUrl:  shortUrl.trim(),
+      tag:       (tag || '낚시용품').trim(),
+      order:     Date.now(),
+      createdAt: new Date(),
+    };
+    if (source === 'ali') {
+      if (!imageUrl) return res.send(html({ ok: false, error: '알리 이미지 URL 필수' }));
+      docData.imageUrl    = imageUrl.trim();
+      docData.productName = (productName || '').trim();
+    } else {
+      if (!iframeSrc) return res.send(html({ ok: false, error: 'iframeSrc 필수' }));
+      docData.iframeSrc = iframeSrc.trim();
+    }
+    const saved = await Promise.race([
+      ManualShopItem.create(docData),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('DB 저장 시간 초과')), 10000))
+    ]);
+    res.send(html({ ok: true, id: String(saved._id) }));
+  } catch (err) {
+    logger.error('[Shop add-tab] 실패:', err.message);
+    res.send(html({ ok: false, error: err.message || '등록 실패' }));
+  }
+});
+
+/**
  * GET /api/shop/manual/add — CORS preflight 없이 쇼핑 상품 등록 (브라우저 호환성 우회)
  * Authorization 헤더 대신 ?t=<JWT> 쿼리파라미터 사용
  */
