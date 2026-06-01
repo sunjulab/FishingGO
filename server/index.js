@@ -7812,6 +7812,51 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
 
 
 /**
+ * GET /api/shop/manual/add — CORS preflight 없이 쇼핑 상품 등록 (브라우저 호환성 우회)
+ * Authorization 헤더 대신 ?t=<JWT> 쿼리파라미터 사용
+ */
+app.get('/api/shop/manual/add', async (req, res) => {
+  const { t: token, source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.query;
+  if (!token) return res.status(401).json({ error: '인증 토큰 필요' });
+  let user;
+  try { user = jwt.verify(token, JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 만료 또는 유효하지 않음' }); }
+  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
+    return res.status(403).json({ error: '관리자 권한 필요' });
+  }
+  try {
+    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중' });
+    if (!shortUrl) return res.status(400).json({ error: '단축 URL 필수' });
+    const docData = {
+      source:    (source || 'coupang').trim(),
+      shortUrl:  decodeURIComponent(shortUrl).trim(),
+      tag:       (tag ? decodeURIComponent(tag) : '낚시용품').trim(),
+      order:     Date.now(),
+      createdAt: new Date(),
+    };
+    if (source === 'ali') {
+      if (!imageUrl) return res.status(400).json({ error: '알리 이미지 URL 필수' });
+      docData.imageUrl    = decodeURIComponent(imageUrl).trim();
+      docData.productName = (productName ? decodeURIComponent(productName) : '').trim();
+    } else {
+      if (!iframeCode) return res.status(400).json({ error: 'iframe 코드 필수' });
+      const decoded = decodeURIComponent(iframeCode);
+      const m = decoded.match(/src=["']([^"']+)["']/i);
+      if (!m) return res.status(400).json({ error: 'iframe src 추출 실패' });
+      docData.iframeSrc = m[1].trim();
+    }
+    const saved = await Promise.race([
+      ManualShopItem.create(docData),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('DB 저장 시간 초과')), 10000))
+    ]);
+    res.json({ ok: true, id: String(saved._id) });
+  } catch (err) {
+    logger.error('[Shop GET-add] 실패:', err.message);
+    res.status(500).json({ error: err.message || '등록 실패' });
+  }
+});
+
+/**
  * POST /api/shop/manual
  * 수동 상품 등록 (관리자 전용)
  * body: { source, shortUrl, iframeCode, imageUrl, productName, tag }

@@ -71,17 +71,21 @@ export default function AdminDashboard() {
     const API   = 'https://fishing-go-backend.onrender.com';
     const token = (() => { try { return localStorage.getItem('access_token') || ''; } catch { return ''; } })();
 
-    // POST 실행 함수 (타임아웃 ms 지정 가능)
-    const doPost = async (timeoutMs) => {
+    // CORS preflight 우회: POST 대신 GET /api/shop/manual/add?t=token 방식
+    const doRegister = async (timeoutMs) => {
       const ctrl = new AbortController();
       const tId  = setTimeout(() => ctrl.abort(), timeoutMs);
       try {
-        const r = await fetch(`${API}/api/shop/manual`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body:    JSON.stringify(shopForm),
-          signal:  ctrl.signal,
+        const params = new URLSearchParams({
+          t:           token,
+          source:      shopForm.source,
+          shortUrl:    shopForm.shortUrl,
+          iframeCode:  shopForm.iframeCode || '',
+          imageUrl:    shopForm.imageUrl   || '',
+          productName: shopForm.productName || '',
+          tag:         shopForm.tag,
         });
+        const r = await fetch(`${API}/api/shop/manual/add?${params.toString()}`, { signal: ctrl.signal });
         const data = await r.json().catch(() => ({}));
         return { ok: r.ok, status: r.status, data };
       } finally { clearTimeout(tId); }
@@ -91,7 +95,7 @@ export default function AdminDashboard() {
       // 1차 시도 (70초 — 콜드스타트 커버)
       setShopMsg('⏳ 등록 중...');
       try {
-        const { ok, status, data } = await doPost(70000);
+        const { ok, status, data } = await doRegister(70000);
         if (!ok) { setShopMsg(`❌ [${status}] ${data.error || '등록 실패'}`); return; }
         setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
         setShopMsg('✅ 등록 완료!');
@@ -112,7 +116,7 @@ export default function AdminDashboard() {
 
       // 2차 시도 (30초)
       setShopMsg('⏳ 재시도 중...');
-      const { ok, status, data } = await doPost(30000);
+      const { ok, status, data } = await doRegister(30000);
       if (!ok) { setShopMsg(`❌ [${status}] ${data.error || '등록 실패'}`); return; }
       setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
       setShopMsg('✅ 등록 완료!');
