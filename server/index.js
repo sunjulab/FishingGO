@@ -7819,9 +7819,12 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
  */
 app.post('/api/shop/manual', verifyToken, async (req, res) => {
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  console.log('[SHOP-POST] ① 핸들러 진입, user:', req.user?.email, '| id:', req.user?.id);
   if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
+    console.log('[SHOP-POST] ② 403 관리자 권한 없음');
     return res.status(403).json({ error: '관리자 권한 필요' });
   }
+  console.log('[SHOP-POST] ③ 관리자 확인, dbReady:', dbReady);
   try {
     if (!dbReady) return res.status(503).json({ error: '서버 초기화 중입니다. 잠시 후 다시 시도해주세요.' });
     const { source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.body;
