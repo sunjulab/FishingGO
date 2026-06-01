@@ -71,60 +71,74 @@ export default function AdminDashboard() {
     const API   = 'https://fishing-go-backend.onrender.com';
     const token = (() => { try { return localStorage.getItem('access_token') || ''; } catch { return ''; } })();
 
-    // CORS preflight 우회: POST 대신 GET /api/shop/manual/add?t=token 방식
-    const doRegister = async (timeoutMs) => {
-      const ctrl = new AbortController();
-      const tId  = setTimeout(() => ctrl.abort(), timeoutMs);
-      try {
-        const params = new URLSearchParams({
-          t:           token,
-          source:      shopForm.source,
-          shortUrl:    shopForm.shortUrl,
-          iframeCode:  shopForm.iframeCode || '',
-          imageUrl:    shopForm.imageUrl   || '',
-          productName: shopForm.productName || '',
-          tag:         shopForm.tag,
-        });
-        const r = await fetch(`${API}/api/shop/manual/add?${params.toString()}`, { signal: ctrl.signal });
-        const data = await r.json().catch(() => ({}));
-        return { ok: r.ok, status: r.status, data };
-      } finally { clearTimeout(tId); }
-    };
+    // JSONP 방식: <script> 태그 로딩 — fetch() 블록/CORS 제한 완전 우회
+    const doRegister = (timeoutMs) => new Promise((resolve) => {
+      const cbName = '__shopCb_' + Date.now();
+      let tId;
+
+      const cleanup = () => {
+        clearTimeout(tId);
+        delete window[cbName];
+        const el = document.getElementById(cbName);
+        if (el) el.remove();
+      };
+
+      window[cbName] = (data) => {
+        cleanup();
+        resolve({ ok: !data.error, status: data.error ? 400 : 200, data });
+      };
+
+      tId = setTimeout(() => {
+        cleanup();
+        resolve({ ok: false, status: 0, data: { error: '서버 응답 없음 (timeout)' }, _timeout: true });
+      }, timeoutMs);
+
+      const params = new URLSearchParams({
+        t:           token,
+        callback:    cbName,
+        source:      shopForm.source,
+        shortUrl:    shopForm.shortUrl,
+        iframeCode:  shopForm.iframeCode || '',
+        imageUrl:    shopForm.imageUrl   || '',
+        productName: shopForm.productName || '',
+        tag:         shopForm.tag,
+      });
+      const script = document.createElement('script');
+      script.id  = cbName;
+      script.src = `${API}/api/shop/manual/add?${params.toString()}`;
+      script.onerror = () => {
+        cleanup();
+        resolve({ ok: false, status: 0, data: { error: '스크립트 로드 실패' } });
+      };
+      document.head.appendChild(script);
+    });
 
     try {
-      // 1차 시도 (70초 — 콜드스타트 커버)
+      // 1차 시도 (30초)
       setShopMsg('⏳ 등록 중...');
-      try {
-        const { ok, status, data } = await doRegister(70000);
-        if (!ok) { setShopMsg(`❌ [${status}] ${data.error || '등록 실패'}`); return; }
+      const r1 = await doRegister(30000);
+      if (r1.ok) {
         setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
         setShopMsg('✅ 등록 완료!');
         await fetchManualItems();
         return;
-      } catch (e1) {
-        if (e1.name !== 'AbortError') throw e1;
       }
+      // 타임아웃이 아닌 실제 오류면 즉시 표시
+      if (!r1._timeout) { setShopMsg(`❌ [${r1.status}] ${r1.data?.error || '등록 실패'}`); return; }
 
-      // 서버 슬립 상태 → GET으로 웨이크업 후 재시도
+      // 서버 슬립 → 웨이크업 후 재시도
       setShopMsg('⏳ 서버 깨우는 중... (최대 60초)');
-      try {
-        const wCtrl = new AbortController();
-        const wTId  = setTimeout(() => wCtrl.abort(), 60000);
-        try { await fetch(`${API}/api/shop/manual`, { signal: wCtrl.signal }); }
-        finally { clearTimeout(wTId); }
-      } catch { /* 웨이크업 실패도 무시하고 재시도 */ }
+      await doRegister(60000); // wakeup only (token없이 timeout이면 무시)
 
-      // 2차 시도 (30초)
       setShopMsg('⏳ 재시도 중...');
-      const { ok, status, data } = await doRegister(30000);
-      if (!ok) { setShopMsg(`❌ [${status}] ${data.error || '등록 실패'}`); return; }
+      const r2 = await doRegister(30000);
+      if (!r2.ok) { setShopMsg(`❌ [${r2.status}] ${r2.data?.error || '서버 응답 없음'}`); return; }
       setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
       setShopMsg('✅ 등록 완료!');
       await fetchManualItems();
 
     } catch (e) {
-      const msg = e.name === 'AbortError' ? '서버 응답 없음 — 잠시 후 다시 시도해주세요' : e.message;
-      setShopMsg(`❌ [NET] ${msg}`);
+      setShopMsg(`❌ [NET] ${e.message}`);
     } finally { setShopLoading(false); }
   };
 

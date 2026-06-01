@@ -7854,10 +7854,22 @@ app.get('/api/shop/manual/add', async (req, res) => {
       ManualShopItem.create(docData),
       new Promise((_, rej) => setTimeout(() => rej(new Error('DB 저장 시간 초과')), 10000))
     ]);
-    res.json({ ok: true, id: String(saved._id) });
+    const result = { ok: true, id: String(saved._id) };
+    const cb = req.query.callback;
+    if (cb && /^[a-zA-Z0-9_]+$/.test(cb)) {
+      res.type('text/javascript').send(`${cb}(${JSON.stringify(result)})`);
+    } else {
+      res.json(result);
+    }
   } catch (err) {
     logger.error('[Shop GET-add] 실패:', err.message);
-    res.status(500).json({ error: err.message || '등록 실패' });
+    const errResult = { error: err.message || '등록 실패' };
+    const cb = req.query.callback;
+    if (cb && /^[a-zA-Z0-9_]+$/.test(cb)) {
+      res.type('text/javascript').send(`${cb}(${JSON.stringify(errResult)})`);
+    } else {
+      res.status(500).json(errResult);
+    }
   }
 });
 
