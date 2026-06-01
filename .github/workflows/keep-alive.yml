@@ -1,0 +1,23 @@
+name: 🐟 Render Keep-Alive (슬립 방지)
+
+on:
+  schedule:
+    # UTC 기준 매 14분 — Render 15분 슬립 직전에 핑
+    - cron: '*/14 * * * *'
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend
+        run: |
+          echo "🏓 Pinging fishing-go-backend.onrender.com..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            https://fishing-go-backend.onrender.com/)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ 서버 정상 응답"
+          else
+            echo "⚠️ 서버 응답 이상: $STATUS"
+          fi

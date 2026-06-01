@@ -88,17 +88,17 @@ export default function AdminDashboard() {
     };
 
     try {
-      // 1차 시도 (30초)
+      // 1차 시도 (70초 — 콜드스타트 커버)
       setShopMsg('⏳ 등록 중...');
       try {
-        const { ok, status, data } = await doPost(30000);
+        const { ok, status, data } = await doPost(70000);
         if (!ok) { setShopMsg(`❌ [${status}] ${data.error || '등록 실패'}`); return; }
         setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
         setShopMsg('✅ 등록 완료!');
         await fetchManualItems();
         return;
       } catch (e1) {
-        if (e1.name !== 'AbortError') throw e1; // AbortError 아니면 바로 throw
+        if (e1.name !== 'AbortError') throw e1;
       }
 
       // 서버 슬립 상태 → GET으로 웨이크업 후 재시도
