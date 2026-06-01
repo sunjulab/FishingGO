@@ -7791,6 +7791,26 @@ app.get('/api/shop/manual', async (req, res) => {
 });
 
 /**
+ * GET /api/shop/manual/dbtest — 임시 MongoDB 쓰기 테스트 (인증 없음)
+ * 서버의 MongoDB write 가능 여부 진단용
+ */
+app.get('/api/shop/manual/dbtest', async (req, res) => {
+  const startMs = Date.now();
+  try {
+    if (!dbReady) return res.json({ ok: false, error: 'dbReady=false', ms: Date.now() - startMs });
+    const doc = await Promise.race([
+      ManualShopItem.create({ source: '__test__', shortUrl: '__test__', tag: '__test__', order: 0, createdAt: new Date() }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('write timeout 8s')), 8000))
+    ]);
+    // 바로 삭제
+    await ManualShopItem.findByIdAndDelete(doc._id).catch(() => {});
+    res.json({ ok: true, ms: Date.now() - startMs, id: String(doc._id) });
+  } catch (err) {
+    res.json({ ok: false, error: err.message, ms: Date.now() - startMs });
+  }
+});
+
+
  * POST /api/shop/manual
  * 수동 상품 등록 (관리자 전용)
  * body: { source, shortUrl, iframeCode, imageUrl, productName, tag }
