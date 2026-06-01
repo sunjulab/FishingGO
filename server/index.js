@@ -7811,6 +7811,7 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
 });
 
 
+/**
  * POST /api/shop/manual
  * 수동 상품 등록 (관리자 전용)
  * body: { source, shortUrl, iframeCode, imageUrl, productName, tag }
