@@ -309,6 +309,51 @@ export default function Shop() {
         </div>
       )}
 
+
+      {/* ── ⭐ 추천 탭: 수동 등록 상품 그리드 ── */}
+      {activeCat === '⭐ 추천' && (
+        <div style={{ padding: '12px 12px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '16px' }}>⭐</span>
+            <span style={{ fontSize: 'calc(14px * var(--fs, 1))', fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
+            <span style={{ fontSize: 'calc(11px * var(--fs, 1))', color: '#8E8E93', fontWeight: '700' }}>({manualItems.length}개)</span>
+          </div>
+          {manualItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#C7C7CC', fontSize: 'calc(13px * var(--fs, 1))', fontWeight: '700' }}>
+              등록된 추천 상품이 없습니다
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {manualItems.map(item => (
+                <div key={item._id} style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', background: '#fff', border: '1px solid #F0F0F0' }}>
+                  <a href={item.shortUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
+                    {item.source === 'ali' ? (
+                      <>
+                        <img src={item.imageUrl} alt={item.productName || '상품'} style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
+                        <div style={{ padding: '8px 10px 10px' }}>
+                          <span style={{ display: 'inline-block', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px', marginBottom: '4px' }}>AliExpress</span>
+                          {item.productName && (
+                            <div style={{ fontSize: 'calc(11px * var(--fs, 1))', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.35', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <iframe src={item.iframeSrc} width="100%" height={240} frameBorder={0} scrolling="no" referrerPolicy="unsafe-url" title={`쿠팡 상품 ${item.tag}`} style={{ display: 'block', pointerEvents: 'none' }} />
+                    )}
+                  </a>
+                  {isAdmin && (
+                    <button onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(item); }} style={{ position: 'absolute', top: '6px', right: '6px', width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(255,59,48,0.93)', border: '2px solid #fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }} title="삭제">
+                      <X size={13} color="#fff" strokeWidth={3} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+{activeCat !== '⭐ 추천' && (
+      <>
       {/* ── 상품 그리드 (Coupang + AliExpress 통합) ── */}
       <div style={{ padding: '12px 12px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingLeft: '4px' }}>
@@ -393,6 +438,9 @@ export default function Shop() {
               })}
         </div>
       </div>
+
+      </>
+      )}
 
       {/* ── 파트너스 공시 ── */}
       <div style={{ padding: '24px 24px 0', textAlign: 'center' }}>
