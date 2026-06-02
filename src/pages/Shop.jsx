@@ -10,6 +10,7 @@ const SHOP_TAGS  = ['낚시용품','루어/채비','릴/로드','라인/원줄',
 
 // ── 카테고리 정의 ──────────────────────────────────────────────────────────────
 const CATEGORIES = [
+  { name: '⭐ 추천',       query: '',           source: 'manual'  },
   { name: '전체',         query: '낚시용품',   source: 'all'     },
   { name: '🛒 Coupang',   query: '낚시용품',   source: 'coupang' },
   { name: '💰 AliExpress', query: '소모품',     source: 'ali'     },
@@ -23,6 +24,7 @@ const CATEGORIES = [
 
 // 카테고리 → manualItems 필터 규칙
 const CAT_MANUAL_FILTER = {
+  '⭐ 추천':      null,
   '전체':         null,
   '🛒 Coupang':   { source: 'coupang' },
   '💰 AliExpress': { source: 'ali' },
@@ -170,9 +172,11 @@ export default function Shop() {
   // ── 카테고리 클릭 ────────────────────────────────────────────────────────────
   const handleCatClick = (cat) => {
     setActiveCat(cat.name);
-    setSearchQuery('');    // 카테고리 클릭 시 검색어 초기화
+    setSearchQuery('');
     setSearch('');
-    fetchProducts(cat.query, cat.source);
+    if (cat.source !== 'manual') {
+      fetchProducts(cat.query, cat.source);
+    }
   };
 
   // ── 상품 클릭 ────────────────────────────────────────────────────────────────
@@ -188,6 +192,8 @@ export default function Shop() {
   // ── 그리드 헤더 텍스트 ──────────────────────────────────────────────────────
   const gridTitle = searchQuery
     ? `🔍 "${searchQuery}" 검색결과`
+    : activeCat === '⭐ 추천'
+    ? '⭐ 추천 낚시 상품'
     : activeCat === '전체'
     ? '전체 상품 (Coupang + AliExpress)'
     : `${activeCat} 상품`;
@@ -267,80 +273,6 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* ✅ 수동 등록 상품 — 카테고리 필터 연동 */}
-      {filteredManualItems.length > 0 && (
-        <div style={{ padding: '12px 12px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '16px' }}>🛒</span>
-            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
-            {activeCat !== '전체' && (
-              <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', marginLeft: '4px' }}>· {activeCat}</span>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-            {filteredManualItems.map(item => (
-              <div key={item._id} style={{ flexShrink: 0, position: 'relative' }}>
-                {item.source === 'ali' ? (
-                  <a
-                    href={item.shortUrl}
-                    target="_blank"
-                    rel="noopener noreferrer sponsored"
-                    style={{ display: 'flex', flexDirection: 'column', width: '120px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
-                  >
-                    <div style={{ position: 'relative' }}>
-                      <img src={item.imageUrl} alt={item.productName || '알리 상품'} width={120} height={120} style={{ display: 'block', objectFit: 'cover', width: '100%', height: '120px' }} />
-                      <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
-                    </div>
-                    {item.productName && (
-                      <div style={{ padding: '6px 7px', fontSize: 'calc(10px * var(--fs, 1))', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {item.productName}
-                      </div>
-                    )}
-                  </a>
-                ) : (
-                  <a
-                    href={item.shortUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
-                  >
-                    <iframe
-                      src={item.iframeSrc}
-                      width={120}
-                      height={240}
-                      frameBorder={0}
-                      scrolling="no"
-                      referrerPolicy="unsafe-url"
-                      title={`쿠팡 상품 ${item.tag}`}
-                      style={{ display: 'block', pointerEvents: 'none' }}
-                    />
-                  </a>
-                )}
-                {isAdmin && (
-                  <button
-                    onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(item); }}
-                    style={{ position: 'absolute', top: '4px', right: '4px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(255,59,48,0.93)', border: '2px solid #fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
-                    title="삭제"
-                  >
-                    <X size={12} color="#fff" strokeWidth={3} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          {/* 면책 문구 */}
-          {filteredManualItems.some(i => !i.source || i.source === 'coupang') && (
-            <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '4px', paddingLeft: '2px' }}>
-              이 상품은 쿠팡 파트너스를 통해 제공되며 구매 시 일정액의 수수료를 받을 수 있습니다.
-            </div>
-          )}
-          {filteredManualItems.some(i => i.source === 'ali') && (
-            <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '2px', paddingLeft: '2px' }}>
-              AliExpress 제휴 링크를 포함하며 구매 시 수수료를 받을 수 있습니다.
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── AliExpress 오늘 특가 배너 (검색 중엔 숨김) ── */}
       {!searchQuery && promos.length > 0 && (
