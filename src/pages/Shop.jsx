@@ -275,7 +275,7 @@ export default function Shop() {
 
 
       {/* ── AliExpress 오늘 특가 배너 (검색 중엔 숨김) ── */}
-      {!searchQuery && promos.length > 0 && (
+      {!searchQuery && activeCat !== '⭐ 추천' && promos.length > 0 && (
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <Zap size={15} color="#FF6900" fill="#FF6900" />
@@ -359,7 +359,7 @@ export default function Shop() {
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <span style={{ fontSize: '14px' }}>⭐</span>
-            <span style={{ fontSize: 'calc(13px * var(--fs, 1))', fontWeight: '900', color: '#1c1c1e' }}>추천 상품</span>
+            <span style={{ fontSize: 'calc(13px * var(--fs, 1))', fontWeight: '900', color: '#1c1c1e' }}>관련 등록 상품</span>
           </div>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
             {filteredManualItems.map(item => (
