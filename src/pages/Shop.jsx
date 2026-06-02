@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Zap, ShoppingBag, Search, SlidersHorizontal, X } from 'lucide-react';
 import apiClient from '../api/index';
 
@@ -6,15 +6,31 @@ const COUPANG_PARTNERS_ID = import.meta.env.VITE_COUPANG_PARTNERS_ID || '';
 
 // ── 카테고리 정의 ──────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { name: '전체',         query: '낚시용품',  source: 'all'     },
-  { name: '🛒 Coupang',   query: '낚시용품',  source: 'coupang' },
-  { name: '💰 AliExpress', query: '소모품',    source: 'ali'     },
-  { name: '스피닝릴',    query: '스피닝릴',  source: 'coupang' },
-  { name: '루어로드',    query: '루어낚시대', source: 'coupang' },
-  { name: '루어/에기',   query: '루어',      source: 'ali'     },
-  { name: '채비/바늘',   query: '채비',      source: 'ali'     },
-  { name: '낚시줄',      query: '낚시줄',    source: 'ali'     },
+  { name: '전체',         query: '낚시용품',   source: 'all'     },
+  { name: '🛒 Coupang',   query: '낚시용품',   source: 'coupang' },
+  { name: '💰 AliExpress', query: '소모품',     source: 'ali'     },
+  { name: '루어/채비',   query: '루어채비',   source: 'coupang' },
+  { name: '릴/로드',     query: '낚시릴낚싯대', source: 'coupang' },
+  { name: '라인/원줄',   query: '낚시줄',     source: 'ali'     },
+  { name: '낚시용품',   query: '낚시용품',   source: 'coupang' },
+  { name: '낚시복',     query: '낚시복',     source: 'coupang' },
+  { name: '액세서리',   query: '낚시액세서리', source: 'ali'     },
 ];
+
+// 카테고리 → manualItems 필터 규칙
+const CAT_MANUAL_FILTER = {
+  '전체':         null,
+  '🛒 Coupang':   { source: 'coupang' },
+  '💰 AliExpress': { source: 'ali' },
+  '루어/채비':   { tag: '루어/채비' },
+  '릴/로드':     { tag: '릴/로드' },
+  '라인/원줄':   { tag: '라인/원줄' },
+  '낚시용품':   { tag: '낚시용품' },
+  '낚시복':     { tag: '낚시복' },
+  '가방/케이스': { tag: '가방/케이스' },
+  '액세서리':   { tag: '액세서리' },
+  '기타':       { tag: '기타' },
+};
 
 // 플랫폼 뱃지 색상
 const SOURCE_STYLE = {
@@ -39,6 +55,17 @@ export default function Shop() {
     apiClient.get('/api/shop/manual').then(r => setManualItems(r.data || [])).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── 수동 상품 카테고리 필터링 ───────────────────────────────────────────────
+  const filteredManualItems = useMemo(() => {
+    const rule = CAT_MANUAL_FILTER[activeCat];
+    if (!rule) return manualItems; // 전체 or 미정의 → 전체 표시
+    return manualItems.filter(item => {
+      if (rule.source) return item.source === rule.source;
+      if (rule.tag)    return item.tag === rule.tag;
+      return true;
+    });
+  }, [manualItems, activeCat]);
 
   // ── 상품 목록 로드 ───────────────────────────────────────────────────────────
   const fetchProducts = useCallback(async (category = '낚시용품', source = 'all') => {
@@ -175,15 +202,18 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* ✅ 수동 등록 상품 (쿠팡 파트너스 + 알리익스프레스) */}
-      {manualItems.length > 0 && (
+      {/* ✅ 수동 등록 상품 — 카테고리 필터 연동 */}
+      {filteredManualItems.length > 0 && (
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <span style={{ fontSize: '16px' }}>🛒</span>
             <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
+            {activeCat !== '전체' && (
+              <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', marginLeft: '4px' }}>· {activeCat}</span>
+            )}
           </div>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-            {manualItems.map(item => (
+            {filteredManualItems.map(item => (
               item.source === 'ali' ? (
                 /* 알리익스프레스 카드 */
                 <a
@@ -225,12 +255,12 @@ export default function Shop() {
             ))}
           </div>
           {/* 면책 문구 */}
-          {manualItems.some(i => !i.source || i.source === 'coupang') && (
+          {filteredManualItems.some(i => !i.source || i.source === 'coupang') && (
             <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '4px', paddingLeft: '2px' }}>
               이 상품은 쿠팡 파트너스를 통해 제공되며 구매 시 일정액의 수수료를 받을 수 있습니다.
             </div>
           )}
-          {manualItems.some(i => i.source === 'ali') && (
+          {filteredManualItems.some(i => i.source === 'ali') && (
             <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '2px', paddingLeft: '2px' }}>
               AliExpress 제휴 링크를 포함하며 구매 시 수수료를 받을 수 있습니다.
             </div>
