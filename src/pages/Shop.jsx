@@ -280,7 +280,7 @@ export default function Shop() {
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {filteredManualItems.map(item => (
               <div key={item._id} style={{ flexShrink: 0, position: 'relative' }}>
-              item.source === 'ali' ? (
+              {item.source === 'ali' ? (
                 /* 알리익스프레스 카드 */
                 <a
                   key={item._id}
@@ -317,7 +317,7 @@ export default function Shop() {
                     style={{ display: 'block', pointerEvents: 'none' }}
                   />
                 </a>
-              )
+              )}
                 {isAdmin && (
                   <button
                     onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(item); }}
