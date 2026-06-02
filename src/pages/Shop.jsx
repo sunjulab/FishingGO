@@ -115,6 +115,23 @@ export default function Shop() {
     }
   };
 
+
+  const handleDelete = async (item) => {
+    if (!window.confirm(`"${item.tag}" 상품을 삭제하시겠습니까?\n${item.shortUrl}`)) return;
+    try {
+      const params = new URLSearchParams({ key: DIRECT_KEY, id: item._id });
+      const res = await fetch(`${API_BASE}/api/shop/manual/delete-direct?${params}`);
+      const data = await res.json();
+      if (data.ok) {
+        setManualItems(prev => prev.filter(i => i._id !== item._id));
+      } else {
+        alert(`삭제 실패: ${data.error}`);
+      }
+    } catch (e) {
+      alert(`오류: ${e.message}`);
+    }
+  };
+
   useEffect(() => {
     fetchProducts('낚시용품', 'all');
     fetchPromo();
@@ -215,9 +232,19 @@ export default function Shop() {
           <h1 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.03em', margin: 0 }}>
             낚시 장비 쇼핑
           </h1>
-          <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', marginLeft: 'auto' }}>
-            Coupang + AliExpress 🎣
-          </span>
+          {isAdmin ? (
+            <button
+              onClick={() => { setShowRegModal(true); setRegMsg(''); }}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '10px', background: 'linear-gradient(135deg,#FF9B26,#FF6B00)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', flexShrink: 0 }}
+            >
+              <Plus size={13} strokeWidth={3} />
+              상품 등록
+            </button>
+          ) : (
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', marginLeft: 'auto' }}>
+              Coupang + AliExpress 🎣
+            </span>
+          )}
         </div>
         <form onSubmit={handleSearchSubmit} style={{ position: 'relative' }}>
           <input
@@ -281,6 +308,7 @@ export default function Shop() {
           </div>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {filteredManualItems.map(item => (
+              <div key={item._id} style={{ flexShrink: 0, position: 'relative' }}>
               item.source === 'ali' ? (
                 /* 알리익스프레스 카드 */
                 <a
@@ -319,6 +347,17 @@ export default function Shop() {
                   />
                 </a>
               )
+                {/* MASTER 전용 삭제 버튼 */}
+                {isAdmin && (
+                  <button
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(item); }}
+                    style={{ position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,59,48,0.92)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
+                    title="삭제"
+                  >
+                    <X size={12} color="#fff" strokeWidth={3} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
           {/* 면책 문구 */}
@@ -463,23 +502,6 @@ export default function Shop() {
           이에 따른 일정액의 수수료를 제공받을 수 있습니다.
         </p>
       </div>
-
-      {/* ── MASTER 전용 상품 등록 FAB ── */}
-      {isAdmin && (
-        <button
-          onClick={() => { setShowRegModal(true); setRegMsg(''); }}
-          style={{
-            position: 'fixed', bottom: '90px', right: '16px', zIndex: 200,
-            width: '52px', height: '52px', borderRadius: '50%',
-            background: 'linear-gradient(135deg,#FF9B26,#FF6B00)',
-            border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(255,107,0,0.45)',
-          }}
-          title="상품 등록 (MASTER)"
-        >
-          <Plus size={24} color="#fff" strokeWidth={3} />
-        </button>
-      )}
 
       {/* ── MASTER 상품 등록 모달 ── */}
       {isAdmin && showRegModal && (
