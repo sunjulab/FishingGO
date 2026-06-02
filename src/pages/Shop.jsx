@@ -53,12 +53,7 @@ export default function Shop() {
   const [searchQuery,  setSearchQuery]  = useState(''); // ✅ 실제 검색 중인 키워드
 
   // ── MASTER 전용 ────────────────────────────────────────────────────
-  const isAdmin = useUserStore(s =>
-    s.userId === ADMIN_ID ||
-    s.userEmail === ADMIN_EMAIL ||
-    s.userEmail === 'sunjulab.k@gmail.com' ||
-    s.userTier  === 'MASTER'
-  );
+  const isAdmin = useUserStore(s => s.isAdmin());
   const [showRegForm, setShowRegForm] = useState(false);
   const [regSrc,  setRegSrc]  = useState('coupang');
   const [regTag,  setRegTag]  = useState('낚시용품');
