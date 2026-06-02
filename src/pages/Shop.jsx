@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Zap, ShoppingBag, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Zap, ShoppingBag, Search, SlidersHorizontal, X, Plus } from 'lucide-react';
 import apiClient from '../api/index';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 
 const COUPANG_PARTNERS_ID = import.meta.env.VITE_COUPANG_PARTNERS_ID || '';
 const API_BASE   = 'https://fishing-go-backend.onrender.com';
