@@ -280,44 +280,42 @@ export default function Shop() {
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {filteredManualItems.map(item => (
               <div key={item._id} style={{ flexShrink: 0, position: 'relative' }}>
-              {item.source === 'ali' ? (
-                /* 알리익스프레스 카드 */
-                <a
-                  key={item._id}
-                  href={item.shortUrl}
-                  target="_blank"
-                  rel="noopener noreferrer sponsored"
-                  style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', width: '120px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
-                >
-                  <div style={{ position: 'relative' }}>
-                    <img src={item.imageUrl} alt={item.productName || '알리 상품'} width={120} height={120} style={{ display: 'block', objectFit: 'cover', width: '100%', height: '120px' }} />
-                    <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
-                  </div>
-                  {item.productName && (
-                    <div style={{ padding: '6px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {item.productName}
+                {item.source === 'ali' ? (
+                  <a
+                    href={item.shortUrl}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                    style={{ display: 'flex', flexDirection: 'column', width: '120px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
+                  >
+                    <div style={{ position: 'relative' }}>
+                      <img src={item.imageUrl} alt={item.productName || '알리 상품'} width={120} height={120} style={{ display: 'block', objectFit: 'cover', width: '100%', height: '120px' }} />
+                      <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
                     </div>
-                  )}
-                </a>
-              ) : (
-                /* 쿠팡 파트너스 iframe 카드 */
-                <a
-                  key={item._id}
-                  href={item.shortUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ flexShrink: 0, display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
-                >
-                  <iframe
-                    src={item.iframeSrc}
-                    width={120} height={240}
-                    frameBorder={0} scrolling="no"
-                    referrerPolicy="unsafe-url"
-                    title={`쿠팡 상품 ${item.tag}`}
-                    style={{ display: 'block', pointerEvents: 'none' }}
-                  />
-                </a>
-              )}
+                    {item.productName && (
+                      <div style={{ padding: '6px 7px', fontSize: 'calc(10px * var(--fs, 1))', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {item.productName}
+                      </div>
+                    )}
+                  </a>
+                ) : (
+                  <a
+                    href={item.shortUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
+                  >
+                    <iframe
+                      src={item.iframeSrc}
+                      width={120}
+                      height={240}
+                      frameBorder={0}
+                      scrolling="no"
+                      referrerPolicy="unsafe-url"
+                      title={`쿠팡 상품 ${item.tag}`}
+                      style={{ display: 'block', pointerEvents: 'none' }}
+                    />
+                  </a>
+                )}
                 {isAdmin && (
                   <button
                     onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(item); }}
