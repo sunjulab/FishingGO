@@ -6,7 +6,7 @@ import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 const COUPANG_PARTNERS_ID = import.meta.env.VITE_COUPANG_PARTNERS_ID || '';
 const API_BASE   = 'https://fishing-go-backend.onrender.com';
 const DIRECT_KEY = 'FishingGO_Admin_Direct_2026';
-const SHOP_TAGS  = ['낚시용품','루어/채비','릴/로드','라인/원줄','낚시복','가방/케이스','액세서리','기타'];
+const SHOP_TAGS  = ['추천','낚시용품','루어/채비','릴/로드','라인/원줄','낚시복','가방/케이스','액세서리','기타'];
 
 // ── 카테고리 정의 ──────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -24,7 +24,7 @@ const CATEGORIES = [
 
 // 카테고리 → manualItems 필터 규칙
 const CAT_MANUAL_FILTER = {
-  '⭐ 추천':      null,
+  '⭐ 추천':      { tag: '추천' },
   '전체':         null,
   '🛒 Coupang':   { source: 'coupang' },
   '💰 AliExpress': { source: 'ali' },
@@ -58,7 +58,7 @@ export default function Shop() {
   const isAdmin = useUserStore(s => s.isAdmin());
   const [showRegForm, setShowRegForm] = useState(false);
   const [regSrc,  setRegSrc]  = useState('coupang');
-  const [regTag,  setRegTag]  = useState('낚시용품');
+  const [regTag,  setRegTag]  = useState('추천');
   const [regShortUrl,    setRegShortUrl]    = useState('');
   const [regIframeCode,  setRegIframeCode]  = useState('');
   const [regImageUrl,    setRegImageUrl]    = useState('');
@@ -316,15 +316,15 @@ export default function Shop() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
             <span style={{ fontSize: '16px' }}>⭐</span>
             <span style={{ fontSize: 'calc(14px * var(--fs, 1))', fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
-            <span style={{ fontSize: 'calc(11px * var(--fs, 1))', color: '#8E8E93', fontWeight: '700' }}>({manualItems.length}개)</span>
+            <span style={{ fontSize: 'calc(11px * var(--fs, 1))', color: '#8E8E93', fontWeight: '700' }}>({filteredManualItems.length}개)</span>
           </div>
-          {manualItems.length === 0 ? (
+          {filteredManualItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: '#C7C7CC', fontSize: 'calc(13px * var(--fs, 1))', fontWeight: '700' }}>
               등록된 추천 상품이 없습니다
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              {manualItems.map(item => (
+              {filteredManualItems.map(item => (
                 <div key={item._id} style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', background: '#fff', border: '1px solid #F0F0F0' }}>
                   <a href={item.shortUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
                     {item.source === 'ali' ? (
@@ -354,6 +354,39 @@ export default function Shop() {
       )}
 {activeCat !== '⭐ 추천' && (
       <>
+      {/* ── 카테고리별 추천 상품 (수동 등록) ── */}
+      {filteredManualItems.length > 0 && (
+        <div style={{ padding: '12px 12px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '14px' }}>⭐</span>
+            <span style={{ fontSize: 'calc(13px * var(--fs, 1))', fontWeight: '900', color: '#1c1c1e' }}>추천 상품</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
+            {filteredManualItems.map(item => (
+              <div key={item._id} style={{ flexShrink: 0, position: 'relative' }}>
+                {item.source === 'ali' ? (
+                  <a href={item.shortUrl} target="_blank" rel="noopener noreferrer sponsored" style={{ display: 'flex', flexDirection: 'column', width: '110px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}>
+                    <div style={{ position: 'relative' }}>
+                      <img src={item.imageUrl} alt={item.productName || '상품'} style={{ width: '110px', height: '110px', objectFit: 'cover', display: 'block' }} />
+                      <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
+                    </div>
+                    {item.productName && <div style={{ padding: '5px 6px', fontSize: 'calc(10px * var(--fs, 1))', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>}
+                  </a>
+                ) : (
+                  <a href={item.shortUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}>
+                    <iframe src={item.iframeSrc} width={110} height={220} frameBorder={0} scrolling="no" referrerPolicy="unsafe-url" title={쿠팡 } style={{ display: 'block', pointerEvents: 'none' }} />
+                  </a>
+                )}
+                {isAdmin && (
+                  <button onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(item); }} style={{ position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,59,48,0.93)', border: '2px solid #fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }} title="삭제">
+                    <X size={11} color="#fff" strokeWidth={3} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* ── 상품 그리드 (Coupang + AliExpress 통합) ── */}
       <div style={{ padding: '12px 12px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingLeft: '4px' }}>
