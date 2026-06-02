@@ -98,6 +98,23 @@ export default function Shop() {
     } finally { setRegLoading(false); }
   };
 
+
+  const handleDelete = async (item) => {
+    if (!window.confirm(`"${item.tag}" 상품을 삭제하시겠습니까?\n${item.shortUrl}`)) return;
+    try {
+      const params = new URLSearchParams({ key: DIRECT_KEY, id: item._id });
+      const res = await fetch(`${API_BASE}/api/shop/manual/delete-direct?${params}`);
+      const data = await res.json();
+      if (data.ok) {
+        setManualItems(prev => prev.filter(i => i._id !== item._id));
+      } else {
+        alert(`삭제 실패: ${data.error}`);
+      }
+    } catch (e) {
+      alert(`오류: ${e.message}`);
+    }
+  };
+
   useEffect(() => {
     fetchProducts('낚시용품', 'all');
     fetchPromo();

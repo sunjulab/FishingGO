@@ -8017,6 +8017,22 @@ app.delete('/api/shop/manual/:id', verifyToken, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/shop/manual/delete-direct — key 기반 삭제 (CORS 우회, 앱/브라우저 호환)
+ * ?key=FishingGO_Admin_Direct_2026&id=<mongoId>
+ */
+app.get('/api/shop/manual/delete-direct', async (req, res) => {
+  const { key, id } = req.query;
+  if (key !== 'FishingGO_Admin_Direct_2026') return res.status(401).json({ error: '키 불일치' });
+  if (!id) return res.status(400).json({ error: 'id 필수' });
+  try {
+    await ManualShopItem.findByIdAndDelete(id);
+    res.json({ ok: true, id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 카테고리 → 알리 키워드 변환 헬퍼
 function _mapToAliKeyword(category) {
   const map = {
