@@ -193,6 +193,7 @@ export default function Shop() {
     : `${activeCat} 상품`;
 
   return (
+    <>
     <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '80px' }}>
 
       {/* ── 헤더 + 검색 ── */}
@@ -547,5 +548,6 @@ export default function Shop() {
         </div>
       )}
 
+    </>
   );
 }
