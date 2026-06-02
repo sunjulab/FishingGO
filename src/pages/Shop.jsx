@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Zap, ShoppingBag, Search, SlidersHorizontal, X, Plus, Trash2 } from 'lucide-react';
+import { Zap, ShoppingBag, Search, SlidersHorizontal, X } from 'lucide-react';
 import apiClient from '../api/index';
-import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 
 const COUPANG_PARTNERS_ID = import.meta.env.VITE_COUPANG_PARTNERS_ID || '';
 const API_BASE   = 'https://fishing-go-backend.onrender.com';
@@ -45,29 +44,29 @@ const SOURCE_STYLE = {
 export default function Shop() {
   const [products,     setProducts]     = useState([]);
   const [promos,       setPromos]       = useState([]);
-  const [manualItems,  setManualItems]  = useState([]);
+  const [manualItems,  setManualItems]  = useState([]);  // ✅ 수동 등록 상품
   const [search,       setSearch]       = useState('');
   const [activeCat,    setActiveCat]    = useState('전체');
   const [loading,      setLoading]      = useState(true);
   const [promoLoading, setPromoLoading] = useState(true);
-  const [searchQuery,  setSearchQuery]  = useState('');
+  const [searchQuery,  setSearchQuery]  = useState(''); // ✅ 실제 검색 중인 키워드
 
-  // ── MASTER 전용 ───────────────────────────────────────────────────────────────
+  // ── MASTER 전용 ────────────────────────────────────────────────────
   const isAdmin = useUserStore(s =>
     s.userId === ADMIN_ID ||
     s.userEmail === ADMIN_EMAIL ||
     s.userEmail === 'sunjulab.k@gmail.com' ||
     s.userTier  === 'MASTER'
   );
-  const [showRegForm,    setShowRegForm]    = useState(false);
-  const [regSrc,         setRegSrc]         = useState('coupang');
-  const [regTag,         setRegTag]         = useState('낚시용품');
+  const [showRegForm, setShowRegForm] = useState(false);
+  const [regSrc,  setRegSrc]  = useState('coupang');
+  const [regTag,  setRegTag]  = useState('낚시용품');
   const [regShortUrl,    setRegShortUrl]    = useState('');
   const [regIframeCode,  setRegIframeCode]  = useState('');
   const [regImageUrl,    setRegImageUrl]    = useState('');
   const [regProductName, setRegProductName] = useState('');
-  const [regMsg,         setRegMsg]         = useState('');
-  const [regLoading,     setRegLoading]     = useState(false);
+  const [regMsg,   setRegMsg]   = useState('');
+  const [regLoading, setRegLoading] = useState(false);
 
   const handleRegSubmit = async () => {
     if (!regShortUrl.trim()) { setRegMsg('❌ 단축 URL 필수'); return; }
@@ -110,6 +109,7 @@ export default function Shop() {
   useEffect(() => {
     fetchProducts('낚시용품', 'all');
     fetchPromo();
+    // 수동 등록 상품 로드
     apiClient.get('/api/shop/manual').then(r => setManualItems(r.data || [])).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -117,7 +117,7 @@ export default function Shop() {
   // ── 수동 상품 카테고리 필터링 ───────────────────────────────────────────────
   const filteredManualItems = useMemo(() => {
     const rule = CAT_MANUAL_FILTER[activeCat];
-    if (!rule) return manualItems;
+    if (!rule) return manualItems; // 전체 or 미정의 → 전체 표시
     return manualItems.filter(item => {
       if (rule.source) return item.source === rule.source;
       if (rule.tag)    return item.tag === rule.tag;
@@ -153,15 +153,17 @@ export default function Shop() {
     }
   }, []);
 
+  // ── 검색 → 내 쇼핑 채널(그리드)에 결과 표시 ──────────────────────────────
   const handleSearchSubmit = (e) => {
     if (e) e.preventDefault();
     const q = search.trim();
     if (!q) return;
-    setSearchQuery(q);
-    setActiveCat('');
-    fetchProducts(q, 'all');
+    setSearchQuery(q);          // 검색어 저장 → 헤더에 표시
+    setActiveCat('');            // 카테고리 칩 선택 해제
+    fetchProducts(q, 'all');    // Coupang + AliExpress 동시 검색
   };
 
+  // ── 검색 초기화 ────────────────────────────────────────────────────────────
   const clearSearch = () => {
     setSearch('');
     setSearchQuery('');
@@ -169,21 +171,25 @@ export default function Shop() {
     fetchProducts('낚시용품', 'all');
   };
 
+  // ── 카테고리 클릭 ────────────────────────────────────────────────────────────
   const handleCatClick = (cat) => {
     setActiveCat(cat.name);
-    setSearchQuery('');
+    setSearchQuery('');    // 카테고리 클릭 시 검색어 초기화
     setSearch('');
     fetchProducts(cat.query, cat.source);
   };
 
+  // ── 상품 클릭 ────────────────────────────────────────────────────────────────
   const handleProductClick = (product) => {
     let url = product.link;
+    // Coupang: lptag 파트너스 ID 추가
     if (product.source === 'coupang' && COUPANG_PARTNERS_ID && url && !url.includes('lptag=')) {
       url = `${url}${url.includes('?') ? '&' : '?'}lptag=${COUPANG_PARTNERS_ID}`;
     }
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  // ── 그리드 헤더 텍스트 ──────────────────────────────────────────────────────
   const gridTitle = searchQuery
     ? `🔍 "${searchQuery}" 검색결과`
     : activeCat === '전체'
@@ -213,6 +219,7 @@ export default function Shop() {
             style={{ width: '100%', padding: '10px 40px 10px 40px', backgroundColor: '#F2F2F7', border: `1.5px solid ${searchQuery ? '#0056D2' : 'transparent'}`, borderRadius: '14px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
           />
           <Search size={16} color="#8E8E93" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+          {/* 검색어 있을 때 X 버튼 */}
           {(search || searchQuery) && (
             <button
               type="button"
@@ -223,6 +230,7 @@ export default function Shop() {
             </button>
           )}
         </form>
+        {/* 검색 활성 안내 */}
         {searchQuery && (
           <div style={{ marginTop: '6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', paddingLeft: '4px' }}>
             🔍 Coupang + AliExpress 통합 검색 중
@@ -252,135 +260,71 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* ── 추천 낚시 상품 (MASTER: 등록/삭제 포함) ── */}
-      <div style={{ padding: '12px 12px 0' }}>
-        {/* 섹션 헤더 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '16px' }}>🛒</span>
-          <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
-          {activeCat !== '전체' && (
-            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', marginLeft: '4px' }}>· {activeCat}</span>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => { setShowRegForm(f => !f); setRegMsg(''); }}
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: '8px', background: showRegForm ? '#1c1c1e' : 'linear-gradient(135deg,#FF9B26,#FF6B00)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900' }}
-            >
-              {showRegForm ? <X size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
-              {showRegForm ? '닫기' : '상품 등록'}
-            </button>
-          )}
-        </div>
-
-        {/* MASTER 전용 인라인 등록 폼 */}
-        {isAdmin && showRegForm && (
-          <div style={{ background: '#F8F9FA', borderRadius: '14px', padding: '14px', marginBottom: '12px', border: '1.5px solid #E5E5EA' }}>
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
-              {['coupang', 'ali'].map(s => (
-                <button key={s} onClick={() => setRegSrc(s)}
-                  style={{ flex: 1, padding: '8px', borderRadius: '8px', border: `2px solid ${regSrc === s ? (s === 'coupang' ? '#0056D2' : '#FF6900') : '#E5E5EA'}`, background: regSrc === s ? (s === 'coupang' ? '#EFF5FF' : '#FFF3EC') : '#fff', fontWeight: '900', fontSize: '12px', cursor: 'pointer', color: regSrc === s ? (s === 'coupang' ? '#0056D2' : '#FF6900') : '#8E8E93' }}
-                >{s === 'coupang' ? '🛒 쿠팡' : '💰 알리'}</button>
-              ))}
-            </div>
-            <input value={regShortUrl} onChange={e => setRegShortUrl(e.target.value)}
-              placeholder="단축 URL *  https://link.coupang.com/a/xxxx"
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '6px' }}
-            />
-            {regSrc === 'coupang' && (
-              <textarea value={regIframeCode} onChange={e => setRegIframeCode(e.target.value)}
-                placeholder={'iframe 코드 *  <iframe src="https://coupa.ng/xxxx" ...></iframe>'}
-                rows={2}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #E5E5EA', fontSize: '11px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', resize: 'none', fontFamily: 'monospace', marginBottom: '6px' }}
-              />
+      {/* ✅ 수동 등록 상품 — 카테고리 필터 연동 */}
+      {filteredManualItems.length > 0 && (
+        <div style={{ padding: '12px 12px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '16px' }}>🛒</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
+            {activeCat !== '전체' && (
+              <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', marginLeft: '4px' }}>· {activeCat}</span>
             )}
-            {regSrc === 'ali' && (
-              <>
-                <input value={regImageUrl} onChange={e => setRegImageUrl(e.target.value)}
-                  placeholder="이미지 URL  https://ae01.alicdn.com/..."
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '6px' }}
-                />
-                <input value={regProductName} onChange={e => setRegProductName(e.target.value)}
-                  placeholder="상품명  낚시 루어 세트 10개입"
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '6px' }}
-                />
-              </>
-            )}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px' }}>
-              {SHOP_TAGS.map(t => (
-                <button key={t} onClick={() => setRegTag(t)}
-                  style={{ padding: '5px 10px', borderRadius: '7px', border: 'none', background: regTag === t ? '#1c1c1e' : '#E5E5EA', color: regTag === t ? '#fff' : '#8E8E93', fontSize: '11px', fontWeight: '850', cursor: 'pointer' }}
-                >{t}</button>
-              ))}
-            </div>
-            {regMsg && (
-              <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: '800', color: regMsg.startsWith('✅') ? '#00C48C' : regMsg.startsWith('⏳') ? '#FF9B26' : '#FF3B30', marginBottom: '8px' }}>
-                {regMsg}
-              </div>
-            )}
-            <button onClick={handleRegSubmit} disabled={regLoading}
-              style={{ width: '100%', padding: '11px', borderRadius: '10px', border: 'none', background: regLoading ? '#C7C7CC' : 'linear-gradient(135deg,#0056D2,#003899)', color: '#fff', fontSize: '13px', fontWeight: '900', cursor: regLoading ? 'not-allowed' : 'pointer' }}
-            >{regLoading ? '⏳ 등록 중...' : '+ 쇼핑탭에 등록'}</button>
           </div>
-        )}
-
-        {/* 상품 카드 */}
-        {filteredManualItems.length > 0 && (
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {filteredManualItems.map(item => (
-              <div key={item._id} style={{ flexShrink: 0, position: 'relative' }}>
-                {item.source === 'ali' ? (
-                  <a href={item.shortUrl} target="_blank" rel="noopener noreferrer sponsored"
-                    style={{ display: 'flex', flexDirection: 'column', width: '120px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
-                  >
-                    <div style={{ position: 'relative' }}>
-                      <img src={item.imageUrl} alt={item.productName || '알리 상품'} width={120} height={120} style={{ display: 'block', objectFit: 'cover', width: '100%', height: '120px' }} />
-                      <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
+              item.source === 'ali' ? (
+                /* 알리익스프레스 카드 */
+                <a
+                  key={item._id}
+                  href={item.shortUrl}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', width: '120px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
+                >
+                  <div style={{ position: 'relative' }}>
+                    <img src={item.imageUrl} alt={item.productName || '알리 상품'} width={120} height={120} style={{ display: 'block', objectFit: 'cover', width: '100%', height: '120px' }} />
+                    <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
+                  </div>
+                  {item.productName && (
+                    <div style={{ padding: '6px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {item.productName}
                     </div>
-                    {item.productName && (
-                      <div style={{ padding: '6px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {item.productName}
-                      </div>
-                    )}
-                  </a>
-                ) : (
-                  <a href={item.shortUrl} target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
-                  >
-                    <iframe src={item.iframeSrc} width={120} height={240} frameBorder={0} scrolling="no"
-                      referrerPolicy="unsafe-url" title={`쿠팡 ${item.tag}`}
-                      style={{ display: 'block', pointerEvents: 'none' }}
-                    />
-                  </a>
-                )}
-                {isAdmin && (
-                  <button
-                    onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(item); }}
-                    style={{ position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,59,48,0.9)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}
-                    title="삭제"
-                  >
-                    <Trash2 size={11} color="#fff" strokeWidth={2.5} />
-                  </button>
-                )}
-              </div>
+                  )}
+                </a>
+              ) : (
+                /* 쿠팡 파트너스 iframe 카드 */
+                <a
+                  key={item._id}
+                  href={item.shortUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flexShrink: 0, display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}
+                >
+                  <iframe
+                    src={item.iframeSrc}
+                    width={120} height={240}
+                    frameBorder={0} scrolling="no"
+                    referrerPolicy="unsafe-url"
+                    title={`쿠팡 상품 ${item.tag}`}
+                    style={{ display: 'block', pointerEvents: 'none' }}
+                  />
+                </a>
+              )
             ))}
           </div>
-        )}
-        {filteredManualItems.length === 0 && isAdmin && !showRegForm && (
-          <div style={{ textAlign: 'center', padding: '16px', color: '#C7C7CC', fontSize: '12px', fontWeight: '700' }}>
-            등록된 상품이 없습니다 🎣
-          </div>
-        )}
-        {filteredManualItems.some(i => !i.source || i.source === 'coupang') && (
-          <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '4px' }}>
-            이 상품은 쿠팡 파트너스를 통해 제공되며 구매 시 일정액의 수수료를 받을 수 있습니다.
-          </div>
-        )}
-        {filteredManualItems.some(i => i.source === 'ali') && (
-          <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '2px' }}>
-            AliExpress 제휴 링크를 포함하며 구매 시 수수료를 받을 수 있습니다.
-          </div>
-        )}
-      </div>
+          {/* 면책 문구 */}
+          {filteredManualItems.some(i => !i.source || i.source === 'coupang') && (
+            <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '4px', paddingLeft: '2px' }}>
+              이 상품은 쿠팡 파트너스를 통해 제공되며 구매 시 일정액의 수수료를 받을 수 있습니다.
+            </div>
+          )}
+          {filteredManualItems.some(i => i.source === 'ali') && (
+            <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '700', marginTop: '2px', paddingLeft: '2px' }}>
+              AliExpress 제휴 링크를 포함하며 구매 시 수수료를 받을 수 있습니다.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── AliExpress 오늘 특가 배너 (검색 중엔 숨김) ── */}
       {!searchQuery && promos.length > 0 && (
@@ -426,7 +370,17 @@ export default function Shop() {
           <SlidersHorizontal size={15} color="#8E8E93" />
         </div>
 
-        <div style={{ background: 'linear-gradient(135deg, #EEF4FF, #F5F0FF)', border: '1px solid #D0DEFF', borderRadius: '12px', padding: '10px 14px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* ✅ 파트너스 수익 공시 */}
+        <div style={{
+          background: 'linear-gradient(135deg, #EEF4FF, #F5F0FF)',
+          border: '1px solid #D0DEFF',
+          borderRadius: '12px',
+          padding: '10px 14px',
+          marginBottom: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
           <span style={{ fontSize: '16px', flexShrink: 0 }}>💰</span>
           <p style={{ margin: 0, fontSize: '10px', color: '#4A4A8A', fontWeight: '700', lineHeight: 1.6 }}>
             이 채널의 상품 링크는 <strong>쿠팡 파트너스</strong> · <strong>AliExpress 어필리에이트</strong>와 연결되어 있으며,
@@ -455,17 +409,21 @@ export default function Shop() {
                     onClick={() => handleProductClick(p)}
                     style={{ backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #F2F2F7', cursor: 'pointer', position: 'relative' }}
                   >
+                    {/* 플랫폼 라벨 */}
                     <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: srcStyle.bg, color: srcStyle.text, padding: '2px 5px', borderRadius: '5px', fontSize: `calc(8px * var(--fs, 1))`, fontWeight: '900', zIndex: 2 }}>
                       {srcStyle.label}
                     </div>
+                    {/* 할인율 */}
                     {p.discount && p.discount !== '0%' && (
                       <div style={{ position: 'absolute', top: '6px', left: '6px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '6px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', zIndex: 2 }}>
                         {p.discount}
                       </div>
                     )}
+                    {/* 이미지 */}
                     <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1' }}>
                       <img src={p.img} alt={p.name || '상품'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
+                    {/* 정보 */}
                     <div style={{ padding: '8px' }}>
                       <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: srcStyle.bg, fontWeight: '900', marginBottom: '2px' }}>{p.badge}</div>
                       <h3 style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', margin: '0 0 4px' }}>
@@ -475,6 +433,7 @@ export default function Shop() {
                         <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
                         <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>원</span>
                       </div>
+                      {/* AliExpress: 수수료율 표시 */}
                       {p.source === 'ali' && p.commission && (
                         <div style={{ fontSize: `calc(8px * var(--fs, 1))`, color: '#FF6900', fontWeight: '800', marginTop: '2px' }}>
                           수수료 {p.commission}
