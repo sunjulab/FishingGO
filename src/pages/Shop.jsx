@@ -24,7 +24,7 @@ const CATEGORIES = [
 
 // 카테고리 → manualItems 필터 규칙
 const CAT_MANUAL_FILTER = {
-  '⭐ 추천':      { tag: '추천' },
+  '⭐ 추천':      null,
   '전체':         null,
   '🛒 Coupang':   { source: 'coupang' },
   '💰 AliExpress': { source: 'ali' },
@@ -316,15 +316,15 @@ export default function Shop() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
             <span style={{ fontSize: '16px' }}>⭐</span>
             <span style={{ fontSize: 'calc(14px * var(--fs, 1))', fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
-            <span style={{ fontSize: 'calc(11px * var(--fs, 1))', color: '#8E8E93', fontWeight: '700' }}>({filteredManualItems.length}개)</span>
+            <span style={{ fontSize: 'calc(11px * var(--fs, 1))', color: '#8E8E93', fontWeight: '700' }}>({manualItems.length}개)</span>
           </div>
-          {filteredManualItems.length === 0 ? (
+          {manualItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: '#C7C7CC', fontSize: 'calc(13px * var(--fs, 1))', fontWeight: '700' }}>
               등록된 추천 상품이 없습니다
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              {filteredManualItems.map(item => (
+              {manualItems.map(item => (
                 <div key={item._id} style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.08)', background: '#fff', border: '1px solid #F0F0F0' }}>
                   <a href={item.shortUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
                     {item.source === 'ali' ? (
@@ -362,7 +362,7 @@ export default function Shop() {
             <span style={{ fontSize: 'calc(13px * var(--fs, 1))', fontWeight: '900', color: '#1c1c1e' }}>관련 등록 상품</span>
           </div>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
-            {filteredManualItems.map(item => (
+            {manualItems.map(item => (
               <div key={item._id} style={{ flexShrink: 0, position: 'relative' }}>
                 {item.source === 'ali' ? (
                   <a href={item.shortUrl} target="_blank" rel="noopener noreferrer sponsored" style={{ display: 'flex', flexDirection: 'column', width: '110px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}>
