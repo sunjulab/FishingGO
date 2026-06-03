@@ -1,5 +1,5 @@
 /**
- * 낚시GO - 정밀 낚시 점수 평가 엔진 v2.0
+ * 낚시GO - 정밀 낚시 점수 평가 엔진 v2.1
  *
  * 개선 사항:
  * 1. 어종별 특보 4종 → 24종으로 확대
@@ -8,6 +8,7 @@
  * 4. 야간 낚시 시간대 보정
  * 5. 지점 유형별 보정 (방파제/갯바위/항구)
  * 6. 조언 메시지 대폭 확대
+ * 7. [v2.1] 계절별 실시간 어종 자동 반영 (월+권역 기반)
  */
 
 // ── 조언 데이터베이스 ──────────────────────────────────────────
@@ -94,6 +95,102 @@ const TIDE_BONUS = {
   '11물': -2, '12물': -4,         '14물': -8, '15물': -6,
   // 정식 표기: getTidePhase/fishingData.js가 반환하는 실제 값과 일치
   '7물(사리)': +8, '13물(조금)': -7, '14물(무시)': -9,
+};
+
+// ── [v2.1] 계절별 실시간 어종 데이터 (월 × 권역) ────────────────────
+// 출처: 국립수산과학원 월별 어황 자료 + 현장 낚시인 커뮤니티 조황 통계
+const SEASONAL_FISH = {
+  '동해': {
+    1:  ['가자미', '이면수', '도다리'],
+    2:  ['가자미', '도다리', '이면수'],
+    3:  ['도다리', '학꽁치', '가자미'],
+    4:  ['도다리', '학꽁치', '감성돔'],
+    5:  ['감성돔', '학꽁치', '벵에돔'],
+    6:  ['오징어', '전갱이', '방어'],
+    7:  ['오징어', '전갱이', '방어'],
+    8:  ['오징어', '삼치', '전갱이'],
+    9:  ['방어', '전갱이', '삼치'],
+    10: ['방어', '삼치', '무늬오징어'],
+    11: ['감성돔', '우럭', '방어'],
+    12: ['가자미', '이면수', '우럭'],
+  },
+  '서해': {
+    1:  ['우럭', '숭어', '도다리'],
+    2:  ['우럭', '도다리', '숭어'],
+    3:  ['도다리', '광어', '숭어'],
+    4:  ['광어', '도다리', '쭈꾸미'],
+    5:  ['광어', '쭈꾸미', '농어'],
+    6:  ['쭈꾸미', '광어', '삼치'],
+    7:  ['쭈꾸미', '농어', '삼치'],
+    8:  ['갑오징어', '농어', '숭어'],
+    9:  ['갑오징어', '쭈꾸미', '광어'],
+    10: ['광어', '우럭', '농어'],
+    11: ['우럭', '광어', '감성돔'],
+    12: ['우럭', '광어', '숭어'],
+  },
+  '남해': {
+    1:  ['감성돔', '볼락', '우럭'],
+    2:  ['감성돔', '볼락', '도다리'],
+    3:  ['도다리', '감성돔', '볼락'],
+    4:  ['감성돔', '참돔', '벵에돔'],
+    5:  ['참돔', '감성돔', '전갱이'],
+    6:  ['갈치', '삼치', '참돔'],
+    7:  ['갈치', '삼치', '전갱이'],
+    8:  ['갈치', '부시리', '삼치'],
+    9:  ['갈치', '방어', '부시리'],
+    10: ['방어', '삼치', '갈치'],
+    11: ['감성돔', '방어', '볼락'],
+    12: ['감성돔', '볼락', '우럭'],
+  },
+  '제주': {
+    1:  ['벵에돔', '감성돔', '볼락'],
+    2:  ['벵에돔', '감성돔', '볼락'],
+    3:  ['벵에돔', '감성돔', '자리돔'],
+    4:  ['벵에돔', '참돔', '자리돔'],
+    5:  ['자리돔', '무늬오징어', '참돔'],
+    6:  ['무늬오징어', '자리돔', '방어'],
+    7:  ['한치', '자리돔', '부시리'],
+    8:  ['한치', '방어', '부시리'],
+    9:  ['방어', '한치', '무늬오징어'],
+    10: ['방어', '벵에돔', '무늬오징어'],
+    11: ['벵에돔', '방어', '감성돔'],
+    12: ['벵에돔', '감성돔', '볼락'],
+  },
+};
+
+// 지역명 → 권역 매핑 (fishingData.js와 독립적으로 유지)
+const REGION_TO_ZONE_EVAL = {
+  '강원': '동해', '경북': '동해',
+  '경남': '남해', '전남': '남해', '부산': '남해', '울산': '남해',
+  '전북': '서해', '충남': '서해', '인천': '서해', '경기': '서해',
+  '제주': '제주',
+  // 권역 직접 입력도 지원
+  '동해': '동해', '서해': '서해', '남해': '남해',
+};
+
+/**
+ * [v2.1] 현재 월과 지역 기반으로 계절 어종 반환
+ * @param {string} region - 지역명 또는 권역명
+ * @param {number} [month] - 월 (1~12, 기본값: 현재 월)
+ * @returns {string} - 대표 어종명 (단일 문자열)
+ */
+export const getSeasonalFish = (region, month) => {
+  const m = month || (new Date().getMonth() + 1);
+  const zone = REGION_TO_ZONE_EVAL[region] || '남해';
+  const fishList = SEASONAL_FISH[zone]?.[m] || SEASONAL_FISH['남해'][m] || ['감성돔'];
+  return fishList[0]; // 대표 어종 1개 반환
+};
+
+/**
+ * [v2.1] 계절 어종 목록 전체 반환 (최대 3종)
+ * @param {string} region - 지역명 또는 권역명
+ * @param {number} [month] - 월 (1~12)
+ * @returns {string[]} - 어종 배열
+ */
+export const getSeasonalFishList = (region, month) => {
+  const m = month || (new Date().getMonth() + 1);
+  const zone = REGION_TO_ZONE_EVAL[region] || '남해';
+  return SEASONAL_FISH[zone]?.[m] || SEASONAL_FISH['남해'][m] || ['감성돔'];
 };
 
 // ── 계절 수온 적정 범위 ─────────────────────────────────────────
@@ -235,13 +332,18 @@ export const evaluateFishingCondition = (data, point = {}) => {
   let result = { score, color: '#8e8e93', status: 'NORMAL', advice: '', tags: [], gear: '', fishAlert: null };
 
   // ── 동적 멘트 생성 (수온·파고·풍속·물때·어종·시간·계절 반영) ──
-  const _fish  = (point?.fish || data?.fish || '').split(',')[0].trim();
+  // [v2.1] 계절 어종 우선 → point.fish → data.fish 순서로 결정
+  const _month   = new Date().getMonth() + 1;
+  const _region  = point?.region || data?.region || '남해';
+  const _seasonalFish = getSeasonalFish(_region, _month);
+  // 포인트 고유 어종이 있고 계절 어종과 다르면 계절 어종 우선 (실시간성)
+  const _pointFish = (point?.fish || data?.fish || '').split(',')[0].trim();
+  const _fish  = _seasonalFish || _pointFish; // 계절 어종 우선
   const _sst   = parseFloat(data?.sst ?? data?.waterTemp ?? 13);
   const _wind  = parseFloat(data?.wind?.speed ?? 0);
   const _wave  = parseFloat(data?.wave?.coastal ?? 0);
   const _phase = data?.tide?.phase || '';
   const _hour  = new Date().getHours();
-  const _month = new Date().getMonth() + 1;
   const _isNight = _hour >= 19 || _hour < 5;
 
   const _buildAdvice = () => {
@@ -319,14 +421,19 @@ export const evaluateFishingCondition = (data, point = {}) => {
   }
 
 
-  // 어종별 특보 (24종)
-  const mainFish = (point.fish || data.fish || '').split(',')[0].trim();
+  // [v2.1] 어종별 특보 — 계절 어종 우선, fallback: point.fish
+  const mainFish = _fish || (point.fish || data.fish || '').split(',')[0].trim();
   const fishData = FISH_ALERTS[mainFish];
   if (fishData) {
     result.advice += ` \n[특보] ${fishData.alert}`;
     result.fishAlert = { fish: mainFish, alert: fishData.alert, gear: fishData.gear };
     // 어종별 채비 정보도 병합
     if (score >= 50) result.gear = `[${mainFish}] ${fishData.gear}`;
+  }
+  // [v2.1] 계절 어종 태그 추가
+  const seasonFishList = getSeasonalFishList(_region, _month);
+  if (seasonFishList.length > 0) {
+    result.seasonFish = seasonFishList; // 호출부에서 활용 가능
   }
 
   // 태그 2개 (지점 고유 조합)
