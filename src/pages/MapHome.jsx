@@ -205,11 +205,31 @@ export default function MapHome() {
   // ✅ 5TH-A5: currentTime setInterval 제거 — LiveClock 컴포넌트가 도맡하므로 MapHome 리렌더 불필요
   // 기존: setInterval(() => setCurrentTime(new Date()), 60000) 제거
 
-  // ✅ REALTIME-FIX: 10분마다 rankTick 증가 → PREMIUM_POINTS 점수 재계산 유도
+  // ✅ REALTIME-v2: 5분마다 rankTick 증가 (이전 10분 → 5분 단쳕) + 앱 포커스 복귀 시 즉시 강제 갱신
   useEffect(() => {
-    const id = setInterval(() => setRankTick(t => t + 1), 10 * 60 * 1000);
+    // 5분 주기 자동 갱신
+    const id = setInterval(() => setRankTick(t => t + 1), 5 * 60 * 1000);
+
+    // ✅ VISIBILITY-FIX: 다른 탭 갔다 돌아올 때 / 앱 포그라운드에서 백그라운드 전환 후 복귀 시 즉시 재갱신
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setRankTick(t => t + 1);
+        if (!import.meta.env.PROD) console.info('[REALTIME] 사용자 앱 복귀 → 날씨 즉시 갱신');
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    // ✅ FOCUS-FIX: 모바일 홈 버튼 돌아올 때 window focus 이벤트도 커버
+    const onFocus = () => setRankTick(t => t + 1);
+    window.addEventListener('focus', onFocus);
+
     // ✅ FIX: closeSheet 타이머 언마운트 정리
-    return () => { clearInterval(id); if (closeSheetTimerRef.current) clearTimeout(closeSheetTimerRef.current); };
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      if (closeSheetTimerRef.current) clearTimeout(closeSheetTimerRef.current);
+    };
   }, []);
 
   // 즐겨찾기 DB 동기화 (로그인 시 서버에서 불러오기)
@@ -556,16 +576,16 @@ export default function MapHome() {
 
 
   /* ── 실시간 날씨 배치 패치 (히트맵 + 대시보드 미리보기 점수 통일) ── */
-  // ✅ FIX-SCORE-ALL: 앱 시작 2초 후 전체 기상관측소 배치 패치 → weatherCache 공유
-  // 히트맵 · 대시보드 카드 · 바텀시트 점수가 동일한 서버 데이터 기준으로 동기화
+  // ✅ REALTIME-v2: 5분 주기 배치패치 + 홈 화면 대표 포인트 조석(tide)도 함께 fetch
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       // ✅ CUSTOM-FIX: 커스텀 포인트 관측소도 캐시 대상에 포함 (실시간 날씨 완전 통합)
       const uniqueStationIds = [...new Set([
         ...ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id),
         ...customPoints.map(p => findNearestStation(p.lat, p.lng).id),
       ])];
 
+      // ① 전체 관측소 기상 데이터 배치 패치
       Promise.allSettled(
         uniqueStationIds.map(id =>
           apiClient.get(`/api/weather/precision?stationId=${id}`)
@@ -585,9 +605,38 @@ export default function MapHome() {
             console.log(`[Weather] ${Object.keys(newCache).length}개 관측소 실시간 날씨 로드 완료 → 히트맵+대시보드 점수 정확도 향상`);
         }
       }).catch(() => {}); // 실패 시 정적 데이터 fallback 유지
-    }, 2000); // 2초 딕레이 — 초기 페이지 로드 성능 보호
+
+      // ② ✅ TIDE-HOME: 홈 화면 대표 포인트 조석예보도 배치 패치 (5분마다 갱신)
+      try {
+        const defaultPt = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
+        const defaultSt = findNearestStation(defaultPt.lat, defaultPt.lng);
+        const todayStr  = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const tideItems = await fetchTideForecast(defaultSt.id, todayStr);
+        if (tideItems?.length) {
+          const preds = tideItems.map(t => ({
+            time: t.hl_time || '', type: t.hl_code === 'H' ? '고조' : '간조', level: t.hl_level || ''
+          }));
+          setWeatherCache(prev => ({
+            ...prev,
+            [defaultSt.id]: {
+              ...(prev[defaultSt.id] || {}),
+              tide_predictions: preds,
+              tide: {
+                ...(prev[defaultSt.id]?.tide || {}),
+                phase: prev[defaultSt.id]?.tide?.phase || '조석 데이터',
+                high: preds.find(p => p.type === '고조')?.time || '-',
+                low:  preds.find(p => p.type === '간조')?.time  || '-',
+              },
+            }
+          }));
+          if (!import.meta.env.PROD) console.info('[TIDE-HOME] 홈 화면 조석 배치 패치 완료', preds.length, '건');
+        }
+      } catch (e) {
+        if (!import.meta.env.PROD) console.warn('[TIDE-HOME] 홈 화면 조석 패치 실패:', e);
+      }
+    }, 2000); // 2초 딜레이 — 초기 페이지 로드 성능 보호
     return () => clearTimeout(timer);
-  }, [rankTick, customPoints]); // rankTick: 10분마다, customPoints: 포인트 추가 시 즉시 갱신
+  }, [rankTick, customPoints]); // rankTick: 5분 + 앱 복귀 즉시, customPoints: 포인트 추가 시 즉시 갱신
 
 
   /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
