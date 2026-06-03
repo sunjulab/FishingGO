@@ -135,7 +135,7 @@ export default function DashboardView({
                     const _st = findNearestStation(p.lat, p.lng);
                     const _live = weatherCache[_st?.id];
                     const _sd = getPointSpecificData(p);
-                    const _wd = _live ? { ..._live, stationId: _st.id, tide: _sd?.tide, pointName: p.name } : _sd;
+                    const _wd = _live ? { ..._live, stationId: _st.id, tide: _live.tide || _sd?.tide, pointName: p.name } : _sd; // ✅ tide 실시간 우선
                     const _sc = evaluateFishingCondition(_wd, p).score;
                     const _label = _sc >= 90 ? '최고' : _sc >= 75 ? '활발' : _sc >= 50 ? '보통' : _sc >= 30 ? '저조' : '위험';
                     const _col   = _sc >= 90 ? '#00C48C' : _sc >= 75 ? '#1565C0' : _sc >= 50 ? '#FF9B26' : _sc >= 30 ? '#FF5A5F' : '#D32F2F';

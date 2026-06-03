@@ -898,14 +898,14 @@ export default function MapHome() {
         // ✅ FIX-SCORE-ALL: weatherCache 우선 → 히트맵·대시보드 점수 전체 동기화
         const liveData = weatherCache[st.id];
         const weatherData = liveData
-          ? { ...liveData, stationId: st.id, tide: staticData?.tide, pointName: p.name }
+          ? { ...liveData, stationId: st.id, tide: liveData.tide || staticData?.tide, pointName: p.name }
           : staticData;
         const liveScore = evaluateFishingCondition(weatherData, p).score;
         return { ...p, _liveScore: liveScore };
       })
-      .sort((a, b) => b._liveScore - a._liveScore)
+      .sort((a, b) => b._liveScore - a._liveScore || a.id - b.id) // ✅ 동점 시 id로 정렬 안정화
       .slice(0, 8);
-  }, [rankTick, filter, weatherCache, customPoints]); // customPoints 갱신 시 재계산
+  }, [filter, weatherCache, customPoints]); // ✅ rankTick 제거: weatherCache 변경 시 즉시 재계산
 
   /* ── 낚시점수 원 색상 계산 ── */
   const getScoreCircleStyle = (s) => {
