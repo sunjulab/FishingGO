@@ -299,16 +299,87 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     }
   }, [editYoutubeId, selectedPoint, cctvData, addToast]); // ✅ 17TH-B1: 모든 클로저 변수 deps 적시
 
+  // ✅ AUTO-REFRESH: 날씨·수온·물때 30분 자동 갱신 (silent — 로딩 스피너 없이 백그라운드 새로고침)
+  const [lastRefreshed, setLastRefreshed] = useState(null);      // 마지막 갱신 시각
+  const [nextRefreshIn, setNextRefreshIn] = useState(null);      // 다음 갱신까지 남은 초
+  const autoRefreshRef = useRef(null);                           // setInterval ref (cleanup용)
+  const countdownRef  = useRef(null);                            // 1초 카운트다운 ref
+
   useEffect(() => {
     if (!selectedPoint) return;
 
+    // ── 날씨 전용 silent 갱신 (CCTV·쇼핑 제외 — 불필요한 API 호출 방지) ──
+    const silentRefresh = async () => {
+      const sid = selectedPoint.obsCode || 'DT_0001';
+      const todayStr = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+      })();
+      try {
+        const [marine, tideItems, temp, fishIdx] = await Promise.allSettled([
+          apiClient.get(`/api/weather/precision?stationId=${sid}`),
+          fetchTideForecast(sid, todayStr),
+          fetchWaterTemp(sid, todayStr),
+          fetchFishingIndex(sid),
+        ]);
+        // 기상 데이터
+        if (marine.status === 'fulfilled') {
+          setMarineData(prev => ({ ...prev, ...marine.value.data, stationId: sid }));
+        }
+        // 조석예보
+        if (tideItems.status === 'fulfilled' && tideItems.value?.length) {
+          const predictions = tideItems.value.map(item => ({
+            tph_time: item.hl_time || item.tph_time || '',
+            hl_code: item.hl_code === 'H' ? '고조' : '간조',
+            tph_level: item.hl_level || item.tph_level || '',
+            time: item.hl_time || '',
+            type: item.hl_code === 'H' ? '고조' : '간조',
+            level: item.hl_level || '',
+          }));
+          setMarineData(prev => ({
+            ...prev,
+            tide_predictions: predictions,
+            tide: {
+              ...(prev.tide || {}),
+              high: predictions.find(p => p.hl_code === '고조')?.tph_time || prev.tide?.high || '-',
+              low:  predictions.find(p => p.hl_code === '간조')?.tph_time || prev.tide?.low  || '-',
+            },
+          }));
+        }
+        // 수온
+        if (temp.status === 'fulfilled' && temp.value && temp.value !== '-') {
+          setMarineData(prev => ({ ...prev, waterTemp: temp.value, sst: temp.value }));
+        }
+        // 낚시지수
+        if (fishIdx.status === 'fulfilled' && fishIdx.value?.length) {
+          const today = fishIdx.value[0];
+          const gradeMap = { '1': '매우좋음', '2': '좋음', '3': '보통', '4': '나쁨', '5': '매우나쁨' };
+          const grade = today?.fishing_grade || gradeMap[today?.fishing_idx || today?.fishingIdx] || '';
+          if (grade) setMarineData(prev => ({
+            ...prev,
+            fishingIndex: {
+              등급: grade,
+              수온: today?.wt ? `${today.wt}°C` : '-',
+              파고: today?.wh ? `${today.wh}m` : '-',
+              조류: today?.current_spd ? `${today.current_spd}m/s` : '-',
+            },
+          }));
+        }
+        setLastRefreshed(new Date());
+        setNextRefreshIn(30 * 60); // 카운트다운 리셋
+        if (!import.meta.env.PROD) console.info('[AutoRefresh] 30분 자동 갱신 완료');
+      } catch (e) {
+        if (!import.meta.env.PROD) console.warn('[AutoRefresh] 갱신 실패:', e);
+      }
+    };
+
+    // ── 최초 로딩 (전체 로딩 — CCTV·쇼핑 포함) ──────────────────────────
     const loadData = async () => {
       setLoading(true);
       setCctvLoading(true);
       const sid = selectedPoint.obsCode || 'DT_0001';
       const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' 일람' : '낚시용품';
 
-      // ── 날짜 (YYYYMMDD) ────────────────────────────────
       const todayStr = (() => {
         const d = new Date();
         const y = d.getFullYear();
@@ -317,7 +388,6 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         return `${y}${m}${day}`;
       })();
 
-      // ── 병렬 실행: CCTV / 쇼핑 / 기상 서버 / 공공데이터포털 3종 ──
       const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}`)
         .then(res => { setCctvData(res.data); })
         .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
@@ -327,7 +397,6 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         .then(res => { if (res.data?.products) setShoppingItems(res.data.products.slice(0, 3)); })
         .catch(err => { if (!import.meta.env.PROD) console.error('Shop Load Error:', err); });
 
-      // ── 기상 서버 (수온·기상 종합) ────────────────────
       const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}`)
         .then(resp => {
           setMarineData(prev => ({ ...prev, ...resp.data, stationId: sid }));
@@ -337,12 +406,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           const reg = selectedPoint.region || '남해';
           const profile = { '제주': 18.2, '남해': 16.5, '동해': 14.2, '서해': 11.8 };
           const baseSst = profile[reg] || 16.0;
-          // ✅ CUSTOM-FIX: 커스텀 포인트 id가 'custom_...' 문자열일 경우 parseInt → NaN 방지
           const _idNum = typeof selectedPoint.id === 'number'
             ? selectedPoint.id
             : String(selectedPoint.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
           const seed = (_idNum % 10 - 5) / 10;
-
           const finalSst = (baseSst + seed).toFixed(1);
           setMarineData(prev => ({
             ...prev,
@@ -356,11 +423,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         })
         .finally(() => setLoading(false));
 
-      // ── ✅ 공공데이터포털 조석예보 ─────────────────────
       const tidePromise = fetchTideForecast(sid, todayStr)
         .then(items => {
           if (!items || items.length === 0) return;
-          // hl_code: 'H'=고조, 'L'=저조 → tide_predictions 배열로 변환
           const predictions = items.map(item => ({
             tph_time: item.hl_time || item.tph_time || '',
             hl_code: item.hl_code === 'H' ? '고조' : '간조',
@@ -383,7 +448,6 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         })
         .catch(err => { if (!import.meta.env.PROD) console.warn('[BottomSheet] 조석예보 실패:', err); });
 
-      // ── ✅ 공공데이터포털 실측 수온 ──────────────────
       const waterTempPromise = fetchWaterTemp(sid, todayStr)
         .then(temp => {
           if (temp && temp !== '-') {
@@ -393,11 +457,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         })
         .catch(err => { if (!import.meta.env.PROD) console.warn('[BottomSheet] 수온 실패:', err); });
 
-      // ── ✅ 공공데이터포털 바다낚시지수 ──────────────
       const fishingIdxPromise = fetchFishingIndex(sid)
         .then(items => {
           if (!items || items.length === 0) return;
-          // 오늘 날짜에 해당하는 첫 번째 예보 레코드 사용
           const today = items[0];
           const gradeMap = { '1': '매우좋음', '2': '좋음', '3': '보통', '4': '나쁨', '5': '매우나쁨' };
           const idx = today?.fishing_idx || today?.fishingIdx || '';
@@ -415,19 +477,35 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         })
         .catch(err => { if (!import.meta.env.PROD) console.warn('[BottomSheet] 낚시지수 실패:', err); });
 
-      // 전체 병렬 대기
       await Promise.allSettled([marinePromise, cctvPromise, shopPromise, tidePromise, waterTempPromise, fishingIdxPromise]);
 
-      // 해당 구역 선상배 홍보글 조회
       setBizLoading(true);
-      const regionKey = (selectedPoint.region || '').split(' ')[0]; // '남해', '제주' 등
+      const regionKey = (selectedPoint.region || '').split(' ')[0];
       apiClient.get(`/api/community/business?region=${encodeURIComponent(regionKey)}&limit=3`)
         .then(res => { setBusinessPosts(Array.isArray(res.data) ? res.data : []); })
         .catch(() => setBusinessPosts([]))
         .finally(() => setBizLoading(false));
+
+      // 최초 로딩 완료 → 갱신 시각 기록 + 카운트다운 시작
+      setLastRefreshed(new Date());
+      setNextRefreshIn(30 * 60);
     };
 
     loadData();
+
+    // ── 30분 자동 갱신 ────────────────────────────────────────────────────
+    const INTERVAL_MS = 30 * 60 * 1000; // 30분
+    autoRefreshRef.current = setInterval(silentRefresh, INTERVAL_MS);
+
+    // ── 1초 카운트다운 ────────────────────────────────────────────────────
+    countdownRef.current = setInterval(() => {
+      setNextRefreshIn(prev => (prev > 0 ? prev - 1 : 30 * 60));
+    }, 1000);
+
+    return () => {
+      clearInterval(autoRefreshRef.current);
+      clearInterval(countdownRef.current);
+    };
   }, [selectedPoint?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // ✅ 3RD-B8: addToast는 store 함수로 안정적 — selectedPoint?.id만으로 deps 제한 안전
 
@@ -651,10 +729,16 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                 <div style={{ backgroundColor: '#fff', border: `2px solid ${cond.color}`, borderRadius: '20px', padding: '20px', marginBottom: '10px', boxShadow: `0 8px 24px ${cond.color}20`, position: 'relative', overflow: 'hidden' }}>
                   {/* 상단 헤더 및 점수 */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '950', color: '#fff', background: cond.color, padding: '4px 12px', borderRadius: '30px', letterSpacing: '-0.02em', boxShadow: `0 2px 8px ${cond.color}40` }}>
                         AI 낚시 컨디션
                       </span>
+                      {/* ✅ AUTO-REFRESH 배지: 30분 자동 갱신 카운트다운 */}
+                      {nextRefreshIn !== null && (
+                        <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', background: '#F2F2F7', padding: '3px 8px', borderRadius: '20px', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          🔄 {Math.floor(nextRefreshIn / 60)}:{String(nextRefreshIn % 60).padStart(2, '0')} 후 갱신
+                        </span>
+                      )}
                     </div>
                     <span style={{ fontSize: `calc(38px * var(--fs, 1))`, fontWeight: '950', color: cond.color, lineHeight: 1, letterSpacing: '-0.05em' }}>{cond.score}<span style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '800' }}>점</span></span>
                   </div>
