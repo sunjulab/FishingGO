@@ -4782,6 +4782,7 @@ app.get('/api/user/crews', async (req, res) => {
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const email = tp.email || tp.id;
+
     if (dbReady && Crew) {
       // memberList에 해당 email이 포함된 크루 조회
       const crews = await Crew.find({ 'memberList.email': email }).sort({ lastActive: -1, createdAt: -1 });
@@ -5577,6 +5578,49 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
       { time: highTime, type: '고조', level: 185 }
     ]
   });
+});
+
+// ── 낚시 포인트 일괄 점수 반환 API ────────────────────────────────────
+// 서버 weatherCache 기반으로 모든 관측소 점수를 1번 API로 반환
+// 클라이언트: 관측소 50개 개별 호출 → 이 API 1개 호출(~100ms)로 대체
+app.get('/api/fishing-scores', (req, res) => {
+  try {
+    const scores = {};
+    Object.keys(weatherCache).forEach(sid => {
+      const entry = weatherCache[sid];
+      if (!entry || !entry.data) return;
+      const d = entry.data;
+      const sst   = parseFloat(d.sst) || 14;
+      const wind  = parseFloat(d.wind?.speed) || 3;
+      const wave  = parseFloat(d.wave?.coastal) || 0.5;
+      const phase = d.tide?.phase || '';
+      let score = 60;
+      if (sst >= 14 && sst <= 22) score += 10;
+      else if (sst >= 12 && sst < 14) score -= 5;
+      else if (sst < 12) score -= 15;
+      else if (sst > 26) score -= 15;
+      else if (sst > 23) score -= 8;
+      if (wind <= 2) score += 10;
+      else if (wind <= 4) score += 0;
+      else if (wind <= 6) score -= 8;
+      else if (wind <= 8) score -= 15;
+      else score -= 25;
+      if (wave <= 0.4) score += 8;
+      else if (wave <= 0.8) score += 0;
+      else if (wave <= 1.2) score -= 10;
+      else if (wave <= 2.0) score -= 20;
+      else score -= 30;
+      const tideNum = parseInt((phase.match(/^(\d+)물/) || [])[1] || 0);
+      if (tideNum >= 6 && tideNum <= 9) score += 8;
+      else if (tideNum >= 13) score -= 7;
+      const month = new Date().getMonth() + 1;
+      if (month >= 5 && month <= 9) score += 3;
+      scores[sid] = Math.min(100, Math.max(5, Math.round(score)));
+    });
+    res.json({ scores, updatedAt: new Date().toISOString(), count: Object.keys(scores).length });
+  } catch (err) {
+    res.status(500).json({ error: '점수 계산 실패' });
+  }
 });
 
 // 프론트엔드 Mixed Content / CORS 블락 우회용 MOF 이미지 스트리밍 프록시

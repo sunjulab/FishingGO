@@ -595,17 +595,33 @@ export default function MapHome() {
   /* ── 실시간 날씨 배치 패치 (히트맵 + 대시보드 미리보기 점수 통일) ── */
   // ✅ REALTIME-v2: 5분 주기 배치패치 + 홈 화면 대표 포인트 조석(tide)도 함께 fetch
   useEffect(() => {
-    // ✅ FAST-START: setTimeout 제거 — 즉시 시작 (이전 2초 딜레이 제거)
+    // ✅ FAST-SCORE: 서버가 미리 계산한 점수를 1번 API 호출로 수신 (50개 개별 → 1개)
+    // 서버 /api/fishing-scores → weatherCache 기반 즉시 계산 → ~100ms 반환
+    apiClient.get('/api/fishing-scores')
+      .then(res => {
+        const { scores } = res.data;
+        if (!scores) return;
+        // 수신한 점수를 weatherCache에 병합 (stationId → score 필드 추가)
+        setWeatherCache(prev => {
+          const next = { ...prev };
+          Object.keys(scores).forEach(sid => {
+            next[sid] = {
+              ...(prev[sid] || {}),
+              stationId: sid,
+              _serverScore: scores[sid], // 서버 계산 점수 (클라이언트 evaluator보다 우선 사용 가능)
+            };
+          });
+          return next;
+        });
+      })
+      .catch(() => {}); // 실패 시 기존 incremental fetch가 fallback
+
+    // ✅ INCREMENTAL: 상세 날씨 데이터도 병렬로 취득 (히트맵/상세 뷰 용도)
     const uniqueStationIds = [...new Set([
       ...ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id),
       ...customPoints.map(p => findNearestStation(p.lat, p.lng).id),
     ])];
-
-    // ✅ INCREMENTAL: 각 관측소 API 응답 즉시 weatherCache 반영 (전체 완료까지 기다리지 않음)
-    // 이전: Promise.allSettled → 전체 완료 후 한 번에 setWeatherCache → 마지막 응답까지 30초 대기
-    // 수정: 응답 오는 순서대로 즉시 반영 → 첫 응답부터 점수 갱신
-    const controllers = uniqueStationIds.map(id => {
-      const ctrl = new AbortController();
+    uniqueStationIds.forEach(id => {
       apiClient.get(`/api/weather/precision?stationId=${id}`)
         .then(res => {
           setWeatherCache(prev => ({
@@ -613,8 +629,7 @@ export default function MapHome() {
             [id]: { ...res.data, stationId: id },
           }));
         })
-        .catch(() => {}); // 실패 시 정적 fallback 유지
-      return ctrl;
+        .catch(() => {});
     });
 
     // ② ✅ TIDE-HOME: 홈 화면 대표 포인트 조석예보도 패치 (5분마다 갱신)
@@ -641,13 +656,11 @@ export default function MapHome() {
               },
             }
           }));
-          if (!import.meta.env.PROD) console.info('[TIDE-HOME] 홈 화면 조석 배치 패치 완료', preds.length, '건');
         }
-      } catch (e) {
-        if (!import.meta.env.PROD) console.warn('[TIDE-HOME] 홈 화면 조석 패치 실패:', e);
-      }
+      } catch (e) { /* 조석 패치 실패 시 정적 fallback */ }
     })();
   }, [rankTick, customPoints]); // rankTick: 5분 + 앱 복귀 즉시, customPoints: 포인트 추가 시 즉시 갱신
+
 
 
 
