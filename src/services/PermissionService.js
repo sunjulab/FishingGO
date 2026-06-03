@@ -22,6 +22,25 @@ export async function initPushPermission(userId) {
       return { ok: false, reason: 'denied' };
     }
 
+    // ✅ BUG-3 FIX: Android 8+ 알림 채널 생성 (createChannel 없으면 무음/미표시 가능)
+    // AndroidManifest의 default_notification_channel_id와 channelId 반드시 일치
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        await PushNotifications.createChannel({
+          id:          'fishing-go-default',
+          name:        '낚시GO 알림',
+          description: '낚시 조황, 기상 특보, 채팅 알림',
+          importance:  5,          // IMPORTANCE_HIGH — 배너 + 소리
+          sound:       'default',
+          vibration:   true,
+          visibility:  1,          // VISIBILITY_PUBLIC
+        });
+        console.log('[PUSH] ✅ Android 알림 채널 생성 완료');
+      } catch (e) {
+        console.warn('[PUSH] 채널 생성 실패 (무시):', e.message);
+      }
+    }
+
     // FCM 등록
     await PushNotifications.register();
 

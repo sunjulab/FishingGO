@@ -28,7 +28,7 @@ function initFirebase() {
   }
 }
 
-// ─── 단일 토큰으로 발송 ───────────────────────────────────
+// ─── 단일 토큰으로 발송 ───────────────────────────────────────────
 async function sendToToken(token, { title, body, data = {}, imageUrl } = {}) {
   if (!initialized) return null;
   try {
@@ -41,7 +41,6 @@ async function sendToToken(token, { title, body, data = {}, imageUrl } = {}) {
         notification: {
           sound: 'default',
           channelId: 'fishing-go-default',
-          clickAction: 'FLUTTER_NOTIFICATION_CLICK',
         },
       },
     };
@@ -57,10 +56,22 @@ async function sendToToken(token, { title, body, data = {}, imageUrl } = {}) {
   }
 }
 
-// ─── 유저 ID로 발송 ───────────────────────────────────────
-async function sendToUser(userId, payload) {
+// ─── 유저 ID로 발송 (✅ BUG-2 FIX: ObjectId 또는 이메일 애드 모두 지원) ──────────────
+async function sendToUser(userIdOrEmail, payload) {
   if (!initialized) return;
   const PushToken = require('./models/PushToken');
+  let userId = userIdOrEmail;
+
+  // ✅ 이메일 문자열이 들어온 경우 User 모델로 ObjectId 조회
+  if (typeof userIdOrEmail === 'string' && userIdOrEmail.includes('@')) {
+    try {
+      const User = require('./models/User');
+      const found = await User.findOne({ email: userIdOrEmail }).select('_id').lean();
+      if (!found) return; // 해당 유저 없으면 실패 무시
+      userId = found._id;
+    } catch { return; }
+  }
+
   const tokens = await PushToken.find({ userId }).select('token').lean();
   if (!tokens.length) return;
   await Promise.allSettled(tokens.map(t => sendToToken(t.token, payload)));
