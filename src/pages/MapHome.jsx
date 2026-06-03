@@ -644,7 +644,7 @@ export default function MapHome() {
   // 캐시 없으면 정적 getPointSpecificData fallback (히트맵 첫 로드 전 임시 표시)
   // ✅ CUSTOM-MERGE: 커스텀 포인트(신규 추가)도 히트맵에 포함
   const heatmapData = useMemo(() => {
-    const allPts = [...ALL_FISHING_POINTS, ...customPoints];
+    const allPts = [...ALL_FISHING_POINTS, ...customPoints].filter(p => p.type !== '민물'); // ✅ 민물 제외
     return allPts.map(point => {
       const st = findNearestStation(point.lat, point.lng);
       const staticData = getPointSpecificData(point);
@@ -712,6 +712,7 @@ export default function MapHome() {
     // ✅ 5TH-B2: heatmapData useMemo 사용 — getPointSpecificData 60+ 포인트 매 재계산 제거
     heatmapData.forEach(({ point, sst, score }) => {
       if (!window.kakao?.maps) return;
+      if (point.type === '민물') return; // ✅ 민물 포인트: 점수/수온 히트맵 스킵
 
       const { fill, text, opacity } = heatmapMode === 'sst' ? getSstColor(sst) : getScoreColor(score);
       const baseRadius = heatmapMode === 'sst' ? getRadiusSst(sst) : getRadiusScore(score);
