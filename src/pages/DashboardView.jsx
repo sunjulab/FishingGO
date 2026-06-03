@@ -267,7 +267,8 @@ export default function DashboardView({
 
 
 
-        {/* AI 낚시 적합도 게이지 */}
+        {/* AI 낚시 적합도 게이지 — 민물 포인트 제외 */}
+        {selectedPoint?.type !== '민물' && (
         <div style={{ padding: '12px 16px 0' }}>
           <div style={{ background: '#fff', borderRadius: '20px', padding: '16px 18px', border: '1.5px solid #F0F2F7', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -307,6 +308,7 @@ export default function DashboardView({
             </div>
           </div>
         </div>
+        )}
 
         {/* 퀵메뉴 */}
         <div style={{ padding: '16px 16px 4px' }}>

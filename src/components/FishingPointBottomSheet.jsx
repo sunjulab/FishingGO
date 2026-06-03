@@ -722,8 +722,20 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* AI 낚시 컨디션 (냉정한 평가) */}
-            {(() => {
+            {/* AI 낚시 컨디션 (냉정한 평가) — 민물 포인트 제외 */}
+            {selectedPoint?.type === '민물' ? (
+              /* 민물 포인트: AI 낚시 컨디션 · 점수 없음 안내 */
+              <div style={{ backgroundColor: '#F0FFF4', border: '2px solid #43A047', borderRadius: '20px', padding: '20px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span style={{ fontSize: `calc(36px * var(--fs, 1))`, flexShrink: 0 }}>🌿</span>
+                <div>
+                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#2E7D32', marginBottom: '6px' }}>민물 낚시 포인트</div>
+                  <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#388E3C', lineHeight: 1.6 }}>
+                    내수면 포인트는 해양 기상 데이터(수온·파고·물때)가<br/>
+                    적용되지 않아 AI 낚시 점수를 제공하지 않습니다.
+                  </div>
+                </div>
+              </div>
+            ) : (() => {
               const cond = fishingCondition; // ✅ 3RD-B7: useMemo 연산 결과 사용
               return (
                 <div style={{ backgroundColor: '#fff', border: `2px solid ${cond.color}`, borderRadius: '20px', padding: '20px', marginBottom: '10px', boxShadow: `0 8px 24px ${cond.color}20`, position: 'relative', overflow: 'hidden' }}>
