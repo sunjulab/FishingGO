@@ -155,6 +155,8 @@ export default function MapHome() {
         // precision 데이터 병합
         if (precRes.status === 'fulfilled') {
           base = { ...base, ...precRes.value.data, stationId: sid };
+          // ✅ REALTIME-FAST: 초기 API 결과를 weatherCache에 즉시 반영 → 30초 대기 없이 점수 갱신
+          setWeatherCache(prev => ({ ...prev, [sid]: { ...precRes.value.data, stationId: sid } }));
         }
         // 조석 예보 병합
         if (tideItems.status === 'fulfilled' && tideItems.value?.length) {
@@ -171,10 +173,16 @@ export default function MapHome() {
               low:  preds.find(p => p.type === '간조')?.time || base.tide?.low  || '-',
             },
           };
+          // ✅ 조석도 weatherCache에 병합
+          setWeatherCache(prev => ({
+            ...prev,
+            [sid]: { ...(prev[sid] || {}), tide_predictions: preds, tide: base.tide },
+          }));
         }
         // 수온 갱신
         if (waterTemp.status === 'fulfilled' && waterTemp.value && waterTemp.value !== '-') {
           base = { ...base, sst: waterTemp.value, waterTemp: waterTemp.value };
+          setWeatherCache(prev => ({ ...prev, [sid]: { ...(prev[sid] || {}), sst: waterTemp.value } }));
         }
 
         const initCond = evaluateFishingCondition(base, defaultPt);
@@ -587,35 +595,30 @@ export default function MapHome() {
   /* ── 실시간 날씨 배치 패치 (히트맵 + 대시보드 미리보기 점수 통일) ── */
   // ✅ REALTIME-v2: 5분 주기 배치패치 + 홈 화면 대표 포인트 조석(tide)도 함께 fetch
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      // ✅ CUSTOM-FIX: 커스텀 포인트 관측소도 캐시 대상에 포함 (실시간 날씨 완전 통합)
-      const uniqueStationIds = [...new Set([
-        ...ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id),
-        ...customPoints.map(p => findNearestStation(p.lat, p.lng).id),
-      ])];
+    // ✅ FAST-START: setTimeout 제거 — 즉시 시작 (이전 2초 딜레이 제거)
+    const uniqueStationIds = [...new Set([
+      ...ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id),
+      ...customPoints.map(p => findNearestStation(p.lat, p.lng).id),
+    ])];
 
-      // ① 전체 관측소 기상 데이터 배치 패치
-      Promise.allSettled(
-        uniqueStationIds.map(id =>
-          apiClient.get(`/api/weather/precision?stationId=${id}`)
-            .then(res => ({ id, data: res.data }))
-        )
-      ).then(results => {
-        const newCache = {};
-        results.forEach(r => {
-          if (r.status === 'fulfilled' && r.value?.id) {
-            // ✅ FIX-STATIONID: weatherCache에 stationId 함께 저장 → 모든 evaluator 호출에서 seed 정확도 보장
-            newCache[r.value.id] = { ...r.value.data, stationId: r.value.id };
-          }
-        });
-        if (Object.keys(newCache).length > 0) {
-          setWeatherCache(newCache);
-          if (!import.meta.env.PROD)
-            console.log(`[Weather] ${Object.keys(newCache).length}개 관측소 실시간 날씨 로드 완료 → 히트맵+대시보드 점수 정확도 향상`);
-        }
-      }).catch(() => {}); // 실패 시 정적 데이터 fallback 유지
+    // ✅ INCREMENTAL: 각 관측소 API 응답 즉시 weatherCache 반영 (전체 완료까지 기다리지 않음)
+    // 이전: Promise.allSettled → 전체 완료 후 한 번에 setWeatherCache → 마지막 응답까지 30초 대기
+    // 수정: 응답 오는 순서대로 즉시 반영 → 첫 응답부터 점수 갱신
+    const controllers = uniqueStationIds.map(id => {
+      const ctrl = new AbortController();
+      apiClient.get(`/api/weather/precision?stationId=${id}`)
+        .then(res => {
+          setWeatherCache(prev => ({
+            ...prev,
+            [id]: { ...res.data, stationId: id },
+          }));
+        })
+        .catch(() => {}); // 실패 시 정적 fallback 유지
+      return ctrl;
+    });
 
-      // ② ✅ TIDE-HOME: 홈 화면 대표 포인트 조석예보도 배치 패치 (5분마다 갱신)
+    // ② ✅ TIDE-HOME: 홈 화면 대표 포인트 조석예보도 패치 (5분마다 갱신)
+    (async () => {
       try {
         const defaultPt = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
         const defaultSt = findNearestStation(defaultPt.lat, defaultPt.lng);
@@ -643,9 +646,9 @@ export default function MapHome() {
       } catch (e) {
         if (!import.meta.env.PROD) console.warn('[TIDE-HOME] 홈 화면 조석 패치 실패:', e);
       }
-    }, 2000); // 2초 딜레이 — 초기 페이지 로드 성능 보호
-    return () => clearTimeout(timer);
+    })();
   }, [rankTick, customPoints]); // rankTick: 5분 + 앱 복귀 즉시, customPoints: 포인트 추가 시 즉시 갱신
+
 
 
   /* ── 수온 및 조황 히트맵 렌더링 (Premium Feature) ── */
