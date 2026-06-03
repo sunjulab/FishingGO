@@ -810,30 +810,53 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               );
             })()}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-              <span style={{ fontWeight: '800', color: '#555' }}>현재 실측 수온</span>
-              <span style={{ color: '#0056D2', fontWeight: '900', fontSize: `calc(18px * var(--fs, 1))` }}>{marineData.sst || marineData.waterTemp || '-'}°C</span>
-            </div>
-
-            <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-              <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>층별 수온 정보 (상/중/저)</span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[
-                  { label: '상층', val: marineData.sst || marineData.waterTemp || '-', color: '#64B5F6' },
-                  { label: '중층', val: marineData.sst ? (parseFloat(marineData.sst) - 1.2).toFixed(1) : '-', color: '#42A5F5' },
-                  { label: '저층', val: marineData.sst ? (parseFloat(marineData.sst) - 3.4).toFixed(1) : '-', color: '#1E88E5' },
-                ].map(l => (
-                  <div key={l.label} style={{ flex: 1, backgroundColor: '#fff', padding: '10px 6px', borderRadius: '10px', textAlign: 'center', border: '1.5px solid #F0F2F7' }}>
-                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>{l.label}</div>
-                    <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: l.color }}>{l.val !== '-' ? `${l.val}°C` : '-'}</div>
-                  </div>
-                ))}
+            {/* ✅ 민물 포인트: 수온 정보 없음 표기 */}
+            {selectedPoint?.type === '민물' || !selectedPoint?.obsCode ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
+                <span style={{ fontWeight: '800', color: '#555' }}>현재 실측 수온</span>
+                <span style={{ color: '#8E8E93', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))` }}>민물 포인트 로 수온 정보 없음</span>
               </div>
-            </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
+                <span style={{ fontWeight: '800', color: '#555' }}>현재 실측 수온</span>
+                <span style={{ color: '#0056D2', fontWeight: '900', fontSize: `calc(18px * var(--fs, 1))` }}>{marineData.sst || marineData.waterTemp || '-'}°C</span>
+              </div>
+            )}
 
-            <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-              <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>오늘의 물때 (만조/간조)</span>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.95rem', color: '#555' }}>
+            {/* ✅ 민물 포인트: 층별 수온 없음 표기 */}
+            {selectedPoint?.type === '민물' || !selectedPoint?.obsCode ? (
+              <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>층별 수온 정보 (상/중/저)</span>
+                <div style={{ textAlign: 'center', color: '#8E8E93', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, padding: '8px 0' }}>민물 포인트로 해수 수온 정보 없음</div>
+              </div>
+            ) : (
+              <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>층별 수온 정보 (상/중/저)</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[
+                    { label: '상층', val: marineData.sst || marineData.waterTemp || '-', color: '#64B5F6' },
+                    { label: '중층', val: marineData.sst ? (parseFloat(marineData.sst) - 1.2).toFixed(1) : '-', color: '#42A5F5' },
+                    { label: '저층', val: marineData.sst ? (parseFloat(marineData.sst) - 3.4).toFixed(1) : '-', color: '#1E88E5' },
+                  ].map(l => (
+                    <div key={l.label} style={{ flex: 1, backgroundColor: '#fff', padding: '10px 6px', borderRadius: '10px', textAlign: 'center', border: '1.5px solid #F0F2F7' }}>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>{l.label}</div>
+                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: l.color }}>{l.val !== '-' ? `${l.val}°C` : '-'}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ✅ 민물 포인트: 물때 정보 없음 표기 */}
+            {selectedPoint?.type === '민물' || !selectedPoint?.obsCode ? (
+              <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>오늘의 물때 (만조/간조)</span>
+                <div style={{ textAlign: 'center', color: '#8E8E93', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, padding: '8px 0' }}>민물 포인트로 조석 정보 없음</div>
+              </div>
+            ) : (
+              <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>오늘의 물때 (만조/간조)</span>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.95rem', color: '#555' }}>
                 {marineData.tide && (marineData.tide.phase || marineData.tide_predictions) ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', borderBottom: '1px solid #ddd', paddingBottom: '4px', marginBottom: '4px' }}>
@@ -854,8 +877,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                 )}
               </ul>
             </div>
+            )}{/* ✅ 민물 else 닫기 */}
 
-            {marineData.fishingIndex && (
+            {/* 낚시지수 — 민물 포인트 제외 */}
+            {marineData.fishingIndex && (selectedPoint?.type !== '민물' && selectedPoint?.obsCode) && (
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
                 <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>바다 낚시지수</span>
                 {/* ✅ 3RD-A4: JSON.stringify raw 제거 — key:value 일반어 표시 */}
