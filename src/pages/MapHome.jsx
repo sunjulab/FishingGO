@@ -829,7 +829,13 @@ export default function MapHome() {
   const _cachedLive   = weatherCache[_nearestSt?.id];
   const _staticData   = getPointSpecificData(_selectedPt);
   const currentData   = precisionData
-    || (_cachedLive ? { ..._cachedLive, stationId: _nearestSt?.id, tide: _staticData?.tide, pointName: _selectedPt.name } : null)
+    || (_cachedLive ? {
+        ..._cachedLive,
+        stationId: _nearestSt?.id,
+        // ✅ BUG-2 FIX: weatherCache의 실시간 조석 우선, 없으면 정적 fallback
+        tide: _cachedLive.tide || _staticData?.tide,
+        pointName: _selectedPt.name,
+      } : null)
     || _staticData;
   // ✅ SHARE-COND: 바텀시트 AI 컨디션 우선 → weatherCache/precisionData 순 fallback
   const cond = (sharedCond?.pointId === _selectedPt?.id ? sharedCond.cond : null)
@@ -837,7 +843,7 @@ export default function MapHome() {
   const score       = cond.score;
   const isGolden    = score >= 90;
   const tideData    = currentData;
-  const phase       = tideData.tide?.phase || '7물(사리)';
+  const phase       = tideData.tide?.phase || '-'; // ✅ BUG-5 FIX: API 실패 시 '7물(사리)' 하드코딩 제거
   // ✅ FILTER-FIX: filter 상태를 deps에 포함 + 필터 적용 후 실시간 점수 정렬
   // 이전: filter 누락으로 방파제/갯바위/항구 선택해도 목록 미변경 버그
   // ✅ CUSTOM-MERGE: 커스텀 포인트도 TOP 8 대시보드에 포함 (실시간 날씨/점수 반영)
