@@ -478,8 +478,15 @@ export default function MapHome() {
     }
     try {
       const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
-      const dynamicTide = getPointSpecificData(point).tide;
-      setPrecisionData({ ...res.data, pointName: point.name, tide: dynamicTide, stationId: nearest.id });
+      // ✅ SCORE-SYNC: weatherCache도 동시 갱신 → 검색결과점수와 홈화면점수가 같은 데이터 기반으로 통일
+      setWeatherCache(prev => ({
+        ...prev,
+        [nearest.id]: { _serverScore: prev[nearest.id]?._serverScore, ...res.data, stationId: nearest.id },
+      }));
+      // ✅ TIDE-SYNC: API 응답의 tide 우선 → 없으면 weatherCache tide → 없으면 정적 fallback
+      const staticTide = getPointSpecificData(point).tide;
+      const bestTide = res.data.tide || staticTide;
+      setPrecisionData({ ...res.data, pointName: point.name, tide: bestTide, stationId: nearest.id });
     } catch {
       setPrecisionData(getPointSpecificData(point));
     } finally { setLoading(false); }
