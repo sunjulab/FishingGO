@@ -644,8 +644,13 @@ export default function MapHome() {
   // 캐시 없으면 정적 getPointSpecificData fallback (히트맵 첫 로드 전 임시 표시)
   // ✅ CUSTOM-MERGE: 커스텀 포인트(신규 추가)도 히트맵에 포함
   const heatmapData = useMemo(() => {
-    const allPts = [...ALL_FISHING_POINTS, ...customPoints].filter(p => p.type !== '민물'); // ✅ 민물 제외
+    const allPts = [...ALL_FISHING_POINTS, ...customPoints];
     return allPts.map(point => {
+      // ✅ 민물 포인트: 점수/수온 계산 없이 어종명만 전달
+      if (point.type === '민물') {
+        const fishList = (point.fish || '').split(',').map(f => f.trim()).filter(Boolean);
+        return { point, sst: null, score: null, isFreshwater: true, fishList };
+      }
       const st = findNearestStation(point.lat, point.lng);
       const staticData = getPointSpecificData(point);
       // 실시간 캐시 우선 사용, 없으면 정적 fallback
@@ -661,7 +666,7 @@ export default function MapHome() {
         : staticData;
       const sst = parseFloat(weatherData?.sst || 13);
       const condition = evaluateFishingCondition(weatherData, point);
-      return { point, sst, score: condition.score };
+      return { point, sst, score: condition.score, isFreshwater: false, fishList: [] };
     });
   }, [rankTick, weatherCache, customPoints]); // customPoints 갱신 시 즉시 재계산
 
@@ -710,14 +715,38 @@ export default function MapHome() {
     };
 
     // ✅ 5TH-B2: heatmapData useMemo 사용 — getPointSpecificData 60+ 포인트 매 재계산 제거
-    heatmapData.forEach(({ point, sst, score }) => {
+    heatmapData.forEach(({ point, sst, score, isFreshwater, fishList }) => {
       if (!window.kakao?.maps) return;
-      if (point.type === '민물') return; // ✅ 민물 포인트: 점수/수온 히트맵 스킵
+
+      const center = new window.kakao.maps.LatLng(point.lat, point.lng);
+
+      // ✅ 민물 포인트: 점수/수온 없이 어종명만 녹색 라벨 표시
+      if (isFreshwater) {
+        if (!fishList || fishList.length === 0) return;
+        const fishDisplay = fishList.slice(0, 3).join(' · ');
+        const fwContent = [
+          '<div style="',
+            'background:rgba(27,94,32,0.92);color:#fff;',
+            'padding:5px 10px;border-radius:12px;',
+            'font-size:11px;font-weight:900;white-space:nowrap;line-height:1.4;',
+            'border:1.5px solid #43A047;pointer-events:none;',
+            'box-shadow:0 4px 12px rgba(67,160,71,0.4);transform:translateY(-8px);">',
+            '<div style="display:flex;align-items:center;gap:4px;">',
+              '<span style="font-size:13px;">🌿</span>',
+              '<span style="color:#A5D6A7;font-size:11px;font-weight:900;">', fishDisplay, '</span>',
+            '</div>',
+            '<div style="color:#81C784;font-size:9.5px;margin-top:2px;">민물 낙시포인트</div>',
+          '</div>',
+        ].join('');
+        const fwOverlay = new window.kakao.maps.CustomOverlay({ position: center, content: fwContent, yAnchor: 2.2, zIndex: 3 });
+        fwOverlay.setMap(mapRef.current);
+        heatmapRef.current.push(fwOverlay);
+        return; // 바다 포인트 렌더링 실행 안 함
+      }
 
       const { fill, text, opacity } = heatmapMode === 'sst' ? getSstColor(sst) : getScoreColor(score);
       const baseRadius = heatmapMode === 'sst' ? getRadiusSst(sst) : getRadiusScore(score);
 
-      const center = new window.kakao.maps.LatLng(point.lat, point.lng);
       const layers = [
         { r: baseRadius,        op: opacity * 0.15 },
         { r: baseRadius * 0.65, op: opacity * 0.35 },
