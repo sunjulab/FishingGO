@@ -186,7 +186,7 @@ export default function MapHome() {
         }
 
         const initCond = evaluateFishingCondition(base, defaultPt);
-        setSharedCond({ cond: initCond, pointId: defaultPt.id });
+        setSharedCond({ cond: initCond, pointId: defaultPt.id, withPrecision: false }); // withPrecision:false → weatherCache 업데이트 시 clear 대상
         if (!import.meta.env.PROD)
           console.log('[Init] 기본 포인트 AI 컨디션 로드 완료 →', defaultPt.name, initCond.score, '점');
       } catch (e) {
@@ -205,10 +205,11 @@ export default function MapHome() {
   }, [selectedPoint?.id]);
 
   // ✅ REALTIME-SCORE-FIX: weatherCache 갱신 시 sharedCond 클리어 → 실시간 점수 즉시 반영
-  // 이전: sharedCond가 weatherCache 갱신 후에도 유지되어 stale 점수 표시
-  // 수정: weatherCache 변경될 때마다 sharedCond 초기화 → freshCond 재계산 트리거
+  // ✅ BUG-FIX: 바텔시트 정밀 AI(메세지/어류 정보) 기반 sharedCond는 보호 (withPrecision 플래그)
+  //            초기 init sharedCond는 weatherCache 반영 후 clear괼도
   useEffect(() => {
-    if (sharedCond) setSharedCond(null);
+    // precisionData 기반가 아닌 sharedCond(앱 시작 시 initCond)는 클리어
+    if (sharedCond && !sharedCond.withPrecision) setSharedCond(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weatherCache]);
 
@@ -902,13 +903,20 @@ export default function MapHome() {
   // 이전: sharedCond 우선 → weatherCache 바뀌어도 앱 시작 시 stale 점수 유지
   // 수정: evaluateFishingCondition(currentData) 직접 → weatherCache 변경 즉시 점수 갱신
   const freshCond = evaluateFishingCondition(currentData, _selectedPt);
+  // ✅ SERVER-SCORE: /api/fishing-scores 응답의 _serverScore가 있으면 즉시 사용
+  // 상세 날씨 데이터(sst/wind/wave)가 없는 경우에도 서버 계산 점수를 빠르게 표시
+  const _stationServerScore = _cachedLive?._serverScore;
+  const freshScore = (_stationServerScore && !_cachedLive?.sst) // 서버점수만 있고 날씨 상세 없을 때
+    ? _stationServerScore
+    : freshCond.score;
   // sharedCond는 바텀시트 AI 텍스트(advice/gear/fishAlert) 동기화에만 사용
   const sharedText = sharedCond?.pointId === _selectedPt?.id ? sharedCond.cond : null;
   const cond     = sharedText || freshCond;  // 텍스트는 바텀시트 정밀값 우선
-  const score    = freshCond.score;          // ✅ 점수는 항상 현재 weatherCache 기반
+  const score    = freshScore;               // ✅ 점수: 서버점수 or freshCond (항상 실시간)
   const isGolden = score >= 90;
   const tideData = currentData;
   const phase    = tideData.tide?.phase || '-'; // ✅ BUG-5 FIX
+
 
   // ✅ FILTER-FIX: filter 상태를 deps에 포함 + 필터 적용 후 실시간 점수 정렬
   // 이전: filter 누락으로 방파제/갯바위/항구 선택해도 목록 미변경 버그
@@ -1312,7 +1320,7 @@ export default function MapHome() {
             <FishingPointBottomSheet 
               selectedPoint={selectedPoint} 
               onClose={closeSheet}
-              onConditionReady={(cond, pointId) => setSharedCond({ cond, pointId })}
+              onConditionReady={(cond, pointId) => setSharedCond({ cond, pointId, withPrecision: true })}
             />
           )}
         </div>
