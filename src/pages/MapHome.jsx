@@ -176,7 +176,7 @@ export default function MapHome() {
               low:  preds.find(p => p.type === '간조')?.time || base.tide?.low  || '-',
             },
           };
-          // ✅ 조석도 weatherCache에 병합
+          // ✅ 조석도 weatherCache에 병합 (_serverScore 보존)
           setWeatherCache(prev => ({
             ...prev,
             [sid]: { ...(prev[sid] || {}), tide_predictions: preds, tide: base.tide },
@@ -185,7 +185,7 @@ export default function MapHome() {
         // 수온 갱신
         if (waterTemp.status === 'fulfilled' && waterTemp.value && waterTemp.value !== '-') {
           base = { ...base, sst: waterTemp.value, waterTemp: waterTemp.value };
-          setWeatherCache(prev => ({ ...prev, [sid]: { ...(prev[sid] || {}), sst: waterTemp.value } }));
+          setWeatherCache(prev => ({ ...prev, [sid]: { ...(prev[sid] || {}), sst: waterTemp.value } })); // _serverScore는 spread로 보존됨
         }
 
         const initCond = evaluateFishingCondition(base, defaultPt);
@@ -604,15 +604,15 @@ export default function MapHome() {
     apiClient.get('/api/fishing-scores')
       .then(res => {
         const { scores } = res.data;
-        if (!scores) return;
-        // 수신한 점수를 weatherCache에 병합 (stationId → score 필드 추가)
+        // ✅ scores가 없거나 비어있으면 불필요한 setWeatherCache 호출 전진(→ useEffect[weatherCache] 굴시적 sharedCond clear 방지)
+        if (!scores || Object.keys(scores).length === 0) return;
         setWeatherCache(prev => {
           const next = { ...prev };
           Object.keys(scores).forEach(sid => {
             next[sid] = {
               ...(prev[sid] || {}),
               stationId: sid,
-              _serverScore: scores[sid], // 서버 계산 점수 (클라이언트 evaluator보다 우선 사용 가능)
+              _serverScore: scores[sid],
             };
           });
           return next;
