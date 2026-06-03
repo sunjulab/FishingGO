@@ -651,7 +651,13 @@ export default function MapHome() {
       // 실시간 캐시 우선 사용, 없으면 정적 fallback
       const liveData = weatherCache[st.id];
       const weatherData = liveData
-        ? { ...liveData, stationId: st.id, tide: staticData?.tide, pointName: point.name }
+        ? {
+            ...liveData,
+            stationId: st.id,
+            // ✅ NEW-1 FIX: 실시간 tide 우선, 없으면 정적 fallback (BUG-2와 동일 패턴 히트맵에 적용)
+            tide: liveData.tide || staticData?.tide,
+            pointName: point.name,
+          }
         : staticData;
       const sst = parseFloat(weatherData?.sst || 13);
       const condition = evaluateFishingCondition(weatherData, point);
@@ -910,7 +916,8 @@ export default function MapHome() {
     if (sst < 11) return `수온 ${sst.toFixed(1)}°C 저수온 — ${mainFish ? `${mainFish}이 ` : ''}바닥에 바짝 붙었습니다. 지렁이+크릴 냄새로 유인하세요.`;
 
     // ③ 황금 물때
-    if (phase.includes('7물(사리)') || phase.includes('6물') || phase.includes('8물'))
+    // ✅ NEW-3 FIX: '7물' 단독 표기도 사리 마때로 감지 (phase 못 표기 포맷 대응)
+    if (phase.includes('7물(사리)') || phase === '7물' || phase.includes('6물') || phase.includes('8물'))
       return `사리 물때 — 조류가 활발해 ${mainFish || '어류'} 입질 집중! 지금이 피딩 타임입니다.`;
     if (phase.includes('13물') || phase.includes('조금') || phase.includes('무시'))
       return `조금·무시 물때 — 조류가 약해 ${mainFish || '어류'} 입질이 뜨문뜨문합니다. 인내심이 관건.`;
