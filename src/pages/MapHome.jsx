@@ -195,6 +195,15 @@ export default function MapHome() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPoint?.id]);
+
+  // ✅ REALTIME-SCORE-FIX: weatherCache 갱신 시 sharedCond 클리어 → 실시간 점수 즉시 반영
+  // 이전: sharedCond가 weatherCache 갱신 후에도 유지되어 stale 점수 표시
+  // 수정: weatherCache 변경될 때마다 sharedCond 초기화 → freshCond 재계산 트리거
+  useEffect(() => {
+    if (sharedCond) setSharedCond(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weatherCache]);
+
   // ── 즐겨찾기 (로컬 + DB 이중 동기화) ─────────────────────────
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('fishing_favorites') || '[]'); } catch { return []; }
@@ -873,13 +882,18 @@ export default function MapHome() {
         pointName: _selectedPt.name,
       } : null)
     || _staticData;
-  // ✅ SHARE-COND: 바텀시트 AI 컨디션 우선 → weatherCache/precisionData 순 fallback
-  const cond = (sharedCond?.pointId === _selectedPt?.id ? sharedCond.cond : null)
-    || evaluateFishingCondition(currentData, _selectedPt);
-  const score       = cond.score;
-  const isGolden    = score >= 90;
-  const tideData    = currentData;
-  const phase       = tideData.tide?.phase || '-'; // ✅ BUG-5 FIX: API 실패 시 '7물(사리)' 하드코딩 제거
+  // ✅ REALTIME-SCORE-FIX: score는 항상 currentData로 직접 계산 (실시간 반영)
+  // 이전: sharedCond 우선 → weatherCache 바뀌어도 앱 시작 시 stale 점수 유지
+  // 수정: evaluateFishingCondition(currentData) 직접 → weatherCache 변경 즉시 점수 갱신
+  const freshCond = evaluateFishingCondition(currentData, _selectedPt);
+  // sharedCond는 바텀시트 AI 텍스트(advice/gear/fishAlert) 동기화에만 사용
+  const sharedText = sharedCond?.pointId === _selectedPt?.id ? sharedCond.cond : null;
+  const cond     = sharedText || freshCond;  // 텍스트는 바텀시트 정밀값 우선
+  const score    = freshCond.score;          // ✅ 점수는 항상 현재 weatherCache 기반
+  const isGolden = score >= 90;
+  const tideData = currentData;
+  const phase    = tideData.tide?.phase || '-'; // ✅ BUG-5 FIX
+
   // ✅ FILTER-FIX: filter 상태를 deps에 포함 + 필터 적용 후 실시간 점수 정렬
   // 이전: filter 누락으로 방파제/갯바위/항구 선택해도 목록 미변경 버그
   // ✅ CUSTOM-MERGE: 커스텀 포인트도 TOP 8 대시보드에 포함 (실시간 날씨/점수 반영)
