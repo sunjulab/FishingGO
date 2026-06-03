@@ -155,8 +155,11 @@ export default function MapHome() {
         // precision 데이터 병합
         if (precRes.status === 'fulfilled') {
           base = { ...base, ...precRes.value.data, stationId: sid };
-          // ✅ REALTIME-FAST: 초기 API 결과를 weatherCache에 즉시 반영 → 30초 대기 없이 점수 갱신
-          setWeatherCache(prev => ({ ...prev, [sid]: { ...precRes.value.data, stationId: sid } }));
+          // ✅ REALTIME-FAST: 초기 API 결과를 weatherCache에 즉시 반영 (기존 _serverScore 보존)
+          setWeatherCache(prev => ({
+            ...prev,
+            [sid]: { _serverScore: prev[sid]?._serverScore, ...precRes.value.data, stationId: sid },
+          }));
         }
         // 조석 예보 병합
         if (tideItems.status === 'fulfilled' && tideItems.value?.length) {
@@ -625,9 +628,10 @@ export default function MapHome() {
     uniqueStationIds.forEach(id => {
       apiClient.get(`/api/weather/precision?stationId=${id}`)
         .then(res => {
+          // ✅ _serverScore 보존: precision 응답이 덮어써도 서버점수는 유지
           setWeatherCache(prev => ({
             ...prev,
-            [id]: { ...res.data, stationId: id },
+            [id]: { _serverScore: prev[id]?._serverScore, ...res.data, stationId: id },
           }));
         })
         .catch(() => {});
@@ -938,7 +942,10 @@ export default function MapHome() {
         const weatherData = liveData
           ? { ...liveData, stationId: st.id, tide: liveData.tide || staticData?.tide, pointName: p.name }
           : staticData;
-        const liveScore = evaluateFishingCondition(weatherData, p).score;
+        // ✅ _serverScore 활용: sst가 없어도 서버가 계산한 점수를 즉시 표시
+        const liveScore = (liveData?._serverScore && !liveData?.sst)
+          ? liveData._serverScore
+          : evaluateFishingCondition(weatherData, p).score;
         return { ...p, _liveScore: liveScore };
       })
       .sort((a, b) => b._liveScore - a._liveScore || a.id - b.id) // ✅ 동점 시 id로 정렬 안정화
