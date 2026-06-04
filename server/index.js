@@ -7731,80 +7731,51 @@ app.get('/api/shop/products', async (req, res) => {
 app.get('/api/shop/ali-debug', async (req, res) => {
   const crypto = require('crypto');
   const axios  = require('axios');
-  const KEY    = process.env.ALI_APP_KEY    || '';
-  const SECRET = process.env.ALI_APP_SECRET || '';
-  const TRACK  = process.env.ALI_TRACKING_ID || 'default';
-  const URL    = 'https://api-sg.aliexpress.com/sync';
+  const KEY    = (process.env.ALI_APP_KEY    || '').trim();
+  const SECRET = (process.env.ALI_APP_SECRET || '').trim();
+  const TRACK  = (process.env.ALI_TRACKING_ID || 'default').trim();
+  const BASE   = 'https://api-sg.aliexpress.com/sync';
 
   if (!KEY || !SECRET) return res.json({ error: 'API 키 미설정' });
 
-  // ── Secret 세부 진단 ──────────────────────────────────────────
-  const secretDiag = {
-    length:   SECRET.length,
-    first4:   SECRET.slice(0, 4),
-    last4:    SECRET.slice(-4),
-    hasSpace: SECRET.includes(' '),
-    hasNewline: SECRET.includes('\n') || SECRET.includes('\r'),
-    trimDiff: SECRET !== SECRET.trim(),  // 앞뒤 공백/줄바꿈 여부
+  const makeMD5Sign = (p) => {
+    const sorted = Object.keys(p).sort().map(k => `${k}${p[k]}`).join('');
+    return crypto.createHash('md5').update(`${SECRET}${sorted}${SECRET}`).digest('hex').toUpperCase();
   };
 
-  // ── 서명 문자열 샘플 확인 (MD5 방식) ──────────────────────────
-  const ts = String(Date.now());
-  const baseP = {
-    method: 'aliexpress.affiliate.product.query',
-    app_key: KEY.trim(), timestamp: ts,
-    sign_method: 'md5', v: '2.0',
-    keywords: 'fishing', page_size: '3', page_no: '1',
-    tracking_id: TRACK.trim(),
+  const testApi = async (label, params) => {
+    try {
+      params.sign = makeMD5Sign(params);
+      const r = await axios.get(`${BASE}?${new URLSearchParams(params).toString()}`, { timeout: 8000 });
+      const d = r.data;
+      const errCode = d?.error_response?.code;
+      const errMsg  = d?.error_response?.msg?.slice(0, 60);
+      const respKey = Object.keys(d).find(k => k.includes('response'));
+      const respCode = d?.[respKey]?.resp_result?.resp_code;
+      const items = d?.[respKey]?.resp_result?.result?.products?.product?.length || 0;
+      return { label, errCode, errMsg, respCode, items, success: respCode === 200 };
+    } catch (e) { return { label, error: e.message }; }
   };
-  const sortedStr = Object.keys(baseP).sort().map(k => `${k}${baseP[k]}`).join('');
-  const secretTrimmed = SECRET.trim();
-  const signSample = crypto.createHash('md5').update(`${secretTrimmed}${sortedStr}${secretTrimmed}`).digest('hex').toUpperCase();
 
-  // ── MD5_TRIM: Secret trim() 버전 테스트 ──────────────────────
-  baseP.sign = signSample;
-  let mainResult = null;
-  try {
-    const qs = new URLSearchParams(baseP).toString();
-    const r = await axios.get(`${URL}?${qs}`, { timeout: 8000 });
-    mainResult = r.data;
-  } catch (e) { mainResult = { err: e.message }; }
+  const ts = () => String(Date.now());
+  const base = (method, extra) => ({ method, app_key: KEY, timestamp: ts(), sign_method: 'md5', v: '2.0', tracking_id: TRACK, ...extra });
 
-  // ── hotproduct API 테스트 (Standard API) ──────────────────────
-  const hotP = {
-    method: 'aliexpress.affiliate.hotproduct.query',
-    app_key: KEY.trim(), timestamp: String(Date.now()),
-    sign_method: 'md5', v: '2.0',
-    keywords: 'fishing', page_size: '3', page_no: '1',
-    tracking_id: TRACK.trim(),
-  };
-  const hotSorted = Object.keys(hotP).sort().map(k => `${k}${hotP[k]}`).join('');
-  hotP.sign = crypto.createHash('md5').update(`${secretTrimmed}${hotSorted}${secretTrimmed}`).digest('hex').toUpperCase();
-  let hotResult = null;
-  try {
-    const qs2 = new URLSearchParams(hotP).toString();
-    const r2 = await axios.get(`${URL}?${qs2}`, { timeout: 8000 });
-    hotResult = r2.data;
-  } catch (e) { hotResult = { err: e.message }; }
+  const results = await Promise.all([
+    // 테스트 1: product.query (lowercase md5)
+    testApi('product_query_md5', base('aliexpress.affiliate.product.query', { keywords: 'fishing', page_size: '3', page_no: '1' })),
+    // 테스트 2: hotproduct.query
+    testApi('hotproduct_query', base('aliexpress.affiliate.hotproduct.query', { keywords: 'fishing', page_size: '3', page_no: '1' })),
+    // 테스트 3: link.generate (가장 단순한 API)
+    testApi('link_generate', base('aliexpress.affiliate.link.generate', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' })),
+    // 테스트 4: product.query v 없이
+    testApi('product_no_v', { method: 'aliexpress.affiliate.product.query', app_key: KEY, timestamp: ts(), sign_method: 'md5', tracking_id: TRACK, keywords: 'fishing', page_size: '3', page_no: '1' }),
+    // 테스트 5: sign_method 대문자 MD5
+    testApi('product_MD5upper', (() => { const p = base('aliexpress.affiliate.product.query', { keywords: 'fishing', page_size: '3', page_no: '1' }); p.sign_method = 'MD5'; return p; })()),
+  ]);
 
-  res.json({
-    secretDiag,
-    sortedStr_sample: sortedStr.slice(0, 100) + '...',
-    signSample: signSample.slice(0, 8) + '...',
-    product_query: {
-      error: mainResult?.error_response?.code,
-      msg:   mainResult?.error_response?.msg,
-      resp:  mainResult?.aliexpress_affiliate_product_query_response?.resp_result?.resp_code,
-    },
-    hotproduct_query: {
-      error: hotResult?.error_response?.code,
-      msg:   hotResult?.error_response?.msg,
-      resp:  hotResult?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.resp_code,
-      items: hotResult?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result?.products?.product?.length || 0,
-    },
-  });
+  const winner = results.find(r => r.success);
+  res.json({ KEY: KEY.slice(0,4)+'****', SECRET_len: SECRET.length, TRACK, winner: winner?.label || '❌ 전부 실패', results });
 });
-
 
 
 /**
