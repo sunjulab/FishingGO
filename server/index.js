@@ -7726,6 +7726,53 @@ app.get('/api/shop/products', async (req, res) => {
 });
 
 /**
+ * GET /api/shop/ali-debug — Ali API 실제 응답 진단 (임시)
+ */
+app.get('/api/shop/ali-debug', async (req, res) => {
+  const crypto = require('crypto');
+  const axios  = require('axios');
+  const ALI_APP_KEY    = process.env.ALI_APP_KEY    || '';
+  const ALI_APP_SECRET = process.env.ALI_APP_SECRET || '';
+  const ALI_TRACKING   = process.env.ALI_TRACKING_ID || '';
+  const ALI_API_URL    = 'https://api-sg.aliexpress.com/sync';
+
+  const status = {
+    ALI_APP_KEY:    ALI_APP_KEY ? `${ALI_APP_KEY.slice(0,4)}****` : '❌ 미설정',
+    ALI_APP_SECRET: ALI_APP_SECRET ? `****${ALI_APP_SECRET.slice(-4)}` : '❌ 미설정',
+    ALI_TRACKING_ID: ALI_TRACKING || '❌ 미설정',
+    ready: ALI_APP_KEY.length > 0 && ALI_APP_SECRET.length > 0,
+  };
+
+  if (!status.ready) return res.json({ status, error: 'API 키 미설정', raw: null });
+
+  try {
+    const timestamp = String(Date.now());
+    const extraParams = {
+      keywords: 'fishing lure', page_size: '3', page_no: '1',
+      tracking_id: ALI_TRACKING, target_currency: 'KRW', target_language: 'KO',
+    };
+    const params = { method: 'aliexpress.affiliate.product.query', app_key: ALI_APP_KEY, timestamp, sign_method: 'md5', v: '2.0', ...extraParams };
+    const sorted = Object.keys(params).sort().map(k => `${k}${params[k]}`).join('');
+    params.sign = crypto.createHash('md5').update(`${ALI_APP_SECRET}${sorted}${ALI_APP_SECRET}`).digest('hex').toUpperCase();
+
+    const queryStr = new URLSearchParams(params).toString();
+    const response = await axios.get(`${ALI_API_URL}?${queryStr}`, { timeout: 10000 });
+    const raw = response.data;
+    const result = raw?.aliexpress_affiliate_product_query_response?.resp_result;
+
+    res.json({
+      status,
+      resp_code: result?.resp_code,
+      resp_msg:  result?.resp_msg,
+      item_count: result?.result?.products?.product?.length || 0,
+      raw_summary: JSON.stringify(raw).slice(0, 500),
+    });
+  } catch (err) {
+    res.json({ status, error: err.message, raw: null });
+  }
+});
+
+/**
  * GET /api/shop/promo
  * 알리 특가 프로모션 상품 (수수료 50%+ 상품)
  */
