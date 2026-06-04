@@ -6411,7 +6411,7 @@ app.get('/api/commerce/coupang/search', async (req, res) => {
 
     res.json({
       keyword,
-      isMock: coupang.IS_TEST_MODE,
+      isMock: false,
       products,
     });
   } catch (err) {
@@ -6425,12 +6425,12 @@ app.get('/api/commerce/coupang/search', async (req, res) => {
  * 쿠팡 API 코나테스트 / 키 상태 확인
  */
 app.get('/api/commerce/coupang/status', (req, res) => {
+  const status = coupang.getCoupangStatus ? coupang.getCoupangStatus() : {};
   res.json({
-    mode: coupang.IS_TEST_MODE ? 'MOCK (테스트 목업 데이터)' : 'LIVE (쿠팡 실상)',
-    partnersId: coupang.PARTNERS_ID,
-    hasAccessKey: process.env.COUPANG_ACCESS_KEY && !process.env.COUPANG_ACCESS_KEY.startsWith('TEST_'),
-    hasSecretKey: process.env.COUPANG_SECRET_KEY && !process.env.COUPANG_SECRET_KEY.startsWith('TEST_'),
-    note: '쿠팡 Access Key / Secret Key를 .env에 추가하면 자동으로 LIVE 모드로 전환됩니다.',
+    mode: status.ready ? 'LIVE (쿠팡 실제 API)' : 'INACTIVE (API 키 미설정)',
+    partnersId: coupang.PARTNERS_ID || '미설정',
+    ready: status.ready || false,
+    note: status.ready ? '실제 쿠팡 API 연동 중' : 'COUPANG_ACCESS_KEY / SECRET_KEY 미설정',
   });
 });
 
