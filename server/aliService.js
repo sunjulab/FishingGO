@@ -31,11 +31,14 @@ const ALI_CACHE_TTL = 10 * 60 * 1000; // 10분
 setInterval(() => aliCache.clear(), 60 * 60 * 1000);
 
 
-// ─── HMAC-MD5 서명 생성 ───────────────────────────────────────────────────────
+// ─── HMAC-SHA256 서명 생성 (Singapore 게이트웨이 방식) ──────────────────────
 function signAliRequest(params) {
+  // 1. 모든 파라미터를 키 업파벳순 정렬 후 key+value 연결
   const sorted = Object.keys(params).sort().map(k => `${k}${params[k]}`).join('');
+  // 2. AppSecret 압수 (HMAC-SHA256 시 압수 없이 sorted 시그닝)
   const str = `${ALI_APP_SECRET}${sorted}${ALI_APP_SECRET}`;
-  return crypto.createHash('md5').update(str).digest('hex').toUpperCase();
+  // 3. HMAC-SHA256 생성 후 대문자 HEX 반환
+  return crypto.createHmac('sha256', ALI_APP_SECRET).update(str).digest('hex').toUpperCase();
 }
 
 function buildParams(method, extraParams = {}) {
@@ -43,7 +46,7 @@ function buildParams(method, extraParams = {}) {
     method,
     app_key:     ALI_APP_KEY,
     timestamp:   String(Date.now()),
-    sign_method: 'md5',
+    sign_method: 'sha256',   // Singapore 게이트웨이: md5 → sha256
     v:           '2.0',
     ...extraParams,
   };
