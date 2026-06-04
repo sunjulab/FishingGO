@@ -393,9 +393,14 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
         .finally(() => setCctvLoading(false));
 
-      const shopPromise = apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(keyword)}&limit=3`)
-        .then(res => { if (res.data?.products) setShoppingItems(res.data.products.slice(0, 3)); })
-        .catch(err => { if (!import.meta.env.PROD) console.error('Shop Load Error:', err); });
+      const fish = selectedPoint.fish ? selectedPoint.fish.split(',')[0].trim() : '';
+      const pointType = selectedPoint.region || '바다';
+      const shopPromise = apiClient.get(
+        `/api/shop/recommend?pointType=${encodeURIComponent(pointType)}&fish=${encodeURIComponent(fish)}`
+      ).then(res => {
+        const items = res.data?.products?.slice(0, 3) || [];
+        if (items.length > 0) setShoppingItems(items);
+      }).catch(err => { if (!import.meta.env.PROD) console.error('Shop Load Error:', err); });
 
       const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}`)
         .then(resp => {

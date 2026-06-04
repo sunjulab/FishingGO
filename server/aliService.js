@@ -24,6 +24,13 @@ const ALI_READY = ALI_APP_KEY.length > 0 && ALI_APP_SECRET.length > 0;
 // API Gateway (싱가포르)
 const ALI_API_URL = 'https://api-sg.aliexpress.com/sync';
 
+// ─── 10분 메모리 캐시 (API 호출 최소화) ──────────────────────────────────────
+const aliCache = new Map();
+const ALI_CACHE_TTL = 10 * 60 * 1000; // 10분
+// 1시간마다 캐시 초기화 (메모리 누수 방지)
+setInterval(() => aliCache.clear(), 60 * 60 * 1000);
+
+
 // ─── HMAC-MD5 서명 생성 ───────────────────────────────────────────────────────
 function signAliRequest(params) {
   const sorted = Object.keys(params).sort().map(k => `${k}${params[k]}`).join('');
@@ -76,11 +83,18 @@ function normalizeProduct(item) {
   };
 }
 
-// ─── 키워드 상품 검색 ─────────────────────────────────────────────────────────
+// ─── 키워드 상품 검색 (10분 캐시 적용) ──────────────────────────────────────
 async function searchAliExpress(keyword, limit = 6) {
   if (!ALI_READY) {
     (global.logger?.warn || console.warn)('[ALI] API 키 미설정 — 상품 없음');
     return [];
+  }
+  // 캐시 확인
+  const cacheKey = `${keyword}_${limit}`;
+  const cached = aliCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < ALI_CACHE_TTL) {
+    (global.logger?.info || console.info)(`[ALI 캐시 히트] "${keyword}" (${cached.data.length}개)`);
+    return cached.data;
   }
   try {
     const params = buildParams('aliexpress.affiliate.product.query', {
@@ -102,10 +116,14 @@ async function searchAliExpress(keyword, limit = 6) {
     }
     const items = result?.result?.products?.product || [];
     (global.logger?.info || console.info)(`[ALI] 검색 "${keyword}" → ${items.length}개`);
-    return items.map(normalizeProduct);
+    const normalized = items.map(normalizeProduct);
+    // 캐시 저장
+    aliCache.set(cacheKey, { data: normalized, ts: Date.now() });
+    return normalized;
   } catch (err) {
     (global.logger?.warn || console.warn)(`[ALI] searchAliExpress 오류: ${err.message}`);
     return [];
+
   }
 }
 

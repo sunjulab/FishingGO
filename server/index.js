@@ -5889,53 +5889,41 @@ app.post('/api/admin/cctv/auto-sync', async (req, res) => {
 // crypto는 파일 최상단에서 이미 require됨 (중복 선언 제거)
 
 
+// BUG-2 수정: 중복 엔드포인트 제거 — 실제 동작 버전은 L6391에 있음
+// 이 위치 엔드포인트는 picsum 목업 포함 구버전이므로 Ali 폴백 버전으로 교체
 app.get('/api/commerce/coupang/search', async (req, res) => {
-  const { keyword } = req.query;
-  const ACCESS_KEY = process.env.COUPANG_ACCESS_KEY;
-  const SECRET_KEY = process.env.COUPANG_SECRET_KEY;
-  const AFFILIATE_ID = process.env.COUPANG_PARTNERS_ID || ''; // ✅ BUG-55: 하드코딩 파트너스 ID → 환경변수 참조
-
-  if (!keyword) return res.status(400).json({ error: '검색어가 필요합니다.' });
-
-  if (!ACCESS_KEY || !SECRET_KEY) {
-    (logger?.warn || console.warn)('[Coupang] API Keys not provided. Returning fallback product.');
-    // API 키 미세팅 시 임시 Mock 응답
-    return res.json({
-      products: [{
-        name: `[쿠팡최저가] ${keyword} 입문자 올인원 세트 (API 키 등록 필요)`,
-        price: '35,000원',
-        discount: '15%',
-        img: 'https://picsum.photos/seed/fishingkit/100/100', // ✅ 22TH-A1: Unsplash → picsum.photos
-        link: 'https://partners.coupang.com/'
-      }]
-    });
-  }
-
+  const keyword = req.query.keyword || '낚시용품';
+  const category = req.query.category || '';
   try {
-    const method = 'GET';
-    const path = `/v2/providers/affiliate_open_api/apis/openapi/products/search?keyword=${encodeURIComponent(keyword)}&limit=1`;
-    const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '').replace(/-/g, '').replace(/:/g, '').replace(/ /g, '') + 'Z';
-    const message = `${method}${path.split('?')[0]}${datetime}`;
-
-    const signature = crypto.createHmac('sha256', SECRET_KEY).update(message).digest('hex');
-    const authorization = `CEA algorithm=HmacSHA256, access-key=${ACCESS_KEY}, signed-date=${datetime}, signature=${signature}`;
-
-    const response = await axios.get(`https://api-gateway.coupang.com${path}`, {
-      headers: { 'Authorization': authorization, 'Content-Type': 'application/json' }
+    // 쿠팡 API 키 있으면 쿠팡 우선, 없으면 AliExpress로 폴백
+    const coupangProducts = await coupang.searchCoupang(keyword, 3).catch(() => []);
+    if (coupangProducts.length > 0) {
+      return res.json({
+        keyword, isMock: false,
+        products: coupangProducts.map(p => ({
+          id: p.productId, name: p.productName,
+          price: typeof p.productPrice === 'number' ? p.productPrice.toLocaleString('ko-KR') + '원' : (p.productPrice || ''),
+          discount: p.discountRate > 0 ? `${p.discountRate}%` : null,
+          img: p.productImage, link: p.coupangUrl,
+          badge: p.badge || '낚시GO 추천', source: 'coupang',
+        }))
+      });
+    }
+    // 쿠팡 키 없음 → AliExpress 폴백
+    const aliKeyword = _mapToAliKeyword(category || keyword);
+    const aliProducts = await ali.searchAliExpress(aliKeyword, 3).catch(() => []);
+    res.json({
+      keyword, isMock: false,
+      products: aliProducts.map(p => ({
+        id: `ali_${p.productId}`, name: p.title,
+        price: p.salePrice + '원', discount: p.discount,
+        img: p.imageUrl, link: p.productUrl,
+        badge: p.badge, source: 'ali',
+      }))
     });
-
-    const products = response.data.data.productData.map(p => ({
-      name: p.productName,
-      price: `${p.productPrice.toLocaleString()}원`,
-      discount: '', // API 응답에 할인율이 별도로 없는 경우 생략
-      img: p.productImage,
-      link: p.productUrl // 수익 창출용 파트너스 자동 전환된 단축 링크 (AF3563639 자동 매핑됨)
-    }));
-
-    res.json({ products });
   } catch (err) {
-    (logger?.error || console.error)('[Coupang] API Error:', err.message);
-    res.status(500).json({ error: '쿠팡 파트너스 연동 중 오류가 발생했습니다.' });
+    (logger?.error || console.error)('[/api/commerce/coupang/search v1] 오류:', err.message);
+    res.status(500).json({ error: '상품 검색 실패', products: [] });
   }
 });
 
@@ -7774,9 +7762,10 @@ app.get('/api/shop/recommend', async (req, res) => {
   const keyword = _buildRecommendKeyword(pointType, fish);
 
   try {
+    const aliKeyword = fish ? _buildAliRecommendKeyword(fish) : _mapToAliKeyword(pointType);
     const [coupangRec, aliRec] = await Promise.all([
       coupang.searchCoupang(keyword, 4).catch(() => []),
-      ali.searchAliExpress(_mapToAliKeyword(keyword), 2).catch(() => []),
+      ali.searchAliExpress(aliKeyword, 3).catch(() => []),
     ]);
 
     const recommend = [
@@ -7818,6 +7807,48 @@ const ManualShopItem = mongoose.models.ManualShopItem || mongoose.model('ManualS
     createdAt:   { type: Date,   default: Date.now },
   }, { collection: 'manual_shop_items' })
 );
+
+// ─── 상품 클릭 추적 모델 ─────────────────────────────────────────────────────
+const ShopClick = mongoose.models.ShopClick || mongoose.model('ShopClick',
+  new mongoose.Schema({
+    productId:  { type: String },
+    source:     { type: String, default: 'ali' },
+    keyword:    { type: String },
+    clickedAt:  { type: Date, default: Date.now },
+  }, { collection: 'shop_clicks' })
+);
+
+/**
+ * POST /api/shop/click — 상품 클릭 로깅 (수익 최적화용)
+ */
+app.post('/api/shop/click', async (req, res) => {
+  try {
+    const { productId, source, keyword } = req.body;
+    if (dbReady && productId) {
+      await ShopClick.create({ productId, source: source || 'ali', keyword: keyword || '' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.json({ ok: false }); // 클릭 추적 실패해도 사용자에게 영향 없음
+  }
+});
+
+/**
+ * GET /api/shop/click/stats — 클릭 통계 (관리자 전용)
+ */
+app.get('/api/shop/click/stats', verifyToken, async (req, res) => {
+  try {
+    if (!dbReady) return res.json([]);
+    const stats = await ShopClick.aggregate([
+      { $group: { _id: '$productId', count: { $sum: 1 }, source: { $first: '$source' }, keyword: { $first: '$keyword' } } },
+      { $sort: { count: -1 } },
+      { $limit: 20 },
+    ]);
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * GET /api/shop/manual
@@ -8078,26 +8109,80 @@ app.get('/api/shop/manual/delete-direct', async (req, res) => {
 });
 
 // 카테고리 → 알리 키워드 변환 헬퍼
+// BUG-3 수정: 키워드 매핑 전면 재작성 (스피닝릴→낚시줄 오류 수정)
 function _mapToAliKeyword(category) {
   const map = {
-    '낚시용품': '소모품', '스피닝릴': '낚시줄', '베이트릴': '낚시줄',
-    '루어낚시대': '루어', '원투낚시대': '채비', '낚시줄': '낚시줄',
-    '캠핑의자': '소모품', '루어': '루어', '에기': '채비',
+    '낚시용품':   'fishing accessories set',
+    '스피닝릴':   'fishing reel spinning',
+    '베이트릴':   'fishing reel baitcasting',
+    '루어낚시대': 'fishing rod lure spinning',
+    '원투낚시대': 'fishing rod surf casting',
+    '낚시줄':    'fishing line PE braid',
+    '캠핑의자':  'fishing chair folding portable',
+    '루어':      'fishing lure set soft bait',
+    '에기':      'squid fishing egi jig',
+    '갯바위':    'rock shore fishing tackle rig',
+    '선상':      'boat jigging fishing tackle',
+    '민물':      'freshwater fishing tackle carp',
+    '소모품':    'fishing accessories set hook',
+    '봉돌':      'fishing sinker weight lead',
+    '채비':      'fishing rig terminal tackle',
+    '집어등':    'fishing light LED underwater',
+    '릴':        'fishing reel spinning',
+    '낚싯대':    'fishing rod telescopic carbon',
+    '에깅':      'squid egi jig spinning',
+    '지그':      'fishing metal jig lure',
   };
-  return map[category] || '소모품';
+  return map[category] || 'fishing accessories set';
 }
 
-// 포인트+어종 → 검색 키워드 변환 헬퍼
+// 시즌별 자동 추천 키워드
+function _getSeasonKeyword() {
+  const month = new Date().getMonth() + 1;
+  const m = {
+    3: 'spring fishing tackle set', 4: 'spring lure fishing',
+    5: 'sea bass minnow lure fishing', 6: 'flounder fishing jig lure',
+    7: 'cutlassfish belt fishing lure', 8: 'jigging deep sea fishing',
+    9: 'squid egi autumn fishing', 10: 'rockfish light game lure',
+    11: 'winter fishing warmth gloves', 12: 'cod fishing heavy jig',
+    1: 'winter fishing cold gear', 2: 'early spring fishing set',
+  };
+  return m[month] || 'fishing accessories set';
+}
+
+// AliExpress 전용 어종 키워드 매핑
+function _buildAliRecommendKeyword(fish) {
+  const map = {
+    '감성돔': 'black seabream fishing hook rig',
+    '참돔': 'red snapper jig fishing lure',
+    '광어': 'flounder fishing jig lure',
+    '우럭': 'rockfish jig head lure',
+    '고등어': 'mackerel sabiki fishing rig',
+    '무늬오징어': 'squid egi jig fishing',
+    '갈치': 'cutlassfish belt fishing lure',
+    '농어': 'seabass minnow lure fishing',
+    '볼락': 'rockfish light game lure',
+    '숭어': 'mullet fishing float rig',
+    '붕어': 'crucian carp freshwater fishing',
+    '잉어': 'carp fishing feeder rig',
+  };
+  return map[fish] || _getSeasonKeyword();
+}
+
+// 포인트+어종 → 쿠팡 검색 키워드 변환 헬퍼
 function _buildRecommendKeyword(pointType, fish) {
   const fishMap = {
     '감성돔': '감성돔 채비 갯바위', '참돔': '참돔 루어 선상',
     '광어': '광어 다운샷 루어', '우럭': '우럭 지그헤드',
-    '고등어': '고등어 채비', '무늬오징어': '에기 에깅',
+    '고등어': '고등어 채비 사비키', '무늬오징어': '에기 에깅',
     '갈치': '갈치 낚시 채비', '농어': '농어 루어 미노우',
+    '볼락': '볼락 라이트게임 루어', '붕어': '붕어 낚시 채비',
+    '잉어': '잉어 낚시 보리 채비',
   };
   if (fish && fishMap[fish]) return fishMap[fish];
   if (pointType === '바다') return '바다낚시 채비';
   if (pointType === '민물') return '민물낚시 채비';
+  if (pointType === '갯바위') return '갯바위 채비 갯지렁이';
   return '낚시용품';
 }
 

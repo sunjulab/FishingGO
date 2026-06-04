@@ -186,6 +186,12 @@ export default function Shop() {
     if (product.source === 'coupang' && COUPANG_PARTNERS_ID && url && !url.includes('lptag=')) {
       url = `${url}${url.includes('?') ? '&' : '?'}lptag=${COUPANG_PARTNERS_ID}`;
     }
+    // 클릭 추적 (수익 최적화용 — 실패해도 UX 무영향)
+    apiClient.post('/api/shop/click', {
+      productId: product.id,
+      source: product.source || 'ali',
+      keyword: searchQuery || activeCat || '쇼핑탭',
+    }).catch(() => {});
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -374,7 +380,7 @@ export default function Shop() {
                   </a>
                 ) : (
                   <a href={item.shortUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}>
-                    <iframe src={item.iframeSrc} width={110} height={220} frameBorder={0} scrolling="no" referrerPolicy="unsafe-url" title={쿠팡 } style={{ display: 'block', pointerEvents: 'none' }} />
+                    <iframe src={item.iframeSrc} width={110} height={220} frameBorder={0} scrolling="no" referrerPolicy="unsafe-url" title={`쿠팡 상품 ${item.tag}`} style={{ display: 'block', pointerEvents: 'none' }} />
                   </a>
                 )}
                 {isAdmin && (
