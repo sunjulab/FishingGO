@@ -7738,43 +7738,73 @@ app.get('/api/shop/ali-debug', async (req, res) => {
 
   if (!KEY || !SECRET) return res.json({ error: 'API 키 미설정' });
 
-  // 4가지 서명 방식 순서대로 시도
-  const signMethods = [
-    { label: 'SHA256_WRAP',   method: 'sha256', fn: (sorted) => crypto.createHmac('sha256', SECRET).update(`${SECRET}${sorted}${SECRET}`).digest('hex').toUpperCase() },
-    { label: 'SHA256_NOWRAP', method: 'sha256', fn: (sorted) => crypto.createHmac('sha256', SECRET).update(sorted).digest('hex').toUpperCase() },
-    { label: 'MD5_WRAP',      method: 'md5',    fn: (sorted) => crypto.createHash('md5').update(`${SECRET}${sorted}${SECRET}`).digest('hex').toUpperCase() },
-    { label: 'MD5_NOWRAP',    method: 'md5',    fn: (sorted) => crypto.createHash('md5').update(`${sorted}${SECRET}`).digest('hex').toUpperCase() },
-  ];
+  // ── Secret 세부 진단 ──────────────────────────────────────────
+  const secretDiag = {
+    length:   SECRET.length,
+    first4:   SECRET.slice(0, 4),
+    last4:    SECRET.slice(-4),
+    hasSpace: SECRET.includes(' '),
+    hasNewline: SECRET.includes('\n') || SECRET.includes('\r'),
+    trimDiff: SECRET !== SECRET.trim(),  // 앞뒤 공백/줄바꿈 여부
+  };
 
-  const results = [];
-  for (const sm of signMethods) {
-    try {
-      const ts = String(Date.now());
-      const p = { method: 'aliexpress.affiliate.product.query', app_key: KEY, timestamp: ts, sign_method: sm.method, v: '2.0', keywords: 'fishing', page_size: '3', page_no: '1', tracking_id: TRACK };
-      const sorted = Object.keys(p).sort().map(k => `${k}${p[k]}`).join('');
-      p.sign = sm.fn(sorted);
-      const qs = new URLSearchParams(p).toString();
-      const r = await axios.get(`${URL}?${qs}`, { timeout: 8000 });
-      const raw = r.data;
-      const result = raw?.aliexpress_affiliate_product_query_response?.resp_result;
-      const errRes = raw?.error_response;
-      results.push({
-        label: sm.label, sign_method: sm.method,
-        resp_code: result?.resp_code || null,
-        error_code: errRes?.code || null,
-        error_msg:  errRes?.msg  || null,
-        items: result?.result?.products?.product?.length || 0,
-        success: result?.resp_code === 200,
-      });
-      if (result?.resp_code === 200) break; // 성공하면 중단
-    } catch (err) {
-      results.push({ label: sm.label, error: err.message });
-    }
-  }
+  // ── 서명 문자열 샘플 확인 (MD5 방식) ──────────────────────────
+  const ts = String(Date.now());
+  const baseP = {
+    method: 'aliexpress.affiliate.product.query',
+    app_key: KEY.trim(), timestamp: ts,
+    sign_method: 'md5', v: '2.0',
+    keywords: 'fishing', page_size: '3', page_no: '1',
+    tracking_id: TRACK.trim(),
+  };
+  const sortedStr = Object.keys(baseP).sort().map(k => `${k}${baseP[k]}`).join('');
+  const secretTrimmed = SECRET.trim();
+  const signSample = crypto.createHash('md5').update(`${secretTrimmed}${sortedStr}${secretTrimmed}`).digest('hex').toUpperCase();
 
-  const ok = results.find(r => r.success);
-  res.json({ status: { KEY: KEY.slice(0,4)+'****', TRACK, ready: true }, winner: ok?.label || '❌ 모두 실패', results });
+  // ── MD5_TRIM: Secret trim() 버전 테스트 ──────────────────────
+  baseP.sign = signSample;
+  let mainResult = null;
+  try {
+    const qs = new URLSearchParams(baseP).toString();
+    const r = await axios.get(`${URL}?${qs}`, { timeout: 8000 });
+    mainResult = r.data;
+  } catch (e) { mainResult = { err: e.message }; }
+
+  // ── hotproduct API 테스트 (Standard API) ──────────────────────
+  const hotP = {
+    method: 'aliexpress.affiliate.hotproduct.query',
+    app_key: KEY.trim(), timestamp: String(Date.now()),
+    sign_method: 'md5', v: '2.0',
+    keywords: 'fishing', page_size: '3', page_no: '1',
+    tracking_id: TRACK.trim(),
+  };
+  const hotSorted = Object.keys(hotP).sort().map(k => `${k}${hotP[k]}`).join('');
+  hotP.sign = crypto.createHash('md5').update(`${secretTrimmed}${hotSorted}${secretTrimmed}`).digest('hex').toUpperCase();
+  let hotResult = null;
+  try {
+    const qs2 = new URLSearchParams(hotP).toString();
+    const r2 = await axios.get(`${URL}?${qs2}`, { timeout: 8000 });
+    hotResult = r2.data;
+  } catch (e) { hotResult = { err: e.message }; }
+
+  res.json({
+    secretDiag,
+    sortedStr_sample: sortedStr.slice(0, 100) + '...',
+    signSample: signSample.slice(0, 8) + '...',
+    product_query: {
+      error: mainResult?.error_response?.code,
+      msg:   mainResult?.error_response?.msg,
+      resp:  mainResult?.aliexpress_affiliate_product_query_response?.resp_result?.resp_code,
+    },
+    hotproduct_query: {
+      error: hotResult?.error_response?.code,
+      msg:   hotResult?.error_response?.msg,
+      resp:  hotResult?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.resp_code,
+      items: hotResult?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result?.products?.product?.length || 0,
+    },
+  });
 });
+
 
 
 /**
