@@ -7748,6 +7748,79 @@ app.get('/api/shop/products', async (req, res) => {
 
 
 /**
+ * GET /api/shop/ali-resolve?url=<s.click.aliexpress.com 링크>
+ * AliExpress 트래킹 링크에서 상품 정보 자동 추출 (마스터 전용)
+ */
+app.get('/api/shop/ali-resolve', async (req, res) => {
+  const DIRECT_KEY = process.env.DIRECT_KEY || 'FishingGO_Admin_Direct_2026';
+  const { url, key } = req.query;
+
+  if (key !== DIRECT_KEY) return res.status(403).json({ error: '권한 없음' });
+  if (!url) return res.status(400).json({ error: 'url 파라미터 필요' });
+
+  const axios = require('axios');
+  const TRACK = (process.env.ALI_TRACKING_ID || 'FishingGO').trim();
+
+  try {
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'ko-KR,ko;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml',
+    };
+
+    const r = await axios.get(url, { headers, maxRedirects: 10, timeout: 15000 });
+    const finalUrl = r.request?.res?.responseUrl || url;
+    const html = typeof r.data === 'string' ? r.data : '';
+
+    // 상품 ID 추출
+    const idMatch = finalUrl.match(/\/item\/(\d+)/);
+    const productId = idMatch ? idMatch[1] : null;
+
+    // og:image 추출
+    const imgMatch = html.match(/property="og:image" content="([^"]+)"/);
+    const imgUrl = imgMatch ? imgMatch[1].split('?')[0] : null;
+
+    // og:title 추출
+    const titleMatch = html.match(/property="og:title" content="([^"]+)"/);
+    const rawTitle = titleMatch ? titleMatch[1] : '';
+    const title = rawTitle.replace(/ - AliExpress\s*\d*/, '').trim();
+
+    // 가격 추출
+    const priceMatch = html.match(/"minAmount":\{"value":"([^"]+)"/);
+    const price = priceMatch ? priceMatch[1] : null;
+
+    if (!productId && !imgUrl) {
+      // 상품 페이지가 아닌 경우 (캠페인/카테고리 링크)
+      return res.json({
+        ok: false,
+        error: '개별 상품 링크가 아닙니다. 포털에서 Product Link로 생성해주세요.',
+        finalUrl,
+      });
+    }
+
+    // 어필리에이트 링크 구성 (원본 s.click 링크 유지 or 새로 구성)
+    const affiliateLink = url.includes('s.click.aliexpress.com')
+      ? url
+      : productId
+        ? `https://www.aliexpress.com/item/${productId}.html?aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`
+        : url;
+
+    return res.json({
+      ok: true,
+      productId,
+      imageUrl: imgUrl,
+      title,
+      price,
+      affiliateLink,
+      finalUrl,
+    });
+  } catch (err) {
+    logger.warn(`[Ali Resolve] 링크 조회 오류: ${err.message}`);
+    return res.status(500).json({ error: `조회 실패: ${err.message.slice(0, 100)}` });
+  }
+});
+
+/**
  * GET /api/shop/ali-debug — Ali API 실제 응답 진단 (임시)
  */
 app.get('/api/shop/ali-debug', async (req, res) => {

@@ -91,6 +91,7 @@ export default function Shop() {
   const [regProductName, setRegProductName] = useState('');
   const [regMsg,         setRegMsg]         = useState('');
   const [regLoading,     setRegLoading]     = useState(false);
+  const [regResolving,   setRegResolving]   = useState(false); // 자동조회 중
 
   // ── 상품 등록/삭제 ────────────────────────────────────────────────────────────
   const handleRegSubmit = async () => {
@@ -545,10 +546,13 @@ export default function Shop() {
               </button>
             ))}
           </div>
-          <div style={{ marginBottom: '10px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>단축 URL *</div>
-            <input value={regShortUrl} onChange={e=>setRegShortUrl(e.target.value)} placeholder="https://link.coupang.com/a/xxxx" style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '13px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
-          </div>
+          {/* 쿠팡일 때만 단축 URL 필드 표시 (알리는 위 자동조회 박스에 통합) */}
+          {regSrc === 'coupang' && (
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>단축 URL *</div>
+              <input value={regShortUrl} onChange={e=>setRegShortUrl(e.target.value)} placeholder="https://link.coupang.com/a/xxxx" style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '13px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+          )}
           {regSrc==='coupang' && (
             <div style={{ marginBottom: '10px' }}>
               <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>iframe 코드 *</div>
@@ -556,14 +560,62 @@ export default function Shop() {
             </div>
           )}
           {regSrc==='ali' && (<>
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>상품 이미지 URL *</div>
-              <input value={regImageUrl} onChange={e=>setRegImageUrl(e.target.value)} placeholder="https://ae01.alicdn.com/..." style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '13px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+            {/* 🔄 자동 조회 버튼 */}
+            <div style={{ marginBottom: '14px', background: 'linear-gradient(135deg,#FFF3EC,#FFF8F5)', border: '1.5px solid #FFD0B0', borderRadius: '14px', padding: '12px 14px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '900', color: '#FF6900', marginBottom: '8px' }}>⚡ 트래킹 링크 자동 조회</div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  value={regShortUrl}
+                  onChange={e => setRegShortUrl(e.target.value)}
+                  placeholder="https://s.click.aliexpress.com/e/_xxx"
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #FFB080', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <button
+                  type="button"
+                  disabled={regResolving || !regShortUrl.trim()}
+                  onClick={async () => {
+                    if (!regShortUrl.trim()) return;
+                    setRegResolving(true); setRegMsg('🔍 상품 정보 조회 중...');
+                    try {
+                      const res = await fetch(`${API_BASE}/api/shop/ali-resolve?key=${DIRECT_KEY}&url=${encodeURIComponent(regShortUrl.trim())}`);
+                      const data = await res.json();
+                      if (data.ok) {
+                        if (data.imageUrl) setRegImageUrl(data.imageUrl);
+                        if (data.title)    setRegProductName(data.title);
+                        setRegMsg(`✅ 조회 완료! ${data.title?.slice(0,20) || ''}`);
+                      } else {
+                        setRegMsg(`⚠️ ${data.error || '조회 실패 — 직접 입력해주세요'}`);
+                      }
+                    } catch(e) { setRegMsg(`❌ 오류: ${e.message}`); }
+                    finally { setRegResolving(false); }
+                  }}
+                  style={{ padding: '10px 14px', borderRadius: '10px', background: regResolving ? '#C7C7CC' : 'linear-gradient(135deg,#FF9B26,#FF6900)', border: 'none', color: '#fff', fontSize: '12px', fontWeight: '900', cursor: regResolving ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                >
+                  {regResolving ? '⏳' : '🔍 자동조회'}
+                </button>
+              </div>
+              <div style={{ fontSize: '11px', color: '#FF8040', fontWeight: '700', marginTop: '6px' }}>포털 Product Link (s.click.aliexpress.com/e/...)를 붙여넣으세요</div>
             </div>
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>상품명</div>
-              <input value={regProductName} onChange={e=>setRegProductName(e.target.value)} placeholder="낚시 루어 세트 10개입" style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '13px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
-            </div>
+            {/* 미리보기 */}
+            {regImageUrl && (
+              <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center', background: '#F9F9F9', borderRadius: '12px', padding: '10px' }}>
+                <img src={regImageUrl} alt="미리보기" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E5E5EA' }} onError={e => e.target.style.display='none'} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '11px', fontWeight: '900', color: '#FF6900', marginBottom: '2px' }}>상품 미리보기</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#1c1c1e', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{regProductName || '상품명 없음'}</div>
+                </div>
+              </div>
+            )}
+            {/* 수동 입력 (자동조회 실패 시) */}
+            <details style={{ marginBottom: '10px' }}>
+              <summary style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', cursor: 'pointer', padding: '4px 0' }}>✏️ 직접 입력 (자동조회 실패 시)</summary>
+              <div style={{ marginTop: '8px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>이미지 URL</div>
+                <input value={regImageUrl} onChange={e=>setRegImageUrl(e.target.value)} placeholder="https://ae01.alicdn.com/..." style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>상품명</div>
+                <input value={regProductName} onChange={e=>setRegProductName(e.target.value)} placeholder="낚시 루어 세트 10개입" style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </details>
           </>)}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '8px' }}>카테고리</div>
