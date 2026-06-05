@@ -7762,115 +7762,93 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
   const http  = require('http');
   const TRACK = (process.env.ALI_TRACKING_ID || 'FishingGO').trim();
 
-  // ── 수동 리다이렉트 추적 (최대 25회, 루프 방지) ──────────────────────────────
-  function followRedirects(startUrl, maxHops = 25) {
+  // ── 리다이렉트 추적: /item/숫자 URL 발견 즉시 중단 ───────────────────────────
+  function findProductId(startUrl, maxHops = 20) {
     return new Promise((resolve, reject) => {
-      const visitedPaths = new Set();  // hostname+pathname만 비교 (쿼리 제외)
       let hops = 0;
 
-      function doRequest(currentUrl) {
+      function doHead(currentUrl) {
         if (hops++ > maxHops) return reject(new Error('리다이렉트 횟수 초과'));
 
         let parsed;
         try { parsed = new URL(currentUrl); } catch { return reject(new Error('잘못된 URL')); }
 
-        // 루프 감지: 같은 hostname+pathname 3회 이상 방문 시 중단
-        const pathKey = parsed.hostname + parsed.pathname;
-        const count = (visitedPaths.get ? visitedPaths.get(pathKey) || 0 : 0);
-        // Map으로 교체
-        const mod2 = parsed.protocol === 'https:' ? https : http;
-        const options = {
+        // 현재 URL에 이미 상품 ID가 있으면 즉시 반환
+        const idNow = currentUrl.match(/\/item\/(\d{8,})/);
+        if (idNow) return resolve({ productId: idNow[1], finalUrl: currentUrl });
+
+        const mod = parsed.protocol === 'https:' ? https : http;
+        const req2 = mod.request({
           hostname: parsed.hostname,
           path: parsed.pathname + parsed.search,
-          method: 'GET',
-          timeout: 15000,
+          method: 'HEAD',   // body 없이 헤더만 받기 (빠름)
+          timeout: 10000,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept-Language': 'ko-KR,ko;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,*/*',
           },
-        };
-
-        const req2 = mod2.request(options, (r) => {
-          // 301/302/303/307/308 → 리다이렉트 추적
+        }, (r) => {
+          r.resume();
           if ([301,302,303,307,308].includes(r.statusCode) && r.headers.location) {
             const next = r.headers.location.startsWith('http')
               ? r.headers.location
               : `${parsed.protocol}//${parsed.host}${r.headers.location}`;
-
-            // 같은 경로(쿼리 제외) 3회 방문 시 최종 URL로 확정
-            let nextParsed; try { nextParsed = new URL(next); } catch { nextParsed = null; }
-            const nextKey = nextParsed ? nextParsed.hostname + nextParsed.pathname : next;
-            if (visitedPaths[nextKey] >= 2) {
-              // 루프 감지 — 현재 URL을 최종으로 확정
-              let body = '';
-              r.setEncoding('utf8');
-              r.on('data', chunk => { if (body.length < 200000) body += chunk; });
-              r.on('end', () => resolve({ finalUrl: currentUrl, html: body, status: r.statusCode }));
-              return;
-            }
-            visitedPaths[nextKey] = (visitedPaths[nextKey] || 0) + 1;
-
-            r.resume();
-            return doRequest(next);
+            // 다음 URL에 상품 ID 있으면 즉시 반환
+            const idNext = next.match(/\/item\/(\d{8,})/);
+            if (idNext) return resolve({ productId: idNext[1], finalUrl: next });
+            return doHead(next);
           }
-          // 최종 응답 — body 수집
-          let body = '';
-          r.setEncoding('utf8');
-          r.on('data', chunk => { if (body.length < 200000) body += chunk; });
-          r.on('end', () => resolve({ finalUrl: currentUrl, html: body, status: r.statusCode }));
+          // 리다이렉트 없으나 상품 ID 없음 → 상품 페이지 아님
+          resolve({ productId: null, finalUrl: currentUrl });
         });
-
         req2.on('error', reject);
         req2.on('timeout', () => { req2.destroy(); reject(new Error('타임아웃')); });
         req2.end();
       }
 
-      doRequest(startUrl);
+      doHead(startUrl);
+    });
+  }
+
+  // ── 상품 페이지 HTML 직접 조회 ───────────────────────────────────────────────
+  function fetchProductPage(productId) {
+    return new Promise((resolve, reject) => {
+      const targetUrl = `https://www.aliexpress.com/item/${productId}.html`;
+      let parsed; try { parsed = new URL(targetUrl); } catch { return reject(new Error('잘못된 URL')); }
+      const req2 = https.request({
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        method: 'GET',
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'Accept': 'text/html,application/xhtml+xml,*/*',
+        },
+      }, (r) => {
+        // 리다이렉트면 최대 3회만 따라감
+        if ([301,302,303].includes(r.statusCode) && r.headers.location) {
+          r.resume();
+          // 재귀 없이 그냥 최종 결과 OK
+          let body2 = ''; r.setEncoding('utf8');
+          r.on('data', c => body2 += c); r.on('end', () => resolve(body2));
+          return;
+        }
+        let body = ''; r.setEncoding('utf8');
+        r.on('data', chunk => { if (body.length < 300000) body += chunk; });
+        r.on('end', () => resolve(body));
+      });
+      req2.on('error', reject);
+      req2.on('timeout', () => { req2.destroy(); reject(new Error('타임아웃')); });
+      req2.end();
     });
   }
 
   try {
-    // Step 1: 리다이렉트 추적해서 최종 URL + HTML 획득
-    const { finalUrl, html } = await followRedirects(url);
+    // Step 1: HEAD 리다이렉트 추적 → 상품 ID 추출 (루프 없이 빠름)
+    const { productId, finalUrl } = await findProductId(url);
 
-    // Step 2: 상품 ID 추출 (URL 또는 HTML에서)
-    const idMatch = finalUrl.match(/\/item\/(\d+)/);
-    let productId = idMatch ? idMatch[1] : null;
-
-    // Step 3: 상품 페이지가 아닌 경우 (카테고리/캠페인) → productId 없음
-    // HTML에서 data-item-id 등 추가 추출 시도
     if (!productId) {
-      const htmlIdMatch = html.match(/\"productId\":\s*\"?(\d{10,})\"?/);
-      if (htmlIdMatch) productId = htmlIdMatch[1];
-    }
-
-    // Step 4: 상품 ID 있으면 실제 상품 페이지 직접 조회 (이미지/타이틀 더 정확)
-    let imgUrl = null, title = '', price = null;
-
-    if (productId) {
-      try {
-        const { html: productHtml } = await followRedirects(
-          `https://www.aliexpress.com/item/${productId}.html`
-        );
-        const imgM   = productHtml.match(/property="og:image" content="([^"]+)"/);
-        const titleM = productHtml.match(/property="og:title" content="([^"]+)"/);
-        const priceM = productHtml.match(/"minAmount":\{"value":"([^"]+)"/);
-        imgUrl = imgM   ? imgM[1].split('?')[0]                            : null;
-        title  = titleM ? titleM[1].replace(/ - AliExpress\s*\d*/, '').trim() : '';
-        price  = priceM ? priceM[1] : null;
-      } catch { /* 상품 페이지 조회 실패 시 fallback: 첫 페이지 HTML 파싱 */ }
-    }
-
-    // Fallback: 첫 페이지 HTML에서 파싱
-    if (!imgUrl) {
-      const imgM2   = html.match(/property="og:image" content="([^"]+)"/);
-      const titleM2 = html.match(/property="og:title" content="([^"]+)"/);
-      if (imgM2)   imgUrl = imgM2[1].split('?')[0];
-      if (titleM2) title  = titleM2[1].replace(/ - AliExpress\s*\d*/, '').trim();
-    }
-
-    if (!productId && !imgUrl) {
       return res.json({
         ok: false,
         error: '개별 상품 링크가 아닙니다. AliExpress 상품 페이지 URL을 붙여넣어 주세요.',
@@ -7878,12 +7856,24 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
       });
     }
 
-    // 어필리에이트 링크: s.click 링크 유지, 일반 URL이면 파라미터 추가
+    // Step 2: 상품 ID로 실제 페이지 GET 조회 → 이미지/제목/가격 추출
+    let imgUrl = null, title = '', price = null;
+    try {
+      const productHtml = await fetchProductPage(productId);
+      const imgM   = productHtml.match(/property="og:image" content="([^"]+)"/);
+      const titleM = productHtml.match(/property="og:title" content="([^"]+)"/);
+      const priceM = productHtml.match(/"minAmount":\{"value":"([^"]+)"/);
+      imgUrl = imgM   ? imgM[1].split('?')[0]                                  : null;
+      title  = titleM ? titleM[1].replace(/ - AliExpress\s*\d*/, '').trim()   : '';
+      price  = priceM ? priceM[1]                                              : null;
+    } catch (fetchErr) {
+      logger.warn(`[Ali Resolve] 상품 페이지 조회 실패: ${fetchErr.message}`);
+    }
+
+    // 어필리에이트 링크: s.click 링크는 유지, 일반 URL이면 파라미터 추가
     const affiliateLink = url.includes('s.click.aliexpress.com')
       ? url
-      : productId
-        ? `https://www.aliexpress.com/item/${productId}.html?aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`
-        : url;
+      : `https://www.aliexpress.com/item/${productId}.html?aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`;
 
     return res.json({ ok: true, productId, imageUrl: imgUrl, title, price, affiliateLink, finalUrl });
 
