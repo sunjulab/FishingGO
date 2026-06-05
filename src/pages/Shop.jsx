@@ -92,6 +92,8 @@ export default function Shop() {
   const [regMsg,         setRegMsg]         = useState('');
   const [regLoading,     setRegLoading]     = useState(false);
   const [regResolving,   setRegResolving]   = useState(false); // 자동조회 중
+  const [regResolved,    setRegResolved]    = useState(false); // 조회 완료 상태
+  const [regNeedManual,  setRegNeedManual]  = useState(false); // 직접 입력 필요
 
   // ── 상품 등록/삭제 ────────────────────────────────────────────────────────────
   const handleRegSubmit = async () => {
@@ -582,8 +584,18 @@ export default function Shop() {
                       if (data.ok) {
                         if (data.imageUrl) setRegImageUrl(data.imageUrl);
                         if (data.title)    setRegProductName(data.title);
-                        setRegMsg(`✅ 조회 완료! ${data.title?.slice(0,20) || ''}`);
+                        // 이미지/제목 없으면 직접 입력 안내
+                        if (!data.imageUrl || !data.title) {
+                          setRegNeedManual(true);
+                          setRegMsg(`✅ 상품 ID ${data.productId} 확인! 이미지/제목을 직접 입력해주세요 ↓`);
+                        } else {
+                          setRegNeedManual(false);
+                          setRegMsg(`✅ 조회 완료! ${data.title?.slice(0,20) || ''}`);
+                        }
+                        setRegResolved(true);
                       } else {
+                        setRegNeedManual(true);
+                        setRegResolved(false);
                         setRegMsg(`⚠️ ${data.error || '조회 실패 — 직접 입력해주세요'}`);
                       }
                     } catch(e) { setRegMsg(`❌ 오류: ${e.message}`); }
@@ -606,14 +618,22 @@ export default function Shop() {
                 </div>
               </div>
             )}
-            {/* 수동 입력 (자동조회 실패 시) */}
-            <details style={{ marginBottom: '10px' }}>
-              <summary style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', cursor: 'pointer', padding: '4px 0' }}>✏️ 직접 입력 (자동조회 실패 시)</summary>
+            {/* 수동 입력 (자동조회 실패 시 또는 이미지 없을 때 자동 표시) */}
+            <details open={regNeedManual} style={{ marginBottom: '10px' }}>
+              <summary style={{ fontSize: '12px', fontWeight: '800', color: regNeedManual ? '#FF6900' : '#8E8E93', cursor: 'pointer', padding: '4px 0' }}>
+                {regNeedManual ? '⚠️ 이미지/제목 직접 입력 필요' : '✏️ 직접 입력 (자동조회 실패 시)'}
+              </summary>
+              {regNeedManual && (
+                <div style={{ background: '#FFF3EC', border: '1px solid #FFD0B0', borderRadius: '10px', padding: '8px 10px', marginTop: '6px', marginBottom: '8px', fontSize: '11px', color: '#FF6900', fontWeight: '700', lineHeight: 1.6 }}>
+                  💡 서버 IP 문제로 이미지를 자동 추출하지 못합니다.<br/>
+                  AliExpress 상품 페이지 → 이미지 우클릭 → "이미지 주소 복사" 후 아래 입력
+                </div>
+              )}
               <div style={{ marginTop: '8px' }}>
                 <div style={{ fontSize: '11px', fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>이미지 URL</div>
-                <input value={regImageUrl} onChange={e=>setRegImageUrl(e.target.value)} placeholder="https://ae01.alicdn.com/..." style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
+                <input value={regImageUrl} onChange={e=>setRegImageUrl(e.target.value)} placeholder="https://ae01.alicdn.com/..." style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${regNeedManual && !regImageUrl ? '#FF6900' : '#E5E5EA'}`, fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
                 <div style={{ fontSize: '11px', fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>상품명</div>
-                <input value={regProductName} onChange={e=>setRegProductName(e.target.value)} placeholder="낚시 루어 세트 10개입" style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+                <input value={regProductName} onChange={e=>setRegProductName(e.target.value)} placeholder="낚시 루어 세트 10개입" style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${regNeedManual && !regProductName ? '#FF6900' : '#E5E5EA'}`, fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             </details>
           </>)}
