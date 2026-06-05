@@ -7758,62 +7758,119 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
   if (key !== DIRECT_KEY) return res.status(403).json({ error: '권한 없음' });
   if (!url) return res.status(400).json({ error: 'url 파라미터 필요' });
 
-  const axios = require('axios');
+  const https = require('https');
+  const http  = require('http');
   const TRACK = (process.env.ALI_TRACKING_ID || 'FishingGO').trim();
 
+  // ── 수동 리다이렉트 추적 (최대 25회, 루프 방지) ──────────────────────────────
+  function followRedirects(startUrl, maxHops = 25) {
+    return new Promise((resolve, reject) => {
+      const visited = new Set();
+      let hops = 0;
+
+      function doRequest(currentUrl) {
+        if (hops++ > maxHops) return reject(new Error('리다이렉트 횟수 초과'));
+        if (visited.has(currentUrl)) return reject(new Error('리다이렉트 루프 감지'));
+        visited.add(currentUrl);
+
+        let parsed;
+        try { parsed = new URL(currentUrl); } catch { return reject(new Error('잘못된 URL')); }
+
+        const mod = parsed.protocol === 'https:' ? https : http;
+        const options = {
+          hostname: parsed.hostname,
+          path: parsed.pathname + parsed.search,
+          method: 'GET',
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,*/*',
+          },
+        };
+
+        const req2 = mod.request(options, (r) => {
+          // 301/302/303/307/308 → 리다이렉트 추적
+          if ([301,302,303,307,308].includes(r.statusCode) && r.headers.location) {
+            const next = r.headers.location.startsWith('http')
+              ? r.headers.location
+              : `${parsed.protocol}//${parsed.host}${r.headers.location}`;
+            r.resume(); // body 무시
+            return doRequest(next);
+          }
+          // 최종 응답 — body 수집
+          let body = '';
+          r.setEncoding('utf8');
+          r.on('data', chunk => { if (body.length < 200000) body += chunk; });
+          r.on('end', () => resolve({ finalUrl: currentUrl, html: body, status: r.statusCode }));
+        });
+
+        req2.on('error', reject);
+        req2.on('timeout', () => { req2.destroy(); reject(new Error('타임아웃')); });
+        req2.end();
+      }
+
+      doRequest(startUrl);
+    });
+  }
+
   try {
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'ko-KR,ko;q=0.9',
-      'Accept': 'text/html,application/xhtml+xml',
-    };
+    // Step 1: 리다이렉트 추적해서 최종 URL + HTML 획득
+    const { finalUrl, html } = await followRedirects(url);
 
-    const r = await axios.get(url, { headers, maxRedirects: 10, timeout: 15000 });
-    const finalUrl = r.request?.res?.responseUrl || url;
-    const html = typeof r.data === 'string' ? r.data : '';
-
-    // 상품 ID 추출
+    // Step 2: 상품 ID 추출 (URL 또는 HTML에서)
     const idMatch = finalUrl.match(/\/item\/(\d+)/);
-    const productId = idMatch ? idMatch[1] : null;
+    let productId = idMatch ? idMatch[1] : null;
 
-    // og:image 추출
-    const imgMatch = html.match(/property="og:image" content="([^"]+)"/);
-    const imgUrl = imgMatch ? imgMatch[1].split('?')[0] : null;
+    // Step 3: 상품 페이지가 아닌 경우 (카테고리/캠페인) → productId 없음
+    // HTML에서 data-item-id 등 추가 추출 시도
+    if (!productId) {
+      const htmlIdMatch = html.match(/\"productId\":\s*\"?(\d{10,})\"?/);
+      if (htmlIdMatch) productId = htmlIdMatch[1];
+    }
 
-    // og:title 추출
-    const titleMatch = html.match(/property="og:title" content="([^"]+)"/);
-    const rawTitle = titleMatch ? titleMatch[1] : '';
-    const title = rawTitle.replace(/ - AliExpress\s*\d*/, '').trim();
+    // Step 4: 상품 ID 있으면 실제 상품 페이지 직접 조회 (이미지/타이틀 더 정확)
+    let imgUrl = null, title = '', price = null;
 
-    // 가격 추출
-    const priceMatch = html.match(/"minAmount":\{"value":"([^"]+)"/);
-    const price = priceMatch ? priceMatch[1] : null;
+    if (productId) {
+      try {
+        const { html: productHtml } = await followRedirects(
+          `https://www.aliexpress.com/item/${productId}.html`
+        );
+        const imgM   = productHtml.match(/property="og:image" content="([^"]+)"/);
+        const titleM = productHtml.match(/property="og:title" content="([^"]+)"/);
+        const priceM = productHtml.match(/"minAmount":\{"value":"([^"]+)"/);
+        imgUrl = imgM   ? imgM[1].split('?')[0]                            : null;
+        title  = titleM ? titleM[1].replace(/ - AliExpress\s*\d*/, '').trim() : '';
+        price  = priceM ? priceM[1] : null;
+      } catch { /* 상품 페이지 조회 실패 시 fallback: 첫 페이지 HTML 파싱 */ }
+    }
+
+    // Fallback: 첫 페이지 HTML에서 파싱
+    if (!imgUrl) {
+      const imgM2   = html.match(/property="og:image" content="([^"]+)"/);
+      const titleM2 = html.match(/property="og:title" content="([^"]+)"/);
+      if (imgM2)   imgUrl = imgM2[1].split('?')[0];
+      if (titleM2) title  = titleM2[1].replace(/ - AliExpress\s*\d*/, '').trim();
+    }
 
     if (!productId && !imgUrl) {
-      // 상품 페이지가 아닌 경우 (캠페인/카테고리 링크)
       return res.json({
         ok: false,
-        error: '개별 상품 링크가 아닙니다. 포털에서 Product Link로 생성해주세요.',
+        error: '개별 상품 링크가 아닙니다. AliExpress 상품 페이지 URL을 붙여넣어 주세요.',
         finalUrl,
       });
     }
 
-    // 어필리에이트 링크 구성 (원본 s.click 링크 유지 or 새로 구성)
+    // 어필리에이트 링크: s.click 링크 유지, 일반 URL이면 파라미터 추가
     const affiliateLink = url.includes('s.click.aliexpress.com')
       ? url
       : productId
         ? `https://www.aliexpress.com/item/${productId}.html?aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`
         : url;
 
-    return res.json({
-      ok: true,
-      productId,
-      imageUrl: imgUrl,
-      title,
-      price,
-      affiliateLink,
-      finalUrl,
-    });
+    return res.json({ ok: true, productId, imageUrl: imgUrl, title, price, affiliateLink, finalUrl });
+
   } catch (err) {
     logger.warn(`[Ali Resolve] 링크 조회 오류: ${err.message}`);
     return res.status(500).json({ error: `조회 실패: ${err.message.slice(0, 100)}` });
