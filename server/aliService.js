@@ -161,7 +161,7 @@ const _ALL_FALLBACK = Object.values(_FALLBACK_DB).flat();
 
 function _getFallbackProducts(keyword, page = 1, limit = 9) {
   const TRACK = (ALI_TRACKING || 'default').trim();
-  const affSuffix = `?aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`;
+  const affSuffix = `&aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`;
   const BASE = 'https://www.aliexpress.com';
 
   const KW_SEARCH_MAP = {
@@ -191,20 +191,34 @@ function _getFallbackProducts(keyword, page = 1, limit = 9) {
   const start = (page - 1) * limit;
   const slice = pool.slice(start, start + limit);
 
-  const items = slice.map((p, i) => ({
-    productId:      p.id,
-    title:          p.title,
-    salePrice:      p.price,
-    originalPrice:  p.orig,
-    discount:       Math.round((1 - parseInt(p.price.replace(',','')) / parseInt(p.orig.replace(',',''))) * 100) + '%',
-    imageUrl:       `https://picsum.photos/seed/${p.id}/300/300`,
-    productUrl:     `${BASE}/wholesale?SearchText=${searchKw}${affSuffix}`,
-    commissionRate: p.commission,
-    badge:          p.badge,
-    stars:          (4.2 + (i % 8) * 0.1).toFixed(1),
-    orders:         Math.floor(Math.random() * 800) + 200,
-    isFallback:     true,
-  }));
+  // id prefix로 카테고리 판별 → 각 상품에 적절한 검색 URL 부여
+  const ID_KW = {
+    fh: 'fishing+hook+set',
+    fl: 'fishing+lure+set',
+    fr: 'spinning+fishing+reel',
+    fd: 'fishing+rod+carbon',
+    fn: 'PE+braided+fishing+line',
+    ft: 'fishing+tackle+accessories',
+  };
+
+  const items = slice.map((p, i) => {
+    const prefix  = p.id.slice(0, 2);
+    const itemKw  = ID_KW[prefix] || searchKw;
+    return {
+      productId:      p.id,
+      title:          p.title,
+      salePrice:      p.price,
+      originalPrice:  p.orig,
+      discount:       Math.round((1 - parseInt(p.price.replace(',','')) / parseInt(p.orig.replace(',',''))) * 100) + '%',
+      imageUrl:       `https://picsum.photos/seed/${p.id}/300/300`,
+      productUrl:     `${BASE}/wholesale?SearchText=${itemKw}${affSuffix}`,
+      commissionRate: p.commission,
+      badge:          p.badge,
+      stars:          (4.2 + (i % 8) * 0.1).toFixed(1),
+      orders:         Math.floor(Math.random() * 800) + 200,
+      isFallback:     true,
+    };
+  });
 
   return { items, total, hasMore: start + limit < total };
 }
