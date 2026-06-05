@@ -100,7 +100,10 @@ const _FALLBACK_DB = {
     { id:'fh9', title:'낚시바늘 전용 케이스 포함 세트', price:'5,200', orig:'10,400', badge:'⚡ 특가', commission:'11%' },
   ],
   'fishing lure': [
-    { id:'fl1', title:'소프트웜 루어 세트 배스/쏘가리 전용 20개', price:'4,500', orig:'9,000', badge:'🔥 인기', commission:'10%' },
+    // ✅ 실제 어필리에이트 상품 (실제 이미지 + 직접 링크)
+    { id:'fl1', title:'쭈꾸미 갑오징어 야광 에기 루어 왕눈이 수박', price:'2,800', orig:'5,600', badge:'🔥 인기', commission:'8%',
+      realImg: 'https://ae01.alicdn.com/kf/S1490668d714e45f8a589f2f4b29f0d16l.jpg',
+      realLink: 'https://s.click.aliexpress.com/e/_c3qIG2jJ' },
     { id:'fl2', title:'메탈 지그 루어 바다낚시 30g/40g 세트', price:'3,800', orig:'7,600', badge:'⚡ 특가', commission:'12%' },
     { id:'fl3', title:'미노우 루어 10cm 리얼피쉬 6색 세트', price:'5,200', orig:'10,400', badge:'🔥 인기', commission:'8%' },
     { id:'fl4', title:'스피너베이트 루어 배스/농어 3개세트', price:'6,800', orig:'13,600', badge:'⚡ 특가', commission:'13%' },
@@ -194,21 +197,22 @@ function _getFallbackProducts(keyword, page = 1, limit = 9) {
   const items = slice.map((p, i) => {
     const prefix = p.id.slice(0, 2);
     const meta   = ID_META[prefix] || ID_META.ft;
-    // 각 상품마다 카테고리 고유 검색 URL (판매량순) — 실제 상품 노출
-    const productUrl = `${BASE}/wholesale?SearchText=${meta.kw}&SortType=${meta.sortType}${affSuffix}`;
+    // ✅ 실제 상품 데이터 우선 사용 (realImg, realLink)
+    const imageUrl   = p.realImg  || meta.img;
+    const productUrl = p.realLink || `${BASE}/wholesale?SearchText=${meta.kw}&SortType=${meta.sortType}${affSuffix}`;
     return {
       productId:      p.id,
       title:          p.title,
       salePrice:      p.price,
       originalPrice:  p.orig,
       discount:       Math.round((1 - parseInt(p.price.replace(',','')) / parseInt(p.orig.replace(',',''))) * 100) + '%',
-      imageUrl:       meta.img,
+      imageUrl,
       productUrl,
       commissionRate: p.commission,
       badge:          p.badge,
       stars:          (4.3 + (i % 7) * 0.1).toFixed(1),
       orders:         Math.floor(300 + i * 47 + (i % 3) * 150),
-      isFallback:     true,
+      isFallback:     !p.realLink,   // 실제 상품이면 false
     };
   });
 
