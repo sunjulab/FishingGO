@@ -7765,18 +7765,20 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
   // ── 수동 리다이렉트 추적 (최대 25회, 루프 방지) ──────────────────────────────
   function followRedirects(startUrl, maxHops = 25) {
     return new Promise((resolve, reject) => {
-      const visited = new Set();
+      const visitedPaths = new Set();  // hostname+pathname만 비교 (쿼리 제외)
       let hops = 0;
 
       function doRequest(currentUrl) {
         if (hops++ > maxHops) return reject(new Error('리다이렉트 횟수 초과'));
-        if (visited.has(currentUrl)) return reject(new Error('리다이렉트 루프 감지'));
-        visited.add(currentUrl);
 
         let parsed;
         try { parsed = new URL(currentUrl); } catch { return reject(new Error('잘못된 URL')); }
 
-        const mod = parsed.protocol === 'https:' ? https : http;
+        // 루프 감지: 같은 hostname+pathname 3회 이상 방문 시 중단
+        const pathKey = parsed.hostname + parsed.pathname;
+        const count = (visitedPaths.get ? visitedPaths.get(pathKey) || 0 : 0);
+        // Map으로 교체
+        const mod2 = parsed.protocol === 'https:' ? https : http;
         const options = {
           hostname: parsed.hostname,
           path: parsed.pathname + parsed.search,
@@ -7789,13 +7791,27 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
           },
         };
 
-        const req2 = mod.request(options, (r) => {
+        const req2 = mod2.request(options, (r) => {
           // 301/302/303/307/308 → 리다이렉트 추적
           if ([301,302,303,307,308].includes(r.statusCode) && r.headers.location) {
             const next = r.headers.location.startsWith('http')
               ? r.headers.location
               : `${parsed.protocol}//${parsed.host}${r.headers.location}`;
-            r.resume(); // body 무시
+
+            // 같은 경로(쿼리 제외) 3회 방문 시 최종 URL로 확정
+            let nextParsed; try { nextParsed = new URL(next); } catch { nextParsed = null; }
+            const nextKey = nextParsed ? nextParsed.hostname + nextParsed.pathname : next;
+            if (visitedPaths[nextKey] >= 2) {
+              // 루프 감지 — 현재 URL을 최종으로 확정
+              let body = '';
+              r.setEncoding('utf8');
+              r.on('data', chunk => { if (body.length < 200000) body += chunk; });
+              r.on('end', () => resolve({ finalUrl: currentUrl, html: body, status: r.statusCode }));
+              return;
+            }
+            visitedPaths[nextKey] = (visitedPaths[nextKey] || 0) + 1;
+
+            r.resume();
             return doRequest(next);
           }
           // 최종 응답 — body 수집
