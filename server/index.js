@@ -7939,15 +7939,26 @@ app.get('/api/shop/ali-debug', async (req, res) => {
   const kw = { keywords: 'fishing', page_size: '3', page_no: '1' };
 
   const results = await Promise.all([
-    // MD5 테스트
-    testApi('md5_product_query',   baseParams('aliexpress.affiliate.product.query', 'md5', kw), makeMD5Sign),
-    testApi('md5_link_generate',   baseParams('aliexpress.affiliate.link.generate', 'md5', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' }), makeMD5Sign),
-    // SHA256 방식 A (현재 aliService.js 방식)
-    testApi('sha256A_product_query', baseParams('aliexpress.affiliate.product.query', 'sha256', kw), makeSHA256SignA),
-    testApi('sha256A_link_generate', baseParams('aliexpress.affiliate.link.generate', 'sha256', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' }), makeSHA256SignA),
-    // SHA256 방식 B (sorted만 서명)
-    testApi('sha256B_product_query', baseParams('aliexpress.affiliate.product.query', 'sha256', kw), makeSHA256SignB),
-    testApi('sha256B_link_generate', baseParams('aliexpress.affiliate.link.generate', 'sha256', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' }), makeSHA256SignB),
+    // 1. MD5 소문자
+    testApi('md5_lower',      baseParams('aliexpress.affiliate.product.query', 'md5', kw), makeMD5Sign),
+    // 2. MD5 대문자
+    testApi('MD5_upper',      baseParams('aliexpress.affiliate.product.query', 'MD5', kw), makeMD5Sign),
+    // 3. SHA256 소문자 + 방식A
+    testApi('sha256_A',       baseParams('aliexpress.affiliate.product.query', 'sha256', kw), makeSHA256SignA),
+    // 4. SHA256 소문자 + 방식B
+    testApi('sha256_B',       baseParams('aliexpress.affiliate.product.query', 'sha256', kw), makeSHA256SignB),
+    // 5. hmac_sha256
+    testApi('hmac_sha256_A',  baseParams('aliexpress.affiliate.product.query', 'hmac_sha256', kw), makeSHA256SignA),
+    // 6. tracking_id 없이
+    testApi('no_tracking',    { method: 'aliexpress.affiliate.product.query', app_key: KEY, timestamp: ts(), sign_method: 'sha256', v: '2.0', ...kw }, makeSHA256SignA),
+    // 7. v 없이
+    testApi('no_v',           { method: 'aliexpress.affiliate.product.query', app_key: KEY, timestamp: ts(), sign_method: 'sha256', tracking_id: TRACK, ...kw }, makeSHA256SignA),
+    // 8. format=json 포함
+    testApi('with_format',    baseParams('aliexpress.affiliate.product.query', 'sha256', { ...kw, format: 'json' }), makeSHA256SignA),
+    // 9. link.generate (가장 단순)
+    testApi('link_sha256A',   baseParams('aliexpress.affiliate.link.generate', 'sha256', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' }), makeSHA256SignA),
+    // 10. MD5 link.generate
+    testApi('link_md5',       baseParams('aliexpress.affiliate.link.generate', 'md5', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' }), makeMD5Sign),
   ]);
 
   const winner = results.find(r => r.success);
