@@ -7887,7 +7887,7 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
 });
 
 /**
- * GET /api/shop/ali-debug — Ali API 실제 응답 진단 (MD5 + SHA256 동시 테스트)
+ * GET /api/shop/ali-debug — Ali API 완전 진단 (엔드포인트 + 서명방식 완전 탐색)
  */
 app.get('/api/shop/ali-debug', async (req, res) => {
   const crypto = require('crypto');
@@ -7895,75 +7895,65 @@ app.get('/api/shop/ali-debug', async (req, res) => {
   const KEY    = (process.env.ALI_APP_KEY    || '').trim();
   const SECRET = (process.env.ALI_APP_SECRET || '').trim();
   const TRACK  = (process.env.ALI_TRACKING_ID || 'default').trim();
-  const BASE   = 'https://api-sg.aliexpress.com/sync';
 
   if (!KEY || !SECRET) return res.json({ error: 'API 키 미설정' });
 
-  // ── 서명 방식 3종 ──────────────────────────────────────────────────────────
-  const makeMD5Sign = (p) => {
-    const sorted = Object.keys(p).sort().map(k => `${k}${p[k]}`).join('');
-    return crypto.createHash('md5').update(`${SECRET}${sorted}${SECRET}`).digest('hex').toUpperCase();
+  // ── 서명 방식 4종 ──────────────────────────────────────────────────────────
+  const sign_md5      = (p) => crypto.createHash('md5').update(`${SECRET}${Object.keys(p).sort().map(k=>`${k}${p[k]}`).join('')}${SECRET}`).digest('hex').toUpperCase();
+  const sign_sha256_A = (p) => crypto.createHmac('sha256',SECRET).update(`${SECRET}${Object.keys(p).sort().map(k=>`${k}${p[k]}`).join('')}${SECRET}`).digest('hex').toUpperCase();
+  const sign_sha256_B = (p) => crypto.createHmac('sha256',SECRET).update(Object.keys(p).sort().map(k=>`${k}${p[k]}`).join('')).digest('hex').toUpperCase();
+  const sign_sha256_C = (p) => { // method prefix 포함 (Lazada 방식)
+    const sorted = Object.keys(p).filter(k=>k!=='method').sort().map(k=>`${k}${p[k]}`).join('');
+    return crypto.createHmac('sha256',SECRET).update(`${p.method}${sorted}`).digest('hex').toUpperCase();
   };
 
-  // SHA256 방식 A: SECRET + sorted + SECRET 를 HMAC key=SECRET 로 서명 (현재 aliService.js 방식)
-  const makeSHA256SignA = (p) => {
-    const sorted = Object.keys(p).sort().map(k => `${k}${p[k]}`).join('');
-    const str = `${SECRET}${sorted}${SECRET}`;
-    return crypto.createHmac('sha256', SECRET).update(str).digest('hex').toUpperCase();
-  };
-
-  // SHA256 방식 B: sorted 만 HMAC key=SECRET 로 서명 (공식 문서 일부 버전)
-  const makeSHA256SignB = (p) => {
-    const sorted = Object.keys(p).sort().map(k => `${k}${p[k]}`).join('');
-    return crypto.createHmac('sha256', SECRET).update(sorted).digest('hex').toUpperCase();
-  };
-
-  const testApi = async (label, params, signFn) => {
+  const callApi = async (label, endpoint, params, signFn) => {
     try {
       params.sign = signFn(params);
-      const r = await axios.get(`${BASE}?${new URLSearchParams(params).toString()}`, { timeout: 8000 });
+      // 샘플 서명 문자열 (처음 40자만)
+      const sortedSample = Object.keys(params).filter(k=>k!=='sign').sort().map(k=>`${k}=${params[k]}`).join('&').slice(0,60);
+      const r = await axios.get(`${endpoint}?${new URLSearchParams(params)}`, { timeout: 8000 });
       const d = r.data;
       const errCode = d?.error_response?.code;
-      const errMsg  = d?.error_response?.msg?.slice(0, 80);
-      const respKey = Object.keys(d).find(k => k.includes('response'));
+      const errMsg  = (d?.error_response?.msg || d?.error_response?.sub_msg || '').slice(0,80);
+      const sub_code = d?.error_response?.sub_code || '';
+      const respKey = Object.keys(d).find(k=>k.includes('response'));
       const respCode = d?.[respKey]?.resp_result?.resp_code;
       const items = d?.[respKey]?.resp_result?.result?.products?.product?.length || 0;
-      return { label, errCode, errMsg, respCode, items, success: respCode === 200 };
-    } catch (e) { return { label, error: e.message }; }
+      return { label, endpoint: endpoint.includes('taobao')?'CN':'SG', errCode, sub_code, errMsg, respCode, items, success: respCode===200 };
+    } catch (e) { return { label, error: e.message.slice(0,80) }; }
   };
 
   const ts = () => String(Date.now());
-  const baseParams = (method, signMethod, extra) => ({
-    method, app_key: KEY, timestamp: ts(), sign_method: signMethod, v: '2.0', tracking_id: TRACK, ...extra,
-  });
+  const SG = 'https://api-sg.aliexpress.com/sync';
+  const CN = 'https://api.taobao.com/router/rest';
   const kw = { keywords: 'fishing', page_size: '3', page_no: '1' };
 
+  // 파라미터 생성 헬퍼
+  const p = (method, sm, extra={}) => ({ method, app_key: KEY, timestamp: ts(), sign_method: sm, v: '2.0', tracking_id: TRACK, ...extra });
+  const pNoTrack = (method, sm, extra={}) => ({ method, app_key: KEY, timestamp: ts(), sign_method: sm, v: '2.0', ...extra });
+
   const results = await Promise.all([
-    // 1. MD5 소문자
-    testApi('md5_lower',      baseParams('aliexpress.affiliate.product.query', 'md5', kw), makeMD5Sign),
-    // 2. MD5 대문자
-    testApi('MD5_upper',      baseParams('aliexpress.affiliate.product.query', 'MD5', kw), makeMD5Sign),
-    // 3. SHA256 소문자 + 방식A
-    testApi('sha256_A',       baseParams('aliexpress.affiliate.product.query', 'sha256', kw), makeSHA256SignA),
-    // 4. SHA256 소문자 + 방식B
-    testApi('sha256_B',       baseParams('aliexpress.affiliate.product.query', 'sha256', kw), makeSHA256SignB),
-    // 5. hmac_sha256
-    testApi('hmac_sha256_A',  baseParams('aliexpress.affiliate.product.query', 'hmac_sha256', kw), makeSHA256SignA),
-    // 6. tracking_id 없이
-    testApi('no_tracking',    { method: 'aliexpress.affiliate.product.query', app_key: KEY, timestamp: ts(), sign_method: 'sha256', v: '2.0', ...kw }, makeSHA256SignA),
-    // 7. v 없이
-    testApi('no_v',           { method: 'aliexpress.affiliate.product.query', app_key: KEY, timestamp: ts(), sign_method: 'sha256', tracking_id: TRACK, ...kw }, makeSHA256SignA),
-    // 8. format=json 포함
-    testApi('with_format',    baseParams('aliexpress.affiliate.product.query', 'sha256', { ...kw, format: 'json' }), makeSHA256SignA),
-    // 9. link.generate (가장 단순)
-    testApi('link_sha256A',   baseParams('aliexpress.affiliate.link.generate', 'sha256', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' }), makeSHA256SignA),
-    // 10. MD5 link.generate
-    testApi('link_md5',       baseParams('aliexpress.affiliate.link.generate', 'md5', { promotion_link_type: '0', source_values: 'https://www.aliexpress.com/item/1005006789012345.html' }), makeMD5Sign),
+    // SG 엔드포인트
+    callApi('SG_md5',       SG, p('aliexpress.affiliate.product.query','md5',kw), sign_md5),
+    callApi('SG_sha256A',   SG, p('aliexpress.affiliate.product.query','sha256',kw), sign_sha256_A),
+    callApi('SG_sha256B',   SG, p('aliexpress.affiliate.product.query','sha256',kw), sign_sha256_B),
+    callApi('SG_sha256C',   SG, p('aliexpress.affiliate.product.query','sha256',kw), sign_sha256_C),
+    callApi('SG_link_md5',  SG, p('aliexpress.affiliate.link.generate','md5',{promotion_link_type:'0',source_values:'https://www.aliexpress.com/item/1005006789012345.html'}), sign_md5),
+    callApi('SG_link_sha256A', SG, p('aliexpress.affiliate.link.generate','sha256',{promotion_link_type:'0',source_values:'https://www.aliexpress.com/item/1005006789012345.html'}), sign_sha256_A),
+    // CN 엔드포인트 (중국 API)
+    callApi('CN_md5',       CN, p('aliexpress.affiliate.product.query','md5',kw), sign_md5),
+    callApi('CN_sha256A',   CN, p('aliexpress.affiliate.product.query','sha256',kw), sign_sha256_A),
+    // tracking 없이
+    callApi('SG_noTrack_sha256A', SG, pNoTrack('aliexpress.affiliate.product.query','sha256',kw), sign_sha256_A),
   ]);
 
-  const winner = results.find(r => r.success);
-  res.json({ KEY: KEY.slice(0,4)+'****', SECRET_len: SECRET.length, TRACK, winner: winner?.label || '❌ 전부 실패', results });
+  const winner = results.find(r=>r.success);
+  // 서명 샘플 정보 (디버그용)
+  const sample = { KEY_prefix: KEY.slice(0,6), SECRET_len: SECRET.length, TRACK, KEY_full_len: KEY.length };
+  res.json({ sample, winner: winner?.label||'❌ 전부 실패', results });
 });
+
 
 
 /**
