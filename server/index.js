@@ -7810,37 +7810,40 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
     });
   }
 
-  // ── 상품 페이지 HTML 직접 조회 ───────────────────────────────────────────────
-  function fetchProductPage(productId) {
+  // ── 상품 페이지 HTML 직접 조회 (리다이렉트 최대 5홉 추적) ─────────────────────
+  function fetchProductPage(productId, maxHops = 5) {
     return new Promise((resolve, reject) => {
-      const targetUrl = `https://www.aliexpress.com/item/${productId}.html`;
-      let parsed; try { parsed = new URL(targetUrl); } catch { return reject(new Error('잘못된 URL')); }
-      const req2 = https.request({
-        hostname: parsed.hostname,
-        path: parsed.pathname + parsed.search,
-        method: 'GET',
-        timeout: 15000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'ko-KR,ko;q=0.9',
-          'Accept': 'text/html,application/xhtml+xml,*/*',
-        },
-      }, (r) => {
-        // 리다이렉트면 최대 3회만 따라감
-        if ([301,302,303].includes(r.statusCode) && r.headers.location) {
-          r.resume();
-          // 재귀 없이 그냥 최종 결과 OK
-          let body2 = ''; r.setEncoding('utf8');
-          r.on('data', c => body2 += c); r.on('end', () => resolve(body2));
-          return;
-        }
-        let body = ''; r.setEncoding('utf8');
-        r.on('data', chunk => { if (body.length < 300000) body += chunk; });
-        r.on('end', () => resolve(body));
-      });
-      req2.on('error', reject);
-      req2.on('timeout', () => { req2.destroy(); reject(new Error('타임아웃')); });
-      req2.end();
+      let hops = 0;
+      function doGet(targetUrl) {
+        if (hops++ > maxHops) return reject(new Error('상품 페이지 리다이렉트 초과'));
+        let parsed; try { parsed = new URL(targetUrl); } catch { return reject(new Error('잘못된 URL')); }
+        const req2 = https.request({
+          hostname: parsed.hostname,
+          path: parsed.pathname + parsed.search,
+          method: 'GET',
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,*/*',
+          },
+        }, (r) => {
+          if ([301,302,303,307,308].includes(r.statusCode) && r.headers.location) {
+            r.resume();
+            const next = r.headers.location.startsWith('http')
+              ? r.headers.location
+              : `${parsed.protocol}//${parsed.host}${r.headers.location}`;
+            return doGet(next);
+          }
+          let body = ''; r.setEncoding('utf8');
+          r.on('data', chunk => { if (body.length < 400000) body += chunk; });
+          r.on('end', () => resolve(body));
+        });
+        req2.on('error', reject);
+        req2.on('timeout', () => { req2.destroy(); reject(new Error('타임아웃')); });
+        req2.end();
+      }
+      doGet(`https://www.aliexpress.com/item/${productId}.html`);
     });
   }
 
