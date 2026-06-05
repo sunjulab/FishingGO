@@ -33,12 +33,14 @@ setInterval(() => aliCache.clear(), 60 * 60 * 1000);
 
 // ─── HMAC-SHA256 서명 생성 (Singapore 게이트웨이 방식) ──────────────────────
 function signAliRequest(params) {
-  // 1. 모든 파라미터를 키 업파벳순 정렬 후 key+value 연결
-  const sorted = Object.keys(params).sort().map(k => `${k}${params[k]}`).join('');
-  // 2. AppSecret 압수 (HMAC-SHA256 시 압수 없이 sorted 시그닝)
-  const str = `${ALI_APP_SECRET}${sorted}${ALI_APP_SECRET}`;
-  // 3. HMAC-SHA256 생성 후 대문자 HEX 반환
-  return crypto.createHmac('sha256', ALI_APP_SECRET).update(str).digest('hex').toUpperCase();
+  // 키 알파벳순 정렬 후 key+value 연결 (sign 필드 제외)
+  const sorted = Object.keys(params)
+    .filter(k => k !== 'sign')
+    .sort()
+    .map(k => `${k}${params[k]}`)
+    .join('');
+  // SHA256-B 방식: sorted 문자열을 SECRET 키로 HMAC-SHA256 서명
+  return crypto.createHmac('sha256', ALI_APP_SECRET).update(sorted).digest('hex').toUpperCase();
 }
 
 function buildParams(method, extraParams = {}) {
