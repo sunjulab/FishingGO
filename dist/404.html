@@ -1,1 +1,13 @@
-﻿<!DOCTYPE html><html><head><meta charset="UTF-8"><script>sessionStorage.redirect=location.href;</script><meta http-equiv="refresh" content="0;URL=/"></head><body></body></html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>낚시GO</title>
+  <script>
+    // gh-pages SPA 라우팅: /shop 등 경로 접속 시 index.html로 리다이렉트 후 URL 복원
+    sessionStorage.redirect = location.href;
+    location.replace('https://www.fishing-go.com/');
+  </script>
+</head>
+<body></body>
+</html>

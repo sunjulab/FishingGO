@@ -7656,13 +7656,19 @@ require('./cctv_admin_routes')(app, { getDbReady: () => dbReady, CctvOverrideMod
 app.get('/api/shop/products', async (req, res) => {
   const source   = (req.query.source   || 'all').toLowerCase();
   const category = req.query.category  || '낚시용품';
+  // page/limit 파라미터 존재 여부로 구/신 클라이언트 구분
+  const hasPagination = !!req.query.page || !!req.query.limit;
   const page     = Math.max(1, parseInt(req.query.page)  || 1);
   const limit    = Math.min(18, parseInt(req.query.limit) || 9);
 
   try {
+    let items = [];
+    let total = 0;
+    let hasMore = false;
+
     if (source === 'coupang') {
       const products = await coupang.getRecommendedProducts(category);
-      const items = products.map(p => ({
+      items = products.map(p => ({
         id:       p.productId,
         name:     p.productName,
         price:    p.productPrice?.toLocaleString('ko-KR') || '0',
@@ -7672,75 +7678,68 @@ app.get('/api/shop/products', async (req, res) => {
         badge:    p.badge,
         source:   'coupang',
       }));
-      return res.json({ items, total: items.length, hasMore: false });
-    }
+      total = items.length;
+      hasMore = false;
 
-    if (source === 'ali') {
+    } else if (source === 'ali') {
       const result = await ali.getAliProducts(category, page, limit);
-      // result가 { items, total, hasMore } 또는 [] 배열일 수 있음 (하위 호환)
-      if (Array.isArray(result)) {
-        const items = result.map(p => ({
-          id:       `ali_${p.productId}`,
-          name:     p.title,
-          price:    p.salePrice,
-          discount: p.discount,
-          img:      p.imageUrl,
-          link:     p.productUrl,
-          badge:    p.badge,
-          source:   'ali',
-          commission: p.commissionRate,
-        }));
-        return res.json({ items, total: items.length, hasMore: false });
-      }
-      const items = (result.items || []).map(p => ({
-        id:       `ali_${p.productId}`,
-        name:     p.title,
-        price:    p.salePrice,
-        discount: p.discount,
-        img:      p.imageUrl,
-        link:     p.productUrl,
-        badge:    p.badge,
-        source:   'ali',
+      const rawItems = Array.isArray(result) ? result : (result.items || []);
+      items = rawItems.map(p => ({
+        id:         `ali_${p.productId}`,
+        name:       p.title,
+        price:      p.salePrice,
+        discount:   p.discount,
+        img:        p.imageUrl,
+        link:       p.productUrl,
+        badge:      p.badge,
+        source:     'ali',
         commission: p.commissionRate,
       }));
-      return res.json({ items, total: result.total || items.length, hasMore: result.hasMore || false });
+      total   = Array.isArray(result) ? items.length : (result.total   || items.length);
+      hasMore = Array.isArray(result) ? false         : (result.hasMore || false);
+
+    } else {
+      // source === 'all'
+      const aliKeyword = _mapToAliKeyword(category);
+      const [coupangProducts, aliResult] = await Promise.all([
+        coupang.getRecommendedProducts(category).catch(() => []),
+        ali.getAliProducts(aliKeyword, page, limit).catch(() => ({ items: [], total: 0, hasMore: false })),
+      ]);
+      const aliItems   = Array.isArray(aliResult) ? aliResult : (aliResult.items || []);
+      hasMore = Array.isArray(aliResult) ? false : (aliResult.hasMore || false);
+      items = [
+        ...(page === 1 ? coupangProducts.slice(0, 6).map(p => ({
+          id:       p.productId,
+          name:     p.productName,
+          price:    p.productPrice?.toLocaleString('ko-KR') || '0',
+          discount: p.discountRate ? `${p.discountRate}%` : '0%',
+          img:      p.productImage,
+          link:     p.coupangUrl,
+          badge:    p.badge,
+          source:   'coupang',
+        })) : []),
+        ...aliItems.map(p => ({
+          id:         `ali_${p.productId}`,
+          name:       p.title,
+          price:      p.salePrice,
+          discount:   p.discount,
+          img:        p.imageUrl,
+          link:       p.productUrl,
+          badge:      p.badge,
+          source:     'ali',
+          commission: p.commissionRate,
+        })),
+      ];
+      total = items.length;
     }
 
-    // source === 'all' → 쿠팡 고가 + 알리 소모품 병렬 조회
-    const aliKeyword = _mapToAliKeyword(category);
-    const [coupangProducts, aliResult] = await Promise.all([
-      coupang.getRecommendedProducts(category).catch(() => []),
-      ali.getAliProducts(aliKeyword, page, limit).catch(() => ({ items: [], total: 0, hasMore: false })),
-    ]);
+    // ✅ 하위 호환: page 파라미터 없으면 배열로 반환 (구 클라이언트 지원)
+    //              page 파라미터 있으면 { items, hasMore, total } 반환 (신 클라이언트)
+    if (!hasPagination) {
+      return res.json(items);
+    }
+    return res.json({ items, total, hasMore });
 
-    const aliItems = Array.isArray(aliResult) ? aliResult : (aliResult.items || []);
-    const aliHasMore = Array.isArray(aliResult) ? false : (aliResult.hasMore || false);
-
-    const merged = [
-      ...(page === 1 ? coupangProducts.slice(0, 6).map(p => ({
-        id:       p.productId,
-        name:     p.productName,
-        price:    p.productPrice?.toLocaleString('ko-KR') || '0',
-        discount: p.discountRate ? `${p.discountRate}%` : '0%',
-        img:      p.productImage,
-        link:     p.coupangUrl,
-        badge:    p.badge,
-        source:   'coupang',
-      })) : []),
-      ...aliItems.map(p => ({
-        id:       `ali_${p.productId}`,
-        name:     p.title,
-        price:    p.salePrice,
-        discount: p.discount,
-        img:      p.imageUrl,
-        link:     p.productUrl,
-        badge:    p.badge,
-        source:   'ali',
-        commission: p.commissionRate,
-      })),
-    ];
-
-    res.json({ items: merged, total: merged.length, hasMore: aliHasMore });
   } catch (err) {
     logger.warn(`[Shop API] 상품 조회 오류: ${err.message}`);
     res.status(500).json({ error: '상품 로드 실패', message: err.message });
