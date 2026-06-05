@@ -163,59 +163,51 @@ function _getFallbackProducts(keyword, page = 1, limit = 9) {
   const TRACK = (ALI_TRACKING || 'default').trim();
   const affSuffix = `&aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`;
   const BASE = 'https://www.aliexpress.com';
+  const SITE = 'https://www.fishing-go.com';
 
-  const KW_SEARCH_MAP = {
-    'fishing hook':   'fishing+hook+set',
-    'fishing lure':   'fishing+lure+set',
-    'fishing reel':   'spinning+fishing+reel',
-    'fishing rod':    'fishing+rod+carbon',
-    'fishing line':   'PE+braided+fishing+line',
-    'fishing tackle': 'fishing+tackle+accessories',
+  // id prefix → 카테고리 매핑
+  const ID_META = {
+    fh: { kw: 'fishing+hook+set',           img: `${SITE}/shop-images/hooks.png`,  sortType: 'orders_desc', cat: '100000866' },
+    fl: { kw: 'soft+fishing+lure+worm+set', img: `${SITE}/shop-images/lures.png`,  sortType: 'orders_desc', cat: '100004098' },
+    fr: { kw: 'spinning+fishing+reel',      img: `${SITE}/shop-images/reel.png`,   sortType: 'orders_desc', cat: '100004100' },
+    fd: { kw: 'telescopic+carbon+fishing+rod', img: `${SITE}/shop-images/rod.png`, sortType: 'orders_desc', cat: '100004099' },
+    fn: { kw: 'PE+braided+fishing+line',    img: `${SITE}/shop-images/line.png`,   sortType: 'orders_desc', cat: '100004102' },
+    ft: { kw: 'fishing+tackle+accessories', img: `${SITE}/shop-images/tackle.png`, sortType: 'orders_desc', cat: '100004103' },
   };
 
   const keyLower = keyword.toLowerCase();
   let catKey = 'fishing tackle';
-  if (keyLower.includes('hook'))                              catKey = 'fishing hook';
+  if (keyLower.includes('hook'))                               catKey = 'fishing hook';
   else if (keyLower.includes('lure') || keyLower.includes('worm')) catKey = 'fishing lure';
-  else if (keyLower.includes('reel'))                         catKey = 'fishing reel';
+  else if (keyLower.includes('reel'))                          catKey = 'fishing reel';
   else if (keyLower.includes('rod')  || keyLower.includes('대'))   catKey = 'fishing rod';
   else if (keyLower.includes('line') || keyLower.includes('줄'))   catKey = 'fishing line';
 
-  // 전체 탭이면 모든 카테고리 풀 사용
   const pool = (keyLower === 'all' || keyLower.includes('낚시용품') || keyLower.includes('accessories'))
     ? _ALL_FALLBACK
     : (_FALLBACK_DB[catKey] || _FALLBACK_DB['fishing tackle']);
 
-  const searchKw = KW_SEARCH_MAP[catKey] || 'fishing+tackle';
   const total = pool.length;
   const start = (page - 1) * limit;
   const slice = pool.slice(start, start + limit);
 
-  // id prefix로 카테고리 판별 → 각 상품에 적절한 검색 URL 부여
-  const ID_KW = {
-    fh: 'fishing+hook+set',
-    fl: 'fishing+lure+set',
-    fr: 'spinning+fishing+reel',
-    fd: 'fishing+rod+carbon',
-    fn: 'PE+braided+fishing+line',
-    ft: 'fishing+tackle+accessories',
-  };
-
   const items = slice.map((p, i) => {
-    const prefix  = p.id.slice(0, 2);
-    const itemKw  = ID_KW[prefix] || searchKw;
+    const prefix = p.id.slice(0, 2);
+    const meta   = ID_META[prefix] || ID_META.ft;
+    // 각 상품마다 카테고리 고유 검색 URL (판매량순) — 실제 상품 노출
+    const productUrl = `${BASE}/wholesale?SearchText=${meta.kw}&SortType=${meta.sortType}${affSuffix}`;
     return {
       productId:      p.id,
       title:          p.title,
       salePrice:      p.price,
       originalPrice:  p.orig,
       discount:       Math.round((1 - parseInt(p.price.replace(',','')) / parseInt(p.orig.replace(',',''))) * 100) + '%',
-      imageUrl:       `https://picsum.photos/seed/${p.id}/300/300`,
-      productUrl:     `${BASE}/wholesale?SearchText=${itemKw}${affSuffix}`,
+      imageUrl:       meta.img,
+      productUrl,
       commissionRate: p.commission,
       badge:          p.badge,
-      stars:          (4.2 + (i % 8) * 0.1).toFixed(1),
-      orders:         Math.floor(Math.random() * 800) + 200,
+      stars:          (4.3 + (i % 7) * 0.1).toFixed(1),
+      orders:         Math.floor(300 + i * 47 + (i % 3) * 150),
       isFallback:     true,
     };
   });
