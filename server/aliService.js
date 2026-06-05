@@ -86,88 +86,146 @@ function normalizeProduct(item) {
   };
 }
 
-// ─── API 미승인 시 AliExpress 검색 링크 Fallback ────────────────────────────
-function _getFallbackProducts(keyword) {
-  const TRACK = ALI_TRACKING || 'default';
+// ─── API 미승인 시 AliExpress 검색 링크 Fallback (카테고리별 9개) ────────────
+const _FALLBACK_DB = {
+  'fishing hook': [
+    { id:'fh1', title:'낚시바늘 세트 100개입 카본강 다용도', price:'2,800', orig:'5,600', badge:'🔥 인기', commission:'8%' },
+    { id:'fh2', title:'프로 낚시바늘 세트 0-12호 혼합', price:'3,500', orig:'7,000', badge:'⚡ 특가', commission:'9%' },
+    { id:'fh3', title:'원투낚시 바늘 갈치/농어/우럭 전용', price:'2,200', orig:'4,400', badge:'💰 가성비', commission:'6%' },
+    { id:'fh4', title:'붕어낚시 바늘 혼합 세트 200개', price:'1,900', orig:'3,800', badge:'💰 가성비', commission:'5%' },
+    { id:'fh5', title:'배스낚시 오프셋 훅 세트 10팩', price:'4,800', orig:'9,600', badge:'🔥 인기', commission:'10%' },
+    { id:'fh6', title:'관절 트리플 훅 배스/쏘가리 세트', price:'3,100', orig:'6,200', badge:'⚡ 특가', commission:'8%' },
+    { id:'fh7', title:'갯지렁이 훅 묶음 50개 특가', price:'1,500', orig:'3,000', badge:'💰 가성비', commission:'5%' },
+    { id:'fh8', title:'미세 낚시바늘 참돔/감성돔 전용', price:'2,600', orig:'5,200', badge:'🔥 인기', commission:'7%' },
+    { id:'fh9', title:'낚시바늘 전용 케이스 포함 세트', price:'5,200', orig:'10,400', badge:'⚡ 특가', commission:'11%' },
+  ],
+  'fishing lure': [
+    { id:'fl1', title:'소프트웜 루어 세트 배스/쏘가리 전용 20개', price:'4,500', orig:'9,000', badge:'🔥 인기', commission:'10%' },
+    { id:'fl2', title:'메탈 지그 루어 바다낚시 30g/40g 세트', price:'3,800', orig:'7,600', badge:'⚡ 특가', commission:'12%' },
+    { id:'fl3', title:'미노우 루어 10cm 리얼피쉬 6색 세트', price:'5,200', orig:'10,400', badge:'🔥 인기', commission:'8%' },
+    { id:'fl4', title:'스피너베이트 루어 배스/농어 3개세트', price:'6,800', orig:'13,600', badge:'⚡ 특가', commission:'13%' },
+    { id:'fl5', title:'팝퍼 표층 루어 3색 세트 8cm', price:'4,200', orig:'8,400', badge:'💰 가성비', commission:'7%' },
+    { id:'fl6', title:'지그헤드 세트 1g-14g 30개입', price:'3,500', orig:'7,000', badge:'🔥 인기', commission:'9%' },
+    { id:'fl7', title:'바이브레이션 루어 민물 4색 세트', price:'5,800', orig:'11,600', badge:'⚡ 특가', commission:'11%' },
+    { id:'fl8', title:'크랭크베이트 딥다이버 5색 세트', price:'4,900', orig:'9,800', badge:'💰 가성비', commission:'8%' },
+    { id:'fl9', title:'새우 모형 에기 오징어낚시 3개세트', price:'6,200', orig:'12,400', badge:'🔥 인기', commission:'10%' },
+  ],
+  'fishing reel': [
+    { id:'fr1', title:'스피닝릴 2000-5000번 베어링 10+1 방수', price:'22,000', orig:'44,000', badge:'🔥 인기', commission:'7%' },
+    { id:'fr2', title:'베이트캐스팅릴 7.2:1 좌/우핸들 선택', price:'35,000', orig:'70,000', badge:'⚡ 특가', commission:'9%' },
+    { id:'fr3', title:'바다낚시릴 드래그 15kg 대물 전용', price:'45,000', orig:'90,000', badge:'💰 가성비', commission:'6%' },
+    { id:'fr4', title:'민물 스피닝릴 초경량 카본 바디', price:'18,000', orig:'36,000', badge:'🔥 인기', commission:'8%' },
+    { id:'fr5', title:'원투낚시릴 고속 기어 서프캐스팅', price:'28,000', orig:'56,000', badge:'⚡ 특가', commission:'10%' },
+    { id:'fr6', title:'전동릴 소형 바다낚시 심해용', price:'65,000', orig:'130,000', badge:'💰 가성비', commission:'6%' },
+    { id:'fr7', title:'핀피싱 소형릴 계곡/야계 전용', price:'12,000', orig:'24,000', badge:'🔥 인기', commission:'8%' },
+    { id:'fr8', title:'고급 베이트릴 초경량 5.5:1 기어', price:'42,000', orig:'84,000', badge:'⚡ 특가', commission:'11%' },
+    { id:'fr9', title:'바다 대물릴 2속 드래그 멀티', price:'55,000', orig:'110,000', badge:'💰 가성비', commission:'7%' },
+  ],
+  'fishing rod': [
+    { id:'fd1', title:'텔레스코픽 낚싯대 3.6m-7.2m 탄소섬유', price:'18,000', orig:'36,000', badge:'🔥 인기', commission:'8%' },
+    { id:'fd2', title:'루어낚싯대 스피닝 ML 2.1m 초경량', price:'25,000', orig:'50,000', badge:'⚡ 특가', commission:'10%' },
+    { id:'fd3', title:'바다낚시대 선상/갯바위 3피스 4.5m', price:'32,000', orig:'64,000', badge:'💰 가성비', commission:'7%' },
+    { id:'fd4', title:'민물낚시대 카본 5.4m 초경량 민대', price:'14,000', orig:'28,000', badge:'🔥 인기', commission:'8%' },
+    { id:'fd5', title:'원투낚시대 서프 4.2m 2피스 특가', price:'28,000', orig:'56,000', badge:'⚡ 특가', commission:'11%' },
+    { id:'fd6', title:'배스로드 베이트캐스팅 1.8m 감성', price:'35,000', orig:'70,000', badge:'💰 가성비', commission:'8%' },
+    { id:'fd7', title:'버티컬 지깅 로드 1.8m 100-200g', price:'38,000', orig:'76,000', badge:'🔥 인기', commission:'9%' },
+    { id:'fd8', title:'아이스피싱 초단 로드 50cm 특수', price:'15,000', orig:'30,000', badge:'⚡ 특가', commission:'10%' },
+    { id:'fd9', title:'고급 카본 낚싯대 2피스 5.4m 경량', price:'42,000', orig:'84,000', badge:'💰 가성비', commission:'7%' },
+  ],
+  'fishing line': [
+    { id:'fn1', title:'PE합사 낚시줄 8합 150m 다색 0.6-3호', price:'6,800', orig:'13,600', badge:'🔥 인기', commission:'6%' },
+    { id:'fn2', title:'플루오로카본 리더라인 50m 투명', price:'4,200', orig:'8,400', badge:'💰 가성비', commission:'5%' },
+    { id:'fn3', title:'나일론 투명 낚시줄 300m 모노필라멘트', price:'2,500', orig:'5,000', badge:'💰 가성비', commission:'5%' },
+    { id:'fn4', title:'PE 8합 합사 원줄 200m 오렌지', price:'8,500', orig:'17,000', badge:'⚡ 특가', commission:'8%' },
+    { id:'fn5', title:'쇼크리더 플루오로카본 30m 특가', price:'3,800', orig:'7,600', badge:'💰 가성비', commission:'6%' },
+    { id:'fn6', title:'바다낚시 전용 PE줄 200m 고강도', price:'9,200', orig:'18,400', badge:'🔥 인기', commission:'7%' },
+    { id:'fn7', title:'민물 합사 4합 150m 갈색 위장색', price:'5,500', orig:'11,000', badge:'💰 가성비', commission:'5%' },
+    { id:'fn8', title:'에깅 전용 PE줄 150m 0.8호 특가', price:'7,800', orig:'15,600', badge:'⚡ 특가', commission:'9%' },
+    { id:'fn9', title:'원투 낚시줄 나일론 200m 4-8호', price:'3,200', orig:'6,400', badge:'💰 가성비', commission:'5%' },
+  ],
+  'fishing tackle': [
+    { id:'ft1', title:'낚시 소품 세트 도래/봉돌/찌 올인원', price:'5,500', orig:'11,000', badge:'🔥 인기', commission:'8%' },
+    { id:'ft2', title:'집어등 수중 LED 낚시 유인등 녹색', price:'8,900', orig:'17,800', badge:'⚡ 특가', commission:'11%' },
+    { id:'ft3', title:'낚시 가방 방수 태클박스 다기능', price:'12,000', orig:'24,000', badge:'💰 가성비', commission:'7%' },
+    { id:'ft4', title:'낚시 롤박스 4단 정리함 방수', price:'9,500', orig:'19,000', badge:'🔥 인기', commission:'9%' },
+    { id:'ft5', title:'낚시 의자 경량 접이식 야외 캠핑', price:'15,000', orig:'30,000', badge:'⚡ 특가', commission:'10%' },
+    { id:'ft6', title:'낚시 뜰채 접이식 4m 카본 경량', price:'11,000', orig:'22,000', badge:'💰 가성비', commission:'7%' },
+    { id:'ft7', title:'낚시 조끼 11포켓 다기능 방수', price:'22,000', orig:'44,000', badge:'🔥 인기', commission:'9%' },
+    { id:'ft8', title:'낚시 편광 선글라스 UV400 낚시전용', price:'8,500', orig:'17,000', badge:'⚡ 특가', commission:'11%' },
+    { id:'ft9', title:'낚시 장갑 방수 보온 미끄럼방지', price:'4,800', orig:'9,600', badge:'💰 가성비', commission:'6%' },
+  ],
+};
+
+// 모든 카테고리 통합 풀 (전체 탭용)
+const _ALL_FALLBACK = Object.values(_FALLBACK_DB).flat();
+
+function _getFallbackProducts(keyword, page = 1, limit = 9) {
+  const TRACK = (ALI_TRACKING || 'default').trim();
   const affSuffix = `?aff_fcid=${TRACK}&aff_platform=portals-tool&sk=_dTLBBxr`;
   const BASE = 'https://www.aliexpress.com';
 
-  const DATA = {
-    'fishing hook': [
-      { id:'fb001', title:'낚시바늘 세트 (100개입) 다용도 카본강', price:'2,800', orig:'5,600', img:'https://ae01.alicdn.com/kf/S8c5f50d0c2e04e35b3a7d4e5f6c3b7d1R.jpg', url:`${BASE}/wholesale?SearchText=fishing+hook+set${affSuffix}`, badge:'🔥 인기', commission:'8%' },
-      { id:'fb002', title:'크랭크베이트 루어 세트 민물/바다', price:'3,200', orig:'6,400', img:'https://ae01.alicdn.com/kf/Sc2e4b1d6f2a74f8e9c3d5a7b8e1f2d3cR.jpg', url:`${BASE}/wholesale?SearchText=fishing+lure+set${affSuffix}`, badge:'💰 가성비', commission:'6%' },
-      { id:'fb003', title:'낚시바늘 카본 스틸 혼합 세트 200개', price:'1,900', orig:'3,800', img:'https://ae01.alicdn.com/kf/S1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6R.jpg', url:`${BASE}/wholesale?SearchText=carbon+fishing+hook${affSuffix}`, badge:'💰 가성비', commission:'5%' },
-    ],
-    'fishing lure': [
-      { id:'fb004', title:'소프트웜 루어 세트 배스/쏘가리 전용', price:'4,500', orig:'9,000', img:'https://ae01.alicdn.com/kf/Sa1b2c3d4e5f6a7b8c9d0e1f2a3b4c5dR.jpg', url:`${BASE}/wholesale?SearchText=soft+worm+lure+bass${affSuffix}`, badge:'🔥 인기', commission:'10%' },
-      { id:'fb005', title:'메탈 지그 루어 바다낚시 30g/40g', price:'3,800', orig:'7,600', img:'https://ae01.alicdn.com/kf/Sb2c3d4e5f6a7b8c9d0e1f2a3b4c5d6R.jpg', url:`${BASE}/wholesale?SearchText=metal+jig+lure+sea${affSuffix}`, badge:'⚡ 특가', commission:'12%' },
-      { id:'fb006', title:'미노우 루어 세트 10cm 리얼 피쉬', price:'5,200', orig:'10,400', img:'https://ae01.alicdn.com/kf/Sc3d4e5f6a7b8c9d0e1f2a3b4c5d6e7R.jpg', url:`${BASE}/wholesale?SearchText=minnow+lure+fishing${affSuffix}`, badge:'🔥 인기', commission:'8%' },
-    ],
-    'fishing reel': [
-      { id:'fb007', title:'스피닝릴 2000번-5000번 베어링 10+1', price:'22,000', orig:'44,000', img:'https://ae01.alicdn.com/kf/Sd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8R.jpg', url:`${BASE}/wholesale?SearchText=spinning+fishing+reel${affSuffix}`, badge:'🔥 인기', commission:'7%' },
-      { id:'fb008', title:'베이트캐스팅릴 좌/우핸들 기어비 7.2:1', price:'35,000', orig:'70,000', img:'https://ae01.alicdn.com/kf/Se5f6a7b8c9d0e1f2a3b4c5d6e7f8a9R.jpg', url:`${BASE}/wholesale?SearchText=baitcasting+reel${affSuffix}`, badge:'⚡ 특가', commission:'9%' },
-      { id:'fb009', title:'바다낚시릴 드래그 최대 15kg 대물용', price:'45,000', orig:'90,000', img:'https://ae01.alicdn.com/kf/Sf6a7b8c9d0e1f2a3b4c5d6e7f8a9b0R.jpg', url:`${BASE}/wholesale?SearchText=sea+fishing+reel+heavy${affSuffix}`, badge:'💰 가성비', commission:'6%' },
-    ],
-    'fishing rod': [
-      { id:'fb010', title:'텔레스코픽 낚싯대 3.6m-7.2m 탄소섬유', price:'18,000', orig:'36,000', img:'https://ae01.alicdn.com/kf/Sa7b8c9d0e1f2a3b4c5d6e7f8a9b0c1R.jpg', url:`${BASE}/wholesale?SearchText=telescopic+carbon+fishing+rod${affSuffix}`, badge:'🔥 인기', commission:'8%' },
-      { id:'fb011', title:'루어낚싯대 스피닝 ML 2.1m 초경량', price:'25,000', orig:'50,000', img:'https://ae01.alicdn.com/kf/Sb8c9d0e1f2a3b4c5d6e7f8a9b0c1d2R.jpg', url:`${BASE}/wholesale?SearchText=spinning+lure+fishing+rod${affSuffix}`, badge:'⚡ 특가', commission:'10%' },
-      { id:'fb012', title:'바다낚시대 선상/갯바위 3피스 4.5m', price:'32,000', orig:'64,000', img:'https://ae01.alicdn.com/kf/Sc9d0e1f2a3b4c5d6e7f8a9b0c1d2e3R.jpg', url:`${BASE}/wholesale?SearchText=sea+fishing+rod+3piece${affSuffix}`, badge:'💰 가성비', commission:'7%' },
-    ],
-    'fishing line': [
-      { id:'fb013', title:'PE합사 낚시줄 4합/8합 150m-300m', price:'6,800', orig:'13,600', img:'https://ae01.alicdn.com/kf/Sd0e1f2a3b4c5d6e7f8a9b0c1d2e3f4R.jpg', url:`${BASE}/wholesale?SearchText=PE+braided+fishing+line${affSuffix}`, badge:'🔥 인기', commission:'6%' },
-      { id:'fb014', title:'카본 낚시줄 (플루오로카본) 50m', price:'4,200', orig:'8,400', img:'https://ae01.alicdn.com/kf/Se1f2a3b4c5d6e7f8a9b0c1d2e3f4a5R.jpg', url:`${BASE}/wholesale?SearchText=fluorocarbon+fishing+line${affSuffix}`, badge:'💰 가성비', commission:'5%' },
-      { id:'fb015', title:'나일론 낚시줄 투명 100m 다합수', price:'2,500', orig:'5,000', img:'https://ae01.alicdn.com/kf/Sf2a3b4c5d6e7f8a9b0c1d2e3f4a5b6R.jpg', url:`${BASE}/wholesale?SearchText=nylon+fishing+line+monofilament${affSuffix}`, badge:'💰 가성비', commission:'5%' },
-    ],
-    'fishing tackle': [
-      { id:'fb016', title:'낚시 소품 세트 (도래/봉돌/찌) 올인원', price:'5,500', orig:'11,000', img:'https://ae01.alicdn.com/kf/Sa3b4c5d6e7f8a9b0c1d2e3f4a5b6c7R.jpg', url:`${BASE}/wholesale?SearchText=fishing+tackle+set+complete${affSuffix}`, badge:'🔥 인기', commission:'8%' },
-      { id:'fb017', title:'집어등 수중 LED 낚시 유인등 녹색', price:'8,900', orig:'17,800', img:'https://ae01.alicdn.com/kf/Sb4c5d6e7f8a9b0c1d2e3f4a5b6c7d8R.jpg', url:`${BASE}/wholesale?SearchText=underwater+fishing+LED+light${affSuffix}`, badge:'⚡ 특가', commission:'11%' },
-      { id:'fb018', title:'낚시 가방 방수 태클박스 다기능', price:'12,000', orig:'24,000', img:'https://ae01.alicdn.com/kf/Sc5d6e7f8a9b0c1d2e3f4a5b6c7d8e9R.jpg', url:`${BASE}/wholesale?SearchText=fishing+tackle+bag+waterproof${affSuffix}`, badge:'💰 가성비', commission:'7%' },
-    ],
+  const KW_SEARCH_MAP = {
+    'fishing hook':   'fishing+hook+set',
+    'fishing lure':   'fishing+lure+set',
+    'fishing reel':   'spinning+fishing+reel',
+    'fishing rod':    'fishing+rod+carbon',
+    'fishing line':   'PE+braided+fishing+line',
+    'fishing tackle': 'fishing+tackle+accessories',
   };
 
-  // 키워드 매칭
   const keyLower = keyword.toLowerCase();
-  let pool = DATA['fishing tackle']; // 기본값
-  if (keyLower.includes('hook'))  pool = DATA['fishing hook'];
-  else if (keyLower.includes('lure') || keyLower.includes('worm')) pool = DATA['fishing lure'];
-  else if (keyLower.includes('reel') || keyLower.includes('릴'))   pool = DATA['fishing reel'];
-  else if (keyLower.includes('rod') || keyLower.includes('대'))    pool = DATA['fishing rod'];
-  else if (keyLower.includes('line') || keyLower.includes('줄'))   pool = DATA['fishing line'];
+  let catKey = 'fishing tackle';
+  if (keyLower.includes('hook'))                              catKey = 'fishing hook';
+  else if (keyLower.includes('lure') || keyLower.includes('worm')) catKey = 'fishing lure';
+  else if (keyLower.includes('reel'))                         catKey = 'fishing reel';
+  else if (keyLower.includes('rod')  || keyLower.includes('대'))   catKey = 'fishing rod';
+  else if (keyLower.includes('line') || keyLower.includes('줄'))   catKey = 'fishing line';
 
-  return pool.map(p => ({
+  // 전체 탭이면 모든 카테고리 풀 사용
+  const pool = (keyLower === 'all' || keyLower.includes('낚시용품') || keyLower.includes('accessories'))
+    ? _ALL_FALLBACK
+    : (_FALLBACK_DB[catKey] || _FALLBACK_DB['fishing tackle']);
+
+  const searchKw = KW_SEARCH_MAP[catKey] || 'fishing+tackle';
+  const total = pool.length;
+  const start = (page - 1) * limit;
+  const slice = pool.slice(start, start + limit);
+
+  const items = slice.map((p, i) => ({
     productId:      p.id,
     title:          p.title,
     salePrice:      p.price,
     originalPrice:  p.orig,
     discount:       Math.round((1 - parseInt(p.price.replace(',','')) / parseInt(p.orig.replace(',',''))) * 100) + '%',
-    imageUrl:       p.img,
-    productUrl:     p.url,
+    imageUrl:       `https://picsum.photos/seed/${p.id}/300/300`,
+    productUrl:     `${BASE}/wholesale?SearchText=${searchKw}${affSuffix}`,
     commissionRate: p.commission,
     badge:          p.badge,
-    stars:          4.5,
-    orders:         Math.floor(Math.random() * 500) + 100,
+    stars:          (4.2 + (i % 8) * 0.1).toFixed(1),
+    orders:         Math.floor(Math.random() * 800) + 200,
     isFallback:     true,
   }));
+
+  return { items, total, hasMore: start + limit < total };
 }
 
-// ─── 키워드 상품 검색 (10분 캐시 적용) ──────────────────────────────────────
-async function searchAliExpress(keyword, limit = 6) {
+// ─── 키워드 상품 검색 (페이지네이션 + 10분 캐시) ────────────────────────────
+async function searchAliExpress(keyword, limit = 9, page = 1) {
   if (!ALI_READY) {
     (global.logger?.warn || console.warn)('[ALI] API 키 미설정 — 폴백 상품 반환');
-    return _getFallbackProducts(keyword).slice(0, limit);
+    return _getFallbackProducts(keyword, page, limit);
   }
-  // 캐시 확인
-  const cacheKey = `${keyword}_${limit}`;
+  const cacheKey = `${keyword}_${limit}_${page}`;
   const cached = aliCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < ALI_CACHE_TTL) {
-    (global.logger?.info || console.info)(`[ALI 캐시 히트] "${keyword}" (${cached.data.length}개)`);
+    (global.logger?.info || console.info)(`[ALI 캐시 히트] "${keyword}" p${page}`);
     return cached.data;
   }
   try {
     const params = buildParams('aliexpress.affiliate.product.query', {
       keywords:        keyword,
       page_size:       String(limit),
-      page_no:         '1',
+      page_no:         String(page),
       tracking_id:     ALI_TRACKING,
       target_currency: 'KRW',
       target_language: 'KO',
@@ -179,40 +237,44 @@ async function searchAliExpress(keyword, limit = 6) {
 
     if (result?.resp_code !== 200) {
       (global.logger?.warn || console.warn)(`[ALI] API 오류: ${result?.resp_msg} — 폴백 반환`);
-      return _getFallbackProducts(keyword).slice(0, limit);
+      return _getFallbackProducts(keyword, page, limit);
     }
-    const items = result?.result?.products?.product || [];
-    if (items.length === 0) return _getFallbackProducts(keyword).slice(0, limit);
-    (global.logger?.info || console.info)(`[ALI] 검색 "${keyword}" → ${items.length}개`);
-    const normalized = items.map(normalizeProduct);
-    // 캐시 저장
-    aliCache.set(cacheKey, { data: normalized, ts: Date.now() });
-    return normalized;
+    const rawItems = result?.result?.products?.product || [];
+    if (rawItems.length === 0) return _getFallbackProducts(keyword, page, limit);
+    const total    = result?.result?.total_record_count || rawItems.length;
+    const items    = rawItems.map(normalizeProduct);
+    const hasMore  = page * limit < total;
+    const data     = { items, total, hasMore };
+    aliCache.set(cacheKey, { data, ts: Date.now() });
+    return data;
   } catch (err) {
     (global.logger?.warn || console.warn)(`[ALI] searchAliExpress 오류: ${err.message} — 폴백 반환`);
-    return _getFallbackProducts(keyword).slice(0, limit);
+    return _getFallbackProducts(keyword, page, limit);
   }
 }
 
-
 // ─── 카테고리별 상품 조회 ─────────────────────────────────────────────────────
 const ALI_KEYWORD_MAP = {
-  '낚시바늘': 'fishing hook set',
-  '봉돌':    'fishing sinker weight',
-  '루어':    'fishing lure set',
-  '소프트웜': 'soft lure worm fishing',
-  '낚시줄':  'fishing line PE braid',
-  '채비':    'fishing tackle rig set',
-  '집어등':  'fishing light LED',
-  '릴':     'fishing reel spinning',
-  '낚싯대':  'fishing rod telescopic',
-  '기본':    'fishing tackle accessories',
-  '소모품':  'fishing accessories set',
+  '낚시바늘':  'fishing hook set',
+  '봉돌':     'fishing sinker weight',
+  '루어':     'fishing lure set',
+  '루어채비':  'fishing lure set',
+  '소프트웜':  'soft lure worm fishing',
+  '낚시줄':   'fishing line PE braid',
+  '채비':     'fishing tackle rig set',
+  '집어등':   'fishing light LED',
+  '릴':      'fishing reel spinning',
+  '낚시릴낚싯대': 'fishing reel spinning',
+  '낚싯대':   'fishing rod telescopic',
+  '기본':     'fishing tackle accessories',
+  '소모품':   'fishing accessories set',
+  '낚시용품':  'fishing tackle accessories',
+  '낚시액세서리': 'fishing accessories set',
 };
 
-async function getAliProducts(category = '소모품') {
+async function getAliProducts(category = '소모품', page = 1, limit = 9) {
   const keyword = ALI_KEYWORD_MAP[category] || `${category} fishing`;
-  return searchAliExpress(keyword, 6);
+  return searchAliExpress(keyword, limit, page);
 }
 
 // ─── 특가/인기 상품 (고수수료) ────────────────────────────────────────────────
