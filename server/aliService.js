@@ -64,27 +64,43 @@ function buildAliAffiliateUrl(productUrl) {
   return `${productUrl}${sep}aff_fcid=${ALI_TRACKING}&aff_platform=portals-tool&sk=_dTLBBxr`;
 }
 
+// ─── USD → KRW 환율 상수 (2026년 6월 기준) ────────────────────────────────────
+const USD_TO_KRW = 1380;
+
 // ─── 상품 데이터 정규화 ────────────────────────────────────────────────────────
 function normalizeProduct(item) {
-  const salePrice     = Number(item.app_sale_price || item.sale_price || 0);
-  const originalPrice = Number(item.original_price || salePrice);
-  const discount      = originalPrice > 0
-    ? `${Math.round((1 - salePrice / originalPrice) * 100)}%`
+  const salePriceUSD     = Number(item.app_sale_price || item.sale_price || 0);
+  const originalPriceUSD = Number(item.app_original_price || item.original_price || salePriceUSD);
+
+  // USD → KRW 환산
+  const salePriceKRW     = Math.round(salePriceUSD * USD_TO_KRW);
+  const originalPriceKRW = Math.round(originalPriceUSD * USD_TO_KRW);
+
+  const discount = originalPriceKRW > salePriceKRW
+    ? `${Math.round((1 - salePriceKRW / originalPriceKRW) * 100)}%`
     : '0%';
-  const commission    = Number(item.commission_rate || 0);
+
+  const orders = Number(item.lastest_volume || 0);
+  const stars  = Number(item.evaluate_rate  || 0);
+
+  // 판매량 + 별점 기반 배지 (commission_rate 미제공 문제 해결)
+  const badge = orders >= 1000 ? '🔥 인기'
+    : orders >= 500  ? '⭐ 추천'
+    : stars  >= 4.5  ? '👍 우수'
+    : '💰 가성비';
 
   return {
     productId:      String(item.product_id),
     title:          item.product_title || '',
-    salePrice:      salePrice.toLocaleString('ko-KR'),
-    originalPrice:  originalPrice.toLocaleString('ko-KR'),
+    salePrice:      salePriceKRW.toLocaleString('ko-KR'),
+    originalPrice:  originalPriceKRW.toLocaleString('ko-KR'),
     discount,
     imageUrl:       item.product_main_image_url || '',
     productUrl:     buildAliAffiliateUrl(item.product_detail_url || ''),
-    commissionRate: `${commission}%`,
-    badge: commission >= 50 ? '⚡ 특가' : commission >= 30 ? '🔥 인기' : '💰 가성비',
-    stars:          Number(item.evaluate_rate || 0),
-    orders:         Number(item.lastest_volume || 0),
+    commissionRate: '어필리에이트',
+    badge,
+    stars,
+    orders,
   };
 }
 
@@ -241,7 +257,7 @@ async function searchAliExpress(keyword, limit = 9, page = 1) {
       tracking_id:     ALI_TRACKING,
       target_currency: 'KRW',
       target_language: 'KO',
-      sort:            'SALE_PRICE_ASC',
+      sort:            'LAST_VOLUME_DESC',  // 판매량 많은 것 먼저 (기존: SALE_PRICE_ASC)
     });
     const queryStr = new URLSearchParams(params).toString();
     const response = await axios.get(`${ALI_API_URL}?${queryStr}`, { timeout: 8000 });
@@ -267,21 +283,21 @@ async function searchAliExpress(keyword, limit = 9, page = 1) {
 
 // ─── 카테고리별 상품 조회 ─────────────────────────────────────────────────────
 const ALI_KEYWORD_MAP = {
-  '낚시바늘':  'fishing hook set',
-  '봉돌':     'fishing sinker weight',
-  '루어':     'fishing lure set',
-  '루어채비':  'fishing lure set',
-  '소프트웜':  'soft lure worm fishing',
-  '낚시줄':   'fishing line PE braid',
-  '채비':     'fishing tackle rig set',
-  '집어등':   'fishing light LED',
-  '릴':      'fishing reel spinning',
-  '낚시릴낚싯대': 'fishing reel spinning',
-  '낚싯대':   'fishing rod telescopic',
-  '기본':     'fishing tackle accessories',
-  '소모품':   'fishing accessories set',
-  '낚시용품':  'fishing tackle accessories',
-  '낚시액세서리': 'fishing accessories set',
+  '낚시바늘':  'fishing hook set size assorted',
+  '봉돌':     'fishing sinker lead weight set',
+  '루어':     'fishing hard lure minnow crankbait set',
+  '루어채비':  'fishing lure spinner jig set',
+  '소프트웜':  'soft fishing worm lure bass',
+  '낚시줄':   'PE braided fishing line 4 strand 100m',
+  '채비':     'fishing rig hook ready tied carp',
+  '집어등':   'fishing light underwater LED green',
+  '릴':      'spinning fishing reel 2000 3000 5000',
+  '낚시릴낚싯대': 'spinning fishing reel 2000 3000 5000',
+  '낚싯대':   'telescopic carbon fiber fishing rod pole',
+  '기본':     'fishing tackle accessories set',
+  '소모품':   'fishing accessories swivel snap float',
+  '낚시용품':  'fishing tackle accessories set',
+  '낚시액세서리': 'fishing gear accessories kit',
 };
 
 async function getAliProducts(category = '소모품', page = 1, limit = 9) {
