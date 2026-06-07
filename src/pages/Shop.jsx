@@ -263,7 +263,7 @@ export default function Shop() {
     : activeCat === '⭐ 추천'
     ? '⭐ 추천 낚시 상품'
     : activeCat === '전체'
-    ? '전체 상품 (Coupang + AliExpress)'
+    ? '전체 상품'
     : `${activeCat} 상품`;
 
   const isManualCat = activeCat === '⭐ 추천';
@@ -286,7 +286,7 @@ export default function Shop() {
             </button>
           ) : (
             <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', marginLeft: 'auto' }}>
-              Coupang + AliExpress 🎣
+              🎣
             </span>
           )}
         </div>
@@ -303,7 +303,7 @@ export default function Shop() {
             </button>
           )}
         </form>
-        {searchQuery && <div style={{ marginTop: '6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', paddingLeft: '4px' }}>🔍 Coupang + AliExpress 통합 검색 중</div>}
+        {searchQuery && <div style={{ marginTop: '6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', paddingLeft: '4px' }}>🔍 검색 중</div>}
       </div>
 
       {/* ── 카테고리 탭 ── */}
@@ -365,7 +365,7 @@ export default function Shop() {
                       <>
                         <ProductImage src={item.imageUrl} alt={item.productName} source="ali" />
                         <div style={{ padding: '8px 10px 10px' }}>
-                          <span style={{ display: 'inline-block', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px', marginBottom: '4px' }}>AliExpress</span>
+
                           {item.productName && <div style={{ fontSize: 'calc(11px * var(--fs, 1))', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.35', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>}
                         </div>
                       </>
@@ -417,7 +417,7 @@ export default function Shop() {
                       <a href={item.shortUrl} target="_blank" rel="noopener noreferrer sponsored" style={{ display: 'flex', flexDirection: 'column', width: '110px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}>
                         <div style={{ position: 'relative', width: '110px', height: '110px', overflow: 'hidden' }}>
                           <ProductImage src={item.imageUrl} alt={item.productName} source="ali" />
-                          <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#FF6900', color: '#fff', fontSize: '8px', fontWeight: '900', padding: '2px 5px', borderRadius: '4px' }}>AliExpress</span>
+
                         </div>
                         {item.productName && <div style={{ padding: '5px 6px', fontSize: 'calc(10px * var(--fs, 1))', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>}
                       </a>
