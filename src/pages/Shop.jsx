@@ -396,7 +396,7 @@ export default function Shop() {
 
           {/* 파트너스 공시 (최소화) */}
           <p style={{ margin: '0 0 10px 4px', fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '600', lineHeight: 1.4 }}>
-            쿠팡 파트너스 · AliExpress 어필리에이트 수수료 수취
+            발생하는 소정의 수수료는 낚시GO 서비스 운영에 사용됩니다. 🎣
           </p>
 
           {/* 수동 등록 관련 상품 (횡스크롤) */}
