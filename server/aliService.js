@@ -76,10 +76,14 @@ const USD_TO_KRW = 1380;
 //   1순위 target_sale_price (KRW 직접) → 가장 정확
 //   2순위 app_sale_price × USD_TO_KRW  → 환산 필요
 //   3순위 sale_price × USD_TO_KRW      → 최후 수단 (원가 수준일 수 있음)
+// KRW/USD 판별: 정수(또는 소수점 없음)이면 KRW, 소수점 2자리면 USD
+// 예) "2870" → KRW, "2.08" → USD, "99" → KRW, "0.07" → USD
+const isKRW = (v) => Number.isInteger(v) || (v > 0 && !String(v).includes('.'));
+
 function getSalePriceKRW(item) {
-  // 1순위: target_sale_price — KRW 직접값 (100원 이상이어야 유효한 KRW값)
+  // 1순위: target_sale_price — KRW 직접값
   const targetKRW = parseFloat(item.target_sale_price);
-  if (!isNaN(targetKRW) && targetKRW >= 100) return targetKRW;
+  if (!isNaN(targetKRW) && targetKRW > 0 && isKRW(targetKRW)) return targetKRW;
   // 2순위: app_sale_price — USD → KRW 환산
   const appUSD = parseFloat(item.app_sale_price);
   if (!isNaN(appUSD) && appUSD > 0) return Math.round(appUSD * USD_TO_KRW);
@@ -92,7 +96,7 @@ function getSalePriceKRW(item) {
 function getOriginalPriceKRW(item, salePriceKRW) {
   // 1순위: target_original_price — KRW 직접값
   const targetOrigKRW = parseFloat(item.target_original_price);
-  if (!isNaN(targetOrigKRW) && targetOrigKRW >= 100) return targetOrigKRW;
+  if (!isNaN(targetOrigKRW) && targetOrigKRW > 0 && isKRW(targetOrigKRW)) return targetOrigKRW;
   // 2순위: app_original_price — USD → KRW
   const appOrigUSD = parseFloat(item.app_original_price);
   if (!isNaN(appOrigUSD) && appOrigUSD > 0) return Math.round(appOrigUSD * USD_TO_KRW);
@@ -108,8 +112,9 @@ function normalizeProduct(item) {
   const originalPriceKRW = getOriginalPriceKRW(item, salePriceKRW);
 
   // 가격 신뢰도 판단
-  // target_sale_price(KRW직접) or app_sale_price(USD환산) 중 하나라도 있으면 신뢰
-  const hasTargetKRW = parseFloat(item.target_sale_price) >= 100;
+  // target_sale_price가 KRW 정수값이거나 app_sale_price(USD)가 있으면 신뢰
+  const rawTarget = parseFloat(item.target_sale_price);
+  const hasTargetKRW = !isNaN(rawTarget) && rawTarget > 0 && isKRW(rawTarget);
   const hasAppUSD    = parseFloat(item.app_sale_price) > 0;
   const priceConfirm = !hasTargetKRW && !hasAppUSD; // 둘 다 없으면 "가격 확인하기"
 
