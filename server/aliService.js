@@ -67,23 +67,30 @@ function buildAliAffiliateUrl(productUrl) {
 // ─── USD → KRW 환율 상수 (2026년 6월 기준) ────────────────────────────────────
 const USD_TO_KRW = 1380;
 
-// ─── 가격 필드 안전 추출 (빈 문자열 fallback 버그 방지) ────────────────────
+// ─── 가격 필드 안전 추출 ────────────────────────────────────────────────────
+// 우선순위: app_sale_price(제휴전용) → target_sale_price(웹판매가) → sale_price(최후)
+// target_currency=USD 로 요청하면 app_sale_price 채워지는 경우 훨씬 많아짐
 function getSalePriceUSD(item) {
-  // app_sale_price: 제휴 전용 판매가 (우선)
+  // 1순위: app_sale_price — 제휴 앱 전용 최저가
   const appPrice = parseFloat(item.app_sale_price);
   if (!isNaN(appPrice) && appPrice > 0) return appPrice;
-  // sale_price: 비제휴 일반 판매가 (최후 수단 — 원가에 가까운 높은 값)
+  // 2순위: target_sale_price — 웹 기준 판매가 (target_currency=USD 시 채워짐)
+  const targetPrice = parseFloat(item.target_sale_price);
+  if (!isNaN(targetPrice) && targetPrice > 0) return targetPrice;
+  // 3순위: sale_price — 비제휴 일반 가격 (원가에 가까울 수 있음, 최후 수단)
   const salePrice = parseFloat(item.sale_price);
   if (!isNaN(salePrice) && salePrice > 0) return salePrice;
   return 0;
 }
 
 function getOriginalPriceUSD(item, salePriceUSD) {
-  const appOrig  = parseFloat(item.app_original_price);
-  if (!isNaN(appOrig)  && appOrig  > 0) return appOrig;
-  const origPrice = parseFloat(item.original_price);
-  if (!isNaN(origPrice) && origPrice > 0) return origPrice;
-  return salePriceUSD; // 원가 정보 없으면 판매가와 동일
+  const appOrig     = parseFloat(item.app_original_price);
+  if (!isNaN(appOrig)     && appOrig     > 0) return appOrig;
+  const targetOrig  = parseFloat(item.target_original_price);
+  if (!isNaN(targetOrig)  && targetOrig  > 0) return targetOrig;
+  const origPrice   = parseFloat(item.original_price);
+  if (!isNaN(origPrice)   && origPrice   > 0) return origPrice;
+  return salePriceUSD;
 }
 
 // ─── 상품 데이터 정규화 ────────────────────────────────────────────────────────
@@ -96,10 +103,10 @@ function normalizeProduct(item) {
   const originalPriceKRW = Math.round(originalPriceUSD * USD_TO_KRW);
 
   // 가격 신뢰도 판단
-  // app_sale_price가 없어 sale_price로 fallback되면 원가에 가까운 높은 값이 올 수 있음
-  // → 가격 미제공으로 처리하여 "가격 확인하기" 표시
-  const hasAppPrice   = parseFloat(item.app_sale_price) > 0;
-  const priceConfirm  = !hasAppPrice; // true면 가격 확인하기 표시
+  // app_sale_price 또는 target_sale_price 중 하나라도 있으면 신뢰 가능
+  const hasAppPrice    = parseFloat(item.app_sale_price)    > 0;
+  const hasTargetPrice = parseFloat(item.target_sale_price) > 0;
+  const priceConfirm   = !hasAppPrice && !hasTargetPrice; // 둘 다 없으면 "가격 확인하기"
 
   const discount = (!priceConfirm && originalPriceKRW > salePriceKRW)
     ? `${Math.round((1 - salePriceKRW / originalPriceKRW) * 100)}%`
@@ -282,9 +289,10 @@ async function searchAliExpress(keyword, limit = 9, page = 1) {
       page_size:       String(limit),
       page_no:         String(page),
       tracking_id:     ALI_TRACKING,
-      target_currency: 'KRW',
-      target_language: 'KO',
-      sort:            'LAST_VOLUME_DESC',  // 판매량 많은 것 먼저 (기존: SALE_PRICE_ASC)
+      target_currency: 'USD',              // ✅ KRW→USD: KRW 요청 시 app_sale_price 빈값 알려진 버그 해결
+      target_language: 'EN',              // ✅ KO→EN: KO 언어 지원 불안정 (검색결과 누락 방지)
+      sort:            'LAST_VOLUME_DESC',
+      fields:          'product_id,product_title,target_sale_price,app_sale_price,target_original_price,app_original_price,product_main_image_url,product_detail_url,evaluate_rate,lastest_volume,commission_rate',
     });
     const queryStr = new URLSearchParams(params).toString();
     const response = await axios.get(`${ALI_API_URL}?${queryStr}`, { timeout: 8000 });
