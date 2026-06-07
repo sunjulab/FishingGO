@@ -5916,9 +5916,10 @@ app.get('/api/commerce/coupang/search', async (req, res) => {
       keyword, isMock: false,
       products: aliProducts.map(p => ({
         id: `ali_${p.productId}`, name: p.title,
-        price: p.salePrice + '원', discount: p.discount,
+        price: p.salePrice, discount: p.discount,
         img: p.imageUrl, link: p.productUrl,
         badge: p.badge, source: 'ali',
+        priceConfirm: p.priceConfirm || false,
       }))
     });
   } catch (err) {
@@ -7685,15 +7686,16 @@ app.get('/api/shop/products', async (req, res) => {
       const result = await ali.getAliProducts(category, page, limit);
       const rawItems = Array.isArray(result) ? result : (result.items || []);
       items = rawItems.map(p => ({
-        id:         `ali_${p.productId}`,
-        name:       p.title,
-        price:      p.salePrice,
-        discount:   p.discount,
-        img:        p.imageUrl,
-        link:       p.productUrl,
-        badge:      p.badge,
-        source:     'ali',
-        commission: p.commissionRate,
+        id:           `ali_${p.productId}`,
+        name:         p.title,
+        price:        p.salePrice,
+        discount:     p.discount,
+        img:          p.imageUrl,
+        link:         p.productUrl,
+        badge:        p.badge,
+        source:       'ali',
+        commission:   p.commissionRate,
+        priceConfirm: p.priceConfirm || false,
       }));
       total   = Array.isArray(result) ? items.length : (result.total   || items.length);
       hasMore = Array.isArray(result) ? false         : (result.hasMore || false);
@@ -7719,15 +7721,16 @@ app.get('/api/shop/products', async (req, res) => {
           source:   'coupang',
         })) : []),
         ...aliItems.map(p => ({
-          id:         `ali_${p.productId}`,
-          name:       p.title,
-          price:      p.salePrice,
-          discount:   p.discount,
-          img:        p.imageUrl,
-          link:       p.productUrl,
-          badge:      p.badge,
-          source:     'ali',
-          commission: p.commissionRate,
+          id:           `ali_${p.productId}`,
+          name:         p.title,
+          price:        p.salePrice,
+          discount:     p.discount,
+          img:          p.imageUrl,
+          link:         p.productUrl,
+          badge:        p.badge,
+          source:       'ali',
+          commission:   p.commissionRate,
+          priceConfirm: p.priceConfirm || false,
         })),
       ];
       total = items.length;
@@ -7962,18 +7965,19 @@ app.get('/api/shop/ali-debug', async (req, res) => {
  */
 app.get('/api/shop/promo', async (req, res) => {
   try {
-    const promoProducts = await ali.getAliPromoProducts(4);
+    const promoProducts = await ali.getAliPromoProducts(6);
     res.json(promoProducts.map(p => ({
-      id:       `ali_${p.productId}`,
-      name:     p.title,
-      price:    p.salePrice,
-      original: p.originalPrice,
-      discount: p.discount,
-      img:      p.imageUrl,
-      link:     p.productUrl,
-      badge:    p.badge,
-      commission: p.commissionRate,
-      source:   'ali',
+      id:           `ali_${p.productId}`,
+      name:         p.title,
+      price:        p.salePrice,
+      original:     p.originalPrice,
+      discount:     p.discount,
+      img:          p.imageUrl,
+      link:         p.productUrl,
+      badge:        p.badge,
+      commission:   p.commissionRate,
+      source:       'ali',
+      priceConfirm: p.priceConfirm || false,
     })));
   } catch (err) {
     logger.warn(`[Shop Promo API] 특가 상품 오류: ${err.message}`);

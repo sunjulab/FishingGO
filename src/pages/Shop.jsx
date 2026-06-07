@@ -339,7 +339,7 @@ export default function Shop() {
                       </div>
                       <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
-                        {p.price && p.price !== '0' && p.price !== '0원'
+                        {(!p.priceConfirm && p.price && p.price !== '0' && p.price !== '0원')
                           ? (<>
                               <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', color: '#FF5A5F' }}>{p.price}원</span>
                               {p.discount && p.discount !== '0%' && <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#FF6900', fontWeight: '800' }}>({p.discount}↓)</span>}
@@ -484,7 +484,7 @@ export default function Shop() {
                           {p.name}
                         </h3>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', marginTop: '2px' }}>
-                          {p.price && p.price !== '0' && p.price !== '0원'
+                          {(!p.priceConfirm && p.price && p.price !== '0' && p.price !== '0원')
                             ? (<>
                                 <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
                                 <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>원</span>
