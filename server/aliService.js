@@ -67,10 +67,29 @@ function buildAliAffiliateUrl(productUrl) {
 // ─── USD → KRW 환율 상수 (2026년 6월 기준) ────────────────────────────────────
 const USD_TO_KRW = 1380;
 
+// ─── 가격 필드 안전 추출 (빈 문자열 fallback 버그 방지) ────────────────────
+function getSalePriceUSD(item) {
+  // app_sale_price: 제휴 전용 판매가 (우선)
+  const appPrice = parseFloat(item.app_sale_price);
+  if (!isNaN(appPrice) && appPrice > 0) return appPrice;
+  // sale_price: 비제휴 일반 판매가 (최후 수단 — 원가에 가까운 높은 값)
+  const salePrice = parseFloat(item.sale_price);
+  if (!isNaN(salePrice) && salePrice > 0) return salePrice;
+  return 0;
+}
+
+function getOriginalPriceUSD(item, salePriceUSD) {
+  const appOrig  = parseFloat(item.app_original_price);
+  if (!isNaN(appOrig)  && appOrig  > 0) return appOrig;
+  const origPrice = parseFloat(item.original_price);
+  if (!isNaN(origPrice) && origPrice > 0) return origPrice;
+  return salePriceUSD; // 원가 정보 없으면 판매가와 동일
+}
+
 // ─── 상품 데이터 정규화 ────────────────────────────────────────────────────────
 function normalizeProduct(item) {
-  const salePriceUSD     = Number(item.app_sale_price || item.sale_price || 0);
-  const originalPriceUSD = Number(item.app_original_price || item.original_price || salePriceUSD);
+  const salePriceUSD     = getSalePriceUSD(item);
+  const originalPriceUSD = getOriginalPriceUSD(item, salePriceUSD);
 
   // USD → KRW 환산
   const salePriceKRW     = Math.round(salePriceUSD * USD_TO_KRW);
@@ -83,7 +102,7 @@ function normalizeProduct(item) {
   const orders = Number(item.lastest_volume || 0);
   const stars  = Number(item.evaluate_rate  || 0);
 
-  // 판매량 + 별점 기반 배지 (commission_rate 미제공 문제 해결)
+  // 판매량 + 별점 기반 배지
   const badge = orders >= 1000 ? '🔥 인기'
     : orders >= 500  ? '⭐ 추천'
     : stars  >= 4.5  ? '👍 우수'
