@@ -77,8 +77,6 @@ export default function Shop() {
   // ─ 실시간 가격 ────────────────────────────────────────────────────────────
   // freshPrices: { [productId]: { price, discount, priceConfirm } }
   const [freshPrices,  setFreshPrices]  = useState({});
-  const [pricePopup,   setPricePopup]   = useState(null);  // {product, fresh, loading}
-  const [popupLoading, setPopupLoading] = useState(false);
   const refreshTimerRef = useRef(null);
   const isFreshingRef   = useRef(false);
 
@@ -229,45 +227,18 @@ export default function Shop() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─ 상품 클릭: 실시간 가격 판업 후 이동 (알리만) ────────────────────
-  const handleProductClick = async (product) => {
-    if (product.source !== 'ali') {
-      let url = product.link;
-      if (product.source === 'coupang' && COUPANG_PARTNERS_ID && url && !url.includes('lptag=')) {
-        url = `${url}${url.includes('?') ? '&' : '?'}lptag=${COUPANG_PARTNERS_ID}`;
-      }
-      apiClient.post('/api/shop/click', {
-        productId: product.id, source: product.source || 'coupang',
-        keyword: searchQuery || activeCat || '쇼핑탭',
-      }).catch(() => {});
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
+  // ─ 상품 클릭: 바로 이동 ──────────────────────────────────────────────────
+  const handleProductClick = (product) => {
+    let url = product.link;
+    if (product.source === 'coupang' && COUPANG_PARTNERS_ID && url && !url.includes('lptag=')) {
+      url = `${url}${url.includes('?') ? '&' : '?'}lptag=${COUPANG_PARTNERS_ID}`;
     }
-    // 알리: 실시간 가격 판업
-    const aliId = (product.id || '').replace('ali_', '');
-    const cached = freshPrices[aliId] || null;
-    setPricePopup({ product, fresh: cached, loading: true });
-    setPopupLoading(true);
-    try {
-      const res  = await apiClient.get(`/api/shop/price-check?ids=${aliId}`);
-      const data = (res.data || [])[0] || null;
-      setPricePopup(prev => prev ? { ...prev, fresh: data, loading: false } : null);
-      if (data && data.productId) {
-        setFreshPrices(prev => ({ ...prev, [aliId]: data }));
-      }
-    } catch {
-      setPricePopup(prev => prev ? { ...prev, loading: false } : null);
-    } finally { setPopupLoading(false); }
-  };
-
-  const handlePopupGo = () => {
-    if (!pricePopup) return;
     apiClient.post('/api/shop/click', {
-      productId: pricePopup.product.id, source: 'ali',
+      productId: product.id,
+      source: product.source || 'ali',
       keyword: searchQuery || activeCat || '쇼핑탭',
     }).catch(() => {});
-    window.open(pricePopup.product.link, '_blank', 'noopener,noreferrer');
-    setPricePopup(null);
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // ── 무한 스크롤: IntersectionObserver ────────────────────────────────────────
@@ -341,73 +312,6 @@ export default function Shop() {
 
   return (
     <>
-    {/* ── 실시간 가격 판업 모달 ── */}
-    {pricePopup && (
-      <div onClick={() => setPricePopup(null)} style={{
-        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
-        zIndex: 9999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      }}>
-        <div onClick={e => e.stopPropagation()} style={{
-          width: '100%', maxWidth: '480px', backgroundColor: '#fff',
-          borderRadius: '20px 20px 0 0', padding: '20px 20px 32px', boxShadow: '0 -4px 20px rgba(0,0,0,0.15)',
-        }}>
-          {/* 상품명 */}
-          <div style={{ fontWeight: '900', fontSize: '14px', color: '#1c1c1e', marginBottom: '14px',
-            overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-            {pricePopup.product.name}
-          </div>
-          {/* 가격 비교 */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'stretch' }}>
-            {/* 여태 가격 (캐시) */}
-            <div style={{ flex: 1, background: '#F8F9FA', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '10px', color: '#8E8E93', fontWeight: '700', marginBottom: '4px' }}>이전 가격</div>
-              <div style={{ fontSize: '16px', fontWeight: '900', color: '#8E8E93' }}>
-                {pricePopup.product.price && pricePopup.product.price !== '0'
-                  ? `${pricePopup.product.price}원` : '확인 필요'}
-              </div>
-            </div>
-            {/* 화슴표 */}
-            <div style={{ display: 'flex', alignItems: 'center', fontSize: '18px' }}>→</div>
-            {/* 실시간 가격 */}
-            <div style={{ flex: 1, background: popupLoading ? '#F8F9FA' : '#FFF3EC',
-              border: popupLoading ? 'none' : '1.5px solid #FF6900',
-              borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '10px', color: '#FF6900', fontWeight: '700', marginBottom: '4px' }}>
-                {popupLoading ? '☁️ 확인 중...' : '✅ 실시간'}
-              </div>
-              {popupLoading
-                ? <div style={{ height: '24px', background: '#eee', borderRadius: '6px', animation: 'pulse 1s infinite' }} />
-                : <div style={{ fontSize: '18px', fontWeight: '950', color: '#FF5A5F' }}>
-                    {pricePopup.fresh && !pricePopup.fresh.priceConfirm && pricePopup.fresh.price
-                      ? `${pricePopup.fresh.price}원`
-                      : pricePopup.fresh?.priceConfirm ? '가격 확인 필요' : 'API 확인 필요'}
-                  </div>
-              }
-              {!popupLoading && pricePopup.fresh?.discount && pricePopup.fresh.discount !== '0%' && (
-                <div style={{ fontSize: '10px', color: '#FF6900', fontWeight: '800', marginTop: '2px' }}>
-                  {pricePopup.fresh.discount} 할인
-                </div>
-              )}
-            </div>
-          </div>
-          {/* 버튼 */}
-          <button onClick={handlePopupGo} style={{
-            width: '100%', padding: '14px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, #FF6900, #FF5A5F)',
-            color: '#fff', fontWeight: '950', fontSize: '15px', border: 'none', cursor: 'pointer',
-          }}>
-            🛍 AliExpress에서 구매하기
-          </button>
-          <button onClick={() => setPricePopup(null)} style={{
-            width: '100%', marginTop: '8px', padding: '10px', borderRadius: '12px',
-            background: '#F2F2F7', color: '#8E8E93', fontWeight: '800', fontSize: '13px',
-            border: 'none', cursor: 'pointer',
-          }}>
-            닫기
-          </button>
-        </div>
-      </div>
-    )}
     <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '80px' }}>
 
       {/* ── 헤더 + 검색 ── */}
