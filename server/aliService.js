@@ -64,49 +64,54 @@ function buildAliAffiliateUrl(productUrl) {
   return `${productUrl}${sep}aff_fcid=${ALI_TRACKING}&aff_platform=portals-tool&sk=_dTLBBxr`;
 }
 
-// ─── USD → KRW 환율 상수 (2026년 6월 기준) ────────────────────────────────────
+// ─── USD → KRW 환율 상수 (2026년 6월 기준, USD 필드 fallback용) ─────────────
 const USD_TO_KRW = 1380;
 
-// ─── 가격 필드 안전 추출 ────────────────────────────────────────────────────
-// 우선순위: app_sale_price(제휴전용) → target_sale_price(웹판매가) → sale_price(최후)
-// target_currency=USD 로 요청하면 app_sale_price 채워지는 경우 훨씬 많아짐
-function getSalePriceUSD(item) {
-  // 1순위: app_sale_price — 제휴 앱 전용 최저가
-  const appPrice = parseFloat(item.app_sale_price);
-  if (!isNaN(appPrice) && appPrice > 0) return appPrice;
-  // 2순위: target_sale_price — 웹 기준 판매가 (target_currency=USD 시 채워짐)
-  const targetPrice = parseFloat(item.target_sale_price);
-  if (!isNaN(targetPrice) && targetPrice > 0) return targetPrice;
-  // 3순위: sale_price — 비제휴 일반 가격 (원가에 가까울 수 있음, 최후 수단)
-  const salePrice = parseFloat(item.sale_price);
-  if (!isNaN(salePrice) && salePrice > 0) return salePrice;
+// ─── 가격 필드 안전 추출 (KRW 직접값 우선) ────────────────────────────────────
+// [통화 구조]
+//   target_sale_price    : target_currency=KRW 요청 시 → KRW 직접값
+//   app_sale_price       : 항상 USD (target_currency 무관)
+//   sale_price           : 항상 USD (비제휴 정가, 원가에 가까울 수 있음)
+// [우선순위]
+//   1순위 target_sale_price (KRW 직접) → 가장 정확
+//   2순위 app_sale_price × USD_TO_KRW  → 환산 필요
+//   3순위 sale_price × USD_TO_KRW      → 최후 수단 (원가 수준일 수 있음)
+function getSalePriceKRW(item) {
+  // 1순위: target_sale_price — KRW 직접값 (100원 이상이어야 유효한 KRW값)
+  const targetKRW = parseFloat(item.target_sale_price);
+  if (!isNaN(targetKRW) && targetKRW >= 100) return targetKRW;
+  // 2순위: app_sale_price — USD → KRW 환산
+  const appUSD = parseFloat(item.app_sale_price);
+  if (!isNaN(appUSD) && appUSD > 0) return Math.round(appUSD * USD_TO_KRW);
+  // 3순위: sale_price — USD → KRW 환산 (원가에 가까울 수 있음, 최후 수단)
+  const saleUSD = parseFloat(item.sale_price);
+  if (!isNaN(saleUSD) && saleUSD > 0) return Math.round(saleUSD * USD_TO_KRW);
   return 0;
 }
 
-function getOriginalPriceUSD(item, salePriceUSD) {
-  const appOrig     = parseFloat(item.app_original_price);
-  if (!isNaN(appOrig)     && appOrig     > 0) return appOrig;
-  const targetOrig  = parseFloat(item.target_original_price);
-  if (!isNaN(targetOrig)  && targetOrig  > 0) return targetOrig;
-  const origPrice   = parseFloat(item.original_price);
-  if (!isNaN(origPrice)   && origPrice   > 0) return origPrice;
-  return salePriceUSD;
+function getOriginalPriceKRW(item, salePriceKRW) {
+  // 1순위: target_original_price — KRW 직접값
+  const targetOrigKRW = parseFloat(item.target_original_price);
+  if (!isNaN(targetOrigKRW) && targetOrigKRW >= 100) return targetOrigKRW;
+  // 2순위: app_original_price — USD → KRW
+  const appOrigUSD = parseFloat(item.app_original_price);
+  if (!isNaN(appOrigUSD) && appOrigUSD > 0) return Math.round(appOrigUSD * USD_TO_KRW);
+  // 3순위: original_price — USD → KRW
+  const origUSD = parseFloat(item.original_price);
+  if (!isNaN(origUSD) && origUSD > 0) return Math.round(origUSD * USD_TO_KRW);
+  return salePriceKRW;
 }
 
 // ─── 상품 데이터 정규화 ────────────────────────────────────────────────────────
 function normalizeProduct(item) {
-  const salePriceUSD     = getSalePriceUSD(item);
-  const originalPriceUSD = getOriginalPriceUSD(item, salePriceUSD);
-
-  // USD → KRW 환산
-  const salePriceKRW     = Math.round(salePriceUSD * USD_TO_KRW);
-  const originalPriceKRW = Math.round(originalPriceUSD * USD_TO_KRW);
+  const salePriceKRW     = getSalePriceKRW(item);
+  const originalPriceKRW = getOriginalPriceKRW(item, salePriceKRW);
 
   // 가격 신뢰도 판단
-  // app_sale_price 또는 target_sale_price 중 하나라도 있으면 신뢰 가능
-  const hasAppPrice    = parseFloat(item.app_sale_price)    > 0;
-  const hasTargetPrice = parseFloat(item.target_sale_price) > 0;
-  const priceConfirm   = !hasAppPrice && !hasTargetPrice; // 둘 다 없으면 "가격 확인하기"
+  // target_sale_price(KRW직접) or app_sale_price(USD환산) 중 하나라도 있으면 신뢰
+  const hasTargetKRW = parseFloat(item.target_sale_price) >= 100;
+  const hasAppUSD    = parseFloat(item.app_sale_price) > 0;
+  const priceConfirm = !hasTargetKRW && !hasAppUSD; // 둘 다 없으면 "가격 확인하기"
 
   const discount = (!priceConfirm && originalPriceKRW > salePriceKRW)
     ? `${Math.round((1 - salePriceKRW / originalPriceKRW) * 100)}%`
@@ -289,8 +294,8 @@ async function searchAliExpress(keyword, limit = 9, page = 1) {
       page_size:       String(limit),
       page_no:         String(page),
       tracking_id:     ALI_TRACKING,
-      target_currency: 'KRW',             // ✅ API가 원화 직접 반환 → 수동 환산 불필요
-      target_language: 'KO',             // 한국어 제목 표시
+      target_currency: 'KRW',   // ✅ KRW 직접값 수신 → target_sale_price가 원화로 옴
+      target_language: 'KO',    // ✅ 한국어 상품명 복원
       sort:            'LAST_VOLUME_DESC',
       fields:          'product_id,product_title,target_sale_price,app_sale_price,target_original_price,app_original_price,product_main_image_url,product_detail_url,evaluate_rate,lastest_volume,commission_rate',
     });
