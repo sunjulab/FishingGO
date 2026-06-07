@@ -379,76 +379,95 @@ async function getAliProducts(category = '소모품', page = 1, limit = 9) {
   return searchAliExpress(keyword, limit, page);
 }
 
-// ─── 특가/인기 상품 (다중 키워드 병렬조회 + 할인율 필터) ──────────────────────
+// ─── 특가/인기 상품 (6키워드 × 3페이지 병렬 = 최대 180개 후보) ──────────────
 async function getAliPromoProducts(limit = 6) {
   if (!ALI_READY) return [];
 
-  // 낚시 전 카테고리 커버 — 각 키워드별 hotproduct 조회
   const PROMO_KEYWORDS = [
-    'fishing lure',    // 루어
-    'fishing reel',    // 릴
-    'fishing hook',    // 바늘
-    'fishing rod',     // 낚싯대
-    'fishing line',    // 줄
-    'fishing tackle',  // 소품
+    'fishing lure',   // 루어
+    'fishing reel',   // 릴
+    'fishing hook',   // 바늘
+    'fishing rod',    // 낚싯대
+    'fishing line',   // 줄
+    'fishing tackle', // 소품
   ];
+  const PAGES = [1, 2, 3]; // 3페이지 × 6키워드 = 18 병렬 호출
 
   const parseDiscountNum = (d) => parseInt((d || '0').replace('%', '')) || 0;
 
+  // 할인율 기준 배지 고도화
+  const getPromoBadge = (discount) => {
+    const d = parseDiscountNum(discount);
+    if (d >= 70) return '💥 역대 최저가';
+    if (d >= 50) return '⚡ 초특가';
+    if (d >= 30) return '🔥 오늘 특가';
+    return '🔥 오늘 특가';
+  };
+
   try {
-    // 6개 키워드 동시 조회
-    const rawResults = await Promise.all(
-      PROMO_KEYWORDS.map(kw => {
+    // 6키워드 × 3페이지 = 18 병렬 API 호출
+    const calls = PROMO_KEYWORDS.flatMap(kw =>
+      PAGES.map(pageNo => {
         const p = buildParams('aliexpress.affiliate.hotproduct.query', {
           keywords:            kw,
           page_size:           '10',
-          page_no:             '1',
+          page_no:             String(pageNo),
           tracking_id:         ALI_TRACKING,
           target_currency:     'KRW',
           target_language:     'KO',
-          min_commission_rate: '10',          // 10%↑ (넓게 잡아 많은 상품 확보)
+          min_commission_rate: '10',
           sort:                'LAST_VOLUME_DESC',
           fields:              'product_id,product_title,target_sale_price,app_sale_price,target_original_price,app_original_price,product_main_image_url,product_detail_url,evaluate_rate,lastest_volume,commission_rate',
         });
         const qs = new URLSearchParams(p).toString();
-        return axios.get(`${ALI_API_URL}?${qs}`, { timeout: 8000 })
+        return axios.get(`${ALI_API_URL}?${qs}`, { timeout: 10000 })
           .then(res => res.data?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result?.products?.product || [])
           .catch(() => []);
       })
     );
+    const rawResults = await Promise.all(calls);
 
-    // 정규화 + 합치기
-    const allItems = rawResults.flat().map(p => ({
-      ...normalizeProduct(p),
-      badge: '🔥 오늘 특가',
-    }));
+    // 정규화
+    const allItems = rawResults.flat().map(p => normalizeProduct(p));
 
     // 상품ID 기준 중복 제거
-    const seen    = new Set();
-    const unique  = allItems.filter(p => {
+    const seen   = new Set();
+    const unique = allItems.filter(p => {
       if (seen.has(p.productId)) return false;
       seen.add(p.productId);
       return true;
     });
 
-    // 1순위: 할인율 30% 이상, 높은 순 정렬
-    const highDiscount = unique
-      .filter(p => parseDiscountNum(p.discount) >= 30)
+    // 1순위: 50%↑ 초특가 (역대 최저가 포함)
+    const top = unique
+      .filter(p => parseDiscountNum(p.discount) >= 50)
       .sort((a, b) => parseDiscountNum(b.discount) - parseDiscountNum(a.discount));
 
-    // 2순위: 30% 부족 시 20% 이상으로 보충
-    let result = highDiscount.slice(0, limit);
+    // 2순위: 30~49% 특가로 보충
+    let result = top.slice(0, limit);
     if (result.length < limit) {
-      const supplement = unique
+      const mid = unique
+        .filter(p => parseDiscountNum(p.discount) >= 30
+                  && !result.find(r => r.productId === p.productId))
+        .sort((a, b) => parseDiscountNum(b.discount) - parseDiscountNum(a.discount))
+        .slice(0, limit - result.length);
+      result = [...result, ...mid];
+    }
+    // 3순위: 20~29% 특가로 보충
+    if (result.length < limit) {
+      const low = unique
         .filter(p => parseDiscountNum(p.discount) >= 20
                   && !result.find(r => r.productId === p.productId))
         .sort((a, b) => parseDiscountNum(b.discount) - parseDiscountNum(a.discount))
         .slice(0, limit - result.length);
-      result = [...result, ...supplement];
+      result = [...result, ...low];
     }
 
+    // 배지 최종 적용
+    result = result.map(p => ({ ...p, badge: getPromoBadge(p.discount) }));
+
     (global.logger?.info || console.info)(
-      `[ALI] 오늘 특가 — 총 ${unique.length}개 후보 → 할인율 필터 후 ${result.length}개`
+      `[ALI] 오늘 특가 — 후보 ${unique.length}개 → 50%↑: ${top.length}개, 최종: ${result.length}개`
     );
     return result;
   } catch (err) {
@@ -456,6 +475,7 @@ async function getAliPromoProducts(limit = 6) {
     return [];
   }
 }
+
 
 
 // ─── API 상태 확인 ────────────────────────────────────────────────────────────

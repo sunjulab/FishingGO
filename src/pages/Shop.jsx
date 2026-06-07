@@ -333,7 +333,10 @@ export default function Shop() {
                       <ProductImage src={p.img} alt={p.name} source="ali" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#FF6900', fontWeight: '900', marginBottom: '2px' }}>{p.badge}</div>
+                      <div style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', marginBottom: '2px',
+                        color: p.badge?.includes('역대') ? '#7B2FF7' : p.badge?.includes('초특가') ? '#0056D2' : '#FF6900' }}>
+                        {p.badge}
+                      </div>
                       <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
                         {p.price && p.price !== '0' && p.price !== '0원'
