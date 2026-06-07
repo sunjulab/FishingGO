@@ -379,31 +379,84 @@ async function getAliProducts(category = '소모품', page = 1, limit = 9) {
   return searchAliExpress(keyword, limit, page);
 }
 
-// ─── 특가/인기 상품 (고수수료) ────────────────────────────────────────────────
-async function getAliPromoProducts(limit = 4) {
+// ─── 특가/인기 상품 (다중 키워드 병렬조회 + 할인율 필터) ──────────────────────
+async function getAliPromoProducts(limit = 6) {
   if (!ALI_READY) return [];
+
+  // 낚시 전 카테고리 커버 — 각 키워드별 hotproduct 조회
+  const PROMO_KEYWORDS = [
+    'fishing lure',    // 루어
+    'fishing reel',    // 릴
+    'fishing hook',    // 바늘
+    'fishing rod',     // 낚싯대
+    'fishing line',    // 줄
+    'fishing tackle',  // 소품
+  ];
+
+  const parseDiscountNum = (d) => parseInt((d || '0').replace('%', '')) || 0;
+
   try {
-    const params = buildParams('aliexpress.affiliate.hotproduct.query', {
-      keywords:           'fishing tackle',
-      page_size:          String(limit),
-      page_no:            '1',
-      tracking_id:        ALI_TRACKING,
-      target_currency:    'KRW',
-      target_language:    'KO',
-      min_commission_rate: '20',
-      sort:               'LAST_VOLUME_DESC',
+    // 6개 키워드 동시 조회
+    const rawResults = await Promise.all(
+      PROMO_KEYWORDS.map(kw => {
+        const p = buildParams('aliexpress.affiliate.hotproduct.query', {
+          keywords:            kw,
+          page_size:           '10',
+          page_no:             '1',
+          tracking_id:         ALI_TRACKING,
+          target_currency:     'KRW',
+          target_language:     'KO',
+          min_commission_rate: '10',          // 10%↑ (넓게 잡아 많은 상품 확보)
+          sort:                'LAST_VOLUME_DESC',
+          fields:              'product_id,product_title,target_sale_price,app_sale_price,target_original_price,app_original_price,product_main_image_url,product_detail_url,evaluate_rate,lastest_volume,commission_rate',
+        });
+        const qs = new URLSearchParams(p).toString();
+        return axios.get(`${ALI_API_URL}?${qs}`, { timeout: 8000 })
+          .then(res => res.data?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result?.products?.product || [])
+          .catch(() => []);
+      })
+    );
+
+    // 정규화 + 합치기
+    const allItems = rawResults.flat().map(p => ({
+      ...normalizeProduct(p),
+      badge: '🔥 오늘 특가',
+    }));
+
+    // 상품ID 기준 중복 제거
+    const seen    = new Set();
+    const unique  = allItems.filter(p => {
+      if (seen.has(p.productId)) return false;
+      seen.add(p.productId);
+      return true;
     });
-    const queryStr = new URLSearchParams(params).toString();
-    const response = await axios.get(`${ALI_API_URL}?${queryStr}`, { timeout: 8000 });
-    const result   = response.data?.aliexpress_affiliate_hotproduct_query_response?.resp_result;
-    const items    = result?.result?.products?.product || [];
-    (global.logger?.info || console.info)(`[ALI] 특가상품 → ${items.length}개`);
-    return items.map(p => ({ ...normalizeProduct(p), badge: '🔥 오늘 특가' }));
+
+    // 1순위: 할인율 30% 이상, 높은 순 정렬
+    const highDiscount = unique
+      .filter(p => parseDiscountNum(p.discount) >= 30)
+      .sort((a, b) => parseDiscountNum(b.discount) - parseDiscountNum(a.discount));
+
+    // 2순위: 30% 부족 시 20% 이상으로 보충
+    let result = highDiscount.slice(0, limit);
+    if (result.length < limit) {
+      const supplement = unique
+        .filter(p => parseDiscountNum(p.discount) >= 20
+                  && !result.find(r => r.productId === p.productId))
+        .sort((a, b) => parseDiscountNum(b.discount) - parseDiscountNum(a.discount))
+        .slice(0, limit - result.length);
+      result = [...result, ...supplement];
+    }
+
+    (global.logger?.info || console.info)(
+      `[ALI] 오늘 특가 — 총 ${unique.length}개 후보 → 할인율 필터 후 ${result.length}개`
+    );
+    return result;
   } catch (err) {
     (global.logger?.warn || console.warn)(`[ALI] getAliPromoProducts 오류: ${err.message}`);
     return [];
   }
 }
+
 
 // ─── API 상태 확인 ────────────────────────────────────────────────────────────
 function getAliStatus() {

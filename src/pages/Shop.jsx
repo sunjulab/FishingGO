@@ -326,8 +326,8 @@ export default function Shop() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '4px' }}>
             {promoLoading
-              ? [1, 2].map(n => <div key={n} style={{ height: '110px', backgroundColor: '#eee', borderRadius: '14px', animation: 'pulse 1.5s infinite' }} />)
-              : promos.slice(0, 4).map(p => (
+              ? [1, 2, 3, 4, 5, 6].map(n => <div key={n} style={{ height: '110px', backgroundColor: '#eee', borderRadius: '14px', animation: 'pulse 1.5s infinite' }} />)
+              : promos.slice(0, 6).map(p => (
                   <div key={p.id} onClick={() => handleProductClick(p)} style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#fff8f3', border: '1px solid #FFE0CC', borderRadius: '14px', padding: '8px', cursor: 'pointer' }}>
                     <div style={{ width: '54px', height: '54px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
                       <ProductImage src={p.img} alt={p.name} source="ali" />
