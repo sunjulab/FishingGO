@@ -301,6 +301,29 @@ const ALI_KEYWORD_MAP = {
 };
 
 async function getAliProducts(category = '소모품', page = 1, limit = 9) {
+  // ─── 릴/로드 특별 처리: Promise.all 병렬 조회 (릴 5개 + 낚싯대 4개) ───────
+  if (category === '낚시릴낚싯대') {
+    const reelLimit = 5;
+    const rodLimit  = 4;
+    const [reelResult, rodResult] = await Promise.all([
+      searchAliExpress('spinning fishing reel 2000 3000 5000', reelLimit, page)
+        .catch(() => ({ items: [], total: 0, hasMore: false })),
+      searchAliExpress('telescopic carbon fiber fishing rod pole', rodLimit, page)
+        .catch(() => ({ items: [], total: 0, hasMore: false })),
+    ]);
+    const reelItems = reelResult.items || [];
+    const rodItems  = rodResult.items  || [];
+    const merged    = [...reelItems, ...rodItems];
+    (global.logger?.info || console.info)(
+      `[ALI] 릴/로드 병렬조회 — 릴 ${reelItems.length}개 + 낚싯대 ${rodItems.length}개 = ${merged.length}개`
+    );
+    return {
+      items:   merged,
+      total:   merged.length,
+      hasMore: reelResult.hasMore || rodResult.hasMore,
+    };
+  }
+  // ─── 일반 카테고리 ──────────────────────────────────────────────────────────
   const keyword = ALI_KEYWORD_MAP[category] || `${category} fishing`;
   return searchAliExpress(keyword, limit, page);
 }
