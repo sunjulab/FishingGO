@@ -95,7 +95,13 @@ function normalizeProduct(item) {
   const salePriceKRW     = Math.round(salePriceUSD * USD_TO_KRW);
   const originalPriceKRW = Math.round(originalPriceUSD * USD_TO_KRW);
 
-  const discount = originalPriceKRW > salePriceKRW
+  // 가격 신뢰도 판단
+  // app_sale_price가 없어 sale_price로 fallback되면 원가에 가까운 높은 값이 올 수 있음
+  // → 가격 미제공으로 처리하여 "가격 확인하기" 표시
+  const hasAppPrice   = parseFloat(item.app_sale_price) > 0;
+  const priceConfirm  = !hasAppPrice; // true면 가격 확인하기 표시
+
+  const discount = (!priceConfirm && originalPriceKRW > salePriceKRW)
     ? `${Math.round((1 - salePriceKRW / originalPriceKRW) * 100)}%`
     : '0%';
 
@@ -111,9 +117,11 @@ function normalizeProduct(item) {
   return {
     productId:      String(item.product_id),
     title:          item.product_title || '',
-    salePrice:      salePriceKRW.toLocaleString('ko-KR'),
-    originalPrice:  originalPriceKRW.toLocaleString('ko-KR'),
+    // priceConfirm=true이면 빈 문자열 → 프론트에서 "가격 확인하기" 표시
+    salePrice:      priceConfirm ? '' : salePriceKRW.toLocaleString('ko-KR'),
+    originalPrice:  priceConfirm ? '' : originalPriceKRW.toLocaleString('ko-KR'),
     discount,
+    priceConfirm,
     imageUrl:       item.product_main_image_url || '',
     productUrl:     buildAliAffiliateUrl(item.product_detail_url || ''),
     commissionRate: '어필리에이트',
