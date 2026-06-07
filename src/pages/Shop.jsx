@@ -322,7 +322,7 @@ export default function Shop() {
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <Zap size={15} color="#FF6900" fill="#FF6900" />
-            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>AliExpress 오늘 특가 🔥</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>낚시GO 오늘 특가 🔥</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '4px' }}>
             {promoLoading
