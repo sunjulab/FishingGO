@@ -289,8 +289,8 @@ async function searchAliExpress(keyword, limit = 9, page = 1) {
       page_size:       String(limit),
       page_no:         String(page),
       tracking_id:     ALI_TRACKING,
-      target_currency: 'USD',              // ✅ KRW→USD: KRW 요청 시 app_sale_price 빈값 알려진 버그 해결
-      target_language: 'EN',              // ✅ KO→EN: KO 언어 지원 불안정 (검색결과 누락 방지)
+      target_currency: 'KRW',             // ✅ API가 원화 직접 반환 → 수동 환산 불필요
+      target_language: 'KO',             // 한국어 제목 표시
       sort:            'LAST_VOLUME_DESC',
       fields:          'product_id,product_title,target_sale_price,app_sale_price,target_original_price,app_original_price,product_main_image_url,product_detail_url,evaluate_rate,lastest_volume,commission_rate',
     });
