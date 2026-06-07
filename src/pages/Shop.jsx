@@ -389,19 +389,15 @@ export default function Shop() {
       {!isManualCat && (
         <div style={{ padding: '12px 12px 0' }}>
           {/* 헤더 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingLeft: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', paddingLeft: '4px' }}>
             <h3 style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', margin: 0 }}>{gridTitle}</h3>
             <SlidersHorizontal size={15} color="#8E8E93" />
           </div>
 
-          {/* 파트너스 공시 */}
-          <div style={{ background: 'linear-gradient(135deg, #EEF4FF, #F5F0FF)', border: '1px solid #D0DEFF', borderRadius: '12px', padding: '10px 14px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '16px', flexShrink: 0 }}>💰</span>
-            <p style={{ margin: 0, fontSize: '10px', color: '#4A4A8A', fontWeight: '700', lineHeight: 1.6 }}>
-              이 채널의 상품 링크는 <strong>쿠팡 파트너스</strong> · <strong>AliExpress 어필리에이트</strong>와 연결되어 있으며,
-              구매 시 발생하는 소정의 수수료는 <strong>낚시GO 서비스 운영</strong>에 사용됩니다. 🎣
-            </p>
-          </div>
+          {/* 파트너스 공시 (최소화) */}
+          <p style={{ margin: '0 0 10px 4px', fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '600', lineHeight: 1.4 }}>
+            쿠팡 파트너스 · AliExpress 어필리에이트 수수료 수취
+          </p>
 
           {/* 수동 등록 관련 상품 (횡스크롤) */}
           {filteredManualItems.length > 0 && (
