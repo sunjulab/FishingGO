@@ -7986,6 +7986,31 @@ app.get('/api/shop/promo', async (req, res) => {
 });
 
 /**
+ * GET /api/shop/price-check?ids=1005007354532583,1005006789
+ * productdetail.get으로 실시간 가격 조회 (최대 50개)
+ * product.query보다 캐시 덜 → 더 최신 가격
+ */
+app.get('/api/shop/price-check', async (req, res) => {
+  const raw = (req.query.ids || '').trim();
+  if (!raw) return res.json([]);
+  const productIds = raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 50);
+  try {
+    const freshItems = await ali.getProductDetailPrice(productIds);
+    res.json(freshItems.map(p => ({
+      productId:    p.productId,
+      price:        p.salePrice,
+      originalPrice: p.originalPrice,
+      discount:     p.discount,
+      priceConfirm: p.priceConfirm || false,
+      freshPrice:   true,
+    })));
+  } catch (err) {
+    logger.warn(`[Shop PriceCheck API] 오류: ${err.message}`);
+    res.status(500).json({ error: '가격 확인 실패' });
+  }
+});
+
+/**
  * GET /api/shop/recommend?pointType=바다&fish=감성돔
  * 낚시 포인트 기반 맞춤 상품 추천 (쿠팡 우선)
  */

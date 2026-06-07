@@ -492,9 +492,49 @@ function getAliStatus() {
   };
 }
 
+// ─── 실시간 가격 확인: productdetail.get (최대 50개 상품 동시 조회) ─────────────
+// product.query보다 캐시가 덜 되어 더 최신 가격 반환
+async function getProductDetailPrice(productIds) {
+  if (!ALI_READY || !productIds || productIds.length === 0) return [];
+  const ids = productIds.slice(0, 50); // 최대 50개
+  try {
+    const params = buildParams('aliexpress.affiliate.productdetail.get', {
+      product_ids:     ids.join(','),
+      target_currency: 'KRW',
+      target_language: 'KO',
+      tracking_id:     ALI_TRACKING,
+      fields:          'product_id,product_title,target_sale_price,app_sale_price,target_original_price,app_original_price,product_main_image_url,product_detail_url,evaluate_rate,lastest_volume,commission_rate',
+    });
+    const qs  = new URLSearchParams(params).toString();
+    const res = await axios.get(`${ALI_API_URL}?${qs}`, { timeout: 8000 });
+
+    // 응답 경로: aliexpress_affiliate_productdetail_get_response
+    const resp = res.data?.aliexpress_affiliate_productdetail_get_response?.resp_result;
+    if (resp?.resp_code !== 200) {
+      (global.logger?.warn || console.warn)(`[ALI] productdetail.get 오류: ${resp?.resp_msg}`);
+      return [];
+    }
+    // 응답 배열 경로 (API 버전에 따라 다를 수 있음)
+    const raw =
+      resp?.result?.product_detail_info_dto_list?.product_detail_info_dto ||
+      resp?.result?.products?.product ||
+      [];
+    const items = Array.isArray(raw) ? raw : [raw];
+    (global.logger?.info || console.info)(`[ALI] productdetail.get → ${items.length}개 실시간 가격 갱신`);
+    return items.map(p => ({
+      ...normalizeProduct(p),
+      freshPrice: true, // 실시간 조회 표시
+    }));
+  } catch (err) {
+    (global.logger?.warn || console.warn)(`[ALI] getProductDetailPrice 오류: ${err.message}`);
+    return [];
+  }
+}
+
 module.exports = {
   searchAliExpress,
   getAliProducts,
   getAliPromoProducts,
   getAliStatus,
+  getProductDetailPrice,
 };
