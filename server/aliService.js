@@ -301,26 +301,37 @@ const ALI_KEYWORD_MAP = {
 };
 
 async function getAliProducts(category = '소모품', page = 1, limit = 9) {
-  // ─── 릴/로드 특별 처리: Promise.all 병렬 조회 (릴 5개 + 낚싯대 4개) ───────
+  // ─── 릴/로드 특별 처리: Promise.all 병렬 조회 ─────────────────────────────
+  // 릴 5개 + 루어대 2개 + 원투대 1개 + 찌낚시대 1개 = 총 9개
   if (category === '낚시릴낚싯대') {
-    const reelLimit = 5;
-    const rodLimit  = 4;
-    const [reelResult, rodResult] = await Promise.all([
-      searchAliExpress('spinning fishing reel 2000 3000 5000', reelLimit, page)
+    const [reelResult, lureRodResult, surfRodResult, floatRodResult] = await Promise.all([
+      // 릴 5개
+      searchAliExpress('spinning fishing reel 2000 3000 5000', 5, page)
         .catch(() => ({ items: [], total: 0, hasMore: false })),
-      searchAliExpress('telescopic carbon fiber fishing rod pole', rodLimit, page)
+      // 루어대 2개 (배스·에깅·라이트 루어대)
+      searchAliExpress('lure fishing rod spinning ultralight bass', 2, page)
+        .catch(() => ({ items: [], total: 0, hasMore: false })),
+      // 원투대 1개 (서프캐스팅·원투낚시)
+      searchAliExpress('surf casting fishing rod long distance beach', 1, page)
+        .catch(() => ({ items: [], total: 0, hasMore: false })),
+      // 찌낚시대 1개 (플로트·찌낚시·카프낚시)
+      searchAliExpress('float fishing rod telescopic carp pole', 1, page)
         .catch(() => ({ items: [], total: 0, hasMore: false })),
     ]);
-    const reelItems = reelResult.items || [];
-    const rodItems  = rodResult.items  || [];
-    const merged    = [...reelItems, ...rodItems];
+
+    const reelItems      = reelResult.items      || [];
+    const lureRodItems   = lureRodResult.items   || [];
+    const surfRodItems   = surfRodResult.items    || [];
+    const floatRodItems  = floatRodResult.items   || [];
+    const merged = [...reelItems, ...lureRodItems, ...surfRodItems, ...floatRodItems];
+
     (global.logger?.info || console.info)(
-      `[ALI] 릴/로드 병렬조회 — 릴 ${reelItems.length}개 + 낚싯대 ${rodItems.length}개 = ${merged.length}개`
+      `[ALI] 릴/로드 — 릴 ${reelItems.length}개 + 루어대 ${lureRodItems.length}개 + 원투대 ${surfRodItems.length}개 + 찌낚시대 ${floatRodItems.length}개 = ${merged.length}개`
     );
     return {
       items:   merged,
       total:   merged.length,
-      hasMore: reelResult.hasMore || rodResult.hasMore,
+      hasMore: reelResult.hasMore || lureRodResult.hasMore || surfRodResult.hasMore || floatRodResult.hasMore,
     };
   }
   // ─── 일반 카테고리 ──────────────────────────────────────────────────────────
