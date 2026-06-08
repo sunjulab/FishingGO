@@ -1471,11 +1471,33 @@ async function getWaterTemp(sid) {
 }
 
 // ✅ REAL-WIND-WAVE: 기상청 해양기상부이 실시간 파고·풍속 API
+// ✅ KMA 실제 부이 STN 번호 (5자리) 매핑
+// 각 관측소 위치 기준 최근접 해양연안부이 ID
 const BUOY_MAP = {
-  'DT_0001':'22','DT_0021':'22','DT_0002':'23','DT_0003':'23','DT_0033':'22','DT_0036':'23',
-  'DT_0004':'2','DT_0005':'5','DT_0006':'6','DT_0014':'5','DT_0016':'2','DT_0018':'6','DT_0034':'2',
-  'DT_0007':'1','DT_0008':'3','DT_0009':'4','DT_0030':'1',
-  'DT_0010':'8','DT_0011':'9','DT_0045':'9',
+  // 동해권
+  'DT_0001':'22102', // 강릉 안목항 → 동해부이 22102
+  'DT_0021':'22102', // 속초
+  'DT_0033':'22102', // 동해묵호
+  'DT_0003':'22101', // 삼첨
+  'DT_0002':'22101', // 웼uc9c4 → 동해부이 22101
+  'DT_0036':'22101', // 경주감포
+  // 남해권
+  'DT_0004':'22104', // 부산 → 남해부이 22104
+  'DT_0034':'22104', // 거제
+  'DT_0016':'22105', // 통영 → 22105
+  'DT_0005':'22105', // 여수
+  'DT_0006':'22106', // 목포 → 22106
+  'DT_0018':'22106', // 완도
+  'DT_0014':'22107', // 광양만 → 22107
+  // 서해권
+  'DT_0007':'22298', // 인천 → 서해부이 22298
+  'DT_0030':'22297', // 태안 → 22297
+  'DT_0008':'22302', // 보령 → 22302
+  'DT_0009':'22303', // 군산 → 22303
+  // 제주권
+  'DT_0010':'22515', // 제주한림 → 22515
+  'DT_0011':'22515', // 서궀포
+  'DT_0045':'22515', // 성산항
 };
 
 async function getMarineWeather(sid) {
@@ -1484,22 +1506,31 @@ async function getMarineWeather(sid) {
   const buoyNum = BUOY_MAP[sid];
   if (!buoyNum) return null;
   try {
-    const tm = new Date(Date.now() - 60 * 60 * 1000);
-    const tmStr = `${tm.getFullYear()}${String(tm.getMonth()+1).padStart(2,'0')}${String(tm.getDate()).padStart(2,'0')}${String(tm.getHours()).padStart(2,'0')}00`;
-    const url = `https://apihub.kma.go.kr/api/typ01/url/kma_buoy2.php?tm=${tmStr}&stn=${buoyNum}&help=2&authKey=${KMA_KEY}`;
-    const res = await axios.get(url, { timeout: 6000 });
+    const now  = new Date();
+    const prev = new Date(now - 70 * 60 * 1000); // 70분 전 (API 지연 보상)
+    const pad  = (n) => String(n).padStart(2, '0');
+    const tm2  = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}00`;
+    const tm1  = `${prev.getFullYear()}${pad(prev.getMonth()+1)}${pad(prev.getDate())}${pad(prev.getHours())}00`;
+    // ✅ tm1/tm2 파라미터 사용 (tm 단일 아님)
+    const url  = `https://apihub.kma.go.kr/api/typ01/url/kma_buoy2.php?tm1=${tm1}&tm2=${tm2}&stn=${buoyNum}&help=1&authKey=${KMA_KEY}`;
+    const res  = await axios.get(url, { timeout: 8000 });
     const text = typeof res.data === 'string' ? res.data : '';
-    if (!text || text.includes('NO DATA') || text.trimStart().startsWith('<')) return null;
-    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+    if (!text || !text.includes('START7777')) return null;
+    // ✅ 쉽표(,) 구분자로 파싱
+    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#') && !l.startsWith(' #') && l.includes(buoyNum));
     if (!lines.length) return null;
-    const cols = lines[lines.length - 1].trim().split(/\s+/);
-    const ws = parseFloat(cols[2]);
-    const wd = cols[3] || 'NE';
-    const wh = parseFloat(cols[5]);
-    if (isNaN(ws) || isNaN(wh)) return null;
+    const cols = lines[lines.length - 1].trim().split(',').map(s => s.trim());
+    // ✅ 컴럼: [0]TM [1]STN [2]WD1 [3]WS1 [4]WS1_GST [5]WD2 [6]WS2 ... [12]WH_MAX [13]WH_SIG [14]WH_AVE
+    const ws   = parseFloat(cols[3]);  // WS1 풍속 (m/s)
+    const wdDeg= parseFloat(cols[2]);  // WD1 풍향 (도)
+    const wh   = parseFloat(cols[13]); // WH_SIG 유효파고 (m)
+    if (isNaN(ws) || ws <= -90 || isNaN(wh) || wh <= -90) return null;
+    // 풍향 도 → 방위 변환
+    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
     return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: Math.max(0, wh) } };
   } catch (e) {
-    logger.warn(`[Marine] 부이 API 실패 (${sid}): ${e.message}`);
+    logger.warn(`[Marine] 부이 API 실패 (${sid}/${BUOY_MAP[sid]}): ${e.message}`);
     return null;
   }
 }
@@ -1521,20 +1552,22 @@ async function getRealTide(sid) {
     const res = await axios.get(url, { timeout: 6000, headers: { Accept: 'application/json' } });
     const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
     if (text.trimStart().startsWith('<')) return null;
-    const items = res.data?.response?.body?.items?.item;
+    // ✅ 실제 응답 구조: body.items.item (response 래퍼 없음)
+    const items = res.data?.body?.items?.item || res.data?.response?.body?.items?.item;
     if (!items) return null;
     const list = Array.isArray(items) ? items : [items];
-    const highs = list.filter(t => (t.hl_code || t.tide_type) === 'H');
-    const lows  = list.filter(t => (t.hl_code || t.tide_type) === 'L');
-    const highTime = (highs[0]?.hl_time || highs[0]?.tideTime || '').slice(11,16) || null;
-    const lowTime  = (lows[0]?.hl_time  || lows[0]?.tideTime  || '').slice(11,16) || null;
+    const highs = list.filter(t => (t.hl_code || t.tide_type || t.hl_Type) === 'H');
+    const lows  = list.filter(t => (t.hl_code || t.tide_type || t.hl_Type) === 'L');
+    const highTime = (highs[0]?.hl_time || highs[0]?.tideTime || highs[0]?.hl_Apear || '').slice(11,16) || null;
+    const lowTime  = (lows[0]?.hl_time  || lows[0]?.tideTime  || lows[0]?.hl_Apear  || '').slice(11,16) || null;
     const lunarDay = getLunarDay();
     const tideNum  = lunarDay <= 15 ? lunarDay : 30 - lunarDay;
     const phaseMap = { 7:'7물(사리)', 13:'13물(조금)', 14:'14물(무시)' };
     const phase = phaseMap[tideNum] || `${tideNum}물`;
     return { phase, high: highTime, low: lowTime };
   } catch (e) {
-    logger.warn(`[Tide] 조석 API 실패 (${sid}): ${e.message}`);
+    // 500 오류는 obsCode 미지원 관측소로 정상
+    if (!e.message?.includes('500')) logger.warn(`[Tide] 조석 API 실패 (${sid}): ${e.message}`);
     return null;
   }
 }
