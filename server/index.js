@@ -1846,10 +1846,15 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
           verified = false; // 명시적으로 미검증
         }
       } catch (e) {
-        // ✅ API 호출 자체가 실패한 경우 (권한 오류, 네트워크 오류 등)
-        // 사용자가 Google Play 결제를 완료했으므로 신뢰 모드로 폴백
-        (logger?.warn || console.warn)('[Google IAP] Play API 검증 실패 → 신뢰 모드 폴백:', e.message);
-        verified = true; // ✅ 수정: 이전엔 항상 false였던 버그 수정
+        // ✅ BUG-3 FIX: 4xx 오류는 토큰 자체가 유효하지 않음 → 결제 실패 처리 (무료 구독 악용 방지)
+        const httpStatus = e?.response?.status || e?.status;
+        if (httpStatus >= 400 && httpStatus < 500) {
+          (logger?.warn || console.warn)(`[Google IAP] Play API ${httpStatus} 오류 → 유효하지 않은 토큰:`, e.message);
+          return res.status(402).json({ error: `결제 검증 실패 — 유효하지 않은 구매 토큰 (${httpStatus})` });
+        }
+        // 5xx / 네트워크 오류만 신뢰 모드 허용 (Google 서버 장애 대응)
+        (logger?.warn || console.warn)('[Google IAP] Play API 서버/네트워크 오류 → 신뢰 모드 폴백:', e.message);
+        verified = true;
       }
     } else {
       (logger?.warn || console.warn)('[Google IAP] 서비스 계정 미설정 — 신뢰 모드');
@@ -1867,7 +1872,14 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
       : new Date(Date.now() + planInfo.days * 24 * 60 * 60 * 1000);
 
     if (dbReady && User) {
-      const filter = tp.email ? { email: tp.email } : { _id: tp.id }; // ✅ id → _id 수정
+      const filter = tp.email
+        ? { email: tp.email }
+        // ✅ BUG-4 FIX: tp.id가 ObjectId 문자열인 경우 캐스팅, 아니면 무시
+        : (() => { try { return { _id: new (require('mongoose').Types.ObjectId)(tp.id) }; } catch { return null; } })();
+      if (!filter) {
+        (logger?.error || console.error)('[Google IAP] 유효하지 않은 사용자 식별자:', tp.id);
+        return res.status(400).json({ error: '사용자 식별 불가 — 재로그인 후 시도해주세요.' });
+      }
       const updated = await User.findOneAndUpdate(filter, {
         $set: { tier: newTier, iapPurchaseToken: purchaseToken, iapProductId: productId, iapExpiresAt: expiresAt, iapAutoRenewing: autoRenewing, updatedAt: new Date() },
       }, { upsert: false, new: true }); // ✅ new:true 추가 - 업데이트 결과 확인
@@ -5157,7 +5169,10 @@ app.post('/api/community/business', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { author, author_email, shipName, type, target, region, date, price, phone, content, cover, images: rawImages, isPinned, harborId, expiresAt, capacity } = req.body;
+    const { author, shipName, type, target, region, date, price, phone, content, cover, images: rawImages, isPinned, harborId, expiresAt, capacity } = req.body;
+    // ✅ BUG-5 FIX: author_email은 JWT에서만 가져와야 함 (클라이언트 body 무시 — 타인 계정 위장 방지)
+    const author_email = tp.email;
+    if (!author_email) return res.status(401).json({ error: '이메일 정보 없음 (재로그인 필요)', code: 'AUTH_REQUIRED' });
     // ✅ MULTI-IMG: 선상배 이미지 배열 처리
     // ✅ BUG-FIX: base64는 원본 대비 ~1.33배 크므로 3MB 원본 = ~4MB base64 → 4MB로 완화
     const bizImages = Array.isArray(rawImages) ? rawImages.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : [];

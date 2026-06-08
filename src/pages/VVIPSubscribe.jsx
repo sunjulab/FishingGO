@@ -156,14 +156,15 @@ export default function VVIPSubscribe() {
           for (let i = 0; i < 3; i++) {
             try {
               const res = await apiClient.get('/api/user/me');
-              if (res.data?.user && res.data.user.tier !== 'FREE') {
-                setUser(res.data.user);
-                const label = TIER_LABELS[res.data.user.tier] || res.data.user.tier;
+              // ✅ /api/user/me는 플랫 객체 반환 ({ id, email, tier, ... })
+              if (res.data?.tier && res.data.tier !== 'FREE') {
+                setUser(res.data);
+                const label = TIER_LABELS[res.data.tier] || res.data.tier;
                 addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
                 tierUpdated = true;
                 break;
-              } else if (res.data?.user) {
-                setUser(res.data.user);
+              } else if (res.data?.email) {
+                setUser(res.data); // tier가 FREE여도 최신 정보 반영
               }
             } catch {}
             if (i < 2) await new Promise(r => setTimeout(r, 1500)); // 1.5초 대기
@@ -309,13 +310,14 @@ export default function VVIPSubscribe() {
             for (let i = 0; i < 3; i++) {
               try {
                 const res = await apiClient.get('/api/user/me');
-                if (res.data?.user && res.data.user.tier !== 'FREE') {
-                  setUser(res.data.user);
-                  const label = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' }[res.data.user.tier] || res.data.user.tier;
+                // ✅ /api/user/me는 플랫 객체 반환 ({ id, email, tier, ... })
+                if (res.data?.tier && res.data.tier !== 'FREE') {
+                  setUser(res.data);
+                  const label = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' }[res.data.tier] || res.data.tier;
                   addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
                   tierUpdated = true;
                   break;
-                } else if (res.data?.user) setUser(res.data.user);
+                } else if (res.data?.email) setUser(res.data);
               } catch {}
               if (i < 2) await new Promise(r => setTimeout(r, 1500));
             }
@@ -381,10 +383,11 @@ export default function VVIPSubscribe() {
       await new Promise(r => setTimeout(r, 3000));
       try {
         const res = await apiClient.get('/api/user/me');
-        if (res.data?.user) {
-          setUser(res.data.user);
-          if (res.data.user.tier !== 'FREE') {
-            const label = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' }[res.data.user.tier] || res.data.user.tier;
+        // ✅ /api/user/me는 플랫 객체 반환 ({ id, email, tier, ... })
+        if (res.data?.email) {
+          setUser(res.data);
+          if (res.data.tier !== 'FREE') {
+            const label = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' }[res.data.tier] || res.data.tier;
             addToast(`✅ ${label} 등급 복원 완료!`, 'success');
           }
         }

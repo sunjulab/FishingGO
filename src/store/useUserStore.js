@@ -312,14 +312,14 @@ export const useUserStore = create((set, get) => ({
           return;
         }
         
-        // IAP 만료 확인 → 다운그레이드 허용
+        // IAP 만료 확인 → 서버 tier로 다운그레이드 (FREE 하드코딩 제거)
         if (!import.meta.env.PROD) {
-          console.log('[syncFromServer] IAP 구독 만료 감지 → FREE 강제 적용 (', state.userTier, '->', serverTier, ')');
+          console.log('[syncFromServer] IAP 구독 만료 감지 → 서버 tier 적용 (', state.userTier, '->', serverTier, ')');
         }
-        const updated = { ...current, ...fresh, tier: 'FREE', iapExpiresAt: null };
+        const updated = { ...current, ...fresh, tier: serverTier, iapExpiresAt: fresh.iapExpiresAt || null };
         _ls.set('user', JSON.stringify(updated));
-        _ls.set('userTier', 'FREE');
-        set({ user: updated, userTier: 'FREE' });
+        _ls.set('userTier', serverTier);
+        set({ user: updated, userTier: serverTier });
         return;
       }
 
