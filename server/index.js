@@ -1734,7 +1734,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
     // ── 상품 ID → 플랜 매핑 (3개 플랜 전체 지원) ────────────────
     const IAP_PLAN_MAP = {
       'kr.fishinggo.app.lite_monthly': { planId: 'BASIC', tier: 'BUSINESS_LITE', amount: 9900,   label: '베이직', days: 31  },
-      'kr.fishinggo.app.pro_yearly':   { planId: 'PRO',   tier: 'PRO',           amount: 110000, label: 'PRO',   days: 365 },
+      'kr.fishinggo.app.pro_monthly':  { planId: 'PRO',   tier: 'PRO',           amount: 110000, label: 'PRO',   days: 31  },
       'kr.fishinggo.app.vvip_monthly': { planId: 'VVIP',  tier: 'BUSINESS_VIP',  amount: 550000, label: 'VVIP',  days: 31  },
     };
 

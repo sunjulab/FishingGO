@@ -115,9 +115,7 @@ export default function VVIPSubscribe() {
 
   const [view, setView]                   = useState('plan'); // 'plan' | 'harbor'
   const [iapReady, setIapReady]           = useState(false);
-  // ✅ IAP-FIX: isNative 확정 즉시 iapReady=true (타이머 또는 연속 렌더에 의한 리셋 방지)
-  const onSuccessRef = React.useRef(null);
-  const onErrorRef   = React.useRef(null);
+  const [iapProgress, setIapProgress]     = useState(0);  // ✅ IAP 수버 로딩중 % 표시
   const [loading, setLoading]             = useState(null);  // 로딩 중인 planKey
   const [restoring, setRestoring]         = useState(false);
   // UCB 결제 선택 다이얼로그
@@ -139,34 +137,55 @@ export default function VVIPSubscribe() {
   /* ── IAP 초기화 ───────────────────────────────────────────── */
   useEffect(() => {
     if (!isNative) return;
-
-    // ✅ IAP-FIX: native 확정 즉시 ready=true → 버튼 즉시 활성화
-    // (addToast/setUser 의존성 제거 → 연속 렌더 시 타이머 리셋 버그 방지)
-    setIapReady(true);
-
-    // 콜백은 ref로 최신값 참조 (의존성 배열 불필요)
-    onSuccessRef.current = async () => {
-      addToast('✅ 구독이 완료되었습니다!', 'success');
-      try {
-        const res = await apiClient.get('/api/user/me');
-        if (res.data?.user) setUser(res.data.user);
-      } catch {}
-      setLoading(null);
-    };
-    onErrorRef.current = (err) => {
-      if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
-      setLoading(null);
-    };
+    let isMounted = true;
+    
+    // 무한 대기 방지: 최대 3초 대기 후 결제 모듈 준비 상태로 전환
+    const timer = setTimeout(() => {
+      if (isMounted) setIapReady(true);
+    }, 3000);
 
     initIAP({
-      onSuccess: () => onSuccessRef.current?.(),
-      onError:   (err) => onErrorRef.current?.(err),
-    }).catch((err) => {
-      console.warn('[IAP] init fail:', err);
+      onSuccess: async () => {
+        addToast('✅ 구독이 완료되었습니다!', 'success');
+        try {
+          const res = await apiClient.get('/api/user/me');
+          if (res.data?.user) setUser(res.data.user);
+        } catch {}
+        setLoading(null);
+      },
+      onError: (err) => {
+        if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
+        setLoading(null);
+      },
+    })
+    .then(() => { if (isMounted) setIapReady(true); })
+    .catch((err) => { 
+      console.warn('[IAP] init fail:', err); 
+      if (isMounted) setIapReady(true); 
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNative]);
 
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [isNative, addToast, setUser]);
+
+  /* ── IAP 결제 진행률 % 표시 ──────────────────────── */
+  useEffect(() => {
+    if (!isNative || iapReady) return;
+    const start = Date.now();
+    const total = 3000;
+    const timer = setInterval(() => {
+      const pct = Math.min(95, Math.round(((Date.now() - start) / total) * 100));
+      setIapProgress(pct);
+      if (pct >= 95) clearInterval(timer);
+    }, 100);
+    return () => clearInterval(timer);
+  }, [isNative, iapReady]);
+
+  useEffect(() => {
+    if (iapReady) setIapProgress(100);
+  }, [iapReady]);
 
   /* ── VVIP 항구 데이터 ─────────────────────────────────────── */
   useEffect(() => {
@@ -339,9 +358,9 @@ export default function VVIPSubscribe() {
                 ) : (
                   <button
                     onClick={() => handlePlanClick(plan.key)}
-                    disabled={isLoading || (!isNative && !UCB_ENABLED)}
+                    disabled={isLoading}
                     style={{
-                      width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                      width: '100%', padding: isNative && !iapReady ? '10px 14px 10px' : '14px', borderRadius: '14px', border: 'none',
                       background: isLoading
                         ? `rgba(${plan.color === '#C8D400' ? '200,212,0' : plan.color === '#64B5F6' ? '100,181,246' : '255,215,0'},0.3)`
                         : plan.key === 'VVIP'
@@ -352,17 +371,31 @@ export default function VVIPSubscribe() {
                       color: plan.key === 'VVIP' ? '#1A1A2E' : plan.key === 'BASIC' ? '#0A1628' : '#fff',
                       fontSize: `calc(14px * var(--fs,1))`, fontWeight: '950',
                       cursor: isLoading ? 'not-allowed' : 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      overflow: 'hidden', position: 'relative',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
                       boxShadow: `0 4px 16px ${plan.color}33`,
                     }}
                   >
+                    {/* ✅ IAP 켈로딩 진행률 표시 */}
+                    {isNative && !iapReady && !isLoading && (
+                      <>
+                        <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:`calc(13px * var(--fs,1))` }}>
+                          <RefreshCw size={14} style={{ animation:'spin 1s linear infinite' }} />
+                          결제 준비 중... {iapProgress}%
+                        </div>
+                        {/* 프로그레스 바 */}
+                        <div style={{ width:'100%', height:'3px', background:'rgba(0,0,0,0.2)', borderRadius:'2px', overflow:'hidden' }}>
+                          <div style={{ width:`${iapProgress}%`, height:'100%', background:'rgba(255,255,255,0.7)', borderRadius:'2px', transition:'width 0.1s linear' }} />
+                        </div>
+                      </>
+                    )}
                     {isLoading ? (
                       <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> 결제 진행 중...</>
                     ) : !isNative ? (
                       <><Smartphone size={16} /> 앱에서만 구독 가능</>
-                    ) : (
+                    ) : iapReady ? (
                       <>{plan.label} 구독 시작하기</>
-                    )}
+                    ) : null}
                   </button>
                 )}
               </div>
