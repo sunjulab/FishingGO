@@ -341,6 +341,11 @@ try { PushToken = require('./models/PushToken'); } catch (e) { PushToken = null;
 // ✅ VISITOR: IP 해시 방문자 로그 모델 (투데이/토탈투데이 카운트)
 let VisitorLog = null;
 try { VisitorLog = require('./models/VisitorLog'); } catch (e) { VisitorLog = null; }
+// ✅ PERSIST: 마스터가 수정한 포인트 좌표 영구 저장 (Render 재배포 후에도 유지)
+let SpotLocationOverrideModel = null;
+try { SpotLocationOverrideModel = require('./models/SpotLocationOverride'); } catch (e) { SpotLocationOverrideModel = null; }
+let SecretPointOverrideModel = null;
+try { SecretPointOverrideModel = require('./models/SecretPointOverride'); } catch (e) { SecretPointOverrideModel = null; }
 // 인메모리 fallback: MongoDB 미연결 시 Set으로 유니크 카운트
 const memVisitorToday = new Set(); // 'YYYY-MM-DD:ipHash'
 const memVisitorTotal = new Set(); // 'ipHash'
@@ -941,6 +946,14 @@ app.post('/api/secret-point-overrides', (req, res) => {
   if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
   secretPointOverrides[String(id)] = { lat: parseFloat(lat), lng: parseFloat(lng) };
   saveSecretPointOverrides();
+  // ✅ DB 영구 저장
+  if (dbReady && SecretPointOverrideModel) {
+    SecretPointOverrideModel.findOneAndUpdate(
+      { id: String(id) },
+      { id: String(id), lat: parseFloat(lat), lng: parseFloat(lng) },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[SecretOverride] DB 저장 실패:', e.message));
+  }
   (logger?.info || console.log)(`[SecretPoint] id=${id} 좌표 업데이트: ${lat}, ${lng}`);
   res.json({ ok: true, overrides: secretPointOverrides });
 });
@@ -956,6 +969,10 @@ app.delete('/api/secret-point-overrides/:id', (req, res) => {
   const { id } = req.params;
   delete secretPointOverrides[id];
   saveSecretPointOverrides();
+  // ✅ DB에서도 삭제
+  if (dbReady && SecretPointOverrideModel) {
+    SecretPointOverrideModel.deleteOne({ id }).catch(e => logger.error('[SecretOverride] DB 삭제 실패:', e.message));
+  }
   res.json({ ok: true, overrides: secretPointOverrides });
 });
 
@@ -982,6 +999,14 @@ app.post('/api/spot-location-overrides', (req, res) => {
     updatedAt: new Date().toISOString(),
   };
   saveSpotLocationOverrides();
+  // ✅ DB 영구 저장 (재배포 후에도 유지)
+  if (dbReady && SpotLocationOverrideModel) {
+    SpotLocationOverrideModel.findOneAndUpdate(
+      { id: String(id) },
+      { id: String(id), lat: parseFloat(lat), lng: parseFloat(lng), name: name || null },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[SpotOverride] DB 저장 실패:', e.message));
+  }
   (logger?.info || console.log)(`[SpotLocation] id=${id} 좌표 수정: (${lat}, ${lng})`);
   res.json({ ok: true, id, lat: parseFloat(lat), lng: parseFloat(lng) });
 });
@@ -997,6 +1022,10 @@ app.delete('/api/spot-location-overrides/:id', (req, res) => {
   const { id } = req.params;
   delete spotLocationOverrides[id];
   saveSpotLocationOverrides();
+  // ✅ DB에서도 삭제
+  if (dbReady && SpotLocationOverrideModel) {
+    SpotLocationOverrideModel.deleteOne({ id }).catch(e => logger.error('[SpotOverride] DB 삭제 실패:', e.message));
+  }
   res.json({ ok: true, reset: id });
 });
 
@@ -5826,6 +5855,28 @@ app.get('/api/weather/cctv', async (req, res) => {
 
 // ── CCTV 오버라이드 (DB 우선, 인메모리 fallback) ──────────────────────────────
 // DB 연결 시 시작할 때 MongoDB에서 오버라이드 로드
+// ✅ PERSIST: 마스터 포인트 좌표 DB 연동 — 재배포 후에도 유지
+async function loadSpotOverridesFromDB() {
+  if (!dbReady || !SpotLocationOverrideModel) return;
+  try {
+    const docs = await SpotLocationOverrideModel.find().lean();
+    docs.forEach(d => { spotLocationOverrides[d.id] = { lat: d.lat, lng: d.lng, name: d.name, updatedAt: d.updatedAt }; });
+    logger.info(`[SpotOverride] DB에서 ${docs.length}개 포인트 좌표 복원 완료`);
+    if (docs.length > 0) saveSpotLocationOverrides();
+  } catch (e) { logger.error('[SpotOverride] DB 로드 실패:', e.message); }
+}
+async function loadSecretPointOverridesFromDB() {
+  if (!dbReady || !SecretPointOverrideModel) return;
+  try {
+    const docs = await SecretPointOverrideModel.find().lean();
+    docs.forEach(d => { secretPointOverrides[d.id] = { lat: d.lat, lng: d.lng }; });
+    logger.info(`[SecretOverride] DB에서 ${docs.length}개 비밀포인트 좌표 복원 완료`);
+    if (docs.length > 0) saveSecretPointOverrides();
+  } catch (e) { logger.error('[SecretOverride] DB 로드 실패:', e.message); }
+}
+setTimeout(loadSpotOverridesFromDB, 4000);
+setTimeout(loadSecretPointOverridesFromDB, 4500);
+
 async function loadCctvOverridesFromDB() {
   if (!dbReady || !CctvOverrideModel) return;
   try {
