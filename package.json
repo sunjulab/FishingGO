@@ -1,7 +1,7 @@
 {
   "name": "fishing-go",
   "private": true,
-  "version": "2.1.52",
+  "version": "2.1.53",
   "type": "module",
   "scripts": {
     "dev": "vite",
