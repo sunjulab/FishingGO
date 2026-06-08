@@ -549,9 +549,18 @@ app.get('/.well-known/assetlinks.json', (req, res) => {
   }]);
 });
 
-// ── ✅ DEV-SEED: 테스트 게시글 시드 엔드포인트 (개발 전용, X-Seed-Secret 헤더 필요) ──
+// ── ✅ DEV-SEED: 테스트 게시글 시드 엔드포인트 (관리자 전용 — X-Seed-Secret + JWT Admin 이중 인증)
 app.post('/api/admin/seed-business-test', async (req, res) => {
-  if (req.headers['x-seed-secret'] !== 'fishinggo_seed_2026') return res.status(403).json({ error: '금지' });
+  // ✅ BUG-05 FIX: 하드코딩 시크릿 → 환경변수 참조 + JWT Admin 이중 인증
+  const seedSecret = process.env.SEED_SECRET || 'fishinggo_seed_2026';
+  if (req.headers['x-seed-secret'] !== seedSecret) return res.status(403).json({ error: '금지' });
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) {
+    try {
+      const tp = jwt.verify(auth.slice(7), JWT_SECRET);
+      if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' });
+    } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  }
   const harbors = [
     { label: '강릉·강문', key: '강원 강릉' }, { label: '주문진', key: '강원 주문진' },
     { label: '속초', key: '강원 속초' }, { label: '고성(거진)', key: '강원 고성' },
@@ -5127,10 +5136,13 @@ app.delete('/api/community/notices/:id', async (req, res) => {
 // ── 공지사항 조회수 증가 ──────────────────────────────────────────────────────
 app.patch('/api/community/notices/:id/view', async (req, res) => {
   try {
+    // ✅ BUG-06 FIX: ObjectId 유효성 사전 검증 → CastError 언캐치 방지
+    const { id } = req.params;
+    if (!id || !/^[a-fA-F0-9]{24}$/.test(id)) return res.status(400).json({ error: '유효하지 않은 ID' });
     if (dbReady && Notice) {
-      await Notice.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+      await Notice.findByIdAndUpdate(id, { $inc: { views: 1 } });
     } else {
-      const n = memNotices.find(x => x.id === req.params.id);
+      const n = memNotices.find(x => x.id === id);
       if (n) { n.views = (n.views || 0) + 1; saveMemNotices(); }
     }
     res.json({ success: true });
@@ -5141,16 +5153,18 @@ app.patch('/api/community/notices/:id/view', async (req, res) => {
 app.get('/api/community/business', async (req, res) => {
   try {
     const { region, limit } = req.query;
-    // ✅ BUG-FIX: 최대 20개 제한 → 클라이언트에 페이지네이션 없으므로 전체 조회 필요. 100으로 상향
-    const maxLimit = Math.min(parseInt(limit) || 100, 100);
+    // ✅ BUG-08 FIX: limit 음수 입력 방어 (Math.max 추가)
+    const maxLimit = Math.min(Math.max(1, parseInt(limit) || 100), 100);
     if (dbReady && BusinessPost) {
       const now = new Date();
       await BusinessPost.updateMany(
         { isPinned: true, expiresAt: { $ne: null, $lt: now } },
         { $set: { isPinned: false } }
       );
-      // region 필터: 해당 지역 키워드 포함 (예: '남해', '제주', '동해', '서해')
-      const query = region ? { region: { $regex: region, $options: 'i' } } : {};
+      // ✅ BUG-02 FIX: region 입력을 $regex에 직접 삽입 금지 → 특수문자 이스케이프로 ReDoS/쿼리 조작 방지
+      const query = region
+        ? { region: { $regex: region.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }
+        : {};
       const posts = await BusinessPost.find(query)
         .sort({ isPinned: -1, createdAt: -1 })
         .limit(maxLimit);
@@ -6461,7 +6475,8 @@ app.post('/api/vvip/purchase', async (req, res) => {
       }
     } catch (e) {
       (logger?.error || console.error)('[VVIP 구매] DB tier 조회 실패:', e.message);
-      // DB 조회 실패 시 통과 (서비스 장애 방어)
+      // ✅ BUG-04 FIX: fail-open → fail-closed — DB 오류 시 503 반환 (무료 유저 VVIP 접근 방지)
+      return res.status(503).json({ error: '서버 일시 오류, 잠시 후 재시도해주세요.' });
     }
   }
 
@@ -6480,9 +6495,12 @@ app.post('/api/vvip/purchase', async (req, res) => {
 
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+  const effectiveUserId = tp.email || tp.id; // ✅ BUG-03 FIX: 슬롯 소유자는 JWT에서만 추출 (본문 userId 신뢰 금지)
+  const effectiveUserName = userName || effectiveUserId;
+
   vvipSlots[harborId] = {
-    userId,
-    userName: userName || userId,
+    userId: effectiveUserId,
+    userName: effectiveUserName,
     purchasedAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     harborName: harbor.name
@@ -8877,8 +8895,14 @@ app.post('/api/ai/coach', async (req, res) => {
 
 // ─── 전국 대회 API ────────────────────────────────────────────────────────
 
-// POST /api/contest — 대회 등록 (관리자)
+// POST /api/contest — 대회 등록 (관리자 전용)
 app.post('/api/contest', async (req, res) => {
+  // ✅ BUG-01 FIX: JWT 인증 없음 취약점 → 관리자만 대회 생성 가능하도록 수정
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자(MASTER)만 대회를 등록할 수 있습니다.' });
   try {
     const { title, fishName, region, metric, startDate, endDate, description, prize } = req.body;
     if (!title || !fishName || !startDate || !endDate) return res.status(400).json({ error: '필수 항목 누락' });
