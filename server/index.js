@@ -916,6 +916,29 @@ const runIapExpiryCheck = async () => {
         await User.findByIdAndUpdate(u._id, {
           $set: { tier: 'FREE', iapExpiresAt: null, iapPurchaseToken: null, iapProductId: null, iapAutoRenewing: false, updatedAt: now }
         });
+
+        // ✅ 선상홍보글 자동 삭제 — PRO/VVIP 만료 시 무료 홍보 악용 방지
+        // PRO, BUSINESS_VIP 유저만 홍보글 작성 가능 → 만료 시 삭제
+        if (u.tier === 'PRO' || u.tier === 'BUSINESS_VIP') {
+          let deletedCount = 0;
+          // DB 삭제
+          if (BusinessPost) {
+            const result = await BusinessPost.deleteMany({ author_email: u.email }).catch(e => {
+              (logger?.error || console.error)(`[IAP 만료] 홍보글 DB 삭제 실패: ${u.email}`, e.message);
+              return { deletedCount: 0 };
+            });
+            deletedCount = result.deletedCount || 0;
+          }
+          // 인메모리 삭제
+          const before = memBusinessPosts.length;
+          memBusinessPosts = memBusinessPosts.filter(p => p.author_email !== u.email);
+          const memDeleted = before - memBusinessPosts.length;
+          if (memDeleted > 0) saveMemBusinessPosts();
+          if (deletedCount > 0 || memDeleted > 0) {
+            (logger?.info || console.log)(`[IAP 만료] 홍보글 삭제: ${u.email} → DB ${deletedCount}건, 메모리 ${memDeleted}건`);
+          }
+        }
+
         // VVIP였으면 항구 슬롯 해제
         if ((u.tier === 'BUSINESS_VIP' || u.tier === 'MASTER') && u.vvipHarborId && vvipSlots[u.vvipHarborId]?.userId === (u.email || String(u._id))) {
           delete vvipSlots[u.vvipHarborId];
@@ -5156,8 +5179,30 @@ app.post('/api/community/business', async (req, res) => {
 
     const isAdmin = isAdminToken(tp);
 
-    // ✅ 1인 1게시글 제한 — 마스터는 예외
+    // ✅ 서버 구독 등급 검증 — DB에서 실제 tier 조회 (클라이언트 우회 방지)
+    // JWT의 tier는 만료 후에도 유료로 남아있을 수 있으므로 DB 직접 확인
     if (!isAdmin) {
+      let dbUser = null;
+      if (dbReady && User) {
+        dbUser = await User.findOne({ email: author_email }, 'tier iapExpiresAt vvipHarborId').lean().catch(() => null);
+      } else {
+        const u = memUsers.find(u => u.email === author_email);
+        if (u) dbUser = u;
+      }
+
+      const actualTier = dbUser?.tier || 'FREE';
+      // IAP 만료 여부 체크 (스케줄러 아직 미실행 시 클라이언트 우회 차단)
+      const isIapExpired = dbUser?.iapExpiresAt && new Date(dbUser.iapExpiresAt) < new Date();
+      const effectiveTier = isIapExpired ? 'FREE' : actualTier;
+
+      if (!['PRO', 'BUSINESS_VIP'].includes(effectiveTier)) {
+        return res.status(403).json({
+          error: 'PRO 또는 VVIP 구독자만 선상홍보글을 작성할 수 있습니다.',
+          code: 'SUBSCRIPTION_REQUIRED',
+        });
+      }
+
+      // 1인 1게시글 제한
       if (dbReady && BusinessPost) {
         const existing = await BusinessPost.findOne({ author_email }).catch(() => null);
         if (existing) {
@@ -5177,34 +5222,14 @@ app.post('/api/community/business', async (req, res) => {
           });
         }
       }
-    }
 
-    // ✅ FIX-BUG1: isPinned — VVIP 슬롯 보유자도 고정 가능 (마스터와 동일 권한)
-    // VVIP 슬롯의 userId 매칭: author_email 기준
-    const myVvipEntry = Object.entries(vvipSlots).find(([, v]) => {
-      const isMatch = v.userId === author_email;
-      const isValid = !v.expiresAt || new Date(v.expiresAt) > new Date();
-      return isMatch && isValid;
-    });
-    const safePinned = (isAdmin || !!myVvipEntry) ? !!isPinned : false;
-
-    // ✅ VVIP 지역 제한 검증 — 구독한 항구 지역과 게시글 region이 일치해야 함
-    if (!isAdmin) {
-      let vvipHarborId = null;
-      if (dbReady && User) {
-        const u = await User.findOne({ $or: [{ email: author_email }, { id: author_email }] }, 'tier vvipHarborId').lean().catch(() => null);
-        if (u?.tier === 'BUSINESS_VIP' && u.vvipHarborId) vvipHarborId = u.vvipHarborId;
-      } else {
-        const u = memUsers.find(u => u.email === author_email || u.id === author_email);
-        if (u?.tier === 'BUSINESS_VIP' && u.vvipHarborId) vvipHarborId = u.vvipHarborId;
-      }
-      // ✅ '전국 (전체)' 지역은 마스터만 사용 가능 (일반 유저 차단)
+      // ✅ VVIP 지역 제한 검증 (기존 로직 — dbUser 재사용)
+      const vvipHarborId = (effectiveTier === 'BUSINESS_VIP' && dbUser?.vvipHarborId) ? dbUser.vvipHarborId : null;
       if (region === '전국 (전체)') {
         return res.status(403).json({ error: "'전국 (전체)' 지역은 마스터 전용입니다.", code: 'GLOBAL_REGION_FORBIDDEN' });
       }
       if (vvipHarborId) {
         const harborKey = HARBOR_KEY_MAP[vvipHarborId];
-        // ✅ '전국 (전체)'는 VVIP 지역 검증 제외 (마스터 전용이므로 이미 위에서 처리)
         if (harborKey && region && region !== '전국 (전체)' && !region.startsWith(harborKey)) {
           const harborInfo = HARBOR_LIST.find(h => h.id === vvipHarborId);
           return res.status(403).json({
@@ -5215,6 +5240,12 @@ app.post('/api/community/business', async (req, res) => {
         }
       }
     }
+
+    // ✅ isPinned — VVIP 슬롯 보유자도 고정 가능 (마스터와 동일 권한)
+    const myVvipEntry = Object.entries(vvipSlots).find(([, v]) => {
+      return v.userId === author_email && (!v.expiresAt || new Date(v.expiresAt) > new Date());
+    });
+    const safePinned = (isAdmin || !!myVvipEntry) ? !!isPinned : false;
 
     const postData = {
       author, author_email, shipName: censoredShipName,
