@@ -336,9 +336,6 @@ export default function CommunityTab() {
     );
   }, [crews, crewSearch]);
 
-  // ✅ 7TH-A4: 내부 InFeedAd 화살표 함수 제거 — 파일 상단(L12) 외부 정의 사용
-  // (렌더마다 새 함수 생성 제거 + 상단 정의는 dead code였음)
-
   // 2. 글쓰기/방만들기 권한 로직 (보상형 광고 및 방장 등급 체크)
   const handleFabClick = () => {
     if (user?.id === 'GUEST') {
@@ -385,6 +382,7 @@ export default function CommunityTab() {
       // ✅ INSTA-P2: 인기순 정렬 지원
       if (sortMode === 'popular') params.set('sort', 'popular');
       const res = await apiClient.get(`/api/community/posts?${params}`);
+      if (!isMountedRef.current) return; // ✅ BUG-CT01 FIX: 언마운트 후 setState 방지
       const data = res.data;
       // 서버가 {posts, total, page, totalPages} 형식 반환
       const newPosts = data.posts || data; // 구버전 fallback
@@ -402,7 +400,7 @@ export default function CommunityTab() {
       if (!import.meta.env.PROD) console.error('Posts fetch error:', err);
     } finally {
       // 1페이지 로드 완료 시 초기 로딩 해제 (append=true인 무한스크롤은 제외)
-      if (pageNum === 1 && !append) setLoading(false);
+      if (pageNum === 1 && !append && isMountedRef.current) setLoading(false); // ✅ BUG-CT01 FIX
     }
   }, [openCategory, debouncedSearch, sortMode]); // ✅ BUG-4 FIX: user?.blockedUsers 제거 → blockedUsersRef.current 참조로 변경
 

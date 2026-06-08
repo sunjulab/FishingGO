@@ -138,6 +138,7 @@ export default function MapHome() {
 
   /* ── 마운트 시 기본 포인트 AI 컨디션 전체 패치 (세로고침 대응) ── */
   useEffect(() => {
+    let cancelled = false; // ✅ BUG-MAP01 FIX: 언마운트 후 setState 방지
     const defaultPt = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
     const nearest   = findNearestStation(defaultPt.lat, defaultPt.lng);
     const sid       = nearest.id;
@@ -151,6 +152,8 @@ export default function MapHome() {
           fetchTideForecast(sid, todayStr),
           fetchWaterTemp(sid, todayStr),
         ]);
+
+        if (cancelled) return; // ✅ BUG-MAP01 FIX: await 후 취소 확인
 
         // precision 데이터 병합
         if (precRes.status === 'fulfilled') {
@@ -176,8 +179,7 @@ export default function MapHome() {
               low:  preds.find(p => p.type === '간조')?.time || base.tide?.low  || '-',
             },
           };
-          // ✅ 조석도 weatherCache에 병합 (_serverScore 보존)
-          setWeatherCache(prev => ({
+          if (!cancelled) setWeatherCache(prev => ({
             ...prev,
             [sid]: { ...(prev[sid] || {}), tide_predictions: preds, tide: base.tide },
           }));
@@ -185,17 +187,20 @@ export default function MapHome() {
         // 수온 갱신
         if (waterTemp.status === 'fulfilled' && waterTemp.value && waterTemp.value !== '-') {
           base = { ...base, sst: waterTemp.value, waterTemp: waterTemp.value };
-          setWeatherCache(prev => ({ ...prev, [sid]: { ...(prev[sid] || {}), sst: waterTemp.value } })); // _serverScore는 spread로 보존됨
+          if (!cancelled) setWeatherCache(prev => ({ ...prev, [sid]: { ...(prev[sid] || {}), sst: waterTemp.value } }));
         }
 
-        const initCond = evaluateFishingCondition(base, defaultPt);
-        setSharedCond({ cond: initCond, pointId: defaultPt.id, withPrecision: false }); // withPrecision:false → weatherCache 업데이트 시 clear 대상
-        if (!import.meta.env.PROD)
-          console.log('[Init] 기본 포인트 AI 컨디션 로드 완료 →', defaultPt.name, initCond.score, '점');
+        if (!cancelled) {
+          const initCond = evaluateFishingCondition(base, defaultPt);
+          setSharedCond({ cond: initCond, pointId: defaultPt.id, withPrecision: false });
+          if (!import.meta.env.PROD)
+            console.log('[Init] 기본 포인트 AI 컨디션 로드 완료 →', defaultPt.name, initCond.score, '점');
+        }
       } catch (e) {
-        if (!import.meta.env.PROD) console.warn('[Init] 기본 AI 컨디션 패치 실패 → fallback', e);
+        if (!cancelled && !import.meta.env.PROD) console.warn('[Init] 기본 AI 컨디션 패치 실패 → fallback', e);
       }
     })();
+    return () => { cancelled = true; }; // ✅ BUG-MAP01 FIX
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -468,7 +473,10 @@ export default function MapHome() {
     setLoading(true);
     if (!fromDashboard) {
       setSheetVisible(true);
-      if (mapRef.current) mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
+      // ✅ BUG-MAP03 FIX: window.kakao?.maps 널 체크 추가 (컨조 SDK 미로드 시 TypeError 크래시 방지)
+      if (mapRef.current && window.kakao?.maps) {
+        mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
+      }
     }
     const nearest = findNearestStation(point.lat, point.lng);
     if (point.type === '민물') {
