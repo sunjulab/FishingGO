@@ -2,10 +2,6 @@
   "appId": "kr.fishinggo.app",
   "appName": "낚시GO",
   "webDir": "dist",
-  "server": {
-    "url": "https://www.fishing-go.com",
-    "cleartext": false
-  },
   "android": {
     "buildOptions": {}
   },
