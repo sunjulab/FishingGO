@@ -233,7 +233,7 @@ export default function VVIPSubscribe() {
   /* ── IAP 결제 ─────────────────────────────────────────────── */
   const handleIAPPurchase = useCallback(async (planKey) => {
     setPayDialog(null);
-    if (!iapReady) return addToast('결제 시스템 준비 중입니다. 잠시 후 다시 시도해주세요.', 'info');
+    // ✅ iapReady 차단 제거 — purchasePlan이 직접 에러 반환
     setLoading(planKey);
     try {
       await purchasePlan(planKey);
@@ -241,7 +241,7 @@ export default function VVIPSubscribe() {
       if (err?.message !== 'NATIVE_ONLY') addToast(err?.message || '결제를 시작할 수 없습니다.', 'error');
       setLoading(null);
     }
-  }, [iapReady]);
+  }, [addToast]);
 
   /* ── UCB 페이플 결제 ──────────────────────────────────────── */
   const handlePayplePurchase = useCallback(async (planKey) => {
