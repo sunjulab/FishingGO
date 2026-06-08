@@ -6,6 +6,10 @@ import apiClient from '../api/index';
 import { initIAP, purchasePlan, restorePurchases, IAP_PRODUCTS } from '../services/GoogleIAPService';
 import { UCB_ENABLED, openPayplePayment } from '../services/PaypleService';
 
+// ✅ 콴마니던 재마운트 시 iapReady 초기화 방지 — 모듈 스코프로 관리
+let _iapReady = false;
+let _iapInitializing = false;
+
 /* ── 항구 목록 ──────────────────────────────────────────────────── */
 const HARBORS_STATIC = [
   { id: 'gangneung',  name: '강릉·강문',        region: '동해권', area: '강원', desc: '안목·강문항, 감성돔·방어·가자미' },
@@ -114,7 +118,7 @@ export default function VVIPSubscribe() {
   const addToast = useToastStore(s => s.addToast);
 
   const [view, setView]                   = useState('plan'); // 'plan' | 'harbor'
-  const [iapReady, setIapReady]           = useState(false);
+  const [iapReady, setIapReady]           = useState(_iapReady); // ✅ 모듈 스코프 전역에서 채우는 값 초기화 (재마운트 시 유지됨)
   const [loading, setLoading]             = useState(null);  // 로딩 중인 planKey
   const [restoring, setRestoring]         = useState(false);
   // UCB 결제 선택 다이얼로그
