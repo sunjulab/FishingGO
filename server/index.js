@@ -2048,7 +2048,6 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
 
     const userId = decodeURIComponent(req.params.userId);
     const isAdmin = isAdminToken(tp);
-    // 본인 또는 어드민만 조회 가능
     if (!isAdmin && tp.email !== userId && tp.id !== userId) {
       return res.status(403).json({ error: '본인 정보만 조회 가능합니다.' });
     }
@@ -2062,6 +2061,15 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
 
     if (!user) return res.status(404).json({ error: '사용자 없음' });
 
+    // ✅ FIX-SUB-FIELDS: Subscription 컬렉션에서 추가 필드(planId, amount, pgProvider 등) 조회
+    // PaymentHistory.jsx에서 subscription.planId/amount/pgProvider/startedAt/lastBilledAt 사용
+    let subDoc = null;
+    if (dbReady && Subscription) {
+      subDoc = await Subscription.findOne({ userId }).lean().catch(() => null);
+    } else {
+      subDoc = memProSubs[userId] || null;
+    }
+
     const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
     const tier = user.tier || 'FREE';
     const isPaid = PAID_TIERS.includes(tier);
@@ -2070,7 +2078,6 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
     if (isPaid && user.subscriptionExpiresAt) {
       const expiry = new Date(user.subscriptionExpiresAt);
       if (expiry < new Date()) {
-        // 만료됨 — DB에서도 FREE로 초기화
         if (dbReady && User) {
           await User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }] }, { tier: 'FREE' });
         } else {
@@ -2081,19 +2088,29 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
       }
       return res.json({
         hasSubscription: true,
-        status: 'active',
+        status: subDoc?.status || 'active',
         tier,
-        nextBillingDate: user.subscriptionExpiresAt,
+        nextBillingDate: subDoc?.nextBillingDate || user.subscriptionExpiresAt,
+        // ✅ 추가 필드 (PaymentHistory 표시용)
+        planId: subDoc?.planId || null,
+        amount: subDoc?.amount || null,
+        pgProvider: subDoc?.pgProvider || 'google_play',
+        startedAt: subDoc?.startedAt || null,
+        lastBilledAt: subDoc?.lastBilledAt || null,
+        failCount: subDoc?.failCount || 0,
       });
     }
 
     if (isPaid) {
-      // 만료일 없는 유료 플랜 = 유효한 것으로 간주
-      return res.json({ hasSubscription: true, status: 'active', tier });
+      return res.json({
+        hasSubscription: true, status: subDoc?.status || 'active', tier,
+        planId: subDoc?.planId || null, amount: subDoc?.amount || null,
+        pgProvider: subDoc?.pgProvider || 'google_play',
+        startedAt: subDoc?.startedAt || null, lastBilledAt: subDoc?.lastBilledAt || null,
+      });
     }
 
-    // ✅ FIX-VVIP-GRANT: DB tier가 FREE이지만 vvipExpiresAt이 많는 유효한 admin grant 계정 복원
-    // — admin grant는 tier + vvipHarborId + vvipExpiresAt만 저장, subscriptionExpiresAt 없음
+    // VVIP admin grant 체크
     const vvipGrantUser = await (async () => {
       try {
         if (!dbReady || !User) return null;
@@ -2103,8 +2120,24 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
     if (vvipGrantUser?.vvipHarborId && vvipGrantUser?.vvipExpiresAt) {
       const vvipExpiry = new Date(vvipGrantUser.vvipExpiresAt);
       if (vvipExpiry > new Date()) {
-        return res.json({ hasSubscription: true, status: 'active', tier: 'BUSINESS_VIP' });
+        return res.json({ hasSubscription: true, status: 'active', tier: 'BUSINESS_VIP', pgProvider: 'admin_grant' });
       }
+    }
+
+    // Subscription 컬렉션만 있는 경우 (페이플 등)
+    if (subDoc && subDoc.status === 'active') {
+      return res.json({
+        hasSubscription: true,
+        status: 'active',
+        tier: subDoc.tier || 'FREE',
+        planId: subDoc.planId,
+        amount: subDoc.amount,
+        pgProvider: subDoc.pgProvider,
+        nextBillingDate: subDoc.nextBillingDate,
+        startedAt: subDoc.startedAt,
+        lastBilledAt: subDoc.lastBilledAt,
+        failCount: subDoc.failCount || 0,
+      });
     }
 
     return res.json({ hasSubscription: false, status: 'free', tier: 'FREE' });
@@ -3890,55 +3923,11 @@ const scheduleExpReset = () => {
 };
 scheduleExpReset();
 
-app.post('/api/user/exp', async (req, res) => {
-  try {
-    // ✅ WARN-EX1: JWT 인증 추가 — 본인 EXP만 수정 가능
-    const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
-    let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { email, activity } = req.body;
-    if (!email || !activity) return res.status(400).json({ error: 'email과 activity가 필요합니다.' });
-    // 본인 또는 어드민만 EXP 지급 가능
-    const isAdmin = isAdminToken(tp);
-    if (!isAdmin && tp.email !== email && tp.id !== email) return res.status(403).json({ error: '본인 EXP만 수정 가능합니다.' });
-    const expEntry = EXP_REWARDS[activity];
-    if (!expEntry) return res.status(400).json({ error: '알 수 없는 활동입니다.' });
-    const expAmount = typeof expEntry === 'object' ? (expEntry.exp || 0) : expEntry;
+// ❌ [BUG-FIX] 구버전 POST /api/user/exp — {email, activity} 기대하나 클라이언트는 {userId, action} 전송 → 항상 400 오류
+// 올바른 버전은 L7548에 있음 ({userId, action} 처리, verifyToken 미들웨어 적용)
+// app.post('/api/user/exp', async (req, res) => { ... }); // 비활성화
 
-    // ── 일일 레이트 리밋 체크 ──────────────────────────────────
-    const today = new Date().toISOString().split('T')[0];
-    const limitKey = `${email}:${activity}:${today}`;
-    const count = expDailyCount.get(limitKey) || 0;
-    const dailyMax = EXP_DAILY_LIMIT[activity] ?? 5;
-    if (count >= dailyMax) return res.status(429).json({ error: `오늘의 ${activity} EXP 한도 도달 (최대 ${dailyMax}회/일)`, code: 'EXP_LIMIT_REACHED' });
-    expDailyCount.set(limitKey, count + 1);
 
-    let user;
-    if (dbReady && User) {
-      user = await User.findOne({ email });
-      if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
-      const prevTotalExp = user.totalExp || 0;
-      user.totalExp = prevTotalExp + expAmount;
-      const prevLevel = getLevelFromExp(prevTotalExp).level;
-      const newLevelInfo = getLevelFromExp(user.totalExp);
-      user.level = newLevelInfo.level;
-      await user.save();
-      return res.json({ success: true, expGained: expAmount, ...buildUserResponse(user), leveledUp: newLevelInfo.level > prevLevel });
-    } else {
-      const userIdx = memUsers.findIndex(u => u.email === email);
-      if (userIdx === -1) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
-      const u = memUsers[userIdx];
-      const prevTotalExp = u.totalExp || 0;
-      u.totalExp = prevTotalExp + expAmount;
-      const prevLevel = getLevelFromExp(prevTotalExp).level;
-      const newLevelInfo = getLevelFromExp(u.totalExp);
-      u.level = newLevelInfo.level;
-      saveMemUsers();
-      return res.json({ success: true, expGained: expAmount, ...buildUserResponse(u), leveledUp: newLevelInfo.level > prevLevel });
-    }
-  } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
-});
 
 // --- 내 게시글 목록 --- ✅ NEW-BUG-12: JWT 인증 추가 (타인 게시글 열람 차단)
 app.get('/api/user/posts', async (req, res) => {
@@ -6065,44 +6054,10 @@ app.post('/api/admin/cctv/auto-sync', async (req, res) => {
 // crypto는 파일 최상단에서 이미 require됨 (중복 선언 제거)
 
 
-// BUG-2 수정: 중복 엔드포인트 제거 — 실제 동작 버전은 L6391에 있음
-// 이 위치 엔드포인트는 picsum 목업 포함 구버전이므로 Ali 폴백 버전으로 교체
-app.get('/api/commerce/coupang/search', async (req, res) => {
-  const keyword = req.query.keyword || '낚시용품';
-  const category = req.query.category || '';
-  try {
-    // 쿠팡 API 키 있으면 쿠팡 우선, 없으면 AliExpress로 폴백
-    const coupangProducts = await coupang.searchCoupang(keyword, 3).catch(() => []);
-    if (coupangProducts.length > 0) {
-      return res.json({
-        keyword, isMock: false,
-        products: coupangProducts.map(p => ({
-          id: p.productId, name: p.productName,
-          price: typeof p.productPrice === 'number' ? p.productPrice.toLocaleString('ko-KR') + '원' : (p.productPrice || ''),
-          discount: p.discountRate > 0 ? `${p.discountRate}%` : null,
-          img: p.productImage, link: p.coupangUrl,
-          badge: p.badge || '낚시GO 추천', source: 'coupang',
-        }))
-      });
-    }
-    // 쿠팡 키 없음 → AliExpress 폴백
-    const aliKeyword = _mapToAliKeyword(category || keyword);
-    const aliProducts = await ali.searchAliExpress(aliKeyword, 3).catch(() => []);
-    res.json({
-      keyword, isMock: false,
-      products: aliProducts.map(p => ({
-        id: `ali_${p.productId}`, name: p.title,
-        price: p.salePrice, discount: p.discount,
-        img: p.imageUrl, link: p.productUrl,
-        badge: p.badge, source: 'ali',
-        priceConfirm: p.priceConfirm || false,
-      }))
-    });
-  } catch (err) {
-    (logger?.error || console.error)('[/api/commerce/coupang/search v1] 오류:', err.message);
-    res.status(500).json({ error: '상품 검색 실패', products: [] });
-  }
-});
+// ❌ [BUG-2 FIX] 구버전 GET /api/commerce/coupang/search 비활성화
+// 쿠팡 없을때 Ali fallback이 searchAliExpress()를 사용하여 오류 발생 가능
+// 올바른 버전은 이 파일 하단 (L6545)에 있음 — 해당 버전이 실행됨
+
 
 // ─── 서버 시작은 파일 말미에서 단일 호용됩니다 (3중 중복 방지) ───
 
