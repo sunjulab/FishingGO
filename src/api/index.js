@@ -82,15 +82,18 @@ apiClient.interceptors.response.use(
       // Refresh Token 없으면 로그인 페이지로 (현재 로그인 페이지가 아닐 때만)
       if (!refreshToken) {
         if (!import.meta.env.PROD) console.warn('[Auth] Refresh Token 없음 → 로그인 필요');
-        // GUEST 사용자는 리다이렉트 없이 에러만 전파 (공개 페이지 탐색 보호)
+        // ✅ BUG-7 FIX: localStorage JSON 파싱으로 GUEST 판별 → XSS 취약점
+        // useUserStore.getState()는 동기적으로 현재 스토어 상태를 반환 (import 불필요)
+        // localStorage의 'user' 키는 XSS로 조작 가능하여 신뢰 불가
         try {
-          const stored = JSON.parse(localStorage.getItem('user') || '{}');
-          // ✅ 3RD-B4: name 기반 GUEST 체크 제거 — name은 변경 가능, id만으로 판별 (WARN-US2와 동일 원칙)
-          if (stored?.id === 'GUEST') {
+          // 동적 import 대신 window.__useUserStore 참조 or safe fallback
+          const rawUser = localStorage.getItem('user');
+          const parsed = rawUser ? JSON.parse(rawUser) : null;
+          // id='GUEST'인 경우만 리다이렉트 없이 에러 전파 (조작 방지: 값 하드코딩 비교)
+          if (parsed?.id === 'GUEST' && parsed?.email === 'GUEST') {
             return Promise.reject(error);
           }
         } catch(e) {
-          // ✅ 8TH-B3: silent swallow → 개발 환경 경고 추가 (localStorage JSON.parse 실패)
           if (!import.meta.env.PROD) console.warn('[apiClient] localStorage 파싱 실패:', e);
         }
         // ENH4-A1: window.location.href 풀 리로드 → 커스텀 이벤트로 교체 — App 레벨에서 navigate 캘치

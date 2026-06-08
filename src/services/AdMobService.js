@@ -136,7 +136,11 @@ export async function showRewardedAd(onRewarded, onFailed) {
         'onRewardedVideoAdDismissed',
         () => {
           closeListener.remove();
-          if (!rewarded) onFailed?.();
+          // ✅ 닫힐 때 rewardListener도 안전하게 제거 (rewarded=true면 이미 제거됐으나 중복 호출 무해)
+          if (!rewarded) {
+            rewardListener?.remove();
+            onFailed?.();
+          }
         }
       );
 
@@ -145,6 +149,9 @@ export async function showRewardedAd(onRewarded, onFailed) {
       return { simulated: false };
 
     } catch (e) {
+      // ✅ BUG-3 FIX: 광고 실패 시 리스너 명시적 제거 (누수 방지)
+      try { rewardListener?.remove(); } catch {}
+      try { closeListener?.remove(); } catch {}
       if (!import.meta.env.PROD) console.error('[AdMob] 보상형 광고 오류:', e);
       onFailed?.(e);
       return { simulated: false };

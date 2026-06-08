@@ -4135,12 +4135,13 @@ app.delete('/api/user/records/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { email } = req.body;
+    // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
+    const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
     if (dbReady && CatchRecord) {
       const record = await CatchRecord.findById(req.params.id);
       if (!record) return res.status(404).json({ error: '기록 없음' });
-      if (!isAdmin && record.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+      if (!isAdmin && record.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
       await CatchRecord.findByIdAndDelete(req.params.id);
       return res.json({ success: true });
     }
@@ -4322,21 +4323,23 @@ app.delete('/api/community/posts/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { email } = req.body;
+    // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
+    const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
 
     if (dbReady && Post) {
       let post = null;
       try { post = await Post.findById(req.params.id); } catch (e) { }
       if (post) {
-        const isAuthor = post.author_email === email && (tp.email === email || tp.id === email);
+        // ✅ JWT email만으로 인증 (보안 수정 — body email 제거)
+        const isAuthor = post.author_email === jwtEmail;
         if (!isAuthor && !isAdmin)
           return res.status(403).json({ error: '삭제 권한이 없습니다.' });
         await post.deleteOne();
       }
     } else {
       const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
-      if (mem && !isAdmin && mem.author_email !== email)
+      if (mem && !isAdmin && mem.author_email !== jwtEmail)
         return res.status(403).json({ error: '삭제 권한이 없습니다.' });
     }
     memPosts = memPosts.filter(p => p._id !== req.params.id && p.id !== req.params.id);
@@ -4655,12 +4658,13 @@ app.delete('/api/community/crews/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { email } = req.body;
+    // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
+    const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
     if (dbReady && Crew) {
       const crew = await Crew.findById(req.params.id);
       if (!crew) return res.status(404).json({ error: '크루 없음' });
-      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '권한 없음' });
+      if (!isAdmin && crew.owner !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
       await Crew.findByIdAndDelete(req.params.id);
       // 소켓으로 크루 해산 알림
       io.to(req.params.id).emit('crew_dissolved', { message: '크루장이 크루를 해산했습니다.' });
@@ -4906,14 +4910,15 @@ app.delete('/api/community/crews/:id/members/:targetEmail', async (req, res) => 
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { email } = req.body; // 요청자 이메일
+    const { email } = req.body; // 클라이언트가 필요로 받는 예상 email (oldOwner 확인용)
     const targetEmail = decodeURIComponent(req.params.targetEmail);
     const isAdmin = isAdminToken(tp);
 
     if (dbReady && Crew && User) {
       const crew = await Crew.findById(req.params.id);
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
-      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 강퇴할 수 있습니다.' });
+      // ✅ BUG-FIX: JWT email로 인증 (body email 제거)
+      if (!isAdmin && crew.owner !== tp.email) return res.status(403).json({ error: '크루장만 강퇴할 수 있습니다.' });
       if (targetEmail === crew.owner) return res.status(400).json({ error: '크루장은 강퇴할 수 없습니다.' });
 
       crew.memberList = crew.memberList.filter(m => m.email !== targetEmail);
@@ -5314,7 +5319,8 @@ app.delete('/api/community/business/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { email } = req.body;
+    // ✅ BUG-DELETE-FIX: email은 JWT에서만 추출 (body email 신뢰 → 타인 게시글 삭제 가능 보안 취약점 수정)
+    const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
     if (dbReady && BusinessPost) {
       // ✅ CastError 방지: _id 검색 실패 시 id 필드로 재검색
@@ -5322,7 +5328,7 @@ app.delete('/api/community/business/:id', async (req, res) => {
       try { post = await BusinessPost.findById(req.params.id); } catch (_) {}
       if (!post) { post = await BusinessPost.findOne({ id: req.params.id }).catch(() => null); }
       if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-      if (!isAdmin && post.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+      if (!isAdmin && post.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
       await post.deleteOne();
       return res.json({ success: true });
     }
@@ -5332,7 +5338,7 @@ app.delete('/api/community/business/:id', async (req, res) => {
       String(p.id) === req.params.id || String(p._id) === req.params.id
     );
     if (!memPost) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
-    if (!isAdmin && memPost.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+    if (!isAdmin && memPost.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
     memBusinessPosts = memBusinessPosts.filter(p => p !== memPost);
     saveMemBusinessPosts();
     res.json({ success: true });
@@ -5346,8 +5352,11 @@ app.put('/api/community/business/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { email, ...fields } = req.body;
+    // ✅ BUG-PUT-FIX: email은 JWT에서만 추출 (body email 신뢰 → 타인 게시글 수정 가능 보안 취약점 수정)
+    const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
+    const { ...fields } = req.body;
+    // email 필드는 수정 불가 (화이트리스트 외 필드는 아래서 차단됨)
 
     // ✅ BUG-FIX-PUT-1: capacity 서버 검증 추가 (수정 시에도 적용)
     if (fields.capacity !== undefined) {
@@ -5360,9 +5369,9 @@ app.put('/api/community/business/:id', async (req, res) => {
 
     // ✅ BUG-FIX-PUT-2: VVIP 사용자도 isPinned 변경 가능 (isAdmin 또는 유효 VVIP 슬롯 보유자)
     if (fields.isPinned !== undefined) {
-      const authorEmail = email || tp.email;
-      const myVvipEntry = authorEmail ? Object.entries(vvipSlots).find(([, v]) => {
-        return v.userId === authorEmail && (!v.expiresAt || new Date(v.expiresAt) > new Date());
+      // ✅ JWT email 사용 (body email 제거)
+      const myVvipEntry = jwtEmail ? Object.entries(vvipSlots).find(([, v]) => {
+        return v.userId === jwtEmail && (!v.expiresAt || new Date(v.expiresAt) > new Date());
       }) : null;
       if (!isAdmin && !myVvipEntry) {
         fields.isPinned = false; // 마스터/VVIP 아닌 경우 강제 false
@@ -5389,14 +5398,16 @@ app.put('/api/community/business/:id', async (req, res) => {
     if (dbReady && BusinessPost) {
       const post = await BusinessPost.findById(req.params.id).catch(() => null);
       if (!post) return res.status(404).json({ error: '게시글 없음' });
-      if (!isAdmin && post.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+      // ✅ JWT email로 권한 체크 (body email 제거)
+      if (!isAdmin && post.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
       Object.assign(post, safeFields);
       await post.save();
       return res.json(post);
     }
     const mem = memBusinessPosts.find(p => p.id === req.params.id || p._id === req.params.id);
     if (!mem) return res.status(404).json({ error: '게시글 없음' });
-    if (!isAdmin && mem.author_email !== email) return res.status(403).json({ error: '권한 없음' });
+    // ✅ JWT email로 권한 체크
+    if (!isAdmin && mem.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
     Object.assign(mem, safeFields);
     saveMemBusinessPosts();
     res.json(mem);

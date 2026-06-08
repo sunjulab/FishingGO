@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Crown, Lock, MapPin, Star, CheckCircle2, RefreshCw, Smartphone, Zap } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
@@ -129,6 +129,9 @@ export default function VVIPSubscribe() {
   const [showHarborConfirm, setShowHarborConfirm] = useState(false);
 
   const isNative     = !!(window?.Capacitor?.isNativePlatform?.());
+  const isMountedRef = useRef(true);       // ✅ BUG-4 FIX: 언마운트 후 setState 호출 방지
+  const reconnectTimerRef = useRef(null);  // 재연결 setTimeout ID 저장 (cleanup용)
+
   const currentTier  = user?.tier || 'FREE';
   const TIER_RANK    = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
   const TIER_LABELS  = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' };
@@ -136,6 +139,15 @@ export default function VVIPSubscribe() {
 
   const isPlanOwned = (planTier) =>
     (TIER_RANK[currentTier] || 0) >= (TIER_RANK[planTier] || 0);
+
+  // ✅ BUG-4 FIX: 컴포넌트 언마운트 시 isMountedRef 해제 + setTimeout 초소
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    };
+  }, []);
 
   /* ── IAP 초기화 ───────────────────────────────────────────── */
   useEffect(() => {
@@ -175,7 +187,12 @@ export default function VVIPSubscribe() {
           setLoading(null);
         },
         onError: (err) => {
-          if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
+          if (err?.isVerifyFailure) {
+            // ✅ BUG-2 FIX: 결제는 완료됐으나 서버 검증 실패 → 재시도 유도 안 함
+            addToast('✅ 결제 완료! 앱 재시작 시 자동으로 등급이 적용됩니다.', 'info');
+          } else if (err?.code !== 6) {
+            addToast('결제 중 오류가 발생했습니다.', 'error');
+          }
           setLoading(null);
         },
       })
@@ -242,7 +259,8 @@ export default function VVIPSubscribe() {
         }
       } catch {}
     }
-  }, [user]);
+  // ✅ BUG-6 FIX: user 전체 대신 user?.email만 의존 (객체 참조 변경으로 interval 재등록 맜음)
+  }, [user?.email]);
 
   useEffect(() => {
     fetchHarborData(); // 즉시 로드
@@ -258,8 +276,10 @@ export default function VVIPSubscribe() {
     try {
       const res = await apiClient.post('/api/vvip/purchase', {
         harborId: harbor.id,
-        userId: user?.email || String(user?._id || user?.id || ''),
-        userName: user?.name || user?.email || '선장',
+        // ✅ BUG-5 FIX: userId에 이메일 대신 name 사용 (개인정보 노옶 방지)
+        // 서버는 JWT로 이엤 식별 — userId는 표시용 닉네임만 사용
+        userId: user?.name || user?.email || '선장',
+        userName: user?.name || '선장',
       });
       addToast(`👑 ${harbor.name} 독점 선점 완료!`, 'success');
       setMySlot({ harborId: harbor.id, harborName: harbor.name, expiresAt: res.data?.expiresAt });
@@ -268,7 +288,7 @@ export default function VVIPSubscribe() {
       const msg = err?.response?.data?.error || '항구 선점 실패. 다시 시도해주세요.';
       addToast(msg, 'error');
     }
-  }, [user, addToast, fetchHarborData]);
+  }, [user?.name, user?.email, addToast, fetchHarborData]);
 
   /* ── VVIP 항구 선택 ────────────────────────────────────────── */
   const handleSelectHarbor = (harbor) => {
@@ -300,41 +320,53 @@ export default function VVIPSubscribe() {
       setIapReady(false);
       setStoreReady(false);
       setIapProgress(0);
-      setTimeout(() => {
+      reconnectTimerRef.current = setTimeout(() => {
+        if (!isMountedRef.current) return; // ✅ 언마운트 후 실행 방지
         // ✅ 재연결 시에도 FULL 콜백으로 initIAP 호출
         // - 재연결 중 결제 완료 시에도 tier 업데이트 정상 동작
         initIAP({
           onSuccess: async () => {
+            if (!isMountedRef.current) return; // ✅ 언마운트 확인
             addToast('✅ 구독이 완료되었습니다! 등급을 갱신합니다.', 'success');
             let tierUpdated = false;
             for (let i = 0; i < 3; i++) {
+              if (!isMountedRef.current) break; // ✅ 재시도 루프 중 언마운트 체크
               try {
                 const res = await apiClient.get('/api/user/me');
                 // ✅ /api/user/me는 플랫 객체 반환 ({ id, email, tier, ... })
                 if (res.data?.tier && res.data.tier !== 'FREE') {
-                  setUser(res.data);
+                  if (isMountedRef.current) setUser(res.data);
                   const label = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' }[res.data.tier] || res.data.tier;
-                  addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
+                  if (isMountedRef.current) addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
                   tierUpdated = true;
                   break;
-                } else if (res.data?.email) setUser(res.data);
+                } else if (res.data?.email && isMountedRef.current) setUser(res.data);
               } catch {}
               if (i < 2) await new Promise(r => setTimeout(r, 1500));
             }
-            if (!tierUpdated) addToast('⚠️ 등급 적용이 지연됩니다. 앱을 재시작해주세요.', 'info');
-            setLoading(null);
+            if (isMountedRef.current) {
+              if (!tierUpdated) addToast('⚠️ 등급 적용이 지연됩니다. 앱을 재시작해주세요.', 'info');
+              setLoading(null);
+            }
           },
           onError: (err) => {
-            if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
+            if (!isMountedRef.current) return; // ✅ 언마운트 확인
+            if (err?.isVerifyFailure) {
+              // ✅ BUG-2 FIX: 결제는 완료됐으나 서버 검증 실패
+              addToast('✅ 결제 완료! 앱 재시작 시 자동으로 등급이 적용됩니다.', 'info');
+            } else if (err?.code !== 6) {
+              addToast('결제 중 오류가 발생했습니다.', 'error');
+            }
             setLoading(null);
           },
         })
         .then(() => {
+          if (!isMountedRef.current) return; // ✅ 언마운트 확인
           setIapReady(true);
           setStoreReady(isStoreReady());
           if (isStoreReady()) addToast('✅ Google Play 재연결 완료. 다시 시도해주세요.', 'success');
         })
-        .catch(() => { setIapReady(true); setStoreReady(false); });
+        .catch(() => { if (isMountedRef.current) { setIapReady(true); setStoreReady(false); } });
       }, 300);
       return;
     }

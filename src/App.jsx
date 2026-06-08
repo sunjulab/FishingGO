@@ -31,7 +31,15 @@ initAdMob().catch(() => {}); // 웹 환경 실패는 무시
 (async () => {
   try {
     const apiBase = import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com';
-    await fetch(`${apiBase}/api/health`, { signal: AbortSignal.timeout(55000) });
+    // ✅ BUG-10 FIX: AbortSignal.timeout()은 Chrome 103+/iOS 16+ 미만 미지원
+    // → AbortController + setTimeout으로 폴백 (구형 Android WebView 호환)
+    const ac = new AbortController();
+    const timerId = setTimeout(() => ac.abort(), 55000);
+    try {
+      await fetch(`${apiBase}/api/health`, { signal: ac.signal });
+    } finally {
+      clearTimeout(timerId);
+    }
   } catch { /* 무시 — 백그라운드 예열, 실패해도 앱 동작에 영향 없음 */ }
 })();
 

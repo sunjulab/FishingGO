@@ -117,8 +117,12 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
             _onPurchaseSuccess?.(transaction);
           } catch (err) {
             console.error('[IAP] 영수증 검증 실패:', err);
-            // 검증 실패: finish 호출 안함 → 다음 앱 실행 시 재시도
-            _onPurchaseError?.(err);
+            // ✅ BUG-2 FIX: 결제는 성공했으나 서버 검증 실패 → 이중결제 유도 방지
+            // finish 호출 안함 → 다음 앱 실행 시 approved 이벤트 재발생하여 자동 복구
+            // VERIFY_FAILED 플래그로 클라이언트가 메시지 구분 가능
+            const verifyErr = new Error(err.message || '서버 검증 실패');
+            verifyErr.isVerifyFailure = true; // ← 결제 자체는 성공했음을 표시
+            _onPurchaseError?.(verifyErr);
           }
         })
         .verified((receipt) => {
