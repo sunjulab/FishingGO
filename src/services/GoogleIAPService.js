@@ -93,6 +93,12 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
 
     // ④ 이벤트 리스너 등록 (중복 방지)
     if (!storeListenersRegistered) {
+      // ✅ v13: store.error()는 store.when() 체인이 아닌 별도 메서드
+      store.error((err) => {
+        console.error('[IAP] 스토어 에러:', err);
+        _onPurchaseError?.(err);
+      });
+
       store.when()
         .approved(async (transaction) => {
           console.log('[IAP] 승인됨:', transaction.transactionId);
@@ -109,10 +115,6 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
         .verified((receipt) => {
           console.log('[IAP] 검증됨:', receipt);
           _onRestore?.(receipt);
-        })
-        .error((err) => {
-          console.error('[IAP] 스토어 에러:', err);
-          _onPurchaseError?.(err);
         });
       storeListenersRegistered = true;
     }
