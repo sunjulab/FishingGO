@@ -5581,40 +5581,81 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
 });
 
 // ── 낚시 포인트 일괄 점수 반환 API ────────────────────────────────────
-// 서버 weatherCache 기반으로 모든 관측소 점수를 1번 API로 반환
-// 클라이언트: 관측소 50개 개별 호출 → 이 API 1개 호출(~100ms)로 대체
+// ✅ SCORE-UNIFIED: 서버 공식 = 클라이언트 evaluator.js 완전 통일 (베이스 45~55점)
+// ✅ REAL-DATA: KMA 해양부이(풍속·파고) + KHOA 조석(물때) 실시간 데이터 반영
 app.get('/api/fishing-scores', (req, res) => {
   try {
     const scores = {};
+    const hour  = new Date().getHours();
+    const month = new Date().getMonth() + 1;
+    const isNight = hour >= 19 || hour < 5;
+
     Object.keys(weatherCache).forEach(sid => {
       const entry = weatherCache[sid];
       if (!entry || !entry.data) return;
       const d = entry.data;
-      const sst   = parseFloat(d.sst) || 14;
-      const wind  = parseFloat(d.wind?.speed) || 3;
+      const sst   = parseFloat(d.sst)          || 14;
+      const wind  = parseFloat(d.wind?.speed)   || 3;
       const wave  = parseFloat(d.wave?.coastal) || 0.5;
-      const phase = d.tide?.phase || '';
-      let score = 60;
-      if (sst >= 14 && sst <= 22) score += 10;
-      else if (sst >= 12 && sst < 14) score -= 5;
-      else if (sst < 12) score -= 15;
-      else if (sst > 26) score -= 15;
-      else if (sst > 23) score -= 8;
-      if (wind <= 2) score += 10;
-      else if (wind <= 4) score += 0;
-      else if (wind <= 6) score -= 8;
-      else if (wind <= 8) score -= 15;
-      else score -= 25;
-      if (wave <= 0.4) score += 8;
-      else if (wave <= 0.8) score += 0;
-      else if (wave <= 1.2) score -= 10;
-      else if (wave <= 2.0) score -= 20;
-      else score -= 30;
-      const tideNum = parseInt((phase.match(/^(\d+)물/) || [])[1] || 0);
-      if (tideNum >= 6 && tideNum <= 9) score += 8;
-      else if (tideNum >= 13) score -= 7;
-      const month = new Date().getMonth() + 1;
-      if (month >= 5 && month <= 9) score += 3;
+      const phase = d.tide?.phase               || '';
+      const seed  = parseInt(sid.replace(/\D/g, '')) || 1;
+
+      // ── 베이스: evaluator.js 동일 (45 + seed 보정) ──
+      let score = 45 + (seed % 10) + ((seed % 14 - 7) / 10);
+
+      // ── 풍속 보정 (evaluator.js 동일) ──
+      if      (wind > 14) score -= 65;
+      else if (wind > 10) score -= 40;
+      else if (wind >  8) score -= 28;
+      else if (wind >  6) score -= 18;
+      else if (wind >  4) score -= 8;
+      else if (wind <  2) score += 12;
+      else if (wind <  3) score += 7;
+
+      // ── 파고 보정 (evaluator.js 동일) ──
+      if      (wave > 2.5) score -= 60;
+      else if (wave > 2.0) score -= 45;
+      else if (wave > 1.5) score -= 30;
+      else if (wave > 1.2) score -= 20;
+      else if (wave > 0.8) score -= 10;
+      else if (wave < 0.3) score += 8;
+      else if (wave < 0.5) score += 4;
+
+      // ── 수온 보정 (evaluator.js 동일) ──
+      if      (sst < 8)              score -= 40;
+      else if (sst < 11)             score -= 25;
+      else if (sst < 14)             score -= 12;
+      else if (sst < 17)             score -= 3;
+      else if (sst >= 17 && sst < 20) score += 10;
+      else if (sst >= 20 && sst < 24) score += 6;
+      else if (sst >= 24 && sst < 27) score -= 5;
+      else if (sst >= 27)             score -= 25;
+
+      // ── 계절 보정 ──
+      const seasons = [
+        { min:10, max:18, months:[3,4,5] },
+        { min:18, max:26, months:[6,7,8] },
+        { min:16, max:22, months:[9,10,11] },
+        { min:8,  max:14, months:[12,1,2] },
+      ];
+      for (const s of seasons) {
+        if (s.months.includes(month)) {
+          if (sst >= s.min && sst <= s.max) score += 8;
+          else if (sst < s.min - 4 || sst > s.max + 4) score -= 15;
+          break;
+        }
+      }
+
+      // ── 물때 보정 (evaluator.js TIDE_BONUS 동일) ──
+      const tideMatch = phase.match(/(\d+)물/);
+      const tideNum = tideMatch ? parseInt(tideMatch[1]) : 0;
+      const TIDE_BONUS = { 1:3,2:5,3:7,4:9,5:10,6:10,7:8,8:6,9:4,10:2,11:-2,12:-4,14:-8,15:-6 };
+      score += TIDE_BONUS[tideNum] || 0;
+      if (phase.includes('조금') || phase.includes('무시')) score -= 7;
+
+      // ── 야간 보정 (서버도 추가) ──
+      if (isNight) score -= 2; // 평균적 야간 패널티 (어종별 분기 불가)
+
       scores[sid] = Math.min(100, Math.max(5, Math.round(score)));
     });
     res.json({ scores, updatedAt: new Date().toISOString(), count: Object.keys(scores).length });
