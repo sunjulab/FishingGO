@@ -162,29 +162,33 @@ export default function VVIPSubscribe() {
     const doInit = () => {
       initIAP({
         onSuccess: async () => {
+          if (!isMountedRef.current) return; // ✅ BUG-V1 FIX: 언마운트 확인
           // ✅ 결제 완료 후 tier 반영까지 최대 3회 재시도 (서버 DB 반영 지연 대비)
           addToast('✅ 구독이 완료되었습니다! 등급을 갱신합니다.', 'success');
           let tierUpdated = false;
           for (let i = 0; i < 3; i++) {
+            if (!isMountedRef.current) break; // ✅ 루프 중 언마운트 체크
             try {
               const res = await apiClient.get('/api/user/me');
               // ✅ /api/user/me는 플랫 객체 반환 ({ id, email, tier, ... })
               if (res.data?.tier && res.data.tier !== 'FREE') {
-                setUser(res.data);
+                if (isMountedRef.current) setUser(res.data);
                 const label = TIER_LABELS[res.data.tier] || res.data.tier;
-                addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
+                if (isMountedRef.current) addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
                 tierUpdated = true;
                 break;
-              } else if (res.data?.email) {
+              } else if (res.data?.email && isMountedRef.current) {
                 setUser(res.data); // tier가 FREE여도 최신 정보 반영
               }
             } catch {}
             if (i < 2) await new Promise(r => setTimeout(r, 1500)); // 1.5초 대기
           }
-          if (!tierUpdated) {
-            addToast('⚠️ 등급 적용이 지연됩니다. 앱을 재시작해주세요.', 'info');
+          if (isMountedRef.current) {
+            if (!tierUpdated) {
+              addToast('⚠️ 등급 적용이 지연됩니다. 앱을 재시작해주세요.', 'info');
+            }
+            setLoading(null);
           }
-          setLoading(null);
         },
         onError: (err) => {
           if (err?.isVerifyFailure) {
@@ -243,15 +247,17 @@ export default function VVIPSubscribe() {
   const fetchHarborData = useCallback(async () => {
     try {
       const res = await apiClient.get('/api/vvip/harbors');
+      if (!isMountedRef.current) return; // ✅ BUG-V3 FIX: 응답 후 언마운트 체크
       const map = {};
       (res.data.harbors || []).forEach(h => {
         if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt };
       });
       setTakenMap(map);
     } catch {}
-    if (user) {
+    if (user && isMountedRef.current) { // ✅ BUG-V3 FIX: 언마운트 후 2차 API 호출 방지
       try {
         const res2 = await apiClient.get('/api/vvip/my-slot');
+        if (!isMountedRef.current) return; // ✅ 2차 응답 후 언마운트 체크
         if (res2.data.hasSlot) {
           setMySlot({ harborId: res2.data.harbor?.id, harborName: res2.data.harbor?.name, expiresAt: res2.data.slot?.expiresAt });
         } else {
@@ -315,12 +321,15 @@ export default function VVIPSubscribe() {
     if (!isNative) return addToast('앱에서만 구독 가능합니다.', 'info');
     // ✅ storeReady state로 체크 (모듈 변수 isStoreReady() 대신)
     if (!storeReady) {
+      // ✅ BUG-V2 FIX: 재연결 중 버튼 연타 → 중복 initIAP 방지
+      if (reconnectTimerRef.current) return;
       addToast('Google Play 재연결 중...', 'info');
       resetIAP();
       setIapReady(false);
       setStoreReady(false);
       setIapProgress(0);
       reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null; // ✅ 완료 후 반드시 초기화 (재시도 허용)
         if (!isMountedRef.current) return; // ✅ 언마운트 후 실행 방지
         // ✅ 재연결 시에도 FULL 콜백으로 initIAP 호출
         // - 재연결 중 결제 완료 시에도 tier 업데이트 정상 동작

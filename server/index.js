@@ -4106,13 +4106,12 @@ app.post('/api/user/records', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { author, author_email, fish, size, weight, location, bait, weather, wind, wave, memo, img, image, date, time, pointId } = req.body;
+    const { author, fish, size, weight, location, bait, weather, wind, wave, memo, img, image, date, time, pointId } = req.body;
+    // ✅ BUG-FIX: author_email은 JWT에서만 추출 (body author_email 신뢰 → 타인 기록 위장 보안 취약점 수정)
+    const author_email = tp.email || tp.id;
     if (!author || !author_email || !fish) return res.status(400).json({ error: '필수 항목 누락 (어종 필수)' });
-    // 본인 또는 어드민만 작성 가능
+    // 본인 또는 어드민만 작성 가능 (JWT로 이미 검증됨 — 추가 author_email 비교 불필요)
     const isAdmin = isAdminToken(tp);
-    if (!isAdmin && tp.id !== author_email && tp.email !== author_email) {
-      return res.status(403).json({ error: '본인 기록만 작성 가능합니다.' });
-    }
     // ✅ BUG-46: img 또는 image 필드 모두 수용 (하위 호환) → image 필드로 통일 저장
     const imageUrl = image || img || null;
     const data = { author, author_email, fish, size: size || '', weight: weight || '', location: location || '', bait: bait || '', weather: weather || '', wind: wind || '', wave: wave || '', memo: memo || '', image: imageUrl, date: date || '', time: time || '', pointId: pointId || null };
@@ -4280,9 +4279,10 @@ app.post('/api/community/posts', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    let { author, author_email, category, content, image, images, location } = req.body;
+    let { author, category, content, image, images, location } = req.body;
+    // ✅ BUG-FIX: author_email은 JWT에서만 추출 (보안 취약점 수정)
+    const author_email = tp.email || tp.id || 'guest@fishinggo.kr';
     if (!author || !category || !content) return res.status(400).json({ error: '필수 항목 누락' });
-    if (!author_email) author_email = 'guest@fishinggo.kr';
     // ✅ CENSOR: 게시글 내용 비속어 * 치환
     content = censorText(content.trim());
     // ✅ LOC: location 안전 정규화 — { address, lat, lng } 또는 null
@@ -4355,13 +4355,15 @@ app.put('/api/community/posts/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { content, category, image, images, email } = req.body;
+    const { content, category, image, images } = req.body;
+    // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
+    const jwtEmail = tp.email || tp.id;
     const isAdmin = isAdminToken(tp);
     if (dbReady && Post) {
       let post;
       try { post = await Post.findById(req.params.id); } catch (e) { }
       if (!post) return res.status(404).json({ error: '게시글 없음' });
-      if (!isAdmin && post.author_email !== email)
+      if (!isAdmin && post.author_email !== jwtEmail)
         return res.status(403).json({ error: '권한 없음' });
       if (content !== undefined) post.content = content;
       if (category !== undefined) post.category = category;
@@ -4383,7 +4385,7 @@ app.put('/api/community/posts/:id', async (req, res) => {
     }
     const mem = memPosts.find(p => p._id === req.params.id || p.id === req.params.id);
     if (!mem) return res.status(404).json({ error: '게시글 없음' });
-    if (!isAdmin && mem.author_email !== email)
+    if (!isAdmin && mem.author_email !== jwtEmail)
       return res.status(403).json({ error: '권한 없음' });
     if (content !== undefined) mem.content = content;
     if (category !== undefined) mem.category = category;
@@ -4411,12 +4413,14 @@ app.post('/api/community/posts/:id/comments', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { author, text, author_email } = req.body;
+    const { author, text } = req.body;
+    // ✅ BUG-FIX: 댓글 author_email도 JWT에서만 추출 (보안 취약점 수정)
+    const author_email = tp.email || tp.id;
     if (!author || !text) return res.status(400).json({ error: '작성자/내용 필수' });
     if (text.length > 500) return res.status(400).json({ error: '댓글은 500자 이하로 작성해주세요.' });
     // ✅ CENSOR: 댓글 비속어 * 치환
     const censoredText = censorText(text.trim());
-    const newComment = { author, author_email: author_email || tp.email || tp.id, text: censoredText, createdAt: new Date() };
+    const newComment = { author, author_email, text: censoredText, createdAt: new Date() };
     if (dbReady && Post) {
       let post = null;
       try { post = await Post.findById(req.params.id); } catch (e) { }
@@ -4859,8 +4863,9 @@ app.post('/api/community/crews/:id/leave', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: '이메일이 필요합니다.' });
+    // ✅ BUG-FIX: 크루 탈퇴 email은 JWT에서만 추출 (body email → 타인 강제 탈퇴 보안 취약점 수정)
+    const email = tp.email || tp.id;
+    if (!email) return res.status(401).json({ error: '인증 정보 없음' });
 
     if (dbReady && Crew && User) {
       const crew = await Crew.findById(req.params.id);
@@ -4910,7 +4915,6 @@ app.delete('/api/community/crews/:id/members/:targetEmail', async (req, res) => 
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { email } = req.body; // 클라이언트가 필요로 받는 예상 email (oldOwner 확인용)
     const targetEmail = decodeURIComponent(req.params.targetEmail);
     const isAdmin = isAdminToken(tp);
 

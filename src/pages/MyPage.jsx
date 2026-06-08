@@ -93,6 +93,13 @@ export default function MyPage() {
   const [bizPostsLoading, setBizPostsLoading]   = useState(false);
   const [deletingBizId, setDeletingBizId]       = useState(null);
   const galleryFileRef = useRef(null);
+  const isMountedRef = useRef(true); // ✅ BUG-M2 FIX: FileReader async 콜백 언마운트 체크용
+
+  // ✅ BUG-M2: 언마운트 cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
@@ -128,6 +135,9 @@ export default function MyPage() {
         setCurrentPwd('');
         setNewPwd('');
         setConfirmPwd(''); // ✅ PWD-CONFIRM: 확인 입력 초기화
+      } else {
+        // ✅ BUG-M3 FIX: success=false 또는 필드 없을 때 무음 실패 방지
+        addToast(res.data?.error || '비밀번호 변경에 실패했습니다.', 'error');
       }
     } catch (err) {
       addToast(err.response?.data?.error || '비밀번호 변경 실패', 'error');
@@ -430,6 +440,7 @@ export default function MyPage() {
       try {
         // imageUtils.compressAvatar: 300x300 정사각형 크롭 + JPEG 0.8
         const base64 = await compressAvatar(ev.target.result);
+        if (!isMountedRef.current) return; // ✅ BUG-M2 FIX: 압축 후 언마운트 체크
 
         // 즉시 UI 반영 (서버 저장 전)
         updateUser({ avatar: base64, picture: base64 });
@@ -443,15 +454,18 @@ export default function MyPage() {
             email: user.email,
             avatar: base64
           }, { timeout: 30000 });
+          if (!isMountedRef.current) return; // ✅ BUG-M2 FIX: API 응답 후 언마운트 체크
           if (res.data.success) {
             addToast('프로필 사진이 저장되었습니다! 📸', 'success');
           }
         } catch (err) {
+          if (!isMountedRef.current) return; // ✅ 에러 처리 전도 체크
           if (!import.meta.env.PROD) console.error('Avatar server error:', err);
           // 서버 저장 실패해도 로컬은 이미 반영됨 → 성공 안내
           addToast('📸 프로필 사진이 변경되었습니다! (로컬 저장)', 'success');
         }
       } catch (compressErr) {
+        if (!isMountedRef.current) return;
         if (!import.meta.env.PROD) console.error('이미지 압축 실패:', compressErr);
         addToast('이미지 처리 중 오류가 발생했습니다.', 'error');
       }
@@ -879,7 +893,7 @@ export default function MyPage() {
                    <p style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', margin: '0 0 16px' }}>{p.content}</p>
                    <div style={{ display: 'flex', gap: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700' }}><Heart size={14} color="#FF5A5F" /> {p.likes}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700' }}><MessageSquare size={14} /> {p.comments.length}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: `calc(12px * var(--fs, 1))`, color: '#8e8e93', fontWeight: '700' }}><MessageSquare size={14} /> {p.comments?.length ?? 0}</div>
                    </div>
                 </div>
               )) : (

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Anchor, ShieldCheck, Eye, EyeOff, CheckCircle, XCircle, User, Phone, Search, KeyRound, X } from 'lucide-react';
 import { useUserStore, LEVEL_CONFIG } from '../store/useUserStore';
@@ -255,6 +255,15 @@ export default function LoginPage() {
   const levelTimerRef = useRef(null);
 
   const [isLogin, setIsLogin]         = useState(true);
+
+  // ✅ BUG-M4 FIX: 언마운트 시 타이머 cleanup (로그인 후 navigate로 언마운트)
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
+    };
+  }, []);
+
   const [userId, setUserId]           = useState('');
   const [password, setPassword]       = useState('');
   const [nickname, setNickname]       = useState('');
@@ -336,7 +345,11 @@ export default function LoginPage() {
       if (status === 503 && !isRetry) {
         addToast('⏳ 서버가 초기화 중입니다. 잠시 후 자동 재시도...', 'info');
         retrying = true;
-        setTimeout(() => handleLogin(true), 3000);
+        // ✅ BUG-M5 FIX: 503 재시도 타이머를 timerRef에 저장 → 언마운트 시 clearTimeout
+        timerRef.current = setTimeout(() => {
+          timerRef.current = null;
+          handleLogin(true);
+        }, 3000);
         return;
       }
       addToast(msg, 'error');
