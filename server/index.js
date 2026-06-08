@@ -935,11 +935,12 @@ const runIapExpiryCheck = async () => {
   }
 };
 
-// 서버 시작 60초 후 첫 실행, 이후 30분마다
+// ✅ 서버 시작 30초 후 첫 실행, 이후 1분마다
+// 30분 → 1분으로 단축: 테스트 구독(5분) 만료 즉시 감지 + 실제 구독도 지연 없이 회수
 setTimeout(() => {
   runIapExpiryCheck();
-  setInterval(runIapExpiryCheck, 30 * 60 * 1000); // 30분 주기
-}, 60 * 1000);
+  setInterval(runIapExpiryCheck, 60 * 1000); // ✅ 1분 주기 (테스트: 5분 구독 만료 대응)
+}, 30 * 1000);
 
 // ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
 function verifyToken(req, res, next) {
@@ -1790,6 +1791,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
     const serviceAccountJson = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT;
     let verified = false;
     let autoRenewing = true;
+    let googleExpiryMs = null; // ✅ Google Play 실제 만료 시각 (테스트: 5분, 실제: ~30일)
 
     if (serviceAccountJson) {
       try {
@@ -1811,6 +1813,11 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
         if (sub.paymentState === 0 || sub.paymentState === 1 || sub.paymentState === 2) {
           verified = true;
           autoRenewing = sub.autoRenewing !== false;
+          // ✅ Google Play의 실제 만료 시각 추출 (테스트 구독: 5분, 실제: 30일)
+          if (sub.expiryTimeMillis) {
+            googleExpiryMs = parseInt(sub.expiryTimeMillis, 10);
+            (logger?.info || console.log)(`[Google IAP] 구독 만료 시각: ${new Date(googleExpiryMs).toISOString()}`);
+          }
         } else {
           (logger?.warn || console.warn)(`[Google IAP] 비정상 paymentState: ${sub.paymentState}`);
           verified = false; // 명시적으로 미검증
@@ -1830,7 +1837,11 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
 
     // ── DB 티어 업데이트 ────────────────────────────────────────
     const newTier  = planInfo.tier;
-    const expiresAt = new Date(Date.now() + planInfo.days * 24 * 60 * 60 * 1000);
+    // ✅ Google Play 실제 만료 시각 우선 사용 (테스트 구독 5분 정확히 반영)
+    // Google Play API 미사용 시 planInfo.days 폴백
+    const expiresAt = googleExpiryMs
+      ? new Date(googleExpiryMs)
+      : new Date(Date.now() + planInfo.days * 24 * 60 * 60 * 1000);
 
     if (dbReady && User) {
       const filter = tp.email ? { email: tp.email } : { _id: tp.id }; // ✅ id → _id 수정
@@ -2351,6 +2362,7 @@ function buildUserResponse(user) {
     streak: user.streak || 0,
     vvipHarborId,                // ✅ FIX-VVIP-BADGE
     vvipHarborName,              // ✅ FIX-VVIP-BADGE: '강릉·강문' 등 — MyPage 뱃지 동적화
+    iapExpiresAt: user.iapExpiresAt ? (user.iapExpiresAt instanceof Date ? user.iapExpiresAt.toISOString() : user.iapExpiresAt) : null, // ✅ 구독 만료 감지용
   };
 }
 

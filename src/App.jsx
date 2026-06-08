@@ -386,8 +386,8 @@ function UserSyncChecker() {
     // 즉시 1회 동기화
     syncFromServer();
 
-    // 5분마다 주기적 동기화
-    const interval = setInterval(syncFromServer, 5 * 60 * 1000);
+    // ✅ 1분마다 주기적 동기화 (30분→1분: 테스트 구독 5분 만료 즉시 반영)
+    const interval = setInterval(syncFromServer, 60 * 1000);
 
     // 탭 포커스 복귀 시 즉시 동기화 (다른 기기에서 tier 변경 후 복귀)
     const onVisibility = () => { if (document.visibilityState === 'visible') syncFromServer(); };

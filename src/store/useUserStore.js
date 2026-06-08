@@ -291,20 +291,35 @@ export const useUserStore = create((set, get) => ({
       const serverTier = fresh.tier || 'FREE';
       const serverTierRank = TIER_RANK[serverTier] ?? 0;
 
-      // ✅ TIER-PROTECT: 서버가 현재보다 낙은 tier를 반환하면 무시
-      // (일시적 네트워크 오류, DB 지연 반영 등으로 VIP 플랜이 FREE로 플리커 방지)
+      // ✅ TIER-PROTECT: 서버가 현재보다 낮은 tier를 반환할 때 처리
+      // - 단순 네트워크 지연/플리커: iapExpiresAt이 미래 → 다운그레이드 무시
+      // - IAP 구독 실제 만료: iapExpiresAt이 null(스케줄러가 회수) 또는 과거 → 다운그레이드 허용
       if (serverTierRank < currentTierRank) {
+        const iapExpiresAt = fresh.iapExpiresAt;
+        const isIapExpired = !iapExpiresAt || new Date(iapExpiresAt) <= new Date();
+        
+        if (!isIapExpired) {
+          // IAP가 아직 살아있음 → 일시적 플리커로 판단, 무시
+          if (!import.meta.env.PROD) {
+            console.warn('[syncFromServer] 서버 tier가 현재보다 낮음 — 업데이트 스킵 (', state.userTier, '->', serverTier, ')');
+          }
+          const avatarChanged = fresh.avatar && fresh.avatar !== current?.avatar;
+          if (avatarChanged) {
+            const updated = { ...current, avatar: fresh.avatar };
+            _ls.set('user', JSON.stringify(updated));
+            set({ user: updated });
+          }
+          return;
+        }
+        
+        // IAP 만료 확인 → 다운그레이드 허용
         if (!import.meta.env.PROD) {
-          console.warn('[syncFromServer] 서버 tier가 현재보다 낮음 — 업데이트 스킵 (', state.userTier, '->', serverTier, ')');
-
+          console.log('[syncFromServer] IAP 구독 만료 감지 → FREE 강제 적용 (', state.userTier, '->', serverTier, ')');
         }
-        // tier만 제외하고 avatar 등 다른 필드는 반영
-        const avatarChanged = fresh.avatar && fresh.avatar !== current?.avatar;
-        if (avatarChanged) {
-          const updated = { ...current, avatar: fresh.avatar };
-          _ls.set('user', JSON.stringify(updated));
-          set({ user: updated });
-        }
+        const updated = { ...current, ...fresh, tier: 'FREE', iapExpiresAt: null };
+        _ls.set('user', JSON.stringify(updated));
+        _ls.set('userTier', 'FREE');
+        set({ user: updated, userTier: 'FREE' });
         return;
       }
 
