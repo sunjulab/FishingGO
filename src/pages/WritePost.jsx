@@ -57,11 +57,13 @@ export default function WritePost() {
   // 수정 모드: 기존 데이터 불러오기
   useEffect(() => {
     if (!isEditMode) return;
+    let isMounted = true; // ✅ BUG-6 FIX: 수정 모드 이탈 시 다중 setState 방지
     const endpoint = isNoticeType
       ? `/api/community/notices/${editId}`
       : `/api/community/posts/${editId}`;
     apiClient.get(endpoint)
       .then(res => {
+        if (!isMounted) return;
         setContent(res.data.content || '');
         setTitle(res.data.title || '');
         setCategory(res.data.category || '전체');
@@ -73,10 +75,12 @@ export default function WritePost() {
         if (res.data.isPopup !== undefined) setIsPopup(!!res.data.isPopup);
       })
       .catch((err) => {
+        if (!isMounted) return;
         if (!import.meta.env.PROD) console.warn('[WritePost] 수정 데이터 로드 실패:', err?.message);
         addToast('게시글 정보를 불러오지 못했습니다.', 'error');
       });
-  }, [editId, isNoticeType]);
+    return () => { isMounted = false; };
+  }, [editId, isNoticeType, addToast]); // ✅ BUG-6 FIX: addToast deps 추가
 
 
   // ✅ 6TH-B3: DRAFT_KEY useMemo — 매 렌더마다 재정의 방지 (postType이 렌더 중 불변)

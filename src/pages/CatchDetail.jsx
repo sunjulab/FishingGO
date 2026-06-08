@@ -61,10 +61,12 @@ export default function CatchDetail() {
 
   useEffect(() => {
     if (!id) return;
+    let isMounted = true; // ✅ BUG-7 FIX: 빠른 뒤로가기 시 언마운트 후 setState 방지
     setLoading(true);
     apiClient.get(`/api/records/${id}`)
-      .then(res => setRecord(res.data))
+      .then(res => { if (isMounted) setRecord(res.data); })
       .catch((err) => {
+        if (!isMounted) return;
         setRecord(null);
         const status = err.response?.status;
         if (status === 404) {
@@ -73,7 +75,8 @@ export default function CatchDetail() {
           addToast('데이터를 불러오지 못했습니다. 네트워크를 확인해주세요.', 'error');
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (isMounted) setLoading(false); });
+    return () => { isMounted = false; };
     // ✅ 2ND-B2: addToast deps 추가 — eslint exhaustive-deps 안정
   }, [id, addToast]);
 

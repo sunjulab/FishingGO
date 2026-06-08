@@ -118,7 +118,10 @@ export default function CommunityTab() {
   const scrollToPostIdRef = useRef(null); // 복귀 시 해당 게시글로 scrollIntoView 대기용
   // ✅ INSTA-P1: 그리드/피드 뷰 전환
   const lastTapRef = useRef({}); // 더블탭 감지용 (postId → 마지막 탭 시각)
+  const heartBurstTimerRef = useRef({}); // ✅ BUG-1 FIX: 더블탭 타이머 ref (언마운트 후 setHeartBurstId 방지)
   const [heartBurstId, setHeartBurstId] = useState(null); // 더블탭 하트 폭발 표시용 postId
+  const blockedUsersRef = useRef(user?.blockedUsers || []); // ✅ BUG-4 FIX: blockedUsers를 ref로 관리 → fetchPosts useCallback deps 제거
+  const isFetchingRef = useRef(false); // ✅ BUG-5 FIX: 무한스크롤 중복 실행 방지
 
   // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
   useEffect(() => {
@@ -139,6 +142,24 @@ export default function CommunityTab() {
       return () => { clearTimeout(scrollTimer); clearTimeout(clearTimer); };
     }
   }, [location.search]);
+
+  // ✅ BUG-3 FIX: user 변경 시 커뮤니티 캐시 초기화 (로그아웃/다른 계정 로그인 시 데이터 오염 방지)
+  useEffect(() => {
+    _communityCache = { business: [], crews: [], notices: [], stories: [] };
+  }, [user?.email]);
+
+  // ✅ BUG-4 FIX: blockedUsersRef 동기화
+  useEffect(() => {
+    blockedUsersRef.current = user?.blockedUsers || [];
+  }, [user?.blockedUsers]);
+
+  // ✅ BUG-1 FIX: 언마운트 시 heartBurstTimerRef cleanup
+  useEffect(() => {
+    return () => {
+      Object.values(heartBurstTimerRef.current).forEach(clearTimeout);
+      heartBurstTimerRef.current = {};
+    };
+  }, []);
 
   // ✅ SCROLL-RETURN: 마운트 시 sessionStorage에서 반환 게시글ID 복원
   // ⚠️ activeTab은 useState() lazy init에서 이미 복원 및 삭제됨 — 여기서는 returnId만 처리
@@ -359,7 +380,7 @@ export default function CommunityTab() {
       const data = res.data;
       // 서버가 {posts, total, page, totalPages} 형식 반환
       const newPosts = data.posts || data; // 구버전 fallback
-      const blocked = user?.blockedUsers || [];
+      const blocked = blockedUsersRef.current; // ✅ BUG-4 FIX: ref에서 읽어 deps 순환 방지
       const filtered = Array.isArray(newPosts) ? newPosts.filter(p => !blocked.includes(p.author)) : [];
       if (append) {
         setPosts(prev => [...prev, ...filtered]);
@@ -375,7 +396,7 @@ export default function CommunityTab() {
       // 1페이지 로드 완료 시 초기 로딩 해제 (append=true인 무한스크롤은 제외)
       if (pageNum === 1 && !append) setLoading(false);
     }
-  }, [openCategory, debouncedSearch, sortMode, user?.blockedUsers]);
+  }, [openCategory, debouncedSearch, sortMode]); // ✅ BUG-4 FIX: user?.blockedUsers 제거 → blockedUsersRef.current 참조로 변경
 
   // ✅ SCROLL-APPLY: posts 로드 완료 후 반환 게시글으로 scrollIntoView
   // ⚠️ requestAnimationFrame만으로는 렌더 확정이 늘리면 실패 — setTimeout 150ms 보증 추가
@@ -494,8 +515,13 @@ export default function CommunityTab() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !loadingMore && page < totalPages && activeTab === 'open') {
+          if (isFetchingRef.current) return; // ✅ BUG-5 FIX: 중복 실행 방지
+          isFetchingRef.current = true;
           setLoadingMore(true);
-          fetchPosts(page + 1, true).finally(() => setLoadingMore(false));
+          fetchPosts(page + 1, true).finally(() => {
+            setLoadingMore(false);
+            isFetchingRef.current = false;
+          });
         }
       },
       { threshold: 0.1 }
@@ -988,7 +1014,12 @@ export default function CommunityTab() {
                               if (!likedPosts[postId]) {
                                 handleLike({ stopPropagation: () => {} }, postId);
                                 setHeartBurstId(postId);
-                                setTimeout(() => setHeartBurstId(null), 800);
+                                // ✅ BUG-1 FIX: 타이머 ID를 ref에 저장 → 연속 탭 시 이전 타이머 취소 + 언마운트 후 setState 방지
+                                if (heartBurstTimerRef.current[postId]) clearTimeout(heartBurstTimerRef.current[postId]);
+                                heartBurstTimerRef.current[postId] = setTimeout(() => {
+                                  setHeartBurstId(null);
+                                  delete heartBurstTimerRef.current[postId];
+                                }, 800);
                               }
                             }
                             lastTapRef.current[postId] = now;

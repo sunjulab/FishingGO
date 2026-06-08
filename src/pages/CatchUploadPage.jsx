@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Upload, Share2, Trophy, X, AlertTriangle } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
@@ -137,10 +137,12 @@ export default function CatchUploadPage() {
   const fishRule = getFishRule(fishName);
   const closed   = isClosedSeason(fishRule);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    let isMounted = true; // ✅ BUG-2 FIX: 언마운트 후 setContests 방지
     apiClient.get('/api/contest/active')
-      .then(r => setContests(r.data.contests || []))
+      .then(r => { if (isMounted) setContests(r.data.contests || []); })
       .catch(() => {});
+    return () => { isMounted = false; };
   }, []);
 
   const handleFile = useCallback((file) => {
