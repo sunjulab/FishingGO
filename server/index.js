@@ -1444,34 +1444,29 @@ const observationData = {
 };
 
 async function getWaterTemp(sid) {
-  // ✅ TIDE-API-FIX: 공공데이터포털 실측 수온 API 사용 (KHOA_CCTV_KEY = 공공데이터포털 인증키)
-  // 구버전 KHOA 직결 API(khoa.go.kr)는 2024년 종료 → 모든 호출 404, WARN 로그 폭탄 방지
+  // ✅ SST-PATH-FIX: 공공데이터포털 수온 API (response 래퍼 없음 → body.items.item 직접 접근)
   const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
-  if (!KEY) return null; // 키 없으면 fallback 데이터 사용
+  if (!KEY) return null;
 
-  // 공공데이터포털 조위관측소 실측 수온 API
   try {
-    const today = (() => {
-      const d = new Date();
-      return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-    })();
-    const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${sid}&date=${today}&type=json&numOfRows=10&pageNo=1`;
+    // 어제 날짜 우선 (오늘 데이터 미집계 가능성)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const dateStr = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
+    const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${sid}&date=${dateStr}&type=json&numOfRows=10&pageNo=1`;
     const res = await axios.get(url, { timeout: 5000, headers: { Accept: 'application/json' } });
-    // XML 오류 응답 감지
     const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
-    if (text.trimStart().startsWith('<')) return null; // XML 에러 → fallback
-    const items = res.data?.response?.body?.items?.item;
+    if (text.trimStart().startsWith('<')) return null;
+    // ✅ 실제 응답 구조: data.body.items.item (response 래퍼 없음)
+    const items = res.data?.body?.items?.item;
     if (!items) return null;
     const list = Array.isArray(items) ? items : [items];
     const last = list[list.length - 1];
-    const sst = last?.water_temp ?? last?.waterTemp ?? null;
+    // ✅ 실제 필드명: wtem (water_temp·waterTemp 아님)
+    const sst = last?.wtem ?? last?.water_temp ?? last?.waterTemp ?? null;
     if (sst !== null && sst !== undefined && sst !== '-') return String(sst);
   } catch (e) {
-    if (!e.message?.includes('404')) {
-      logger.warn(`[Weather] 수온 API 실패 (${sid}): ${e.message}`);
-    }
+    if (!e.message?.includes('404')) logger.warn(`[Weather] 수온 API 실패 (${sid}): ${e.message}`);
   }
-
   return null;
 }
 
