@@ -300,15 +300,38 @@ export default function VVIPSubscribe() {
       setStoreReady(false);
       setIapProgress(0);
       setTimeout(() => {
+        // ✅ 재연결 시에도 FULL 콜백으로 initIAP 호출
+        // - 재연결 중 결제 완료 시에도 tier 업데이트 정상 동작
         initIAP({
           onSuccess: async () => {
-            addToast('✅ 연결 완료! 다시 시도해주세요.', 'success');
-            setIapReady(true);
-            setStoreReady(true);
+            addToast('✅ 구독이 완료되었습니다! 등급을 갱신합니다.', 'success');
+            let tierUpdated = false;
+            for (let i = 0; i < 3; i++) {
+              try {
+                const res = await apiClient.get('/api/user/me');
+                if (res.data?.user && res.data.user.tier !== 'FREE') {
+                  setUser(res.data.user);
+                  const label = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' }[res.data.user.tier] || res.data.user.tier;
+                  addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
+                  tierUpdated = true;
+                  break;
+                } else if (res.data?.user) setUser(res.data.user);
+              } catch {}
+              if (i < 2) await new Promise(r => setTimeout(r, 1500));
+            }
+            if (!tierUpdated) addToast('⚠️ 등급 적용이 지연됩니다. 앱을 재시작해주세요.', 'info');
+            setLoading(null);
           },
-          onError: () => { setIapReady(true); setStoreReady(false); },
+          onError: (err) => {
+            if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
+            setLoading(null);
+          },
         })
-        .then(() => { setIapReady(true); setStoreReady(isStoreReady()); })
+        .then(() => {
+          setIapReady(true);
+          setStoreReady(isStoreReady());
+          if (isStoreReady()) addToast('✅ Google Play 재연결 완료. 다시 시도해주세요.', 'success');
+        })
         .catch(() => { setIapReady(true); setStoreReady(false); });
       }, 300);
       return;
@@ -318,7 +341,7 @@ export default function VVIPSubscribe() {
     } else {
       handleIAPPurchase(planKey);
     }
-  }, [user, isNative, addToast, storeReady]);
+  }, [user, isNative, addToast, storeReady, setUser]);
 
   /* ── IAP 결제 ─────────────────────────────────────────────── */
   const handleIAPPurchase = useCallback(async (planKey) => {
@@ -351,10 +374,25 @@ export default function VVIPSubscribe() {
   /* ── 복원 ─────────────────────────────────────────────────── */
   const handleRestore = useCallback(async () => {
     setRestoring(true);
-    try { await restorePurchases(); addToast('구독 복원을 시도했습니다.', 'info'); }
+    try {
+      await restorePurchases();
+      addToast('구독 복원을 시도했습니다. 잠시 후 등급이 갱신됩니다.', 'info');
+      // ✅ 복원 후 3초 뒤 user 정보 갱신 (복원 처리 시간 대기)
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const res = await apiClient.get('/api/user/me');
+        if (res.data?.user) {
+          setUser(res.data.user);
+          if (res.data.user.tier !== 'FREE') {
+            const label = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' }[res.data.user.tier] || res.data.user.tier;
+            addToast(`✅ ${label} 등급 복원 완료!`, 'success');
+          }
+        }
+      } catch {}
+    }
     catch { addToast('복원 중 오류가 발생했습니다.', 'error'); }
     finally { setRestoring(false); }
-  }, []);
+  }, [addToast, setUser]);
 
   /* ════════════════════════════════════════════════════════════
      렌더

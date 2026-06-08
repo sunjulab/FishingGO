@@ -3,6 +3,7 @@
  * cordova-plugin-purchase v13 — 구글 플레이 인앱결제
  * BASIC(9,900/월) · PRO(110,000/월) · VVIP(550,000/월)
  */
+import apiClient from '../api/index.js'; // ✅ 토큰 자동 갱신 인터셉터 포함
 
 // ── 상품 ID (Google Play Console에 등록된 값과 동일) ─────────────
 export const IAP_PRODUCTS = {
@@ -240,26 +241,16 @@ async function verifyReceiptOnServer(transaction) {
     throw new Error('purchaseToken 없음 — 영수증 검증 불가');
   }
 
-  // ✅ CRITICAL FIX: localStorage에서 access_token 읽어 Authorization 헤더 첨부
-  // (apiClient 인터셉터와 동일한 방식 — fetch는 apiClient와 달리 자동 첨부 없음)
-  let accessToken = null;
-  try { accessToken = localStorage.getItem('access_token'); } catch { /* StorageError */ }
-
-  const res = await fetch(
-    (import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com') + '/api/payment/google-iap/verify',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-      },
-      credentials: 'include',
-      body: JSON.stringify({ purchaseToken, productId }),
-    }
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `서버 검증 실패 (HTTP ${res.status})`);
+  // ✅ CRITICAL FIX: apiClient 사용 → 토큰 만료 시 자동 갱신 (refresh_token 활용)
+  // 기존 fetch()는 토큰 만료 시 401만 반환하여 결제 실패 유발 가능성 있음
+  try {
+    const res = await apiClient.post('/api/payment/google-iap/verify', {
+      purchaseToken,
+      productId,
+    });
+    return res.data;
+  } catch (err) {
+    const msg = err?.response?.data?.error || `서버 검증 실패 (HTTP ${err?.response?.status || '?'})`;
+    throw new Error(msg);
   }
-  return res.json();
 }

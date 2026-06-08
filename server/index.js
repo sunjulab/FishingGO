@@ -2514,7 +2514,9 @@ app.get('/api/user/me', async (req, res) => {
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
 
-    const email = req.query.email || req.headers['x-user-email'];
+    // ✅ email 쿼리 파라미터 없을 때 JWT의 tp.email 폴백 사용
+    // (VVIPSubscribe 등에서 email 없이 호출 시에도 본인 정보 조회 가능)
+    const email = req.query.email || req.headers['x-user-email'] || tp.email;
     if (!email) return res.status(400).json({ error: 'email 필요' });
 
     const isAdmin = isAdminToken(tp);
@@ -6376,6 +6378,20 @@ app.post('/api/vvip/purchase', async (req, res) => {
   const isAdmin = isAdminToken(tp);
   if (!isAdmin && tp.id !== userId && tp.email !== userId) return res.status(403).json({ error: '본인만 슬롯 구매 가능합니다.' });
 
+  // ✅ DB에서 실제 tier 확인 (JWT tier는 로그인 시점 발급 → 최신 tier 반영 안 됨)
+  if (!isAdmin && dbReady && User) {
+    try {
+      const dbFilter = tp.email ? { email: tp.email } : { _id: tp.id };
+      const dbUser = await User.findOne(dbFilter).select('tier').lean();
+      if (!dbUser || !['BUSINESS_VIP', 'MASTER'].includes(dbUser.tier)) {
+        return res.status(403).json({ error: 'VVIP 멤버십 구독 후 이용 가능합니다.', code: 'NOT_VVIP' });
+      }
+    } catch (e) {
+      (logger?.error || console.error)('[VVIP 구매] DB tier 조회 실패:', e.message);
+      // DB 조회 실패 시 통과 (서비스 장애 방어)
+    }
+  }
+
   const harbor = HARBOR_LIST.find(h => h.id === harborId);
   if (!harbor) return res.status(404).json({ error: '존재하지 않는 항구입니다.' });
 
@@ -6400,12 +6416,13 @@ app.post('/api/vvip/purchase', async (req, res) => {
   };
   saveVvipSlots(); // 파일 영구 저장
 
-  // User DB에 VVIP 정보 영구 저장
+  // ✅ User DB에 VVIP 항구 정보 저장 — JWT email/id로 안전하게 매칭
   if (dbReady && User) {
     try {
+      const dbFilter = tp.email ? { email: tp.email } : { _id: tp.id };
       await User.findOneAndUpdate(
-        { email: userId },
-        { tier: 'BUSINESS_VIP', vvipHarborId: harborId, vvipExpiresAt: expiresAt }
+        dbFilter,
+        { $set: { vvipHarborId: harborId, vvipExpiresAt: expiresAt, updatedAt: now } }
       );
     } catch (e) { (logger?.error || console.error)('[VVIP DB 저장 실패]', e.message); }
   }
