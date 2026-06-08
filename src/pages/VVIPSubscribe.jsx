@@ -131,6 +131,8 @@ export default function VVIPSubscribe() {
   const isNative     = !!(window?.Capacitor?.isNativePlatform?.());
   const currentTier  = user?.tier || 'FREE';
   const TIER_RANK    = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
+  const TIER_LABELS  = { BUSINESS_LITE: '베이직', PRO: 'PRO', BUSINESS_VIP: 'VVIP', MASTER: '마스터' };
+  const isVVIP       = (TIER_RANK[currentTier] || 0) >= 3; // BUSINESS_VIP 이상
 
   const isPlanOwned = (planTier) =>
     (TIER_RANK[currentTier] || 0) >= (TIER_RANK[planTier] || 0);
@@ -150,22 +152,25 @@ export default function VVIPSubscribe() {
         onSuccess: async () => {
           // ✅ 결제 완료 후 tier 반영까지 최대 3회 재시도 (서버 DB 반영 지연 대비)
           addToast('✅ 구독이 완료되었습니다! 등급을 갱신합니다.', 'success');
-          const refreshUser = async (retries = 3) => {
-            for (let i = 0; i < retries; i++) {
-              try {
-                const res = await apiClient.get('/api/user/me');
-                if (res.data?.user && res.data.user.tier !== 'FREE') {
-                  setUser(res.data.user);
-                  addToast(`🎉 ${res.data.user.tier} 등급이 적용되었습니다!`, 'success');
-                  return;
-                } else if (res.data?.user) {
-                  setUser(res.data.user);
-                }
-              } catch {}
-              if (i < retries - 1) await new Promise(r => setTimeout(r, 1500)); // 1.5초 대기
-            }
-          };
-          await refreshUser();
+          let tierUpdated = false;
+          for (let i = 0; i < 3; i++) {
+            try {
+              const res = await apiClient.get('/api/user/me');
+              if (res.data?.user && res.data.user.tier !== 'FREE') {
+                setUser(res.data.user);
+                const label = TIER_LABELS[res.data.user.tier] || res.data.user.tier;
+                addToast(`🎉 ${label} 등급이 적용되었습니다!`, 'success');
+                tierUpdated = true;
+                break;
+              } else if (res.data?.user) {
+                setUser(res.data.user);
+              }
+            } catch {}
+            if (i < 2) await new Promise(r => setTimeout(r, 1500)); // 1.5초 대기
+          }
+          if (!tierUpdated) {
+            addToast('⚠️ 등급 적용이 지연됩니다. 앱을 재시작해주세요.', 'info');
+          }
           setLoading(null);
         },
         onError: (err) => {
@@ -246,6 +251,38 @@ export default function VVIPSubscribe() {
     return () => { clearInterval(id); window.removeEventListener('focus', onFocus); };
   }, [fetchHarborData]);
 
+  /* ── VVIP 항구 슬롯 선점 (VVIP 유저 전용) ─────────────────────── */
+  const handleHarborPurchase = useCallback(async (harbor) => {
+    setShowHarborConfirm(false);
+    try {
+      const res = await apiClient.post('/api/vvip/purchase', {
+        harborId: harbor.id,
+        userId: user?.email || String(user?._id || user?.id || ''),
+        userName: user?.name || user?.email || '선장',
+      });
+      addToast(`👑 ${harbor.name} 독점 선점 완료!`, 'success');
+      setMySlot({ harborId: harbor.id, harborName: harbor.name, expiresAt: res.data?.expiresAt });
+      fetchHarborData(); // 잔여 현황 즉시 갱신
+    } catch (err) {
+      const msg = err?.response?.data?.error || '항구 선점 실패. 다시 시도해주세요.';
+      addToast(msg, 'error');
+    }
+  }, [user, addToast, fetchHarborData]);
+
+  /* ── VVIP 항구 선택 ────────────────────────────────────────── */
+  const handleSelectHarbor = (harbor) => {
+    // 내 항구 클릭 → 정보만 표시
+    if (harbor.isMyHarbor) {
+      addToast(`👑 ${harbor.name} — 내 VVIP 독점 항구입니다.`, 'info');
+      return;
+    }
+    if (harbor.isTaken) return addToast(`${harbor.name}은 이미 선점된 자리입니다.`, 'error');
+    if (mySlot) return addToast('이미 다른 항구를 선점 중입니다.', 'error');
+    // VVIP/비VVIP 모두 다이얼로그 진입 (다이얼로그 내부에서 분기)
+    setSelectedHarbor(harbor);
+    setShowHarborConfirm(true);
+  };
+
   const harbors = HARBORS_STATIC.map(h => ({ ...h, isTaken: !!takenMap[h.id], takenBy: takenMap[h.id]?.takenBy || null, isMyHarbor: mySlot?.harborId === h.id }));
   const filtered = selectedRegion === '전체' ? harbors : harbors.filter(h => h.region === selectedRegion);
   const takenCount = Object.keys(takenMap).length;
@@ -318,14 +355,6 @@ export default function VVIPSubscribe() {
     catch { addToast('복원 중 오류가 발생했습니다.', 'error'); }
     finally { setRestoring(false); }
   }, []);
-
-  /* ── VVIP 항구 ────────────────────────────────────────────── */
-  const handleSelectHarbor = (harbor) => {
-    if (harbor.isTaken && !harbor.isMyHarbor) return addToast(`${harbor.name}은 이미 선점된 자리입니다.`, 'error');
-    if (mySlot && !harbor.isMyHarbor) return addToast('이미 다른 항구를 선점 중입니다.', 'error');
-    setSelectedHarbor(harbor);
-    setShowHarborConfirm(true);
-  };
 
   /* ════════════════════════════════════════════════════════════
      렌더
@@ -592,7 +621,7 @@ export default function VVIPSubscribe() {
         );
       })()}
 
-      {/* VVIP 항구 구매 확인 */}
+      {/* VVIP 항구 선점 확인 */}
       {showHarborConfirm && selectedHarbor && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 9000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: '480px', background: 'linear-gradient(180deg,#1A1A2E,#0A0F1C)', borderRadius: '28px 28px 0 0', padding: '28px 24px 44px', border: '1px solid rgba(255,215,0,0.2)', borderBottom: 'none' }}>
@@ -600,13 +629,29 @@ export default function VVIPSubscribe() {
             <Crown size={40} color="#FFD700" style={{ display: 'block', margin: '0 auto 12px' }} />
             <h2 style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: '#fff', margin: '0 0 4px', textAlign: 'center' }}>{selectedHarbor.name}</h2>
             <p style={{ fontSize: `calc(12px * var(--fs,1))`, color: 'rgba(255,255,255,0.45)', margin: '0 0 20px', textAlign: 'center' }}>{selectedHarbor.area} · {REGION_EMOJI[selectedHarbor.region]} {selectedHarbor.region}</p>
-            <div style={{ fontSize: `calc(12px * var(--fs,1))`, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, background: 'rgba(255,215,0,0.06)', borderRadius: '14px', padding: '14px', marginBottom: '18px' }}>
-              VVIP 항구 독점 구독은 <strong style={{ color: '#FFD700' }}>VVIP 구독 후</strong> 자동 배정됩니다.<br />
-              VVIP 플랜을 먼저 구독해 주세요.
-            </div>
-            <button onClick={() => { setShowHarborConfirm(false); handlePlanClick('VVIP'); }} style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: `calc(15px * var(--fs,1))`, fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
-              VVIP 구독하기
-            </button>
+            {isVVIP ? (
+              // ✅ VVIP 유저 → 항구 선점 API 호출
+              <>
+                <div style={{ fontSize: `calc(12px * var(--fs,1))`, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, background: 'rgba(255,215,0,0.06)', borderRadius: '14px', padding: '14px', marginBottom: '18px' }}>
+                  이 항구를 <strong style={{ color: '#FFD700' }}>30일간 독점 선점</strong>하시겠습니까?<br />
+                  선상 홍보 게시물이 이 항구에서 <strong style={{ color: '#FFD700' }}>최상단 고정</strong>됩니다.
+                </div>
+                <button onClick={() => handleHarborPurchase(selectedHarbor)} style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: `calc(15px * var(--fs,1))`, fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
+                  👑 선점하기
+                </button>
+              </>
+            ) : (
+              // ✅ 비 VVIP 유저 → VVIP 구독 유도
+              <>
+                <div style={{ fontSize: `calc(12px * var(--fs,1))`, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, background: 'rgba(255,215,0,0.06)', borderRadius: '14px', padding: '14px', marginBottom: '18px' }}>
+                  VVIP 항구 독점 선점은 <strong style={{ color: '#FFD700' }}>VVIP 구독 후</strong> 가능합니다.<br />
+                  월 ₩550,000으로 항구 독점 + 선상 최상단 고정을 누리세요.
+                </div>
+                <button onClick={() => { setShowHarborConfirm(false); setView('plan'); handlePlanClick('VVIP'); }} style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: `calc(15px * var(--fs,1))`, fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
+                  VVIP 구독하기
+                </button>
+              </>
+            )}
             <button onClick={() => setShowHarborConfirm(false)} style={{ width: '100%', padding: '12px', border: 'none', background: 'none', color: 'rgba(255,255,255,0.35)', fontSize: `calc(14px * var(--fs,1))`, cursor: 'pointer' }}>취소</button>
           </div>
         </div>

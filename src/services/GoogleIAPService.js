@@ -54,7 +54,15 @@ export function diagnoseIAP() {
 // ── 초기화 ───────────────────────────────────────────────────────
 export async function initIAP({ onSuccess, onError, onRestore } = {}) {
   if (!isNative()) return;
-  if (storeInitialized) return;
+
+  // ✅ 이미 초기화됐어도 콜백은 항상 갱신 (재방문 시 stale 클로저 방지)
+  if (storeInitialized) {
+    _onPurchaseSuccess = onSuccess;
+    _onPurchaseError   = onError;
+    _onRestore         = onRestore;
+    return;
+  }
+
   if (_initInProgress) return; // ✅ 동시 호출 방어
   _initInProgress = true;
 
