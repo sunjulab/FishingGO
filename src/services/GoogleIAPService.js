@@ -99,6 +99,12 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
   }
 }
 
+/** ✅ IAP 스토어 초기화 완료 여부 (VVIPSubscribe에서 사용) */
+export function isStoreReady() {
+  return storeInitialized;
+}
+
+
 /**
  * 플랜별 구매 시작
  * @param {'BASIC'|'PRO'|'VVIP'} planKey

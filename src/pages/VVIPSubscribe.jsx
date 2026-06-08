@@ -3,7 +3,7 @@ import { X, Crown, Lock, MapPin, Star, CheckCircle2, RefreshCw, Smartphone, Zap 
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
-import { initIAP, purchasePlan, restorePurchases, IAP_PRODUCTS } from '../services/GoogleIAPService';
+import { initIAP, purchasePlan, restorePurchases, IAP_PRODUCTS, isStoreReady } from '../services/GoogleIAPService';
 import { UCB_ENABLED, openPayplePayment } from '../services/PaypleService';
 
 /* ── 항구 목록 ──────────────────────────────────────────────────── */
@@ -393,8 +393,10 @@ export default function VVIPSubscribe() {
                       <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> 결제 진행 중...</>
                     ) : !isNative ? (
                       <><Smartphone size={16} /> 앱에서만 구독 가능</>
-                    ) : iapReady ? (
+                    ) : iapReady && isStoreReady() ? (
                       <>{plan.label} 구독 시작하기</>
+                    ) : iapReady && !isStoreReady() ? (
+                      <><RefreshCw size={14} /> Google Play 연결 필요 (앱 재시작)</>
                     ) : null}
                   </button>
                 )}
