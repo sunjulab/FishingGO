@@ -1,21 +1,24 @@
 /**
- * GoogleIAPService.js
+ * GoogleIAPService.js — 100점 완전판
  * cordova-plugin-purchase v13 — 구글 플레이 인앱결제
- * BASIC(9,900/월) · PRO(110,000/월) · VVIP(550,000/월) 전 플랜 지원
+ * BASIC(9,900/월) · PRO(110,000/월) · VVIP(550,000/월)
  */
 
-// ── 상품 ID (Google Play Console에 등록된 값과 동일해야 함) ──────
+// ── 상품 ID (Google Play Console에 등록된 값과 동일) ─────────────
 export const IAP_PRODUCTS = {
   BASIC: { id: 'kr.fishinggo.app.lite_monthly',  type: 'PAID_SUBSCRIPTION', price: 9900,   label: 'BASIC', tier: 'BUSINESS_LITE' },
   PRO:   { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 110000, label: 'PRO',   tier: 'PRO'           },
   VVIP:  { id: 'kr.fishinggo.app.vvip_monthly',  type: 'PAID_SUBSCRIPTION', price: 550000, label: 'VVIP',  tier: 'BUSINESS_VIP'  },
 };
 
-let storeInitialized = false;
+// ── 모듈 레벨 상태 ────────────────────────────────────────────────
+let storeInitialized       = false; // 초기화 완료 여부
 let storeListenersRegistered = false; // 이벤트 리스너 중복 등록 방지
-let _onPurchaseSuccess = null;
-let _onPurchaseError   = null;
-let _onRestore         = null;
+let storeProductsRegistered  = false; // 상품 등록 중복 방지
+let _initInProgress        = false; // 동시 초기화 방어 mutex
+let _onPurchaseSuccess     = null;
+let _onPurchaseError       = null;
+let _onRestore             = null;
 
 function isNative() {
   return !!(window?.Capacitor?.isNativePlatform?.());
@@ -24,21 +27,23 @@ function getStore() {
   return window?.CdvPurchase?.store;
 }
 
-/** 🔍 IAP 상태 진단 (디버그용) */
+// ── 상태 진단 (디버그) ───────────────────────────────────────────
 export function diagnoseIAP() {
   const info = {
     isNative:         isNative(),
     CdvPurchaseReady: !!window?.CdvPurchase,
     storeExists:      !!getStore(),
     storeInitialized,
-    products:         {},
+    storeListenersRegistered,
+    storeProductsRegistered,
+    products: {},
   };
   const store = getStore();
   if (store && storeInitialized) {
     Object.entries(IAP_PRODUCTS).forEach(([key, p]) => {
       const sp = store.get(p.id, window.CdvPurchase?.Platform?.GOOGLE_PLAY);
       info.products[key] = sp
-        ? { found: true, state: sp.state, owned: sp.owned }
+        ? { found: true, state: sp.state, owned: sp.owned, hasOffer: !!sp.getOffer?.() }
         : { found: false };
     });
   }
@@ -46,11 +51,7 @@ export function diagnoseIAP() {
   return info;
 }
 
-/**
- * IAP 스토어 초기화 (앱 시작 시 1회)
- */
-let _initInProgress = false; // ✅ 동시 초기화 방어 mutex
-
+// ── 초기화 ───────────────────────────────────────────────────────
 export async function initIAP({ onSuccess, onError, onRestore } = {}) {
   if (!isNative()) return;
   if (storeInitialized) return;
@@ -58,96 +59,103 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
   _initInProgress = true;
 
   try {
-    // ✅ Cordova 플러그인은 deviceready 이후에만 사용 가능
+    // ① deviceready 대기 (최대 5초)
     if (!window.CdvPurchase) {
       await new Promise((resolve) => {
         const onReady = () => { document.removeEventListener('deviceready', onReady); resolve(); };
         document.addEventListener('deviceready', onReady, { once: true });
-        setTimeout(resolve, 5000); // 5초 최대 대기
+        setTimeout(resolve, 5000);
       });
     }
 
     const store = getStore();
     if (!store) {
-      console.warn('[IAP] ❌ window.CdvPurchase.store 없음 — cordova.js 로드 확인 필요');
-      return;
+      console.warn('[IAP] ❌ window.CdvPurchase.store 없음');
+      throw new Error('IAP-ERR-PLUGIN: cordova.js 로드 실패. 앱을 재시작해주세요.');
     }
 
+    // ② 콜백 등록
     _onPurchaseSuccess = onSuccess;
     _onPurchaseError   = onError;
     _onRestore         = onRestore;
 
-    // 3개 상품 동시 등록
-    store.register(
-      Object.values(IAP_PRODUCTS).map(p => ({
-        id:       p.id,
-        type:     window.CdvPurchase.ProductType.PAID_SUBSCRIPTION,
-        platform: window.CdvPurchase.Platform.GOOGLE_PLAY,
-      }))
-    );
+    // ③ 상품 등록 (중복 방지)
+    if (!storeProductsRegistered) {
+      store.register(
+        Object.values(IAP_PRODUCTS).map(p => ({
+          id:       p.id,
+          type:     window.CdvPurchase.ProductType.PAID_SUBSCRIPTION,
+          platform: window.CdvPurchase.Platform.GOOGLE_PLAY,
+        }))
+      );
+      storeProductsRegistered = true;
+    }
 
-    // ✅ 이벤트 리스너 중복 등록 방지
+    // ④ 이벤트 리스너 등록 (중복 방지)
     if (!storeListenersRegistered) {
       store.when()
         .approved(async (transaction) => {
+          console.log('[IAP] 승인됨:', transaction.transactionId);
           try {
             await verifyReceiptOnServer(transaction);
             transaction.finish();
             _onPurchaseSuccess?.(transaction);
           } catch (err) {
             console.error('[IAP] 영수증 검증 실패:', err);
+            // 검증 실패: finish 호출 안함 → 다음 앱 실행 시 재시도
             _onPurchaseError?.(err);
           }
         })
-        .verified((receipt) => { _onRestore?.(receipt); })
+        .verified((receipt) => {
+          console.log('[IAP] 검증됨:', receipt);
+          _onRestore?.(receipt);
+        })
         .error((err) => {
-          console.error('[IAP] 에러:', err);
+          console.error('[IAP] 스토어 에러:', err);
           _onPurchaseError?.(err);
         });
       storeListenersRegistered = true;
     }
 
-    // ✅ cordova-plugin-purchase v13: initialize()는 IError[] 배열 반환 (throw 안함)
+    // ⑤ 스토어 초기화 — IError[] 반환 (throw 안함)
     const initErrors = await store.initialize([window.CdvPurchase.Platform.GOOGLE_PLAY]);
     if (initErrors && initErrors.length > 0) {
-      const code = initErrors[0]?.code;
-      const msg  = initErrors[0]?.message || '알 수 없음';
-      console.error('[IAP] ⚠️ 초기화 오류:', code, msg);
-      // ✅ 실제 에러 코드를 throw message에 포함 → VVIPSubscribe catch에서 toast 표시 가능
+      const code = initErrors[0]?.code ?? 'UNKNOWN';
+      const msg  = initErrors[0]?.message || '알 수 없는 오류';
+      console.error('[IAP] 초기화 오류:', code, msg);
+      // ✅ 에러 코드 그대로 전파 → VVIPSubscribe에서 toast에 표시
       throw new Error(`IAP-ERR-${code}: ${msg}`);
     }
+
     storeInitialized = true;
-    console.log('[IAP] ✅ Google Play Billing 초기화 완료 (3개 상품)');
-    diagnoseIAP(); // 초기화 후 자동 진단
+    console.log('[IAP] ✅ Google Play Billing 초기화 완료');
+    diagnoseIAP();
+
   } catch (err) {
-    console.error('[IAP] 초기화 실패 상세:', err?.message || err);
-    throw err; // ✅ 원본 에러 그대로 전파 (VVIPSubscribe에서 메시지 읽기 위해)
+    console.error('[IAP] 초기화 실패:', err?.message || err);
+    throw err; // ✅ 원본 에러 그대로 전파
   } finally {
     _initInProgress = false; // ✅ 항상 mutex 해제
   }
 }
 
-/** ✅ IAP 스토어 초기화 완료 여부 */
+// ── 상태 조회 ─────────────────────────────────────────────────────
 export function isStoreReady() {
   return storeInitialized;
 }
 
-/** ✅ IAP 재시도를 위한 상태 초기화 */
+// ── 재시도용 상태 초기화 ──────────────────────────────────────────
 export function resetIAP() {
   storeInitialized = false;
+  // 리스너/상품 등록은 유지 (재시도 시 중복 등록 방지)
 }
 
-
-/**
- * 플랜별 구매 시작
- * @param {'BASIC'|'PRO'|'VVIP'} planKey
- */
+// ── 구매 시작 ─────────────────────────────────────────────────────
 export async function purchasePlan(planKey) {
   if (!isNative()) throw new Error('NATIVE_ONLY');
 
   const store = getStore();
 
-  // ── 상세 에러 메시지 ─────────────────────────────────────────
   if (!window?.CdvPurchase) {
     throw new Error('결제 플러그인 로드 실패\n앱을 재시작 후 다시 시도해주세요.');
   }
@@ -163,7 +171,6 @@ export async function purchasePlan(planKey) {
 
   const storeProduct = store.get(product.id, window.CdvPurchase.Platform.GOOGLE_PLAY);
   if (!storeProduct) {
-    // Google Play Console에 상품이 없거나 미활성화 상태
     console.error('[IAP] 상품 없음:', product.id);
     diagnoseIAP();
     throw new Error(
@@ -180,17 +187,23 @@ export async function purchasePlan(planKey) {
   }
 
   console.log('[IAP] 구매 시작:', planKey, product.id);
-  return offer.order();
+
+  // ✅ offer.order() IError 반환값 체크 (v13: 에러 시 IError 반환, 성공 시 undefined)
+  const orderResult = await offer.order();
+  if (orderResult && orderResult.isError) {
+    throw new Error(`결제 요청 실패: ${orderResult.message || JSON.stringify(orderResult)}`);
+  }
+  return orderResult;
 }
 
-/** 구독 복원 */
+// ── 구독 복원 ─────────────────────────────────────────────────────
 export async function restorePurchases() {
   const store = getStore();
   if (!store || !storeInitialized) return;
   await store.restorePurchases();
 }
 
-/** 특정 플랜 구독 여부 확인 */
+// ── 특정 플랜 구독 여부 확인 ──────────────────────────────────────
 export function isPlanActive(planKey) {
   const store = getStore();
   if (!store) return false;
@@ -198,15 +211,24 @@ export function isPlanActive(planKey) {
   return product?.owned ?? false;
 }
 
-/** 서버 영수증 검증 */
+// ── 서버 영수증 검증 ──────────────────────────────────────────────
 async function verifyReceiptOnServer(transaction) {
-  const productId = transaction?.products?.[0]?.id
-    || transaction?.nativePurchase?.productId
+  // ✅ v13 정확한 purchaseToken 필드: nativePurchase.purchaseToken (Google Play)
+  const purchaseToken =
+    transaction?.nativePurchase?.purchaseToken   // ✅ 최우선 (Google Play 정식 필드)
+    || transaction?.purchaseId                    // 폴백 1
+    || transaction?.transactionId;                // 폴백 2
+
+  const productId =
+    transaction?.nativePurchase?.productId        // ✅ 최우선
+    || transaction?.products?.[0]?.id             // 폴백
     || '';
 
-  const purchaseToken = transaction?.purchaseId
-    || transaction?.nativePurchase?.purchaseToken
-    || transaction?.transactionId;
+  console.log('[IAP] 서버 검증 요청:', { productId, hasToken: !!purchaseToken });
+
+  if (!purchaseToken) {
+    throw new Error('purchaseToken 없음 — 영수증 검증 불가');
+  }
 
   const res = await fetch(
     (import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com') + '/api/payment/google-iap/verify',
@@ -219,7 +241,7 @@ async function verifyReceiptOnServer(transaction) {
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || '서버 검증 실패');
+    throw new Error(err.error || `서버 검증 실패 (HTTP ${res.status})`);
   }
   return res.json();
 }

@@ -161,25 +161,20 @@ export default function VVIPSubscribe() {
         },
       })
       .then(() => {
+        clearTimeout(timer); // ✅ 성공 시 8초 타이머 즉시 해제
         if (isMounted) {
           setIapReady(true);
-          setStoreReady(isStoreReady()); // ✅ 모듈 변수 → React state 동기화
+          setStoreReady(isStoreReady());
         }
       })
-      .catch((err) => { 
+      .catch((err) => {
+        clearTimeout(timer); // ✅ 실패 시도 타이머 해제
         const errMsg = err?.message || String(err);
-        console.warn('[IAP] init fail:', errMsg); 
+        console.warn('[IAP] init fail:', errMsg);
         if (isMounted) {
           setIapReady(true);
           setStoreReady(false);
-          // ✅ 실제 오류 코드를 화면에 표시 (IAP-ERR-X: ... 형식)
-          if (errMsg.includes('IAP-ERR-')) {
-            addToast('결제 연결 실패: ' + errMsg, 'error');
-          } else if (errMsg.includes('store 없음') || errMsg.includes('CdvPurchase')) {
-            addToast('결제 플러그인 로드 실패 (코드: PLUGIN_MISSING)', 'error');
-          } else {
-            addToast('결제 초기화 실패: ' + errMsg.slice(0, 60), 'error');
-          }
+          addToast('결제 초기화 실패: ' + errMsg.slice(0, 80), 'error');
         }
       });
     };
@@ -195,7 +190,7 @@ export default function VVIPSubscribe() {
   useEffect(() => {
     if (!isNative || iapReady) return;
     const start = Date.now();
-    const total = 3000;
+    const total = 8000; // ✅ 8초 타임아웃과 일치
     const timer = setInterval(() => {
       const pct = Math.min(95, Math.round(((Date.now() - start) / total) * 100));
       setIapProgress(pct);
