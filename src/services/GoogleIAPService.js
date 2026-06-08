@@ -52,6 +52,16 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
   if (!isNative()) return;
   if (storeInitialized) return;
 
+  // ✅ Cordova 플러그인은 deviceready 이후에만 사용 가능
+  // window.CdvPurchase가 없으면 deviceready 이벤트를 기다림 (최대 5초)
+  if (!window.CdvPurchase) {
+    await new Promise((resolve) => {
+      const onReady = () => { document.removeEventListener('deviceready', onReady); resolve(); };
+      document.addEventListener('deviceready', onReady, { once: true });
+      setTimeout(resolve, 5000); // 5초 최대 대기
+    });
+  }
+
   const store = getStore();
   if (!store) {
     console.warn('[IAP] ❌ window.CdvPurchase.store 없음 — cordova.js 로드 확인 필요');

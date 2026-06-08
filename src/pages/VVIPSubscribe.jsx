@@ -139,10 +139,10 @@ export default function VVIPSubscribe() {
     if (!isNative) return;
     let isMounted = true;
     
-    // 무한 대기 방지: 최대 3초 대기 후 결제 모듈 준비 상태로 전환
+    // 무한 대기 방지: 최대 8초 대기 후 결제 모듈 준비 상태로 전환 (deviceready 5초 + 초기화 시간)
     const timer = setTimeout(() => {
       if (isMounted) setIapReady(true);
-    }, 3000);
+    }, 8000);
 
     initIAP({
       onSuccess: async () => {
