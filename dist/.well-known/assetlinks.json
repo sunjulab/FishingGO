@@ -1,10 +1,16 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "kr.fishinggo.app",
-    "sha256_cert_fingerprints": [
-      "0B:14:2F:90:F1:E9:EE:32:C6:DD:93:99:94:98:1A:C8:90:F4:63:26:E7:DE:8A:63:B2:CE:08:6C:0B:5F:8F:85"
-    ]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "kr.fishinggo.app",
+      "sha256_cert_fingerprints": [
+        "0B:14:2F:90:F1:E9:EE:32:C6:DD:93:99:94:98:1A:C8:90:F4:63:26:E7:DE:8A:63:B2:CE:08:6C:0B:5F:8F:85",
+        "60:56:39:22:BB:72:E9:20:08:06:53:BE:70:2B:FE:58:DE:3D:63:02:39:A8:13:7A:DD:10:72:D1:32:F3:9B:D2"
+      ]
+    }
   }
-}]
+]
