@@ -203,35 +203,40 @@ export default function VVIPSubscribe() {
     if (iapReady) setIapProgress(100);
   }, [iapReady]);
 
-  /* ── VVIP 항구 데이터 ─────────────────────────────────────── */
-  useEffect(() => {
-    apiClient.get('/api/vvip/harbors').then(res => {
+  /* ── VVIP 항구 데이터 (실시간 폴링) ──────────────────────────── */
+  const fetchHarborData = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/vvip/harbors');
       const map = {};
-      (res.data.harbors || []).forEach(h => { if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt }; });
+      (res.data.harbors || []).forEach(h => {
+        if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt };
+      });
       setTakenMap(map);
-    }).catch(() => {});
+    } catch {}
     if (user) {
-      apiClient.get('/api/vvip/my-slot').then(res => {
-        if (res.data.hasSlot) setMySlot({ harborId: res.data.harbor?.id, harborName: res.data.harbor?.name, expiresAt: res.data.slot?.expiresAt });
-      }).catch(() => {});
+      try {
+        const res2 = await apiClient.get('/api/vvip/my-slot');
+        if (res2.data.hasSlot) {
+          setMySlot({ harborId: res2.data.harbor?.id, harborName: res2.data.harbor?.name, expiresAt: res2.data.slot?.expiresAt });
+        } else {
+          setMySlot(null); // ✅ 슬롯 해제 시 null 반영
+        }
+      } catch {}
     }
-  }, [user?.email]);
+  }, [user]);
 
   useEffect(() => {
-    if (!user) return;
-    const id = setInterval(() => {
-      apiClient.get('/api/vvip/harbors').then(res => {
-        const map = {};
-        (res.data.harbors || []).forEach(h => { if (h.isTaken) map[h.id] = { takenBy: h.takenBy }; });
-        setTakenMap(map);
-      }).catch(() => {});
-    }, 30000);
-    return () => clearInterval(id);
-  }, [user?.email]);
+    fetchHarborData(); // 즉시 로드
+    const id = setInterval(fetchHarborData, 10000); // ✅ 10초 폴링
+    const onFocus = () => fetchHarborData();
+    window.addEventListener('focus', onFocus); // ✅ 포커스 시 즉시 갱신
+    return () => { clearInterval(id); window.removeEventListener('focus', onFocus); };
+  }, [fetchHarborData]);
 
   const harbors = HARBORS_STATIC.map(h => ({ ...h, isTaken: !!takenMap[h.id], takenBy: takenMap[h.id]?.takenBy || null, isMyHarbor: mySlot?.harborId === h.id }));
   const filtered = selectedRegion === '전체' ? harbors : harbors.filter(h => h.region === selectedRegion);
-  const availableCount = HARBORS_STATIC.length - Object.keys(takenMap).length;
+  const takenCount = Object.keys(takenMap).length;
+  const availableCount = HARBORS_STATIC.length - takenCount; // ✅ 점유 해제 시 즉시 반영
 
   /* ── 결제 버튼 클릭 ──────────────────────────────────────── */
   const handlePlanClick = useCallback((planKey) => {
