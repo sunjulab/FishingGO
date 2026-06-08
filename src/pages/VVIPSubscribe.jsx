@@ -139,38 +139,34 @@ export default function VVIPSubscribe() {
   /* ── IAP 초기화 ───────────────────────────────────────────── */
   useEffect(() => {
     if (!isNative) return;
-    let isMounted = true;
-    
-    // 무한 대기 방지: 최대 3초 대기 후 결제 모듈 준비 상태로 전환
-    const timer = setTimeout(() => {
-      if (isMounted) setIapReady(true);
-    }, 3000);
+
+    // ✅ IAP-FIX: native 확정 즉시 ready=true → 버튼 즉시 활성화
+    // (addToast/setUser 의존성 제거 → 연속 렌더 시 타이머 리셋 버그 방지)
+    setIapReady(true);
+
+    // 콜백은 ref로 최신값 참조 (의존성 배열 불필요)
+    onSuccessRef.current = async () => {
+      addToast('✅ 구독이 완료되었습니다!', 'success');
+      try {
+        const res = await apiClient.get('/api/user/me');
+        if (res.data?.user) setUser(res.data.user);
+      } catch {}
+      setLoading(null);
+    };
+    onErrorRef.current = (err) => {
+      if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
+      setLoading(null);
+    };
 
     initIAP({
-      onSuccess: async () => {
-        addToast('✅ 구독이 완료되었습니다!', 'success');
-        try {
-          const res = await apiClient.get('/api/user/me');
-          if (res.data?.user) setUser(res.data.user);
-        } catch {}
-        setLoading(null);
-      },
-      onError: (err) => {
-        if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
-        setLoading(null);
-      },
-    })
-    .then(() => { if (isMounted) setIapReady(true); })
-    .catch((err) => { 
-      console.warn('[IAP] init fail:', err); 
-      if (isMounted) setIapReady(true); 
+      onSuccess: () => onSuccessRef.current?.(),
+      onError:   (err) => onErrorRef.current?.(err),
+    }).catch((err) => {
+      console.warn('[IAP] init fail:', err);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNative]);
 
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, [isNative, addToast, setUser]);
 
   /* ── VVIP 항구 데이터 ─────────────────────────────────────── */
   useEffect(() => {
