@@ -12,6 +12,7 @@ export const IAP_PRODUCTS = {
 };
 
 let storeInitialized = false;
+let storeListenersRegistered = false; // 이벤트 리스너 중복 등록 방지
 let _onPurchaseSuccess = null;
 let _onPurchaseError   = null;
 let _onRestore         = null;
@@ -99,19 +100,33 @@ export async function initIAP({ onSuccess, onError, onRestore } = {}) {
     });
 
   try {
-    await store.initialize([window.CdvPurchase.Platform.GOOGLE_PLAY]);
+    // ✅ cordova-plugin-purchase v13: initialize()는 IError[] 배열 반환 (throw 안함)
+    const initErrors = await store.initialize([window.CdvPurchase.Platform.GOOGLE_PLAY]);
+    if (initErrors && initErrors.length > 0) {
+      const code = initErrors[0]?.code;
+      const msg  = initErrors[0]?.message || '알 수 없음';
+      console.error('[IAP] ⚠️ 초기화 오류:', code, msg);
+      // BILLING_UNAVAILABLE(3): Play Store 미설치/미로그인 or 앱이 Play Store 외부 설치
+      // ERROR(0): 일시적 오류 → 재시도 가능
+      throw new Error(`[IAP-${code}] ${msg}`);
+    }
     storeInitialized = true;
     console.log('[IAP] ✅ Google Play Billing 초기화 완료 (3개 상품)');
     diagnoseIAP(); // 초기화 후 자동 진단
   } catch (err) {
-    console.error('[IAP] 초기화 실패:', err);
-    throw new Error('구글 플레이 결제 모듈 초기화 실패');
+    console.error('[IAP] 초기화 실패 상세:', err?.message || err);
+    throw new Error('구글 플레이 결제 모듈 초기화 실패: ' + (err?.message || err));
   }
 }
 
-/** ✅ IAP 스토어 초기화 완료 여부 (VVIPSubscribe에서 사용) */
+/** ✅ IAP 스토어 초기화 완료 여부 */
 export function isStoreReady() {
   return storeInitialized;
+}
+
+/** ✅ IAP 재시도를 위한 상태 초기화 */
+export function resetIAP() {
+  storeInitialized = false;
 }
 
 

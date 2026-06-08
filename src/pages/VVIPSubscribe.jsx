@@ -3,7 +3,7 @@ import { X, Crown, Lock, MapPin, Star, CheckCircle2, RefreshCw, Smartphone, Zap 
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
-import { initIAP, purchasePlan, restorePurchases, IAP_PRODUCTS, isStoreReady } from '../services/GoogleIAPService';
+import { initIAP, purchasePlan, restorePurchases, IAP_PRODUCTS, isStoreReady, resetIAP } from '../services/GoogleIAPService';
 import { UCB_ENABLED, openPayplePayment } from '../services/PaypleService';
 
 /* ── 항구 목록 ──────────────────────────────────────────────────── */
@@ -144,25 +144,28 @@ export default function VVIPSubscribe() {
       if (isMounted) setIapReady(true);
     }, 8000);
 
-    initIAP({
-      onSuccess: async () => {
-        addToast('✅ 구독이 완료되었습니다!', 'success');
-        try {
-          const res = await apiClient.get('/api/user/me');
-          if (res.data?.user) setUser(res.data.user);
-        } catch {}
-        setLoading(null);
-      },
-      onError: (err) => {
-        if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
-        setLoading(null);
-      },
-    })
-    .then(() => { if (isMounted) setIapReady(true); })
-    .catch((err) => { 
-      console.warn('[IAP] init fail:', err); 
-      if (isMounted) setIapReady(true); 
-    });
+    const doInit = () => {
+      initIAP({
+        onSuccess: async () => {
+          addToast('✅ 구독이 완료되었습니다!', 'success');
+          try {
+            const res = await apiClient.get('/api/user/me');
+            if (res.data?.user) setUser(res.data.user);
+          } catch {}
+          setLoading(null);
+        },
+        onError: (err) => {
+          if (err?.code !== 6) addToast('결제 중 오류가 발생했습니다.', 'error');
+          setLoading(null);
+        },
+      })
+      .then(() => { if (isMounted) setIapReady(true); })
+      .catch((err) => { 
+        console.warn('[IAP] init fail:', err); 
+        if (isMounted) setIapReady(true); 
+      });
+    };
+    doInit();
 
     return () => {
       isMounted = false;
@@ -221,14 +224,31 @@ export default function VVIPSubscribe() {
   const handlePlanClick = useCallback((planKey) => {
     if (!user) return addToast('로그인이 필요합니다.', 'error');
     if (!isNative) return addToast('앱에서만 구독 가능합니다.', 'info');
+    // ✅ store 미준비 시 재연결 시도 (앱 재시작 없이)
+    if (!isStoreReady()) {
+      addToast('Google Play 재연결 중...', 'info');
+      resetIAP();
+      setIapReady(false);
+      setIapProgress(0);
+      setTimeout(() => {
+        initIAP({
+          onSuccess: async () => {
+            addToast('✅ 연결 완료! 다시 시도해주세요.', 'success');
+            setIapReady(true);
+          },
+          onError: () => { setIapReady(true); },
+        })
+        .then(() => setIapReady(true))
+        .catch(() => setIapReady(true));
+      }, 300);
+      return;
+    }
     if (UCB_ENABLED) {
-      // UCB 활성화 시: 결제 선택 다이얼로그
       setPayDialog(planKey);
     } else {
-      // UCB 비활성화 시: IAP 바로 실행
       handleIAPPurchase(planKey);
     }
-  }, [user, isNative]);
+  }, [user, isNative, addToast]);
 
   /* ── IAP 결제 ─────────────────────────────────────────────── */
   const handleIAPPurchase = useCallback(async (planKey) => {
@@ -396,7 +416,7 @@ export default function VVIPSubscribe() {
                     ) : iapReady && isStoreReady() ? (
                       <>{plan.label} 구독 시작하기</>
                     ) : iapReady && !isStoreReady() ? (
-                      <><RefreshCw size={14} /> Google Play 연결 필요 (앱 재시작)</>
+                      <><RefreshCw size={14} /> Google Play 재연결</>
                     ) : null}
                   </button>
                 )}
