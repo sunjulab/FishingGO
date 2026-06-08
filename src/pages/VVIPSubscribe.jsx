@@ -115,6 +115,7 @@ export default function VVIPSubscribe() {
 
   const [view, setView]                   = useState('plan'); // 'plan' | 'harbor'
   const [iapReady, setIapReady]           = useState(false);
+  const [storeReady, setStoreReady]       = useState(false); // ✅ React 재렌더용 - isStoreReady()는 모듈변수라 React 추적 불가
   const [iapProgress, setIapProgress]     = useState(0);  // ✅ IAP 수버 로딩중 % 표시
   const [loading, setLoading]             = useState(null);  // 로딩 중인 planKey
   const [restoring, setRestoring]         = useState(false);
@@ -159,10 +160,18 @@ export default function VVIPSubscribe() {
           setLoading(null);
         },
       })
-      .then(() => { if (isMounted) setIapReady(true); })
+      .then(() => {
+        if (isMounted) {
+          setIapReady(true);
+          setStoreReady(isStoreReady()); // ✅ 모듈 변수 → React state 동기화
+        }
+      })
       .catch((err) => { 
         console.warn('[IAP] init fail:', err); 
-        if (isMounted) setIapReady(true); 
+        if (isMounted) {
+          setIapReady(true);
+          setStoreReady(false);
+        }
       });
     };
     doInit();
@@ -224,22 +233,24 @@ export default function VVIPSubscribe() {
   const handlePlanClick = useCallback((planKey) => {
     if (!user) return addToast('로그인이 필요합니다.', 'error');
     if (!isNative) return addToast('앱에서만 구독 가능합니다.', 'info');
-    // ✅ store 미준비 시 재연결 시도 (앱 재시작 없이)
-    if (!isStoreReady()) {
+    // ✅ storeReady state로 체크 (모듈 변수 isStoreReady() 대신)
+    if (!storeReady) {
       addToast('Google Play 재연결 중...', 'info');
       resetIAP();
       setIapReady(false);
+      setStoreReady(false);
       setIapProgress(0);
       setTimeout(() => {
         initIAP({
           onSuccess: async () => {
             addToast('✅ 연결 완료! 다시 시도해주세요.', 'success');
             setIapReady(true);
+            setStoreReady(true);
           },
-          onError: () => { setIapReady(true); },
+          onError: () => { setIapReady(true); setStoreReady(false); },
         })
-        .then(() => setIapReady(true))
-        .catch(() => setIapReady(true));
+        .then(() => { setIapReady(true); setStoreReady(isStoreReady()); })
+        .catch(() => { setIapReady(true); setStoreReady(false); });
       }, 300);
       return;
     }
@@ -248,7 +259,7 @@ export default function VVIPSubscribe() {
     } else {
       handleIAPPurchase(planKey);
     }
-  }, [user, isNative, addToast]);
+  }, [user, isNative, addToast, storeReady]);
 
   /* ── IAP 결제 ─────────────────────────────────────────────── */
   const handleIAPPurchase = useCallback(async (planKey) => {
@@ -413,9 +424,9 @@ export default function VVIPSubscribe() {
                       <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> 결제 진행 중...</>
                     ) : !isNative ? (
                       <><Smartphone size={16} /> 앱에서만 구독 가능</>
-                    ) : iapReady && isStoreReady() ? (
+                    ) : iapReady && storeReady ? (
                       <>{plan.label} 구독 시작하기</>
-                    ) : iapReady && !isStoreReady() ? (
+                    ) : iapReady && !storeReady ? (
                       <><RefreshCw size={14} /> Google Play 재연결</>
                     ) : null}
                   </button>
