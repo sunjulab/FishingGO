@@ -49,73 +49,81 @@ export function diagnoseIAP() {
 /**
  * IAP 스토어 초기화 (앱 시작 시 1회)
  */
+let _initInProgress = false; // ✅ 동시 초기화 방어 mutex
+
 export async function initIAP({ onSuccess, onError, onRestore } = {}) {
   if (!isNative()) return;
   if (storeInitialized) return;
-
-  // ✅ Cordova 플러그인은 deviceready 이후에만 사용 가능
-  // window.CdvPurchase가 없으면 deviceready 이벤트를 기다림 (최대 5초)
-  if (!window.CdvPurchase) {
-    await new Promise((resolve) => {
-      const onReady = () => { document.removeEventListener('deviceready', onReady); resolve(); };
-      document.addEventListener('deviceready', onReady, { once: true });
-      setTimeout(resolve, 5000); // 5초 최대 대기
-    });
-  }
-
-  const store = getStore();
-  if (!store) {
-    console.warn('[IAP] ❌ window.CdvPurchase.store 없음 — cordova.js 로드 확인 필요');
-    return;
-  }
-
-  _onPurchaseSuccess = onSuccess;
-  _onPurchaseError   = onError;
-  _onRestore         = onRestore;
-
-  // 3개 상품 동시 등록
-  store.register(
-    Object.values(IAP_PRODUCTS).map(p => ({
-      id:       p.id,
-      type:     window.CdvPurchase.ProductType.PAID_SUBSCRIPTION,
-      platform: window.CdvPurchase.Platform.GOOGLE_PLAY,
-    }))
-  );
-
-  store.when()
-    .approved(async (transaction) => {
-      try {
-        await verifyReceiptOnServer(transaction);
-        transaction.finish();
-        _onPurchaseSuccess?.(transaction);
-      } catch (err) {
-        console.error('[IAP] 영수증 검증 실패:', err);
-        _onPurchaseError?.(err);
-      }
-    })
-    .verified((receipt) => { _onRestore?.(receipt); })
-    .error((err) => {
-      console.error('[IAP] 에러:', err);
-      _onPurchaseError?.(err);
-    });
+  if (_initInProgress) return; // ✅ 동시 호출 방어
+  _initInProgress = true;
 
   try {
+    // ✅ Cordova 플러그인은 deviceready 이후에만 사용 가능
+    if (!window.CdvPurchase) {
+      await new Promise((resolve) => {
+        const onReady = () => { document.removeEventListener('deviceready', onReady); resolve(); };
+        document.addEventListener('deviceready', onReady, { once: true });
+        setTimeout(resolve, 5000); // 5초 최대 대기
+      });
+    }
+
+    const store = getStore();
+    if (!store) {
+      console.warn('[IAP] ❌ window.CdvPurchase.store 없음 — cordova.js 로드 확인 필요');
+      return;
+    }
+
+    _onPurchaseSuccess = onSuccess;
+    _onPurchaseError   = onError;
+    _onRestore         = onRestore;
+
+    // 3개 상품 동시 등록
+    store.register(
+      Object.values(IAP_PRODUCTS).map(p => ({
+        id:       p.id,
+        type:     window.CdvPurchase.ProductType.PAID_SUBSCRIPTION,
+        platform: window.CdvPurchase.Platform.GOOGLE_PLAY,
+      }))
+    );
+
+    // ✅ 이벤트 리스너 중복 등록 방지
+    if (!storeListenersRegistered) {
+      store.when()
+        .approved(async (transaction) => {
+          try {
+            await verifyReceiptOnServer(transaction);
+            transaction.finish();
+            _onPurchaseSuccess?.(transaction);
+          } catch (err) {
+            console.error('[IAP] 영수증 검증 실패:', err);
+            _onPurchaseError?.(err);
+          }
+        })
+        .verified((receipt) => { _onRestore?.(receipt); })
+        .error((err) => {
+          console.error('[IAP] 에러:', err);
+          _onPurchaseError?.(err);
+        });
+      storeListenersRegistered = true;
+    }
+
     // ✅ cordova-plugin-purchase v13: initialize()는 IError[] 배열 반환 (throw 안함)
     const initErrors = await store.initialize([window.CdvPurchase.Platform.GOOGLE_PLAY]);
     if (initErrors && initErrors.length > 0) {
       const code = initErrors[0]?.code;
       const msg  = initErrors[0]?.message || '알 수 없음';
       console.error('[IAP] ⚠️ 초기화 오류:', code, msg);
-      // BILLING_UNAVAILABLE(3): Play Store 미설치/미로그인 or 앱이 Play Store 외부 설치
-      // ERROR(0): 일시적 오류 → 재시도 가능
-      throw new Error(`[IAP-${code}] ${msg}`);
+      // ✅ 실제 에러 코드를 throw message에 포함 → VVIPSubscribe catch에서 toast 표시 가능
+      throw new Error(`IAP-ERR-${code}: ${msg}`);
     }
     storeInitialized = true;
     console.log('[IAP] ✅ Google Play Billing 초기화 완료 (3개 상품)');
     diagnoseIAP(); // 초기화 후 자동 진단
   } catch (err) {
     console.error('[IAP] 초기화 실패 상세:', err?.message || err);
-    throw new Error('구글 플레이 결제 모듈 초기화 실패: ' + (err?.message || err));
+    throw err; // ✅ 원본 에러 그대로 전파 (VVIPSubscribe에서 메시지 읽기 위해)
+  } finally {
+    _initInProgress = false; // ✅ 항상 mutex 해제
   }
 }
 

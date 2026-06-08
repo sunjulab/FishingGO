@@ -167,10 +167,19 @@ export default function VVIPSubscribe() {
         }
       })
       .catch((err) => { 
-        console.warn('[IAP] init fail:', err); 
+        const errMsg = err?.message || String(err);
+        console.warn('[IAP] init fail:', errMsg); 
         if (isMounted) {
           setIapReady(true);
           setStoreReady(false);
+          // ✅ 실제 오류 코드를 화면에 표시 (IAP-ERR-X: ... 형식)
+          if (errMsg.includes('IAP-ERR-')) {
+            addToast('결제 연결 실패: ' + errMsg, 'error');
+          } else if (errMsg.includes('store 없음') || errMsg.includes('CdvPurchase')) {
+            addToast('결제 플러그인 로드 실패 (코드: PLUGIN_MISSING)', 'error');
+          } else {
+            addToast('결제 초기화 실패: ' + errMsg.slice(0, 60), 'error');
+          }
         }
       });
     };
@@ -389,7 +398,7 @@ export default function VVIPSubscribe() {
                 ) : (
                   <button
                     onClick={() => handlePlanClick(plan.key)}
-                    disabled={isLoading}
+                    disabled={owned || isLoading || !iapReady}
                     style={{
                       width: '100%', padding: isNative && !iapReady ? '10px 14px 10px' : '14px', borderRadius: '14px', border: 'none',
                       background: isLoading
