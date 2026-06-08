@@ -1475,83 +1475,139 @@ async function getWaterTemp(sid) {
   return null;
 }
 
+// ✅ REAL-WIND-WAVE: 기상청 해양기상부이 실시간 파고·풍속 API
+const BUOY_MAP = {
+  'DT_0001':'22','DT_0021':'22','DT_0002':'23','DT_0003':'23','DT_0033':'22','DT_0036':'23',
+  'DT_0004':'2','DT_0005':'5','DT_0006':'6','DT_0014':'5','DT_0016':'2','DT_0018':'6','DT_0034':'2',
+  'DT_0007':'1','DT_0008':'3','DT_0009':'4','DT_0030':'1',
+  'DT_0010':'8','DT_0011':'9','DT_0045':'9',
+};
+
+async function getMarineWeather(sid) {
+  const KMA_KEY = process.env.KMA_KEY;
+  if (!KMA_KEY) return null;
+  const buoyNum = BUOY_MAP[sid];
+  if (!buoyNum) return null;
+  try {
+    const tm = new Date(Date.now() - 60 * 60 * 1000);
+    const tmStr = `${tm.getFullYear()}${String(tm.getMonth()+1).padStart(2,'0')}${String(tm.getDate()).padStart(2,'0')}${String(tm.getHours()).padStart(2,'0')}00`;
+    const url = `https://apihub.kma.go.kr/api/typ01/url/kma_buoy2.php?tm=${tmStr}&stn=${buoyNum}&help=2&authKey=${KMA_KEY}`;
+    const res = await axios.get(url, { timeout: 6000 });
+    const text = typeof res.data === 'string' ? res.data : '';
+    if (!text || text.includes('NO DATA') || text.trimStart().startsWith('<')) return null;
+    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+    if (!lines.length) return null;
+    const cols = lines[lines.length - 1].trim().split(/\s+/);
+    const ws = parseFloat(cols[2]);
+    const wd = cols[3] || 'NE';
+    const wh = parseFloat(cols[5]);
+    if (isNaN(ws) || isNaN(wh)) return null;
+    return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: Math.max(0, wh) } };
+  } catch (e) {
+    logger.warn(`[Marine] 부이 API 실패 (${sid}): ${e.message}`);
+    return null;
+  }
+}
+
+// ✅ REAL-TIDE: KHOA 조석예보 — 실제 물때·고조·간조
+function getLunarDay() {
+  const known = new Date('2024-01-11');
+  const diff = Math.floor((Date.now() - known) / (1000 * 60 * 60 * 24));
+  return (diff % 30) + 1;
+}
+
+async function getRealTide(sid) {
+  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
+  if (!KEY) return null;
+  try {
+    const d = new Date();
+    const today = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+    const url = `https://apis.data.go.kr/1192136/tideFcstHighLw/GetTideFcstHighLwApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${sid}&reqDate=${today}&type=json&numOfRows=20&pageNo=1`;
+    const res = await axios.get(url, { timeout: 6000, headers: { Accept: 'application/json' } });
+    const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+    if (text.trimStart().startsWith('<')) return null;
+    const items = res.data?.response?.body?.items?.item;
+    if (!items) return null;
+    const list = Array.isArray(items) ? items : [items];
+    const highs = list.filter(t => (t.hl_code || t.tide_type) === 'H');
+    const lows  = list.filter(t => (t.hl_code || t.tide_type) === 'L');
+    const highTime = (highs[0]?.hl_time || highs[0]?.tideTime || '').slice(11,16) || null;
+    const lowTime  = (lows[0]?.hl_time  || lows[0]?.tideTime  || '').slice(11,16) || null;
+    const lunarDay = getLunarDay();
+    const tideNum  = lunarDay <= 15 ? lunarDay : 30 - lunarDay;
+    const phaseMap = { 7:'7물(사리)', 13:'13물(조금)', 14:'14물(무시)' };
+    const phase = phaseMap[tideNum] || `${tideNum}물`;
+    return { phase, high: highTime, low: lowTime };
+  } catch (e) {
+    logger.warn(`[Tide] 조석 API 실패 (${sid}): ${e.message}`);
+    return null;
+  }
+}
+
 async function updateAllStationsCache() {
-  logger.info(`[Batch] Updating ${ALL_STATIONS.length} stations...`);
-  // ✅ 9TH-C4: Promise.allSettled 병렬화 — 직렬 80ms 대기(1.7초) 제거
-  // ✅ 21TH-B4: 배치 실패 건수 집계 로그 추가
+  logger.info(`[Batch] Updating ${ALL_STATIONS.length} stations (KMA+KHOA 실시간)...`);
   const results = await Promise.allSettled(ALL_STATIONS.map(async (sid) => {
-    const realSst = await getWaterTemp(sid);
-
-    // 지점별 정보 또는 권역별 랜덤 프로파일 적용
-    const base = observationData[sid] || { region: '남해', baseTemp: 16.5, baseWind: 3.0 };
+    const base    = observationData[sid] || { region: '남해', baseTemp: 16.5, baseWind: 3.0 };
     const profile = REGIONAL_PROFILES[base.region] || REGIONAL_PROFILES['남해'];
+    const seed    = parseInt(sid.replace(/\D/g, '')) || 1;
+    const lcg     = (n) => ((seed * 9301 + 49297 * n) % 233280) / 233280;
 
-    // ✅ 9TH-B2: seed 기반 결정론적 오프셋 — Math.random() 3회 제거
-    // 매 갱신마다 수온/풍속이 달라지는 문제 해결 (sid 기반 고정 값)
-    const seed = parseInt(sid.replace(/\D/g, '')) || 1;
-    const lcg = (n) => ((seed * 9301 + 49297 * n) % 233280) / 233280; // LCG 의사랜덤
-    const tempOffset = (lcg(1) * 1.5 - 0.75).toFixed(1);
-    const windOffset = (lcg(2) * 3.0 - 1.5).toFixed(1);
-    const waveOffset = (lcg(3) * 0.6 - 0.3).toFixed(1);
+    // ① 수온 (KHOA 실측)
+    const realSst = await getWaterTemp(sid);
+    // ② 풍속·파고 (기상청 해양부이)
+    const marine  = await getMarineWeather(sid);
+    // ③ 조석 (KHOA 조석예보)
+    const realTide = await getRealTide(sid);
 
-    const finalTemp = realSst || (base.baseTemp + parseFloat(tempOffset)).toFixed(1);
-    const finalWind = Math.max(0.2, (base.baseWind || profile.wind) + parseFloat(windOffset)).toFixed(1);
-    const finalWave = Math.max(0.1, profile.wave + parseFloat(waveOffset)).toFixed(1);
+    // fallback
+    const finalTemp = realSst || (base.baseTemp + (lcg(1) * 1.5 - 0.75)).toFixed(1);
+    const finalWind = marine?.wind?.speed  ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 3.0 - 1.5));
+    const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.6 - 0.3));
+    const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
 
-    // ✅ BUG-FIX: (seed % 14) + 1 → (seed % 15) + 1 — fishingData.js와 동일 버그, 15물이 절대 출력 안됨
-    const tideNum = (seed % 15) + 1;
-    const baseHighMin = (tideNum * 45 + seed * 7) % 1440;
-    const baseLowMin = (baseHighMin + 375) % 1440;
-    const fmt = (mins) => {
-      const m = ((mins % 1440) + 1440) % 1440;
-      return `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
-    };
-    // ✅ 9TH-B2: 풍향도 seed 기반으로 고정 (Math.random 제거)
-    const WIND_DIRS = ['N', 'E', 'S', 'W', 'NE', 'SW'];
-    const windDir = WIND_DIRS[seed % WIND_DIRS.length];
-    // ✅ 9TH-B2: 조위 수위도 seed + 시간대 기반으로 고정
+    const seed15 = (seed % 15) + 1;
+    const fmtMin = (mins) => { const m = ((mins % 1440) + 1440) % 1440; return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`; };
+    const phaseMap = { 7:'7물(사리)', 13:'13물(조금)', 14:'14물(무시)' };
+    const tidePhase = realTide?.phase || phaseMap[seed15] || `${seed15}물`;
+    const tideHigh  = realTide?.high  || fmtMin((seed15 * 45 + seed * 7) % 1440);
+    const tideLow   = realTide?.low   || fmtMin(((seed15 * 45 + seed * 7) + 375) % 1440);
     const tideLevel = 10 + (seed * 7 + new Date().getHours() * 13) % 250;
 
     weatherCache[sid] = {
       data: {
         ...base,
         stationId: sid,
-        sst: finalTemp,
-        temp: `${finalTemp}°C`,
-        wind: { speed: parseFloat(finalWind), dir: windDir },
-        wave: { coastal: parseFloat(finalWave) },
+        sst:  parseFloat(finalTemp).toFixed(1),
+        temp: `${parseFloat(finalTemp).toFixed(1)}\u00b0C`,
+        wind: { speed: parseFloat(parseFloat(finalWind).toFixed(1)), dir: windDir },
+        wave: { coastal: parseFloat(parseFloat(finalWave).toFixed(1)) },
         layers: {
-          upper: parseFloat(finalTemp),
+          upper:  parseFloat(finalTemp),
           middle: (parseFloat(finalTemp) - 1.2).toFixed(1),
-          lower: (parseFloat(finalTemp) - 3.4).toFixed(1)
+          lower:  (parseFloat(finalTemp) - 3.4).toFixed(1),
         },
-        tide: {
-          phase: tideNum === 7 ? '7물(사리)' : tideNum === 13 ? '13물(조금)' : tideNum === 14 ? '14물(무시)' : `${tideNum}물`,
-          high: fmt(baseHighMin),
-          low: fmt(baseLowMin),
-          current_level: `${tideLevel}cm`
-        }
+        tide: { phase: tidePhase, high: tideHigh, low: tideLow, current_level: `${tideLevel}cm` },
+        _sources: {
+          sst:  realSst  ? 'KHOA_API' : 'fallback',
+          wind: marine   ? 'KMA_BUOY' : 'fallback',
+          tide: realTide ? 'KHOA_TIDE' : 'fallback',
+        },
       },
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
   }));
-  // ✅ 21TH-B4: 실패 건수 집계 후 경고 로그
   const failCount = results.filter(r => r.status === 'rejected').length;
-  if (failCount > 0) logger.warn(`[Batch] ${failCount}/${ALL_STATIONS.length} 지점 날씨 캐시 갱신 실패`);
-  else logger.info(`[Batch] 전체 ${ALL_STATIONS.length} 지점 날씨 캐시 갱신 완료`);
+  if (failCount > 0) logger.warn(`[Batch] ${failCount}/${ALL_STATIONS.length} 지점 캐시 갱신 실패`);
+  else logger.info(`[Batch] 전체 ${ALL_STATIONS.length} 지점 캐시 갱신 완료 (KMA+KHOA)`);
 }
 
 updateAllStationsCache();
 
-// ─── 시간대별 스마트 날씨 캐시 갱신 ─────────────────────────────────────────
-// 주간(6~24시): 1시간마다 / 새벽(0~6시): 3시간마다
+// ─── 30분 주기 갱신 (주간), 새벽 2시간 ──────────────────────────────────────
 function scheduleWeatherCache() {
   const hour = new Date().getHours();
-  const delay = (hour >= 2 && hour < 6) ? 3 * 60 * 60 * 1000 : 60 * 60 * 1000;
-  setTimeout(() => {
-    updateAllStationsCache();
-    scheduleWeatherCache(); // 재귀 스케줄링
-  }, delay);
+  const delay = (hour >= 2 && hour < 6) ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000;
+  setTimeout(() => { updateAllStationsCache(); scheduleWeatherCache(); }, delay);
 }
 scheduleWeatherCache();
 
