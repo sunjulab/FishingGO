@@ -24,9 +24,11 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.fishing-go.com" />
+                <data android:scheme="https" android:host="fishing-go.com" />
                 <data android:scheme="https" android:host="fishing-go.vercel.app" />
-                <data android:scheme="https" android:host="fishinggo.vercel.app" />
             </intent-filter>
+
 
             <!-- ✅ DEEPLINK-SCHEME: 커스텀 스킴 fishinggo:// — 카카오톡 딥링크 직접 실행 -->
             <intent-filter>
