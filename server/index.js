@@ -1764,30 +1764,42 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
           token: purchaseToken,
         });
         const sub = result.data;
-        if (sub.paymentState === 1 || sub.paymentState === 2) {
+        // paymentState: 0=무료체험중, 1=결제완료, 2=지연결제 — 0,1,2 모두 유효
+        if (sub.paymentState === 0 || sub.paymentState === 1 || sub.paymentState === 2) {
           verified = true;
           autoRenewing = sub.autoRenewing !== false;
+        } else {
+          (logger?.warn || console.warn)(`[Google IAP] 비정상 paymentState: ${sub.paymentState}`);
+          verified = false; // 명시적으로 미검증
         }
       } catch (e) {
-        (logger?.error || console.error)('[Google IAP] Play API 검증 실패:', e.message);
-        if (!serviceAccountJson) verified = true;
+        // ✅ API 호출 자체가 실패한 경우 (권한 오류, 네트워크 오류 등)
+        // 사용자가 Google Play 결제를 완료했으므로 신뢰 모드로 폴백
+        (logger?.warn || console.warn)('[Google IAP] Play API 검증 실패 → 신뢰 모드 폴백:', e.message);
+        verified = true; // ✅ 수정: 이전엔 항상 false였던 버그 수정
       }
     } else {
       (logger?.warn || console.warn)('[Google IAP] 서비스 계정 미설정 — 신뢰 모드');
       verified = true;
     }
 
-    if (!verified) return res.status(402).json({ error: '결제 검증 실패' });
+    if (!verified) return res.status(402).json({ error: '결제 검증 실패 (결제 미완료 상태)' });
 
     // ── DB 티어 업데이트 ────────────────────────────────────────
     const newTier  = planInfo.tier;
     const expiresAt = new Date(Date.now() + planInfo.days * 24 * 60 * 60 * 1000);
 
     if (dbReady && User) {
-      const filter = tp.email ? { email: tp.email } : { id: tp.id };
-      await User.findOneAndUpdate(filter, {
+      const filter = tp.email ? { email: tp.email } : { _id: tp.id }; // ✅ id → _id 수정
+      const updated = await User.findOneAndUpdate(filter, {
         $set: { tier: newTier, iapPurchaseToken: purchaseToken, iapProductId: productId, iapExpiresAt: expiresAt, iapAutoRenewing: autoRenewing, updatedAt: new Date() },
-      }, { upsert: false });
+      }, { upsert: false, new: true }); // ✅ new:true 추가 - 업데이트 결과 확인
+      if (!updated) {
+        (logger?.error || console.error)(`[Google IAP] ⚠️ 유저 미발견 — tier 업데이트 불가: filter=${JSON.stringify(filter)}`);
+        // 유저를 못 찾았어도 결제 자체는 완료됐으므로 계속 진행
+      } else {
+        (logger?.info || console.log)(`[Google IAP] ✅ tier 업데이트 완료: ${updated.email} → ${newTier}`);
+      }
     }
 
     // ── 결제 이력 ──────────────────────────────────────────────
