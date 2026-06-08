@@ -232,11 +232,19 @@ async function verifyReceiptOnServer(transaction) {
     throw new Error('purchaseToken 없음 — 영수증 검증 불가');
   }
 
+  // ✅ CRITICAL FIX: localStorage에서 access_token 읽어 Authorization 헤더 첨부
+  // (apiClient 인터셉터와 동일한 방식 — fetch는 apiClient와 달리 자동 첨부 없음)
+  let accessToken = null;
+  try { accessToken = localStorage.getItem('access_token'); } catch { /* StorageError */ }
+
   const res = await fetch(
     (import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com') + '/api/payment/google-iap/verify',
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+      },
       credentials: 'include',
       body: JSON.stringify({ purchaseToken, productId }),
     }
