@@ -243,12 +243,14 @@ export default function MyPage() {
       const endpoint = type === 'followers' ? '/api/user/followers' : '/api/user/following';
       const res = await apiClient.get(`${endpoint}?email=${encodeURIComponent(user.email)}`);
       const list = type === 'followers' ? (res.data.followers || []) : (res.data.following || []);
+      if (!isMountedRef.current) return; // ✅ BUG-MY02 FIX
       setFollowList(list);
     } catch (err) {
+      if (!isMountedRef.current) return; // ✅ BUG-MY02 FIX
       addToast('목록을 불러오는 데 실패했습니다.', 'error');
       setFollowModal(null);
     } finally {
-      setFollowLoading(false);
+      if (isMountedRef.current) setFollowLoading(false); // ✅ BUG-MY02 FIX
     }
   };
 
@@ -256,6 +258,7 @@ export default function MyPage() {
   const handleOpenBizPhone = async () => {
     try {
       const res = await apiClient.get('/api/business/my-phone');
+      if (!isMountedRef.current) return; // BUG-MY03 FIX
       setBizPhone(res.data);
       setBizPhoneModal(true);
     } catch { addToast('연락처 정보를 불러오지 못했습니다.', 'error'); }
@@ -267,6 +270,7 @@ export default function MyPage() {
     setBizPostsModal(true);
     try {
       const res = await apiClient.get('/api/business/my-posts');
+      if (!isMountedRef.current) return; // BUG-MY03 FIX
       setMyBizPosts(Array.isArray(res.data) ? res.data : []);
     } catch { addToast('홍보글을 불러오지 못했습니다.', 'error'); }
     finally { setBizPostsLoading(false); }
@@ -332,6 +336,7 @@ export default function MyPage() {
         notiSettings: newSettings
       });
     } catch (err) {
+      if (!isMountedRef.current) return; // BUG-MY04 FIX
       addToast('설정 저장 실패', 'error');
       setNotiSetting(prevSettings); // 캡처된 이전 상태로 안전하게 롤백
       updateUser({ notiSettings: prevSettings });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Heart, MessageSquare, Send, ChevronLeft, Share2, User, MoreVertical, Edit2, Trash2, MapPin, ShoppingBag, ChevronRight, ExternalLink } from 'lucide-react';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
@@ -100,7 +100,7 @@ export default function PostDetail() {
     });
   };
   const user = useUserStore((state) => state.user);
-  const canAccessPremium = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(user?.tier);
+  // canAccessPremium은 아래 userTier deps로 useMemo 사용 (해당 위치로 이동)
   const addToast = useToastStore((state) => state.addToast);
   const [post, setPost] = useState(null);
   const [comment, setComment] = useState('');
@@ -108,7 +108,15 @@ export default function PostDetail() {
   const [error, setError] = useState(null);
   const [liked, setLiked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false); // ✅ BUG-PD01 FIX: 이중 클릭 방지
   const [coupangProducts, setCoupangProducts] = useState([]);
+
+  // ✅ BUG-PD02 FIX: canAccessPremium — store의 userTier 사용 + 어드민 우회
+  const userTier = useUserStore((s) => s.userTier);
+  const canAccessPremium = useMemo(() => {
+    if (user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL) return true;
+    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
+  }, [userTier, user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 게시글 키워드 추출 함수
   const extractKeyword = (p) => {
@@ -150,24 +158,8 @@ export default function PostDetail() {
   };
 
 
-  // ✅ 24TH-B1: fetchPost를 useCallback으로 감싸 — eslint-disable-line 없이 useEffect deps에 안전하게 포함 (23TH-C4 NoticeDetail 패턴)
-  const fetchPost = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const res = await apiClient.get(`/api/community/posts/${id}`);
-      setPost(res.data);
-      // 이미 좋아요한 경우 liked 상태 초기화 (새로고침 중복 방지)
-      if (user?.email && Array.isArray(res.data.likedBy)) {
-        setLiked(res.data.likedBy.includes(user.email));
-      }
-    } catch (err) {
-      if (err.response?.status === 404) setError('게시글을 찾을 수 없습니다.');
-      else setError('네트워크 오류가 발생했습니다.');
-    } finally { setLoading(false); }
-  }, [id, user?.email]); // ✅ BUG-FIX: addToast는 fetchPost 내부에서 미사용 — 불필요한 deps 제거
-
   // ✅ NAV-FIX: 이전글/다음글 이동 시 id 바뀌면 상태 즉시 초기화
-  // setLoading(true) 필수 — post=null만 하면 252줄 if(!post) 조건에 걸려 에러화면 잠깐 표시됨
+  // setLoading(true) 필수 — post=null만 하면 if(!post) 조건에 걸려 에러화면 잠긄 표시됨
   useEffect(() => {
     setLoading(true);
     setPost(null);
@@ -177,17 +169,38 @@ export default function PostDetail() {
     setCoupangProducts([]);
   }, [id]);
 
-  // ✅ NEW-A4: user?.email deps 추가 — 로그인 직후 likedBy stale 방지
-  // ✅ 24TH-B1: fetchPost가 useCallback으로 안정화되어 eslint-disable 없이 deps 포함
-  useEffect(() => { fetchPost(); }, [fetchPost]);
+  // ✅ BUG-PD01 CRITICAL FIX: 취소 패넴을 useEffect에 내장 (fetchPost의 return값은 useEffect가 무시함)
+  // 이전 fetchPost useCallback 내 cancelled는 데드 코드였음
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true); setError(null);
+      try {
+        const res = await apiClient.get(`/api/community/posts/${id}`);
+        if (cancelled) return;
+        setPost(res.data);
+        if (user?.email && Array.isArray(res.data.likedBy)) {
+          setLiked(res.data.likedBy.includes(user.email));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (err.response?.status === 404) setError('게시글을 찾을 수 없습니다.');
+        else setError('네트워크 오류가 발생했습니다.');
+      } finally { if (!cancelled) setLoading(false); }
+    };
+    run();
+    return () => { cancelled = true; }; // ✅ 제대로 된 cleanup
+  }, [id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 게시글 로드 완료 후 쿠팡 상품 검색
   useEffect(() => {
     if (!post) return;
+    let cancelled = false; // ✅ BUG-PD03 FIX: post 변경 시 이전 요청 취소
     const kw = extractKeyword(post);
     apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(kw)}`)
-      .then(res => { if (res.data.products?.length) setCoupangProducts(res.data.products.slice(0, 5)); })
+      .then(res => { if (!cancelled && res.data.products?.length) setCoupangProducts(res.data.products.slice(0, 5)); })
       .catch(() => {}); // 실패해도 UI에 영향 없음
+    return () => { cancelled = true; }; // ✅ BUG-PD03 FIX
   }, [String(post?._id)]); // eslint-disable-line react-hooks/exhaustive-deps // ✅ ID-FIX: ObjectId → string 비교
 
   const handleLike = async () => {
@@ -252,6 +265,8 @@ export default function PostDetail() {
   };
 
   const handleDelete = async () => {
+    if (deleting) return; // ✅ BUG-PD01 FIX: 이중 클릭 방지
+    setDeleting(true);
     try {
       await apiClient.delete(`/api/community/posts/${id}`, {
         data: { email: user.email }
@@ -260,7 +275,7 @@ export default function PostDetail() {
       navigate('/community');
     } catch (err) {
       addToast(err.response?.data?.error || '삭제 실패.', 'error');
-    }
+    } finally { setDeleting(false); setShowDeleteConfirm(false); } // ✅ BUG-PD01 FIX
   };
 
   // ✅ SHARE-EXT: shareUtils 유틸 사용 — Web Share API(네이티브 공유 시트) 우선
@@ -584,7 +599,7 @@ export default function PostDetail() {
             <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#AAB0BE', marginBottom: '24px' }}>삭제된 게시글은 복구할 수 없습니다.</div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '13px', border: '1.5px solid #E5E5EA', borderRadius: '12px', background: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', color: '#666' }}>취소</button>
-              <button onClick={handleDelete} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: '#FF3B30', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', color: '#fff' }}>삭제</button>
+              <button onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '13px', border: 'none', borderRadius: '12px', background: deleting ? '#AEAEB2' : '#FF3B30', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: deleting ? 'not-allowed' : 'pointer', color: '#fff' }}>{deleting ? '삭제 중...' : '삭제'}</button>
             </div>
           </div>
         </div>

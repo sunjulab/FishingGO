@@ -30,6 +30,13 @@ export default function WritePost() {
   const [locEditMode, setLocEditMode] = useState(false);
   const [locDraft, setLocDraft] = useState('');
   const locInputRef = useRef(null);
+  const isMountedRef = useRef(true); // ✅ BUG-WP01 FIX: Geolocation/AI 콜백 언마운트 보호
+
+  // ✅ BUG-WP01: 언마운트 cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const categories = ['전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅', '조황 공유'];
   const addToast = useToastStore((state) => state.addToast);
@@ -72,6 +79,8 @@ export default function WritePost() {
           ? res.data.images
           : res.data.image ? [res.data.image] : [];
         setImages(existingImages);
+        // ✅ BUG-WP04 FIX: 수정 모드에서 location 필드 복원 (누락 시 저장 시 위치 유실)
+        if (res.data.location) setLocation(res.data.location);
         if (res.data.isPopup !== undefined) setIsPopup(!!res.data.isPopup);
       })
       .catch((err) => {
@@ -495,13 +504,17 @@ export default function WritePost() {
                 setLocLoading(true);
                 navigator.geolocation.getCurrentPosition(
                   async (pos) => {
+                    if (!isMountedRef.current) return; // ✅ BUG-WP01 FIX: GPS 응답 전 언마운트 확인
                     const { latitude: lat, longitude: lng } = pos.coords;
                     let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                     try {
                       await new Promise((resolve) => {
                         if (window.kakao?.maps?.services?.Geocoder) { resolve(); return; }
+                        // ✅ BUG-WP02 FIX: window.kakao.maps가 undefined일 수 있음 (Kakao SDK 부분 로드)
+                        if (!window.kakao?.maps?.load) { resolve(); return; }
                         window.kakao.maps.load(resolve);
                       });
+                      if (!window.kakao?.maps?.services?.Geocoder) throw new Error('Geocoder not available');
                       const geocoder = new window.kakao.maps.services.Geocoder();
                       await new Promise((resolve) => {
                         geocoder.coord2Address(lng, lat, (result, status) => {
@@ -514,11 +527,13 @@ export default function WritePost() {
                         });
                       });
                     } catch { /* 역지오코딩 실패 시 좌표 문자열 사용 */ }
+                    if (!isMountedRef.current) return; // ✅ BUG-WP01 FIX: 역지오코딩 완료 후 언마운트 재확인
                     setLocation({ lat, lng, address });
                     setLocLoading(false);
                     addToast(`📍 위치 추가: ${address}`, 'success');
                   },
                   (err) => {
+                    if (!isMountedRef.current) return; // ✅ BUG-WP01 FIX: 에러 캐릭백도 언마운트 확인
                     setLocLoading(false);
                     addToast('GPS 권한이 없습니다. 직접 입력해주세요.', 'info');
                     setLocEditMode(true);

@@ -99,6 +99,13 @@ export default function CrewChat() {
   const mySocketId = useRef(null);
   const longPressTimer = useRef(null);
   const inputRef = useRef();
+  const isMountedRef = useRef(true); // ✅ BUG-1 FIX: 언마운트 후 setState/navigate 방지
+
+  // ✅ BUG-1 FIX: 언마운트 시 isMountedRef.current = false
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const myName = user?.name || user?.email || '익명';
   const isOwner = crewOwner && user?.email === crewOwner;
@@ -106,23 +113,32 @@ export default function CrewChat() {
   const isOfficer = myRole === 'officer';
 
   const loadMembers = useCallback(async () => {
+    if (!isMountedRef.current) return; // ✅ BUG-3 FIX: 언마운트 시 실행 거부
     setLoadingMembers(true);
     try {
       const res = await apiClient.get(`/api/community/crews/${id}/members`);
-      setMembers(res.data?.members || []);
-    } catch {} finally { setLoadingMembers(false); }
-  }, [id]);
+      if (isMountedRef.current) setMembers(res.data?.members || []); // ✅ BUG-3 FIX
+    } catch (err) {
+      if (isMountedRef.current) addToast('멤버 목록을 불러올 수 없습니다.', 'error'); // ✅ BUG-3 FIX: 에러 피드백 추가
+    } finally {
+      if (isMountedRef.current) setLoadingMembers(false); // ✅ BUG-3 FIX
+    }
+  }, [id, addToast]);
 
   useEffect(() => {
+    let cancelled = false; // ✅ BUG-4 FIX: 언마운트 후 setState 방지
     apiClient.get(`/api/community/crews/${id}`)
       .then(res => {
+        if (cancelled) return;
         setCrewName(res.data?.name || '');
         setCrewOwner(res.data?.owner || '');
         setCrewLimit(res.data?.limit != null ? res.data.limit : 1000);
-        setCrewLogo(res.data?.logo || null); // ✅ CREW-LOGO
-      }).catch(() => {});
+        setCrewLogo(res.data?.logo || null);
+      })
+      .catch(() => { if (!cancelled) addToast('크루 정보를 불러올 수 없습니다.', 'error'); }); // ✅ BUG-4 FIX: 에러 피드백
     loadMembers();
-  }, [id, loadMembers]);
+    return () => { cancelled = true; };
+  }, [id, loadMembers, addToast]);
 
   // ✅ CREW-LOGO: 로고 업로드 핸들러 (방장 전용)
   const handleLogoUpload = useCallback(async (e) => {
@@ -155,37 +171,45 @@ export default function CrewChat() {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
+      if (!isMountedRef.current) return;
       setConnected(true); setReconnecting(false);
       mySocketId.current = newSocket.id;
       newSocket.emit('join_crew', id);
     });
-    newSocket.on('disconnect', () => setConnected(false));
-    newSocket.on('reconnecting', () => setReconnecting(true));
+    newSocket.on('disconnect', () => { if (isMountedRef.current) setConnected(false); });
+    newSocket.on('reconnecting', () => { if (isMountedRef.current) setReconnecting(true); });
     newSocket.on('reconnect', () => {
+      if (!isMountedRef.current) return;
       setConnected(true); setReconnecting(false);
       newSocket.emit('join_crew', id);
     });
-    newSocket.on('chat_history', (history) => setMessages(history));
-    newSocket.on('new_msg', (msg) => setMessages(prev => {
-      const next = [...prev, msg];
-      return next.length > 300 ? next.slice(-300) : next;
-    }));
+    newSocket.on('chat_history', (history) => { if (isMountedRef.current) setMessages(history); }); // ✅ BUG-1 FIX
+    newSocket.on('new_msg', (msg) => {
+      if (!isMountedRef.current) return; // ✅ BUG-1 FIX
+      setMessages(prev => {
+        const next = [...prev, msg];
+        return next.length > 300 ? next.slice(-300) : next;
+      });
+    });
     newSocket.on('crew_dissolved', ({ message }) => {
+      if (!isMountedRef.current) return; // ✅ BUG-1 FIX
       addToast(message || '크루가 해산되었습니다.', 'error');
       navigate('/community?tab=crew');
     });
     newSocket.on('crew_transferred', ({ newOwnerEmail, message }) => {
+      if (!isMountedRef.current) return; // ✅ BUG-1 FIX
       addToast(message || '크루장이 위임되었습니다.', 'success');
       if (user?.email === newOwnerEmail) setCrewOwner(newOwnerEmail);
       loadMembers();
     });
     newSocket.on('member_kicked', ({ email }) => {
+      if (!isMountedRef.current) return; // ✅ BUG-1 FIX
       if (user?.email === email) {
         addToast('크루장에 의해 강퇴되었습니다.', 'error');
         navigate('/community?tab=crew');
       } else { loadMembers(); }
     });
-    newSocket.on('member_role_changed', () => { loadMembers(); });
+    newSocket.on('member_role_changed', () => { if (isMountedRef.current) loadMembers(); }); // ✅ BUG-1 FIX
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && !newSocket.connected) newSocket.connect();
@@ -274,6 +298,7 @@ export default function CrewChat() {
   };
 
   const handleDeleteCrew = async () => {
+    if (!user) { addToast('로그인이 필요합니다.', 'error'); return; } // ✅ BUG-2 FIX
     setDeletingCrew(true);
     try {
       await apiClient.delete(`/api/community/crews/${id}`, { data: { email: user.email } });
@@ -286,6 +311,7 @@ export default function CrewChat() {
 
   const handleTransferCrew = async () => {
     if (!transferTarget) return;
+    if (!user) { addToast('로그인이 필요합니다.', 'error'); return; } // ✅ BUG-2 FIX
     setTransferring(true);
     try {
       await apiClient.patch(`/api/community/crews/${id}/transfer`, {
@@ -304,6 +330,7 @@ export default function CrewChat() {
   };
 
   const handleKick = async (targetEmail, targetName) => {
+    if (!user) { addToast('로그인이 필요합니다.', 'error'); return; } // ✅ BUG-2 FIX
     try {
       await apiClient.delete(`/api/community/crews/${id}/members/${encodeURIComponent(targetEmail)}`, { data: { email: user.email } });
       setMembers(prev => prev.filter(m => m.email !== targetEmail));
@@ -312,6 +339,7 @@ export default function CrewChat() {
   };
 
   const handleSetRole = async (targetEmail, targetName, newRole) => {
+    if (!user) { addToast('로그인이 필요합니다.', 'error'); return; } // ✅ BUG-2 FIX
     try {
       await apiClient.patch(
         `/api/community/crews/${id}/members/${encodeURIComponent(targetEmail)}/role`,

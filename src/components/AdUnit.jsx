@@ -12,7 +12,7 @@
  * 2. 광고 영역 위/아래 빈 공간(padding) 최소 8px 확보
  * 3. 보상형 광고는 반드시 유저 자발적 클릭으로만 노출
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { showRewardedAd } from '../services/AdMobService';
@@ -180,6 +180,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
 
   const intervalRef  = useRef(null); // 광고 진행 타이머
   const autoTimerRef = useRef(null); // ✅ FIX-AUTO: 자동 등록 타이머
+  const skipTimerRef = useRef(null); // ✅ BUG-04 FIX: skipTimer ref 관리 (누수 방지)
   const calledRef    = useRef(false); // ✅ FIX-DUP: handleComplete 중복 방지
 
   // ✅ FIX-RESET: isOpen이 true로 바뀔 때마다 상태 초기화 (adDone 잔류 방지)
@@ -204,6 +205,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     return () => {
       if (intervalRef.current)  clearInterval(intervalRef.current);
       if (autoTimerRef.current) clearInterval(autoTimerRef.current);
+      if (skipTimerRef.current) { clearTimeout(skipTimerRef.current); skipTimerRef.current = null; } // ✅ BUG-04 FIX
     };
   }, []);
 
@@ -224,7 +226,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     }, 1000);
     autoTimerRef.current = countId;
     return () => { clearInterval(countId); };
-  }, [adDone]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [adDone, handleComplete]); // ✅ BUG-03 FIX: handleComplete deps 추가 (stale closure 해소)
 
   // ✅ WEB-AD: 웹 fallback 타이머 — 전체화면 오버레이와 함께 실행
   const startWebTimerFallback = () => {
@@ -232,12 +234,13 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     setAdProgress(0);
     setSkipVisible(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
-    const skipTimer = setTimeout(() => setSkipVisible(true), 5000);
+    if (skipTimerRef.current) { clearTimeout(skipTimerRef.current); skipTimerRef.current = null; } // ✅ BUG-04 FIX: 이전 skipTimer 정리
+    skipTimerRef.current = setTimeout(() => setSkipVisible(true), 5000); // ✅ BUG-04 FIX: ref에 저장
     const intervalId = setInterval(() => {
       setAdProgress(prev => {
         if (prev >= 100) {
           clearInterval(intervalId);
-          clearTimeout(skipTimer);
+          if (skipTimerRef.current) { clearTimeout(skipTimerRef.current); skipTimerRef.current = null; } // ✅ BUG-04 FIX
           intervalRef.current = null;
           setAdWatching(false);
           setWebAdFullscreen(false);
@@ -306,15 +309,16 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     }
   };
 
-  // ✅ FIX-DUP: calledRef로 중복 호출 방지 (자동 타이머 + 수동 버튼 동시 방지)
-  const handleComplete = () => {
+  // ✅ BUG-03 FIX: handleComplete를 useCallback으로 안정화 → adDone useEffect deps 얰반 해소
+  const handleComplete = useCallback(() => {
     if (calledRef.current) return;
     calledRef.current = true;
     if (intervalRef.current)  { clearInterval(intervalRef.current);  intervalRef.current  = null; }
     if (autoTimerRef.current) { clearInterval(autoTimerRef.current); autoTimerRef.current = null; }
+    if (skipTimerRef.current) { clearTimeout(skipTimerRef.current);  skipTimerRef.current = null; } // ✅ BUG-04 FIX
     onRewardComplete?.();
     onClose?.();
-  };
+  }, [onRewardComplete, onClose]);
 
 
   if (!isOpen) return null;

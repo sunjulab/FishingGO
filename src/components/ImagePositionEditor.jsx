@@ -19,8 +19,10 @@ export default function ImagePositionEditor({ src, onConfirm, onCancel }) {
 
   /* ── 이미지 로드 & 레이아웃 계산 ── */
   useEffect(() => {
+    let cancelled = false; // ✅ BUG-08 FIX: src prop 변경 시 이전 이미지 onload setState 방지
     const img = new Image();
     img.onload = () => {
+      if (cancelled) return; // ✅ BUG-08 FIX
       const imgRatio   = img.naturalWidth / img.naturalHeight;
       const frameRatio = FRAME_W / FRAME_H;          // 0.75
 
@@ -46,6 +48,7 @@ export default function ImagePositionEditor({ src, onConfirm, onCancel }) {
       setOffset({ x: (FRAME_W - drawW) / 2, y: (FRAME_H - drawH) / 2 });
     };
     img.src = src;
+    return () => { cancelled = true; img.onload = null; }; // ✅ BUG-08 FIX
   }, [src]);
 
   /* ── 캔버스 렌더링 ── */

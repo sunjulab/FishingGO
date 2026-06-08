@@ -1,0 +1,13 @@
+fix: 31 bugs fixed across 5 files
+
+CT-05 CRITICAL: blockedUsersRef TDZ fix (initialized before user declaration)
+CT-04: likeTimerRef cleanup on unmount added
+PD-01 CRITICAL: fetchPost cancelled flag was dead code - moved to useEffect
+PD-02: canAccessPremium now uses store userTier + admin bypass
+WP-01: WritePost Geolocation callback unmount guard added
+WP-02: Kakao maps.load null guard added
+WP-03: AI analysis handler unmount guard added
+WP-04: Edit mode location field restore added
+MY-02: handleOpenFollowModal isMountedRef guard added
+MY-03: handleOpenBizPhone/Posts isMountedRef guards added
+MY-04: handleToggleNoti catch rollback unmount guard added

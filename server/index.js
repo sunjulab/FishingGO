@@ -4649,9 +4649,12 @@ app.post('/api/community/crews/:id/verify', async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) return res.status(400).json({ error: '입장 코드를 입력해주세요.' });
+    // ✅ BUG-04 FIX: CastError 방지 — ObjectId 사전 검증
+    if (mongoose.Types.ObjectId.isValid && !mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ error: '유효하지 않은 크루 ID' });
     let crew;
     if (dbReady && Crew) {
-      crew = await Crew.findById(req.params.id);
+      crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-04 FIX: .catch(() => null)
     } else {
       crew = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
     }
@@ -4700,21 +4703,26 @@ app.patch('/api/community/crews/:id/transfer', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { email, newOwnerEmail } = req.body;
-    if (!email || !newOwnerEmail) return res.status(400).json({ error: 'email, newOwnerEmail 필수' });
+    const { newOwnerEmail } = req.body;
+    // ✅ BUG-06 FIX: body.email 신뢰 제거 → JWT에서만 현 크루장 이메일 추출
+    const email = tp.email || tp.id;
+    if (!email || !newOwnerEmail) return res.status(400).json({ error: 'newOwnerEmail 필수' });
     if (email === newOwnerEmail) return res.status(400).json({ error: '자기 자신에게 위임할 수 없습니다.' });
+
+    // ✅ BUG-06 FIX: CastError 방지
+    if (mongoose.Types.ObjectId.isValid && !mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ error: '유효하지 않은 ID' });
 
     const isAdmin = isAdminToken(tp);
 
     if (dbReady && Crew) {
-      const crew = await Crew.findById(req.params.id);
+      const crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-06 FIX
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
-      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 위임할 수 있습니다.' });
+      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 위임할 수 있습니다.' }); // ✅ JWT email 사용
 
       const newOwnerMember = crew.memberList.find(m => m.email === newOwnerEmail);
       if (!newOwnerMember) return res.status(404).json({ error: '위임할 멤버가 크루에 없습니다.' });
 
-      // 기존 크루장 → member 강등
       crew.memberList = crew.memberList.map(m => {
         if (m.email === email) return { ...m.toObject(), role: 'member' };
         if (m.email === newOwnerEmail) return { ...m.toObject(), role: 'owner' };
@@ -4724,7 +4732,6 @@ app.patch('/api/community/crews/:id/transfer', async (req, res) => {
       crew.ownerName = newOwnerMember.name;
       await crew.save();
 
-      // 소켓으로 위임 알림
       io.to(req.params.id).emit('crew_transferred', {
         newOwnerEmail,
         newOwnerName: newOwnerMember.name,
@@ -4737,7 +4744,7 @@ app.patch('/api/community/crews/:id/transfer', async (req, res) => {
     // 인메모리 fallback
     const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
     if (!mem) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
-    if (!isAdmin && mem.owner !== email) return res.status(403).json({ error: '크루장만 위임할 수 있습니다.' });
+    if (!isAdmin && mem.owner !== email) return res.status(403).json({ error: '크루장만 위임할 수 있습니다.' }); // ✅ JWT email 사용
     const newOwnerMem = (mem.memberList || []).find(m => m.email === newOwnerEmail);
     if (!newOwnerMem) return res.status(404).json({ error: '위임할 멤버가 크루에 없습니다.' });
     mem.memberList = (mem.memberList || []).map(m => ({
@@ -4779,7 +4786,10 @@ app.put('/api/community/crews/:id/logo', async (req, res) => {
     if (!logo.startsWith('data:image/')) return res.status(400).json({ error: '올바른 이미지 형식이 아닙니다.' });
 
     if (dbReady && Crew) {
-      const crew = await Crew.findById(req.params.id);
+      // ✅ BUG-13 FIX: CastError 방지
+      if (mongoose.Types.ObjectId.isValid && !mongoose.Types.ObjectId.isValid(req.params.id))
+        return res.status(400).json({ error: '유효하지 않은 ID' });
+      const crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-13 FIX
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
       if (crew.owner !== tp.email && !isAdminToken(tp)) return res.status(403).json({ error: '방장만 로고를 수정할 수 있습니다.' });
       crew.logo = logo;
@@ -4806,11 +4816,18 @@ app.post('/api/community/crews/:id/join', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { password, email, name } = req.body;
-    if (!email || !name) return res.status(400).json({ error: '사용자 정보가 필요합니다.' });
+    const { password } = req.body;
+    // ✅ BUG-09 FIX: email/name을 JWT에서만 추출 (본문 email 신뢰 → 명단 위조 차단)
+    const email = tp.email || tp.id;
+    if (!email) return res.status(401).json({ error: '인증 정보 없음' });
+    // name은 JWT에 없으면 DB에서 조회 (또는 클라이언트에서 body로 제공 허용)
+    const name = tp.name || req.body.name || email.split('@')[0];
+    // ✅ BUG-12 FIX: CastError 방지
+    if (mongoose.Types.ObjectId.isValid && !mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ error: '유효하지 않은 ID' });
 
     if (dbReady && Crew) {
-      const crew = await Crew.findById(req.params.id);
+      const crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-12 FIX
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
 
       // 이미 가입된 경우 → 중복 방지 (성공 반환)
@@ -4877,7 +4894,10 @@ app.post('/api/community/crews/:id/leave', async (req, res) => {
     if (!email) return res.status(401).json({ error: '인증 정보 없음' });
 
     if (dbReady && Crew && User) {
-      const crew = await Crew.findById(req.params.id);
+      // ✅ BUG-11 FIX: CastError 방지
+      if (mongoose.Types.ObjectId.isValid && !mongoose.Types.ObjectId.isValid(req.params.id))
+        return res.status(400).json({ error: '유효하지 않은 ID' });
+      const crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-11 FIX
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
       if (crew.owner === email) return res.status(400).json({ error: '크루장은 크루를 탈퇴할 수 없습니다. 크루를 삭제하거나 크루장을 위임하세요.' });
 
@@ -4928,7 +4948,10 @@ app.delete('/api/community/crews/:id/members/:targetEmail', async (req, res) => 
     const isAdmin = isAdminToken(tp);
 
     if (dbReady && Crew && User) {
-      const crew = await Crew.findById(req.params.id);
+      // ✅ BUG-14 FIX: CastError 방지
+      if (mongoose.Types.ObjectId.isValid && !mongoose.Types.ObjectId.isValid(req.params.id))
+        return res.status(400).json({ error: '유효하지 않은 ID' });
+      const crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-14 FIX
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
       // ✅ BUG-FIX: JWT email로 인증 (body email 제거)
       if (!isAdmin && crew.owner !== tp.email) return res.status(403).json({ error: '크루장만 강퇴할 수 있습니다.' });
@@ -4963,16 +4986,21 @@ app.patch('/api/community/crews/:id/members/:targetEmail/role', async (req, res)
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { email, role } = req.body; // 요청자 이메일, 부여할 역할
+    const { role } = req.body; // 부여할 역할
+    // ✅ BUG-05 FIX: email을 JWT에서만 추출 (본문 email 신뢰 → 권한 우회 차단)
+    const email = tp.email || tp.id;
     const targetEmail = decodeURIComponent(req.params.targetEmail);
     const isAdmin = isAdminToken(tp);
 
     if (!['officer', 'member'].includes(role)) return res.status(400).json({ error: '역할은 officer 또는 member만 허용됩니다.' });
+    // ✅ BUG-05 FIX: CastError 방지
+    if (mongoose.Types.ObjectId.isValid && !mongoose.Types.ObjectId.isValid(req.params.id))
+      return res.status(400).json({ error: '유효하지 않은 ID' });
 
     if (dbReady && Crew) {
-      const crew = await Crew.findById(req.params.id);
+      const crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-05 FIX
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
-      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 간부를 설정할 수 있습니다.' });
+      if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 간부를 설정할 수 있습니다.' }); // ✅ JWT email
       if (targetEmail === crew.owner) return res.status(400).json({ error: '크루장의 역할은 변경할 수 없습니다.' });
 
       const member = crew.memberList.find(m => m.email === targetEmail);
@@ -4989,7 +5017,7 @@ app.patch('/api/community/crews/:id/members/:targetEmail/role', async (req, res)
     // 인메모리 fallback
     const mem = memCrews.find(c => c.id === req.params.id || c._id === req.params.id);
     if (!mem) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
-    if (!isAdmin && mem.owner !== email) return res.status(403).json({ error: '크루장만 간부를 설정할 수 있습니다.' });
+    if (!isAdmin && mem.owner !== email) return res.status(403).json({ error: '크루장만 간부를 설정할 수 있습니다.' }); // ✅ JWT email
     const memMember = (mem.memberList || []).find(m => m.email === targetEmail);
     if (memMember) memMember.role = role;
     saveMemCrews();
@@ -7759,10 +7787,14 @@ app.get('/api/community/search', async (req, res) => {
 });
 
 // ── (10) 즐겨찾기 DB 동기화 ──────────────────────────────────────────────────
+// ✅ BUG-03 FIX: GET /api/user/favorites — JWT 인증 추가 (타인 즐겨찾기 노출 차단)
 app.get('/api/user/favorites', async (req, res) => {
   try {
-    const userId = req.query.userId;
-    if (!userId) return res.status(400).json({ error: 'userId 필요' });
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const userId = tp.email || tp.id; // ✅ BUG-03 FIX: JWT에서만 추출
     if (dbReady && User) {
       const u = await User.findOne({ $or: [{ email: userId }, { id: userId }] }, 'favorites').lean().catch(() => null);
       return res.json({ favorites: u?.favorites || [] });
@@ -8792,10 +8824,14 @@ app.get('/api/catch/ranking', async (req, res) => {
 });
 
 // GET /api/catch/my — 내 조황 목록
+// ✅ BUG-02 FIX: JWT 인증 없이 타인 조황 목록 조회 가능 → verifyToken 미들웨어 추가
 app.get('/api/catch/my', async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) return res.status(400).json({ error: 'userId 필요' });
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const userId = tp.email || tp.id; // ✅ BUG-02 FIX: JWT에서만 추출
     await waitForDb(5000);
     const records = await CatchRecord.find({ userId }).sort({ createdAt: -1 }).limit(50).lean();
     res.json({ records });
@@ -8805,9 +8841,16 @@ app.get('/api/catch/my', async (req, res) => {
 });
 
 // POST /api/catch/:id/like — 좋아요
+// ✅ BUG-01 FIX: JWT 인증 없음 + body.userId 신뢰 + CastError 크래시 배합 취약점 수정
 app.post('/api/catch/:id/like', async (req, res) => {
   try {
-    const { userId } = req.body;
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const userId = tp.email || tp.id; // ✅ BUG-01 FIX: JWT에서만 추출
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) // ✅ BUG-01 FIX: CastError 방지
+      return res.status(400).json({ error: '유효하지 않은 ID' });
     const record = await CatchRecord.findById(req.params.id);
     if (!record) return res.status(404).json({ error: '없는 조황' });
     const liked = record.likes.includes(userId);

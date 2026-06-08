@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageSquare, ChevronDown, ChevronUp, Lock, Send, RefreshCw, CheckCircle, Clock } from 'lucide-react';
 import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
@@ -55,15 +55,20 @@ export default function CsInquirySection({ user, isAdmin }) {
     }));
   }, [user]);
 
+  const isMountedRef = useRef(true); // ✅ BUG-09 FIX: 언마운트 후 setState 방지
+  useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; }; }, []);
+
   const fetchInquiries = useCallback(async () => {
     if (!user?.email || user.id === 'GUEST') return;
     setLoading(true);
     try {
       const res = await apiClient.get('/api/cs/inquiries');
+      if (!isMountedRef.current) return; // ✅ BUG-09 FIX
       setInquiries(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
+      if (!isMountedRef.current) return; // ✅ BUG-09 FIX
       if (err.response?.status !== 401) addToast('문의 목록 로드 실패', 'error');
-    } finally { setLoading(false); }
+    } finally { if (isMountedRef.current) setLoading(false); } // ✅ BUG-09 FIX
   }, [user?.email, addToast]);
 
   // \u2705 REALTIME-FIX: list \ud0ed \uc5f4\ub9b0 \uc0c1\ud0dc\uc5d0\uc11c 60\ucd08 \ud3f4\ub9c1 \u2014 \uad00\ub9ac\uc790 \ub2f5\ubcc0 \uc2dc \uc790\ub3d9 \ubc18\uc601

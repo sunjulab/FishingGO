@@ -120,7 +120,7 @@ export default function CommunityTab() {
   const lastTapRef = useRef({}); // 더블탭 감지용 (postId → 마지막 탭 시각)
   const heartBurstTimerRef = useRef({}); // ✅ BUG-1 FIX: 더블탭 타이머 ref (언마운트 후 setHeartBurstId 방지)
   const [heartBurstId, setHeartBurstId] = useState(null); // 더블탭 하트 폭발 표시용 postId
-  const blockedUsersRef = useRef(user?.blockedUsers || []); // ✅ BUG-4 FIX: blockedUsers를 ref로 관리 → fetchPosts useCallback deps 제거
+  const blockedUsersRef = useRef([]); // ✅ BUG-CT05 CRITICAL FIX: user가 아직 선언 전(TDZ) — 빈 배열로 초기화, sync useEffect(L151-154)에서 동기화
   const isFetchingRef = useRef(false); // ✅ BUG-5 FIX: 무한스크롤 중복 실행 방지
 
   // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
@@ -158,6 +158,14 @@ export default function CommunityTab() {
     return () => {
       Object.values(heartBurstTimerRef.current).forEach(clearTimeout);
       heartBurstTimerRef.current = {};
+    };
+  }, []);
+
+  // ✅ BUG-CT04 FIX: likeTimerRef cleanup 추가 — 언마운트 시 pending like API 타이머 제거
+  useEffect(() => {
+    return () => {
+      Object.values(likeTimerRef.current).forEach(clearTimeout);
+      likeTimerRef.current = {};
     };
   }, []);
 

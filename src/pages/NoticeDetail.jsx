@@ -22,6 +22,9 @@ export default function NoticeDetail() {
   const [notice, setNotice] = useState(location.state?.notice || null);
   const [loading, setLoading] = useState(!location.state?.notice);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // ✅ BUG-5 FIX: 중복 삭제 방지
+  const isMountedRef = useRef(true); // ✅ BUG-6 FIX: 언마운트 후 setState 방지
+  // ✅ BUG-6 FIX: 언마운트 시 isMountedRef = false
   // ✅ SHARE
   const [shareModal, setShareModal] = useState(false);
   const [myCrews, setMyCrews] = useState([]);
@@ -54,6 +57,12 @@ export default function NoticeDetail() {
     fetchNotice();
   }, [fetchNotice, location.state?.notice]);
 
+  // ✅ BUG-6 FIX: isMountedRef cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   // ✅ SHARE-SOCKET-CLEANUP: 언마운트 시 캐시된 공유 소켓 전체 해제
   useEffect(() => {
     return () => {
@@ -70,13 +79,15 @@ export default function NoticeDetail() {
   };
 
   const handleDelete = async () => {
+    if (isDeleting) return; // ✅ BUG-5 FIX: 중복 클릭 방지
+    setIsDeleting(true);
     try {
       await apiClient.delete(`/api/community/notices/${id}`);
       addToast('공지사항이 삭제되었습니다.', 'success');
       navigate('/community?tab=notice');
     } catch (err) {
       addToast(err.response?.data?.error || '삭제 실패', 'error');
-    }
+    } finally { if (isMountedRef.current) setIsDeleting(false); } // ✅ BUG-5+6 FIX
   };
 
   // ✅ 11TH-C2: 인라인 border 스피너 → LoadingSpinner 컴포넌트 교체
@@ -217,7 +228,7 @@ export default function NoticeDetail() {
             <p style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#666', marginBottom: '24px' }}>이 공지사항을 삭제하시겠습니까?<br />삭제 후 복구할 수 없습니다.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1.5px solid #E5E5EA', background: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}>취소</button>
-              <button onClick={handleDelete} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#FF3B30', color: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}>삭제</button>
+              <button onClick={handleDelete} disabled={isDeleting} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: isDeleting ? '#E5E5EA' : '#FF3B30', color: isDeleting ? '#aaa' : '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900', cursor: isDeleting ? 'not-allowed' : 'pointer' }}>{isDeleting ? '삭제 중...' : '삭제'}</button>
             </div>
           </div>
         </div>
@@ -280,13 +291,14 @@ export default function NoticeDetail() {
                   }
                   shareSockets.current[crewId].emit('send_msg', {
                     crewId, type: 'post_share',
+                    sender: user?.name || user?.email || '익명', // ✅ BUG-10 FIX: sender 필드 누락 추가
                     postId: String(notice._id || id),
                     postTitle: notice.title || '(제목 없음)',
                     postPreview: (notice.content || '').slice(0, 120),
                     postImage: notice.images?.[0] || notice.image || '',
                     postCategory: '📢 공지사항',
                   });
-                  addToast(`✅ ${shareTarget.name} 채팅방에 공유했습니다!`, 'success');
+                  addToast(`✅ ${shareTarget.name} 체팅방에 공유했습니다!`, 'success');
                   setShareModal(false);
                 } catch (err) {
                   if (shareSockets.current[crewId]) {
@@ -295,7 +307,7 @@ export default function NoticeDetail() {
                   }
                   addToast('공유에 실패했습니다. 잠시 후 다시 시도해주세요.', 'error');
                 }
-                finally { setSharing(false); }
+                finally { if (isMountedRef.current) setSharing(false); } // ✅ BUG-6 FIX: isMounted 체크
               }}
               style={{ width: '100%', padding: '16px', border: 'none', borderRadius: '16px', background: (!shareTarget || sharing) ? '#E5E5EA' : 'linear-gradient(135deg,#FF3B30,#c0392b)', color: (!shareTarget || sharing) ? '#aaa' : '#fff', fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', cursor: (!shareTarget || sharing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >

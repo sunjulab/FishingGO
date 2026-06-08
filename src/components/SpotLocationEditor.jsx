@@ -21,48 +21,48 @@ export default function SpotLocationEditor({ spot, onClose, onSaved }) {
   // 카카오 지도 초기화
   useEffect(() => {
     if (!window.kakao?.maps) return;
+    let mapInst, markerInst;
+    // ✅ BUG-02 FIX: 이벤트 핸들러 참조를 변수에 저장 → cleanup에서 removeListener 가능
+    const handleDragEnd = () => {
+      const pos = markerInst.getPosition();
+      setLat(pos.getLat().toFixed(6));
+      setLng(pos.getLng().toFixed(6));
+      setChanged(true);
+    };
+    const handleMapClick = (e) => {
+      const pos = e.latLng;
+      markerInst.setPosition(pos);
+      setLat(pos.getLat().toFixed(6));
+      setLng(pos.getLng().toFixed(6));
+      setChanged(true);
+    };
+
     window.kakao.maps.load(() => {
       const container = mapRef.current;
       if (!container) return;
-
       const initLat = parseFloat(lat);
       const initLng = parseFloat(lng);
-
-      const map = new window.kakao.maps.Map(container, {
+      mapInst = new window.kakao.maps.Map(container, {
         center: new window.kakao.maps.LatLng(initLat, initLng),
         level: 4,
       });
-      kakaoMap.current = map;
-
-      // 드래그 가능한 마커
-      const marker = new window.kakao.maps.Marker({
+      kakaoMap.current = mapInst;
+      markerInst = new window.kakao.maps.Marker({
         position: new window.kakao.maps.LatLng(initLat, initLng),
         draggable: true,
-        map,
+        map: mapInst,
       });
-      markerRef.current = marker;
-
+      markerRef.current = markerInst;
       // 마커 드래그 끝날 때 좌표 업데이트
-      window.kakao.maps.event.addListener(marker, 'dragend', () => {
-        const pos = marker.getPosition();
-        const newLat = pos.getLat().toFixed(6);
-        const newLng = pos.getLng().toFixed(6);
-        setLat(newLat);
-        setLng(newLng);
-        setChanged(true);
-      });
-
+      window.kakao.maps.event.addListener(markerInst, 'dragend', handleDragEnd);
       // 지도 클릭으로도 마커 이동
-      window.kakao.maps.event.addListener(map, 'click', (e) => {
-        const pos = e.latLng;
-        marker.setPosition(pos);
-        const newLat = pos.getLat().toFixed(6);
-        const newLng = pos.getLng().toFixed(6);
-        setLat(newLat);
-        setLng(newLng);
-        setChanged(true);
-      });
+      window.kakao.maps.event.addListener(mapInst, 'click', handleMapClick);
     });
+    return () => {
+      // ✅ BUG-02 FIX: 언마운트 시 이벤트 리스너 제거 → 중복 누적 방지
+      if (markerInst) window.kakao.maps.event.removeListener(markerInst, 'dragend', handleDragEnd);
+      if (mapInst) window.kakao.maps.event.removeListener(mapInst, 'click', handleMapClick);
+    };
   }, []); // eslint-disable-line
 
   // 수동 입력 시 지도 마커도 이동

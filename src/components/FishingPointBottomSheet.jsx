@@ -77,8 +77,8 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
           (weatherLine  ? `🌤 날씨: ${weatherLine}\n`       : '') +
           (form.memo    ? `\n💬 ${form.memo}` : '');
         await apiClient.post('/api/community/posts', {
-          author: user.name,
-          author_email: user.email,
+          author: user?.name || 'anonymous', // ✅ BUG-05 FIX: user null 가드
+          author_email: user?.email || '',    // ✅ BUG-05 FIX: user null 가드
           category: '조황 공유',
           content: boardContent.trim(),
           image: form.image || null,
@@ -374,11 +374,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     };
 
     // ── 최초 로딩 (전체 로딩 — CCTV·쇼핑 포함) ──────────────────────────
+    let cancelled = false; // ✅ BUG-01 FIX: 포인트 전환 시 이전 요청 취소용 플래그
     const loadData = async () => {
       setLoading(true);
       setCctvLoading(true);
       const sid = selectedPoint.obsCode || 'DT_0001';
-      const keyword = selectedPoint.fish ? selectedPoint.fish.split(',')[0] + ' 일람' : '낚시용품';
 
       const todayStr = (() => {
         const d = new Date();
@@ -389,9 +389,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       })();
 
       const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}`)
-        .then(res => { setCctvData(res.data); })
+        .then(res => { if (!cancelled) setCctvData(res.data); }) // ✅ BUG-01 FIX
         .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
-        .finally(() => setCctvLoading(false));
+        .finally(() => { if (!cancelled) setCctvLoading(false); }); // ✅ BUG-01 FIX
 
       const fish = selectedPoint.fish ? selectedPoint.fish.split(',')[0].trim() : '';
       const pointType = selectedPoint.region || '바다';
@@ -399,15 +399,16 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         `/api/shop/recommend?pointType=${encodeURIComponent(pointType)}&fish=${encodeURIComponent(fish)}`
       ).then(res => {
         const items = res.data?.products?.slice(0, 3) || [];
-        if (items.length > 0) setShoppingItems(items);
+        if (items.length > 0 && !cancelled) setShoppingItems(items); // ✅ BUG-01 FIX
       }).catch(err => { if (!import.meta.env.PROD) console.error('Shop Load Error:', err); });
 
       const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}`)
         .then(resp => {
-          setMarineData(prev => ({ ...prev, ...resp.data, stationId: sid }));
+          if (!cancelled) setMarineData(prev => ({ ...prev, ...resp.data, stationId: sid })); // ✅ BUG-01 FIX
         })
         .catch(err => {
           if (!import.meta.env.PROD) console.error('Data Load Error:', err);
+          if (cancelled) return;
           const reg = selectedPoint.region || '남해';
           const profile = { '제주': 18.2, '남해': 16.5, '동해': 14.2, '서해': 11.8 };
           const baseSst = profile[reg] || 16.0;
@@ -426,11 +427,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             tide_predictions: [{ time: '14:20', type: '고조', level: 180 }]
           }));
         })
-        .finally(() => setLoading(false));
+        .finally(() => { if (!cancelled) setLoading(false); }); // ✅ BUG-01 FIX
 
       const tidePromise = fetchTideForecast(sid, todayStr)
         .then(items => {
-          if (!items || items.length === 0) return;
+          if (!items || items.length === 0 || cancelled) return;
           const predictions = items.map(item => ({
             tph_time: item.hl_time || item.tph_time || '',
             hl_code: item.hl_code === 'H' ? '고조' : '간조',
@@ -439,7 +440,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             type: item.hl_code === 'H' ? '고조' : '간조',
             level: item.hl_level || '',
           }));
-          setMarineData(prev => ({
+          if (!cancelled) setMarineData(prev => ({ // ✅ BUG-01 FIX
             ...prev,
             tide_predictions: predictions,
             tide: {
@@ -455,7 +456,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
       const waterTempPromise = fetchWaterTemp(sid, todayStr)
         .then(temp => {
-          if (temp && temp !== '-') {
+          if (temp && temp !== '-' && !cancelled) { // ✅ BUG-01 FIX
             setMarineData(prev => ({ ...prev, waterTemp: temp, sst: temp }));
             if (!import.meta.env.PROD) console.info(`[BottomSheet] 실측 수온 ${temp}°C 로드 완료`);
           }
@@ -464,12 +465,12 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
       const fishingIdxPromise = fetchFishingIndex(sid)
         .then(items => {
-          if (!items || items.length === 0) return;
+          if (!items || items.length === 0 || cancelled) return; // ✅ BUG-01 FIX
           const today = items[0];
           const gradeMap = { '1': '매우좋음', '2': '좋음', '3': '보통', '4': '나쁨', '5': '매우나쁨' };
           const idx = today?.fishing_idx || today?.fishingIdx || '';
           const grade = today?.fishing_grade || gradeMap[idx] || idx;
-          setMarineData(prev => ({
+          if (!cancelled) setMarineData(prev => ({ // ✅ BUG-01 FIX
             ...prev,
             fishingIndex: {
               등급: grade,
@@ -484,16 +485,20 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
       await Promise.allSettled([marinePromise, cctvPromise, shopPromise, tidePromise, waterTempPromise, fishingIdxPromise]);
 
-      setBizLoading(true);
-      const regionKey = (selectedPoint.region || '').split(' ')[0];
-      apiClient.get(`/api/community/business?region=${encodeURIComponent(regionKey)}&limit=3`)
-        .then(res => { setBusinessPosts(Array.isArray(res.data) ? res.data : []); })
-        .catch(() => setBusinessPosts([]))
-        .finally(() => setBizLoading(false));
+      if (!cancelled) { // ✅ BUG-10 FIX: fire-and-forget 비즈니스 게시물 setState 언마운트 후 호출 방지
+        setBizLoading(true);
+        const regionKey = (selectedPoint.region || '').split(' ')[0];
+        apiClient.get(`/api/community/business?region=${encodeURIComponent(regionKey)}&limit=3`)
+          .then(res => { if (!cancelled) setBusinessPosts(Array.isArray(res.data) ? res.data : []); }) // ✅ BUG-10 FIX
+          .catch(() => { if (!cancelled) setBusinessPosts([]); }) // ✅ BUG-10 FIX
+          .finally(() => { if (!cancelled) setBizLoading(false); }); // ✅ BUG-10 FIX
+      }
 
       // 최초 로딩 완료 → 갱신 시각 기록 + 카운트다운 시작
-      setLastRefreshed(new Date());
-      setNextRefreshIn(30 * 60);
+      if (!cancelled) {
+        setLastRefreshed(new Date());
+        setNextRefreshIn(30 * 60);
+      }
     };
 
     loadData();
@@ -508,6 +513,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     }, 1000);
 
     return () => {
+      cancelled = true; // ✅ BUG-01 FIX: 포인트 전환 시 loadData 내 모든 setState 방지
       clearInterval(autoRefreshRef.current);
       clearInterval(countdownRef.current);
     };

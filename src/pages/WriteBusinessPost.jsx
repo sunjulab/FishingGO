@@ -91,6 +91,7 @@ export default function WriteBusinessPost() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const generateTimerRef = useRef(null); // ✅ 19TH-B2: AI 생성 타이머 ref — 언마운트 후 setState 방지
+  const isMountedRef = useRef(true); // ✅ BUG-8 FIX: 언마운트 후 setState 방지
 
   // ✅ BUG-FIX: isReady phone 최소 9자리 → 8자리로 완화 (1588-XXXX 등 8자리 대표번호 허용, handlePostClick과 일치)
   const isReady = shipName.trim() && region && boatType && targetFish.trim() && price.trim() && schedule.trim()
@@ -115,20 +116,20 @@ export default function WriteBusinessPost() {
   // 수정 모드: 기존 데이터 불러오기
   useEffect(() => {
     if (!isEditMode) return;
+    let cancelled = false; // ✅ BUG-7 FIX: 언마운트 후 setState 방지
     apiClient.get(`/api/community/business/${editId}`)
       .then(res => {
+        if (cancelled) return; // ✅ BUG-7 FIX
         const data = res.data;
         setShipName(data.shipName || '');
         setRegion(data.region || '');
         setBoatType(data.type || '');
-        setTargetFish(data.target || ''); // ✅ LOC-FISH: 문자열 그대로 로드
+        setTargetFish(data.target || '');
         setPrice(data.price != null ? String(data.price) : '');
         setSchedule(data.date || '');
-        // ✅ BUG-FIX: capacity=0은 DB에 null로 저장되므로 null만 체크. data.capacity !== 0 조건은 불필요
         setCapacity(data.capacity != null ? String(data.capacity) : '');
         setPhone(data.phone || '');
         setExtraMsg('');
-        // ✅ MULTI-IMG: 수정 모드에서 기존 이미지 배열 복원
         const existingImages = Array.isArray(data.images) && data.images.length > 0
           ? data.images
           : data.cover ? [data.cover] : [];
@@ -136,8 +137,12 @@ export default function WriteBusinessPost() {
         setContent(data.content || '');
         setIsPinned(data.isPinned || false);
       })
-      .catch((e) => { if (!import.meta.env.PROD) console.warn('[WriteBusinessPost] 수정 데이터 로드 실패:', e); }); // ✅ 19TH-B1: silent catch → 개발 환경 경고
-  }, [editId]);
+      .catch((e) => {
+        if (!cancelled) addToast('수정 데이터를 불러올 수 없습니다.', 'error'); // ✅ BUG-7 FIX: 에러 피드백
+        if (!import.meta.env.PROD) console.warn('[WriteBusinessPost] 수정 데이터 로드 실패:', e);
+      });
+    return () => { cancelled = true; }; // ✅ BUG-7 FIX
+  }, [editId, addToast]);
 
   // ✅ LOC-FISH: 칩 클릭 → 텍스트에 어종명 추가 (중복 방지)
   const appendFish = (fish) => {
@@ -149,6 +154,8 @@ export default function WriteBusinessPost() {
     });
   };
 
+  // ✅ BUG-8 FIX: isMountedRef cleanup
+  useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; }; }, []);
   // ✅ 19TH-B2: 언마운트 시 AI 생성 타이머 정리
   useEffect(() => { return () => { if (generateTimerRef.current) clearTimeout(generateTimerRef.current); }; }, []);
 
@@ -241,7 +248,7 @@ export default function WriteBusinessPost() {
         const msg = err.response?.data?.error || '등록 실패. 다시 시도해주세요.';
         addToast(msg, 'error');
       }
-    } finally { setIsSubmitting(false); }
+    } finally { if (isMountedRef.current) setIsSubmitting(false); } // ✅ BUG-8 FIX: 언마운트 후 setState 방지
   };
 
   return (

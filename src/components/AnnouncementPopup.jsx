@@ -36,22 +36,22 @@ export default function AnnouncementPopup() {
   // ── 공지 목록 로드 (마운트 1회) ──────────────────────────────────────────
   useEffect(() => {
     try { if (localStorage.getItem(getHideAllKey())) return; } catch { /* ok */ }
+    let alive = true; // ✅ BUG-06 FIX: 언마운트 후 setState 방지
 
     apiClient.get('/api/community/notices')
       .then(res => {
+        if (!alive) return; // ✅ BUG-06 FIX
         const all = Array.isArray(res.data) ? res.data : [];
         const popups = all
-          // ✅ FIX-POPUP: isPopup=true OR image 있는 공지 표시 (하위호환)
-          // 기존 공지(isPopup 체크 전 작성)도 이미지가 있으면 팝업으로 노출
           .filter(n => (n.isPopup || n.image) && !isHiddenToday(String(n._id || n.id)))
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
         if (popups.length > 0) {
           setNotices(popups);
           setVisible(true);
         }
       })
       .catch(() => { /* 팝업 로드 실패 무시 */ });
+    return () => { alive = false; }; // ✅ BUG-06 FIX
   }, []);
 
   // ── 닫기 (개별 "오늘 안보기" 처리 후 다음 팝업으로) ──────────────────────

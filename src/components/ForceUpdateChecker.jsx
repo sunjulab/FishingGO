@@ -40,37 +40,37 @@ export default function ForceUpdateChecker() {
   const [storeUrl, setStoreUrl] = useState('https://play.google.com/apps/internaltest/4701312289208373704');
 
   useEffect(() => {
+    let cancelled = false; // ✅ BUG-02 FIX: 언마운트 후 setState 방지
     const checkUpdate = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/app-config`);
-        if (!res.ok) return;
+        if (!res.ok || cancelled) return; // ✅ BUG-02 FIX
         const data = await res.json();
+        if (cancelled) return; // ✅ BUG-02 FIX: fetch 후 취소 체크
         
         if (data.min_version && isVersionLower(CURRENT_APP_VERSION, data.min_version)) {
-          if (data.store_url) setStoreUrl(data.store_url);
+          if (data.store_url && !cancelled) setStoreUrl(data.store_url); // ✅ BUG-02 FIX
           
-          // 1. Android 네이티브 환경인 경우 공식 In-App Update(Immediate) 시도
           if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
             try {
               const info = await AppUpdate.getAppUpdateInfo();
-              if (info.updateAvailability !== 1) { // 1 = UPDATE_NOT_AVAILABLE
-                // 즉시 업데이트 실행 시도
+              if (info.updateAvailability !== 1) {
                 await AppUpdate.performImmediateUpdate();
-                return; // 성공적으로 구글 플레이 팝업이 덮었다면 모달을 렌더링하지 않음 (대기)
+                return;
               }
             } catch (err) {
-              console.warn('Native AppUpdate failed, falling back to custom modal:', err);
+              if (!import.meta.env.PROD) console.warn('Native AppUpdate failed, falling back to custom modal:', err);
             }
           }
           
-          // 2. 인앱 업데이트 실패 또는 미지원 환경(웹/iOS)일 경우 커스텀 강제 모달 표시
-          setNeedsUpdate(true);
+          if (!cancelled) setNeedsUpdate(true); // ✅ BUG-02 FIX
         }
       } catch (err) {
-        console.error('Failed to check app config:', err);
+        if (!import.meta.env.PROD) console.warn('Failed to check app config:', err); // ✅ BUG-02 FIX: prod에서 콘솔 노출 방지
       }
     };
     checkUpdate();
+    return () => { cancelled = true; }; // ✅ BUG-02 FIX
   }, []);
 
   // 24시간 내 이미 닫은 경우 또는 이번 세션에서 닫은 경우
