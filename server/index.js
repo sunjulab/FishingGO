@@ -898,6 +898,49 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+// ✅ IAP 구독 자동 만료 스케줄러 (30분마다 실행)
+// iapExpiresAt이 지난 유저 tier → FREE로 강제 회수 + VVIP 슬롯 해제
+const runIapExpiryCheck = async () => {
+  if (!dbReady || !User) return;
+  try {
+    const now = new Date();
+    // 만료된 유료 구독자 조회 (FREE가 아닌 + 만료일 지남)
+    const expiredUsers = await User.find({
+      tier: { $nin: ['FREE', 'MASTER'] },
+      iapExpiresAt: { $ne: null, $lt: now },
+    }).select('_id email tier iapExpiresAt vvipHarborId').lean();
+
+    for (const u of expiredUsers) {
+      try {
+        // tier → FREE 강제 다운그레이드
+        await User.findByIdAndUpdate(u._id, {
+          $set: { tier: 'FREE', iapExpiresAt: null, iapPurchaseToken: null, iapProductId: null, iapAutoRenewing: false, updatedAt: now }
+        });
+        // VVIP였으면 항구 슬롯 해제
+        if ((u.tier === 'BUSINESS_VIP' || u.tier === 'MASTER') && u.vvipHarborId && vvipSlots[u.vvipHarborId]?.userId === (u.email || String(u._id))) {
+          delete vvipSlots[u.vvipHarborId];
+          saveVvipSlots();
+          (logger?.info || console.log)(`[IAP 만료] VVIP 슬롯 해제: ${u.email} → ${u.vvipHarborId}`);
+        }
+        (logger?.info || console.log)(`[IAP 만료] 구독 회수: ${u.email} ${u.tier}→FREE (만료: ${u.iapExpiresAt})`);
+      } catch (e2) {
+        (logger?.error || console.error)(`[IAP 만료] 처리 실패: ${u.email}`, e2.message);
+      }
+    }
+    if (expiredUsers.length > 0) {
+      (logger?.info || console.log)(`[IAP 만료] 총 ${expiredUsers.length}명 처리 완료`);
+    }
+  } catch (e) {
+    (logger?.error || console.error)('[IAP 만료 스케줄러] 오류:', e.message);
+  }
+};
+
+// 서버 시작 60초 후 첫 실행, 이후 30분마다
+setTimeout(() => {
+  runIapExpiryCheck();
+  setInterval(runIapExpiryCheck, 30 * 60 * 1000); // 30분 주기
+}, 60 * 1000);
+
 // ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
 function verifyToken(req, res, next) {
   const auth = req.headers.authorization;

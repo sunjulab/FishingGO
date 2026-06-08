@@ -148,11 +148,24 @@ export default function VVIPSubscribe() {
     const doInit = () => {
       initIAP({
         onSuccess: async () => {
-          addToast('✅ 구독이 완료되었습니다!', 'success');
-          try {
-            const res = await apiClient.get('/api/user/me');
-            if (res.data?.user) setUser(res.data.user);
-          } catch {}
+          // ✅ 결제 완료 후 tier 반영까지 최대 3회 재시도 (서버 DB 반영 지연 대비)
+          addToast('✅ 구독이 완료되었습니다! 등급을 갱신합니다.', 'success');
+          const refreshUser = async (retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                const res = await apiClient.get('/api/user/me');
+                if (res.data?.user && res.data.user.tier !== 'FREE') {
+                  setUser(res.data.user);
+                  addToast(`🎉 ${res.data.user.tier} 등급이 적용되었습니다!`, 'success');
+                  return;
+                } else if (res.data?.user) {
+                  setUser(res.data.user);
+                }
+              } catch {}
+              if (i < retries - 1) await new Promise(r => setTimeout(r, 1500)); // 1.5초 대기
+            }
+          };
+          await refreshUser();
           setLoading(null);
         },
         onError: (err) => {
@@ -385,7 +398,7 @@ export default function VVIPSubscribe() {
 
                 {/* VVIP: 항구 현황 버튼 추가 */}
                 {plan.key === 'VVIP' && (
-                  <button onClick={() => setView('harbor')} style={{ width: '100%', padding: '10px', border: `1px solid ${plan.border}`, borderRadius: '12px', background: 'rgba(255,215,0,0.06)', color: '#FFD700', fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`, cursor: 'pointer', marginBottom: '8px' }}>
+                  <button onClick={() => { setView('harbor'); fetchHarborData(); }} style={{ width: '100%', padding: '10px', border: `1px solid ${plan.border}`, borderRadius: '12px', background: 'rgba(255,215,0,0.06)', color: '#FFD700', fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`, cursor: 'pointer', marginBottom: '8px' }}>
                     🏖️ 항구 잔여 현황 보기 ({availableCount}/{HARBORS_STATIC.length}석)
                   </button>
                 )}
