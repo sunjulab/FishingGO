@@ -52,7 +52,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 403 && error.response?.data?.code === 'SUBSCRIPTION_EXPIRED') {
       try {
         const { useUserStore } = await import('../store/useUserStore');
-        useUserStore.getState().setUserTier('FREE');
+        // ✅ FIX-MED: setUserTier 제거 → updateUser 단일 호출로 원자 갱신 (user.tier + userTier 동시 갱신)
         useUserStore.getState().updateUser({ tier: 'FREE', subscriptionExpiresAt: null });
       } catch(e) {
         // ✅ 8TH-B2: silent swallow → 개발 환경 경고 추가
@@ -86,15 +86,14 @@ apiClient.interceptors.response.use(
         // useUserStore.getState()는 동기적으로 현재 스토어 상태를 반환 (import 불필요)
         // localStorage의 'user' 키는 XSS로 조작 가능하여 신뢰 불가
         try {
-          // 동적 import 대신 window.__useUserStore 참조 or safe fallback
-          const rawUser = localStorage.getItem('user');
-          const parsed = rawUser ? JSON.parse(rawUser) : null;
-          // id='GUEST'인 경우만 리다이렉트 없이 에러 전파 (조작 방지: 값 하드코딩 비교)
-          if (parsed?.id === 'GUEST' && parsed?.email === 'GUEST') {
+          // ✅ FIX-HIGH: localStorage 대신 Zustand 스토어 직접 참조 (XSS 조작 불가)
+          const { useUserStore } = await import('../store/useUserStore');
+          const storeUser = useUserStore.getState().user;
+          if (storeUser?.id === 'GUEST' && storeUser?.email === 'GUEST') {
             return Promise.reject(error);
           }
         } catch(e) {
-          if (!import.meta.env.PROD) console.warn('[apiClient] localStorage 파싱 실패:', e);
+          if (!import.meta.env.PROD) console.warn('[apiClient] GUEST 판별 실패:', e);
         }
         // ENH4-A1: window.location.href 풀 리로드 → 커스텀 이벤트로 교체 — App 레벨에서 navigate 캘치
         window.dispatchEvent(new CustomEvent('auth_expired'));

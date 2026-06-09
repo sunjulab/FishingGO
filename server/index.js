@@ -6713,7 +6713,9 @@ app.get('/api/pro/status', (req, res) => {
   const isExpired = new Date(sub.expiresAt) < now;
   if (isExpired) {
     delete proSubscriptions[userId];
-    saveProSubs(); // 만료 파일 반영
+    saveProSubs();
+    // ✅ FIX-MEDIUM: User DB tier FREE 초기화 (서버 재시작 시 만료 유저 tier 복원 방지)
+    if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }] }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
     return res.json({
       tier: 'FREE', isActive: false,
       reason: 'expired',
