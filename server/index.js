@@ -7936,8 +7936,12 @@ try {
 // ── (11) 커뮤니티 서버사이드 전문 검색 ──────────────────────────────────────
 app.get('/api/community/search', async (req, res) => {
   try {
-    const { q = '', page = 1, limit = 20, category } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const rawQ = Array.isArray(req.query.q) ? req.query.q[0] : (req.query.q || ''); // ✅ FIX-SEARCH-HPP
+    const q = rawQ.slice(0, 100); // ✅ FIX-SEARCH-MAXLEN-2: 검색어 최대 100자
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20)); // ✅ FIX-SEARCH-LIMIT: 최대 50개
+    const category = Array.isArray(req.query.category) ? req.query.category[0] : (req.query.category || ''); // ✅ FIX-SEARCH-HPP
+    const skip = (page - 1) * limit;
     let results = [];
     let total = 0;
 
@@ -7949,7 +7953,7 @@ app.get('/api/community/search', async (req, res) => {
       [results, total] = await Promise.all([
         Post.find(filter, { score: { $meta: 'textScore' } })
           .sort({ score: { $meta: 'textScore' }, createdAt: -1 })
-          .skip(skip).limit(parseInt(limit)).lean(),
+          .skip(skip).limit(limit).lean(),
         Post.countDocuments(filter),
       ]);
     } else {
@@ -7961,9 +7965,9 @@ app.get('/api/community/search', async (req, res) => {
         p.category?.toLowerCase().includes(low)
       );
       total = filtered.length;
-      results = filtered.slice(skip, skip + parseInt(limit));
+      results = filtered.slice(skip, skip + limit);
     }
-    res.json({ results, total, page: parseInt(page), hasMore: skip + results.length < total });
+    res.json({ results, total, page, hasMore: skip + results.length < total });
   } catch (err) {
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
