@@ -733,7 +733,7 @@ export default function CommunityTab() {
             </div>
           </div>
           {/* 카테고리 필터 */}
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <div style={{ display: 'flex', gap: '6px', padding: '10px 16px', width: 'max-content' }}>
               {OPEN_CATEGORIES.map(cat => (
                 <button

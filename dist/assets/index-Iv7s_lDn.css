@@ -374,3 +374,6 @@ ins.adsbygoogle[data-ad-status="unfilled"]::after {
 /* ─── 인스타그램형 이미지 슬라이더 스크롤바 숨김 ─── */
 .insta-slider::-webkit-scrollbar { display: none; }
 .insta-slider { scrollbar-width: none; -ms-overflow-style: none; }
+/* ���� ��ũ�� ���� �� ��ũ�ѹ� ����� (Chrome/Safari webkit + Firefox) */
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }

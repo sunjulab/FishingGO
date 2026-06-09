@@ -1,4 +1,4 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-BxfHCR6t.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-CVgYVfbG.js","assets/index-DLAZAG8k.js","assets/index-Kyo3XGIU.js","assets/index-BD9Fr2xD.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-DfR1mGBy.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-BjwHZlLm.js","assets/index-CFK-4coq.js","assets/web-CUsruP4H.js"])))=>i.map(i=>d[i]);
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-CAaNQklK.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-BzfcTCNg.js","assets/index-DpFJ-A4f.js","assets/index-Bq0yQzgh.js","assets/index-BcDlL39l.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-DfiZgbYx.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-pWpCKiqq.js","assets/index-DaZUhfgM.js","assets/web-CRsQu2xO.js"])))=>i.map(i=>d[i]);
 import { r as reactExports, g as getDefaultExportFromCjs, a as reactDomExports, R as React, u as useNavigate, b as useLocation, c as useSearchParams, d as useParams, N as NavLink, e as Navigate, B as BrowserRouter, f as Routes, h as Route } from './vendor-react-vfOo6a0P.js';
 import { A as AlertCircle, C as CheckCircle, I as Info, X, a as Clock, M as MessageSquare, b as ChevronUp, c as ChevronDown, L as Lock, S as Send, R as RefreshCw, d as Search, e as MapPin, W as Waves, f as Wind, T as Tv, g as Map$1, B as BarChart2, h as Ship, i as Crown, Z as Zap, j as CornerUpLeft, k as Megaphone, l as AlertTriangle, F as Fish, m as Bell, n as Trash2, o as CheckCheck, p as RotateCcw, q as Loader2, r as Check, s as ArrowLeft, t as Anchor, P as Play, u as Maximize2, U as UserRound, v as ShoppingBag, w as ChevronLeft, x as ChevronRight, y as ZoomIn, z as Pen, H as Heart, D as Share2, E as Users, G as Award, J as Phone, K as PlusCircle, N as Plus, O as SlidersHorizontal, Q as CreditCard, V as ShieldAlert, Y as Camera, _ as PenLine, $ as Trophy, a0 as Star, a1 as Calendar, a2 as BookOpen, a3 as History, a4 as ToggleRight, a5 as ToggleLeft, a6 as Image$1, a7 as Scan, a8 as CheckCircle2, a9 as HelpCircle, aa as MoreVertical, ab as ExternalLink, ac as User, ad as Droplets, ae as KeyRound, af as EyeOff, ag as Eye, ah as XCircle, ai as ShieldCheck, aj as Wifi, ak as WifiOff, al as LogOut, am as Navigation, an as Sunrise, ao as Sunset, ap as Smartphone, aq as Sparkles, ar as Youtube, as as Link, at as MousePointer, au as TrendingUp, av as Activity, aw as UserPlus, ax as Globe, ay as DollarSign, az as BellRing, aA as Filter, aB as Flame, aC as UserCheck, aD as FileText, aE as Upload, aF as CloudLightning, aG as Home } from './vendor-icons-Bsle_tIe.js';
 import { c as create } from './vendor-store-wmv-LjAu.js';
@@ -1322,7 +1322,7 @@ let AdMob = null;
 async function initAdMob() {
   if (!isNative$1()) return;
   try {
-    const mod = await __vitePreload(() => import('./index-BxfHCR6t.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
+    const mod = await __vitePreload(() => import('./index-CAaNQklK.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
     AdMob = mod.AdMob;
     await AdMob.initialize({
       requestTrackingAuthorization: false,
@@ -1582,7 +1582,7 @@ const index = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
 async function initPushPermission(userId) {
   if (!Capacitor.isNativePlatform()) return { ok: false, reason: 'web' };
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-CVgYVfbG.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-BzfcTCNg.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
 
     // 기존 리스너 중복 방지
     await PushNotifications.removeAllListeners();
@@ -1668,7 +1668,7 @@ function setPushHandlers({ addToast, navigate }) {
 async function unregisterPushToken() {
   if (!Capacitor.isNativePlatform()) return;
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-CVgYVfbG.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-BzfcTCNg.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
     await PushNotifications.removeAllListeners();
     await apiClient.delete('/api/user/push-token');
     console.log('[PUSH] ✅ FCM 토큰 해제 완료');
@@ -1691,7 +1691,7 @@ async function requestLocationPermission() {
     });
   }
   try {
-    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-DLAZAG8k.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
+    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-DpFJ-A4f.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
     const perm = await Geolocation.requestPermissions();
     // 'granted' | 'denied' | 'prompt'
     const ok = perm.location === 'granted' || perm.coarseLocation === 'granted';
@@ -1707,7 +1707,7 @@ async function requestLocationPermission() {
 async function requestCameraPermission() {
   if (!Capacitor.isNativePlatform()) return { ok: true }; // 웹은 별도 권한 불필요
   try {
-    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-Kyo3XGIU.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
+    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-Bq0yQzgh.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
     const perm = await Camera.requestPermissions({ permissions: ['camera', 'photos'] });
     const cameraOk = perm.camera === 'granted' || perm.camera === 'limited';
     const photosOk = perm.photos === 'granted' || perm.photos === 'limited';
@@ -1731,7 +1731,7 @@ async function initNetworkMonitor(onOffline, onOnline) {
     };
   }
   try {
-    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-BD9Fr2xD.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
+    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-BcDlL39l.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
     const status = await Network.getStatus();
     if (!status.connected) onOffline?.();
 
@@ -2373,7 +2373,7 @@ const Players = [
     player: reactExports.lazy(
       () => __vitePreload(() => import(
         /* webpackChunkName: 'reactPlayerDash' */
-        './react-DfR1mGBy.js'
+        './react-DfiZgbYx.js'
       ),true?__vite__mapDeps([13,1,11,2,3,4,5]):void 0)
     )
   },
@@ -8402,7 +8402,7 @@ const SITE_URL = "https://www.fishing-go.com";
 const APP_ID$3 = "kr.fishinggo.app";
 async function copyToClipboard$1(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-BjwHZlLm.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-pWpCKiqq.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -8428,7 +8428,7 @@ async function copyToClipboard$1(text) {
 }
 async function openKakaoTalk$1() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CFK-4coq.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-DaZUhfgM.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -9096,7 +9096,7 @@ function CommunityTab() {
         ),
         searchQuery && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSearchQuery(""), style: { border: "none", background: "none", cursor: "pointer", color: "#999", fontSize: `calc(16px * var(--fs, 1))` }, children: "✕" })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { overflowX: "auto", WebkitOverflowScrolling: "touch" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "6px", padding: "10px 16px", width: "max-content" }, children: OPEN_CATEGORIES.map((cat) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "6px", padding: "10px 16px", width: "max-content" }, children: OPEN_CATEGORIES.map((cat) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           onClick: () => setOpenCategory(cat),
@@ -21271,7 +21271,7 @@ function getFishEmoji(name) {
 
 async function copyToClipboard(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-BjwHZlLm.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-pWpCKiqq.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -21297,7 +21297,7 @@ async function copyToClipboard(text) {
 }
 async function openKakaoTalk() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CFK-4coq.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-DaZUhfgM.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -21859,7 +21859,7 @@ function PhotoViewer({ records, initialIndex, onClose, onLike, onDelete, userId,
               r.baitUsed
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "2px" }, children: records.map((rec, j) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "2px", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }, children: records.map((rec, j) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
             setSliding(j > idx ? "left" : "right");
             setTimeout(() => {
               setIdx(j);
@@ -22007,11 +22007,11 @@ function CatchRankingPage({ embedded = false }) {
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "8px", marginBottom: "10px" }, children: PERIOD_TABS.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setPeriod(t.key), style: { padding: "6px 18px", borderRadius: "20px", border: "none", cursor: "pointer", fontWeight: "800", fontSize: `calc(12px * var(--fs,1))`, background: period === t.key ? T.tabActive : T.tabInactive, color: period === t.key ? T.tabActiveTxt : T.tabInactiveTxt, transition: "all 0.18s" }, children: t.label }, t.key)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }, children: FISH_TABS.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setFish(f), style: { padding: "5px 14px", borderRadius: "20px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: `calc(11px * var(--fs,1))`, whiteSpace: "nowrap", background: fish === f ? T.fishActive : T.fishInactive, color: fish === f ? T.fishActiveTxt : T.fishInactiveTxt, transition: "all 0.18s" }, children: f }, f)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }, children: FISH_TABS.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setFish(f), style: { padding: "5px 14px", borderRadius: "20px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: `calc(11px * var(--fs,1))`, whiteSpace: "nowrap", background: fish === f ? T.fishActive : T.fishInactive, color: fish === f ? T.fishActiveTxt : T.fishInactiveTxt, transition: "all 0.18s" }, children: f }, f)) })
       ] }),
       embedded && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { padding: "12px 16px 10px", background: T.card, borderBottom: "1px solid #f0f0f0" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "6px", marginBottom: "8px" }, children: PERIOD_TABS.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setPeriod(t.key), style: { padding: "5px 14px", borderRadius: "20px", border: "none", cursor: "pointer", fontWeight: "800", fontSize: `calc(12px * var(--fs,1))`, background: period === t.key ? T.tabActive : T.tabInactive, color: period === t.key ? T.tabActiveTxt : T.tabInactiveTxt, transition: "all 0.18s" }, children: t.label }, t.key)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" }, children: FISH_TABS.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setFish(f), style: { padding: "4px 12px", borderRadius: "20px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: `calc(11px * var(--fs,1))`, whiteSpace: "nowrap", background: fish === f ? T.fishActive : T.fishInactive, color: fish === f ? T.fishActiveTxt : T.fishInactiveTxt, transition: "all 0.18s" }, children: f }, f)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }, children: FISH_TABS.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setFish(f), style: { padding: "4px 12px", borderRadius: "20px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: `calc(11px * var(--fs,1))`, whiteSpace: "nowrap", background: fish === f ? T.fishActive : T.fishInactive, color: fish === f ? T.fishActiveTxt : T.fishInactiveTxt, transition: "all 0.18s" }, children: f }, f)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { padding: "14px 14px" }, children: [
         contests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { background: "linear-gradient(135deg,#FDE68A,#F59E0B)", borderRadius: "16px", padding: "13px 16px", marginBottom: "12px", cursor: "pointer" }, onClick: () => navigate("/contest"), children: [
@@ -23959,7 +23959,7 @@ var AppUpdateResultCode;
 })(AppUpdateResultCode || (AppUpdateResultCode = {}));
 
 const AppUpdate = registerPlugin('AppUpdate', {
-    web: () => __vitePreload(() => import('./web-CUsruP4H.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
+    web: () => __vitePreload(() => import('./web-CRsQu2xO.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
 });
 
 const CURRENT_APP_VERSION = true ? "2.1.75" : "2.1.17";

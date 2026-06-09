@@ -1,4 +1,4 @@
-import { W as WebPlugin } from './index-NI8adjLZ.js';
+import { W as WebPlugin } from './index-DvZBU_x5.js';
 import './vendor-react-vfOo6a0P.js';
 import './vendor-icons-Bsle_tIe.js';
 import './vendor-store-wmv-LjAu.js';

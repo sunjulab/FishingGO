@@ -129,7 +129,7 @@ function PhotoViewer({ records, initialIndex, onClose, onLike, onDelete, userId,
           {r.baitUsed && <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px' }}>🪱 {r.baitUsed}</span>}
         </div>
         {/* 썸네일 스트립 */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
           {records.map((rec, j) => (
             <button key={rec._id} onClick={() => { setSliding(j > idx ? 'left' : 'right'); setTimeout(() => { setIdx(j); setSliding(null); }, 200); }} style={{ flexShrink: 0, width: '50px', height: '50px', borderRadius: '10px', padding: 0, border: j === idx ? '2.5px solid #C8D400' : '2px solid rgba(255,255,255,0.15)', overflow: 'hidden', background: '#1a2a4a', cursor: 'pointer', transform: j === idx ? 'scale(1.1)' : 'scale(1)', transition: 'all 0.18s ease' }}>
               {rec.imageUrl ? <img src={rec.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>{getFishEmoji(rec.fishName)}</div>}
@@ -276,7 +276,7 @@ export default function CatchRankingPage({ embedded = false }) {
                 <button key={t.key} onClick={() => setPeriod(t.key)} style={{ padding: '6px 18px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`, background: period === t.key ? T.tabActive : T.tabInactive, color: period === t.key ? T.tabActiveTxt : T.tabInactiveTxt, transition: 'all 0.18s' }}>{t.label}</button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
               {FISH_TABS.map(f => (
                 <button key={f} onClick={() => setFish(f)} style={{ padding: '5px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: `calc(11px * var(--fs,1))`, whiteSpace: 'nowrap', background: fish === f ? T.fishActive : T.fishInactive, color: fish === f ? T.fishActiveTxt : T.fishInactiveTxt, transition: 'all 0.18s' }}>{f}</button>
               ))}
@@ -292,7 +292,7 @@ export default function CatchRankingPage({ embedded = false }) {
                 <button key={t.key} onClick={() => setPeriod(t.key)} style={{ padding: '5px 14px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`, background: period === t.key ? T.tabActive : T.tabInactive, color: period === t.key ? T.tabActiveTxt : T.tabInactiveTxt, transition: 'all 0.18s' }}>{t.label}</button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
               {FISH_TABS.map(f => (
                 <button key={f} onClick={() => setFish(f)} style={{ padding: '4px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: `calc(11px * var(--fs,1))`, whiteSpace: 'nowrap', background: fish === f ? T.fishActive : T.fishInactive, color: fish === f ? T.fishActiveTxt : T.fishInactiveTxt, transition: 'all 0.18s' }}>{f}</button>
               ))}
