@@ -3678,7 +3678,7 @@ app.put('/api/user/password', async (req, res) => {
     const { email, currentPassword, newPassword } = req.body;
     if (!email) return res.status(400).json({ error: '이메일이 필요합니다.' });
     if (!currentPassword || !newPassword) return res.status(400).json({ error: '비밀번호를 모두 입력해주세요.' });
-    if (newPassword.length < 8) return res.status(400).json({ error: '새 비밀번호는 8자 이상이어야 합니다.' });
+    if (newPassword.length < 8 || newPassword.length > 128 /* FIX-BCRYPT-DOS */) return res.status(400).json({ error: '새 비밀번호는 8자 이상이어야 합니다.' });
     // ✅ FIX-CHANGE-PWD-LEN: 비밀번호 최대 길이 제한 (bcrypt DoS 방어)
     if (newPassword.length > 128) return res.status(400).json({ error: '비밀번호는 최대 128자입니다.' });
 
@@ -3703,6 +3703,8 @@ app.put('/api/user/password', async (req, res) => {
 
     if (dbReady && User) {
       await User.findOneAndUpdate({ email }, { password: hashed, passwordChangedAt: new Date() }); // ✅ FIX-PWD-CHANGED-AT
+      // ✅ FIX-PWD-CACHE-INVALIDATE: 비밀번호 변경 시 기존 JWT 즉시 무효화
+      if (typeof pwdChangedCache !== 'undefined') pwdChangedCache.set(email, Date.now());
       pwdChangedCache.set(email, Date.now()); // ✅ FIX-PWD-IAT: 기존 토큰 무효화
       return res.json({ success: true });
     } else {
