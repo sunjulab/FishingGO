@@ -3322,8 +3322,12 @@ app.post('/api/admin/create-test-account', async (req, res) => {
   }
 });
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => { // ✅ FIX-REGISTER-RATE-LIMIT
   try {
+    // ✅ FIX-NOSQL-REGISTER: req.body 필드 타입 강제 (NoSQL Operator Injection 방어)
+    if (typeof req.body.email !== 'string' || typeof req.body.password !== 'string' || typeof req.body.name !== 'string') {
+      return res.status(400).json({ error: '잘못된 요청 형식' });
+    }
     const { email, password, name, phone, realName } = req.body; // ✅ realName 추가 수신
     if (!email || !password || !name) return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
     // 입력값 검증
@@ -4434,6 +4438,7 @@ app.delete('/api/community/posts/:id', async (req, res) => {
 
     if (dbReady && Post) {
       let post = null;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-AUTO
       try { post = await Post.findById(req.params.id); } catch (e) { }
       if (post) {
         // ✅ JWT email만으로 인증 (보안 수정 — body email 제거)
@@ -4466,6 +4471,7 @@ app.put('/api/community/posts/:id', async (req, res) => {
     const isAdmin = isAdminToken(tp);
     if (dbReady && Post) {
       let post;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-AUTO
       try { post = await Post.findById(req.params.id); } catch (e) { }
       if (!post) return res.status(404).json({ error: '게시글 없음' });
       if (!isAdmin && post.author_email !== jwtEmail)
@@ -4528,6 +4534,7 @@ app.post('/api/community/posts/:id/comments', async (req, res) => {
     const newComment = { author, author_email, text: censoredText, createdAt: new Date() };
     if (dbReady && Post) {
       let post = null;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-AUTO
       try { post = await Post.findById(req.params.id); } catch (e) { }
       if (post) {
         if (!Array.isArray(post.comments)) post.comments = [];
@@ -4608,6 +4615,7 @@ app.post('/api/community/posts/:id/like', async (req, res) => {
     const voterEmail = tp.email || tp.id;
     if (dbReady && Post) {
       let post = null;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-AUTO
       try { post = await Post.findById(req.params.id); } catch (e) { }
       if (post) {
         if (!Array.isArray(post.likedBy)) post.likedBy = [];
@@ -4642,6 +4650,7 @@ app.patch('/api/community/posts/:id/like', async (req, res) => {
     const voterEmail = tp.email || tp.id;
     if (dbReady && Post) {
       let post = null;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-AUTO
       try { post = await Post.findById(req.params.id); } catch (e) { }
       if (post) {
         if (!Array.isArray(post.likedBy)) post.likedBy = [];
@@ -5468,6 +5477,7 @@ app.delete('/api/community/business/:id', async (req, res) => {
     if (dbReady && BusinessPost) {
       // ✅ CastError 방지: _id 검색 실패 시 id 필드로 재검색
       let post = null;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-AUTO
       try { post = await BusinessPost.findById(req.params.id); } catch (_) {}
       if (!post) { post = await BusinessPost.findOne({ id: req.params.id }).catch(() => null); }
       if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
@@ -6038,6 +6048,7 @@ app.get('/api/fishing-scores', (req, res) => {
 // 프론트엔드 Mixed Content / CORS 블락 우회용 MOF 이미지 스트리밍 프록시
 app.get('/api/weather/cctv/stream/:beachCode', async (req, res) => {
   const { beachCode } = req.params;
+    if (!/^[a-zA-Z0-9_-]{1,20}$/.test(beachCode || '')) return res.status(400).json({ error: '잘못된 beachCode' }); // ✅ FIX-SSRF-BEACH
   const mofOriginUrl = `http://220.95.232.18/camera/${beachCode}_0.jpg`;
 
   try {
