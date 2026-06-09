@@ -3751,6 +3751,17 @@ app.post('/api/user/unblock', async (req, res) => {
 // =================================================================
 
 // --- 팔로우 ---
+// ✅ FIX-FOLLOW-RATE: 팔로우/언팔로우 rate limit — IP당 1분/30회 (스팸 방어)
+const followRateMap = new Map(); // ipHash → { count, windowStart }
+function checkFollowRate(ip) {
+  const key = hashIp(ip);
+  const now = Date.now();
+  const entry = followRateMap.get(key) || { count: 0, windowStart: now };
+  if (now - entry.windowStart > 60_000) { entry.count = 0; entry.windowStart = now; }
+  entry.count++;
+  followRateMap.set(key, entry);
+  return entry.count <= 30; // 1분 30회 허용
+}
 app.post('/api/user/follow', async (req, res) => {
   try {
     const auth = req.headers.authorization || '';
@@ -3764,6 +3775,9 @@ app.post('/api/user/follow', async (req, res) => {
     if (email === targetEmail) return res.status(400).json({ error: '자기 자신을 팔로우할 수 없습니다.' });
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.email !== email && tp.id !== email) return res.status(403).json({ error: '본인만 팔로우 가능합니다.' });
+    // ✅ FIX-FOLLOW-RATE: rate limit 체크
+    const rawFollowIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
+    if (!isAdmin && !checkFollowRate(rawFollowIp)) return res.status(429).json({ error: '팔로우 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' });
 
     if (dbReady && User) {
       const me = await User.findOne({ email });
@@ -4328,7 +4342,8 @@ app.get('/api/community/posts', async (req, res) => {
     const limit = Math.min(50, parseInt(req.query.limit) || 20);
     const skip = (page - 1) * limit;
     const category = req.query.category || '';  // 카테고리 필터
-    const q = req.query.q || '';          // 검색어
+    const rawQ = Array.isArray(req.query.q) ? req.query.q[0] : (req.query.q || ''); // ✅ FIX-HPP-SEARCH: 배열 파라미터 첫 값만 사용
+    const q = rawQ.slice(0, 100); // ✅ FIX-SEARCH-MAXLEN: 검색어 최대 100자 제한 (DoS 방어)
     const safeQ = q.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\$&'); // ✅ FIX-REGEX-ESCAPE
 
     if (dbReady && Post) {
@@ -4723,8 +4738,10 @@ app.post('/api/community/crews', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { name, region, isPrivate, password, owner, ownerName, limit } = req.body;
+    const { name, region, isPrivate, password, owner, ownerName, limit, description, bio } = req.body;
     if (typeof name === 'string' && name.length > 20) return res.status(400).json({ error: '크루 이름은 최대 20자입니다.' }); // ✅ FIX-CREW-NAME-LENGTH
+    if (typeof description === 'string' && description.length > 500) return res.status(400).json({ error: '크루 소개는 최대 500자입니다.' }); // ✅ FIX-CREW-DESC-LENGTH: DoS 방어
+    if (typeof bio === 'string' && bio.length > 500) return res.status(400).json({ error: '크루 bio는 최대 500자입니다.' }); // ✅ FIX-CREW-BIO-LENGTH: DoS 방어
     if (!name || !owner || !ownerName) return res.status(400).json({ error: '필수 항목 누락' });
     // limit 유효성 검증: 3~1000 범위 강제
     const safeLimit = Math.min(1000, Math.max(3, parseInt(limit) || 100));
@@ -5293,11 +5310,23 @@ app.delete('/api/community/notices/:id', async (req, res) => {
 });
 
 // ── 공지사항 조회수 증가 ──────────────────────────────────────────────────────
+// ✅ FIX-NOTICE-VIEW-DEDUP: IP 기반 중복 조회수 방어 (같은 IP 1시간 내 1회만 카운트)
+const noticeViewCache = new Map(); // 'ipHash:noticeId' → timestamp
+setInterval(() => {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  for (const [k, v] of noticeViewCache.entries()) { if (v < cutoff) noticeViewCache.delete(k); }
+}, 30 * 60 * 1000);
 app.patch('/api/community/notices/:id/view', async (req, res) => {
   try {
     // ✅ BUG-06 FIX: ObjectId 유효성 사전 검증 → CastError 언캐치 방지
     const { id } = req.params;
     if (!id || !/^[a-fA-F0-9]{24}$/.test(id)) return res.status(400).json({ error: '유효하지 않은 ID' });
+    // ✅ FIX-NOTICE-VIEW-DEDUP: 같은 IP에서 1시간 내 중복 조회수 차단
+    const rawIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
+    const viewKey = `${hashIp(rawIp)}:${id}`;
+    const lastView = noticeViewCache.get(viewKey) || 0;
+    if (Date.now() - lastView < 60 * 60 * 1000) return res.json({ success: true, deduplicated: true });
+    noticeViewCache.set(viewKey, Date.now());
     if (dbReady && Notice) {
       await Notice.findByIdAndUpdate(id, { $inc: { views: 1 } });
     } else {
