@@ -4955,8 +4955,20 @@ app.put('/api/community/crews/:id/logo', async (req, res) => {
 });
 
 // ── ✅ CREW-ENH: 크루 가입 (비번 검증 + 멤버 DB 저장) ──────────────────────────
+// ✅ FIX-CREW-JOIN-RATE: 크루 가입 rate limit (IP당 1분 5회)
+const crewJoinRateMap = new Map();
+function checkCrewJoinRate(ip) {
+  const key = (typeof hashIp === 'function') ? hashIp(ip) : ip;
+  const now = Date.now();
+  const e = crewJoinRateMap.get(key) || { count: 0, windowStart: now };
+  if (now - e.windowStart > 60_000) { e.count = 0; e.windowStart = now; }
+  e.count++; crewJoinRateMap.set(key, e);
+  return e.count <= 5;
+}
 app.post('/api/community/crews/:id/join', async (req, res) => {
   try {
+    const rawJoinIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
+    if (!checkCrewJoinRate(rawJoinIp)) return res.status(429).json({ error: '크루 가입 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }); // FIX-CREW-JOIN-RATE-CHECK
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
@@ -9115,7 +9127,16 @@ app.post('/api/contest', async (req, res) => {
   if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자(MASTER)만 대회를 등록할 수 있습니다.' });
   try {
     const { title, fishName, region, metric, startDate, endDate, description, prize } = req.body;
+    // ✅ FIX-CONTEST-INPUT-LENGTH: Contest 입력 최대 길이 제한 (DoS/XSS 방어)
+    if (typeof title === 'string' && title.length > 100) return res.status(400).json({ error: '대회 제목은 최대 100자입니다.' });
+    if (typeof description === 'string' && description.length > 2000) return res.status(400).json({ error: '대회 설명은 최대 2000자입니다.' });
+    if (typeof prize === 'string' && prize.length > 200) return res.status(400).json({ error: '경품 설명은 최대 200자입니다.' });
+    if (typeof fishName === 'string' && fishName.length > 50) return res.status(400).json({ error: '어종명은 최대 50자입니다.' });
     if (!title || !fishName || !startDate || !endDate) return res.status(400).json({ error: '필수 항목 누락' });
+    // ✅ FIX-CONTEST-INPUT: 대회 입력 길이 제한 (DoS 방어)
+    if (typeof title === 'string' && title.length > 100) return res.status(400).json({ error: '대회 제목은 최대 100자입니다.' });
+    if (typeof description === 'string' && description.length > 1000) return res.status(400).json({ error: '대회 설명은 최대 1000자입니다.' });
+    if (typeof prize === 'string' && prize.length > 200) return res.status(400).json({ error: '상품 설명은 최대 200자입니다.' });
     await waitForDb(5000);
     const contest = await Contest.create({ title, fishName, region, metric, startDate, endDate, description, prize });
     res.json({ success: true, contest });
