@@ -4544,9 +4544,14 @@ app.post('/api/community/posts', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     let { author, category, content, image, images, location } = req.body;
-    // ✅ BUG-FIX: author_email은 JWT에서만 추출 (보안 취약점 수정)
+    // BUG-FIX: author_email은 JWT에서만 추출 (보안 취약점 수정)
     const author_email = tp.email || tp.id || 'guest@fishinggo.kr';
     if (!author || !category || !content) return res.status(400).json({ error: '필수 항목 누락' });
+    // FIX-CATEGORY-WHITELIST: 허용된 카테고리만 수락
+    const VALID_POST_CATEGORIES = ['일반', '조황', '정보', '질문', '장터', '유머', '낚시터', '채비', '기타'];
+    if (!VALID_POST_CATEGORIES.includes(category)) return res.status(400).json({ error: '유효하지 않은 카테고리' });
+    if (typeof author !== 'string' || author.length > 30) return res.status(400).json({ error: 'author 최대 30자' });
+    if (typeof content !== 'string' || content.length > 15000) return res.status(400).json({ error: 'content 최대 15000자' });
     // ✅ CENSOR: 게시글 내용 비속어 * 치환
     content = censorText(content.trim());
     // ✅ LOC: location 안전 정규화 — { address, lat, lng } 또는 null
@@ -9191,12 +9196,20 @@ app.post('/api/catch', catchLimiter, async (req, res) => { // ✅ FIX-CATCH-RATE
     const { userName, userAvatar, fishName, fishSize, fishWeight,
             imageUrl, location, lat, lng, memo, weather, tide, contestId,
             verified, aiConfidence } = req.body;
-    const userId = tp.email || tp.id; // ✅ FIX-CATCH-AUTH: userId는 JWT에서만 (주입 방지)
+    const userId = tp.email || tp.id; // FIX-CATCH-AUTH: userId는 JWT에서만 (주입 방지)
     if (!userId || !fishName) return res.status(400).json({ error: '필수 항목 누락' });
-    const safeImageUrl = sanitizeImageUrl(imageUrl); // ✅ FIX-IMAGEURL-SSRF
+    // FIX-CATCH-VALID: 필드 길이 제한 및 좌표 범위 검증
+    if (typeof fishName !== 'string' || fishName.trim().length < 1 || fishName.trim().length > 50) return res.status(400).json({ error: 'fishName 1~50자' });
+    if (location !== undefined && typeof location !== 'string') return res.status(400).json({ error: 'location은 문자열' });
+    if (location && location.length > 100) return res.status(400).json({ error: 'location 최대 100자' });
+    if (memo !== undefined && typeof memo === 'string' && memo.length > 500) return res.status(400).json({ error: 'memo 최대 500자' });
+    if (lat !== undefined && (typeof lat !== 'number' || lat < -90 || lat > 90)) return res.status(400).json({ error: 'lat 범위 오류 (-90~90)' });
+    if (lng !== undefined && (typeof lng !== 'number' || lng < -180 || lng > 180)) return res.status(400).json({ error: 'lng 범위 오류 (-180~180)' });
+    const safeFishName = fishName.trim().substring(0, 50);
+    const safeImageUrl = sanitizeImageUrl(imageUrl); // FIX-IMAGEURL-SSRF
     await waitForDb(5000);
     const record = await CatchRecord.create({
-      userId, userName, userAvatar, fishName,
+      userId, userName, userAvatar, fishName: safeFishName,
       fishSize: fishSize || 0, fishWeight: fishWeight || 0,
       imageUrl: safeImageUrl, location, lat, lng, memo, weather, tide,
       contestId, verified: !!verified, aiConfidence: aiConfidence || 0,
