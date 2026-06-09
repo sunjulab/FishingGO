@@ -473,6 +473,7 @@ export default function CommunityTab() {
 
         // ✅ INSTA-P3: 24h 스토리 로드 (오류는 조용히 무시)
         apiClient.get('/api/stories').then(r => {
+          if (!isMountedRef.current) return; // ✅ FIX-ISMOUNTED: 언마운트 후 setStories 방어
           if (Array.isArray(r.data)) {
             _communityCache.stories = r.data;
             setStories(r.data);
