@@ -1372,9 +1372,14 @@ io.on('connection', (socket) => {
     }
   }
 
+  let joinCount = 0; let joinWindow = Date.now(); // ✅ FIX-SOCKET-JOIN-RATE: join 이벤트 rate limit
   socket.on('join_crew', async (crewId) => {
     if (!crewId || typeof crewId !== 'string' || !/^[a-f0-9]{24}$/.test(crewId)) return; // ✅ FIX-CREWID
     if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-SOCKET-JOIN-AUTH
+    // ✅ FIX-SOCKET-JOIN-RATE: 10초 내 5회 이상 join 시도 차단
+    const nowJoin = Date.now();
+    if (nowJoin - joinWindow > 10_000) { joinCount = 0; joinWindow = nowJoin; }
+    if (++joinCount > 5) { socket.emit('error', { message: '너무 빠른 채팅방 참가 시도입니다.' }); return; }
     // ✅ FIX-JOIN-CREW-MEMBER: 비공개 크루 멤버십 검증
     if (dbReady && Crew) {
       try {
@@ -9010,7 +9015,8 @@ app.post('/api/catch', catchLimiter, async (req, res) => { // ✅ FIX-CATCH-RATE
 // GET /api/catch/ranking — 전국 랭킹 (어종별/전체)
 app.get('/api/catch/ranking', async (req, res) => {
   try {
-    const { fishName, period = 'month', limit = 20 } = req.query;
+    const { fishName, period = 'month' } = req.query;
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20)); // ✅ FIX-RANKING-LIMIT: 최대 100개 제한
     await waitForDb(5000);
     const now = new Date();
     let startDate = new Date();
@@ -9021,7 +9027,7 @@ app.get('/api/catch/ranking', async (req, res) => {
     if (fishName) query.fishName = fishName;
     const records = await CatchRecord.find(query)
       .sort({ fishSize: -1, fishWeight: -1, createdAt: -1 })
-      .limit(parseInt(limit))
+      .limit(limit)
       .lean();
     res.json({ records });
   } catch (err) {
