@@ -2738,7 +2738,7 @@ app.get('/api/user/me', async (req, res) => {
 
     // ✅ email 쿼리 파라미터 없을 때 JWT의 tp.email 폴백 사용
     // (VVIPSubscribe 등에서 email 없이 호출 시에도 본인 정보 조회 가능)
-    const email = req.query.email || req.headers['x-user-email'] || tp.email;
+    const email = (Array.isArray(req.query.email) ? req.query.email[0] : (req.query.email || '')).slice(0, 254) /* FIX-QUERY-EMAIL-HPP */ || req.headers['x-user-email'] || tp.email;
     if (!email) return res.status(400).json({ error: 'email 필요' });
 
     const isAdmin = isAdminToken(tp);
@@ -3984,7 +3984,7 @@ app.get('/api/user/followers', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const email = req.query.email;
+    const email = (Array.isArray(req.query.email) ? req.query.email[0] : (req.query.email || '')).slice(0, 254) /* FIX-QUERY-EMAIL-HPP */;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
 
     if (dbReady && User) {
@@ -4010,7 +4010,7 @@ app.get('/api/user/following', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const email = req.query.email;
+    const email = (Array.isArray(req.query.email) ? req.query.email[0] : (req.query.email || '')).slice(0, 254) /* FIX-QUERY-EMAIL-HPP */;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
 
     if (dbReady && User) {
@@ -4301,7 +4301,7 @@ app.get('/api/user/posts', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const email = req.query.email;
+    const email = (Array.isArray(req.query.email) ? req.query.email[0] : (req.query.email || '')).slice(0, 254) /* FIX-QUERY-EMAIL-HPP */;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.email !== email && tp.id !== email) return res.status(403).json({ error: '본인 게시글만 조회 가능합니다.' });
@@ -4329,7 +4329,7 @@ app.get('/api/user/records', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const email = req.query.email;
+    const email = (Array.isArray(req.query.email) ? req.query.email[0] : (req.query.email || '')).slice(0, 254) /* FIX-QUERY-EMAIL-HPP */;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.email !== email && tp.id !== email) return res.status(403).json({ error: '본인 기록만 조회 가능합니다.' });
@@ -4465,7 +4465,7 @@ app.get('/api/community/posts', async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 20);
     const skip = (page - 1) * limit;
-    const category = req.query.category || '';  // 카테고리 필터
+    const category = (Array.isArray(req.query.category) ? req.query.category[0] : (req.query.category || '')) /* FIX-QUERY-CAT-HPP */ || '';  // 카테고리 필터
     const rawQ = Array.isArray(req.query.q) ? req.query.q[0] : (req.query.q || ''); // ✅ FIX-HPP-SEARCH: 배열 파라미터 첫 값만 사용
     const q = rawQ.slice(0, 100); // ✅ FIX-SEARCH-MAXLEN: 검색어 최대 100자 제한 (DoS 방어)
     const safeQ = q.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\$&'); // ✅ FIX-REGEX-ESCAPE
@@ -4925,7 +4925,7 @@ app.post('/api/admin/crews/fix-limit', async (req, res) => {
   let tp;
   try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' });
-  const newLimit = parseInt(req.body.defaultLimit) || 1000;
+  const newLimit = Math.min(1000, Math.max(1, parseInt(req.body.defaultLimit) || 100)); // FIX-CREW-LIMIT-VALIDATE
   try {
     if (dbReady && Crew) {
       // limit이 100 이하인 크루만 업데이트 (신규 생성된 올바른 크루 제외)
@@ -7009,7 +7009,7 @@ setInterval(() => {
  */
 app.get('/api/products', async (req, res) => {
   try {
-    const category = req.query.category || '낚시용품';
+    const category = (Array.isArray(req.query.category) ? req.query.category[0] : (req.query.category || '')) /* FIX-QUERY-CAT-HPP */ || '낚시용품';
     const products = await coupang.getRecommendedProducts(category);
 
     // Shop.jsx가 기대하는 포맷으로 변환
@@ -7036,8 +7036,8 @@ app.get('/api/products', async (req, res) => {
  */
 app.get('/api/commerce/coupang/search', async (req, res) => {
   try {
-    const keyword = req.query.keyword || '낚시용품';
-    const category = req.query.category || '';
+    const keyword = (Array.isArray(req.query.keyword) ? req.query.keyword[0] : (req.query.keyword || '')).slice(0, 100) /* FIX-QUERY-KW-HPP */ || '낚시용품';
+    const category = (Array.isArray(req.query.category) ? req.query.category[0] : (req.query.category || '')) /* FIX-QUERY-CAT-HPP */ || '';
 
     const rawProducts = category
       ? await coupang.getProductsByVideoCategory(category)
