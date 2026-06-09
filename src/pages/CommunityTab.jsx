@@ -122,6 +122,12 @@ export default function CommunityTab() {
   const [heartBurstId, setHeartBurstId] = useState(null); // 더블탭 하트 폭발 표시용 postId
   const blockedUsersRef = useRef([]); // ✅ BUG-CT05 CRITICAL FIX: user가 아직 선언 전(TDZ) — 빈 배열로 초기화, sync useEffect(L151-154)에서 동기화
   const isFetchingRef = useRef(false); // ✅ BUG-5 FIX: 무한스크롤 중복 실행 방지
+  const isMountedRef = useRef(true); // ✅ FIX-ISMOUNTED: 언마운트 후 setState 방지용 ref
+
+  // ✅ FIX-TDZ: user/userTier를 useEffect보다 앞에 선언 (TDZ 오류 방지)
+  // L147/L153 useEffect에서 user?.email, user?.blockedUsers 사용하므로 여기서 선언해야 함
+  const userTier = useUserStore((state) => state.userTier);
+  const user = useUserStore((state) => state.user);
 
   // URL 쿼리 파라미터 처리 (?tab=open&postId=xxx)
   useEffect(() => {
@@ -180,8 +186,7 @@ export default function CommunityTab() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✅ 25TH-B2: canAccessPremium 셀렉터 실함 호출 → userTier 기반 useMemo 직접 판별
-  const userTier = useUserStore((state) => state.userTier);
-  const user = useUserStore((state) => state.user);
+  // ✅ FIX-TDZ: userTier/user는 L125에서 이미 선언됨 — 여기서 중복 선언 제거
   const canAccessPremium = useMemo(() => {
     if (user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL || user?.email === ADMIN_ID) return true;
     return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);

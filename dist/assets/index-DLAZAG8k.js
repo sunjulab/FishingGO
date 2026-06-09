@@ -1,5 +1,5 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-Cwlc20sK.js","assets/index-Cc2YVBvS.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-Dy2mt0G_.css"])))=>i.map(i=>d[i]);
-import { r as registerPlugin, _ as __vitePreload } from './index-Cc2YVBvS.js';
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-C62TjdtS.js","assets/index-NI8adjLZ.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-Dy2mt0G_.css"])))=>i.map(i=>d[i]);
+import { r as registerPlugin, _ as __vitePreload } from './index-NI8adjLZ.js';
 import './vendor-react-vfOo6a0P.js';
 import './vendor-icons-Bsle_tIe.js';
 import './vendor-store-wmv-LjAu.js';
@@ -53,7 +53,7 @@ function f(t = !1) {
 }
 
 const Geolocation = registerPlugin('Geolocation', {
-    web: () => __vitePreload(() => import('./web-Cwlc20sK.js'),true?__vite__mapDeps([0,1,2,3,4,5,6,7]):void 0).then((m) => new m.GeolocationWeb()),
+    web: () => __vitePreload(() => import('./web-C62TjdtS.js'),true?__vite__mapDeps([0,1,2,3,4,5,6,7]):void 0).then((m) => new m.GeolocationWeb()),
 });
 f();
 

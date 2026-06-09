@@ -1,4 +1,4 @@
-import { W as WebPlugin, C as CapacitorException, r as registerPlugin } from './index-Cc2YVBvS.js';
+import { W as WebPlugin, C as CapacitorException, r as registerPlugin } from './index-NI8adjLZ.js';
 import './vendor-react-vfOo6a0P.js';
 import './vendor-icons-Bsle_tIe.js';
 import './vendor-store-wmv-LjAu.js';
