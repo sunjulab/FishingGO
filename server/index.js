@@ -4717,6 +4717,9 @@ app.post('/api/community/crews', async (req, res) => {
     // ✅ BUG-39: 비밀번호 bcrypt 해싱 저장 (프라이빗 크루인 경우만)
     const hashedPwd = (isPrivate && password) ? await bcrypt.hash(String(password), 10) : null;
     if (dbReady && Crew) {
+      // ✅ FIX-CREW-CREATE-LIMIT: 유저당 크루 생성 최대 5개 제한
+      const existingOwned = await Crew.countDocuments({ owner: tp.email || tp.id }).catch(() => 0);
+      if (existingOwned >= 5) return res.status(400).json({ error: '크루는 최대 5개까지 생성할 수 있습니다.' });
       const crew = new Crew({ name, region: region || '전국', isPrivate: !!isPrivate, password: hashedPwd, owner, ownerName, limit: safeLimit });
       await crew.save();
       const obj = crew.toObject();
