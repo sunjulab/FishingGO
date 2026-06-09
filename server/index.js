@@ -1042,6 +1042,13 @@ const pwdChangedCache = new Map(); // email → passwordChangedAt ms
 // 1시간마다 정리
 setInterval(() => { pwdChangedCache.clear(); }, 60 * 60 * 1000);
 
+// ✅ FIX-NO-CACHE: 민감 데이터 API에 no-store 헤더 미들웨어
+function noCache(req, res, next) {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  next();
+}
+
 function verifyToken(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증이 필요합니다.' });
@@ -8537,6 +8544,16 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
  * GET /api/shop/ali-debug — Ali API 완전 진단 (엔드포인트 + 서명방식 완전 탐색)
  */
 app.get('/api/shop/ali-debug', async (req, res) => {
+  // ✅ FIX-ALI-DEBUG-AUTH: 진단 API에 인증 추가 (API 키/서명 알고리즘 노출 방어)
+  const keyOk = process.env.DIRECT_KEY && req.query.key === process.env.DIRECT_KEY;
+  if (!keyOk) {
+    const authH = req.headers.authorization || '';
+    if (!authH.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    try {
+      const tp = require('jsonwebtoken').verify(authH.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+      if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' });
+    } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  }
   const crypto = require('crypto');
   const axios  = require('axios');
   const KEY    = (process.env.ALI_APP_KEY    || '').trim();
