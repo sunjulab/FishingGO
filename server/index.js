@@ -6740,6 +6740,8 @@ app.delete('/api/pro/cancel', (req, res) => {
   try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자만 접근 가능' });
   const { userId } = req.body;
+  // ✅ FIX-LOW: userId null/undefined 유효성 검사
+  if (!userId) return res.status(400).json({ error: 'userId 필수' });
   if (proSubscriptions[userId]) {
     delete proSubscriptions[userId];
     saveProSubs();
