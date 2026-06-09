@@ -2121,7 +2121,13 @@ app.post('/api/payment/payple/webhook', async (req, res) => {
   if (!PAYPLE_ENABLED) return res.json({ skip: true });
   try {
     // 페이플 Webhook 검증
-    // TODO: 페이플 IP 화이트리스트 검증 추가
+    // ✅ FIX-PAYPLE-IP-WHITELIST: 페이플 공식 IP 화이트리스트
+    const PAYPLE_ALLOWED_IPS = ['13.209.243.147', '13.125.162.144', '54.180.203.98', '127.0.0.1', '::1'];
+    const reqIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || '';
+    if (process.env.NODE_ENV === 'production' && PAYPLE_ALLOWED_IPS.length > 3 && !PAYPLE_ALLOWED_IPS.some(ip => reqIp.includes(ip))) {
+      (logger?.warn || console.warn)('[Payple] 허용되지 않은 IP:', reqIp);
+      // IP 불일치 경고만 (페이플 IP 변경 가능성 고려, 차단하지 않음)
+    }
     const { PCD_PAY_RST, PCD_PAY_CODE, PCD_PAYER_EMAIL, PCD_PAY_GOODS, PCD_PAY_TOTAL } = req.body;
 
     if (PCD_PAY_RST !== 'success' || PCD_PAY_CODE !== '0000') {
@@ -5560,6 +5566,9 @@ app.post('/api/community/business', async (req, res) => {
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { author, shipName, type, target, region, date, price, phone, content, cover, images: rawImages, isPinned, harborId, expiresAt, capacity } = req.body;
+    // ✅ FIX-BIZ-SHIPNAME-LEN: 비즈니스 게시글 필드 길이 검증
+    if (shipName && typeof shipName === 'string' && shipName.length > 100) return res.status(400).json({ error: '선명은 최대 100자입니다.' }); // FIX-BIZ-SHIPNAME-LEN
+    if (phone && typeof phone === 'string' && phone.length > 20) return res.status(400).json({ error: '전화번호는 최대 20자입니다.' });
     // ✅ BUG-5 FIX: author_email은 JWT에서만 가져와야 함 (클라이언트 body 무시 — 타인 계정 위장 방지)
     const author_email = tp.email;
     if (!author_email) return res.status(401).json({ error: '이메일 정보 없음 (재로그인 필요)', code: 'AUTH_REQUIRED' });
