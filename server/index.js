@@ -7239,7 +7239,7 @@ app.get('/api/media/youtube/search', async (req, res) => {
 
 // ─── 통합 피드: 최신(7일) + 인기(전체기간) 병렬 조회 ─────────────────────────
 app.get('/api/media/youtube/unified', async (req, res) => {
-  const q = (req.query.q || '낚시').trim();
+  const q = ((Array.isArray(req.query.q) ? req.query.q[0] : req.query.q) || '낚시').slice(0, 100).trim(); // ✅ FIX-UNIFIED-HPP
   if (!YT_API_KEY) return res.json({ recent: [], popular: [], note: 'YOUTUBE_API_KEY 미설정' });
 
   const today = new Date().toISOString().slice(0, 10);
