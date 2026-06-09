@@ -1687,9 +1687,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     logger.info(`[Socket] User disconnected: ${socket.id}`); // ✅ 21TH-B1: console.log → logger.info
-    // FIX-SOCKET-DISCONNECT-CLEANUP: 연결 해제 시 rate limit Map 정리 (메모리 누수 방지)
-    socketFloodMap.delete(socket.id);
-    if (typeof joinRateMap !== 'undefined') joinRateMap.delete(socket.id);
+    // ✅ FIX-LOW: socket 스코프 변수(msgCount/msgWindow)는 소켓 종료 시 자동 소멸 — 별도 Map 정리 불필요
   });
 });
 
