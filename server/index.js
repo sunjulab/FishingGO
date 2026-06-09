@@ -4444,6 +4444,7 @@ app.post('/api/user/records', async (req, res) => {
     const { author, fish, size, weight, location, bait, weather, wind, wave, memo, img, image, date, time, pointId } = req.body;
     // ??BUG-FIX: author_email?� JWT?�서�?추출 (body author_email ?�뢰 ???�??기록 ?�장 보안 취약???�정)
     const author_email = tp.email || tp.id;
+    if (memo && typeof memo === 'string' && memo.length > 500) return res.status(400).json({ error: '메모는 500자 이하여야 합니다.' }); // FIX-MEMO-LEN
     if (!author || !author_email || !fish) return res.status(400).json({ error: '?�수 ??�� ?�락 (?�종 ?�수)' });
     // 본인 ?�는 ?�드민만 ?�성 가??(JWT�??��? 검증됨 ??추�? author_email 비교 불필??
     const isAdmin = isAdminToken(tp);
@@ -4518,6 +4519,7 @@ app.post('/api/stories', async (req, res) => {
     try { tp = require('jsonwebtoken').verify(auth, JWT_SECRET); } catch { return res.status(401).json({ error: '?�증 ?�큰???�효?��? ?�습?�다.' }); }
     const { image, content, location } = req.body;
     if (!image) return res.status(400).json({ error: '?��?지???�수?�니??' });
+    if (content && typeof content === 'string' && content.length > 300) return res.status(400).json({ error: '스토리 내용은 300자 이하여야 합니다.' }); // FIX-STORY-CONTENT-LEN
     if (!dbReady || !Story) return res.status(503).json({ error: 'DB ?�결 ?�요' });
     // avatar enriching
     let author_avatar = null;
