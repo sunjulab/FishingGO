@@ -4627,14 +4627,36 @@ app.put('/api/community/posts/:id', async (req, res) => {
 });
 
 
+// ✅ FIX-COMMENT-RATE: 댓글 스팸 방어 (같은 사용자, 1분에 10개 이하)
+const commentRateMap = new Map(); // 'userId' → [timestamps]
+setInterval(() => {
+  const cutoff = Date.now() - 60_000;
+  for (const [k, v] of commentRateMap.entries()) {
+    const filtered = v.filter(t => t > cutoff);
+    if (filtered.length === 0) commentRateMap.delete(k);
+    else commentRateMap.set(k, filtered);
+  }
+}, 5 * 60 * 1000);
+
 // ── 오픈게시판 댓글 작성 (JWT 인증 필수) ─────────────────────────────────────
 app.post('/api/community/posts/:id/comments', async (req, res) => {
   try {
+    const rawCmtIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
+    if (!checkCommentRate(rawCmtIp)) return res.status(429).json({ error: '댓글을 너무 빠르게 작성하고 있습니다. 잠시 후 다시 시도해주세요.' }); // FIX-COMMENT-RATE-CHECK
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { author, text } = req.body;
+    // ✅ FIX-COMMENT-RATE: 1분에 10개 초과 댓글 차단
+    const commentUserId = tp.email || tp.id;
+    if (commentUserId) {
+      const now = Date.now();
+      const times = (commentRateMap.get(commentUserId) || []).filter(t => now - t < 60_000);
+      if (times.length >= 10) return res.status(429).json({ error: '댓글을 너무 빠르게 작성하고 있습니다. 잠시 후 시도해주세요.' });
+      times.push(now);
+      commentRateMap.set(commentUserId, times);
+    }
     // ✅ BUG-FIX: 댓글 author_email도 JWT에서만 추출 (보안 취약점 수정)
     const author_email = tp.email || tp.id;
     if (!author || !text) return res.status(400).json({ error: '작성자/내용 필수' });
@@ -7948,6 +7970,13 @@ const SERVER_EXP_REWARDS = {
 };
 
 // ✅ BUG-43: JWT 인증 추가 — EXP 직접 조작 방지
+// ✅ FIX-EXP-RATE: per-user+action rate limit (반복 EXP 적립 방어)
+const expRateMap = new Map(); // 'userId:action' → timestamp
+setInterval(() => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const [k, v] of expRateMap.entries()) { if (v < cutoff) expRateMap.delete(k); }
+}, 60 * 60 * 1000); // 1시간마다 정리
+
 app.post('/api/user/exp', verifyToken, async (req, res) => {
   try {
     const { userId, action } = req.body;
@@ -7958,6 +7987,18 @@ app.post('/api/user/exp', verifyToken, async (req, res) => {
     if (!isAdmin && userId !== tokenId) return res.status(403).json({ error: '본인 EXP만 적립할 수 있습니다.' });
     const gain = SERVER_EXP_REWARDS[action];
     if (!gain) return res.status(400).json({ error: '유효하지 않은 액션' });
+    // ✅ FIX-EXP-RATE: 24시간 내 동일 action 중복 적립 방어 (attendance는 1회/일, 나머지는 10회/일)
+    if (!isAdmin) {
+      const rateKey = `${tokenId}:${action}`;
+      const EXP_COOLDOWN = (action === 'attendance' || action === 'first_catch' || action === 'weekly_streak' || action === 'monthly_streak')
+        ? 23 * 60 * 60 * 1000  // 23시간 쿨다운 (daily activities)
+        : 5 * 60 * 1000;       // 5분 쿨다운 (regular activities)
+      const lastTime = expRateMap.get(rateKey) || 0;
+      if (Date.now() - lastTime < EXP_COOLDOWN) {
+        return res.status(429).json({ error: '잠시 후 다시 시도해주세요.', cooldownMs: EXP_COOLDOWN - (Date.now() - lastTime) });
+      }
+      expRateMap.set(rateKey, Date.now());
+    }
 
     let totalExp = 0;
     if (dbReady && User) {
@@ -8688,7 +8729,7 @@ app.post('/api/shop/click', searchLimiter, async (req, res) => { // ✅ FIX-CLIC
   try {
     const { productId, source, keyword } = req.body;
     if (dbReady && productId) {
-      await ShopClick.create({ productId, source: source || 'ali', keyword: keyword || '' });
+      await ShopClick.create({ productId, source: source || 'ali', keyword: safeKeyword || '' });
     }
     res.json({ ok: true });
   } catch (err) {
