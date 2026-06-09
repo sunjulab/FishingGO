@@ -8173,7 +8173,10 @@ app.get('/api/community/search', async (req, res) => {
     const q = rawQ.slice(0, 100); // ✅ FIX-SEARCH-MAXLEN-2: 검색어 최대 100자
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20)); // ✅ FIX-SEARCH-LIMIT: 최대 50개
-    const category = Array.isArray(req.query.category) ? req.query.category[0] : (req.query.category || ''); // ✅ FIX-SEARCH-HPP
+    // ✅ FIX-CAT-WHITELIST: category 화이트리스트 검증
+    const ALLOWED_CATEGORIES = ['전체','낚시팁','조황','낚시터','장비','동영상','이벤트','자유','기타'];
+    const rawCat = Array.isArray(req.query.category) ? req.query.category[0] : (req.query.category || '');
+    const category = (typeof rawCat === 'string' && rawCat.length <= 20) ? rawCat : ''; // FIX-CAT-WHITELIST
     const skip = (page - 1) * limit;
     let results = [];
     let total = 0;
