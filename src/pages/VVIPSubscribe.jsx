@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Crown, Lock, MapPin, Star, CheckCircle2, RefreshCw, Smartphone, Zap } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
@@ -386,7 +386,7 @@ export default function VVIPSubscribe() {
     } else {
       handleIAPPurchase(planKey);
     }
-  }, [user, isNative, addToast, storeReady, setUser, handleIAPPurchase]);
+  }, [user, isNative, addToast, storeReady, setUser]); // handleIAPPurchase는 클로저로 최신값 참조 (deps 불필요)
 
   /* ── IAP 결제 ─────────────────────────────────────────────── */
   const handleIAPPurchase = useCallback(async (planKey) => {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2, Share2, X as XIcon, Send } from 'lucide-react';
 const CatchRankingPage = lazy(() => import('./CatchRankingPage'));

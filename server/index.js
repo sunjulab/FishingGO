@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
