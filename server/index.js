@@ -6028,8 +6028,6 @@ app.get('/delete-account', (req, res) => {
 <title>낚시GO 계정 삭제</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  // ✅ VVIP 만료 처리는 L1039~L1065의 runVvipExpiryCheck(1분 주기)로 통합 운영
-// ✅ 기존 24시간 주기 setInterval 제거 — runVvipExpiryCheck가 User DB 초기화까지 처리
 
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f9fa;color:#212529;line-height:1.8}
   .wrap{max-width:700px;margin:0 auto;padding:40px 20px}

@@ -253,11 +253,7 @@ export default function VVIPSubscribe() {
         if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt, daysLeft: h.daysLeft };
       });
       setTakenMap(map);
-    } catch {
-      // ✅ 1수 API 실패 시 빈 map으로 명시적 초기화
-      // (서버에서 슬롯 해제됩도 네트워크 오류로 old 데이터 유지되는 문제 방지)
-      if (isMountedRef.current) setTakenMap({});
-    }
+    } catch {} // ✅ 폴링 실패 시 old 데이터 유지 (네트워크 오류마다 깜빡임 방지)
     if (user && isMountedRef.current) { // ✅ BUG-V3 FIX: 언마운트 후 2차 API 호출 방지
       try {
         const res2 = await apiClient.get('/api/vvip/my-slot');
