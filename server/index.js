@@ -555,7 +555,8 @@ app.get('/.well-known/assetlinks.json', (req, res) => {
 // ── ✅ DEV-SEED: 테스트 게시글 시드 엔드포인트 (관리자 전용 — X-Seed-Secret + JWT Admin 이중 인증)
 app.post('/api/admin/seed-business-test', async (req, res) => {
   // ✅ BUG-05 FIX: 하드코딩 시크릿 → 환경변수 참조 + JWT Admin 이중 인증
-  const seedSecret = process.env.SEED_SECRET || 'fishinggo_seed_2026';
+  const seedSecret = process.env.SEED_SECRET;
+  if (!seedSecret) return res.status(503).json({ error: '시드 기능이 비활성화되어 있습니다.' }); // ✅ FIX-SEED-SECRET
   if (req.headers['x-seed-secret'] !== seedSecret) return res.status(403).json({ error: '금지' });
   const auth = req.headers.authorization || '';
   if (auth.startsWith('Bearer ')) {
@@ -826,7 +827,7 @@ try {
   // 로그인/회원가입: IP당 10분/500회 (통신사 NAT 환경 수백명 커버)
   const authLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 500,
+    max: 10,
     message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -865,7 +866,11 @@ try {
     legacyHeaders: false,
   });
 
+  // ✅ FIX-OTP-LIMITER: OTP 전용 rate limit — 분당 3회 (전화번호 스팸 방지)
+  const otpLimiter = rateLimit({ windowMs: 60_000, max: 3, message: { error: 'OTP 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
+
   app.use('/api/auth/', authLimiter);
+
   app.use('/api/', apiLimiter);
   app.use('/api/media/youtube/search', ytSearchLimiter);   // ✅ 검색: 1분/3회
   app.use('/api/media/youtube/unified', ytFeedLimiter);    // ✅ 통합 피드: 1분/10회
@@ -3128,7 +3133,7 @@ async function sendAppPushNotification(userEmail, type, title, message, data = {
 }
 
 // OTP 발송
-app.post('/api/auth/send-otp', async (req, res) => {
+app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: '휴대폰 번호를 입력해주세요.' });
@@ -3175,7 +3180,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 });
 
 // OTP 검증
-app.post('/api/auth/verify-otp', (req, res) => {
+app.post('/api/auth/verify-otp', otpLimiter, (req, res) => {
   try {
     const { phone, otp } = req.body;
     if (!phone || !otp) return res.status(400).json({ error: '번호와 인증코드를 입력해주세요.' });

@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
 
 const noticeSchema = new mongoose.Schema({
-  title:     { type: String, required: true },
-  content:   { type: String, required: true },
+  title:     { type: String, trim: true, required: true },
+  content:   { type: String, trim: true, required: true },
   isPinned:  { type: Boolean, default: false },
   // ✅ POPUP-CTRL: 홈화면 팝업 노출 여부 — 작성/수정 시 체크박스로 명시 지정
   isPopup:   { type: Boolean, default: false },
-  author:    { type: String, default: 'MASTER' },
+  author:    { type: String, trim: true, default: 'MASTER' },
   views:     { type: Number, default: 0 },
   // ✅ POPUP: 공지 이미지 (base64) — isPopup=true인 공지의 팝업 이미지
-  image:     { type: String, default: null },
+  image:     { type: String, trim: true, default: null },
   images:    { type: [String], default: [] }, // ✅ MULTI-IMG: 다중 이미지 (최대 5장)
 }, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps 자동 관리
 

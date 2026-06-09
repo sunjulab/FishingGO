@@ -5,18 +5,18 @@ const mongoose = require('mongoose');
  * 포트원 customer_uid(빌링키) 기반 자동 월 청구
  */
 const subscriptionSchema = new mongoose.Schema({
-  userId:          { type: String, required: true, unique: true }, // user email or id
-  userName:        { type: String, default: '' },
-  planId:          { type: String, enum: ['LITE', 'BUSINESS_LITE', 'PRO', 'VVIP', 'BUSINESS_VIP'], required: true }, // ✅ 27TH-B1: BUSINESS_LITE 추가 — 25TH-C4 payment.js PLAN_LABEL 동기화 (누락 시 ValidationError 발생)
-  tier:            { type: String, required: true },
+  userId:          { type: String, trim: true, required: true, unique: true }, // user email or id
+  userName:        { type: String, trim: true, default: '' },
+  planId:          { type: String, trim: true, enum: ['LITE', 'BUSINESS_LITE', 'PRO', 'VVIP', 'BUSINESS_VIP'], required: true }, // ✅ 27TH-B1: BUSINESS_LITE 추가 — 25TH-C4 payment.js PLAN_LABEL 동기화 (누락 시 ValidationError 발생)
+  tier:            { type: String, trim: true, required: true },
   amount:          { type: Number, required: true },            // 월 청구 금액(원)
 
   // 포트원 빌링키 정보
-  customerUid:     { type: String, required: true },           // 포트원 customer_uid
-  pgProvider:      { type: String, default: 'kakaopay' },      // 'kakaopay' | 'naverpay' | 'tosspayments'
+  customerUid:     { type: String, trim: true, required: true },           // 포트원 customer_uid
+  pgProvider:      { type: String, trim: true, default: 'kakaopay' },      // 'kakaopay' | 'naverpay' | 'tosspayments'
 
   // 구독 상태
-  status:          { type: String, enum: ['active', 'pending', 'failed', 'cancelled', 'paused'], default: 'active' },
+  status:          { type: String, trim: true, enum: ['active', 'pending', 'failed', 'cancelled', 'paused'], default: 'active' },
 
   // 결제 일정
   startedAt:       { type: Date, default: Date.now },
@@ -27,14 +27,14 @@ const subscriptionSchema = new mongoose.Schema({
   // 실패 재시도
   failCount:       { type: Number, default: 0 },               // 연속 실패 횟수
   lastFailedAt:    { type: Date },
-  lastFailReason:  { type: String },
+  lastFailReason:  { type: String, trim: true },
 
   // 취소
   cancelledAt:     { type: Date },
-  cancelReason:    { type: String },
+  cancelReason:    { type: String, trim: true },
 
   // VVIP 항구
-  harborId:        { type: String, default: null },
+  harborId:        { type: String, trim: true, default: null },
 });
 
 subscriptionSchema.index({ userId: 1 });

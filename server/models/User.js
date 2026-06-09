@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  email: { type: String, lowercase: true, trim: true, required: true, unique: true },
-  password:       { type: String, required: true },
-  name: { type: String, trim: true, required: true, unique: true }, // 닉네임 (중복불가)
+  email: { type: String, lowercase: true, trim: true, maxlength: 100, required: true, unique: true },
+  password: { type: String, maxlength: 200, select: false, required: true },
+  name: { type: String, trim: true, maxlength: 30, required: true, unique: true }, // 닉네임 (중복불가)
   realName:       { type: String, default: '' },                  // ✅ 실명 (회원가입 시 수집)
   phone:          { type: String, default: '' },                   // 휴대폰 번호 (SMS 발송용)
   level:          { type: Number, default: 1 },
