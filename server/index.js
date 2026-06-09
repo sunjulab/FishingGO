@@ -2127,6 +2127,13 @@ app.post('/api/payment/payple/webhook', async (req, res) => {
     const planInfo = PAYPLE_PLAN_MAP[planId];
     if (!planInfo) return res.status(400).json({ error: '알 수 없는 플랜' });
 
+    // FIX-PAYPLE-AMOUNT: 결제 금액 서버사이드 재계산 (위조 방어)
+    const paidAmount = Number(PCD_PAY_TOTAL);
+    if (!paidAmount || paidAmount < planInfo.amount) {
+      (logger?.warn || console.warn)('[Payple] 금액 불일치: 기대=' + planInfo.amount + ', 수신=' + paidAmount + ', planId=' + planId);
+      return res.status(400).json({ error: '결제 금액이 플랜 가격과 일치하지 않습니다.' });
+    }
+
     const email = PCD_PAYER_EMAIL;
     const newTier = planInfo.tier;
     const expiresAt = new Date(Date.now() + planInfo.days * 24 * 60 * 60 * 1000);
@@ -6400,6 +6407,10 @@ app.put('/api/admin/cctv/:obsCode', async (req, res) => {
   const { obsCode } = req.params;
   const { youtubeId, type, label } = req.body;
   if (!obsCode) return res.status(400).json({ error: 'obsCode 필요' });
+  // FIX-CCTV-VALID: 입력 길이/형식 검증
+  if (youtubeId !== undefined && (typeof youtubeId !== 'string' || youtubeId.length > 20)) return res.status(400).json({ error: '유효하지 않은 YouTube ID' });
+  if (type !== undefined && !['live', 'youtube', 'hls', 'dash', 'cctv'].includes(type)) return res.status(400).json({ error: '유효하지 않은 타입' });
+  if (label !== undefined && (typeof label !== 'string' || label.length > 50)) return res.status(400).json({ error: '라벨은 최대 50자' });
 
   const prev = cctvOverrides[obsCode] || {};
   const updated = {
