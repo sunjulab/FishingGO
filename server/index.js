@@ -4403,7 +4403,8 @@ app.delete('/api/user/records/:id', async (req, res) => {
       const record = await CatchRecord.findById(req.params.id);
       if (!record) return res.status(404).json({ error: '기록 없음' });
       if (!isAdmin && record.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
-      await CatchRecord.findByIdAndDelete(req.params.id);
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID' }); // FIX-CATCH-DEL-OBJID
+    await CatchRecord.findByIdAndDelete(req.params.id);
       return res.json({ success: true });
     }
     memRecords = memRecords.filter(r => r.id !== req.params.id);
@@ -5013,6 +5014,7 @@ app.patch('/api/community/crews/:id/transfer', async (req, res) => {
     const isAdmin = isAdminToken(tp);
 
     if (dbReady && Crew) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID 형식입니다.' }); // FIX-OBJID-BATCH-1
       const crew = await Crew.findById(req.params.id).catch(() => null); // ✅ BUG-06 FIX
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
       if (!isAdmin && crew.owner !== email) return res.status(403).json({ error: '크루장만 위임할 수 있습니다.' }); // ✅ JWT email 사용
@@ -5060,6 +5062,7 @@ app.patch('/api/community/crews/:id/transfer', async (req, res) => {
 app.get('/api/community/crews/:id', async (req, res) => {
   try {
     if (dbReady && Crew) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID 형식입니다.' }); // FIX-OBJID-BATCH-2
       const crew = await Crew.findById(req.params.id).catch(() => null);
       if (crew) { const obj = crew.toObject(); delete obj.password; return res.json(obj); }
     }
@@ -5237,6 +5240,7 @@ app.post('/api/community/crews/:id/leave', async (req, res) => {
 app.get('/api/community/crews/:id/members', async (req, res) => {
   try {
     if (dbReady && Crew) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID 형식입니다.' }); // FIX-OBJID-BATCH-3
       const crew = await Crew.findById(req.params.id).catch(() => null);
       if (!crew) return res.status(404).json({ error: '크루를 찾을 수 없습니다.' });
       return res.json({ members: crew.memberList || [], owner: crew.owner, ownerName: crew.ownerName });
