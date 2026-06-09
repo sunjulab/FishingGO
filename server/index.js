@@ -5519,6 +5519,9 @@ app.put('/api/community/notices/:id', async (req, res) => {
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '?�큰 ?�효?��? ?�음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스??권한 ?�요' });
     const { title, content, image, images, isPopup } = req.body;
+    // FIX-NOTICE-PUT-LEN: PUT 수정 시 길이 제한 (POST와 동일 기준 적용)
+    if (typeof title === 'string' && title.length > 100) return res.status(400).json({ error: '제목은 100자 이하여야 합니다.' }); // FIX-NOTICE-PUT-LEN
+    if (typeof content === 'string' && content.length > 5000) return res.status(400).json({ error: '내용은 5000자 이하여야 합니다.' }); // FIX-NOTICE-PUT-LEN
     if (!title || !content) return res.status(400).json({ error: '?�목�??�용 ?�수' });
     // ??IMG-SIZE-FIX: 4MB 기�? ?�일
     const safeImages = Array.isArray(images) ? images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : undefined;
