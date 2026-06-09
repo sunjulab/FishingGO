@@ -5283,7 +5283,11 @@ app.delete('/api/community/crews/:id/members/:targetEmail', async (req, res) => 
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const targetEmail = decodeURIComponent(req.params.targetEmail);
+    const rawTargetEmail = decodeURIComponent(req.params.targetEmail || '');
+    if (typeof rawTargetEmail !== 'string' || rawTargetEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawTargetEmail)) {
+      return res.status(400).json({ error: '유효하지 않은 이메일 형식입니다.' }); // FIX-TARGET-EMAIL-VALIDATE
+    }
+    const targetEmail = rawTargetEmail;
     const isAdmin = isAdminToken(tp);
 
     if (dbReady && Crew && User) {
