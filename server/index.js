@@ -1975,6 +1975,9 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
 
     // ── 결제 이력 ──────────────────────────────────────────────
     if (dbReady && PaymentHistory) {
+    // ✅ FIX-PAYMENT-DEDUP: 동일 purchaseToken 중복 결제 방지
+    const dupPayment = await PaymentHistory.findOne({ purchaseToken }).lean().catch(() => null);
+    if (dupPayment) { logger.warn('[IAP] 중복 purchaseToken:', purchaseToken); return res.status(409).json({ error: '이미 처리된 결제입니다.' }); } // FIX-PAYMENT-DEDUP
       await PaymentHistory.create({
         userId: tp.id || tp.email, email: tp.email,
         pg: 'google_play', method: 'iap',
@@ -3753,6 +3756,8 @@ app.post('/api/user/unblock', async (req, res) => {
 // --- 팔로우 ---
 // ✅ FIX-FOLLOW-RATE: 팔로우/언팔로우 rate limit — IP당 1분/30회 (스팸 방어)
 const followRateMap = new Map(); // ipHash → { count, windowStart }
+// ✅ FIX-FOLLOW-RATE-CLEANUP: followRateMap 메모리 누수 방지 (1시간마다 정리)
+setInterval(() => { const now = Date.now(); for (const [k, v] of followRateMap.entries()) { if (now - v.windowStart > 3600_000) followRateMap.delete(k); } }, 3600_000);
 function checkFollowRate(ip) {
   const key = hashIp(ip);
   const now = Date.now();
@@ -4957,6 +4962,8 @@ app.put('/api/community/crews/:id/logo', async (req, res) => {
 // ── ✅ CREW-ENH: 크루 가입 (비번 검증 + 멤버 DB 저장) ──────────────────────────
 // ✅ FIX-CREW-JOIN-RATE: 크루 가입 rate limit (IP당 1분 5회)
 const crewJoinRateMap = new Map();
+// ✅ FIX-CREW-JOIN-CLEANUP: crewJoinRateMap 메모리 누수 방지
+setInterval(() => { const now = Date.now(); for (const [k, v] of crewJoinRateMap.entries()) { if (now - v.windowStart > 3600_000) crewJoinRateMap.delete(k); } }, 3600_000);
 function checkCrewJoinRate(ip) {
   const key = (typeof hashIp === 'function') ? hashIp(ip) : ip;
   const now = Date.now();
