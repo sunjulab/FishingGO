@@ -378,7 +378,7 @@ const app = express();
 // ─── 보안 헤더 (Helmet) ────────────────────────────────────────
 try {
   const helmet = require('helmet');
-  app.use(helmet({ contentSecurityPolicy: false, // ✅ FIX-HELMET:
+  app.use(helmet({ contentSecurityPolicy: false, hidePoweredBy: true, // ✅ FIX-HELMET: FIX-HELMET-NO-POWERED-BY
     strictTransportSecurity: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false, // ✅ FIX-HSTS CSP는 Vite SPA가 관리 (script-src 'unsafe-inline' 필요)
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     crossOriginEmbedderPolicy: false })); // CSP는 SPA 프론트 판단에 맡김으로 off
@@ -3549,6 +3549,11 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { logger.error('[login] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
+// ✅ FIX-REFRESH-BLACKLIST-INIT: refreshToken blacklist (replay attack 방어)
+const usedRefreshTokens = new Set();
+// 24시간마다 정리 (메모리 보호)
+setInterval(() => { usedRefreshTokens.clear(); }, 24 * 3600_000);
+
 // --- 토큰 갱신 (Refresh Token) ---
 // ✅ AUTH-FIX-4: tier 복원 — 기존 코드는 tier 누락으로 갱신 후 항상 FREE 처리
 // tier를 refresh 토큰에서 읽어 새 accessToken에 포함시켜 구독 상태 유지
@@ -3557,6 +3562,9 @@ app.post('/api/auth/refresh', async (req, res) => {
   if (!refreshToken) return res.status(401).json({ error: 'Refresh Token이 없습니다.' });
   try {
     const decoded = jwt.verify(refreshToken, JWT_SECRET, { algorithms: ['HS256'] });
+    // ✅ FIX-REFRESH-BLACKLIST-CHECK: 이미 사용된 refreshToken 차단 (replay attack 방어)
+    if (usedRefreshTokens.has(refreshToken)) return res.status(401).json({ error: '만료된 Refresh Token입니다. 다시 로그인해주세요.' }); // FIX-REFRESH-BLACKLIST-CHECK
+    usedRefreshTokens.add(refreshToken); // 현재 토큰 사용 처리
     if (decoded.type !== 'refresh') return res.status(401).json({ error: '유효하지 않은 Refresh Token입니다.' });
 
     // tier를 최신 DB 값으로 동기화 (구독 만료/업그레이드 반영)
@@ -3578,7 +3586,8 @@ app.post('/api/auth/refresh', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '7d' }
     );
-    res.json({ accessToken, refreshToken: newRefreshToken }); // ✅ BUG-FIX: Refresh Token Rotation 구현
+    res.setHeader('Cache-Control', 'no-store'); // ✅ FIX-REFRESH-CACHE-NO-STORE
+  res.json({ accessToken, refreshToken: newRefreshToken }); // ✅ BUG-FIX: Refresh Token Rotation 구현
   } catch (err) {
     return res.status(401).json({ error: 'Refresh Token이 만료되었습니다. 다시 로그인해주세요.' });
   }
