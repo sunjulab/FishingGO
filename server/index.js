@@ -1113,6 +1113,10 @@ app.post('/api/spot-location-overrides', (req, res) => {
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { id, lat, lng, name } = req.body;
   if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
+  // ✅ FIX-SPOT-LATNG-RANGE: 좌표 범위 검증
+  const latNumS = parseFloat(lat); const lngNumS = parseFloat(lng);
+  if (isNaN(latNumS) || latNumS < -90 || latNumS > 90) return res.status(400).json({ error: '유효하지 않은 위도값' });
+  if (isNaN(lngNumS) || lngNumS < -180 || lngNumS > 180) return res.status(400).json({ error: '유효하지 않은 경도값' });
   spotLocationOverrides[String(id)] = {
     lat: parseFloat(lat),
     lng: parseFloat(lng),
@@ -1166,6 +1170,14 @@ app.post('/api/custom-points', (req, res) => {
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { name, type, region, lat, lng, fish, obsCode, aiDescription, season, recommend, status } = req.body;
   if (!name || !type || lat == null || lng == null) return res.status(400).json({ error: 'name, type, lat, lng 필수' });
+  // ✅ FIX-POINT-LATNG-RANGE: 좌표 범위 검증 (한국 좌표 ± 넓은 범위 허용)
+  const latNum = parseFloat(lat); const lngNum = parseFloat(lng);
+  if (isNaN(latNum) || latNum < -90 || latNum > 90) return res.status(400).json({ error: '유효하지 않은 위도값 (-90~90)' });
+  if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) return res.status(400).json({ error: '유효하지 않은 경도값 (-180~180)' });
+  // ✅ FIX-POINT-NAME-LEN: 포인트명/어종 길이 제한
+  if (typeof name !== 'string' || name.length > 100) return res.status(400).json({ error: '포인트명은 최대 100자입니다.' });
+  if (typeof type !== 'string' || type.length > 50) return res.status(400).json({ error: '타입은 최대 50자입니다.' });
+  if (typeof fish === 'string' && fish.length > 200) return res.status(400).json({ error: '어종 정보는 최대 200자입니다.' });
   const id = `custom_${Date.now()}`;
   customPoints[id] = {
     id,
@@ -1216,6 +1228,11 @@ app.post('/api/ai/generate-point-info', async (req, res) => {
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { name, type, region, lat, lng, obsCode } = req.body;
   if (!name || !type) return res.status(400).json({ error: 'name, type 필수' });
+  // ✅ FIX-POINT-INFO-LEN: 입력 길이 제한 (prompt injection + DoS 방어)
+  if (typeof name !== 'string' || name.length > 100) return res.status(400).json({ error: '포인트명은 최대 100자입니다.' });
+  if (typeof type !== 'string' || type.length > 50) return res.status(400).json({ error: '타입은 최대 50자입니다.' });
+  if (lat !== undefined && (isNaN(Number(lat)) || Number(lat) < -90 || Number(lat) > 90)) return res.status(400).json({ error: '유효하지 않은 위도값' });
+  if (lng !== undefined && (isNaN(Number(lng)) || Number(lng) < -180 || Number(lng) > 180)) return res.status(400).json({ error: '유효하지 않은 경도값' });
   const GEMINI_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini API 키 미설정' });
   const stationInfo = obsCode ? (observationData[obsCode] || {}) : {};
@@ -8149,6 +8166,10 @@ app.post('/api/admin/push-fcm', verifyToken, async (req, res) => {
 app.post('/api/user/push-token', verifyToken, async (req, res) => {
   const { token, platform = 'android' } = req.body;
   if (!token) return res.status(400).json({ error: 'token 필수' });
+  // ✅ FIX-PUSHTOKEN-LEN: FCM 토큰 길이 검증 (DoS + 이상 토큰 방어)
+  if (typeof token !== 'string' || token.length > 512 || token.length < 10) return res.status(400).json({ error: '유효하지 않은 FCM 토큰' });
+  const ALLOWED_PLATFORMS = ['android', 'ios', 'web'];
+  if (!ALLOWED_PLATFORMS.includes(platform)) return res.status(400).json({ error: '유효하지 않은 플랫폼' });
   const userId = req.user.id || req.user._id;
   if (!userId) return res.status(400).json({ error: 'userId 로드 실패' });
   try {
