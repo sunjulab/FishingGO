@@ -1408,6 +1408,11 @@ const io = new Server(server, {
 });
 
 // ✅ CREW-ENH: 서버사이드 레벨 시스템 (유저스토어와 동일 기준)
+// FIX-ADMIN-EMAIL-CONST: 관리자 이메일 전역 상수화 (하드코딩 분산 방지)
+const ADMIN_EMAIL_PRIMARY = process.env.ADMIN_EMAIL || 'sunjulab@gmail.com';
+const ADMIN_EMAIL_ALT = process.env.ADMIN_EMAIL_ALT || 'sunjulab.k@gmail.com';
+const ADMIN_EMAIL_LIST = new Set([ADMIN_EMAIL_PRIMARY, ADMIN_EMAIL_ALT]);
+
 const LEVEL_CONFIG_SV = [
   { level: 1, title: '\uCD08\uBCF4 \uB099\uC2DC\uAFBC',   emoji: '\uD83E\uDEB1', expRequired: 0    },
   { level: 2, title: '\uACAC\uC2B5 \uB099\uC2DC\uAFBC',   emoji: '\uD83C\uDFA3', expRequired: 100  },
@@ -8906,9 +8911,8 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
     try {
       const tp = require('jsonwebtoken').verify(auth.slice(7), process.env.JWT_SECRET || 'fishinggo_jwt_secret_2024', { algorithms: ['HS256'] });
-      const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sunjulab@gmail.com';
-      const ADMIN_ID = process.env.ADMIN_ID || 'sunjulab';
-      if (tp.email !== ADMIN_EMAIL && tp.id !== ADMIN_ID && tp.email !== 'sunjulab.k@gmail.com') {
+      const ADMIN_EMAIL = ADMIN_EMAIL_PRIMARY; const ADMIN_ID = process.env.ADMIN_ID || 'sunjulab';
+      if (!ADMIN_EMAIL_LIST.has(tp.email) && tp.id !== ADMIN_ID) { // FIX-ADMIN-EMAIL-CONST
         return res.status(403).json({ error: '관리자 권한 필요' });
       }
     } catch { return res.status(401).json({ error: '토큰 오류' }); }
@@ -8978,7 +8982,7 @@ setTimeout(function(){ document.body.innerHTML='<pre>${JSON.stringify(msg)}</pre
   let user;
   try { user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); }
   catch { return res.send(html({ ok: false, error: '유효하지 않거나 만료된 토큰' })); }
-  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  const adminEmails = [...ADMIN_EMAIL_LIST]; // FIX-ADMIN-EMAIL-CONST
   if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
     return res.send(html({ ok: false, error: '관리자 권한 필요' }));
   }
@@ -9030,7 +9034,7 @@ app.get('/api/shop/manual/add', async (req, res) => {
   let user;
   try { user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); }
   catch { return send(401, { error: '유효하지 않거나 만료된 토큰' }); }
-  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  const adminEmails = [...ADMIN_EMAIL_LIST]; // FIX-ADMIN-EMAIL-CONST
   if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
     return send(403, { error: '관리자 권한 필요' });
   }
@@ -9071,7 +9075,7 @@ app.get('/api/shop/manual/add', async (req, res) => {
  *   source: 'coupang'(기본) | 'ali'
  */
 app.post('/api/shop/manual', verifyToken, async (req, res) => {
-  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  const adminEmails = [...ADMIN_EMAIL_LIST]; // FIX-ADMIN-EMAIL-CONST
   console.log('[SHOP-POST] ① 핸들러 진입, user:', req.user?.email, '| id:', req.user?.id);
   if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
     console.log('[SHOP-POST] ② 403 관리자 권한 없음');
@@ -9121,7 +9125,7 @@ app.post('/api/shop/manual', verifyToken, async (req, res) => {
  * 수동 상품 삭제 (관리자 전용)
  */
 app.delete('/api/shop/manual/:id', verifyToken, async (req, res) => {
-  const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
+  const adminEmails = [...ADMIN_EMAIL_LIST]; // FIX-ADMIN-EMAIL-CONST
   if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
     return res.status(403).json({ error: '관리자 권한 필요' });
   }
