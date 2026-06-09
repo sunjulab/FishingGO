@@ -4423,6 +4423,11 @@ app.delete('/api/user/records/:id', async (req, res) => {
     await CatchRecord.findByIdAndDelete(req.params.id);
       return res.json({ success: true });
     }
+    // ✅ FIX-MEM-CATCH-IDOR: 인메모리 폴백에서도 본인만 삭제 가능
+    const memTarget = memRecords.find(r => r.id === req.params.id || r._id === req.params.id);
+    if (memTarget && !isAdmin && memTarget.author_email && memTarget.author_email !== jwtEmail) {
+      return res.status(403).json({ error: '본인의 기록만 삭제할 수 있습니다.' }); // FIX-MEM-CATCH-IDOR
+    }
     memRecords = memRecords.filter(r => r.id !== req.params.id);
     saveMemRecords();
     res.json({ success: true });
