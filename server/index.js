@@ -1415,6 +1415,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_msg', async (data) => {
+    // ✅ FIX-CHAT-MSG-LENGTH: 채팅 메시지 최대 500자 제한 (DoS 방어)
+    if (!data || typeof data !== 'object') return;
+    if (typeof data.text === 'string' && data.text.length > 500) {
+      socket.emit('error', { message: '메시지는 최대 500자입니다.' }); return;
+    }
     // ✅ FIX-SOCKET-FLOOD-CHECK: 플러딩 방지
     const now = Date.now(); if (now - msgWindow > MSG_WINDOW_MS) { msgCount = 0; msgWindow = now; }
     if (++msgCount > MSG_LIMIT) { socket.emit('error', { message: '메시지를 너무 빠르게 전송하고 있습니다.' }); return; }
@@ -3392,7 +3397,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => { // ✅ FIX-REG
     }
   } catch (err) { logger.error('[register] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
-    const email = (typeof req.body.email === 'string' ? req.body.email : '').trim(); // FIX-NOSQL-LOGIN
+    const email = (typeof req.body.email === 'string' ? req.body.email : '').replace(/ /g, '').trim(); // ✅ FIX-NOSQL-LOGIN FIX-NULL-BYTE
     const password = typeof req.body.password === 'string' ? req.body.password : ''; // FIX-NOSQL-LOGIN
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -3582,6 +3587,14 @@ app.put('/api/user/nickname', async (req, res) => {
     if (!newName) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
+    // ✅ FIX-NICKNAME-COOLDOWN: 닉네임 변경 30일 쿨다운 (DB에 lastNicknameChange 기록)
+    if (dbReady && User) {
+      const cooldownUser = await User.findOne({ email: tp.email || tp.id }, 'lastNicknameChange').lean().catch(() => null);
+      if (cooldownUser?.lastNicknameChange) {
+        const diffDays = (Date.now() - new Date(cooldownUser.lastNicknameChange).getTime()) / (1000*60*60*24);
+        if (diffDays < 30) return res.status(429).json({ error: `닉네임은 30일마다 변경할 수 있습니다. (${Math.ceil(30-diffDays)}일 후 가능)` }); // FIX-NICKNAME-COOLDOWN
+      }
+    }
 
     // ✅ NICK-VAL: 서버사이드 닉네임 검증 (클라이언트 우회 방지)
     const trimmed = newName.trim();
@@ -3596,7 +3609,7 @@ app.put('/api/user/nickname', async (req, res) => {
     if (dbReady && User) {
       const dup = await User.findOne({ name: trimmed });
       if (dup && dup.email !== email) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
-      const user = await User.findOneAndUpdate({ email }, { name: trimmed }, { new: true, runValidators: true });
+      const user = await User.findOneAndUpdate({ email }, { name: trimmed, lastNicknameChange: new Date() }, { new: true, runValidators: true }); // ✅ FIX-NICKNAME-TIMESTAMP
       if (Post) await Post.updateMany({ author_email: email }, { author: trimmed });
       return res.json({ success: true, name: user.name });
     } else {
@@ -3646,7 +3659,7 @@ app.put('/api/user/password', async (req, res) => {
     const hashed = await bcrypt.hash(newPassword, 12);
 
     if (dbReady && User) {
-      await User.findOneAndUpdate({ email }, { password: hashed });
+      await User.findOneAndUpdate({ email }, { password: hashed, passwordChangedAt: new Date() }); // ✅ FIX-PWD-CHANGED-AT
       return res.json({ success: true });
     } else {
       user.password = hashed;
@@ -4711,6 +4724,7 @@ app.post('/api/community/crews', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { name, region, isPrivate, password, owner, ownerName, limit } = req.body;
+    if (typeof name === 'string' && name.length > 20) return res.status(400).json({ error: '크루 이름은 최대 20자입니다.' }); // ✅ FIX-CREW-NAME-LENGTH
     if (!name || !owner || !ownerName) return res.status(400).json({ error: '필수 항목 누락' });
     // limit 유효성 검증: 3~1000 범위 강제
     const safeLimit = Math.min(1000, Math.max(3, parseInt(limit) || 100));
@@ -5205,6 +5219,8 @@ app.post('/api/community/notices', async (req, res) => {
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
     const { title, content, isPinned, isPopup, image, images } = req.body;
+    if (typeof title === 'string' && title.length > 100) return res.status(400).json({ error: '제목은 최대 100자입니다.' }); // ✅ FIX-POST-TITLE-LENGTH
+    if (typeof content === 'string' && content.length > 5000) return res.status(400).json({ error: '내용은 최대 5000자입니다.' });
     if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
     // ✅ IMG-SIZE-FIX: 4MB 기준 통일 (오픈게시판과 동일하게)
     const safeImages = Array.isArray(images) ? images.filter(img => img && img.length <= 4 * 1024 * 1024).slice(0, 5) : [];
@@ -6711,7 +6727,8 @@ app.post('/api/admin/vvip/grant', async (req, res) => {
   try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
 
-  const { userId, harborId, days = 30 } = req.body;
+  const { userId, harborId, days: rawDays = 30 } = req.body;
+  const days = Math.min(365, Math.max(1, parseInt(rawDays) || 30)); // ✅ FIX-VVIP-DAYS-LIMIT: 1~365일 범위 강제
   if (!userId || !harborId) return res.status(400).json({ error: 'userId, harborId 필수' });
 
   const harbor = HARBOR_LIST.find(h => h.id === harborId);
