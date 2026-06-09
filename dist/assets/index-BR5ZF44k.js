@@ -1,4 +1,4 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-CAaNQklK.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-BzfcTCNg.js","assets/index-DpFJ-A4f.js","assets/index-Bq0yQzgh.js","assets/index-BcDlL39l.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-DfiZgbYx.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-pWpCKiqq.js","assets/index-DaZUhfgM.js","assets/web-CRsQu2xO.js"])))=>i.map(i=>d[i]);
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-BKmWkyrN.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-ihFKgdTl.js","assets/index-BIKH67Z2.js","assets/index-B3aRsUtq.js","assets/index-BbOGDW6P.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-DOKcpzHr.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-Cu1OsbpW.js","assets/index-zNAptgQN.js","assets/web-DngoIZhx.js"])))=>i.map(i=>d[i]);
 import { r as reactExports, g as getDefaultExportFromCjs, a as reactDomExports, R as React, u as useNavigate, b as useLocation, c as useSearchParams, d as useParams, N as NavLink, e as Navigate, B as BrowserRouter, f as Routes, h as Route } from './vendor-react-vfOo6a0P.js';
 import { A as AlertCircle, C as CheckCircle, I as Info, X, a as Clock, M as MessageSquare, b as ChevronUp, c as ChevronDown, L as Lock, S as Send, R as RefreshCw, d as Search, e as MapPin, W as Waves, f as Wind, T as Tv, g as Map$1, B as BarChart2, h as Ship, i as Crown, Z as Zap, j as CornerUpLeft, k as Megaphone, l as AlertTriangle, F as Fish, m as Bell, n as Trash2, o as CheckCheck, p as RotateCcw, q as Loader2, r as Check, s as ArrowLeft, t as Anchor, P as Play, u as Maximize2, U as UserRound, v as ShoppingBag, w as ChevronLeft, x as ChevronRight, y as ZoomIn, z as Pen, H as Heart, D as Share2, E as Users, G as Award, J as Phone, K as PlusCircle, N as Plus, O as SlidersHorizontal, Q as CreditCard, V as ShieldAlert, Y as Camera, _ as PenLine, $ as Trophy, a0 as Star, a1 as Calendar, a2 as BookOpen, a3 as History, a4 as ToggleRight, a5 as ToggleLeft, a6 as Image$1, a7 as Scan, a8 as CheckCircle2, a9 as HelpCircle, aa as MoreVertical, ab as ExternalLink, ac as User, ad as Droplets, ae as KeyRound, af as EyeOff, ag as Eye, ah as XCircle, ai as ShieldCheck, aj as Wifi, ak as WifiOff, al as LogOut, am as Navigation, an as Sunrise, ao as Sunset, ap as Smartphone, aq as Sparkles, ar as Youtube, as as Link, at as MousePointer, au as TrendingUp, av as Activity, aw as UserPlus, ax as Globe, ay as DollarSign, az as BellRing, aA as Filter, aB as Flame, aC as UserCheck, aD as FileText, aE as Upload, aF as CloudLightning, aG as Home } from './vendor-icons-Bsle_tIe.js';
 import { c as create } from './vendor-store-wmv-LjAu.js';
@@ -1322,7 +1322,7 @@ let AdMob = null;
 async function initAdMob() {
   if (!isNative$1()) return;
   try {
-    const mod = await __vitePreload(() => import('./index-CAaNQklK.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
+    const mod = await __vitePreload(() => import('./index-BKmWkyrN.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
     AdMob = mod.AdMob;
     await AdMob.initialize({
       requestTrackingAuthorization: false,
@@ -1582,7 +1582,7 @@ const index = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
 async function initPushPermission(userId) {
   if (!Capacitor.isNativePlatform()) return { ok: false, reason: 'web' };
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-BzfcTCNg.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-ihFKgdTl.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
 
     // 기존 리스너 중복 방지
     await PushNotifications.removeAllListeners();
@@ -1668,7 +1668,7 @@ function setPushHandlers({ addToast, navigate }) {
 async function unregisterPushToken() {
   if (!Capacitor.isNativePlatform()) return;
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-BzfcTCNg.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-ihFKgdTl.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
     await PushNotifications.removeAllListeners();
     await apiClient.delete('/api/user/push-token');
     console.log('[PUSH] ✅ FCM 토큰 해제 완료');
@@ -1691,7 +1691,7 @@ async function requestLocationPermission() {
     });
   }
   try {
-    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-DpFJ-A4f.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
+    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-BIKH67Z2.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
     const perm = await Geolocation.requestPermissions();
     // 'granted' | 'denied' | 'prompt'
     const ok = perm.location === 'granted' || perm.coarseLocation === 'granted';
@@ -1707,7 +1707,7 @@ async function requestLocationPermission() {
 async function requestCameraPermission() {
   if (!Capacitor.isNativePlatform()) return { ok: true }; // 웹은 별도 권한 불필요
   try {
-    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-Bq0yQzgh.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
+    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-B3aRsUtq.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
     const perm = await Camera.requestPermissions({ permissions: ['camera', 'photos'] });
     const cameraOk = perm.camera === 'granted' || perm.camera === 'limited';
     const photosOk = perm.photos === 'granted' || perm.photos === 'limited';
@@ -1731,7 +1731,7 @@ async function initNetworkMonitor(onOffline, onOnline) {
     };
   }
   try {
-    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-BcDlL39l.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
+    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-BbOGDW6P.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
     const status = await Network.getStatus();
     if (!status.connected) onOffline?.();
 
@@ -2373,7 +2373,7 @@ const Players = [
     player: reactExports.lazy(
       () => __vitePreload(() => import(
         /* webpackChunkName: 'reactPlayerDash' */
-        './react-DfiZgbYx.js'
+        './react-DOKcpzHr.js'
       ),true?__vite__mapDeps([13,1,11,2,3,4,5]):void 0)
     )
   },
@@ -8402,7 +8402,7 @@ const SITE_URL = "https://www.fishing-go.com";
 const APP_ID$3 = "kr.fishinggo.app";
 async function copyToClipboard$1(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-pWpCKiqq.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-Cu1OsbpW.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -8428,7 +8428,7 @@ async function copyToClipboard$1(text) {
 }
 async function openKakaoTalk$1() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-DaZUhfgM.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-zNAptgQN.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -17539,7 +17539,7 @@ function VVIPSubscribe() {
       if (!isMountedRef.current) return;
       const map = {};
       (res.data.harbors || []).forEach((h) => {
-        if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt };
+        if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt, daysLeft: h.daysLeft };
       });
       setTakenMap(map);
     } catch {
@@ -17595,7 +17595,7 @@ function VVIPSubscribe() {
     setSelectedHarbor(harbor);
     setShowHarborConfirm(true);
   };
-  const harbors = HARBORS_STATIC.map((h) => ({ ...h, isTaken: !!takenMap[h.id], takenBy: takenMap[h.id]?.takenBy || null, isMyHarbor: mySlot?.harborId === h.id }));
+  const harbors = HARBORS_STATIC.map((h) => ({ ...h, isTaken: !!takenMap[h.id], takenBy: takenMap[h.id]?.takenBy || null, daysLeft: takenMap[h.id]?.daysLeft ?? null, expiresAtSlot: takenMap[h.id]?.expiresAt || null, isMyHarbor: mySlot?.harborId === h.id }));
   const filtered = selectedRegion === "전체" ? harbors : harbors.filter((h) => h.region === selectedRegion);
   const takenCount = Object.keys(takenMap).length;
   const availableCount = HARBORS_STATIC.length - takenCount;
@@ -17749,16 +17749,24 @@ function VVIPSubscribe() {
             " ",
             f.text
           ] }, i)) }),
-          plan.key === "VVIP" && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => {
-            setView("harbor");
-            fetchHarborData();
-          }, style: { width: "100%", padding: "10px", border: `1px solid ${plan.border}`, borderRadius: "12px", background: "rgba(255,215,0,0.06)", color: "#FFD700", fontWeight: "800", fontSize: `calc(12px * var(--fs,1))`, cursor: "pointer", marginBottom: "8px" }, children: [
-            "🏖️ 항구 잔여 현황 보기 (",
-            availableCount,
-            "/",
-            HARBORS_STATIC.length,
-            "석)"
-          ] }),
+          plan.key === "VVIP" && (mySlot ? (
+            // 이미 구독 중: 내 항구명 표시 + 버튼 역할
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => {
+              setView("harbor");
+              fetchHarborData();
+            }, style: { width: "100%", padding: "11px", border: `1.5px solid #FFD700`, borderRadius: "12px", background: "rgba(255,215,0,0.12)", color: "#FFD700", fontWeight: "900", fontSize: `calc(13px * var(--fs,1))`, cursor: "pointer", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Crown, { size: 14, color: "#FFD700" }),
+              " 👑 ",
+              mySlot.harborName,
+              " 구독 중 · 관리하기"
+            ] })
+          ) : (
+            // 미구독: 잔여 항구 구독하기
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+              setView("harbor");
+              fetchHarborData();
+            }, style: { width: "100%", padding: "11px", border: `1px solid ${plan.border}`, borderRadius: "12px", background: availableCount > 0 ? "rgba(255,215,0,0.09)" : "rgba(255,90,95,0.08)", color: availableCount > 0 ? "#FFD700" : "#FF5A5F", fontWeight: "900", fontSize: `calc(13px * var(--fs,1))`, cursor: "pointer", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }, children: availableCount > 0 ? `🏖️ 잔여 항구 구독하기 (${availableCount}/${HARBORS_STATIC.length}석)` : `🔒 전 항구 마감 (잔여 0석)` })
+          )),
           owned ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100%", padding: "13px", borderRadius: "14px", background: `rgba(${plan.color === "#C8D400" ? "200,212,0" : plan.color === "#64B5F6" ? "100,181,246" : "255,215,0"},0.1)`, border: `1px solid ${plan.border}`, textAlign: "center", color: plan.color, fontWeight: "900", fontSize: `calc(14px * var(--fs,1))` }, children: "✅ 현재 이용 중" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -17866,17 +17874,44 @@ function VVIPSubscribe() {
               "석"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }, children: "전국 잔여" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: `calc(20px * var(--fs,1))`, fontWeight: "950", color: "#aaa" }, children: [
+              takenCount,
+              "석"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }, children: "점유 중" })
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "14px 16px 8px", display: "flex", gap: "8px", overflowX: "auto", scrollbarWidth: "none" }, children: REGION_TABS.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedRegion(tab), style: { padding: "7px 14px", borderRadius: "20px", fontSize: `calc(13px * var(--fs,1))`, fontWeight: "800", whiteSpace: "nowrap", cursor: "pointer", border: selectedRegion === tab ? "1.5px solid #FFD700" : "1.5px solid rgba(255,255,255,0.1)", background: selectedRegion === tab ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.04)", color: selectedRegion === tab ? "#FFD700" : "rgba(255,255,255,0.5)" }, children: tab === "전체" ? `전체 (${availableCount}석)` : `${REGION_EMOJI[tab]} ${tab}` }, tab)) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "0 16px", display: "flex", flexDirection: "column", gap: "8px" }, children: filtered.map((harbor) => {
-        const disabled = !harbor.isMyHarbor && (harbor.isTaken || !!mySlot);
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "14px 16px 8px", display: "flex", gap: "8px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }, children: REGION_TABS.map((tab) => {
+        const tabTaken = tab === "전체" ? takenCount : harbors.filter((h) => h.region === tab && h.isTaken).length;
+        const tabTotal = tab === "전체" ? HARBORS_STATIC.length : HARBORS_STATIC.filter((h) => h.region === tab).length;
+        const tabAvail = tabTotal - tabTaken;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelectedRegion(tab), style: { padding: "7px 14px", borderRadius: "20px", fontSize: `calc(12px * var(--fs,1))`, fontWeight: "800", whiteSpace: "nowrap", cursor: "pointer", border: selectedRegion === tab ? "1.5px solid #FFD700" : "1.5px solid rgba(255,255,255,0.1)", background: selectedRegion === tab ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.04)", color: selectedRegion === tab ? "#FFD700" : "rgba(255,255,255,0.5)" }, children: tab === "전체" ? `전체 (${tabAvail}/${tabTotal}석)` : `${REGION_EMOJI[tab]} ${tab} (${tabAvail}/${tabTotal})` }, tab);
+      }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "0 16px 24px", display: "flex", flexDirection: "column", gap: "8px" }, children: filtered.map((harbor) => {
+        const isTakenByOther = harbor.isTaken && !harbor.isMyHarbor;
+        const isOtherSlot = !!mySlot && !harbor.isMyHarbor;
+        const disabled = isTakenByOther || isOtherSlot;
+        const daysLeft = harbor.daysLeft;
+        const expiryText = harbor.expiresAtSlot ? `${new Date(harbor.expiresAtSlot).toLocaleDateString("ko-KR")} 만료${daysLeft !== null ? ` (D-${daysLeft})` : ""}` : null;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
             onClick: () => !disabled && handleSelectHarbor(harbor),
-            style: { background: harbor.isMyHarbor ? "rgba(255,215,0,0.1)" : disabled ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)", border: harbor.isMyHarbor ? "1.5px solid #FFD700" : disabled ? "1px solid rgba(255,255,255,0.06)" : "1.5px solid rgba(255,215,0,0.22)", borderRadius: "16px", padding: "14px 16px", display: "flex", alignItems: "center", gap: "14px", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1, transition: "transform 0.15s" },
+            style: {
+              background: harbor.isMyHarbor ? "rgba(255,215,0,0.1)" : isTakenByOther ? "rgba(255,90,95,0.04)" : isOtherSlot ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.06)",
+              border: harbor.isMyHarbor ? "1.5px solid #FFD700" : isTakenByOther ? "1px solid rgba(255,90,95,0.2)" : isOtherSlot ? "1px solid rgba(255,255,255,0.05)" : "1.5px solid rgba(255,215,0,0.25)",
+              borderRadius: "16px",
+              padding: "14px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              cursor: disabled ? "not-allowed" : "pointer",
+              transition: "transform 0.15s, opacity 0.15s",
+              opacity: isOtherSlot && !harbor.isMyHarbor ? 0.4 : 1
+            },
             onMouseEnter: (e) => {
               if (!disabled) e.currentTarget.style.transform = "translateY(-2px)";
             },
@@ -17884,30 +17919,35 @@ function VVIPSubscribe() {
               e.currentTarget.style.transform = "translateY(0)";
             },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "44px", height: "44px", borderRadius: "13px", flexShrink: 0, background: harbor.isMyHarbor ? "linear-gradient(135deg,#FFD700,#FF9B26)" : disabled ? "rgba(255,255,255,0.05)" : "rgba(255,215,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }, children: harbor.isMyHarbor ? /* @__PURE__ */ jsxRuntimeExports.jsx(Crown, { size: 20, color: "#1A1A2E" }) : disabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(Lock, { size: 18, color: "rgba(255,255,255,0.25)" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Crown, { size: 20, color: "#FFD700" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "44px", height: "44px", borderRadius: "13px", flexShrink: 0, background: harbor.isMyHarbor ? "linear-gradient(135deg,#FFD700,#FF9B26)" : isTakenByOther ? "rgba(255,90,95,0.12)" : "rgba(255,215,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }, children: harbor.isMyHarbor ? /* @__PURE__ */ jsxRuntimeExports.jsx(Crown, { size: 20, color: "#1A1A2E" }) : isTakenByOther ? /* @__PURE__ */ jsxRuntimeExports.jsx(Lock, { size: 18, color: "#FF5A5F" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Crown, { size: 20, color: "#FFD700" }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px", flexWrap: "wrap" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(10px * var(--fs,1))`, background: "rgba(255,215,0,0.15)", color: "#FFD700", padding: "2px 7px", borderRadius: "5px", fontWeight: "800" }, children: harbor.area }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(15px * var(--fs,1))`, fontWeight: "900", color: harbor.isMyHarbor ? "#FFD700" : disabled ? "rgba(255,255,255,0.25)" : "#fff" }, children: harbor.name }),
-                  harbor.isMyHarbor && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(10px * var(--fs,1))`, background: "#FFD700", color: "#1A1A2E", padding: "2px 8px", borderRadius: "5px", fontWeight: "900" }, children: "내 자리" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(10px * var(--fs,1))`, background: harbor.isMyHarbor ? "rgba(255,215,0,0.25)" : isTakenByOther ? "rgba(255,90,95,0.12)" : "rgba(255,215,0,0.15)", color: harbor.isMyHarbor ? "#FFD700" : isTakenByOther ? "#FF5A5F" : "#FFD700", padding: "2px 7px", borderRadius: "5px", fontWeight: "800" }, children: harbor.area }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(15px * var(--fs,1))`, fontWeight: "900", color: harbor.isMyHarbor ? "#FFD700" : isTakenByOther ? "rgba(255,255,255,0.4)" : "#fff" }, children: harbor.name }),
+                  harbor.isMyHarbor && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(10px * var(--fs,1))`, background: "#FFD700", color: "#1A1A2E", padding: "2px 8px", borderRadius: "5px", fontWeight: "900" }, children: "내 자리" }),
+                  isTakenByOther && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(10px * var(--fs,1))`, background: "rgba(255,90,95,0.15)", color: "#FF5A5F", padding: "2px 8px", borderRadius: "5px", fontWeight: "900" }, children: "마감" })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: `calc(11px * var(--fs,1))`, color: "rgba(255,255,255,0.4)", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: `calc(11px * var(--fs,1))`, color: "rgba(255,255,255,0.35)", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(MapPin, { size: 9, style: { marginRight: "3px", verticalAlign: "middle" } }),
                   harbor.desc
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(11px * var(--fs,1))`, marginTop: "4px", fontWeight: "700" }, children: harbor.isMyHarbor ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#FFD700", display: "flex", alignItems: "center", gap: "4px" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(11px * var(--fs,1))`, marginTop: "5px", fontWeight: "700" }, children: harbor.isMyHarbor ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#FFD700", display: "flex", alignItems: "center", gap: "4px" }, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 11 }),
-                  " 독점 활성 중"
-                ] }) : harbor.isTaken ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#FF5A5F" }, children: [
-                  "🔒 마감 — ",
+                  " 독점 활성 중",
+                  mySlot?.expiresAt ? ` · ${new Date(mySlot.expiresAt).toLocaleDateString("ko-KR")} 만료` : ""
+                ] }) : isTakenByOther ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#FF5A5F" }, children: [
+                  "🔒 ",
                   harbor.takenBy,
-                  " 선장"
-                ] }) : mySlot ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "rgba(255,255,255,0.25)" }, children: "🔒 다른 항구 선점 중" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#00C48C", display: "flex", alignItems: "center", gap: "4px" }, children: [
+                  " 선장 독점 중",
+                  expiryText ? ` · ${expiryText}` : ""
+                ] }) : isOtherSlot ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "rgba(255,255,255,0.2)" }, children: "🔒 다른 항구 선점 중" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#00C48C", display: "flex", alignItems: "center", gap: "4px" }, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Star, { size: 10, fill: "#00C48C" }),
-                  " 선착순 구매 가능"
+                  " 선착순 구독 가능"
                 ] }) })
               ] }),
-              !disabled && !harbor.isMyHarbor && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#FFD700", fontSize: `calc(20px * var(--fs,1))`, fontWeight: "900", flexShrink: 0 }, children: "›" })
+              !disabled && !harbor.isMyHarbor && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#FFD700", fontSize: `calc(20px * var(--fs,1))`, fontWeight: "900", flexShrink: 0 }, children: "›" }),
+              harbor.isMyHarbor && /* @__PURE__ */ jsxRuntimeExports.jsx(CheckCircle2, { size: 20, color: "#FFD700", style: { flexShrink: 0 } }),
+              isTakenByOther && /* @__PURE__ */ jsxRuntimeExports.jsx(Lock, { size: 16, color: "rgba(255,90,95,0.5)", style: { flexShrink: 0 } })
             ]
           },
           harbor.id
@@ -21271,7 +21311,7 @@ function getFishEmoji(name) {
 
 async function copyToClipboard(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-pWpCKiqq.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-Cu1OsbpW.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -21297,7 +21337,7 @@ async function copyToClipboard(text) {
 }
 async function openKakaoTalk() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-DaZUhfgM.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-zNAptgQN.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -23959,7 +23999,7 @@ var AppUpdateResultCode;
 })(AppUpdateResultCode || (AppUpdateResultCode = {}));
 
 const AppUpdate = registerPlugin('AppUpdate', {
-    web: () => __vitePreload(() => import('./web-CRsQu2xO.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
+    web: () => __vitePreload(() => import('./web-DngoIZhx.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
 });
 
 const CURRENT_APP_VERSION = true ? "2.1.75" : "2.1.17";

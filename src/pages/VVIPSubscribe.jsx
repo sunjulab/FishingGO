@@ -250,7 +250,7 @@ export default function VVIPSubscribe() {
       if (!isMountedRef.current) return; // ✅ BUG-V3 FIX: 응답 후 언마운트 체크
       const map = {};
       (res.data.harbors || []).forEach(h => {
-        if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt };
+        if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt, daysLeft: h.daysLeft };
       });
       setTakenMap(map);
     } catch {}
@@ -310,7 +310,7 @@ export default function VVIPSubscribe() {
     setShowHarborConfirm(true);
   };
 
-  const harbors = HARBORS_STATIC.map(h => ({ ...h, isTaken: !!takenMap[h.id], takenBy: takenMap[h.id]?.takenBy || null, isMyHarbor: mySlot?.harborId === h.id }));
+  const harbors = HARBORS_STATIC.map(h => ({ ...h, isTaken: !!takenMap[h.id], takenBy: takenMap[h.id]?.takenBy || null, daysLeft: takenMap[h.id]?.daysLeft ?? null, expiresAtSlot: takenMap[h.id]?.expiresAt || null, isMyHarbor: mySlot?.harborId === h.id }));
   const filtered = selectedRegion === '전체' ? harbors : harbors.filter(h => h.region === selectedRegion);
   const takenCount = Object.keys(takenMap).length;
   const availableCount = HARBORS_STATIC.length - takenCount; // ✅ 점유 해제 시 즉시 반영
@@ -507,11 +507,19 @@ export default function VVIPSubscribe() {
                   ))}
                 </div>
 
-                {/* VVIP: 항구 현황 버튼 추가 */}
+                {/* VVIP: 잔여 항구 구독하기 (통합 버튼) */}
                 {plan.key === 'VVIP' && (
-                  <button onClick={() => { setView('harbor'); fetchHarborData(); }} style={{ width: '100%', padding: '10px', border: `1px solid ${plan.border}`, borderRadius: '12px', background: 'rgba(255,215,0,0.06)', color: '#FFD700', fontWeight: '800', fontSize: `calc(12px * var(--fs,1))`, cursor: 'pointer', marginBottom: '8px' }}>
-                    🏖️ 항구 잔여 현황 보기 ({availableCount}/{HARBORS_STATIC.length}석)
-                  </button>
+                  mySlot ? (
+                    // 이미 구독 중: 내 항구명 표시 + 버튼 역할
+                    <button onClick={() => { setView('harbor'); fetchHarborData(); }} style={{ width: '100%', padding: '11px', border: `1.5px solid #FFD700`, borderRadius: '12px', background: 'rgba(255,215,0,0.12)', color: '#FFD700', fontWeight: '900', fontSize: `calc(13px * var(--fs,1))`, cursor: 'pointer', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Crown size={14} color="#FFD700" /> 👑 {mySlot.harborName} 구독 중 · 관리하기
+                    </button>
+                  ) : (
+                    // 미구독: 잔여 항구 구독하기
+                    <button onClick={() => { setView('harbor'); fetchHarborData(); }} style={{ width: '100%', padding: '11px', border: `1px solid ${plan.border}`, borderRadius: '12px', background: availableCount > 0 ? 'rgba(255,215,0,0.09)' : 'rgba(255,90,95,0.08)', color: availableCount > 0 ? '#FFD700' : '#FF5A5F', fontWeight: '900', fontSize: `calc(13px * var(--fs,1))`, cursor: 'pointer', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      {availableCount > 0 ? `🏖️ 잔여 항구 구독하기 (${availableCount}/${HARBORS_STATIC.length}석)` : `🔒 전 항구 마감 (잔여 0석)`}
+                    </button>
+                  )
                 )}
 
                 {/* 구매 버튼 */}
@@ -616,48 +624,97 @@ export default function VVIPSubscribe() {
             <div style={{ fontSize: `calc(12px * var(--fs,1))`, opacity: 0.75, lineHeight: 1.6, marginBottom: '12px' }}>선상 홍보 피드 <strong style={{ color: '#FFD700' }}>최상단 고정</strong></div>
             <div style={{ display: 'flex', gap: '16px' }}>
               <div><div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: '#FFD700' }}>₩550,000</div><div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>월 정액</div></div>
-              <div><div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: availableCount > 0 ? '#00C48C' : '#FF5A5F' }}>{availableCount}석</div><div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>전국 잔여</div></div>
+              <div>
+                <div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: availableCount > 0 ? '#00C48C' : '#FF5A5F' }}>{availableCount}석</div>
+                <div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>전국 잔여</div>
+              </div>
+              <div>
+                <div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: '#aaa' }}>{takenCount}석</div>
+                <div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>점유 중</div>
+              </div>
             </div>
           </div>
         )}
         {/* 권역 탭 */}
-        <div style={{ padding: '14px 16px 8px', display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {REGION_TABS.map(tab => (
-            <button key={tab} onClick={() => setSelectedRegion(tab)} style={{ padding: '7px 14px', borderRadius: '20px', fontSize: `calc(13px * var(--fs,1))`, fontWeight: '800', whiteSpace: 'nowrap', cursor: 'pointer', border: selectedRegion === tab ? '1.5px solid #FFD700' : '1.5px solid rgba(255,255,255,0.1)', background: selectedRegion === tab ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.04)', color: selectedRegion === tab ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>
-              {tab === '전체' ? `전체 (${availableCount}석)` : `${REGION_EMOJI[tab]} ${tab}`}
-            </button>
-          ))}
+        <div style={{ padding: '14px 16px 8px', display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {REGION_TABS.map(tab => {
+            const tabTaken = tab === '전체' ? takenCount : harbors.filter(h => h.region === tab && h.isTaken).length;
+            const tabTotal = tab === '전체' ? HARBORS_STATIC.length : HARBORS_STATIC.filter(h => h.region === tab).length;
+            const tabAvail = tabTotal - tabTaken;
+            return (
+              <button key={tab} onClick={() => setSelectedRegion(tab)} style={{ padding: '7px 14px', borderRadius: '20px', fontSize: `calc(12px * var(--fs,1))`, fontWeight: '800', whiteSpace: 'nowrap', cursor: 'pointer', border: selectedRegion === tab ? '1.5px solid #FFD700' : '1.5px solid rgba(255,255,255,0.1)', background: selectedRegion === tab ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.04)', color: selectedRegion === tab ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>
+                {tab === '전체' ? `전체 (${tabAvail}/${tabTotal}석)` : `${REGION_EMOJI[tab]} ${tab} (${tabAvail}/${tabTotal})`}
+              </button>
+            );
+          })}
         </div>
         {/* 항구 목록 */}
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {filtered.map(harbor => {
-            const disabled = !harbor.isMyHarbor && (harbor.isTaken || !!mySlot);
+            // ✅ 비활성화 조건: 타인 점유 OR (이미 다른 항구 선점 중 && 내 항구 아님)
+            const isTakenByOther = harbor.isTaken && !harbor.isMyHarbor;
+            const isOtherSlot = !!mySlot && !harbor.isMyHarbor;
+            const disabled = isTakenByOther || isOtherSlot;
+            const daysLeft = harbor.daysLeft;
+            const expiryText = harbor.expiresAtSlot
+              ? `${new Date(harbor.expiresAtSlot).toLocaleDateString('ko-KR')} 만료${daysLeft !== null ? ` (D-${daysLeft})` : ''}`
+              : null;
             return (
-              <div key={harbor.id} onClick={() => !disabled && handleSelectHarbor(harbor)}
-                style={{ background: harbor.isMyHarbor ? 'rgba(255,215,0,0.1)' : disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)', border: harbor.isMyHarbor ? '1.5px solid #FFD700' : disabled ? '1px solid rgba(255,255,255,0.06)' : '1.5px solid rgba(255,215,0,0.22)', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '14px', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.45 : 1, transition: 'transform 0.15s' }}
+              <div key={harbor.id}
+                onClick={() => !disabled && handleSelectHarbor(harbor)}
+                style={{
+                  background: harbor.isMyHarbor
+                    ? 'rgba(255,215,0,0.1)'
+                    : isTakenByOther
+                      ? 'rgba(255,90,95,0.04)'
+                      : isOtherSlot
+                        ? 'rgba(255,255,255,0.02)'
+                        : 'rgba(255,255,255,0.06)',
+                  border: harbor.isMyHarbor
+                    ? '1.5px solid #FFD700'
+                    : isTakenByOther
+                      ? '1px solid rgba(255,90,95,0.2)'
+                      : isOtherSlot
+                        ? '1px solid rgba(255,255,255,0.05)'
+                        : '1.5px solid rgba(255,215,0,0.25)',
+                  borderRadius: '16px', padding: '14px 16px',
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  transition: 'transform 0.15s, opacity 0.15s',
+                  opacity: isOtherSlot && !harbor.isMyHarbor ? 0.4 : 1,
+                }}
                 onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
-                <div style={{ width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0, background: harbor.isMyHarbor ? 'linear-gradient(135deg,#FFD700,#FF9B26)' : disabled ? 'rgba(255,255,255,0.05)' : 'rgba(255,215,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {harbor.isMyHarbor ? <Crown size={20} color="#1A1A2E" /> : disabled ? <Lock size={18} color="rgba(255,255,255,0.25)" /> : <Crown size={20} color="#FFD700" />}
+                {/* 아이콘 */}
+                <div style={{ width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0, background: harbor.isMyHarbor ? 'linear-gradient(135deg,#FFD700,#FF9B26)' : isTakenByOther ? 'rgba(255,90,95,0.12)' : 'rgba(255,215,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {harbor.isMyHarbor ? <Crown size={20} color="#1A1A2E" /> : isTakenByOther ? <Lock size={18} color="#FF5A5F" /> : <Crown size={20} color="#FFD700" />}
                 </div>
+                {/* 정보 */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: `calc(10px * var(--fs,1))`, background: 'rgba(255,215,0,0.15)', color: '#FFD700', padding: '2px 7px', borderRadius: '5px', fontWeight: '800' }}>{harbor.area}</span>
-                    <span style={{ fontSize: `calc(15px * var(--fs,1))`, fontWeight: '900', color: harbor.isMyHarbor ? '#FFD700' : disabled ? 'rgba(255,255,255,0.25)' : '#fff' }}>{harbor.name}</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs,1))`, background: harbor.isMyHarbor ? 'rgba(255,215,0,0.25)' : isTakenByOther ? 'rgba(255,90,95,0.12)' : 'rgba(255,215,0,0.15)', color: harbor.isMyHarbor ? '#FFD700' : isTakenByOther ? '#FF5A5F' : '#FFD700', padding: '2px 7px', borderRadius: '5px', fontWeight: '800' }}>{harbor.area}</span>
+                    <span style={{ fontSize: `calc(15px * var(--fs,1))`, fontWeight: '900', color: harbor.isMyHarbor ? '#FFD700' : isTakenByOther ? 'rgba(255,255,255,0.4)' : '#fff' }}>{harbor.name}</span>
                     {harbor.isMyHarbor && <span style={{ fontSize: `calc(10px * var(--fs,1))`, background: '#FFD700', color: '#1A1A2E', padding: '2px 8px', borderRadius: '5px', fontWeight: '900' }}>내 자리</span>}
+                    {isTakenByOther && <span style={{ fontSize: `calc(10px * var(--fs,1))`, background: 'rgba(255,90,95,0.15)', color: '#FF5A5F', padding: '2px 8px', borderRadius: '5px', fontWeight: '900' }}>마감</span>}
                   </div>
-                  <div style={{ fontSize: `calc(11px * var(--fs,1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: `calc(11px * var(--fs,1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     <MapPin size={9} style={{ marginRight: '3px', verticalAlign: 'middle' }} />{harbor.desc}
                   </div>
-                  <div style={{ fontSize: `calc(11px * var(--fs,1))`, marginTop: '4px', fontWeight: '700' }}>
-                    {harbor.isMyHarbor ? <span style={{ color: '#FFD700', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={11} /> 독점 활성 중</span>
-                      : harbor.isTaken ? <span style={{ color: '#FF5A5F' }}>🔒 마감 — {harbor.takenBy} 선장</span>
-                      : mySlot ? <span style={{ color: 'rgba(255,255,255,0.25)' }}>🔒 다른 항구 선점 중</span>
-                      : <span style={{ color: '#00C48C', display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={10} fill="#00C48C" /> 선착순 구매 가능</span>}
+                  <div style={{ fontSize: `calc(11px * var(--fs,1))`, marginTop: '5px', fontWeight: '700' }}>
+                    {harbor.isMyHarbor
+                      ? <span style={{ color: '#FFD700', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={11} /> 독점 활성 중{mySlot?.expiresAt ? ` · ${new Date(mySlot.expiresAt).toLocaleDateString('ko-KR')} 만료` : ''}</span>
+                      : isTakenByOther
+                        ? <span style={{ color: '#FF5A5F' }}>🔒 {harbor.takenBy} 선장 독점 중{expiryText ? ` · ${expiryText}` : ''}</span>
+                      : isOtherSlot
+                        ? <span style={{ color: 'rgba(255,255,255,0.2)' }}>🔒 다른 항구 선점 중</span>
+                        : <span style={{ color: '#00C48C', display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={10} fill="#00C48C" /> 선착순 구독 가능</span>}
                   </div>
                 </div>
+                {/* 우측 화살표 (가능한 항구만) */}
                 {!disabled && !harbor.isMyHarbor && <div style={{ color: '#FFD700', fontSize: `calc(20px * var(--fs,1))`, fontWeight: '900', flexShrink: 0 }}>›</div>}
+                {harbor.isMyHarbor && <CheckCircle2 size={20} color="#FFD700" style={{ flexShrink: 0 }} />}
+                {isTakenByOther && <Lock size={16} color="rgba(255,90,95,0.5)" style={{ flexShrink: 0 }} />}
               </div>
             );
           })}

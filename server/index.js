@@ -1036,6 +1036,32 @@ setTimeout(() => {
   setInterval(runIapExpiryCheck, 60 * 1000); // ✅ 1분 주기 (테스트: 5분 구독 만료 대응)
 }, 30 * 1000);
 
+// ✅ VVIP 항구 슬롯 만료 자동 회수 (1분 주기) — 기존에는 /api/vvip/harbors 요청 시만 처리
+const runVvipExpiryCheck = async () => {
+  const now = new Date();
+  let cleaned = 0;
+  for (const [harborId, slot] of Object.entries(vvipSlots)) {
+    if (slot.expiresAt && new Date(slot.expiresAt) < now) {
+      (logger?.info || console.log)(`[VVIP 만료-자동] ${slot.harborName || harborId} 슬롯 자동 해제 (userId: ${slot.userId})`);
+      delete vvipSlots[harborId];
+      cleaned++;
+      // User DB vvipHarborId/vvipExpiresAt 초기화 (재시작 시 재복원 방지)
+      if (dbReady && User) {
+        User.findOneAndUpdate(
+          { $or: [{ email: slot.userId }, { id: slot.userId }] },
+          { $unset: { vvipHarborId: 1, vvipExpiresAt: 1 } }
+        ).catch(e => (logger?.error || console.error)('[VVIP 만료-자동] DB 초기화 실패:', e.message));
+      }
+    }
+  }
+  if (cleaned > 0) saveVvipSlots();
+};
+// 서버 시작 후 1분 뒤 첫 실행, 이후 1분 주기
+setTimeout(() => {
+  runVvipExpiryCheck();
+  setInterval(runVvipExpiryCheck, 60 * 1000);
+}, 60 * 1000);
+
 // ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
 // ✅ FIX-PWD-IAT: 비밀번호 변경 시 이전 토큰 무효화를 위한 in-memory 캐시
 const pwdChangedCache = new Map(); // email → passwordChangedAt ms

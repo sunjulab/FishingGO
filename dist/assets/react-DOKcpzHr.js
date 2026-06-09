@@ -1,5 +1,5 @@
 import { R as React } from './vendor-react-vfOo6a0P.js';
-import { _ as __vitePreload } from './index-DvZBU_x5.js';
+import { _ as __vitePreload } from './index-BR5ZF44k.js';
 import { M as MediaTracksMixin, C as CustomVideoElement } from './index-CUWt0Sfx.js';
 import './vendor-icons-Bsle_tIe.js';
 import './vendor-store-wmv-LjAu.js';
