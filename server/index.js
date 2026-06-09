@@ -1038,14 +1038,16 @@ setTimeout(() => {
 
 // ✅ VVIP 항구 슬롯 만료 자동 회수 (1분 주기) — 기존에는 /api/vvip/harbors 요청 시만 처리
 const runVvipExpiryCheck = async () => {
-  // ✅ 안전 참조: vvipSlots가 아직 초기화 전이면 memVvipSlots 사용
-  const slots = (typeof vvipSlots !== 'undefined' ? vvipSlots : memVvipSlots) || {};
+  // vvipSlots는 서버 시작 후 즉시 초기화되므로 60초 후 호출 시 항상 존재
+  // 만료된 슬롯을 메모리 + DB + JSON 파일에서 동시 제거
+  const target = (typeof vvipSlots !== 'undefined' ? vvipSlots : memVvipSlots);
+  if (!target || typeof target !== 'object') return;
   const now = new Date();
   let cleaned = 0;
-  for (const [harborId, slot] of Object.entries(slots)) {
+  for (const [harborId, slot] of Object.entries(target)) {
     if (slot.expiresAt && new Date(slot.expiresAt) < now) {
       (logger?.info || console.log)(`[VVIP 만료-자동] ${slot.harborName || harborId} 슬롯 자동 해제 (userId: ${slot.userId})`);
-      delete slots[harborId];
+      delete target[harborId];
       cleaned++;
       // User DB vvipHarborId/vvipExpiresAt 초기화 (재시작 시 재복원 방지)
       if (dbReady && User) {

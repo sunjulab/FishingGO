@@ -287,10 +287,12 @@ export default function VVIPSubscribe() {
         userId: user?.name || user?.email || '선장',
         userName: user?.name || '선장',
       });
+      if (!isMountedRef.current) return; // ✅ 언마운트 후 응답 도착 방어
       addToast(`👑 ${harbor.name} 독점 선점 완료!`, 'success');
       setMySlot({ harborId: harbor.id, harborName: harbor.name, expiresAt: res.data?.expiresAt });
       fetchHarborData(); // 잔여 현황 즉시 갱신
     } catch (err) {
+      if (!isMountedRef.current) return; // ✅ 언마운트 후 에러 토스트 방어
       const msg = err?.response?.data?.error || '항구 선점 실패. 다시 시도해주세요.';
       addToast(msg, 'error');
     }
