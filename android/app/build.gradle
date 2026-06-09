@@ -1,4 +1,4 @@
-apply plugin: 'com.android.application'
+﻿apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
@@ -8,8 +8,8 @@ android {
         applicationId "kr.fishinggo.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 145
-        versionName "2.1.75"
+        versionCode 146
+        versionName "2.1.76"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -31,9 +31,9 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            // ??R8 理쒖쟻???占쎌꽦????APK ?占쎄린 媛먯냼 + 媛?占쏀솕 ?占쎌씪 ?占쎈룞 ?占쎌꽦
+            // ??R8 筌ㅼ뮇?????좎럩苑????APK ??좎럡由?揶쏅Ŋ??+ 揶쎛??좎?????좎럩????좎럥猷???좎럩苑?
             minifyEnabled true
-            shrinkResources false  // WebView ?占쏙옙? false ?占쏙옙? (由ъ냼????占쏙옙 ???占쎈쪟 媛??
+            shrinkResources false  // WebView ??좎룞?? false ??좎룞?? (?귐딅꺖?????좎룞??????좎럥履?揶쎛??
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
