@@ -1,78 +1,78 @@
-services:
-  # ══════════════════════════════════════════════════════════════
-  # 🖥️  프론트엔드 — Vite React (Static Site)
-  # VITE_* 환경변수는 빌드 타임에 번들에 포함됨 (런타임 X)
-  # Render 대시보드 → 해당 서비스 → [Environment] 탭에서 직접 입력
-  # ══════════════════════════════════════════════════════════════
+﻿services:
+  # ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧
+  # ?뼢截? ?꾨줎?몄뿏????Vite React (Static Site)
+  # VITE_* ?섍꼍蹂?섎뒗 鍮뚮뱶 ??꾩뿉 踰덈뱾???ы븿??(?고???X)
+  # Render ??쒕낫?????대떦 ?쒕퉬????[Environment] ??뿉??吏곸젒 ?낅젰
+  # ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧
   - type: web
     name: fishing-go-frontend
     env: static
-    rootDir: .                   # 로컬 빌드 후 dist/ 직접 포함
-    buildCommand: echo "Using pre-built dist — no build step needed"  # ✅ 로컬 빌드 dist/ git 포함으로 파이프라인 분 절약
-    staticPublishPath: ./dist    # 로컬 빌드 결과물 경로 (git에 포함)
+    rootDir: .                   # 濡쒖뺄 鍮뚮뱶 ??dist/ 吏곸젒 ?ы븿
+    buildCommand: echo "Using pre-built dist ??no build step needed"  # ??濡쒖뺄 鍮뚮뱶 dist/ git ?ы븿?쇰줈 ?뚯씠?꾨씪??遺??덉빟
+    staticPublishPath: ./dist    # 濡쒖뺄 鍮뚮뱶 寃곌낵臾?寃쎈줈 (git???ы븿)
     pullRequestPreviewsEnabled: false
     routes:
-      # SPA 라우터 — 모든 경로를 index.html로 폴백
+      # SPA ?쇱슦????紐⑤뱺 寃쎈줈瑜?index.html濡??대갚
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
-      # ── 백엔드 API 주소 ──────────────────────────────────────
-      # ✅ 배포 후 반드시 실제 Render 백엔드 URL로 변경!
-      # 예: https://fishing-go-backend.onrender.com
+      # ?? 諛깆뿏??API 二쇱냼 ??????????????????????????????????????
+      # ??諛고룷 ??諛섎뱶???ㅼ젣 Render 諛깆뿏??URL濡?蹂寃?
+      # ?? https://fishing-go-backend.onrender.com
       - key: VITE_API_URL
-        sync: false              # Render 대시보드에서 직접 입력
-      # ── 카카오 SDK ───────────────────────────────────────────
-      # ✅ SEC-04: 하드코딩 제거 후 환경변수 필수화됨
-      # https://developers.kakao.com → 내 애플리케이션 → 앱 키 → JavaScript 키
+        sync: false              # Render ??쒕낫?쒖뿉??吏곸젒 ?낅젰
+      # ?? 移댁뭅??SDK ???????????????????????????????????????????
+      # ??SEC-04: ?섎뱶肄붾뵫 ?쒓굅 ???섍꼍蹂???꾩닔?붾맖
+      # https://developers.kakao.com ?????좏뵆由ъ??댁뀡 ????????JavaScript ??
       - key: VITE_KAKAO_APP_KEY
         sync: false
-      # ── 쿠팡 파트너스 ─────────────────────────────────────────
-      # ✅ BUG-59: 하드코딩 제거 후 환경변수 필수화됨
-      # https://partners.coupang.com → 마이페이지 → 파트너스 ID 확인
+      # ?? 荑좏뙜 ?뚰듃?덉뒪 ?????????????????????????????????????????
+      # ??BUG-59: ?섎뱶肄붾뵫 ?쒓굅 ???섍꼍蹂???꾩닔?붾맖
+      # https://partners.coupang.com ??留덉씠?섏씠吏 ???뚰듃?덉뒪 ID ?뺤씤
       - key: VITE_COUPANG_PARTNERS_ID
         sync: false
-      # ── KHOA 해양 API (조석/수온/낚시지수) ───────────────────────
-      # ✅ SEC-07: marineApi.js 하드코딩 제거 후 환경변수 필수화됨
-      # https://www.khoa.go.kr/api → 오픈 API → 발급 신청
+      # ?? KHOA ?댁뼇 API (議곗꽍/?섏삩/?싳떆吏?? ???????????????????????
+      # ??SEC-07: marineApi.js ?섎뱶肄붾뵫 ?쒓굅 ???섍꼍蹂???꾩닔?붾맖
+      # https://www.khoa.go.kr/api ???ㅽ뵂 API ??諛쒓툒 ?좎껌
       - key: VITE_KHOA_API_KEY
         sync: false
-      # ── 포트원 결제 (선택) ────────────────────────────────────
-      # https://portone.io → 가맹점 식별코드
+      # ?? ?ы듃??寃곗젣 (?좏깮) ????????????????????????????????????
+      # https://portone.io ??媛留뱀젏 ?앸퀎肄붾뱶
       - key: VITE_PORTONE_MERCHANT_ID
         sync: false
-      # ── AdSense (선택) ────────────────────────────────────────
+      # ?? AdSense (?좏깮) ????????????????????????????????????????
       - key: VITE_ADSENSE_PUB_ID
         sync: false
       - key: VITE_ADSENSE_SLOT_BANNER
         sync: false
       - key: VITE_ADSENSE_SLOT_NATIVE
         sync: false
-      # ── 포트원 채널키 (실결제 필수) ─────────────────────────────
-      # ✅ FIX: .env.example에 추가 후 render.yaml 누락 수정
-      # 포트원 대시보드 > 채널 관리에서 발급
+      # ?? ?ы듃??梨꾨꼸??(?ㅺ껐???꾩닔) ?????????????????????????????
+      # ??FIX: .env.example??異붽? ??render.yaml ?꾨씫 ?섏젙
+      # ?ы듃????쒕낫??> 梨꾨꼸 愿由ъ뿉??諛쒓툒
       - key: VITE_PORTONE_CHANNEL_KEY
         sync: false
-      # ── AdMob 광고 모드 (Android 전용) ──────────────────────────
-      # ✅ FIX: 미설정 시 VITE_ADMOB_TESTING=true 기본값 → 테스트 광고 (수익 미발생)
-      # 플레이스토어 출시 후 Render 환경변수에서 false로 설정
+      # ?? AdMob 愿묎퀬 紐⑤뱶 (Android ?꾩슜) ??????????????????????????
+      # ??FIX: 誘몄꽕????VITE_ADMOB_TESTING=true 湲곕낯媛????뚯뒪??愿묎퀬 (?섏씡 誘몃컻??
+      # ?뚮젅?댁뒪?좎뼱 異쒖떆 ??Render ?섍꼍蹂?섏뿉??false濡??ㅼ젙
       - key: VITE_ADMOB_TESTING
         sync: false
 
-  # ══════════════════════════════════════════════════════════════
-  # ⚙️  백엔드 — Node.js Express API
-  # ══════════════════════════════════════════════════════════════
+  # ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧
+  # ?숋툘  諛깆뿏????Node.js Express API
+  # ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧
   - type: web
     name: fishing-go-backend
     env: node
     rootDir: server
-    buildCommand: npm install      # ✅ FIX-DEPLOY: npm ci → npm install (package-lock.json 불일치로 4일간 배포 실패 수정)
-    startCommand: node --max-old-space-size=512 index.js  # ✅ 10TH-B5: 메모리 제한 512MB — 미처리 예외시 서버 다운 방지
-    healthCheckPath: /api/health   # ✅ ENH-B6: 실제 엔드포인트로 수정 (/api/status → /api/health)
-    plan: free          # ⚠️ 27TH-C3: Free 플랜 — 15분 비활동 시 슬립(cold start ~60초). 실서비스 전 plan: starter 이상으로 변경 권장
-    # ✅ DEPLOY-OPT: dist/ 변경 시 백엔드 재배포 방지 (프론트 빌드 파일 push와 무관)
+    buildCommand: npm install      # ??FIX-DEPLOY: npm ci ??npm install (package-lock.json 遺덉씪移섎줈 4?쇨컙 諛고룷 ?ㅽ뙣 ?섏젙)
+    startCommand: node --max-old-space-size=512 index.js  # ??10TH-B5: 硫붾え由??쒗븳 512MB ??誘몄쿂由??덉쇅???쒕쾭 ?ㅼ슫 諛⑹?
+    healthCheckPath: /api/health   # ??ENH-B6: ?ㅼ젣 ?붾뱶?ъ씤?몃줈 ?섏젙 (/api/status ??/api/health)
+    plan: free          # ?좑툘 27TH-C3: Free ?뚮옖 ??15遺?鍮꾪솢?????щ┰(cold start ~60珥?. ?ㅼ꽌鍮꾩뒪 ??plan: starter ?댁긽?쇰줈 蹂寃?沅뚯옣
+    # ??DEPLOY-OPT: dist/ 蹂寃???諛깆뿏???щ같??諛⑹? (?꾨줎??鍮뚮뱶 ?뚯씪 push? 臾닿?)
     autoDeploy: true
-    # 백엔드는 server/ 폴더 또는 render.yaml 변경 시에만 재배포
+    # 諛깆뿏?쒕뒗 server/ ?대뜑 ?먮뒗 render.yaml 蹂寃??쒖뿉留??щ같??
     deployFilterIncludePaths:
       - server
       - render.yaml
@@ -80,50 +80,56 @@ services:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
-        sync: false          # 필수! Render 대시보드에서 직접 입력
+        sync: false          # ?꾩닔! Render ??쒕낫?쒖뿉??吏곸젒 ?낅젰
       - key: MONGO_URI
-        sync: false          # MongoDB Atlas 연결 문자열
+        sync: false          # MongoDB Atlas ?곌껐 臾몄옄??
       - key: MONGO_PASS
-        sync: false          # MongoDB 비밀번호 (MONGO_URI 미사용 시)
+        sync: false          # MongoDB 鍮꾨?踰덊샇 (MONGO_URI 誘몄궗????
       - key: PORTONE_API_KEY
-        sync: false          # ✅ 28TH-C4: 포트원 콘솔(https://admin.portone.io) → 시스템 설정 → API 서비스 → API KEY
+        sync: false          # ??28TH-C4: ?ы듃??肄섏넄(https://admin.portone.io) ???쒖뒪???ㅼ젙 ??API ?쒕퉬????API KEY
       - key: PORTONE_API_SECRET
-        sync: false          # 포트원 콘솔 → 시스템 설정 → API 서비스 → API SECRET
+        sync: false          # ?ы듃??肄섏넄 ???쒖뒪???ㅼ젙 ??API ?쒕퉬????API SECRET
       - key: PORTONE_WEBHOOK_SECRET
-        sync: false          # 포트원 콘솔 → 결제연동 → 웹훅 → 시크릿키
+        sync: false          # ?ы듃??肄섏넄 ??寃곗젣?곕룞 ???뱁썒 ???쒗겕由욱궎
       - key: SMS_API_KEY
         sync: false          # CoolSMS API Key
       - key: SMS_API_SECRET
         sync: false          # CoolSMS API Secret
       - key: SMS_SENDER
-        sync: false          # 등록된 발신번호 (01000000000 형식)
+        sync: false          # ?깅줉??諛쒖떊踰덊샇 (01000000000 ?뺤떇)
       - key: KHOA_KEY
-        sync: false          # KHOA 해양 API Key
+        sync: false          # KHOA ?댁뼇 API Key
       - key: KHOA_CCTV_KEY
         sync: false          # KHOA CCTV API Key
       - key: YOUTUBE_API_KEY
         sync: false          # YouTube API Key
       - key: CLOUDINARY_URL
-        sync: false          # 선택사항 — 이미지 CDN 사용 시 입력
+        sync: false          # ?좏깮?ы빆 ???대?吏 CDN ?ъ슜 ???낅젰
       - key: COUPANG_ACCESS_KEY
-        sync: false          # 쿠팡 파트너스 Access Key (미설정 시 목업 데이터 사용)
+        sync: false          # 荑좏뙜 ?뚰듃?덉뒪 Access Key (誘몄꽕????紐⑹뾽 ?곗씠???ъ슜)
       - key: COUPANG_SECRET_KEY
-        sync: false          # 쿠팡 파트너스 Secret Key
+        sync: false          # 荑좏뙜 ?뚰듃?덉뒪 Secret Key
       - key: COUPANG_PARTNERS_ID
-        sync: false          # 쿠팡 파트너스 ID (예: AF0000000)
-      # ── CORS: 프론트엔드 도메인 허용 ─────────────────────────
-      # ✅ 10TH-A3: FRONTEND_URL → ALLOWED_ORIGIN 키 통일
-      # server/index.js가 process.env.ALLOWED_ORIGIN을 읽음 (불일치 버그 수정)
-      # Render Static Site 배포 후 자동 발급된 URL 또는 커스텀 도메인 입력
-      # 예: https://fishing-go-frontend.onrender.com
+        sync: false          # 荑좏뙜 ?뚰듃?덉뒪 ID (?? AF0000000)
+      # ?? CORS: ?꾨줎?몄뿏???꾨찓???덉슜 ?????????????????????????
+      # ??10TH-A3: FRONTEND_URL ??ALLOWED_ORIGIN ???듭씪
+      # server/index.js媛 process.env.ALLOWED_ORIGIN???쎌쓬 (遺덉씪移?踰꾧렇 ?섏젙)
+      # Render Static Site 諛고룷 ???먮룞 諛쒓툒??URL ?먮뒗 而ㅼ뒪? ?꾨찓???낅젰
+      # ?? https://fishing-go-frontend.onrender.com
       - key: ALLOWED_ORIGIN
         sync: false
-      # ── Firebase FCM 푸시 알림 (실기기 알림 필수) ────────────────
-      # Firebase Console → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성
-      # 발급된 JSON을 한 줄로 직렬화하여 입력
-      # 미설정 시 FCM 실기기 알림 완전 비작동 (socket.io 인앱 알림만 동작)
+      # ?? Firebase FCM ?몄떆 ?뚮┝ (?ㅺ린湲??뚮┝ ?꾩닔) ????????????????
+      # Firebase Console ???꾨줈?앺듃 ?ㅼ젙 ???쒕퉬??怨꾩젙 ????鍮꾧났媛????앹꽦
+      # 諛쒓툒??JSON????以꾨줈 吏곷젹?뷀븯???낅젰
+      # 誘몄꽕????FCM ?ㅺ린湲??뚮┝ ?꾩쟾 鍮꾩옉??(socket.io ?몄빋 ?뚮┝留??숈옉)
       - key: FIREBASE_SERVICE_ACCOUNT
-        sync: false          # ✅ 필수! Render 대시보드에서 JSON 문자열로 직접 입력
-      # ── Gemini AI (AI 낚시 가이드, 선택) ────────────────────────
+        sync: false          # ???꾩닔! Render ??쒕낫?쒖뿉??JSON 臾몄옄?대줈 吏곸젒 ?낅젰
+      # ?? Gemini AI (AI ?싳떆 媛?대뱶, ?좏깮) ????????????????????????
+      - key: ADMIN_SECRET
+        sync: false          # ✅ FIX-ADMIN-SECRET: 테스트 계정 생성 API 보호
+      - key: DIRECT_KEY
+        sync: false          # ✅ FIX-DIRECT-KEY: AliExpress Direct 키
+      - key: SEED_SECRET
+        sync: false          # ✅ FIX-SEED: DB 시드 데이터 보호 키
       - key: GEMINI_API_KEY
         sync: false

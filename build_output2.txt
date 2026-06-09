@@ -1,0 +1,33 @@
+﻿[36mvite v5.1.6 [32mbuilding for production...[36m[39m
+transforming...
+[32m??[39m 21 modules transformed.
+node.exe : [31mx[39m Build failed in 456ms
+위치 줄:1 문자:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([31mx[39m Build failed in 456ms:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[31merror during build:
+Error: [31m[vite:esbuild] Transform failed with 1 error:
+C:/Users/palin/Desktop/?싳떆GO/src/pages/MapHome.jsx:499:14: ERROR: Expected ";" but found "el"[31m
+file: [36mC:/Users/palin/Desktop/?싳떆GO/src/pages/MapHome.jsx:499:14[31m
+[33m
+[33mExpected ";" but found "el"[33m
+497|      }
+498|      try {
+499|        co      el.style.cssText = `
+   |                ^
+500|          background: ${color};
+501|          width: ${isCustom ? '28px' : '24px'}; height: ${isCustom ? '28px' : '24px'};
+[31m
+    at failureErrorWithLog (C:\Users\palin\Desktop\?싳떆GO\node_modules\esbuild\lib\main.js:1651:15)
+    at C:\Users\palin\Desktop\?싳떆GO\node_modules\esbuild\lib\main.js:849:29
+    at responseCallbacks.<computed> (C:\Users\palin\Desktop\?싳떆GO\node_modules\esbuild\lib\main.js:704:9)
+    at handleIncomingPacket (C:\Users\palin\Desktop\?싳떆GO\node_modules\esbuild\lib\main.js:764:9)
+    at Socket.readFromStdout (C:\Users\palin\Desktop\?싳떆GO\node_modules\esbuild\lib\main.js:680:7)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)[39m

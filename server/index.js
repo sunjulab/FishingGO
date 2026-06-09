@@ -14,6 +14,9 @@ try {
 const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
+// ✅ FIX-AXIOS-TIMEOUT: 전역 타임아웃 10초 — 외부 API 무한 대기 방지
+axios.defaults.timeout = 10000; // 10초
+axios.defaults.validateStatus = (s) => s < 500; // 4xx도 throw 안 함
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
@@ -557,7 +560,7 @@ app.post('/api/admin/seed-business-test', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (auth.startsWith('Bearer ')) {
     try {
-      const tp = jwt.verify(auth.slice(7), JWT_SECRET);
+      const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
       if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' });
     } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   }
@@ -627,7 +630,7 @@ app.post('/api/channel/videos', (req, res) => {
   if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   const tp = authHeader.slice(7);
   try {
-    const payload = jwt.verify(tp, JWT_SECRET);
+    const payload = jwt.verify(tp, JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(payload)) return res.status(403).json({ error: '관리자 권한 필요' });
   } catch { return res.status(401).json({ error: '인증 필요' }); }
   const video = req.body;
@@ -648,7 +651,7 @@ app.use(async (req, res, next) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return next();
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return next(); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return next(); }
     const email = tp.email || tp.id;
     if (!email) return next();
     const now = Date.now();
@@ -698,7 +701,7 @@ app.use((req, res, next) => {
     let userId = null;
     const auth = req.headers.authorization || '';
     if (auth.startsWith('Bearer ')) {
-      try { const p = jwt.verify(auth.slice(7), JWT_SECRET); userId = p.email || p.id || null; } catch {}
+      try { const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); userId = p.email || p.id || null; } catch {}
     }
 
     if (dbReady && VisitorLog) {
@@ -721,7 +724,7 @@ app.get('/api/admin/user-stats', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자만 접근 가능합니다.' });
 
     // ✅ 티어 정규화 맵 — 변형 이름을 표준 이름으로 매핑
@@ -873,6 +876,13 @@ try {
 
 // ✅ IMG-SIZE-FIX: 다중이미지 5장 × 4MB = 최대 20MB → 25mb로 확장 (이전 10mb에서 이미지 탈락 방지)
 app.use(express.json({ limit: '25mb' }));
+// ✅ FIX-JSON-ERR: JSON 파싱 에러 → 400 응답
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: '잘못된 JSON 형식입니다.' });
+  }
+  next(err);
+});
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
 // ✅ SCALE: API 응답 캐시 (메모리) — 날씨/물때/포인트 등 자주 변하지 않는 데이터
@@ -979,7 +989,7 @@ function verifyToken(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증이 필요합니다.' });
   try {
-    req.user = jwt.verify(auth.split(' ')[1], JWT_SECRET);
+    req.user = jwt.verify(auth.split(' ')[1], JWT_SECRET, { algorithms: ['HS256'] });
     next();
   } catch (e) {
     return res.status(401).json({ error: '토큰이 유효하지 않거나 만료되었습니다.' });
@@ -992,7 +1002,7 @@ app.get('/api/secret-point-overrides', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
   const isAdmin = isAdminToken(tp);
   if (!isAdmin) {
     // LITE+ 이상 티어 확인 (JWT tier 우선, DB fallback)
@@ -1015,7 +1025,7 @@ app.post('/api/secret-point-overrides', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
   const { id, lat, lng } = req.body;
@@ -1039,7 +1049,7 @@ app.delete('/api/secret-point-overrides/:id', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
   const { id } = req.params;
@@ -1063,7 +1073,7 @@ app.post('/api/spot-location-overrides', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { id, lat, lng, name } = req.body;
@@ -1092,7 +1102,7 @@ app.delete('/api/spot-location-overrides/:id', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { id } = req.params;
@@ -1116,7 +1126,7 @@ app.post('/api/custom-points', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { name, type, region, lat, lng, fish, obsCode, aiDescription, season, recommend, status } = req.body;
@@ -1149,7 +1159,7 @@ app.delete('/api/custom-points/:id', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { id } = req.params;
@@ -1166,7 +1176,7 @@ app.post('/api/ai/generate-point-info', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { name, type, region, lat, lng, obsCode } = req.body;
@@ -1208,7 +1218,7 @@ app.post('/api/admin/app-config', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
-    const p = jwt.verify(auth.slice(7), JWT_SECRET);
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   
@@ -1286,7 +1296,7 @@ io.on('connection', (socket) => {
   const handshakeToken = socket.handshake?.auth?.token || socket.handshake?.query?.token;
   if (handshakeToken) {
     try {
-      verifiedUser = jwt.verify(handshakeToken, JWT_SECRET);
+      verifiedUser = jwt.verify(handshakeToken, JWT_SECRET, { algorithms: ['HS256'] });
     } catch {
       // 토큰 만료/위조 — verifiedUser null 유지, 연결은 허용하되 발신 시 익명 처리
       (logger?.warn || console.warn)('[Socket] 잘못된 토큰으로 연결 시도:', socket.id);
@@ -1325,7 +1335,7 @@ io.on('connection', (socket) => {
   }
 
   socket.on('join_crew', async (crewId) => {
-    if (!crewId || typeof crewId !== 'string') return;
+    if (!crewId || typeof crewId !== 'string' || !/^[a-f0-9]{24}$/.test(crewId)) return; // ✅ FIX-CREWID
     socket.join(crewId);
     // ENH4-C4: DB에서 최근 50개 메시지만 로드 (기존 100개 → 초기 전송량 최적화)
     if (dbReady && ChatMessage) {
@@ -1356,6 +1366,9 @@ io.on('connection', (socket) => {
 
   socket.on('send_msg', async (data) => {
     if (!data.crewId || typeof data.crewId !== 'string') return;
+    if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-MSG-AUTH
+    if (data.type === 'text' && (!data.text || !String(data.text).trim())) return; // ✅ FIX-MSG-EMPTY
+    if (data.type !== 'post_share' && typeof data.text === 'string' && data.text.length > 1000) { socket.emit('error', { message: '1000자를 초과할 수 없습니다.' }); return; } // ✅ FIX-MSG-SIZE
 
     // ── 닉네임 결정 (기존 로직 동일) ─────────────────────────
     let resolvedNickname = cachedNickname;
@@ -2024,7 +2037,7 @@ app.post('/api/payment/verify', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { imp_uid, merchant_uid, planId, tier, harborId, userId, userName } = req.body;
     if (!planId || !userId) return res.status(400).json({ error: '필수 항목 누락' });
@@ -2153,7 +2166,7 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
 
     const userId = decodeURIComponent(req.params.userId);
@@ -2567,7 +2580,7 @@ app.get('/api/user/me', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
 
     // ✅ email 쿼리 파라미터 없을 때 JWT의 tp.email 폴백 사용
@@ -2617,7 +2630,7 @@ app.post('/api/cs/inquiry', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰이 유효하지 않습니다.' }); }
 
     const { realName, nickname, phone, category, title, content } = req.body;
@@ -2625,6 +2638,7 @@ app.post('/api/cs/inquiry', async (req, res) => {
       return res.status(400).json({ error: '문의 내용을 5자 이상 입력해주세요.' });
     }
     if (!title || title.trim().length < 2) {
+    if (title && title.trim().length > 200) return res.status(400).json({ error: '제목은 200자를 초과할 수 없습니다.' }); // ✅ FIX-TITLE-MAX
       return res.status(400).json({ error: '제목을 2자 이상 입력해주세요.' });
     }
 
@@ -2670,7 +2684,7 @@ app.get('/api/cs/inquiries', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '로그인이 필요합니다.', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰이 유효하지 않습니다.' }); }
 
     const isAdmin = isAdminToken(tp);
@@ -2706,7 +2720,7 @@ app.put('/api/cs/inquiry/:id/reply', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '로그인이 필요합니다.' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰이 유효하지 않습니다.' }); }
 
     if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자만 답변할 수 있습니다.' });
@@ -2753,7 +2767,7 @@ app.put('/api/user/tier', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { email, tier } = req.body;
@@ -2821,7 +2835,7 @@ app.post('/api/admin/force-tier', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
 
   const { targetEmail, tier } = req.body;
@@ -2858,7 +2872,7 @@ app.get('/api/admin/suspicious-tiers', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
 
   const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'];
@@ -2919,7 +2933,7 @@ app.post('/api/user/point-visit-check', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
 
     // 어드민은 무제한
@@ -2999,7 +3013,7 @@ app.post('/api/user/settings', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, notiSettings } = req.body;
     if (!email || !notiSettings) return res.status(400).json({ error: '이메일과 설정 데이터가 필요합니다.' });
@@ -3007,7 +3021,7 @@ app.post('/api/user/settings', async (req, res) => {
     if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 설정만 변경 가능' });
 
     if (dbReady && User) {
-      const user = await User.findOneAndUpdate({ email }, { notiSettings }, { new: true });
+      const user = await User.findOneAndUpdate({ email }, { notiSettings }, { new: true, runValidators: true });
       if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
       return res.json({ success: true, notiSettings: user.notiSettings });
     }
@@ -3200,7 +3214,7 @@ app.post('/api/auth/verify-otp', (req, res) => {
 // ── 구글 심사관용 테스트 계정 자동 생성 (어드민 전용) ───────────
 app.post('/api/admin/create-test-account', async (req, res) => {
   const { adminKey } = req.body;
-  if (adminKey !== (process.env.ADMIN_SECRET || 'fishinggo-admin-2024')) {
+  if (!process.env.ADMIN_SECRET || adminKey !== process.env.ADMIN_SECRET) {
     return res.status(403).json({ error: '권한 없음' });
   }
   try {
@@ -3241,6 +3255,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (!email || !password || !name) return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
     // 입력값 검증
     if (email.trim().length < 4) return res.status(400).json({ error: 'ID는 4자 이상이어야 합니다.' });
+    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim())) { return res.status(400).json({ error: '이메일 형식이 올바르지 않습니다.' }); } // ✅ FIX-EMAIL
     if (password.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
     if (name.trim().length < 2) return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
     if (name.trim().length > 20) return res.status(400).json({ error: '닉네임은 20자 이하여야 합니다.' });
@@ -3376,7 +3391,7 @@ app.post('/api/auth/refresh', async (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken) return res.status(401).json({ error: 'Refresh Token이 없습니다.' });
   try {
-    const decoded = jwt.verify(refreshToken, JWT_SECRET);
+    const decoded = jwt.verify(refreshToken, JWT_SECRET, { algorithms: ['HS256'] });
     if (decoded.type !== 'refresh') return res.status(401).json({ error: '유효하지 않은 Refresh Token입니다.' });
 
     // tier를 최신 DB 값으로 동기화 (구독 만료/업그레이드 반영)
@@ -3476,7 +3491,7 @@ app.put('/api/user/nickname', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, newName } = req.body;
     if (!newName) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
@@ -3496,7 +3511,7 @@ app.put('/api/user/nickname', async (req, res) => {
     if (dbReady && User) {
       const dup = await User.findOne({ name: trimmed });
       if (dup && dup.email !== email) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
-      const user = await User.findOneAndUpdate({ email }, { name: trimmed }, { new: true });
+      const user = await User.findOneAndUpdate({ email }, { name: trimmed }, { new: true, runValidators: true });
       if (Post) await Post.updateMany({ author_email: email }, { author: trimmed });
       return res.json({ success: true, name: user.name });
     } else {
@@ -3518,7 +3533,7 @@ app.put('/api/user/password', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { email, currentPassword, newPassword } = req.body;
@@ -3563,7 +3578,7 @@ app.post('/api/user/block', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, blockTargetName } = req.body;
     if (!blockTargetName) return res.status(400).json({ error: '차단할 사용자 닉네임을 입력해주세요.' });
@@ -3609,7 +3624,7 @@ app.post('/api/user/unblock', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, unblockTargetName } = req.body;
     const isAdmin = isAdminToken(tp);
@@ -3643,7 +3658,7 @@ app.post('/api/user/follow', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { email, targetEmail, targetName } = req.body;
@@ -3691,7 +3706,7 @@ app.post('/api/user/unfollow', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { email, targetEmail, targetName } = req.body;
@@ -3731,7 +3746,7 @@ app.get('/api/user/followers', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
@@ -3757,7 +3772,7 @@ app.get('/api/user/following', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
@@ -3787,7 +3802,7 @@ app.get('/api/user/profile/:name', async (req, res) => {
     let myEmail = null;
     const auth = req.headers.authorization || '';
     if (auth.startsWith('Bearer ')) {
-      try { const tp = jwt.verify(auth.slice(7), JWT_SECRET); myEmail = tp.email || tp.id; }
+      try { const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); myEmail = tp.email || tp.id; }
       catch { /* 비로그인 허용 */ }
     }
 
@@ -3874,7 +3889,7 @@ app.get('/api/business/my-posts', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = tp.email || tp.id;
     if (dbReady && BusinessPost) {
       const posts = await BusinessPost.find({ author_email: email }).sort({ createdAt: -1 }).lean();
@@ -3892,7 +3907,7 @@ app.get('/api/business/my-phone', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = tp.email || tp.id;
     let phone = '';
     let shipName = '';
@@ -3922,7 +3937,7 @@ app.post('/api/business/gallery-post', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = tp.email || tp.id;
 
     const { author, fish, size, weight, location, memo, image, shipName, phone } = req.body;
@@ -3969,7 +3984,7 @@ app.delete('/api/business/posts/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = tp.email || tp.id;
     const isAdmin = isAdminToken(tp);
     const { id } = req.params;
@@ -3995,7 +4010,7 @@ app.post('/api/user/avatar', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, avatar } = req.body;
     if (!email) return res.status(400).json({ error: '사용자 이메일이 필요합니다.' });
@@ -4006,7 +4021,7 @@ app.post('/api/user/avatar', async (req, res) => {
     if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
 
     if (dbReady && User) {
-      const updated = await User.findOneAndUpdate({ email }, { avatar }, { new: true });
+      const updated = await User.findOneAndUpdate({ email }, { avatar }, { new: true, runValidators: true });
       if (!updated) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
       return res.json({ success: true, avatar: updated.avatar });
     } else {
@@ -4048,7 +4063,7 @@ app.get('/api/user/posts', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
     const isAdmin = isAdminToken(tp);
@@ -4076,7 +4091,7 @@ app.get('/api/user/records', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'email 파라미터 필요' });
     const isAdmin = isAdminToken(tp);
@@ -4114,7 +4129,7 @@ app.post('/api/user/records', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { author, fish, size, weight, location, bait, weather, wind, wave, memo, img, image, date, time, pointId } = req.body;
     // ✅ BUG-FIX: author_email은 JWT에서만 추출 (body author_email 신뢰 → 타인 기록 위장 보안 취약점 수정)
     const author_email = tp.email || tp.id;
@@ -4142,7 +4157,7 @@ app.delete('/api/user/records/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
     const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
@@ -4287,7 +4302,7 @@ app.post('/api/community/posts', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     let { author, category, content, image, images, location } = req.body;
     // ✅ BUG-FIX: author_email은 JWT에서만 추출 (보안 취약점 수정)
     const author_email = tp.email || tp.id || 'guest@fishinggo.kr';
@@ -4331,7 +4346,7 @@ app.delete('/api/community/posts/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
     const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
@@ -4363,7 +4378,7 @@ app.put('/api/community/posts/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { content, category, image, images } = req.body;
     // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
     const jwtEmail = tp.email || tp.id;
@@ -4421,7 +4436,7 @@ app.post('/api/community/posts/:id/comments', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { author, text } = req.body;
     // ✅ BUG-FIX: 댓글 author_email도 JWT에서만 추출 (보안 취약점 수정)
     const author_email = tp.email || tp.id;
@@ -4464,7 +4479,7 @@ app.delete('/api/community/posts/:id/comments/:commentId', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const requesterEmail = tp.email || tp.id;
     const isAdminUser = isAdminToken(tp); // ✅ 9TH-A1: requesterEmail 불일치 비교 → isAdminToken() 헬퍼 통일
     const { id, commentId } = req.params;
@@ -4508,7 +4523,7 @@ app.post('/api/community/posts/:id/like', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const voterEmail = tp.email || tp.id;
     if (dbReady && Post) {
       let post = null;
@@ -4542,7 +4557,7 @@ app.patch('/api/community/posts/:id/like', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const voterEmail = tp.email || tp.id;
     if (dbReady && Post) {
       let post = null;
@@ -4598,7 +4613,7 @@ app.post('/api/community/crews', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { name, region, isPrivate, password, owner, ownerName, limit } = req.body;
     if (!name || !owner || !ownerName) return res.status(400).json({ error: '필수 항목 누락' });
     // limit 유효성 검증: 3~1000 범위 강제
@@ -4627,7 +4642,7 @@ app.post('/api/admin/crews/fix-limit', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' });
   const newLimit = parseInt(req.body.defaultLimit) || 1000;
   try {
@@ -4673,7 +4688,7 @@ app.delete('/api/community/crews/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
     const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
@@ -4701,7 +4716,7 @@ app.patch('/api/community/crews/:id/transfer', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { newOwnerEmail } = req.body;
     // ✅ BUG-06 FIX: body.email 신뢰 제거 → JWT에서만 현 크루장 이메일 추출
@@ -4778,7 +4793,7 @@ app.put('/api/community/crews/:id/logo', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { logo } = req.body;
     if (!logo) return res.status(400).json({ error: '이미지 데이터가 필요합니다.' });
@@ -4814,7 +4829,7 @@ app.post('/api/community/crews/:id/join', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { password } = req.body;
     // ✅ BUG-09 FIX: email/name을 JWT에서만 추출 (본문 email 신뢰 → 명단 위조 차단)
@@ -4887,7 +4902,7 @@ app.post('/api/community/crews/:id/leave', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     // ✅ BUG-FIX: 크루 탈퇴 email은 JWT에서만 추출 (body email → 타인 강제 탈퇴 보안 취약점 수정)
     const email = tp.email || tp.id;
@@ -4942,7 +4957,7 @@ app.delete('/api/community/crews/:id/members/:targetEmail', async (req, res) => 
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const targetEmail = decodeURIComponent(req.params.targetEmail);
     const isAdmin = isAdminToken(tp);
@@ -4984,7 +4999,7 @@ app.patch('/api/community/crews/:id/members/:targetEmail/role', async (req, res)
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { role } = req.body; // 부여할 역할
     // ✅ BUG-05 FIX: email을 JWT에서만 추출 (본문 email 신뢰 → 권한 우회 차단)
@@ -5031,7 +5046,7 @@ app.get('/api/user/crews', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const email = tp.email || tp.id;
 
@@ -5087,7 +5102,7 @@ app.post('/api/community/notices', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
     const { title, content, isPinned, isPopup, image, images } = req.body;
     if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
@@ -5113,7 +5128,7 @@ app.put('/api/community/notices/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
     const { title, content, image, images, isPopup } = req.body;
     if (!title || !content) return res.status(400).json({ error: '제목과 내용 필수' });
@@ -5149,7 +5164,7 @@ app.delete('/api/community/notices/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
     if (dbReady && Notice) {
       await Notice.findByIdAndDelete(req.params.id);
@@ -5218,7 +5233,7 @@ app.post('/api/community/business', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { author, shipName, type, target, region, date, price, phone, content, cover, images: rawImages, isPinned, harborId, expiresAt, capacity } = req.body;
     // ✅ BUG-5 FIX: author_email은 JWT에서만 가져와야 함 (클라이언트 body 무시 — 타인 계정 위장 방지)
@@ -5364,7 +5379,7 @@ app.delete('/api/community/business/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     // ✅ BUG-DELETE-FIX: email은 JWT에서만 추출 (body email 신뢰 → 타인 게시글 삭제 가능 보안 취약점 수정)
     const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
@@ -5397,7 +5412,7 @@ app.put('/api/community/business/:id', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     // ✅ BUG-PUT-FIX: email은 JWT에서만 추출 (body email 신뢰 → 타인 게시글 수정 가능 보안 취약점 수정)
     const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
@@ -6056,7 +6071,7 @@ function isMaster(req) {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return false;
   try {
-    const tp = jwt.verify(auth.slice(7), JWT_SECRET);
+    const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     return isAdminToken(tp);
   } catch { return false; }
 }
@@ -6244,7 +6259,7 @@ app.post('/api/pro/purchase', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { userId, userName } = req.body;
   if (!userId) return res.status(400).json({ error: '필수 정보 누락' });
   const isAdmin = isAdminToken(tp);
@@ -6284,7 +6299,7 @@ app.get('/api/pro/status', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ error: '사용자 ID 필요' });
   const isAdmin = isAdminToken(tp);
@@ -6320,7 +6335,7 @@ app.delete('/api/pro/cancel', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자만 접근 가능' });
   const { userId } = req.body;
   if (proSubscriptions[userId]) {
@@ -6487,7 +6502,7 @@ app.post('/api/vvip/purchase', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   const { harborId, userId, userName } = req.body;
   if (!harborId || !userId) return res.status(400).json({ error: '필수 정보 누락' });
   const isAdmin = isAdminToken(tp);
@@ -6559,7 +6574,7 @@ app.get('/api/vvip/my-slot', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   // userId 쿼리파라미터 대신 JWT에서 추출 (타인 열람 차단)
   const { userId } = req.query;
   const isAdmin = isAdminToken(tp);
@@ -6591,7 +6606,7 @@ app.post('/api/admin/vvip/grant', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
 
   const { userId, harborId, days = 30 } = req.body;
@@ -7162,7 +7177,7 @@ app.post('/api/vvip/cancel', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '권한 없음' });
     const { harborId } = req.body;
     if (dbReady && User) {
@@ -7326,7 +7341,7 @@ app.post('/api/payment/billing/register', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { imp_uid, customer_uid, planId, pgProvider, userId, userName, harborId } = req.body;
@@ -7439,7 +7454,7 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const { userId } = req.params;
@@ -7480,7 +7495,7 @@ app.delete('/api/payment/subscription/:userId', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { userId } = req.params;
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.id !== userId && tp.email !== userId) return res.status(403).json({ error: '본인 구독만 취소 가능합니다.' });
@@ -7532,7 +7547,7 @@ app.put('/api/payment/subscription/:userId/plan', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { userId } = req.params;
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.id !== userId && tp.email !== userId) return res.status(403).json({ error: '본인 구독만 변경 가능합니다.' });
@@ -7587,7 +7602,7 @@ async function checkSubscriptionValid(req, res, next) {
   try {
     const authHeader = req.headers.authorization || '';
     if (!authHeader.startsWith('Bearer ')) return next();
-    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET);
+    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     const userId = payload.email || payload.id;
     if (!userId) return next();
 
@@ -7623,7 +7638,7 @@ app.get('/api/payment/history', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
     const userId = req.query.userId;
@@ -7793,7 +7808,7 @@ app.get('/api/user/favorites', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const userId = tp.email || tp.id; // ✅ BUG-03 FIX: JWT에서만 추출
     if (dbReady && User) {
       const u = await User.findOne({ $or: [{ email: userId }, { id: userId }] }, 'favorites').lean().catch(() => null);
@@ -7811,7 +7826,7 @@ app.post('/api/user/favorites', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { userId, pointId, action } = req.body; // action: 'add' | 'remove'
     if (!userId || !pointId || !action) return res.status(400).json({ error: '필수 항목 누락' });
     // 본인 또는 어드민만 즐겨찾기 수정 가능
@@ -7848,7 +7863,7 @@ app.get('/api/admin/revenue', async (req, res) => {
     const authHeader = req.headers.authorization || '';
     if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
     let payload;
-    try { payload = jwt.verify(authHeader.slice(7), JWT_SECRET); }
+    try { payload = jwt.verify(authHeader.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '인증 필요' }); }
     const isAdmin = isAdminToken(payload); // ✅ 9TH-A1/B1: payload.name 불일치 비교 제거 — isAdminToken은 id/email만 체크 (ADMIN 기준 통일)
     if (!isAdmin) return res.status(403).json({ error: '접근 권한 없음' });
@@ -8407,7 +8422,7 @@ const ShopClick = mongoose.models.ShopClick || mongoose.model('ShopClick',
 /**
  * POST /api/shop/click — 상품 클릭 로깅 (수익 최적화용)
  */
-app.post('/api/shop/click', async (req, res) => {
+app.post('/api/shop/click', searchLimiter, async (req, res) => { // ✅ FIX-CLICK-LIMIT: 분당 30회 제한
   try {
     const { productId, source, keyword } = req.body;
     if (dbReady && productId) {
@@ -8518,7 +8533,7 @@ setTimeout(function(){ document.body.innerHTML='<pre>${JSON.stringify(msg)}</pre
 
   if (!token) return res.send(html({ ok: false, error: '인증 토큰 필요' }));
   let user;
-  try { user = jwt.verify(token, JWT_SECRET); }
+  try { user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); }
   catch { user = jwt.decode(token); if (!user) return res.send(html({ ok: false, error: '유효하지 않은 토큰' })); }
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
   if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
@@ -8569,7 +8584,7 @@ app.get('/api/shop/manual/add', async (req, res) => {
 
   if (!token) return send(401, { error: '인증 토큰 필요' });
   let user;
-  try { user = jwt.verify(token, JWT_SECRET); }
+  try { user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); }
   catch {
     user = jwt.decode(token);
     if (!user) return send(401, { error: '유효하지 않은 토큰 형식' });
@@ -8830,7 +8845,7 @@ app.get('/api/catch/my', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const userId = tp.email || tp.id; // ✅ BUG-02 FIX: JWT에서만 추출
     await waitForDb(5000);
     const records = await CatchRecord.find({ userId }).sort({ createdAt: -1 }).limit(50).lean();
@@ -8847,7 +8862,7 @@ app.post('/api/catch/:id/like', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const userId = tp.email || tp.id; // ✅ BUG-01 FIX: JWT에서만 추출
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) // ✅ BUG-01 FIX: CastError 방지
       return res.status(400).json({ error: '유효하지 않은 ID' });
@@ -8944,7 +8959,7 @@ app.post('/api/contest', async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
   let tp;
-  try { tp = jwt.verify(auth.slice(7), JWT_SECRET); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자(MASTER)만 대회를 등록할 수 있습니다.' });
   try {
     const { title, fishName, region, metric, startDate, endDate, description, prize } = req.body;
@@ -9005,8 +9020,12 @@ app.get('/api/contest/all', async (req, res) => {
     res.status(500).json({ error: '서버 오류' });
   }
 });
+// ✅ FIX-UNCAUGHT: 미처리 예외 → cluster.js worker 자동 재시작
+process.on('uncaughtException', (err) => { (logger?.error || console.error)('[FATAL] uncaughtException:', err?.message || err); process.exit(1); });
+process.on('unhandledRejection', (reason) => { (logger?.warn || console.warn)('[WARN] unhandledRejection:', reason?.message || reason); });
 
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, '0.0.0.0', () => {
   const env = process.env.NODE_ENV || 'development';
 // ✅ SCALE: Keep-Alive 최적화 — 연결 재사용으로 핸드셰이크 비용 절감

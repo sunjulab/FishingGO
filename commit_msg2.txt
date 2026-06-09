@@ -1,0 +1,10 @@
+fix: HIGH severity bugs round 2 - MapHome and CommunityTab
+
+MAP-01: MapHome init useEffect IIFE - added cancelled flag to prevent setState after unmount
+MAP-03: _enterPoint - added window.kakao?.maps null guard to prevent TypeError crash when Kakao SDK not loaded
+CT-01: fetchPosts - added isMountedRef.current guard after await and in finally block
+CT-02: fetchData in useEffect - added cancelled flag for race condition protection on user.email change
+CT-06: stories fetch inside fetchData - added cancelled guard
+CT-04: likeTimerRef cleanup on unmount (from previous commit)
+CT-05: blockedUsersRef TDZ fix (from previous commit)
+noticePosts: fixed corrupted useState destructuring from edit conflict

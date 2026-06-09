@@ -12,7 +12,7 @@ const postSchema = new mongoose.Schema({
   author:       { type: String, required: true },
   author_email: { type: String, required: true },
   category:     { type: String, required: true },
-  content:      { type: String, required: true },
+  content: { type: String, maxlength: 15000, trim: true, required: true },
   image:        { type: String, default: null },
   images:       { type: [String], default: [],
     validate: {
