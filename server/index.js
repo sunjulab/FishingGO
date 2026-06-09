@@ -374,7 +374,8 @@ const app = express();
 // ─── 보안 헤더 (Helmet) ────────────────────────────────────────
 try {
   const helmet = require('helmet');
-  app.use(helmet({ contentSecurityPolicy: false, // ✅ FIX-HELMET: CSP는 Vite SPA가 관리 (script-src 'unsafe-inline' 필요)
+  app.use(helmet({ contentSecurityPolicy: false, // ✅ FIX-HELMET:
+    strictTransportSecurity: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false, // ✅ FIX-HSTS CSP는 Vite SPA가 관리 (script-src 'unsafe-inline' 필요)
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     crossOriginEmbedderPolicy: false })); // CSP는 SPA 프론트 판단에 맡김으로 off
 } catch (e) { /* helmet 미설치 — npm install helmet */ }
@@ -2310,7 +2311,19 @@ app.post('/api/payment/webhook', async (req, res) => {
     // ✅ BUG-FIX: express.json() 파싱 후 JSON.stringify(req.body)는 원본 raw body와 순서 불일치
     // → HMAC 서명 불일치 발생. 웹훅 처리 자체는 스케줄러(runBillingScheduler)가 담당하므로
     //   여기서는 로그만 기록하고 200 반환 (포트원 필수 요구사항)
+    // ✅ FIX-WEBHOOK-SIG: PORTONE HMAC 서명 검증
     const signature = req.headers['x-iamport-signature'];
+    if (process.env.PORTONE_WEBHOOK_SECRET && signature) {
+      try {
+        const crypto = require('crypto');
+        const rawBody = JSON.stringify(req.body);
+        const expected = crypto.createHmac('sha256', process.env.PORTONE_WEBHOOK_SECRET).update(rawBody).digest('hex');
+        if (signature !== expected) {
+          logger.warn('[Webhook] FIX-WEBHOOK-SIG: 서명 불일치 — 위조 요청 차단');
+          return res.status(401).json({ error: '서명 검증 실패' });
+        }
+      } catch { }
+    }
     if (process.env.NODE_ENV !== 'production') {
       (logger?.debug || console.log)(`[Webhook] 서명 수신: ${signature ? '있음' : '없음'}`);
     }
@@ -8150,7 +8163,9 @@ app.get('/api/shop/ali-resolve', async (req, res) => {
   const DIRECT_KEY = process.env.DIRECT_KEY; // ✅ FIX-DIRECT-KEY
   const { url, key } = req.query;
 
-  if (key !== DIRECT_KEY) return res.status(403).json({ error: '권한 없음' });
+  if (!DIRECT_KEY || !key || !require('crypto').timingSafeEqual(Buffer.from(DIRECT_KEY), Buffer.from(key.padEnd(DIRECT_KEY.length, '\0').substring(0, DIRECT_KEY.length)))) {
+    return res.status(403).json({ error: '권한 없음' }); // ✅ FIX-TIMING-SAFE
+  }
   if (!url) return res.status(400).json({ error: 'url 파라미터 필요' });
 
   const https = require('https');
@@ -9084,6 +9099,11 @@ app.post('/api/auth/logout', verifyToken, async (req, res) => {
     }
     res.json({ success: true, message: '로그아웃 완료. 클라이언트 토큰을 삭제해주세요.' });
   } catch { res.json({ success: true }); }
+});
+
+// ✅ FIX-404-HANDLER: 미매칭 라우트 404 응답
+app.use((req, res) => {
+  res.status(404).json({ error: '요청한 API를 찾을 수 없습니다.', path: req.path });
 });
 
 // ✅ FIX-GLOBAL-ERROR: 글로벌 에러 핸들러
