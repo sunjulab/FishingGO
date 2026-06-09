@@ -55,6 +55,7 @@ const ALL_FILES = [
   'src/pages/VVIPSubscribe.jsx',
   'src/pages/CommunityTab.jsx',
   'src/pages/MyPage.jsx',
+  'src/pages/MapHome.jsx',
   'src/components/SubscriptionFailBanner.jsx',
   'src/components/UpgradeModal.jsx',
   'src/components/AdUnit.jsx',
@@ -275,7 +276,35 @@ if (commLines.length > 0) {
 }
 
 // ════════════════════════════════════════════
-// 10. 빌드 문법 검사
+// 10. MapHome.jsx 언마운트 방어 점검
+// ════════════════════════════════════════════
+const mapHomeLines = readLines('src/pages/MapHome.jsx');
+if (mapHomeLines.length > 0) {
+  // secret-point-overrides useEffect 내 cancelled 패턴
+  const secretRange = findLineRange(mapHomeLines, 'secret-point-overrides', 25);
+  if (!secretRange.some(l => l.includes('cancelled'))) {
+    issue('HIGH', 'src/pages/MapHome.jsx', 'secret-point-overrides useEffect',
+      'cancelled 언마운트 방어 없음 — 언마운트 후 setEffectiveSecretPoints 호출 위험',
+      'let cancelled = false; + if(cancelled) return; + return () => { cancelled = true; }');
+  }
+  // spot-location-overrides useEffect 내 cancelled 패턴
+  const spotRange = findLineRange(mapHomeLines, 'spot-location-overrides', 25);
+  if (!spotRange.some(l => l.includes('cancelled'))) {
+    issue('HIGH', 'src/pages/MapHome.jsx', 'spot-location-overrides useEffect',
+      'cancelled 언마운트 방어 없음 — 언마운트 후 setState 호출 위험',
+      'cancelled 패턴 추가');
+  }
+  // custom-points useEffect 내 cancelled 패턴
+  const customPtsRange = findLineRange(mapHomeLines, 'custom-points', 15);
+  if (!customPtsRange.some(l => l.includes('cancelled'))) {
+    issue('HIGH', 'src/pages/MapHome.jsx', 'custom-points useEffect',
+      'cancelled 언마운트 방어 없음 — setCustomPoints 호출 위험',
+      'cancelled 패턴 추가');
+  }
+}
+
+// ════════════════════════════════════════════
+// 11. 빌드 문법 검사
 // ════════════════════════════════════════════
 try {
   execSync('node --check server/index.js', { cwd: ROOT, stdio: 'pipe' });

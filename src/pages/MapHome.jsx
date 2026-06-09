@@ -308,8 +308,10 @@ export default function MapHome() {
   /* ── 서버에서 비밀포인트 좌표 오버라이드 fetch (프리미엄 이상만 호출) ── */
   useEffect(() => {
     if (!canAccessPremium && !isAdmin) return;
+    let cancelled = false; // ✅ FIX-MED: 언마운트 후 setState 방어
     apiClient.get('/api/secret-point-overrides')
       .then(res => {
+        if (cancelled) return;
         const ov = res.data || {};
         const applied = SECRET_FISHING_POINTS.map(p => {
           const key = String(p.id);
@@ -318,17 +320,21 @@ export default function MapHome() {
         setEffectiveSecretPoints(applied);
       })
       .catch(() => {
+        if (cancelled) return;
         try {
           const ov = JSON.parse(localStorage.getItem('secretPointOverrides') || '{}');
           setEffectiveSecretPoints(SECRET_FISHING_POINTS.map(p => ov[p.id] ? { ...p, lat: ov[p.id].lat, lng: ov[p.id].lng } : p));
         } catch { /* 기본값 유지 */ }
       });
+    return () => { cancelled = true; };
   }, [canAccessPremium, isAdmin]);
 
   /* ── MASTER 전용: 일반 포인트 좌표 오버라이드 로드 ── */
   useEffect(() => {
+    let cancelled = false; // ✅ FIX-LOW: 언마운트 후 setState 방어
     apiClient.get('/api/spot-location-overrides')
       .then(res => {
+        if (cancelled) return;
         const ov = res.data || {};
         setSpotLocOverrides(ov);
         const applied = ALL_FISHING_POINTS.map(p => {
@@ -338,13 +344,16 @@ export default function MapHome() {
         setEffectiveAllPoints(applied);
       })
       .catch(() => { /* 오버라이드 없으면 원본 사용 */ });
+    return () => { cancelled = true; };
   }, []);
 
   /* ── 커스텀 포인트 로드 (신규 추가된 포인트) ── */
   useEffect(() => {
+    let cancelled = false; // ✅ FIX-LOW: 언마운트 후 setState 방어
     apiClient.get('/api/custom-points')
-      .then(res => { if (Array.isArray(res.data) && res.data.length > 0) setCustomPoints(res.data); })
+      .then(res => { if (!cancelled && Array.isArray(res.data) && res.data.length > 0) setCustomPoints(res.data); })
       .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   /* ── 카카오맵 초기화 (viewMode=map 진입 시, kakao.maps.load 공식 콜백) ── */
