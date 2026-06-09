@@ -425,8 +425,14 @@ try {
 global.logger = logger;
 
 // ─── CORS: 허용 도메인 화이트리스트 ──────────────────────────────
-// 모든 origin 허용 (모바일 앱 특성 상 JWT로 인증, origin 제한 불필요)
-const ALLOWED_ORIGINS = [/.*/];  // 전체 허용
+// FIX-CORS-ORIGIN: 프로덕션에서는 ALLOWED_ORIGIN_LIST 환경변수로 Origin 제한
+// 모바일 앱(React Native)은 Origin 없이 접근하므로 null origin은 별도 처리
+const PROD_ORIGINS = process.env.ALLOWED_ORIGIN_LIST
+  ? process.env.ALLOWED_ORIGIN_LIST.split(',').map(o => o.trim()).filter(Boolean)
+  : null; // null이면 전체 허용 (개발 환경)
+const ALLOWED_ORIGINS = PROD_ORIGINS && PROD_ORIGINS.length > 0
+  ? PROD_ORIGINS.map(o => o.startsWith("/") ? new RegExp(o.slice(1, -1)) : o)
+  : [/.*/];  // 환경변수 미설정 시 모두 허용 (개발용)
 
 // 환경변수로 추가 허용 도메인 설정 (프로덕션 배포 시 사용)
 if (process.env.ALLOWED_ORIGIN) {
@@ -864,7 +870,17 @@ setInterval(() => {
 try {
   const rateLimit = require('express-rate-limit');
   // 로그인/회원가입: IP당 10분/500회 (통신사 NAT 환경 수백명 커버)
-  const authLimiter = rateLimit({
+  // FIX-POST-RATE: 게시글 작성 rate limit (1분 5회)
+const postCreateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1분
+  max: 5,
+  message: { error: '게시글 작성이 너무 빠릅니다. 잠시 후 다시 시도해주세요.' },
+  keyGenerator: (req) => req.headers.authorization?.slice(-20) || req.ip || 'unknown',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
     max: 10,
     message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
@@ -4568,7 +4584,7 @@ app.get('/api/community/posts/:id', async (req, res) => {
 });
 
 // ── 오픈게시판 작성 (JWT 인증 필수 — 로그인 사용자만 작성 가능) ──────────────
-app.post('/api/community/posts', async (req, res) => {
+app.post('/api/community/posts', postCreateLimiter, async (req, res) => { // FIX-POST-RATE-APPLY
   try {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
