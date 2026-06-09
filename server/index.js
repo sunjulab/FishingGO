@@ -8954,23 +8954,40 @@ function _buildRecommendKeyword(pointType, fish) {
 
 // ─── 조황 인증 API ───────────────────────────────────────────────────────────
 
-// POST /api/catch — 조황 등록
+// ✅ FIX-IMAGEURL-SSRF: 이미지 URL SSRF 방어 헬퍼 — 내부망/file://javascript: 차단
+function sanitizeImageUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  const u = url.trim();
+  if (u.startsWith('data:image/')) return u;
+  if (!u.startsWith('http://') && !u.startsWith('https://')) return null;
+  if (/^https?:\/\/(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|169\.254\.|::1|localhost|0\.0\.0\.0)/i.test(u)) return null;
+  if (/^https?:\/\/metadata\.(google|aws|azure)/i.test(u)) return null;
+  return u.slice(0, 2000);
+}
+// POST /api/catch — 조황 등록 (✅ FIX-CATCH-AUTH)
 app.post('/api/catch', catchLimiter, async (req, res) => { // ✅ FIX-CATCH-RATE: 1분 5회 제한
   try {
-    const { userId, userName, userAvatar, fishName, fishSize, fishWeight,
+    // ✅ FIX-CATCH-AUTH: JWT 인증 필수 (userId body 신뢰 제거 → JWT에서만 추출)
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    const { userName, userAvatar, fishName, fishSize, fishWeight,
             imageUrl, location, lat, lng, memo, weather, tide, contestId,
             verified, aiConfidence } = req.body;
+    const userId = tp.email || tp.id; // ✅ FIX-CATCH-AUTH: userId는 JWT에서만 (주입 방지)
     if (!userId || !fishName) return res.status(400).json({ error: '필수 항목 누락' });
+    const safeImageUrl = sanitizeImageUrl(imageUrl); // ✅ FIX-IMAGEURL-SSRF
     await waitForDb(5000);
     const record = await CatchRecord.create({
       userId, userName, userAvatar, fishName,
       fishSize: fishSize || 0, fishWeight: fishWeight || 0,
-      imageUrl, location, lat, lng, memo, weather, tide,
+      imageUrl: safeImageUrl, location, lat, lng, memo, weather, tide,
       contestId, verified: !!verified, aiConfidence: aiConfidence || 0,
     });
     // EXP 보상 (+30 EXP)
     if (dbReady && User) {
-      await User.updateOne({ _id: userId }, { $inc: { exp: 30, totalExp: 30 } }).catch(() => {});
+      await User.updateOne({ email: userId }, { $inc: { exp: 30, totalExp: 30 } }).catch(() => {});
     }
     res.json({ success: true, record });
   } catch (err) {
