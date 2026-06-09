@@ -33,6 +33,10 @@ if (!process.env.JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
     process.stderr.write('[SECURITY] ❌ JWT_SECRET 환경변수가 설정되지 않았습니다. 프로덕션 서버를 시작할 수 없습니다.\n');
     process.exit(1); // 취약한 기본값으로 프로덕션 구동 차단
+// ✅ FIX-JWT-LENGTH: JWT_SECRET 최소 32자 권고
+if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+  logger.warn('[보안] JWT_SECRET이 32자 미만입니다. 보안 강화를 위해 32자 이상의 무작위 문자열을 사용하세요.');
+}
   }
   // 개발 환경: 경고 없이 계속 진행 (logger 초기화 이전)
 }
@@ -736,6 +740,8 @@ app.use((req, res, next) => {
 
 // ── GET /api/admin/user-stats — 사용자 통계 (마스터 전용, CORS 이후) ─────────────
 app.get('/api/admin/user-stats', async (req, res) => {
+  // ✅ FIX-ADMIN-STATS-AUTH: 어드민 인증 강제
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
   try {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
@@ -3219,7 +3225,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     }
 
     // 6자리 OTP 생성
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otp = String(require('crypto').randomInt(100000, 1000000)); // ✅ FIX-OTP-CRYPTO-RANDOM: 암호학적 난수
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5분 유효
 
     otpStore.set(normalized, { otp, expiresAt, verified: false });
@@ -7952,6 +7958,7 @@ app.post('/api/user/favorites', async (req, res) => {
 
 // ── (14) 어드민 수익 대시보드 API ─────────────────────────────────────────────
 app.get('/api/admin/revenue', async (req, res) => {
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' }); // ✅ FIX-ADMIN-REVENUE-AUTH
   try {
     // 마스터 어드민 인증
     const authHeader = req.headers.authorization || '';
