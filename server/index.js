@@ -4906,15 +4906,18 @@ app.post('/api/community/crews', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { name, region, isPrivate, password, owner, ownerName, limit, description, bio } = req.body;
+    const { name, region, isPrivate, password, ownerName, limit, description, bio } = req.body;
+    // FIX-CREW-OWNER-JWT: owner는 JWT에서만 추출 (IDOR 방어)
+    const owner = tp.email || tp.id;
     if (typeof name === 'string' && name.length > 20) return res.status(400).json({ error: '크루 이름은 최대 20자입니다.' }); // ✅ FIX-CREW-NAME-LENGTH
     if (typeof description === 'string' && description.length > 500) return res.status(400).json({ error: '크루 소개는 최대 500자입니다.' }); // ✅ FIX-CREW-DESC-LENGTH: DoS 방어
     if (typeof bio === 'string' && bio.length > 500) return res.status(400).json({ error: '크루 bio는 최대 500자입니다.' }); // ✅ FIX-CREW-BIO-LENGTH: DoS 방어
     if (!name || !owner || !ownerName) return res.status(400).json({ error: '필수 항목 누락' });
     // limit 유효성 검증: 3~1000 범위 강제
     const safeLimit = Math.min(1000, Math.max(3, parseInt(limit) || 100));
-    // ✅ BUG-39: 비밀번호 bcrypt 해싱 저장 (프라이빗 크루인 경우만)
-    const hashedPwd = (isPrivate && password) ? await bcrypt.hash(String(password), 10) : null;
+    // FIX-CREW-PWD-DOS: 입장 코드 최대 128자 제한 (bcrypt DoS 방어)
+    if (isPrivate && password && String(password).length > 128) return res.status(400).json({ error: '입장 코드는 최대 128자입니다.' });
+    const hashedPwd = (isPrivate && password) ? await bcrypt.hash(String(password).slice(0, 128), 10) : null;
     if (dbReady && Crew) {
       // ✅ FIX-CREW-CREATE-LIMIT: 유저당 크루 생성 최대 5개 제한
       const existingOwned = await Crew.countDocuments({ owner: tp.email || tp.id }).catch(() => 0);
