@@ -978,14 +978,17 @@ const runIapExpiryCheck = async () => {
     // 만료된 유료 구독자 조회 (FREE가 아닌 + 만료일 지남)
     const expiredUsers = await User.find({
       tier: { $nin: ['FREE', 'MASTER'] },
-      iapExpiresAt: { $ne: null, $lt: now },
-    }).select('_id email tier iapExpiresAt vvipHarborId').lean();
+      $or: [
+        { iapExpiresAt: { $ne: null, $lt: now } },
+        { subscriptionExpiresAt: { $ne: null, $lt: now }, iapExpiresAt: null },
+      ],
+    }).select('_id email tier iapExpiresAt subscriptionExpiresAt vvipHarborId').lean();
 
     for (const u of expiredUsers) {
       try {
         // tier → FREE 강제 다운그레이드
         await User.findByIdAndUpdate(u._id, {
-          $set: { tier: 'FREE', iapExpiresAt: null, iapPurchaseToken: null, iapProductId: null, iapAutoRenewing: false, updatedAt: now }
+          $set: { tier: 'FREE', iapExpiresAt: null, subscriptionExpiresAt: null, iapPurchaseToken: null, iapProductId: null, iapAutoRenewing: false, updatedAt: now }
         });
 
         // ✅ 선상홍보글 자동 삭제 — PRO/VVIP 만료 시 무료 홍보 악용 방지
@@ -6875,8 +6878,10 @@ app.get('/api/vvip/harbors', (req, res) => {
     const slot = vvipSlots[harborId];
     if (slot.expiresAt && new Date(slot.expiresAt) < now) {
       logger.info(`[VVIP 만료] ${slot.harborName} 슬롯 자동 해제`); // ✅ 22TH-B1
+      const _expiredUid = slot.userId;
       delete vvipSlots[harborId];
       expiredCount++;
+      if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: _expiredUid }, { id: _expiredUid }] }, { $unset: { vvipHarborId: 1, vvipExpiresAt: 1 } }).catch(()=>{}); }
     }
   });
   if (expiredCount > 0) saveVvipSlots(); // 만료 파일 반영
@@ -6986,6 +6991,7 @@ app.get('/api/vvip/my-slot', (req, res) => {
     if (isExpired) {
       delete vvipSlots[harborId];
       saveVvipSlots(); // 만료 파일 반영
+      if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: slot.userId }, { id: slot.userId }] }, { $unset: { vvipHarborId: 1, vvipExpiresAt: 1 } }).catch(()=>{}); }
       return res.json({ hasSlot: false, reason: 'expired', message: 'VVIP 구독이 만료되었습니다. 재구독 시 슬롯을 다시 선점하세요.' });
     }
     // ✅ BUG-FIX: expiresAt이 null이면 daysLeft 계산 시 NaN 발생 → null guard 추가

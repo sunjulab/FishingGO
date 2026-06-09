@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function UpgradeModal({ onClose }) {
+export default function UpgradeModal({ onClose = () => {} }) {
   const navigate = useNavigate();
   return (
     <div

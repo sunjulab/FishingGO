@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CreditCard, X } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
@@ -18,24 +18,29 @@ export default function SubscriptionFailBanner() {
   const userTier = useUserStore(s => s.userTier);
   const [failInfo, setFailInfo] = useState(null);
   const [dismissed, setDismissed] = useState(false);
+  const isMountedRef = useRef(true); // ✅ FIX: 언마운트 후 setState 방어
 
   useEffect(() => {
-    if (!user || dismissed) return;
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  const userId = user?.email || user?.id || null;
+
+  useEffect(() => {
+    if (!userId || dismissed) return;
     // ✅ 8TH-C2: PAID_TIERS 모듈 레벨 상수 참조 — 매 실행마다 배열 재생성 제거
     if (!PAID_TIERS.includes(userTier)) return;
 
-    const userId = user.email || user.id;
-    // ENH6-A6: userId 빈값 guard — ENH5-A3과 동일 패턴, 빈 userId API 호출 방지
-    if (!userId) return;
-
     apiClient.get(`/api/payment/subscription/${encodeURIComponent(userId)}`)
       .then(res => {
+        if (!isMountedRef.current) return; // ✅ FIX: 언마운트 방어
         if (res.data.hasSubscription && res.data.status === 'failed') {
           setFailInfo(res.data);
         }
       })
       .catch((e) => { if (!import.meta.env.PROD) console.warn('[SubscriptionFailBanner] 결제 상태 조회 실패:', e); }); // ✅ 18TH-B2: silent catch → 개발 환경 경고
-  }, [user, userTier, dismissed]);
+  }, [userId, userTier, dismissed]); // ✅ FIX: user 전체 대신 userId만 의존 — 불필요 API 재호출 방지
 
   if (!failInfo || dismissed) return null;
 
