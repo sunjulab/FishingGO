@@ -3386,8 +3386,8 @@ app.post('/api/auth/register', authLimiter, async (req, res) => { // ✅ FIX-REG
     }
   } catch (err) { logger.error('[register] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
-
-// --- 이메일 로그인 ---
+    const email = (typeof req.body.email === 'string' ? req.body.email : '').trim(); // FIX-NOSQL-LOGIN
+    const password = typeof req.body.password === 'string' ? req.body.password : ''; // FIX-NOSQL-LOGIN
 app.post('/api/auth/login', async (req, res) => {
   try {
     // ✅ AUTH-FIX-8: 이메일 공백 trim — 복사-붙여넣기 시 앞뒤 공백 포함 케이스 방어
