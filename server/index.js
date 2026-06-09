@@ -1503,7 +1503,7 @@ io.on('connection', (socket) => {
     // ENH4-C4: DB에서 최근 50개 메시지만 로드 (기존 100개 → 초기 전송량 최적화)
     if (dbReady && ChatMessage) {
       try {
-        const msgs = await ChatMessage.find({ crewId }).sort({ createdAt: -1 }).limit(50);
+        const msgs = await ChatMessage.find({ crewId }).sort({ createdAt: -1 }).limit(50).lean(); // ✅ FIX-CHAT-LEAN
         chatHistories[crewId] = msgs.reverse().map(m => ({
           sender: m.sender,
           text: m.text,
@@ -4425,6 +4425,11 @@ app.get('/api/records/:id', async (req, res) => {
 
 // ── 조과기록 작성 (JWT 인증 필수) ──────────────────────────────────────────────
 app.post('/api/user/records', async (req, res) => {
+  // ✅ FIX-CATCH-IMG-SIZE: 조황기록 이미지 5MB 제한 (base64 ~6.8M chars)
+  const rawImg = req.body.imageUrl || req.body.image || '';
+  if (rawImg && rawImg.startsWith('data:') && rawImg.length > 6_825_000) {
+    return res.status(413).json({ error: '이미지 크기가 5MB를 초과합니다.' }); // FIX-CATCH-IMG-SIZE
+  }
   try {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
