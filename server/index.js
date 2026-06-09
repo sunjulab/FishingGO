@@ -1391,7 +1391,8 @@ io.on('connection', (socket) => {
         }
       } catch { }
     }
-    socket.join(crewId);
+    // ✅ FIX-SOCKET-DUP-JOIN: 중복 room join 방어
+  if (!socket.rooms.has(crewId)) socket.join(crewId);
     // ENH4-C4: DB에서 최근 50개 메시지만 로드 (기존 100개 → 초기 전송량 최적화)
     if (dbReady && ChatMessage) {
       try {
@@ -7106,7 +7107,7 @@ function getPublishedAfter(order) {
  */
 app.get('/api/media/youtube/search', async (req, res) => {
   try {
-    const q = (req.query.q || '낚시').trim();
+    const q = ((Array.isArray(req.query.q) ? req.query.q[0] : req.query.q) || '낚시').slice(0, 100).trim(); // ✅ FIX-YT-SEARCH-HPP FIX-YT-SEARCH-LEN
     const order = req.query.order === 'viewCount' ? 'viewCount' : 'date';
     const maxResults = Math.min(parseInt(req.query.maxResults) || 15, 25);
     const pageToken = req.query.pageToken || '';
