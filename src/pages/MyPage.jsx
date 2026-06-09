@@ -211,7 +211,7 @@ export default function MyPage() {
       const res = await apiClient.put('/api/user/tier', { email: identifier, tier });
       if (res.data.success) {
         const confirmedTier = res.data.tier || tier;
-        useUserStore.getState().setUserTier(confirmedTier);
+        // ✅ FIX-MED: setUserTier 제거 → updateUser 단일 원자 호출 (user.tier + userTier 동시 갱신)
         updateUser({ tier: confirmedTier });
         addToast(`${name} 플랜으로 변경됐습니다.`, 'success');
         setShowModal(null);
@@ -222,7 +222,7 @@ export default function MyPage() {
       if (err.response?.status === 403) {
         // 서버가 다운그레이드 거부 → 로컬 tier를 서버 기준으로 강제 복원
         if (serverTier) {
-          useUserStore.getState().setUserTier(serverTier);
+          // ✅ FIX-MED: setUserTier 제거 → updateUser 단일 원자 호출 (user.tier + userTier 동시 갱신)
           updateUser({ tier: serverTier });
         }
         addToast(serverMsg || '구독 변경이 차단되었습니다.', 'error');
