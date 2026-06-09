@@ -253,7 +253,11 @@ export default function VVIPSubscribe() {
         if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt, daysLeft: h.daysLeft };
       });
       setTakenMap(map);
-    } catch {}
+    } catch {
+      // ✅ 1수 API 실패 시 빈 map으로 명시적 초기화
+      // (서버에서 슬롯 해제됩도 네트워크 오류로 old 데이터 유지되는 문제 방지)
+      if (isMountedRef.current) setTakenMap({});
+    }
     if (user && isMountedRef.current) { // ✅ BUG-V3 FIX: 언마운트 후 2차 API 호출 방지
       try {
         const res2 = await apiClient.get('/api/vvip/my-slot');
@@ -690,7 +694,7 @@ export default function VVIPSubscribe() {
               >
                 {/* 아이콘 */}
                 <div style={{ width: '44px', height: '44px', borderRadius: '13px', flexShrink: 0, background: harbor.isMyHarbor ? 'linear-gradient(135deg,#FFD700,#FF9B26)' : isTakenByOther ? 'rgba(255,90,95,0.12)' : 'rgba(255,215,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {harbor.isMyHarbor ? <Crown size={20} color="#1A1A2E" /> : isTakenByOther ? <Lock size={18} color="#FF5A5F" /> : <Crown size={20} color="#FFD700" />}
+                  {harbor.isMyHarbor ? <Crown size={20} color="#1A1A2E" /> : isTakenByOther ? <Lock size={18} color="#FF5A5F" /> : isOtherSlot ? <Lock size={16} color="rgba(255,255,255,0.2)" /> : <Crown size={20} color="#FFD700" />}
                 </div>
                 {/* 정보 */}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -713,10 +717,11 @@ export default function VVIPSubscribe() {
                         : <span style={{ color: '#00C48C', display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={10} fill="#00C48C" /> 선착순 구독 가능</span>}
                   </div>
                 </div>
-                {/* 우측 화살표 (가능한 항구만) */}
+                {/* 우측 상태 아이콘 */}
                 {!disabled && !harbor.isMyHarbor && <div style={{ color: '#FFD700', fontSize: `calc(20px * var(--fs,1))`, fontWeight: '900', flexShrink: 0 }}>›</div>}
                 {harbor.isMyHarbor && <CheckCircle2 size={20} color="#FFD700" style={{ flexShrink: 0 }} />}
                 {isTakenByOther && <Lock size={16} color="rgba(255,90,95,0.5)" style={{ flexShrink: 0 }} />}
+                {isOtherSlot && !isTakenByOther && <Lock size={14} color="rgba(255,255,255,0.15)" style={{ flexShrink: 0 }} />}
               </div>
             );
           })}

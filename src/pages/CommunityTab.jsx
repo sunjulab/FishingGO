@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2, Share2, X as XIcon, Send } from 'lucide-react';
 const CatchRankingPage = lazy(() => import('./CatchRankingPage'));
@@ -122,7 +122,7 @@ export default function CommunityTab() {
   const [heartBurstId, setHeartBurstId] = useState(null); // 더블탭 하트 폭발 표시용 postId
   const blockedUsersRef = useRef([]); // ✅ BUG-CT05 CRITICAL FIX: user가 아직 선언 전(TDZ) — 빈 배열로 초기화, sync useEffect(L151-154)에서 동기화
   const isFetchingRef = useRef(false); // ✅ BUG-5 FIX: 무한스크롤 중복 실행 방지
-  const isMountedRef = useRef(true); // ✅ FIX-ISMOUNTED: 언마운트 후 setState 방지용 ref
+  const isMountedRef = useRef(false); // ✅ FIX-ISMOUNTED: useRef(false)으로 초기화, useEffect에서만 true 설정 (StrictMode 호환)
 
   // ✅ FIX-TDZ: user/userTier를 useEffect보다 앞에 선언 (TDZ 오류 방지)
   // L147/L153 useEffect에서 user?.email, user?.blockedUsers 사용하므로 여기서 선언해야 함

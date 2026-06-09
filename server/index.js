@@ -6028,6 +6028,9 @@ app.get('/delete-account', (req, res) => {
 <title>낚시GO 계정 삭제</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
+  // ✅ VVIP 만료 처리는 L1039~L1065의 runVvipExpiryCheck(1분 주기)로 통합 운영
+// ✅ 기존 24시간 주기 setInterval 제거 — runVvipExpiryCheck가 User DB 초기화까지 처리
+
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f9fa;color:#212529;line-height:1.8}
   .wrap{max-width:700px;margin:0 auto;padding:40px 20px}
   h1{font-size:26px;font-weight:700;color:#1a1a2e;border-bottom:3px solid #c8d400;padding-bottom:16px;margin-bottom:28px}
@@ -7107,19 +7110,9 @@ app.delete('/api/admin/vvip/revoke', async (req, res) => {
   });
 });
 
-setInterval(() => {
-  const now = new Date();
-  let cleaned = 0;
-  Object.keys(vvipSlots).forEach(harborId => {
-    const slot = vvipSlots[harborId];
-    if (slot.expiresAt && new Date(slot.expiresAt) < now) {
-      logger.info(`[VVIP 자동 만료 정리] ${slot.harborName} (${slot.userName})`); // ✅ 22TH-B1
-      delete vvipSlots[harborId];
-      cleaned++;
-    }
-  });
-  if (cleaned > 0) { saveVvipSlots(); logger.info(`[VVIP 클린업] ${cleaned}개 만료 슬롯 제거 완료`); } // ✅ 22TH-B1
-}, 24 * 60 * 60 * 1000);
+// ✅ VVIP 만료 처리는 runVvipExpiryCheck(L1039, 1분 주기)로 통합 운영
+// ✅ 기존 24시간 주기 setInterval 제거 — runVvipExpiryCheck가 User DB 초기화까지 처리
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ─── 쿠팡 파트너스 Open API 라우트 ────────────────────────────────────────────
