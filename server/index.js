@@ -5469,6 +5469,7 @@ app.delete('/api/community/notices/:id', async (req, res) => {
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
     if (dbReady && Notice) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID 형식입니다.' }); // FIX-OBJID-BATCH-4
       await Notice.findByIdAndDelete(req.params.id);
       return res.json({ success: true });
     }
@@ -5673,6 +5674,7 @@ app.get('/api/community/business/:id', async (req, res) => {
   try {
     if (dbReady && BusinessPost) {
       let post = null;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID 형식입니다.' }); // FIX-OBJID-BATCH-5
       try { post = await BusinessPost.findById(req.params.id).lean(); } catch (_) {}
       if (!post) post = await BusinessPost.findOne({ id: req.params.id }).lean().catch(() => null);
       if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
@@ -5775,6 +5777,7 @@ app.put('/api/community/business/:id', async (req, res) => {
     }
 
     if (dbReady && BusinessPost) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID 형식입니다.' }); // FIX-OBJID-BATCH-6
       const post = await BusinessPost.findById(req.params.id).catch(() => null);
       if (!post) return res.status(404).json({ error: '게시글 없음' });
       // ✅ JWT email로 권한 체크 (body email 제거)
@@ -9074,6 +9077,7 @@ app.delete('/api/shop/manual/:id', verifyToken, async (req, res) => {
     return res.status(403).json({ error: '관리자 권한 필요' });
   }
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID 형식입니다.' }); // FIX-OBJID-BATCH-7
     await ManualShopItem.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (err) {
