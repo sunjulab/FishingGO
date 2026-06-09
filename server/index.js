@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -861,10 +861,16 @@ setInterval(() => {
 // ─── Rate Limiter ────────────────────────────────────────────────────
 // ✅ SCALE-FIX: IP 기반 → 완화 (한국 이동통신사 NAT: 수백명이 같은 IP 공유)
 // 실제 브루트포스 보호는 계정 기반으로 처리 (아래 loginAttemptMap)
+let apiLimiter     = (req, res, next) => next(); // ✅ FIX-SCOPE
+let ytSearchLimiter= (req, res, next) => next(); // ✅ FIX-SCOPE
+let ytFeedLimiter  = (req, res, next) => next(); // ✅ FIX-SCOPE
+let otpLimiter     = (req, res, next) => next(); // ✅ FIX-SCOPE
+let catchLimiter   = (req, res, next) => next(); // ✅ FIX-SCOPE
+let authLimiter = (req, res, next) => next(); // ✅ FIX-SCOPE: try 밖 선언으로 ReferenceError 방지
 try {
   const rateLimit = require('express-rate-limit');
-  // 로그인/회원가입: IP당 10분/500회 (통신사 NAT 환경 수백명 커버)
-  const authLimiter = rateLimit({
+  // 로그인/회원가입: IP당 10분/10회 (통신사 NAT 환경 수백명 커버)
+  authLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
     max: 10,
     message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
@@ -876,7 +882,7 @@ try {
     },
   });
   // 일반 API: IP당 1분/1000회 (동시 1만 사용자 커버)
-  const apiLimiter = rateLimit({
+  apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 300, // ✅ FIX-API-LIMITER: 1분 300회
     message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
@@ -886,7 +892,7 @@ try {
 
   // ✅ YouTube 검색 전용 Rate Limit — IP당 분당 3회
   // 이유: 검색 1회 = 201 units 소비. 50만 사용자 환경에서 쿼터 폭발 방지
-  const ytSearchLimiter = rateLimit({
+  ytSearchLimiter = rateLimit({
     windowMs: 60 * 1000,       // 1분
     max: 3,                    // IP당 최대 3회
     message: { error: '검색 요청이 너무 많습니다. 1분 후 다시 시도해주세요.', code: 'YT_SEARCH_RATE_LIMIT' },
@@ -897,7 +903,7 @@ try {
 
   // ✅ YouTube 통합 피드 전용 Rate Limit — IP당 분당 10회
   // 이유: 피드는 캐시가 있어 실제 API 호출 적음, 너무 엄격하면 UX 저하
-  const ytFeedLimiter = rateLimit({
+  ytFeedLimiter = rateLimit({
     windowMs: 60 * 1000,       // 1분
     max: 10,                   // IP당 최대 10회
     message: { error: '피드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.', code: 'YT_FEED_RATE_LIMIT' },
@@ -906,12 +912,12 @@ try {
   });
 
   // ✅ FIX-OTP-LIMITER: OTP 전용 rate limit — 분당 3회 (전화번호 스팸 방지)
-  const otpLimiter = rateLimit({ windowMs: 60_000, max: 3, message: { error: 'OTP 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
+  otpLimiter = rateLimit({ windowMs: 60_000, max: 3, message: { error: 'OTP 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
 
   app.use('/api/auth/', authLimiter);
 
   // ✅ FIX-CATCH-LIMITER
-  const catchLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '조황 등록이 너무 많습니다.' }, standardHeaders: true, legacyHeaders: false });
+  catchLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '조황 등록이 너무 많습니다.' }, standardHeaders: true, legacyHeaders: false });
 
   // ✅ FIX-CACHE-AUTH-MIDDLEWARE: /api/auth/* 에 no-store 헤더
   app.use('/api/auth/', (req, res, next) => {
@@ -3533,8 +3539,6 @@ app.post('/api/auth/register', authLimiter, async (req, res) => { // ✅ FIX-REG
     }
   } catch (err) { logger.error('[register] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
-    const email = (typeof req.body.email === 'string' ? req.body.email : '').replace(/ /g, '').trim(); // ✅ FIX-NOSQL-LOGIN FIX-NULL-BYTE
-    const password = typeof req.body.password === 'string' ? req.body.password : ''; // FIX-NOSQL-LOGIN
 app.post('/api/auth/login', async (req, res) => {
   try {
     // ✅ AUTH-FIX-8: 이메일 공백 trim — 복사-붙여넣기 시 앞뒤 공백 포함 케이스 방어
@@ -8182,13 +8186,15 @@ app.use('/api/upload', validateImageUpload);
 app.use('/api/user/avatar', validateImageUpload);
 
 // ── (8) Rate Limit 강화 (결제·검색·업로드) ────────────────────────────────
+let paymentLimiter = (req, res, next) => next(); // ✅ FIX-SCOPE
+let searchLimiter  = (req, res, next) => next(); // ✅ FIX-SCOPE
 try {
   const rateLimit = require('express-rate-limit');
   // 결제 API: 1분에 5회
-  const paymentLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '결제 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
+  paymentLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '결제 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
   app.use('/api/payment', paymentLimiter);
   // 검색 API: 1분에 30회
-  const searchLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: '검색 요청이 너무 많습니다.' } });
+  searchLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: '검색 요청이 너무 많습니다.' } });
   app.use('/api/community/search', searchLimiter);
   (logger?.info || console.log)('✅ Rate Limit 강화 적용 (결제/검색)');
 } catch (e) { (logger?.warn || console.warn)('[RateLimit] express-rate-limit 미설치 또는 적용 실패:', e.message); }
@@ -9561,7 +9567,8 @@ app.get('/api/contest/all', async (req, res) => {
     res.status(500).json({ error: '서버 오류' });
   }
 });
-// ✅ FIX-UNCAUGHT: 미처리 예외 → cluster.js worker 자동 재시작
+
+// ✅ FIX-UNCAUGHT: 미처리 예외 → cluster.js worker 자동 재시작
 process.on('uncaughtException', (err) => { (logger?.error || console.error)('[FATAL] uncaughtException:', err?.message || err); process.exit(1); });
 process.on('unhandledRejection', (reason) => { (logger?.warn || console.warn)('[WARN] unhandledRejection:', reason?.message || reason); });
 
