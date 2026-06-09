@@ -9095,6 +9095,11 @@ app.post('/api/ai/fish-identify', async (req, res) => {
   try {
     const { imageBase64, mimeType = 'image/jpeg' } = req.body;
     if (!imageBase64) return res.status(400).json({ error: '이미지 필요' });
+    // ✅ FIX-FISH-IMG-LEN: base64 이미지 최대 10MB 제한 (약 13,650,000 chars) - DoS 방어
+    if (typeof imageBase64 !== 'string' || imageBase64.length > 13_650_000) return res.status(413).json({ error: '이미지가 너무 큽니다. 최대 10MB.' });
+    // ✅ FIX-FISH-MIME: 허용 MIME 타입 검증
+    const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!ALLOWED_MIMES.includes(mimeType)) return res.status(400).json({ error: '허용되지 않는 이미지 형식 (jpeg/png/gif/webp만 가능)' });
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini API 키 미설정' });
 
@@ -9131,6 +9136,8 @@ app.post('/api/ai/coach', async (req, res) => {
   try {
     const { message, context } = req.body; // context: { weather, tide, location, season }
     if (!message) return res.status(400).json({ error: '메시지 필요' });
+    // ✅ FIX-AI-COACH-LEN: 메시지 최대 500자 제한 (API 비용 DoS 방어)
+    if (typeof message !== 'string' || message.length > 500) return res.status(400).json({ error: '메시지는 최대 500자입니다.' });
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini API 키 미설정' });
 
@@ -9179,10 +9186,6 @@ app.post('/api/contest', async (req, res) => {
     if (typeof prize === 'string' && prize.length > 200) return res.status(400).json({ error: '경품 설명은 최대 200자입니다.' });
     if (typeof fishName === 'string' && fishName.length > 50) return res.status(400).json({ error: '어종명은 최대 50자입니다.' });
     if (!title || !fishName || !startDate || !endDate) return res.status(400).json({ error: '필수 항목 누락' });
-    // ✅ FIX-CONTEST-INPUT: 대회 입력 길이 제한 (DoS 방어)
-    if (typeof title === 'string' && title.length > 100) return res.status(400).json({ error: '대회 제목은 최대 100자입니다.' });
-    if (typeof description === 'string' && description.length > 1000) return res.status(400).json({ error: '대회 설명은 최대 1000자입니다.' });
-    if (typeof prize === 'string' && prize.length > 200) return res.status(400).json({ error: '상품 설명은 최대 200자입니다.' });
     await waitForDb(5000);
     const contest = await Contest.create({ title, fishName, region, metric, startDate, endDate, description, prize });
     res.json({ success: true, contest });
