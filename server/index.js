@@ -371,7 +371,9 @@ const app = express();
 // ─── 보안 헤더 (Helmet) ────────────────────────────────────────
 try {
   const helmet = require('helmet');
-  app.use(helmet({ contentSecurityPolicy: false })); // CSP는 SPA 프론트 판단에 맡김으로 off
+  app.use(helmet({ contentSecurityPolicy: false, // ✅ FIX-HELMET: CSP는 Vite SPA가 관리 (script-src 'unsafe-inline' 필요)
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    crossOriginEmbedderPolicy: false })); // CSP는 SPA 프론트 판단에 맡김으로 off
 } catch (e) { /* helmet 미설치 — npm install helmet */ }
 
 // ─── 응답 압축 (Compression) - 응답 속도 30~70% 향상 ──────────
@@ -641,7 +643,13 @@ app.post('/api/channel/videos', (req, res) => {
 });
 
 app.use(cors({
-  origin: true,        // 모든 origin 허용 (JWT 인증으로 벴안 유지)
+  origin: (origin, cb) => {
+    // ✅ FIX-CORS-WHITELIST: 허가된 출처만 허용
+    const allowed = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173')
+      .split(',').map(s => s.trim());
+    if (!origin || allowed.includes(origin) || allowed.includes('*')) cb(null, true);
+    else cb(new Error('CORS policy: ' + origin + ' not allowed'));
+  },        // 모든 origin 허용 (JWT 인증으로 벴안 유지)
   credentials: true,
 }));
 
@@ -880,7 +888,7 @@ try {
 } catch (e) { (logger?.warn || console.warn)('⚠️ express-rate-limit 미설치 → npm install express-rate-limit'); }
 
 // ✅ IMG-SIZE-FIX: 다중이미지 5장 × 4MB = 최대 20MB → 25mb로 확장 (이전 10mb에서 이미지 탈락 방지)
-app.use(express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '1mb' }));
 // ✅ FIX-JSON-ERR: JSON 파싱 에러 → 400 응답
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -2520,7 +2528,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
     if (newPassword.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
     const normalizedPhone = String(phone).replace(/\D/g, '');
     const normalizedEmail = email.trim().toLowerCase();
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 12);
     await waitForDb(5000);
     if (dbReady && User) {
       // 이메일 + 실명 + 전화번호 3중 검증
@@ -3232,13 +3240,13 @@ app.post('/api/admin/create-test-account', async (req, res) => {
       const exists = await User.findOne({ email: testEmail });
       if (exists) {
         // 비밀번호 재설정
-        const hash = await bcrypt.hash(testPw, 10);
+        const hash = await bcrypt.hash(testPw, 12);
         await User.findOneAndUpdate({ email: testEmail }, {
           $set: { password: hash, tier: 'BUSINESS_LITE', name: testName, updatedAt: new Date() }
         });
         return res.json({ ok: true, message: '기존 계정 업데이트 완료', email: testEmail, password: testPw });
       }
-      const hash = await bcrypt.hash(testPw, 10);
+      const hash = await bcrypt.hash(testPw, 12);
       await User.create({
         email: testEmail, password: hash, name: testName,
         tier: 'BUSINESS_LITE', createdAt: new Date(), updatedAt: new Date(),
@@ -3262,6 +3270,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (email.trim().length < 4) return res.status(400).json({ error: 'ID는 4자 이상이어야 합니다.' });
     if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim())) { return res.status(400).json({ error: '이메일 형식이 올바르지 않습니다.' }); } // ✅ FIX-EMAIL
     if (password.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
+    if (!/(?=.*[A-Za-z])(?=.*[0-9]).{8,}/.test(password)) return res.status(400).json({ error: '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.' }); // ✅ FIX-PWD-COMPLEXITY
     if (name.trim().length < 2) return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
     if (name.trim().length > 20) return res.status(400).json({ error: '닉네임은 20자 이하여야 합니다.' });
     // ✅ 금지 닉네임/아이디 검사 (어드민 계정 예외)
@@ -3286,7 +3295,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (dbReady && User) {
       const existing = await User.findOne({ $or: [{ email }, { name }] });
       if (existing) return res.status(400).json({ error: '이미 사용 중인 이메일이거나 닉네임입니다.' });
-      const hashed = await bcrypt.hash(password, 10);
+      const hashed = await bcrypt.hash(password, 12);
       const user = new User({
         email, password: hashed, name,
         realName: (realName || '').trim(), // ✅ 실명 DB 저장
@@ -3299,7 +3308,7 @@ app.post('/api/auth/register', async (req, res) => {
       // 인메모리 fallback
       if (memUsers.find(u => u.email === email)) return res.status(400).json({ error: '이미 등록된 이메일입니다.' });
       if (memUsers.find(u => u.name === name)) return res.status(400).json({ error: '이미 사용 중인 닉네임입니다.' });
-      const hashed = await bcrypt.hash(password, 10);
+      const hashed = await bcrypt.hash(password, 12);
       memUsers.push({
         id: Date.now().toString(), email, password: hashed, name,
         realName: (realName || '').trim(), // ✅ 실명 인메모리 저장
@@ -3563,7 +3572,7 @@ app.put('/api/user/password', async (req, res) => {
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(400).json({ error: '현재 비밀번호가 일치하지 않습니다.' });
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 12);
 
     if (dbReady && User) {
       await User.findOneAndUpdate({ email }, { password: hashed });
@@ -4234,13 +4243,14 @@ app.get('/api/community/posts', async (req, res) => {
     const skip = (page - 1) * limit;
     const category = req.query.category || '';  // 카테고리 필터
     const q = req.query.q || '';          // 검색어
+    const safeQ = q.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\$&'); // ✅ FIX-REGEX-ESCAPE
 
     if (dbReady && Post) {
       const filter = {};
       if (category) filter.category = category;
       if (q) filter.$or = [
-        { content: { $regex: q, $options: 'i' } },
-        { author: { $regex: q, $options: 'i' } },
+        { content: { $regex: safeQ, $options: 'i' } },
+        { author: { $regex: safeQ, $options: 'i' } },
       ];
       // ✅ INSTA-P2: 인기순 정렬 (likes 내림차순) vs 기본 최신순
       const sortBy = req.query.sort === 'popular'
