@@ -526,12 +526,12 @@ export default function VVIPSubscribe() {
                   )
                 )}
 
-                {/* 구매 버튼 */}
+                {/* 구매 버튼 — VVIP는 위의 '잔여 항구 구독하기' 버튼으로 통합, 별도 버튼 숨김 */}
                 {owned ? (
                   <div style={{ width: '100%', padding: '13px', borderRadius: '14px', background: `rgba(${plan.color === '#C8D400' ? '200,212,0' : plan.color === '#64B5F6' ? '100,181,246' : '255,215,0'},0.1)`, border: `1px solid ${plan.border}`, textAlign: 'center', color: plan.color, fontWeight: '900', fontSize: `calc(14px * var(--fs,1))` }}>
                     ✅ 현재 이용 중
                   </div>
-                ) : (
+                ) : plan.key === 'VVIP' ? null : (
                   <button
                     onClick={() => handlePlanClick(plan.key)}
                     disabled={owned || isLoading || !iapReady}
