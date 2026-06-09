@@ -3433,6 +3433,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => { // ✅ FIX-REG
     // ✅ 금지 닉네임/아이디 검사 (어드민 계정 예외)
     if (!isAdminToken({ email })) {
       if (isBannedName(name))  return res.status(400).json({ error: '이 닉네임은 사용할 수 없습니다. (운영 정책상 금지된 표현 포함)' });
+    if (isReservedNickname(name)) return res.status(400).json({ error: '사용할 수 없는 닉네임입니다. (예약어 금지)' }); // FIX-SIGNUP-RESERVED
       if (isBannedName(email)) return res.status(400).json({ error: '이 아이디는 사용할 수 없습니다. (운영 정책상 금지된 표현 포함)' });
     }
 
