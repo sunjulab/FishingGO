@@ -4242,6 +4242,10 @@ app.post('/api/business/gallery-post', async (req, res) => {
     const email = tp.email || tp.id;
 
     const { author, fish, size, weight, location, memo, image, shipName, phone } = req.body;
+    // FIX-GALLERY-FIELD-LEN: 갤러리 포스트 필드 길이 제한 (DoS 방어)
+    if (memo && typeof memo === 'string' && memo.length > 500) return res.status(400).json({ error: '메모는 500자 이하여야 합니다.' }); // FIX-GALLERY-FIELD-LEN
+    if (shipName && typeof shipName === 'string' && shipName.length > 100) return res.status(400).json({ error: '선상명은 100자 이하여야 합니다.' }); // FIX-GALLERY-FIELD-LEN
+    if (phone && typeof phone === 'string' && phone.length > 20) return res.status(400).json({ error: '전화번호는 20자 이하여야 합니다.' }); // FIX-GALLERY-FIELD-LEN
     if (!author) return res.status(400).json({ error: 'author ?�수' });
 
     // 게시글 ?�용 ?�동 ?�성
