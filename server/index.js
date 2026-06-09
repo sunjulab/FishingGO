@@ -1329,6 +1329,12 @@ app.post('/api/admin/app-config', (req, res) => {
 
 app.get('/api/debug', async (req, res) => {
   if (process.env.NODE_ENV === 'production') return res.status(403).json({ error: '접근 불가' });
+  // FIX-DEBUG-AUTH: production이 아닌 경우에도 관리자 JWT 필요
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) {
+    try { const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' }); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  } else { return res.status(401).json({ error: '인증 필요' }); }
   const uri = MONGO_URI ? MONGO_URI.replace(/:[^@]+@/, ':***@') : '미설정';
   res.json({
     dbReady,
@@ -1648,6 +1654,9 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     logger.info(`[Socket] User disconnected: ${socket.id}`); // ✅ 21TH-B1: console.log → logger.info
+    // FIX-SOCKET-DISCONNECT-CLEANUP: 연결 해제 시 rate limit Map 정리 (메모리 누수 방지)
+    socketFloodMap.delete(socket.id);
+    if (typeof joinRateMap !== 'undefined') joinRateMap.delete(socket.id);
   });
 });
 
