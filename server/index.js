@@ -438,11 +438,11 @@ app.get('/api/health', (req, res) => {
   const fcmStatus = pushService?.isInitialized?.() ?? false;
   res.json({
     status: 'ok',
-    db: dbReady ? 'mongodb' : 'memory',
+    db: dbReady ? 'connected' : 'fallback', // ✅ FIX-HEALTH-INFOLEA: mongodb/memory 구분 → 일반 상태로 변경
     uptime: Math.floor(process.uptime()),
     time: new Date().toISOString(),
-    fcm: fcmStatus ? 'ready' : 'disabled',  // FCM 초기화 상태
-    env: process.env.NODE_ENV || 'development',
+    fcm: fcmStatus ? 'ready' : 'disabled',
+    // ✅ FIX-HEALTH-INFOLEA: env 필드 제거 (서버 환경 노출 방지)
   });
 });
 
@@ -1019,11 +1019,23 @@ setTimeout(() => {
 }, 30 * 1000);
 
 // ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
+// ✅ FIX-PWD-IAT: 비밀번호 변경 시 이전 토큰 무효화를 위한 in-memory 캐시
+const pwdChangedCache = new Map(); // email → passwordChangedAt ms
+// 1시간마다 정리
+setInterval(() => { pwdChangedCache.clear(); }, 60 * 60 * 1000);
+
 function verifyToken(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증이 필요합니다.' });
   try {
-    req.user = jwt.verify(auth.split(' ')[1], JWT_SECRET, { algorithms: ['HS256'] });
+    const decoded = jwt.verify(auth.split(' ')[1], JWT_SECRET, { algorithms: ['HS256'] });
+    // ✅ FIX-PWD-IAT: 비밀번호 변경 후 이전 토큰 차단
+    const userKey = decoded.email || decoded.id;
+    const changedAt = pwdChangedCache.get(userKey);
+    if (changedAt && decoded.iat && (decoded.iat * 1000) < changedAt) {
+      return res.status(401).json({ error: '비밀번호가 변경되어 다시 로그인이 필요합니다.', code: 'TOKEN_INVALIDATED' });
+    }
+    req.user = decoded;
     next();
   } catch (e) {
     return res.status(401).json({ error: '토큰이 유효하지 않거나 만료되었습니다.' });
@@ -3691,10 +3703,12 @@ app.put('/api/user/password', async (req, res) => {
 
     if (dbReady && User) {
       await User.findOneAndUpdate({ email }, { password: hashed, passwordChangedAt: new Date() }); // ✅ FIX-PWD-CHANGED-AT
+      pwdChangedCache.set(email, Date.now()); // ✅ FIX-PWD-IAT: 기존 토큰 무효화
       return res.json({ success: true });
     } else {
       user.password = hashed;
       saveMemUsers();
+      pwdChangedCache.set(email, Date.now()); // ✅ FIX-PWD-IAT: 기존 토큰 무효화
       return res.json({ success: true });
     }
   } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
