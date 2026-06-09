@@ -1272,7 +1272,9 @@ app.delete('/api/custom-points/:id', (req, res) => {
 });
 
 // POST: AI 낚시 포인트 정보 자동 생성 (MASTER 전용)
-app.post('/api/ai/generate-point-info', async (req, res) => {
+// ✅ FIX-AI-RATE-LIMIT: AI 포인트 정보 생성 1분 5회 제한
+const aiLimiter = (() => { try { const rl = require('express-rate-limit'); return rl({ windowMs: 60_000, max: 5, message: { error: 'AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } }); } catch { return (req,res,next)=>next(); } })();
+app.post('/api/ai/generate-point-info', aiLimiter, async (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
   try {
@@ -8127,6 +8129,10 @@ try {
   // 검색 API: 1분에 30회
   const searchLimiter = rateLimit({ windowMs: 60_000, max: 30, message: { error: '검색 요청이 너무 많습니다.' } });
   app.use('/api/community/search', searchLimiter);
+  // ✅ FIX-UPLOAD-RATE-LIMIT: 이미지 업로드 1분 10회 제한
+  const uploadLimiter = rateLimit({ windowMs: 60_000, max: 10, message: { error: '업로드 요청이 너무 많습니다.' } });
+  app.use('/api/upload', uploadLimiter);
+  app.use('/api/user/avatar', uploadLimiter);
   (logger?.info || console.log)('✅ Rate Limit 강화 적용 (결제/검색)');
 } catch (e) { (logger?.warn || console.warn)('[RateLimit] express-rate-limit 미설치 또는 적용 실패:', e.message); }
 
