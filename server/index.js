@@ -669,6 +669,7 @@ app.use(async (req, res, next) => {
     const now = Date.now();
     const last = lastSeenCache.get(email) || 0;
     if (now - last < 60_000) return next();
+    if (lastSeenCache.size >= 5000) lastSeenCache.delete(lastSeenCache.keys().next().value); // ✅ FIX-LASTSEEN-SIZE
     lastSeenCache.set(email, now);
     const nowDate = new Date(now);
     if (dbReady && User) {
@@ -684,7 +685,9 @@ app.use(async (req, res, next) => {
 // ── 방문자 추적 미들웨어 (가입/미가입 모두 IP 해시 기록) ─────────────────────────
 // 투데이: KST 오늘 날짜 유니크 IP 수 / 토탈: 전체 누적 유니크 IP 수
 // crypto는 파일 최상단에서 이미 require됨
-const visitorCache = new Map(); // ipHash → lastTrackedDate (중복 DB쓰기 방지)
+const visitorCache = new Map(); // ipHash → lastTrackedDate (중복 DB쓰기 방지) — max 10000
+// ✅ FIX-VISITOR-SIZE: 주기적 정리
+setInterval(() => { if (visitorCache.size > 10000) visitorCache.clear(); }, 60 * 60 * 1000);
 function getKstDateStr() {
   const d = new Date();
   d.setTime(d.getTime() + 9 * 60 * 60 * 1000); // UTC+9
@@ -3061,7 +3064,8 @@ app.post('/api/user/settings', async (req, res) => {
       memUser.notiSettings = notiSettings;
     } else {
       memUser = { email, notiSettings, name: email.split('@')[0], totalExp: 0 };
-      memUsers.push(memUser);
+      if (memUsers.length >= 5000) memUsers.shift(); // ✅ FIX-MEMUSERS-SIZE
+  memUsers.push(memUser);
     }
     saveMemUsers(); // 알림 설정 파일 저장
     return res.json({ success: true, notiSettings });
@@ -3110,6 +3114,17 @@ app.post('/api/auth/check-name', async (req, res) => {
 // ─── SMS 본인인증 (CoolSMS) ───────────────────────────────────────────────────
 // OTP 임시 저장소: { phone: { otp, expiresAt } }
 const otpStore = new Map();
+// ✅ FIX-OTP-CLEANUP: OTP 만료 자동 정리 (5분마다) + 최대 1000개 제한
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of otpStore.entries()) {
+    if (val.expiresAt && now > val.expiresAt) otpStore.delete(key);
+  }
+  if (otpStore.size > 1000) {
+    const oldest = otpStore.keys().next().value;
+    otpStore.delete(oldest);
+  }
+}, 5 * 60 * 1000);
 
 // CoolSMS SDK 동적 로드 (설치된 경우에만)
 let coolsmsClient = null;
@@ -4002,7 +4017,8 @@ app.post('/api/business/gallery-post', async (req, res) => {
       return res.json({ success: true, postId: post._id, message: '오픈게시판 선상 카테고리에 등록되었습니다! 🎣' });
     }
     const newPost = { ...postData, id: Date.now().toString(), _id: Date.now().toString() };
-    memPosts.push(newPost);
+    if (memPosts.length >= 2000) memPosts.pop(); // ✅ FIX-MEMPOSTS-PUSH
+      memPosts.push(newPost);
     saveMemPosts();
     return res.json({ success: true, postId: newPost._id, message: '오픈게시판 선상 카테고리에 등록되었습니다! 🎣' });
   } catch (err) { (logger?.error || console.error)('[business/gallery-post]', err.message); res.status(500).json({ error: '서버 오류' }); }
@@ -4355,6 +4371,7 @@ app.post('/api/community/posts', async (req, res) => {
     const post = new Post({ author, author_email, category, content: safeContent, image: safeImage, images: safeImages, location: safeLocation });
         await post.save();
         try {
+          if (memPosts.length >= 2000) memPosts.pop(); // ✅ FIX-MEMPOSTS-UNSHIFT-1
           memPosts.unshift({ _id: post._id.toString(), id: post._id.toString(), author, author_email, category, content, image: safeImage, images: safeImages, location: safeLocation, likes: 0, comments: [], createdAt: post.createdAt });
           if (memPosts.length > 200) memPosts.splice(200);
         } catch (syncErr) { /* memPosts 동기화 실패는 무시 */ }
@@ -4365,7 +4382,8 @@ app.post('/api/community/posts', async (req, res) => {
     }
     const uid = Date.now().toString();
     const post = { _id: uid, id: uid, author, author_email, category, content, image: safeImage, images: safeImages, location: safeLocation, likes: 0, comments: [], createdAt: new Date().toISOString() };
-    memPosts.unshift(post);
+    if (memPosts.length >= 2000) memPosts.pop(); // ✅ FIX-MEMPOSTS-UNSHIFT-2
+          memPosts.unshift(post);
     if (memPosts.length > 200) memPosts.splice(200);
     saveMemPosts();
     return res.json(post);
@@ -7716,6 +7734,7 @@ app.post('/api/payment/history/record', verifyToken, async (req, res) => {
     // 요청 userId와 토큰 userId 일치 여부 확인 (본인 결제만 기록 가능)
     const tokenId = req.user.email || req.user.id;
     const isAdmin = isAdminToken(req.user);
+    const safeAmount = Number(amount); if (!Number.isFinite(safeAmount) || safeAmount <= 0) return res.status(400).json({ error: '유효하지 않은 결제 금액' }); // ✅ FIX-AMOUNT-VALIDATE
     if (!isAdmin && userId && userId !== tokenId) {
       return res.status(403).json({ error: '본인 결제 기록만 등록할 수 있습니다.' });
     }
@@ -9055,6 +9074,17 @@ app.get('/api/contest/all', async (req, res) => {
 // ✅ FIX-UNCAUGHT: 미처리 예외 → cluster.js worker 자동 재시작
 process.on('uncaughtException', (err) => { (logger?.error || console.error)('[FATAL] uncaughtException:', err?.message || err); process.exit(1); });
 process.on('unhandledRejection', (reason) => { (logger?.warn || console.warn)('[WARN] unhandledRejection:', reason?.message || reason); });
+
+// ✅ FIX-LOGOUT-ENDPOINT: 로그아웃 (서버 lastSeen 업데이트)
+app.post('/api/auth/logout', verifyToken, async (req, res) => {
+  try {
+    const email = req.user?.email;
+    if (email && dbReady && User) {
+      await User.updateOne({ email }, { $set: { lastSeen: new Date() } }).exec().catch(() => {});
+    }
+    res.json({ success: true, message: '로그아웃 완료. 클라이언트 토큰을 삭제해주세요.' });
+  } catch { res.json({ success: true }); }
+});
 
 // ✅ FIX-GLOBAL-ERROR: 글로벌 에러 핸들러
 app.use(function globalErrorHandler(err, req, res, next) {
