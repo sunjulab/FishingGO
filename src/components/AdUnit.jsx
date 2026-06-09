@@ -330,11 +330,18 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 99999,
-        background: 'linear-gradient(135deg, #0A1628 0%, #0d2240 50%, #0A1628 100%)',
+        background: 'rgba(0,0,0,0.85)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         overflow: 'hidden',
       }}>
+        <div style={{
+          width: '100%', maxWidth: '480px', height: '100dvh',
+          background: 'linear-gradient(135deg, #0A1628 0%, #0d2240 50%, #0A1628 100%)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden', position: 'relative',
+        }}>
         {/* 상단: 광고 표시 배지 + 카운트다운 */}
         <div style={{
           position: 'absolute', top: 16, left: 0, right: 0,
@@ -429,7 +436,8 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
             50% { transform: scale(1.06); box-shadow: 0 0 60px rgba(0,163,255,0.7); }
           }
         `}</style>
-      </div>
+      </div>{/* inner 480px container */}
+    </div>
     );
   }
 
@@ -439,7 +447,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       backgroundColor: 'rgba(0,0,0,0.7)',
       backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
-    }}>
+    }}> {/* PC 웹: 최대 480px 컨테이너 내 정렬 */}
       <div style={{
         width: '100%', maxWidth: '480px', backgroundColor: '#ffffff',
         borderRadius: '24px 24px 0 0', padding: '28px 24px 40px',

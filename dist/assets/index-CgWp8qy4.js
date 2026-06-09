@@ -1,4 +1,4 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-CixhA9KC.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-BZpq6-wo.js","assets/index-YJCl1-nu.js","assets/index-BVQEoIiy.js","assets/index-BecV2rXd.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-C3Vqh8yN.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-CStbsbK7.js","assets/index-CZlkngfX.js","assets/web-bSu4Ng4w.js"])))=>i.map(i=>d[i]);
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-RRykCApL.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-7JpEp-fY.js","assets/index-BSbeHX5j.js","assets/index-DCWdkhcl.js","assets/index-C880EPVt.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-CwCWU-vi.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-fgYv9XHQ.js","assets/index-CQ40WnWe.js","assets/web-BatZeaJZ.js"])))=>i.map(i=>d[i]);
 import { r as reactExports, g as getDefaultExportFromCjs, a as reactDomExports, R as React, u as useNavigate, b as useLocation, c as useSearchParams, d as useParams, N as NavLink, e as Navigate, B as BrowserRouter, f as Routes, h as Route } from './vendor-react-vfOo6a0P.js';
 import { A as AlertCircle, C as CheckCircle, I as Info, X, a as Clock, M as MessageSquare, b as ChevronUp, c as ChevronDown, L as Lock, S as Send, R as RefreshCw, d as Search, e as MapPin, W as Waves, f as Wind, T as Tv, g as Map$1, B as BarChart2, h as Ship, i as Crown, Z as Zap, j as CornerUpLeft, k as Megaphone, l as AlertTriangle, F as Fish, m as Bell, n as Trash2, o as CheckCheck, p as RotateCcw, q as Loader2, r as Check, s as ArrowLeft, t as Anchor, P as Play, u as Maximize2, U as UserRound, v as ShoppingBag, w as ChevronLeft, x as ChevronRight, y as ZoomIn, z as Pen, H as Heart, D as Share2, E as Users, G as Award, J as Phone, K as PlusCircle, N as Plus, O as SlidersHorizontal, Q as CreditCard, V as ShieldAlert, Y as Camera, _ as PenLine, $ as Trophy, a0 as Star, a1 as Calendar, a2 as BookOpen, a3 as History, a4 as ToggleRight, a5 as ToggleLeft, a6 as Image$1, a7 as Scan, a8 as CheckCircle2, a9 as HelpCircle, aa as MoreVertical, ab as ExternalLink, ac as User, ad as Droplets, ae as KeyRound, af as EyeOff, ag as Eye, ah as XCircle, ai as ShieldCheck, aj as Wifi, ak as WifiOff, al as LogOut, am as Navigation, an as Sunrise, ao as Sunset, ap as Smartphone, aq as Sparkles, ar as Youtube, as as Link, at as MousePointer, au as TrendingUp, av as Activity, aw as UserPlus, ax as Globe, ay as DollarSign, az as BellRing, aA as Filter, aB as Flame, aC as UserCheck, aD as FileText, aE as Upload, aF as CloudLightning, aG as Home } from './vendor-icons-Bsle_tIe.js';
 import { c as create } from './vendor-store-wmv-LjAu.js';
@@ -1322,7 +1322,7 @@ let AdMob = null;
 async function initAdMob() {
   if (!isNative$1()) return;
   try {
-    const mod = await __vitePreload(() => import('./index-CixhA9KC.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
+    const mod = await __vitePreload(() => import('./index-RRykCApL.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
     AdMob = mod.AdMob;
     await AdMob.initialize({
       requestTrackingAuthorization: false,
@@ -1582,7 +1582,7 @@ const index = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
 async function initPushPermission(userId) {
   if (!Capacitor.isNativePlatform()) return { ok: false, reason: 'web' };
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-BZpq6-wo.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-7JpEp-fY.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
 
     // 기존 리스너 중복 방지
     await PushNotifications.removeAllListeners();
@@ -1668,7 +1668,7 @@ function setPushHandlers({ addToast, navigate }) {
 async function unregisterPushToken() {
   if (!Capacitor.isNativePlatform()) return;
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-BZpq6-wo.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-7JpEp-fY.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
     await PushNotifications.removeAllListeners();
     await apiClient.delete('/api/user/push-token');
     console.log('[PUSH] ✅ FCM 토큰 해제 완료');
@@ -1691,7 +1691,7 @@ async function requestLocationPermission() {
     });
   }
   try {
-    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-YJCl1-nu.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
+    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-BSbeHX5j.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
     const perm = await Geolocation.requestPermissions();
     // 'granted' | 'denied' | 'prompt'
     const ok = perm.location === 'granted' || perm.coarseLocation === 'granted';
@@ -1707,7 +1707,7 @@ async function requestLocationPermission() {
 async function requestCameraPermission() {
   if (!Capacitor.isNativePlatform()) return { ok: true }; // 웹은 별도 권한 불필요
   try {
-    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-BVQEoIiy.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
+    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-DCWdkhcl.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
     const perm = await Camera.requestPermissions({ permissions: ['camera', 'photos'] });
     const cameraOk = perm.camera === 'granted' || perm.camera === 'limited';
     const photosOk = perm.photos === 'granted' || perm.photos === 'limited';
@@ -1731,7 +1731,7 @@ async function initNetworkMonitor(onOffline, onOnline) {
     };
   }
   try {
-    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-BecV2rXd.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
+    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-C880EPVt.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
     const status = await Network.getStatus();
     if (!status.connected) onOffline?.();
 
@@ -2373,7 +2373,7 @@ const Players = [
     player: reactExports.lazy(
       () => __vitePreload(() => import(
         /* webpackChunkName: 'reactPlayerDash' */
-        './react-C3Vqh8yN.js'
+        './react-CwCWU-vi.js'
       ),true?__vite__mapDeps([13,1,11,2,3,4,5]):void 0)
     )
   },
@@ -2974,16 +2974,27 @@ function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe, conte
   if (!isOpen) return null;
   const remaining = Math.ceil(30 - adProgress / 100 * 30);
   if (webAdFullscreen) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
       position: "fixed",
       inset: 0,
       zIndex: 99999,
-      background: "linear-gradient(135deg, #0A1628 0%, #0d2240 50%, #0A1628 100%)",
+      background: "rgba(0,0,0,0.85)",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden"
+    }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+      width: "100%",
+      maxWidth: "480px",
+      height: "100dvh",
+      background: "linear-gradient(135deg, #0A1628 0%, #0d2240 50%, #0A1628 100%)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      position: "relative"
     }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
         position: "absolute",
@@ -3098,9 +3109,9 @@ function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe, conte
             50% { transform: scale(1.06); box-shadow: 0 0 60px rgba(0,163,255,0.7); }
           }
         ` })
-    ] });
+    ] }) });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
     position: "fixed",
     inset: 0,
     zIndex: 9e3,
@@ -3109,97 +3120,100 @@ function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe, conte
     display: "flex",
     alignItems: "flex-end",
     justifyContent: "center"
-  }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
-    width: "100%",
-    maxWidth: "480px",
-    backgroundColor: "#ffffff",
-    borderRadius: "24px 24px 0 0",
-    padding: "28px 24px 40px",
-    animation: "slideUp 0.3s ease"
   }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "40px", height: "4px", backgroundColor: "#E5E5EA", borderRadius: "2px", margin: "0 auto 20px" } }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { style: { fontSize: `calc(22px * var(--fs, 1))`, fontWeight: "900", textAlign: "center", marginBottom: "6px" }, children: ctx.title }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: `calc(14px * var(--fs, 1))`, color: "#8E8E93", textAlign: "center", marginBottom: "28px" }, children: [
-      "무료로 이용하거나 ",
-      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "LITE 이상" }),
-      "을 구독하세요"
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        onClick: () => onSubscribe?.(),
-        style: {
-          background: "linear-gradient(135deg, #0056D2, #0096FF)",
-          borderRadius: "18px",
-          padding: "20px",
-          color: "#fff",
-          cursor: "pointer",
-          marginBottom: "12px",
-          boxShadow: "0 8px 24px rgba(0,86,210,0.35)",
-          transition: "transform 0.15s"
-        },
-        onMouseEnter: (e) => e.currentTarget.style.transform = "scale(1.02)",
-        onMouseLeave: (e) => e.currentTarget.style.transform = "scale(1)",
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.85, fontWeight: "700", marginBottom: "4px" }, children: "⭐ LITE 이상" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(18px * var(--fs, 1))`, fontWeight: "900", marginBottom: "4px" }, children: "광고 없이 무제한 등록" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.9 }, children: "광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { textAlign: "right", flexShrink: 0, marginLeft: "12px" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(22px * var(--fs, 1))`, fontWeight: "900" }, children: "₩9,900" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(11px * var(--fs, 1))`, opacity: 0.85 }, children: "/월 구독" })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: "14px", backgroundColor: "rgba(255,255,255,0.2)", borderRadius: "12px", padding: "10px 16px", fontSize: `calc(14px * var(--fs, 1))`, fontWeight: "800", textAlign: "center" }, children: "🚀 지금 구독하고 바로 등록하기" })
-        ]
-      }
-    ),
-    !adDone ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { border: `1.5px solid #E5E5EA`, borderRadius: "18px", padding: "20px" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(15px * var(--fs, 1))`, fontWeight: "800", marginBottom: "4px", color: "#1c1c1e" }, children: "📺 30초 광고 시청 후 무료 등록" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, color: "#8E8E93", marginBottom: "16px" }, children: "광고를 시청하면 1회 무료로 이용하실 수 있어요." }),
-      adWatching ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { backgroundColor: "#F2F2F7", borderRadius: "12px", padding: "20px", marginBottom: "12px", textAlign: "center", minHeight: "80px", display: "flex", alignItems: "center", justifyContent: "center" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(24px * var(--fs, 1))` }, children: "📺" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(13px * var(--fs, 1))`, color: "#8E8E93", marginLeft: "8px", fontWeight: "600" }, children: "시청 중..." })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { height: "6px", backgroundColor: "#F2F2F7", borderRadius: "3px", overflow: "hidden", marginBottom: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { height: "100%", width: `${adProgress}%`, backgroundColor: "#0056D2", borderRadius: "3px", transition: "width 0.9s linear" } }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, color: "#8E8E93", textAlign: "center" }, children: [
-          Math.ceil(30 - adProgress / 100 * 30),
-          "초 후 완료..."
-        ] })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleWatchAd,
-          style: { width: "100%", padding: "14px", borderRadius: "12px", border: "1.5px solid #0056D2", backgroundColor: "rgba(0,86,210,0.05)", color: "#0056D2", fontSize: `calc(15px * var(--fs, 1))`, fontWeight: "800", cursor: "pointer" },
-          children: "📺 광고 시청하기"
-        }
-      )
-    ] }) : (
-      // ✅ FIX-AUTO: 시청 완료 후 자동 등록 카운트다운 표시
+    " ",
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+      width: "100%",
+      maxWidth: "480px",
+      backgroundColor: "#ffffff",
+      borderRadius: "24px 24px 0 0",
+      padding: "28px 24px 40px",
+      animation: "slideUp 0.3s ease"
+    }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "40px", height: "4px", backgroundColor: "#E5E5EA", borderRadius: "2px", margin: "0 auto 20px" } }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { style: { fontSize: `calc(22px * var(--fs, 1))`, fontWeight: "900", textAlign: "center", marginBottom: "6px" }, children: ctx.title }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: `calc(14px * var(--fs, 1))`, color: "#8E8E93", textAlign: "center", marginBottom: "28px" }, children: [
+        "무료로 이용하거나 ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "LITE 이상" }),
+        "을 구독하세요"
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
+        "div",
         {
-          onClick: handleComplete,
-          style: { width: "100%", padding: "16px", borderRadius: "18px", border: "none", backgroundColor: "#00C48C", color: "#fff", fontSize: `calc(17px * var(--fs, 1))`, fontWeight: "900", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,196,140,0.3)" },
+          onClick: () => onSubscribe?.(),
+          style: {
+            background: "linear-gradient(135deg, #0056D2, #0096FF)",
+            borderRadius: "18px",
+            padding: "20px",
+            color: "#fff",
+            cursor: "pointer",
+            marginBottom: "12px",
+            boxShadow: "0 8px 24px rgba(0,86,210,0.35)",
+            transition: "transform 0.15s"
+          },
+          onMouseEnter: (e) => e.currentTarget.style.transform = "scale(1.02)",
+          onMouseLeave: (e) => e.currentTarget.style.transform = "scale(1)",
           children: [
-            "✅ 시청 완료!",
-            autoCount > 0 ? ` (${autoCount}초 후 자동 등록)` : ` ${ctx.action}`
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.85, fontWeight: "700", marginBottom: "4px" }, children: "⭐ LITE 이상" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(18px * var(--fs, 1))`, fontWeight: "900", marginBottom: "4px" }, children: "광고 없이 무제한 등록" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.9 }, children: "광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { textAlign: "right", flexShrink: 0, marginLeft: "12px" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(22px * var(--fs, 1))`, fontWeight: "900" }, children: "₩9,900" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(11px * var(--fs, 1))`, opacity: 0.85 }, children: "/월 구독" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: "14px", backgroundColor: "rgba(255,255,255,0.2)", borderRadius: "12px", padding: "10px 16px", fontSize: `calc(14px * var(--fs, 1))`, fontWeight: "800", textAlign: "center" }, children: "🚀 지금 구독하고 바로 등록하기" })
           ]
         }
+      ),
+      !adDone ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { border: `1.5px solid #E5E5EA`, borderRadius: "18px", padding: "20px" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(15px * var(--fs, 1))`, fontWeight: "800", marginBottom: "4px", color: "#1c1c1e" }, children: "📺 30초 광고 시청 후 무료 등록" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, color: "#8E8E93", marginBottom: "16px" }, children: "광고를 시청하면 1회 무료로 이용하실 수 있어요." }),
+        adWatching ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { backgroundColor: "#F2F2F7", borderRadius: "12px", padding: "20px", marginBottom: "12px", textAlign: "center", minHeight: "80px", display: "flex", alignItems: "center", justifyContent: "center" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(24px * var(--fs, 1))` }, children: "📺" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: `calc(13px * var(--fs, 1))`, color: "#8E8E93", marginLeft: "8px", fontWeight: "600" }, children: "시청 중..." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { height: "6px", backgroundColor: "#F2F2F7", borderRadius: "3px", overflow: "hidden", marginBottom: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { height: "100%", width: `${adProgress}%`, backgroundColor: "#0056D2", borderRadius: "3px", transition: "width 0.9s linear" } }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: `calc(12px * var(--fs, 1))`, color: "#8E8E93", textAlign: "center" }, children: [
+            Math.ceil(30 - adProgress / 100 * 30),
+            "초 후 완료..."
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleWatchAd,
+            style: { width: "100%", padding: "14px", borderRadius: "12px", border: "1.5px solid #0056D2", backgroundColor: "rgba(0,86,210,0.05)", color: "#0056D2", fontSize: `calc(15px * var(--fs, 1))`, fontWeight: "800", cursor: "pointer" },
+            children: "📺 광고 시청하기"
+          }
+        )
+      ] }) : (
+        // ✅ FIX-AUTO: 시청 완료 후 자동 등록 카운트다운 표시
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: handleComplete,
+            style: { width: "100%", padding: "16px", borderRadius: "18px", border: "none", backgroundColor: "#00C48C", color: "#fff", fontSize: `calc(17px * var(--fs, 1))`, fontWeight: "900", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,196,140,0.3)" },
+            children: [
+              "✅ 시청 완료!",
+              autoCount > 0 ? ` (${autoCount}초 후 자동 등록)` : ` ${ctx.action}`
+            ]
+          }
+        )
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: onClose,
+          style: { width: "100%", marginTop: "12px", padding: "14px", border: "none", background: "none", color: "#8E8E93", fontSize: `calc(14px * var(--fs, 1))`, cursor: "pointer", fontWeight: "600" },
+          children: "취소"
+        }
       )
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        onClick: onClose,
-        style: { width: "100%", marginTop: "12px", padding: "14px", border: "none", background: "none", color: "#8E8E93", fontSize: `calc(14px * var(--fs, 1))`, cursor: "pointer", fontWeight: "600" },
-        children: "취소"
-      }
-    )
-  ] }) });
+    ] })
+  ] });
 }
 
 const API_KEY = "2c92debdb84cf6c2ca60816fa5e9acbbfa06a9ae502cc37919ebec6be629623a";
@@ -8388,7 +8402,7 @@ const SITE_URL = "https://www.fishing-go.com";
 const APP_ID$3 = "kr.fishinggo.app";
 async function copyToClipboard$1(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-CStbsbK7.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-fgYv9XHQ.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -8414,7 +8428,7 @@ async function copyToClipboard$1(text) {
 }
 async function openKakaoTalk$1() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CZlkngfX.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CQ40WnWe.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -21256,7 +21270,7 @@ function getFishEmoji(name) {
 
 async function copyToClipboard(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-CStbsbK7.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-fgYv9XHQ.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -21282,7 +21296,7 @@ async function copyToClipboard(text) {
 }
 async function openKakaoTalk() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CZlkngfX.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CQ40WnWe.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -23944,7 +23958,7 @@ var AppUpdateResultCode;
 })(AppUpdateResultCode || (AppUpdateResultCode = {}));
 
 const AppUpdate = registerPlugin('AppUpdate', {
-    web: () => __vitePreload(() => import('./web-bSu4Ng4w.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
+    web: () => __vitePreload(() => import('./web-BatZeaJZ.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
 });
 
 const CURRENT_APP_VERSION = true ? "2.1.75" : "2.1.17";
