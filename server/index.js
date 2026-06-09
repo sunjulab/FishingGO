@@ -1306,6 +1306,9 @@ function getServerLevel(totalExp = 0) {
 io.on('connection', (socket) => {
   // ✅ OPT-5: 연결 시 핸드셰이크 토큰 검증 (발신자 위조 방지)
   let verifiedUser = null;
+  // ✅ FIX-SOCKET-FLOOD: 메시지 플러딩 방지
+  let msgCount = 0; let msgWindow = Date.now();
+  const MSG_LIMIT = 10; const MSG_WINDOW_MS = 3000; // 3초 내 10회
   const handshakeToken = socket.handshake?.auth?.token || socket.handshake?.query?.token;
   if (handshakeToken) {
     try {
@@ -1349,6 +1352,7 @@ io.on('connection', (socket) => {
 
   socket.on('join_crew', async (crewId) => {
     if (!crewId || typeof crewId !== 'string' || !/^[a-f0-9]{24}$/.test(crewId)) return; // ✅ FIX-CREWID
+    if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-SOCKET-JOIN-AUTH
     socket.join(crewId);
     // ENH4-C4: DB에서 최근 50개 메시지만 로드 (기존 100개 → 초기 전송량 최적화)
     if (dbReady && ChatMessage) {
@@ -1378,6 +1382,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_msg', async (data) => {
+    // ✅ FIX-SOCKET-FLOOD-CHECK: 플러딩 방지
+    const now = Date.now(); if (now - msgWindow > MSG_WINDOW_MS) { msgCount = 0; msgWindow = now; }
+    if (++msgCount > MSG_LIMIT) { socket.emit('error', { message: '메시지를 너무 빠르게 전송하고 있습니다.' }); return; }
     if (!data.crewId || typeof data.crewId !== 'string') return;
     if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-MSG-AUTH
     if (data.type === 'text' && (!data.text || !String(data.text).trim())) return; // ✅ FIX-MSG-EMPTY
@@ -2521,7 +2528,7 @@ app.post('/api/auth/find-id', async (req, res) => {
 });
 
 // --- 비밀번호 재설정 ---
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
   try {
     const { email, realName, phone, newPassword } = req.body;
     if (!email || !realName || !phone || !newPassword) return res.status(400).json({ error: '모든 항목을 입력해주세요.' });
@@ -3345,7 +3352,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (dbAvailable && User) {
       try {
-        user = await User.findOne({ email });
+        user = await User.findOne({ email }).select('-password -__v');
       } catch (dbErr) {
         logger.warn('[login] DB 조회 실패 → memUsers fallback:', dbErr.message);
         user = memUsers.find(u => u.email === email);
@@ -3445,7 +3452,7 @@ app.post('/api/auth/google', async (req, res) => {
     if (dbAvailable && User) {
 
       try {
-        user = await User.findOne({ email });
+        user = await User.findOne({ email }).select('-password -__v');
         if (!user) {
           let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
           if (!safeName) safeName = 'Fisher';
