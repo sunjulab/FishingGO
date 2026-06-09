@@ -7804,47 +7804,9 @@ app.post('/api/payment/billing/register', async (req, res) => {
   }
 });
 
-// ── API: 내 구독 정보 조회 ────────────────────────────────────────────────────
-// ── API: 내 구독 정보 조회 — JWT 인증 필수 ────────────────────────────────────
-app.get('/api/payment/subscription/:userId', async (req, res) => {
-  try {
-    // ✅ JWT 인증 추가
-    const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
-    let tp;
-    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
-    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-
-    const { userId } = req.params;
-    // 본인 또는 어드민만 조회 가능
-    const isAdmin = isAdminToken(tp);
-    if (!isAdmin && tp.id !== userId && tp.email !== userId) {
-      return res.status(403).json({ error: '본인의 구독 정보만 조회 가능합니다.' });
-    }
-
-    let sub = null;
-    if (dbReady && Subscription) {
-      sub = await Subscription.findOne({ userId }).lean().catch(() => null);
-    } else {
-      sub = memProSubs[userId] || null;
-    }
-    if (!sub) return res.json({ hasSubscription: false });
-    res.json({
-      hasSubscription: true,
-      planId: sub.planId,
-      tier: sub.tier,
-      amount: sub.amount,
-      status: sub.status,
-      pgProvider: sub.pgProvider,
-      nextBillingDate: sub.nextBillingDate,
-      lastBilledAt: sub.lastBilledAt,
-      startedAt: sub.startedAt,
-      failCount: sub.failCount || 0,
-    });
-  } catch (err) {
-    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
-  }
-});
+// ── API: 내 구독 정보 조회 — DUPLICATE REMOVED ──────────────────────────────
+// GET /api/payment/subscription/:userId 는 L2316에 더 완전한 버전이 있으므로 이 중복 엔드포인트를 제거합니다.
+// FIX-DUP-ROUTE-SUBSCRIPTION
 
 // ── API: 구독 취소 — ✅ NEW-WARN-01: JWT 인증 추가 (본인/어드민만 취소 가능)
 app.delete('/api/payment/subscription/:userId', async (req, res) => {
