@@ -889,6 +889,11 @@ try {
   // ✅ FIX-CATCH-LIMITER
   const catchLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '조황 등록이 너무 많습니다.' }, standardHeaders: true, legacyHeaders: false });
 
+  // ✅ FIX-CACHE-AUTH-MIDDLEWARE: /api/auth/* 에 no-store 헤더
+  app.use('/api/auth/', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   app.use('/api/', apiLimiter);
   app.use('/api/media/youtube/search', ytSearchLimiter);   // ✅ 검색: 1분/3회
   app.use('/api/media/youtube/unified', ytFeedLimiter);    // ✅ 통합 피드: 1분/10회
@@ -1364,6 +1369,17 @@ io.on('connection', (socket) => {
   socket.on('join_crew', async (crewId) => {
     if (!crewId || typeof crewId !== 'string' || !/^[a-f0-9]{24}$/.test(crewId)) return; // ✅ FIX-CREWID
     if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-SOCKET-JOIN-AUTH
+    // ✅ FIX-JOIN-CREW-MEMBER: 비공개 크루 멤버십 검증
+    if (dbReady && Crew) {
+      try {
+        const crewDoc = await Crew.findById(crewId).select('isPrivate members').lean();
+        if (crewDoc && crewDoc.isPrivate) {
+          const userKey = verifiedUser.email || verifiedUser.id;
+          const isMem = (crewDoc.members || []).some(m => (m.email || m) === userKey);
+          if (!isMem) { socket.emit('error', { message: '비공개 크루의 멤버가 아닙니다.' }); return; }
+        }
+      } catch { }
+    }
     socket.join(crewId);
     // ENH4-C4: DB에서 최근 50개 메시지만 로드 (기존 100개 → 초기 전송량 최적화)
     if (dbReady && ChatMessage) {
@@ -3438,6 +3454,7 @@ app.post('/api/auth/login', async (req, res) => {
     const userTier = user.tier || 'FREE';
     const accessToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier }, JWT_SECRET, { expiresIn: '1h' });
     const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    res.setHeader('Cache-Control', 'no-store'); // ✅ FIX-CACHE-NO-STORE-LOGIN
     res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
   } catch (err) { logger.error('[login] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
@@ -4221,6 +4238,7 @@ app.delete('/api/user/records/:id', async (req, res) => {
     const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
     if (dbReady && CatchRecord) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-CastError-CATCH
       const record = await CatchRecord.findById(req.params.id);
       if (!record) return res.status(404).json({ error: '기록 없음' });
       if (!isAdmin && record.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
@@ -4756,6 +4774,7 @@ app.delete('/api/community/crews/:id', async (req, res) => {
     const jwtEmail = tp.email;
     const isAdmin = isAdminToken(tp);
     if (dbReady && Crew) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-CREW
       const crew = await Crew.findById(req.params.id);
       if (!crew) return res.status(404).json({ error: '크루 없음' });
       if (!isAdmin && crew.owner !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
@@ -9065,6 +9084,7 @@ app.get('/api/contest/active', async (req, res) => {
 app.get('/api/contest/:id/ranking', async (req, res) => {
   try {
     await waitForDb(5000);
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-CONTEST
     const contest = await Contest.findById(req.params.id).lean();
     if (!contest) return res.status(404).json({ error: '대회 없음' });
     const ranking = await CatchRecord.find({ contestId: req.params.id })
