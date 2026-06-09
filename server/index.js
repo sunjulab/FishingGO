@@ -3676,6 +3676,12 @@ app.post('/api/auth/google', async (req, res) => {
 });
 
 // --- 닉네임 변경 ---
+// ✅ FIX-NICK-RESERVED: 예약어 닉네임 차단
+const RESERVED_NICKNAMES = ['admin', 'master', 'root', 'system', 'operator', 'moderator', 'support', 'help', 'official', '관리자', '운영자', '마스터', '시스템'];
+function isReservedNickname(name) {
+  const lower = (name || '').toLowerCase().replace(/\s/g, '');
+  return RESERVED_NICKNAMES.some(r => lower.includes(r));
+}
 app.put('/api/user/nickname', async (req, res) => {
   try {
     const auth = req.headers.authorization || '';
@@ -3684,6 +3690,8 @@ app.put('/api/user/nickname', async (req, res) => {
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
     const { email, newName } = req.body;
+    // ✅ FIX-NICK-RESERVED-CHECK: 예약어 닉네임 차단
+    if (isReservedNickname(newName)) return res.status(400).json({ error: '사용할 수 없는 닉네임입니다. (예약어 금지)' }); // FIX-NICK-RESERVED-CHECK
     if (!newName) return res.status(400).json({ error: '닉네임을 입력해주세요.' });
     const isAdmin = isAdminToken(tp);
     if (!isAdmin && tp.id !== email && tp.email !== email) return res.status(403).json({ error: '본인 정보만 변경 가능' });
