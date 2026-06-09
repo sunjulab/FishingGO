@@ -2593,6 +2593,8 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
     const { email, realName, phone, newPassword } = req.body;
     if (!email || !realName || !phone || !newPassword) return res.status(400).json({ error: '모든 항목을 입력해주세요.' });
     if (newPassword.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
+    // ✅ FIX-RESET-PWD-LEN: 비밀번호 최대 길이 제한 (bcrypt DoS 방어 — 72바이트 초과 입력 차단)
+    if (newPassword.length > 128) return res.status(400).json({ error: '비밀번호는 최대 128자입니다.' });
     const normalizedPhone = String(phone).replace(/\D/g, '');
     const normalizedEmail = email.trim().toLowerCase();
     const hashed = await bcrypt.hash(newPassword, 12);
@@ -3323,18 +3325,19 @@ app.post('/api/admin/create-test-account', async (req, res) => {
         await User.findOneAndUpdate({ email: testEmail }, {
           $set: { password: hash, tier: 'BUSINESS_LITE', name: testName, updatedAt: new Date() }
         });
-        return res.json({ ok: true, message: '기존 계정 업데이트 완료', email: testEmail, password: testPw });
+        return res.json({ ok: true, message: '기존 계정 업데이트 완료', email: testEmail }); // ✅ FIX-TESTACCT-PWDLEAK: 응답에서 평문 비밀번호 제거
       }
       const hash = await bcrypt.hash(testPw, 12);
       await User.create({
         email: testEmail, password: hash, name: testName,
         tier: 'BUSINESS_LITE', createdAt: new Date(), updatedAt: new Date(),
       });
-      return res.json({ ok: true, message: '테스트 계정 생성 완료', email: testEmail, password: testPw });
+      return res.json({ ok: true, message: '테스트 계정 생성 완료', email: testEmail }); // ✅ FIX-TESTACCT-PWDLEAK
     } else {
       // 인메모리
-      users.push({ email: testEmail, password: testPw, name: testName, tier: 'BUSINESS_LITE' });
-      return res.json({ ok: true, message: '인메모리 계정 생성', email: testEmail, password: testPw });
+      const hashMem = require('bcryptjs').hashSync(testPw, 10); // ✅ FIX-TESTACCT-PWDLEAK: 인메모리도 bcrypt 해싱
+      users.push({ email: testEmail, password: hashMem, name: testName, tier: 'BUSINESS_LITE' });
+      return res.json({ ok: true, message: '인메모리 계정 생성', email: testEmail }); // ✅ FIX-TESTACCT-PWDLEAK
     }
   } catch (err) {
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
@@ -3646,6 +3649,8 @@ app.put('/api/user/password', async (req, res) => {
     if (!email) return res.status(400).json({ error: '이메일이 필요합니다.' });
     if (!currentPassword || !newPassword) return res.status(400).json({ error: '비밀번호를 모두 입력해주세요.' });
     if (newPassword.length < 8) return res.status(400).json({ error: '새 비밀번호는 8자 이상이어야 합니다.' });
+    // ✅ FIX-CHANGE-PWD-LEN: 비밀번호 최대 길이 제한 (bcrypt DoS 방어)
+    if (newPassword.length > 128) return res.status(400).json({ error: '비밀번호는 최대 128자입니다.' });
 
     // 본인 또는 어드민만 변경 가능
     const isAdmin = isAdminToken(tp);
