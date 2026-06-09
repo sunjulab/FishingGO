@@ -5619,7 +5619,10 @@ app.put('/api/community/business/:id', async (req, res) => {
     }
 
     // ✅ BUG-FIX-PUT-4: 화이트리스트 필드만 저장 — 예상치 못한 필드 주입 방지
-    const ALLOWED_FIELDS = ['shipName', 'type', 'target', 'region', 'date', 'price', 'phone',
+    // ✅ FIX-BPOST-TITLE-LENGTH: 비즈니스 게시글 주요 필드 길이 제한
+  if (fields.shipName && typeof fields.shipName === 'string' && fields.shipName.length > 100) return res.status(400).json({ error: '선박명은 최대 100자입니다.' });
+  if (fields.content && typeof fields.content === 'string' && fields.content.length > 5000) return res.status(400).json({ error: '내용은 최대 5000자입니다.' });
+  const ALLOWED_FIELDS = ['shipName', 'type', 'target', 'region', 'date', 'price', 'phone',
       'content', 'cover', 'images', 'isPinned', 'capacity', 'harborId', 'expiresAt'];
     const safeFields = {};
     for (const k of ALLOWED_FIELDS) {
@@ -8109,7 +8112,16 @@ app.post('/api/admin/push', verifyToken, (req, res) => {
     message,
     time: time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
   };
-  io.emit('push_notification', payload); // 클라이언트에서 targetEmail 필터링
+  // ✅ FIX-PUSH-TARGET-ONLY: 특정 소켓에만 발송 (전체 방송 → 타겟 필터링)
+  let pushed = false;
+  for (const [sid, sock] of io.sockets.sockets) {
+    const sockUser = sock.verifiedUser || sock._verifiedUser;
+    if (sockUser && (sockUser.email === targetEmail || sockUser.id === targetEmail)) {
+      sock.emit('push_notification', payload);
+      pushed = true;
+    }
+  }
+  if (!pushed) (logger?.debug || console.log)('[Admin Push] 오프라인 사용자:', targetEmail);
   (logger?.info || console.log)(`[Admin Push] 개인 알림 → ${targetEmail}: ${message}`);
   res.json({ success: true, targetEmail, payload });
 });
