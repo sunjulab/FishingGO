@@ -870,7 +870,27 @@ setInterval(() => {
 try {
   const rateLimit = require('express-rate-limit');
   // 로그인/회원가입: IP당 10분/500회 (통신사 NAT 환경 수백명 커버)
-  // FIX-POST-RATE: 게시글 작성 rate limit (1분 5회)
+  // FIX-LIKE-RATE: 좋아요 rate limit (1분 30회)
+const likeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: '좋아요 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+  keyGenerator: (req) => req.headers.authorization?.slice(-20) || req.ip || 'unknown',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// FIX-CREW-JOIN-RATE: 크루 가입 rate limit (1분 10회)
+const crewJoinLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: '크루 가입 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+  keyGenerator: (req) => req.headers.authorization?.slice(-20) || req.ip || 'unknown',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// FIX-POST-RATE: 게시글 작성 rate limit (1분 5회)
 const postCreateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1분
   max: 5,
@@ -3642,7 +3662,7 @@ app.post('/api/auth/refresh', async (req, res) => {
 });
 
 // --- 구글 소셜 로그인 (자동 회원가입) ---
-app.post('/api/auth/google', async (req, res) => {
+app.post('/api/auth/google', authLimiter, async (req, res) => { // ✅ FIX-GOOGLE-AUTH-RATE
   try {
     const { email, name, picture } = req.body;
     if (!email) return res.status(400).json({ error: 'Google 정보를 가져올 수 없습니다.' });
@@ -4840,7 +4860,7 @@ app.delete('/api/community/posts/:id/comments/:commentId', async (req, res) => {
 
 
 // ── 좌아요 POST/PATCH (JWT 인증 + 중복 방지) ─────────────────
-app.post('/api/community/posts/:id/like', async (req, res) => {
+app.post('/api/community/posts/:id/like', likeLimiter, async (req, res) => { // FIX-LIKE-RATE-APPLY
   try {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
@@ -5172,7 +5192,7 @@ function checkCrewJoinRate(ip) {
   e.count++; crewJoinRateMap.set(key, e);
   return e.count <= 5;
 }
-app.post('/api/community/crews/:id/join', async (req, res) => {
+app.post('/api/community/crews/:id/join', crewJoinLimiter, async (req, res) => { // FIX-CREW-JOIN-RATE-APPLY
   try {
     const rawJoinIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
     if (!checkCrewJoinRate(rawJoinIp)) return res.status(429).json({ error: '크루 가입 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }); // FIX-CREW-JOIN-RATE-CHECK
@@ -9300,7 +9320,7 @@ app.get('/api/catch/my', async (req, res) => {
 
 // POST /api/catch/:id/like — 좋아요
 // ✅ BUG-01 FIX: JWT 인증 없음 + body.userId 신뢰 + CastError 크래시 배합 취약점 수정
-app.post('/api/catch/:id/like', async (req, res) => {
+app.post('/api/catch/:id/like', likeLimiter, async (req, res) => { // FIX-LIKE-RATE-APPLY
   try {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
