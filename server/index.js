@@ -850,7 +850,7 @@ try {
   // 일반 API: IP당 1분/1000회 (동시 1만 사용자 커버)
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 1000,
+    max: 300, // ✅ FIX-API-LIMITER: 1분 300회
     message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -881,6 +881,9 @@ try {
   const otpLimiter = rateLimit({ windowMs: 60_000, max: 3, message: { error: 'OTP 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
 
   app.use('/api/auth/', authLimiter);
+
+  // ✅ FIX-CATCH-LIMITER
+  const catchLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '조황 등록이 너무 많습니다.' }, standardHeaders: true, legacyHeaders: false });
 
   app.use('/api/', apiLimiter);
   app.use('/api/media/youtube/search', ytSearchLimiter);   // ✅ 검색: 1분/3회
@@ -1045,6 +1048,7 @@ app.post('/api/secret-point-overrides', (req, res) => {
     if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
   const { id, lat, lng } = req.body;
+    if (!Number.isFinite(parseFloat(lat)) || !Number.isFinite(parseFloat(lng))) return res.status(400).json({ error: '유효한 좌표(숫자)가 필요합니다.' }); // ✅ FIX-LAT-LNG
   if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
   secretPointOverrides[String(id)] = { lat: parseFloat(lat), lng: parseFloat(lng) };
   saveSecretPointOverrides();
@@ -1393,6 +1397,7 @@ io.on('connection', (socket) => {
     if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-MSG-AUTH
     if (data.type === 'text' && (!data.text || !String(data.text).trim())) return; // ✅ FIX-MSG-EMPTY
     if (data.type !== 'post_share' && typeof data.text === 'string' && data.text.length > 1000) { socket.emit('error', { message: '1000자를 초과할 수 없습니다.' }); return; } // ✅ FIX-MSG-SIZE
+    const safeText = (data.text||'').replace(/<[^>]*>/g,'').replace(/javascript:/gi,'').trim().substring(0,1000); // ✅ FIX-CHAT-XSS
 
     // ── 닉네임 결정 (기존 로직 동일) ─────────────────────────
     let resolvedNickname = cachedNickname;
@@ -1457,7 +1462,7 @@ io.on('connection', (socket) => {
     }
 
     // ── 일반 텍스트 메시지 처리 (기존 로직) ──────────────────
-    const text = censorText((data.text || '').toString().trim());
+    const text = censorText((safeText || data.text || '').toString().trim());
     if (!text || text.length > 500) return;
 
     const msgData = {
@@ -4346,7 +4351,8 @@ app.post('/api/community/posts', async (req, res) => {
 
     if (dbReady && Post) {
       try {
-        const post = new Post({ author, author_email, category, content, image: safeImage, images: safeImages, location: safeLocation });
+        const safeContent = (content||'').replace(/<[^>]*>/g,'').replace(/javascript:/gi,'').trim().substring(0,15000); // ✅ FIX-POST-XSS
+    const post = new Post({ author, author_email, category, content: safeContent, image: safeImage, images: safeImages, location: safeLocation });
         await post.save();
         try {
           memPosts.unshift({ _id: post._id.toString(), id: post._id.toString(), author, author_email, category, content, image: safeImage, images: safeImages, location: safeLocation, likes: 0, comments: [], createdAt: post.createdAt });
@@ -8817,7 +8823,7 @@ function _buildRecommendKeyword(pointType, fish) {
 // ─── 조황 인증 API ───────────────────────────────────────────────────────────
 
 // POST /api/catch — 조황 등록
-app.post('/api/catch', async (req, res) => {
+app.post('/api/catch', catchLimiter, async (req, res) => { // ✅ FIX-CATCH-RATE: 1분 5회 제한
   try {
     const { userId, userName, userAvatar, fishName, fishSize, fishWeight,
             imageUrl, location, lat, lng, memo, weather, tide, contestId,
