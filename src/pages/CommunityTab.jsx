@@ -159,9 +159,11 @@ export default function CommunityTab() {
     blockedUsersRef.current = user?.blockedUsers || [];
   }, [user?.blockedUsers]);
 
-  // ✅ BUG-1 FIX: 언마운트 시 heartBurstTimerRef cleanup
+  // ✅ BUG-1 FIX: 언마운트 시 heartBurstTimerRef cleanup + isMountedRef false
   useEffect(() => {
+    isMountedRef.current = true; // 마운트 시 true
     return () => {
+      isMountedRef.current = false; // ✅ FIX-ISMOUNTED-CLEANUP: 언마운트 시 false 설정 (setState 차단)
       Object.values(heartBurstTimerRef.current).forEach(clearTimeout);
       heartBurstTimerRef.current = {};
     };

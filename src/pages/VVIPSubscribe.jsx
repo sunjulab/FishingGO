@@ -681,7 +681,7 @@ export default function VVIPSubscribe() {
                   display: 'flex', alignItems: 'center', gap: '14px',
                   cursor: disabled ? 'not-allowed' : 'pointer',
                   transition: 'transform 0.15s, opacity 0.15s',
-                  opacity: isOtherSlot && !harbor.isMyHarbor ? 0.4 : 1,
+                  opacity: harbor.isMyHarbor ? 1 : isTakenByOther ? 0.6 : isOtherSlot ? 0.35 : 1,
                 }}
                 onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
