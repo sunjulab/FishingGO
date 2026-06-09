@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Crown, Lock, MapPin, Star, CheckCircle2, RefreshCw, Smartphone, Zap } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
