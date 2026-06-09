@@ -3794,8 +3794,6 @@ app.put('/api/user/password', async (req, res) => {
       // ✅ FIX-PWD-CACHE-INVALIDATE: 비밀번호 변경 시 기존 JWT 즉시 무효화
       if (typeof pwdChangedCache !== 'undefined') pwdChangedCache.set(email, Date.now());
       pwdChangedCache.set(email, Date.now()); // ✅ FIX-PWD-IAT: 기존 토큰 무효화
-      return res.json({ success: true });
-    } else {
       user.password = hashed;
       saveMemUsers();
       pwdChangedCache.set(email, Date.now()); // ✅ FIX-PWD-IAT: 기존 토큰 무효화
@@ -3803,6 +3801,7 @@ app.put('/api/user/password', async (req, res) => {
     }
   } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
+
 
 // --- 사용자 차단 ---
 app.post('/api/user/block', async (req, res) => {
@@ -4360,6 +4359,8 @@ app.get('/api/user/records', async (req, res) => {
 app.get('/api/records/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    // FIX-OBJID-RECORDS-GET: isValid 검증으로 CastError 방지 및 불필요한 DB 쿼리 차단
+    if (id && !/^[a-fA-F0-9]{24}$/.test(id)) return res.status(400).json({ error: '유효하지 않은 ID 형식' });
     if (dbReady && CatchRecord) {
       let record = null;
       try { record = await CatchRecord.findById(id); } catch (castErr) { /* ObjectId 캐스팅 오류 무시 */ }
