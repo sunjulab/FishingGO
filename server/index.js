@@ -1518,8 +1518,15 @@ io.on('connection', (socket) => {
       const postId = (data.postId || '').toString().trim();
       if (!postId) return;
       const rawImage = (data.postImage || '').toString();
-      // ✅ BASE64-FIX: base64 이미지는 실시간 emit에는 전체 전송, DB에는 저장 안 함 (16MB 문서 한도 보호)
+      // FIX-CHAT-MIME: base64 이미지 MIME 타입 화이트리스트 (허용: jpeg/png/gif/webp)
       const isBase64 = rawImage.startsWith('data:');
+      if (isBase64) {
+        const mimeMatch = rawImage.match(/^data:([^;]+);base64,/);
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!mimeMatch || !allowedMimes.includes(mimeMatch[1])) {
+          socket.emit('error', { message: '허용되지 않는 이미지 형식입니다.' }); return;
+        }
+      }
       const dbSafeImage = isBase64 ? '' : rawImage.slice(0, 500); // URL은 500자 이내 저장
       const msgData = {
         type: 'post_share',
@@ -4225,6 +4232,8 @@ app.delete('/api/business/posts/:id', async (req, res) => {
     const email = tp.email || tp.id;
     const isAdmin = isAdminToken(tp);
     const { id } = req.params;
+    // FIX-OBJID-BPOST-DEL: ObjectId 유효성 사전 검증 → CastError 방지
+    if (id && !/^[a-fA-F0-9]{24}$/.test(id)) return res.status(400).json({ error: '유효하지 않은 ID 형식' });
     if (dbReady && BusinessPost) {
       const post = await BusinessPost.findById(id);
       if (!post) return res.status(404).json({ error: '게시글 없음' });
