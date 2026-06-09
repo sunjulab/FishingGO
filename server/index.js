@@ -9091,8 +9091,21 @@ app.post('/api/catch/:id/like', async (req, res) => {
 // ─── AI API ──────────────────────────────────────────────────────────────
 
 // POST /api/ai/fish-identify — Gemini Vision으로 어종 식별
+// ✅ FIX-FISH-RATE: 물고기 인식 rate limit (IP당 1분 5회 - Gemini Vision API 비용 보호)
+const fishRateMap = new Map();
+function checkFishRate(ip) {
+  const key = (typeof hashIp === 'function') ? hashIp(ip) : ip;
+  const now = Date.now();
+  const e = fishRateMap.get(key) || { count: 0, windowStart: now };
+  if (now - e.windowStart > 60_000) { e.count = 0; e.windowStart = now; }
+  e.count++; fishRateMap.set(key, e);
+  if (fishRateMap.size > 3000) fishRateMap.clear();
+  return e.count <= 5;
+}
 app.post('/api/ai/fish-identify', async (req, res) => {
   try {
+    const rawFishIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
+    if (!checkFishRate(rawFishIp)) return res.status(429).json({ error: '물고기 인식 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' }); // FIX-FISH-RATE-CHECK
     const { imageBase64, mimeType = 'image/jpeg' } = req.body;
     if (!imageBase64) return res.status(400).json({ error: '이미지 필요' });
     // ✅ FIX-FISH-IMG-LEN: base64 이미지 최대 10MB 제한 (약 13,650,000 chars) - DoS 방어
@@ -9132,10 +9145,25 @@ app.post('/api/ai/fish-identify', async (req, res) => {
 });
 
 // POST /api/ai/coach — AI 낚시 코치 (Gemini)
+// ✅ FIX-AI-COACH-RATE: AI 코치 rate limit (IP당 1분 10회 - API 비용 DoS 방어)
+const aiCoachRateMap = new Map();
+function checkAiCoachRate(ip) {
+  const key = (typeof hashIp === 'function') ? hashIp(ip) : ip;
+  const now = Date.now();
+  const e = aiCoachRateMap.get(key) || { count: 0, windowStart: now };
+  if (now - e.windowStart > 60_000) { e.count = 0; e.windowStart = now; }
+  e.count++; aiCoachRateMap.set(key, e);
+  if (aiCoachRateMap.size > 5000) aiCoachRateMap.clear(); // 메모리 보호
+  return e.count <= 10;
+}
 app.post('/api/ai/coach', async (req, res) => {
   try {
+    const rawAiIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
+    if (!checkAiCoachRate(rawAiIp)) return res.status(429).json({ error: 'AI 코치 사용이 너무 많습니다. 1분 후 다시 시도해주세요.' }); // FIX-AI-COACH-RATE-CHECK
     const { message, context } = req.body; // context: { weather, tide, location, season }
     if (!message) return res.status(400).json({ error: '메시지 필요' });
+    // ✅ FIX-AI-CONTEXT-SIZE: context 객체 최대 1000자 제한 (JSON injection 방어)
+    if (context && JSON.stringify(context).length > 1000) return res.status(400).json({ error: '컨텍스트 데이터가 너무 큽니다.' });
     // ✅ FIX-AI-COACH-LEN: 메시지 최대 500자 제한 (API 비용 DoS 방어)
     if (typeof message !== 'string' || message.length > 500) return res.status(400).json({ error: '메시지는 최대 500자입니다.' });
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
