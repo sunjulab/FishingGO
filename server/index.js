@@ -644,8 +644,26 @@ app.post('/api/channel/videos', (req, res) => {
     const payload = jwt.verify(tp, JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(payload)) return res.status(403).json({ error: '관리자 권한 필요' });
   } catch { return res.status(401).json({ error: '인증 필요' }); }
-  const video = req.body;
-  if (!video.id) video.id = Date.now();
+  // ✅ FIX-CHANNEL-MASS-ASSIGN: 화이트리스트 필드만 허용 (Mass Assignment 방어)
+  const { title, category, url, thumbnail, duration, views: viewsStr, description } = req.body;
+  if (!title || !url) return res.status(400).json({ error: 'title, url 필수' });
+  if (typeof title !== 'string' || title.length > 200) return res.status(400).json({ error: 'title 최대 200자' });
+  const urlStr = String(url || '');
+  if (!urlStr.startsWith('https://') || urlStr.length > 500) return res.status(400).json({ error: '유효한 https URL 필요' });
+  if (thumbnail) {
+    const thStr = String(thumbnail);
+    if (!thStr.startsWith('https://') || thStr.length > 500) return res.status(400).json({ error: '유효한 https thumbnail URL 필요' });
+  }
+  const video = {
+    id: Date.now(),
+    title: title.trim(),
+    category: typeof category === 'string' ? category.trim().slice(0, 50) : '기타',
+    url: urlStr.trim(),
+    thumbnail: thumbnail ? String(thumbnail).trim() : '',
+    duration: typeof duration === 'string' ? duration.trim().slice(0, 10) : '',
+    views: typeof viewsStr === 'string' ? viewsStr.trim().slice(0, 20) : '0',
+    description: typeof description === 'string' ? description.trim().slice(0, 500) : '',
+  };
   channelVideos.push(video);
   res.json({ success: true, video });
 });
@@ -1286,8 +1304,17 @@ app.post('/api/admin/app-config', (req, res) => {
     if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
   
-  if (req.body.min_version) appConfig.min_version = req.body.min_version;
-  if (req.body.store_url) appConfig.store_url = req.body.store_url;
+  // ✅ FIX-APPCONFIG-VALID: 형식 검증 추가 (임의 값/XSS URL 주입 방어)
+  if (req.body.min_version !== undefined) {
+    const mv = String(req.body.min_version);
+    if (/^\d+\.\d+\.\d+$/.test(mv)) appConfig.min_version = mv;
+    else return res.status(400).json({ error: 'min_version 형식: x.y.z' });
+  }
+  if (req.body.store_url !== undefined) {
+    const su = String(req.body.store_url);
+    if (/^https:\/\/.{5,500}/.test(su)) appConfig.store_url = su;
+    else return res.status(400).json({ error: 'store_url은 https로 시작해야 합니다.' });
+  }
   
   saveAppConfig();
   res.json({ ok: true, appConfig });
@@ -8673,6 +8700,8 @@ app.post('/api/shop/click', searchLimiter, async (req, res) => { // ✅ FIX-CLIC
  * GET /api/shop/click/stats — 클릭 통계 (관리자 전용)
  */
 app.get('/api/shop/click/stats', verifyToken, async (req, res) => {
+  // ✅ FIX-STATS-AUTH: 클릭 통계는 관리자 전용
+  if (!isAdminToken(req.user)) return res.status(403).json({ error: '관리자 권한 필요' });
   try {
     if (!dbReady) return res.json([]);
     const stats = await ShopClick.aggregate([
@@ -8706,6 +8735,20 @@ app.get('/api/shop/manual', async (req, res) => {
  * 서버의 MongoDB write 가능 여부 진단용
  */
 app.get('/api/shop/manual/dbtest', async (req, res) => {
+  // ✅ FIX-DBTEST-AUTH: 인증 없는 MongoDB 쓰기 테스트 → DIRECT_KEY 또는 관리자 토큰 필요
+  const keyOk = process.env.DIRECT_KEY && req.query.key === process.env.DIRECT_KEY;
+  if (!keyOk) {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    try {
+      const tp = require('jsonwebtoken').verify(auth.slice(7), process.env.JWT_SECRET || 'fishinggo_jwt_secret_2024', { algorithms: ['HS256'] });
+      const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sunjulab@gmail.com';
+      const ADMIN_ID = process.env.ADMIN_ID || 'sunjulab';
+      if (tp.email !== ADMIN_EMAIL && tp.id !== ADMIN_ID && tp.email !== 'sunjulab.k@gmail.com') {
+        return res.status(403).json({ error: '관리자 권한 필요' });
+      }
+    } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  }
   const startMs = Date.now();
   try {
     if (!dbReady) return res.json({ ok: false, error: 'dbReady=false', ms: Date.now() - startMs });
@@ -8767,9 +8810,10 @@ setTimeout(function(){ document.body.innerHTML='<pre>${JSON.stringify(msg)}</pre
 </scr` + `ipt></body></html>`;
 
   if (!token) return res.send(html({ ok: false, error: '인증 토큰 필요' }));
+  // ✅ FIX-ADDTAB-JWT: jwt.decode() 폴백 제거 — 만료/위조된 토큰 수락 취약점 수정
   let user;
   try { user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); }
-  catch { user = jwt.decode(token); if (!user) return res.send(html({ ok: false, error: '유효하지 않은 토큰' })); }
+  catch { return res.send(html({ ok: false, error: '유효하지 않거나 만료된 토큰' })); }
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
   if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
     return res.send(html({ ok: false, error: '관리자 권한 필요' }));
@@ -8818,12 +8862,10 @@ app.get('/api/shop/manual/add', async (req, res) => {
   };
 
   if (!token) return send(401, { error: '인증 토큰 필요' });
+  // ✅ FIX-ADD-JWT: jwt.decode() 폴백 제거 — 만료/위조된 토큰 수락 취약점 수정
   let user;
   try { user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }); }
-  catch {
-    user = jwt.decode(token);
-    if (!user) return send(401, { error: '유효하지 않은 토큰 형식' });
-  }
+  catch { return send(401, { error: '유효하지 않거나 만료된 토큰' }); }
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
   if (!adminEmails.includes(user?.email) && user?.id !== ADMIN_ID) {
     return send(403, { error: '관리자 권한 필요' });
