@@ -1492,7 +1492,7 @@ io.on('connection', (socket) => {
     // ✅ FIX-SOCKET-FLOOD-CHECK: 플러딩 방지
     const now = Date.now(); if (now - msgWindow > MSG_WINDOW_MS) { msgCount = 0; msgWindow = now; }
     if (++msgCount > MSG_LIMIT) { socket.emit('error', { message: '메시지를 너무 빠르게 전송하고 있습니다.' }); return; }
-    if (!data.crewId || typeof data.crewId !== 'string') return;
+    if (!data.crewId || typeof data.crewId !== 'string' || data.crewId.length > 100) return; // FIX-CREWID-VALIDATE
     if (!socket.rooms.has(data.crewId)) { socket.emit('error', { message: '채팅방에 참가하지 않았습니다.' }); return; } // ✅ FIX-CREW-ROOM
     if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-MSG-AUTH
     if (data.type === 'text' && (!data.text || !String(data.text).trim())) return; // ✅ FIX-MSG-EMPTY
@@ -4555,7 +4555,7 @@ app.post('/api/community/posts', async (req, res) => {
     // ✅ CENSOR: 게시글 내용 비속어 * 치환
     content = censorText(content.trim());
     // ✅ LOC: location 안전 정규화 — { address, lat, lng } 또는 null
-    const safeLocation = (location && location.address) ? { address: location.address, lat: location.lat || null, lng: location.lng || null } : null;
+    const safeLocation = (location && location.address) ? { address: String(location.address).slice(0, 200) /* FIX-POST-LOCATION-LEN */, lat: location.lat || null, lng: location.lng || null } : null;
     // ✅ IMG-SIZE-FIX: 클라이언트(WritePost.jsx L142)와 동일한 4MB 기준으로 통일
     // 이전 3MB 제한으로 3~4MB 구간 이미지가 서버에서 탈락하여 저장 0장 버그 발생
     const safeImages = Array.isArray(images)
