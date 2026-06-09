@@ -2705,7 +2705,7 @@ app.post('/api/auth/find-id', async (req, res) => {
     const normalizedPhone = String(phone).replace(/\D/g, '');
     await waitForDb(5000);
     if (dbReady && User) {
-      const users = await User.find({ realName }).lean();
+      const users = await User.find({ realName }).select("email phone realName").lean(); // FIX-FIND-ID-SELECT
       const user = users.find(u => String(u.phone || '').replace(/\D/g, '') === normalizedPhone);
       if (!user) return res.status(400).json({ error: '일치하는 회원 정보가 없습니다.' });
       // ✅ masked: 화면 표시용, raw: 로그인 자동입력용
@@ -9097,6 +9097,11 @@ app.post('/api/shop/manual', verifyToken, async (req, res) => {
 
     if (source === 'ali') {
       if (!imageUrl) return res.status(400).json({ error: '알리 상품 이미지 URL 필수' });
+      // FIX-SHOP-IMG-SSRF: 내부 IP/로컬호스트 URL 저장 방어
+      const imgHost = (() => { try { return new URL(imageUrl.trim()).hostname; } catch { return ''; } })();
+      if (!imgHost || /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(imgHost)) {
+        return res.status(400).json({ error: '허용되지 않는 이미지 URL입니다.' });
+      }
       docData.imageUrl     = imageUrl.trim();
       docData.productName  = (productName || '').trim();
     } else {
