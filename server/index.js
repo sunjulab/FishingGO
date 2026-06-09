@@ -6743,6 +6743,8 @@ app.delete('/api/pro/cancel', (req, res) => {
   if (proSubscriptions[userId]) {
     delete proSubscriptions[userId];
     saveProSubs();
+    // ✅ FIX-MEDIUM: 관리자 강제 해지 시 User DB tier FREE 초기화
+    if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }] }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
     res.json({ success: true, message: `${userId} PRO 구독 해지 완료` });
   } else {
     res.status(404).json({ error: '해당 유저의 PRO 구독이 없습니다.' });
@@ -6757,8 +6759,10 @@ setInterval(() => {
     const sub = proSubscriptions[userId];
     if (new Date(sub.expiresAt) < now) {
       logger.info(`[PRO 만료 정리] ${sub.userName} 구독 자동 해제`); // ✅ 22TH-B1
+      const _cleanedUserId = userId; // ✅ FIX-LOW: PRO cron User DB 초기화용
       delete proSubscriptions[userId];
       cleaned++;
+      if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: _cleanedUserId }, { id: _cleanedUserId }] }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
     }
   });
   if (cleaned > 0) { saveProSubs(); logger.info(`[PRO 클린업] ${cleaned}개 만료 구독 제거`); } // ✅ 22TH-B1
