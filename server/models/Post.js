@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const commentSchema = new mongoose.Schema({
   author:       { type: String, required: true },
-  author_email: { type: String, default: '' },  // 댓글 작성자 이메일 (차단/신고용)
+  author_email: { type: String, trim: true, lowercase: true, lowercase: true, default: '' },  // 댓글 작성자 이메일 (차단/신고용)
   text:         { type: String, required: true },
   createdAt:    { type: Date, default: Date.now },
 });
@@ -10,7 +10,7 @@ const commentSchema = new mongoose.Schema({
 
 const postSchema = new mongoose.Schema({
   author:       { type: String, required: true },
-  author_email: { type: String, required: true },
+  author_email: { type: String, trim: true, lowercase: true, lowercase: true, required: true },
   category:     { type: String, required: true },
   content: { type: String, maxlength: 15000, trim: true, required: true },
   image:        { type: String, default: null },
