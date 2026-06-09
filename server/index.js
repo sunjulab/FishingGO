@@ -3598,6 +3598,22 @@ app.post('/api/auth/google', async (req, res) => {
   try {
     const { email, name, picture } = req.body;
     if (!email) return res.status(400).json({ error: 'Google 정보를 가져올 수 없습니다.' });
+    // ✅ FIX-GOOGLE-OAUTH-VERIFY: email 형식 검증 + idToken 서버사이드 검증
+    const { idToken } = req.body;
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      return res.status(400).json({ error: '유효하지 않은 이메일 형식입니다.' }); // FIX-GOOGLE-OAUTH-VERIFY
+    }
+    if (idToken && typeof idToken === 'string' && idToken.length < 4096) {
+      try {
+        const tokenInfoResp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+        if (tokenInfoResp.ok) {
+          const tokenInfo = await tokenInfoResp.json();
+          const googleClientId = process.env.GOOGLE_CLIENT_ID;
+          if (googleClientId && tokenInfo.aud !== googleClientId) return res.status(401).json({ error: 'Google Client ID 불일치.' });
+          if (tokenInfo.email && tokenInfo.email !== email) return res.status(401).json({ error: 'Google 토큰의 이메일과 요청 이메일이 일치하지 않습니다.' });
+        }
+      } catch (verifyErr) { (logger?.warn || console.warn)('[google-auth] idToken 검증 실패:', verifyErr.message); }
+    }
 
     let user;
     // ✅ DB-FIX: 구글 로그인도 서버 시작 직후 DB 연결 대기
