@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -6903,7 +6903,8 @@ app.post('/api/vvip/purchase', async (req, res) => {
   const { harborId, userId, userName } = req.body;
   if (!harborId || !userId) return res.status(400).json({ error: '필수 정보 누락' });
   const isAdmin = isAdminToken(tp);
-  if (!isAdmin && tp.id !== userId && tp.email !== userId) return res.status(403).json({ error: '본인만 슬롯 구매 가능합니다.' });
+  // ✅ FIX-403: userId는 닉네임(name) 또는 email이므로 tp.name도 허용
+  if (!isAdmin && tp.id !== userId && tp.email !== userId && (tp.name || '') !== userId) return res.status(403).json({ error: '본인의 슬롯만 구매 가능합니다.' });
 
   // ✅ DB에서 실제 tier 확인 (JWT tier는 로그인 시점 발급 → 최신 tier 반영 안 됨)
   if (!isAdmin && dbReady && User) {

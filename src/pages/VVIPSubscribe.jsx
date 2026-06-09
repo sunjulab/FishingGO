@@ -386,7 +386,7 @@ export default function VVIPSubscribe() {
     } else {
       handleIAPPurchase(planKey);
     }
-  }, [user, isNative, addToast, storeReady, setUser]);
+  }, [user, isNative, addToast, storeReady, setUser, handleIAPPurchase]);
 
   /* ── IAP 결제 ─────────────────────────────────────────────── */
   const handleIAPPurchase = useCallback(async (planKey) => {
@@ -421,12 +421,14 @@ export default function VVIPSubscribe() {
     setRestoring(true);
     try {
       await restorePurchases();
+      if (!isMountedRef.current) return; // ✅ FIX: 복원 중 언마운트 방어
       addToast('구독 복원을 시도했습니다. 잠시 후 등급이 갱신됩니다.', 'info');
       // ✅ 복원 후 3초 뒤 user 정보 갱신 (복원 처리 시간 대기)
       await new Promise(r => setTimeout(r, 3000));
+      if (!isMountedRef.current) return; // ✅ FIX: 3초 대기 후 언마운트 방어
       try {
         const res = await apiClient.get('/api/user/me');
-        // ✅ /api/user/me는 플랫 객체 반환 ({ id, email, tier, ... })
+        if (!isMountedRef.current) return; // ✅ FIX: API 응답 후 언마운트 방어
         if (res.data?.email) {
           setUser(res.data);
           if (res.data.tier !== 'FREE') {
@@ -436,8 +438,8 @@ export default function VVIPSubscribe() {
         }
       } catch {}
     }
-    catch { addToast('복원 중 오류가 발생했습니다.', 'error'); }
-    finally { setRestoring(false); }
+    catch { if (isMountedRef.current) addToast('복원 중 오류가 발생했습니다.', 'error'); } // ✅ FIX
+    finally { if (isMountedRef.current) setRestoring(false); } // ✅ FIX
   }, [addToast, setUser]);
 
   /* ════════════════════════════════════════════════════════════
