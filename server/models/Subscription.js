@@ -1,43 +1,43 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 
 /**
- * Subscription — 정기결제(빌링) 구독 모델
- * 포트원 customer_uid(빌링키) 기반 자동 월 청구
+ * Subscription ???뺢린寃곗젣(鍮뚮쭅) 援щ룆 紐⑤뜽
+ * ?ы듃??customer_uid(鍮뚮쭅?? 湲곕컲 ?먮룞 ??泥?뎄
  */
 const subscriptionSchema = new mongoose.Schema({
   userId:          { type: String, trim: true, required: true, unique: true }, // user email or id
   userName:        { type: String, trim: true, default: '' },
-  planId:          { type: String, trim: true, enum: ['LITE', 'BUSINESS_LITE', 'PRO', 'VVIP', 'BUSINESS_VIP'], required: true }, // ✅ 27TH-B1: BUSINESS_LITE 추가 — 25TH-C4 payment.js PLAN_LABEL 동기화 (누락 시 ValidationError 발생)
+  planId:          { type: String, trim: true, enum: ['LITE', 'BUSINESS_LITE', 'PRO', 'VVIP', 'BUSINESS_VIP'], required: true }, // ??27TH-B1: BUSINESS_LITE 異붽? ??25TH-C4 payment.js PLAN_LABEL ?숆린??(?꾨씫 ??ValidationError 諛쒖깮)
   tier:            { type: String, trim: true, required: true },
-  amount:          { type: Number, required: true },            // 월 청구 금액(원)
+  amount:          { type: Number, required: true },            // ??泥?뎄 湲덉븸(??
 
-  // 포트원 빌링키 정보
-  customerUid:     { type: String, trim: true, required: true },           // 포트원 customer_uid
+  // ?ы듃??鍮뚮쭅???뺣낫
+  customerUid:     { type: String, trim: true, required: true },           // ?ы듃??customer_uid
   pgProvider:      { type: String, trim: true, default: 'kakaopay' },      // 'kakaopay' | 'naverpay' | 'tosspayments'
 
-  // 구독 상태
+  // 援щ룆 ?곹깭
   status:          { type: String, trim: true, enum: ['active', 'pending', 'failed', 'cancelled', 'paused'], default: 'active' },
 
-  // 결제 일정
+  // 寃곗젣 ?쇱젙
   startedAt:       { type: Date, default: Date.now },
-  nextBillingDate: { type: Date },                             // 다음 결제일
-  lastBilledAt:    { type: Date },                             // 마지막 성공 결제일
-  billingDay:      { type: Number, default: 1 },               // 매월 몇 일에 청구 (1~28)
+  nextBillingDate: { type: Date },                             // ?ㅼ쓬 寃곗젣??
+  lastBilledAt:    { type: Date },                             // 留덉?留??깃났 寃곗젣??
+  billingDay:      { type: Number, default: 1 },               // 留ㅼ썡 紐??쇱뿉 泥?뎄 (1~28)
 
-  // 실패 재시도
-  failCount:       { type: Number, default: 0 },               // 연속 실패 횟수
+  // ?ㅽ뙣 ?ъ떆??
+  failCount:       { type: Number, default: 0 },               // ?곗냽 ?ㅽ뙣 ?잛닔
   lastFailedAt:    { type: Date },
   lastFailReason:  { type: String, trim: true },
 
-  // 취소
+  // 痍⑥냼
   cancelledAt:     { type: Date },
   cancelReason:    { type: String, trim: true },
 
-  // VVIP 항구
+  // VVIP ??뎄
   harborId:        { type: String, trim: true, default: null },
 });
 
 subscriptionSchema.index({ userId: 1 });
-subscriptionSchema.index({ status: 1, nextBillingDate: 1 }); // 스케줄러 조회용
+subscriptionSchema.index({ status: 1, nextBillingDate: 1 }); // ?ㅼ?以꾨윭 議고쉶??
 
 module.exports = mongoose.model('Subscription', subscriptionSchema);
