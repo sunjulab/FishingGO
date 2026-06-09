@@ -1,4 +1,4 @@
-import { r as registerPlugin } from './index-CgWp8qy4.js';
+import { r as registerPlugin } from './index-Cc2YVBvS.js';
 import './vendor-react-vfOo6a0P.js';
 import './vendor-icons-Bsle_tIe.js';
 import './vendor-store-wmv-LjAu.js';

@@ -209,6 +209,17 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     };
   }, []);
 
+  // ✅ FIX-TDZ: handleComplete를 adDone useEffect보다 앞에 선언 (TDZ 오류 방지)
+  const handleComplete = useCallback(() => {
+    if (calledRef.current) return;
+    calledRef.current = true;
+    if (intervalRef.current)  { clearInterval(intervalRef.current);  intervalRef.current  = null; }
+    if (autoTimerRef.current) { clearInterval(autoTimerRef.current); autoTimerRef.current = null; }
+    if (skipTimerRef.current) { clearTimeout(skipTimerRef.current);  skipTimerRef.current = null; }
+    onRewardComplete?.();
+    onClose?.();
+  }, [onRewardComplete, onClose]);
+
   // ✅ FIX-AUTO: adDone=true 시 1.5초 카운트다운 후 자동 등록
   useEffect(() => {
     if (!adDone) return;
@@ -308,17 +319,6 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       startFallback();
     }
   };
-
-  // ✅ BUG-03 FIX: handleComplete를 useCallback으로 안정화 → adDone useEffect deps 얰반 해소
-  const handleComplete = useCallback(() => {
-    if (calledRef.current) return;
-    calledRef.current = true;
-    if (intervalRef.current)  { clearInterval(intervalRef.current);  intervalRef.current  = null; }
-    if (autoTimerRef.current) { clearInterval(autoTimerRef.current); autoTimerRef.current = null; }
-    if (skipTimerRef.current) { clearTimeout(skipTimerRef.current);  skipTimerRef.current = null; } // ✅ BUG-04 FIX
-    onRewardComplete?.();
-    onClose?.();
-  }, [onRewardComplete, onClose]);
 
 
   if (!isOpen) return null;

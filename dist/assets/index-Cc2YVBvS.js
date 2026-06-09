@@ -1,4 +1,4 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-RRykCApL.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-7JpEp-fY.js","assets/index-BSbeHX5j.js","assets/index-DCWdkhcl.js","assets/index-C880EPVt.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-CwCWU-vi.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-fgYv9XHQ.js","assets/index-CQ40WnWe.js","assets/web-BatZeaJZ.js"])))=>i.map(i=>d[i]);
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-B5KheAD-.js","assets/vendor-react-vfOo6a0P.js","assets/vendor-icons-Bsle_tIe.js","assets/vendor-store-wmv-LjAu.js","assets/vendor-http-ChhVHlBG.js","assets/vendor-socket-DJUzVLd_.js","assets/index-ChEe8O7U.js","assets/index-Ciw7W7qt.js","assets/index-IFK8rhWj.js","assets/index-2JPHF81-.js","assets/react-DLnA0mkx.js","assets/index-CUWt0Sfx.js","assets/hls-C7Hf2gZu.js","assets/react-DdArrbEb.js","assets/index-CaX5rCqB.js","assets/react-DkAdHzuK.js","assets/index-DYnuIO1L.js","assets/react-JX3udZX-.js","assets/react-CSpy8v60.js","assets/react-DVzk0GkE.js","assets/react-BtGDuw5v.js","assets/react-Dm1y9_0y.js","assets/Preview-CVKraf7p.js","assets/index-CN4ZQPqy.js","assets/index-DtUDCBEr.js","assets/web-D3JfzrcE.js"])))=>i.map(i=>d[i]);
 import { r as reactExports, g as getDefaultExportFromCjs, a as reactDomExports, R as React, u as useNavigate, b as useLocation, c as useSearchParams, d as useParams, N as NavLink, e as Navigate, B as BrowserRouter, f as Routes, h as Route } from './vendor-react-vfOo6a0P.js';
 import { A as AlertCircle, C as CheckCircle, I as Info, X, a as Clock, M as MessageSquare, b as ChevronUp, c as ChevronDown, L as Lock, S as Send, R as RefreshCw, d as Search, e as MapPin, W as Waves, f as Wind, T as Tv, g as Map$1, B as BarChart2, h as Ship, i as Crown, Z as Zap, j as CornerUpLeft, k as Megaphone, l as AlertTriangle, F as Fish, m as Bell, n as Trash2, o as CheckCheck, p as RotateCcw, q as Loader2, r as Check, s as ArrowLeft, t as Anchor, P as Play, u as Maximize2, U as UserRound, v as ShoppingBag, w as ChevronLeft, x as ChevronRight, y as ZoomIn, z as Pen, H as Heart, D as Share2, E as Users, G as Award, J as Phone, K as PlusCircle, N as Plus, O as SlidersHorizontal, Q as CreditCard, V as ShieldAlert, Y as Camera, _ as PenLine, $ as Trophy, a0 as Star, a1 as Calendar, a2 as BookOpen, a3 as History, a4 as ToggleRight, a5 as ToggleLeft, a6 as Image$1, a7 as Scan, a8 as CheckCircle2, a9 as HelpCircle, aa as MoreVertical, ab as ExternalLink, ac as User, ad as Droplets, ae as KeyRound, af as EyeOff, ag as Eye, ah as XCircle, ai as ShieldCheck, aj as Wifi, ak as WifiOff, al as LogOut, am as Navigation, an as Sunrise, ao as Sunset, ap as Smartphone, aq as Sparkles, ar as Youtube, as as Link, at as MousePointer, au as TrendingUp, av as Activity, aw as UserPlus, ax as Globe, ay as DollarSign, az as BellRing, aA as Filter, aB as Flame, aC as UserCheck, aD as FileText, aE as Upload, aF as CloudLightning, aG as Home } from './vendor-icons-Bsle_tIe.js';
 import { c as create } from './vendor-store-wmv-LjAu.js';
@@ -1322,7 +1322,7 @@ let AdMob = null;
 async function initAdMob() {
   if (!isNative$1()) return;
   try {
-    const mod = await __vitePreload(() => import('./index-RRykCApL.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
+    const mod = await __vitePreload(() => import('./index-B5KheAD-.js'),true?__vite__mapDeps([0,1,2,3,4,5]):void 0);
     AdMob = mod.AdMob;
     await AdMob.initialize({
       requestTrackingAuthorization: false,
@@ -1582,7 +1582,7 @@ const index = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
 async function initPushPermission(userId) {
   if (!Capacitor.isNativePlatform()) return { ok: false, reason: 'web' };
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-7JpEp-fY.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-ChEe8O7U.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
 
     // 기존 리스너 중복 방지
     await PushNotifications.removeAllListeners();
@@ -1668,7 +1668,7 @@ function setPushHandlers({ addToast, navigate }) {
 async function unregisterPushToken() {
   if (!Capacitor.isNativePlatform()) return;
   try {
-    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-7JpEp-fY.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
+    const { PushNotifications } = await __vitePreload(async () => { const { PushNotifications } = await import('./index-ChEe8O7U.js');return { PushNotifications }},true?__vite__mapDeps([6,1,2,3,4,5]):void 0);
     await PushNotifications.removeAllListeners();
     await apiClient.delete('/api/user/push-token');
     console.log('[PUSH] ✅ FCM 토큰 해제 완료');
@@ -1691,7 +1691,7 @@ async function requestLocationPermission() {
     });
   }
   try {
-    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-BSbeHX5j.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
+    const { Geolocation } = await __vitePreload(async () => { const { Geolocation } = await import('./index-Ciw7W7qt.js');return { Geolocation }},true?__vite__mapDeps([7,1,2,3,4,5]):void 0);
     const perm = await Geolocation.requestPermissions();
     // 'granted' | 'denied' | 'prompt'
     const ok = perm.location === 'granted' || perm.coarseLocation === 'granted';
@@ -1707,7 +1707,7 @@ async function requestLocationPermission() {
 async function requestCameraPermission() {
   if (!Capacitor.isNativePlatform()) return { ok: true }; // 웹은 별도 권한 불필요
   try {
-    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-DCWdkhcl.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
+    const { Camera } = await __vitePreload(async () => { const { Camera } = await import('./index-IFK8rhWj.js');return { Camera }},true?__vite__mapDeps([8,1,2,3,4,5]):void 0);
     const perm = await Camera.requestPermissions({ permissions: ['camera', 'photos'] });
     const cameraOk = perm.camera === 'granted' || perm.camera === 'limited';
     const photosOk = perm.photos === 'granted' || perm.photos === 'limited';
@@ -1731,7 +1731,7 @@ async function initNetworkMonitor(onOffline, onOnline) {
     };
   }
   try {
-    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-C880EPVt.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
+    const { Network } = await __vitePreload(async () => { const { Network } = await import('./index-2JPHF81-.js');return { Network }},true?__vite__mapDeps([9,1,2,3,4,5]):void 0);
     const status = await Network.getStatus();
     if (!status.connected) onOffline?.();
 
@@ -2373,7 +2373,7 @@ const Players = [
     player: reactExports.lazy(
       () => __vitePreload(() => import(
         /* webpackChunkName: 'reactPlayerDash' */
-        './react-CwCWU-vi.js'
+        './react-DdArrbEb.js'
       ),true?__vite__mapDeps([13,1,11,2,3,4,5]):void 0)
     )
   },
@@ -2848,6 +2848,24 @@ function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe, conte
       }
     };
   }, []);
+  const handleComplete = reactExports.useCallback(() => {
+    if (calledRef.current) return;
+    calledRef.current = true;
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (autoTimerRef.current) {
+      clearInterval(autoTimerRef.current);
+      autoTimerRef.current = null;
+    }
+    if (skipTimerRef.current) {
+      clearTimeout(skipTimerRef.current);
+      skipTimerRef.current = null;
+    }
+    onRewardComplete?.();
+    onClose?.();
+  }, [onRewardComplete, onClose]);
   reactExports.useEffect(() => {
     if (!adDone) return;
     setAutoCount(2);
@@ -2953,24 +2971,6 @@ function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe, conte
       startFallback();
     }
   };
-  const handleComplete = reactExports.useCallback(() => {
-    if (calledRef.current) return;
-    calledRef.current = true;
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (autoTimerRef.current) {
-      clearInterval(autoTimerRef.current);
-      autoTimerRef.current = null;
-    }
-    if (skipTimerRef.current) {
-      clearTimeout(skipTimerRef.current);
-      skipTimerRef.current = null;
-    }
-    onRewardComplete?.();
-    onClose?.();
-  }, [onRewardComplete, onClose]);
   if (!isOpen) return null;
   const remaining = Math.ceil(30 - adProgress / 100 * 30);
   if (webAdFullscreen) {
@@ -8402,7 +8402,7 @@ const SITE_URL = "https://www.fishing-go.com";
 const APP_ID$3 = "kr.fishinggo.app";
 async function copyToClipboard$1(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-fgYv9XHQ.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-CN4ZQPqy.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -8428,7 +8428,7 @@ async function copyToClipboard$1(text) {
 }
 async function openKakaoTalk$1() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CQ40WnWe.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-DtUDCBEr.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -21270,7 +21270,7 @@ function getFishEmoji(name) {
 
 async function copyToClipboard(text) {
   try {
-    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-fgYv9XHQ.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
+    const { Clipboard } = await __vitePreload(async () => { const { Clipboard } = await import('./index-CN4ZQPqy.js');return { Clipboard }},true?__vite__mapDeps([23,1,2,3,4,5]):void 0);
     await Clipboard.write({ string: text });
     return true;
   } catch {
@@ -21296,7 +21296,7 @@ async function copyToClipboard(text) {
 }
 async function openKakaoTalk() {
   try {
-    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-CQ40WnWe.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
+    const { AppLauncher } = await __vitePreload(async () => { const { AppLauncher } = await import('./index-DtUDCBEr.js');return { AppLauncher }},true?__vite__mapDeps([24,1,2,3,4,5]):void 0);
     const { value: canOpen } = await AppLauncher.canOpenUrl({ url: "kakaotalk://" });
     if (canOpen) {
       await AppLauncher.openUrl({ url: "kakaotalk://" });
@@ -23958,7 +23958,7 @@ var AppUpdateResultCode;
 })(AppUpdateResultCode || (AppUpdateResultCode = {}));
 
 const AppUpdate = registerPlugin('AppUpdate', {
-    web: () => __vitePreload(() => import('./web-BatZeaJZ.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
+    web: () => __vitePreload(() => import('./web-D3JfzrcE.js'),true?__vite__mapDeps([25,1,2,3,4,5]):void 0).then(m => new m.AppUpdateWeb()),
 });
 
 const CURRENT_APP_VERSION = true ? "2.1.75" : "2.1.17";
