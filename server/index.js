@@ -5645,6 +5645,7 @@ app.post('/api/community/business', async (req, res) => {
     // ??FIX-BIZ-SHIPNAME-LEN: 비즈?�스 게시글 ?�드 길이 검�?
     if (shipName && typeof shipName === 'string' && shipName.length > 100) return res.status(400).json({ error: '?�명?� 최�? 100?�입?�다.' }); // FIX-BIZ-SHIPNAME-LEN
     if (phone && typeof phone === 'string' && phone.length > 20) return res.status(400).json({ error: '?�화번호??최�? 20?�입?�다.' });
+    if (content && typeof content === 'string' && content.length > 3000) return res.status(400).json({ error: '내용은 3000자 이하여야 합니다.' }); // FIX-BIZ-CONTENT-LEN
     // ??BUG-5 FIX: author_email?� JWT?�서�?가?��?????(?�라?�언??body 무시 ???�??계정 ?�장 방�?)
     const author_email = tp.email;
     if (!author_email) return res.status(401).json({ error: '?�메???�보 ?�음 (?�로그인 ?�요)', code: 'AUTH_REQUIRED' });
