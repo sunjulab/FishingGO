@@ -7032,6 +7032,51 @@ app.post('/api/admin/vvip/grant', async (req, res) => {
   });
 });
 
+// ✅ ADMIN: VVIP 슬롯 강제 해제 (관리자 전용)
+// DELETE /api/admin/vvip/revoke  { harborId }
+app.delete('/api/admin/vvip/revoke', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '마스터 권한 필요' });
+
+  const { harborId } = req.body;
+  if (!harborId) return res.status(400).json({ error: 'harborId 필수' });
+
+  const slot = vvipSlots[harborId];
+  if (!slot) return res.status(404).json({ error: `${harborId} 슬롯이 점유되어 있지 않습니다.` });
+
+  const slotUserId = slot.userId;
+  const harborName = slot.harborName || harborId;
+
+  // 메모리에서 즉시 해제
+  delete vvipSlots[harborId];
+  saveVvipSlots();
+
+  // DB User 초기화 (재시작 시 재복원 방지)
+  if (dbReady && User) {
+    try {
+      await User.findOneAndUpdate(
+        { $or: [{ email: slotUserId }, { id: slotUserId }] },
+        { $unset: { vvipHarborId: 1, vvipExpiresAt: 1 } }
+      );
+    } catch (e) {
+      (logger?.error || console.error)('[VVIP Revoke] DB 초기화 실패:', e.message);
+    }
+  }
+  // memUsers 초기화
+  const mu = memUsers.find(u => u.email === slotUserId || u.id === slotUserId);
+  if (mu) { delete mu.vvipHarborId; delete mu.vvipExpiresAt; saveMemUsers(); }
+
+  (logger?.info || console.log)(`[VVIP Revoke] 슬롯 해제: ${harborName} (userId: ${slotUserId})`);
+  res.json({
+    success: true,
+    harborId, harborName, slotUserId,
+    message: `✅ ${harborName} VVIP 슬롯 해제 완료 (${slotUserId})`,
+  });
+});
+
 setInterval(() => {
   const now = new Date();
   let cleaned = 0;
