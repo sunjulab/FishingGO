@@ -3560,7 +3560,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (dbAvailable && User) {
       try {
-        user = await User.findOne({ email }).select('-__v'); // ✅ FIX-LOGIN: password 포함 조회 (-password 제거)
+        user = await User.findOne({ email }).select('+password -__v'); // ✅ FIX-LOGIN: select:false 스키마 우회, 명시적 +password
       } catch (dbErr) {
         logger.warn('[login] DB 조회 실패 → memUsers fallback:', dbErr.message);
         user = memUsers.find(u => u.email === email);
@@ -3686,7 +3686,7 @@ app.post('/api/auth/google', async (req, res) => {
     if (dbAvailable && User) {
 
       try {
-        user = await User.findOne({ email }).select('-__v'); // ✅ FIX-LOGIN: password 포함 조회 (-password 제거)
+        user = await User.findOne({ email }).select('+password -__v'); // ✅ FIX-LOGIN: select:false 스키마 우회, 명시적 +password
         if (!user) {
           let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
           if (!safeName) safeName = 'Fisher';
