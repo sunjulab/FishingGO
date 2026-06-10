@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -3560,7 +3560,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (dbAvailable && User) {
       try {
-        user = await User.findOne({ email }).select('-password -__v');
+        user = await User.findOne({ email }).select('-__v'); // ✅ FIX-LOGIN: password 포함 조회 (-password 제거)
       } catch (dbErr) {
         logger.warn('[login] DB 조회 실패 → memUsers fallback:', dbErr.message);
         user = memUsers.find(u => u.email === email);
@@ -3686,7 +3686,7 @@ app.post('/api/auth/google', async (req, res) => {
     if (dbAvailable && User) {
 
       try {
-        user = await User.findOne({ email }).select('-password -__v');
+        user = await User.findOne({ email }).select('-__v'); // ✅ FIX-LOGIN: password 포함 조회 (-password 제거)
         if (!user) {
           let safeName = (name || 'Fisher').replace(/[^a-zA-Z0-9가-힣]/g, '');
           if (!safeName) safeName = 'Fisher';
