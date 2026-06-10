@@ -698,8 +698,10 @@ export default function MapHome() {
   // 캐시 없으면 정적 getPointSpecificData fallback (히트맵 첫 로드 전 임시 표시)
   // ✅ CUSTOM-MERGE: 커스텀 포인트(신규 추가)도 히트맵에 포함
   const heatmapData = useMemo(() => {
+    // ✅ FIX-HEATMAP-FILTER: filter 카테고리 적용 (갯바위/민물/방파제/항구/전체)
     const allPts = [...ALL_FISHING_POINTS, ...customPoints];
-    return allPts.map(point => {
+    const filteredPts = filter === '전체' ? allPts : allPts.filter(p => p.type === filter);
+    return filteredPts.map(point => {
       // ✅ 민물 포인트: 점수/수온 계산 없이 어종명만 전달
       if (point.type === '민물') {
         const fishList = (point.fish || '').split(',').map(f => f.trim()).filter(Boolean);
@@ -722,7 +724,8 @@ export default function MapHome() {
       const condition = evaluateFishingCondition(weatherData, point);
       return { point, sst, score: condition.score, isFreshwater: false, fishList: [] };
     });
-  }, [rankTick, weatherCache, customPoints]); // customPoints 갱신 시 즉시 재계산
+  }, [filter, rankTick, weatherCache, customPoints]); // ✅ FIX: filter 추가 — 카테고리 전환 시 즉시 재계산
+
 
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
