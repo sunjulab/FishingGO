@@ -101,9 +101,10 @@ export default function MyPage() {
     return () => { isMountedRef.current = false; };
   }, []);
 
-  // ✅ LEGAL-FETCH: 마운트 시 서버에서 법적고지 불러오기
+  // ✅ LEGAL-FETCH: 마운트 시 법적고지 불러오기 (서버 → localStorage → 기본값 순서)
   useEffect(() => {
     let cancelled = false;
+    const LS_KEY = 'fishinggo_legal_info';
     const DEFAULT_LEGAL_CLIENT = [
       { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
       { label: '대표자',         key: 'ceo',      value: '김승철' },
@@ -113,15 +114,24 @@ export default function MyPage() {
       { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
       { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
     ];
+    // ✅ LEGAL-LS: localStorage 캐시 먼저 확인
+    let lsItems = null;
+    try { const raw = localStorage.getItem(LS_KEY); if (raw) lsItems = JSON.parse(raw); } catch {}
     apiClient.get('/api/legal-info')
       .then(r => {
         if (cancelled) return;
-        const items = r.data?.items?.length ? r.data.items : DEFAULT_LEGAL_CLIENT;
+        const items = r.data?.items?.length ? r.data.items : (lsItems || DEFAULT_LEGAL_CLIENT);
+        // 서버 데이터 → localStorage 동기화
+        try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch {}
         setLegalInfo(items);
         setLegalDraft(items);
       })
       .catch(() => {
-        if (!cancelled) { setLegalInfo(DEFAULT_LEGAL_CLIENT); setLegalDraft(DEFAULT_LEGAL_CLIENT); }
+        // 서버 실패 → localStorage or 기본값
+        if (!cancelled) {
+          const items = lsItems || DEFAULT_LEGAL_CLIENT;
+          setLegalInfo(items); setLegalDraft(items);
+        }
       })
       .finally(() => { if (!cancelled) setLegalLoading(false); });
     return () => { cancelled = true; };
@@ -1169,11 +1179,19 @@ export default function MyPage() {
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button disabled={legalSaving} onClick={async () => {
                     setLegalSaving(true);
+                    const LS_KEY = 'fishinggo_legal_info';
                     try {
                       await apiClient.put('/api/admin/legal-info', { items: legalDraft });
+                      // 서버 저장 성공 → localStorage도 동기화
+                      try { localStorage.setItem(LS_KEY, JSON.stringify(legalDraft)); } catch {}
                       setLegalInfo(legalDraft); setEditingLegal(false);
                       addToast('✅ 서버에 저장되었습니다.', 'success');
-                    } catch (e) { addToast(`❌ ${e.response?.data?.error || '저장 실패'}`, 'error'); }
+                    } catch {
+                      // 서버 실패 → localStorage에만 저장 (Render 장애 대응)
+                      try { localStorage.setItem(LS_KEY, JSON.stringify(legalDraft)); } catch {}
+                      setLegalInfo(legalDraft); setEditingLegal(false);
+                      addToast('📱 저장 완료 (이 기기에 저장됨)', 'success');
+                    }
                     finally { setLegalSaving(false); }
                   }} style={{ fontSize: `10px`, fontWeight: '900', color: '#fff', background: legalSaving ? '#99b8e8' : '#0056D2', border: 'none', borderRadius: '7px', padding: '3px 12px', cursor: legalSaving ? 'not-allowed' : 'pointer' }}>
                     {legalSaving ? '저장 중...' : '저장'}
