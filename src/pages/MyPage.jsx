@@ -110,6 +110,26 @@ export default function MyPage() {
   // ✅ FONT-SCALE: 리렌더 트리거용 (CSS 변수 변경 후 활성 버튼 상태 즉시 반영)
   const [fontScale, setFontScale] = useState(() => localStorage.getItem('fishinggo_fs') || '1');
 
+  // ✅ LEGAL-EDIT: 사업자 법적고지 — localStorage 저장/불러오기 (마스터 수정 가능)
+  const DEFAULT_LEGAL = [
+    { label: '상호명',         key: 'company',    value: '선제이유랩 (SUN J.U. Lab)' },
+    { label: '대표자',         key: 'ceo',        value: '김승철' },
+    { label: '사업자등록번호', key: 'bizNo',      value: '865-10-03351' },
+    { label: '사업장 주소',    key: 'address',    value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
+    { label: '업태/종목',      key: 'bizType',    value: '정보통신업 · 전자상거래 소매업' },
+    { label: '고객센터 이메일',key: 'email',      value: 'sunjulab.a1@gmail.com' },
+    { label: '통신판매업',     key: 'salesReg',   value: '신고 준비 중' },
+  ];
+  const [legalInfo, setLegalInfo] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fishinggo_legal_info');
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return DEFAULT_LEGAL;
+  });
+  const [editingLegal, setEditingLegal] = useState(false);
+  const [legalDraft, setLegalDraft] = useState(legalInfo);
+
   // NEW-B3: 카메라 오버레이 hover 상태 — DOM 직접 조작 anti-pattern 제거
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
 
