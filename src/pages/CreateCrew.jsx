@@ -93,6 +93,7 @@ export default function CreateCrew() {
             type="text"
             placeholder="예: 강원권 루어 정기출조 모임"
             maxLength={20}
+            value={name}
             style={{ 
               width: '100%', 
               padding: '16px', 
@@ -101,7 +102,8 @@ export default function CreateCrew() {
               backgroundColor: '#f8f9fa',
               fontSize: `calc(16px * var(--fs, 1))`,
               fontWeight: '600',
-              outline: 'none'
+              outline: 'none',
+              boxSizing: 'border-box',
             }}
             onChange={(e) => setName(e.target.value)}
           />
@@ -153,6 +155,13 @@ export default function CreateCrew() {
            </div>
         </div>
 
+        {/* ✅ FREE 사용자 광고 게이트 안내 */}
+        {!isBusinessLite && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFF8E7', border: '1px solid #FFD700', borderRadius: '12px', padding: '12px 14px', marginBottom: '16px' }}>
+            <span style={{ fontSize: '18px' }}>📺</span>
+            <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#8B6914' }}>짧은 광고 1회 시청 후 크루를 개설할 수 있습니다. BUSINESS LITE 이상 구독 시 광고 없이 즉시 개설!</span>
+          </div>
+        )}
         <button 
           disabled={!name.trim() || isSubmitting}
           onClick={handleCreateCrew}
@@ -165,10 +174,11 @@ export default function CreateCrew() {
             border: 'none',
             fontSize: `calc(16px * var(--fs, 1))`,
             fontWeight: '800',
-            boxShadow: name.trim() ? '0 10px 20px rgba(0, 86, 210, 0.2)' : 'none'
+            boxShadow: name.trim() ? '0 10px 20px rgba(0, 86, 210, 0.2)' : 'none',
+            cursor: name.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
           }}
         >
-          {isSubmitting ? '생성 중...' : '크루 생성하기'}
+          {isSubmitting ? '생성 중...' : isBusinessLite ? '크루 생성하기' : '크루 생성하기 (광고 시청 후)'}
         </button>
         
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', marginTop: '20px', color: '#bbb' }}>

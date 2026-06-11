@@ -354,11 +354,9 @@ export default function CommunityTab() {
       navigate('/write'); // 무료 사용자도 글쓰기 허용 (글 작성 화면에서 광고 게이트 처리)
 
     } else if (activeTab === 'crew') {
-      if (!canAccessPremium) {
-        addToast("무료(Free) 멤버쉽은 '크루 개설 방장 권한'이 없습니다. 업그레이드 후 이용해보세요!", "error");
-      } else {
-        navigate('/create-crew');
-      }
+      // ✅ FIX-CREW-ACCESS: FREE 사용자도 /create-crew 진입 허용
+      // (광고 시청 후 생성 가능 — 광고 게이트는 CreateCrew.jsx 내부에서 처리)
+      navigate('/create-crew');
     } else if (activeTab === 'business') {
       if (!canAccessBusinessPromo) {
         addToast('선상 홍보글은 PRO 또는 항구 독점 VVIP 보유자만 작성 가능합니다. 구독 페이지로 이동합니다.', 'error');
