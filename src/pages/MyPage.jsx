@@ -105,6 +105,7 @@ export default function MyPage() {
   useEffect(() => {
     let cancelled = false;
     const LS_KEY = 'fishinggo_legal_info';
+    const LS_PENDING_KEY = 'fishinggo_legal_pending'; // 서버 미동기 플래그
     const DEFAULT_LEGAL_CLIENT = [
       { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
       { label: '대표자',         key: 'ceo',      value: '김승철' },
@@ -116,15 +117,32 @@ export default function MyPage() {
     ];
     // ✅ LEGAL-LS: localStorage 캐시 먼저 확인
     let lsItems = null;
-    try { const raw = localStorage.getItem(LS_KEY); if (raw) lsItems = JSON.parse(raw); } catch {}
+    let hasPending = false;
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) lsItems = JSON.parse(raw);
+      hasPending = localStorage.getItem(LS_PENDING_KEY) === 'true';
+    } catch {}
     apiClient.get('/api/legal-info')
-      .then(r => {
+      .then(async r => {
         if (cancelled) return;
+        // ✅ AUTO-SYNC: 서버 복구 + 미동기 로컬 데이터 있으면 자동 push
+        const isAdminUser = useUserStore.getState().userTier === 'MASTER' ||
+          useUserStore.getState().user?.id === 'sunjulab.k';
+        if (hasPending && lsItems && isAdminUser) {
+          try {
+            await apiClient.put('/api/admin/legal-info', { items: lsItems });
+            localStorage.removeItem(LS_PENDING_KEY);
+            // DB 저장 성공 후 서버 최신값 사용
+            const items = lsItems;
+            try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch {}
+            if (!cancelled) { setLegalInfo(items); setLegalDraft(items); }
+            return;
+          } catch { /* 자동 동기화 실패 시 서버 값 사용 */ }
+        }
         const items = r.data?.items?.length ? r.data.items : (lsItems || DEFAULT_LEGAL_CLIENT);
-        // 서버 데이터 → localStorage 동기화
         try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch {}
-        setLegalInfo(items);
-        setLegalDraft(items);
+        if (!cancelled) { setLegalInfo(items); setLegalDraft(items); }
       })
       .catch(() => {
         // 서버 실패 → localStorage or 기본값
@@ -137,6 +155,7 @@ export default function MyPage() {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
@@ -1187,12 +1206,16 @@ export default function MyPage() {
                       setLegalInfo(legalDraft); setEditingLegal(false);
                       addToast('✅ 서버에 저장되었습니다.', 'success');
                     } catch {
-                      // 서버 실패 → localStorage에만 저장 (Render 장애 대응)
-                      try { localStorage.setItem(LS_KEY, JSON.stringify(legalDraft)); } catch {}
+                      // 서버 실패 → localStorage에만 저장 + pending 플래그 (서버 복구 시 자동 동기화)
+                      try {
+                        localStorage.setItem(LS_KEY, JSON.stringify(legalDraft));
+                        localStorage.setItem('fishinggo_legal_pending', 'true');
+                      } catch {}
                       setLegalInfo(legalDraft); setEditingLegal(false);
-                      addToast('📱 저장 완료 (이 기기에 저장됨)', 'success');
+                      addToast('📱 저장 완료 (이 기기에 저장됨 — 서버 복구 시 자동 동기화)', 'success');
                     }
                     finally { setLegalSaving(false); }
+
                   }} style={{ fontSize: `10px`, fontWeight: '900', color: '#fff', background: legalSaving ? '#99b8e8' : '#0056D2', border: 'none', borderRadius: '7px', padding: '3px 12px', cursor: legalSaving ? 'not-allowed' : 'pointer' }}>
                     {legalSaving ? '저장 중...' : '저장'}
                   </button>
