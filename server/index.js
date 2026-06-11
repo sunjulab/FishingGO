@@ -9739,9 +9739,12 @@ app.put('/api/admin/legal-info', async (req, res) => {
   }
 });
 // ✅ FIX-404-HANDLER: 미매칭 라우트 404 응답
-app.use((req, res) => {
+// ✅ LEGAL-PASSTHROUGH: /api/legal-info 는 next() 통과 — 뒤에 등록된 라우트가 처리
+app.use((req, res, next) => {
+  if (req.path === '/api/legal-info' || req.path === '/api/admin/legal-info') return next();
   res.status(404).json({ error: '요청한 API를 찾을 수 없습니다.', path: req.path });
 });
+
 
 // ✅ FIX-GLOBAL-ERROR: 글로벌 에러 핸들러
 app.use(function globalErrorHandler(err, req, res, next) {
