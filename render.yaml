@@ -1,4 +1,4 @@
-﻿services:
+services:
   # ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧
   # ?뼢截? ?꾨줎?몄뿏????Vite React (Static Site)
   # VITE_* ?섍꼍蹂?섎뒗 鍮뚮뱶 ??꾩뿉 踰덈뱾???ы븿??(?고???X)
@@ -11,6 +11,14 @@
     buildCommand: echo "Using pre-built dist ??no build step needed"  # ??濡쒖뺄 鍮뚮뱶 dist/ git ?ы븿?쇰줈 ?뚯씠?꾨씪??遺??덉빟
     staticPublishPath: ./dist    # 濡쒖뺄 鍮뚮뱶 寃곌낵臾?寃쎈줈 (git???ы븿)
     pullRequestPreviewsEnabled: false
+    headers:
+      # ✅ CACHE-FIX: index.html 캐시 완전 금지 — 배포 즉시 반영
+      - path: /index.html
+        name: Cache-Control
+        value: no-store, no-cache, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
     routes:
       # SPA ?쇱슦????紐⑤뱺 寃쎈줈瑜?index.html濡??대갚
       - type: rewrite
