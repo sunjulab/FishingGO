@@ -1189,13 +1189,13 @@ export default function MyPage() {
               </div>
             ) : (editingLegal ? legalDraft : legalInfo).map((item, idx) => (
               <div key={item.key} style={{ display: 'flex', gap: '8px', marginBottom: editingLegal ? '8px' : '5px', alignItems: editingLegal ? 'center' : 'flex-start' }}>
-                <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#AEAEB2', fontWeight: '700', flexShrink: 0, width: '88px', paddingTop: editingLegal ? '6px' : 0 }}>{item.label}</span>
+                <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '700', flexShrink: 0, width: '88px', paddingTop: editingLegal ? '6px' : 0 }}>{item.label}</span>
                 {editingLegal ? (
                   <input value={legalDraft[idx]?.value || ''}
                     onChange={e => { const n=[...legalDraft]; n[idx]={...n[idx],value:e.target.value}; setLegalDraft(n); }}
-                    style={{ flex:1, fontSize:`calc(11px * var(--fs,1))`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#8E8E93', background:'#F8F9FC' }} />
+                    style={{ flex:1, fontSize:`calc(11px * var(--fs,1))`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#AEAEB2', background:'#F8F9FC' }} />
                 ) : (
-                  <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#8E8E93', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
+                  <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#AEAEB2', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
                 )}
               </div>
             ))}
