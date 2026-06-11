@@ -9596,65 +9596,6 @@ app.post('/api/auth/logout', verifyToken, async (req, res) => {
   } catch { res.json({ success: true }); }
 });
 
-// ✅ FIX-404-HANDLER: 미매칭 라우트 404 응답
-app.use((req, res) => {
-  res.status(404).json({ error: '요청한 API를 찾을 수 없습니다.', path: req.path });
-});
-
-// ✅ FIX-GLOBAL-ERROR: 글로벌 에러 핸들러
-app.use(function globalErrorHandler(err, req, res, next) {
-  const isProd = process.env.NODE_ENV === 'production';
-  (logger || console).error('[GlobalError]', err.message);
-  res.status(err.status || 500).json({ error: isProd ? '서버 오류가 발생했습니다.' : (err.message || '오류') });
-});
-
-const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, '0.0.0.0', () => {
-  const env = process.env.NODE_ENV || 'development';
-// ✅ SCALE: Keep-Alive 최적화 — 연결 재사용으로 핸드셰이크 비용 절감
-server.keepAliveTimeout = 65000;  // 65초 (로드밸런서 60초보다 길게)
-server.headersTimeout = 66000;    // keepAlive보다 1초 더 길게
-  logger.info(`🚀 낚시GO 서버 시작 완료 | 포트: ${PORT} | 환경: ${env}`);
-  logger.info(`   웹훅: ${process.env.PORTONE_WEBHOOK_SECRET ? '✅' : '⚠️ 미설정'} | SMS: ${process.env.SMS_API_KEY ? '✅' : '⚠️ 미설정'} | DB: ${process.env.MONGO_PASS || process.env.MONGO_URI ? '✅ MongoDB' : '⚠️ 인메모리'}`);
-  if (env === 'production') logger.info('[보안] 프로덕션 모드 활성화');
-
-
-
-  // Render 슬립 방지 — 서버 시작 즉시 + 1분 간격 ping
-  // Render 무료 플랜: 15분 비활성 시 슬립. 1분 간격으로 방지.
-  if (process.env.RENDER_EXTERNAL_URL) {
-    const selfUrl = process.env.RENDER_EXTERNAL_URL;
-    const keepAlivePing = async () => {
-      try {
-        await axios.get(`${selfUrl}/api/health`, { timeout: 10000 });
-      } catch (e) {
-        logger.warn(`[KeepAlive] ping 실패: ${e.message}`);
-      }
-    };
-    // 즉시 실행 후 1분 간격 반복
-    keepAlivePing();
-    setInterval(keepAlivePing, 60 * 1000); // 1분마다 ping
-    logger.info(`✅ Render Keep-Alive 활성화 — 1분 간격 즉시시작 (${selfUrl})`);
-  }
-});
-
-// ✅ BUG-FIX: flushAllData 함수 정의 — 종료 전 인메모리 데이터 파일 동기화 보장
-function flushAllData() {
-  saveMemUsers();
-  saveMemPosts();
-  saveMemRecords();
-  saveMemCrews();
-  saveChatHistories();
-  saveMemNotices();
-  saveMemBusinessPosts();
-  saveSecretPointOverrides();
-  saveCctvOverrides();
-  saveProSubs();
-  saveVvipSlots();
-  (logger?.info || (() => {}))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // ✅ LEGAL-INFO: 사업자 법적고지 API (전자상거래법 제10조 — 마스터 수정 가능)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -9720,6 +9661,65 @@ app.put('/api/admin/legal-info', async (req, res) => {
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
+// ✅ FIX-404-HANDLER: 미매칭 라우트 404 응답
+app.use((req, res) => {
+  res.status(404).json({ error: '요청한 API를 찾을 수 없습니다.', path: req.path });
+});
+
+// ✅ FIX-GLOBAL-ERROR: 글로벌 에러 핸들러
+app.use(function globalErrorHandler(err, req, res, next) {
+  const isProd = process.env.NODE_ENV === 'production';
+  (logger || console).error('[GlobalError]', err.message);
+  res.status(err.status || 500).json({ error: isProd ? '서버 오류가 발생했습니다.' : (err.message || '오류') });
+});
+
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, '0.0.0.0', () => {
+  const env = process.env.NODE_ENV || 'development';
+// ✅ SCALE: Keep-Alive 최적화 — 연결 재사용으로 핸드셰이크 비용 절감
+server.keepAliveTimeout = 65000;  // 65초 (로드밸런서 60초보다 길게)
+server.headersTimeout = 66000;    // keepAlive보다 1초 더 길게
+  logger.info(`🚀 낚시GO 서버 시작 완료 | 포트: ${PORT} | 환경: ${env}`);
+  logger.info(`   웹훅: ${process.env.PORTONE_WEBHOOK_SECRET ? '✅' : '⚠️ 미설정'} | SMS: ${process.env.SMS_API_KEY ? '✅' : '⚠️ 미설정'} | DB: ${process.env.MONGO_PASS || process.env.MONGO_URI ? '✅ MongoDB' : '⚠️ 인메모리'}`);
+  if (env === 'production') logger.info('[보안] 프로덕션 모드 활성화');
+
+
+
+  // Render 슬립 방지 — 서버 시작 즉시 + 1분 간격 ping
+  // Render 무료 플랜: 15분 비활성 시 슬립. 1분 간격으로 방지.
+  if (process.env.RENDER_EXTERNAL_URL) {
+    const selfUrl = process.env.RENDER_EXTERNAL_URL;
+    const keepAlivePing = async () => {
+      try {
+        await axios.get(`${selfUrl}/api/health`, { timeout: 10000 });
+      } catch (e) {
+        logger.warn(`[KeepAlive] ping 실패: ${e.message}`);
+      }
+    };
+    // 즉시 실행 후 1분 간격 반복
+    keepAlivePing();
+    setInterval(keepAlivePing, 60 * 1000); // 1분마다 ping
+    logger.info(`✅ Render Keep-Alive 활성화 — 1분 간격 즉시시작 (${selfUrl})`);
+  }
+});
+
+// ✅ BUG-FIX: flushAllData 함수 정의 — 종료 전 인메모리 데이터 파일 동기화 보장
+function flushAllData() {
+  saveMemUsers();
+  saveMemPosts();
+  saveMemRecords();
+  saveMemCrews();
+  saveChatHistories();
+  saveMemNotices();
+  saveMemBusinessPosts();
+  saveSecretPointOverrides();
+  saveCctvOverrides();
+  saveProSubs();
+  saveVvipSlots();
+  (logger?.info || (() => {}))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
+}
+
 
 // ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
 // ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
