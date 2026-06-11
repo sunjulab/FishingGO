@@ -1111,6 +1111,35 @@ export default function MyPage() {
          >
            {user?.id === 'GUEST' ? '회원가입 / 로그인 하러가기' : '로그아웃'}
          </button>
+
+         {/* ✅ 법적고지 — 전자상거래법 제10조 사업자 정보 표시 의무 */}
+         <div style={{
+           marginTop: '32px',
+           padding: '20px 4px 8px',
+           borderTop: '1px solid #F0F0F0',
+         }}>
+           <div style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '700', marginBottom: '10px', letterSpacing: '0.05em' }}>
+             사업자 정보
+           </div>
+           {[
+             ['상호명',         '선제이유랩 (SUN J.U. Lab)'],
+             ['대표자',         '김승철'],
+             ['사업자등록번호', '865-10-03351'],
+             ['사업장 주소',    '강원특별자치도 강릉시 노가니남길 25, 202동 405호'],
+             ['업태/종목',      '정보통신업 · 전자상거래 소매업'],
+             ['고객센터 이메일','sunjulab.a1@gmail.com'],
+             ['통신판매업',     '신고 준비 중'],
+           ].map(([label, value]) => (
+             <div key={label} style={{ display: 'flex', gap: '8px', marginBottom: '5px', alignItems: 'flex-start' }}>
+               <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#AEAEB2', fontWeight: '700', flexShrink: 0, width: '88px' }}>{label}</span>
+               <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#8E8E93', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{value}</span>
+             </div>
+           ))}
+           <div style={{ marginTop: '14px', fontSize: `calc(9px * var(--fs,1))`, color: '#D1D1D6', fontWeight: '600', lineHeight: '1.6' }}>
+             ⓒ 2026 선제이유랩. All rights reserved.{'\n'}
+             본 서비스는 전자상거래법 및 정보통신망법에 따라 운영됩니다.
+           </div>
+         </div>
       </div>
 
       {/* 🟦 Settings Modals (Bottom Sheets) 🟦 */}
