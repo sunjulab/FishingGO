@@ -1193,7 +1193,7 @@ export default function MyPage() {
                 {editingLegal ? (
                   <input value={legalDraft[idx]?.value || ''}
                     onChange={e => { const n=[...legalDraft]; n[idx]={...n[idx],value:e.target.value}; setLegalDraft(n); }}
-                    style={{ flex:1, fontSize:`calc(11px * var(--fs,1))`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#1c1c1e', background:'#F8F9FC' }} />
+                    style={{ flex:1, fontSize:`calc(11px * var(--fs,1))`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#8E8E93', background:'#F8F9FC' }} />
                 ) : (
                   <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#8E8E93', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
                 )}
