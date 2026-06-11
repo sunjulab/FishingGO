@@ -799,41 +799,66 @@ export default function CommunityTab() {
             <CatchRankingPage embedded />
           </Suspense>
         ) : activeTab === 'notice' ? (
-          <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {noticePosts.map(notice => (
-              <div
-                key={String(notice._id || notice.id)}
-                onClick={() => navigate(`/notice/${String(notice._id || notice.id)}`, { state: { notice } })}
-                style={{ backgroundColor: notice.isPinned ? '#FFF1F0' : '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative', border: notice.isPinned ? '1px solid #FFCCC7' : '1px solid #E5E5EA', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.08)'}
-                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)'}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  {notice.isPinned && <div style={{ padding: '4px 8px', backgroundColor: '#FF3B30', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, borderRadius: '6px', fontWeight: '900' }}>중요 필독</div>}
-                  <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#888', fontWeight: 'bold' }}>{notice.date}</div>
-                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#aaa', marginLeft: 'auto' }}>조회 {notice.views}</div>
-                </div>
-                <h3 style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', marginBottom: '8px', wordBreak: 'keep-all' }}>{notice.title}</h3>
-                <p style={{
-                  fontSize: `calc(14px * var(--fs, 1))`, color: '#777', lineHeight: '1.6', paddingBottom: isAdmin ? '36px' : '0',
-                  overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
-                }}>{notice.content}</p>
-                <div style={{ marginTop: '8px', fontSize: `calc(12px * var(--fs, 1))`, color: '#0056D2', fontWeight: '700', paddingBottom: isAdmin ? '36px' : '0' }}>
-                  자세히 보기 →
-                </div>
-
-                {isAdmin && (
-                  <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '6px' }}>
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/write?type=notice&editId=${String(notice._id || notice.id)}`); }} style={{ border: 'none', background: 'rgba(0,86,210,0.1)', color: '#0056D2', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Edit2 size={13} /> 수정
-                    </button>
-                    <button onClick={(e) => handleDeletePost(e, String(notice._id || notice.id), 'notice')} style={{ border: 'none', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Trash2 size={13} /> 삭제
-                    </button>
+          <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {noticePosts.map(notice => {
+              // ✅ 미리보기 정제: 이모지·구분선·빈줄 제거 후 첫 2줄만 표시
+              const cleanPreview = (notice.content || '')
+                .replace(/[━─=\-]{3,}/g, '')           // ━━━ 등 구분선 제거
+                .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // 이모지 제거
+                .replace(/[\u2600-\u27BF]/gu, '')       // 기타 특수문자 제거
+                .replace(/[■□●○✅✔️❌⚠️📌📢📍]/g, '')   // 특수 마크 제거
+                .split('\n')
+                .map(l => l.trim())
+                .filter(l => l.length > 2)              // 2자 이하 짧은 줄 제거
+                .join(' ')                              // 줄바꿈 제거하고 연결
+                .slice(0, 120);                         // 최대 120자
+              return (
+                <div
+                  key={String(notice._id || notice.id)}
+                  onClick={() => navigate(`/notice/${String(notice._id || notice.id)}`, { state: { notice } })}
+                  style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', position: 'relative', border: notice.isPinned ? '1.5px solid #FF3B30' : '1px solid #F0F0F0', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'}
+                  onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'}
+                >
+                  {/* 상단: 필독브지 + 날짜 + 조회수 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    {notice.isPinned && <span style={{ padding: '2px 7px', backgroundColor: '#FF3B30', color: '#fff', fontSize: `calc(10px * var(--fs,1))`, borderRadius: '5px', fontWeight: '900', letterSpacing: '-0.3px' }}>필독</span>}
+                    <span style={{ fontSize: `calc(11px * var(--fs,1))`, color: '#bbb', fontWeight: '600' }}>{notice.date || new Date(notice.createdAt).toLocaleDateString('ko-KR')}</span>
+                    <span style={{ fontSize: `calc(11px * var(--fs,1))`, color: '#ddd', marginLeft: 'auto' }}>조회 {notice.views || 0}</span>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* 제목 */}
+                  <div style={{ fontSize: `calc(15px * var(--fs,1))`, fontWeight: '800', color: '#1c1c1e', marginBottom: '6px', lineHeight: '1.4', wordBreak: 'keep-all',
+                    overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {notice.title}
+                  </div>
+
+                  {/* 정제된 미리보기 */}
+                  <div style={{ fontSize: `calc(13px * var(--fs,1))`, color: '#999', lineHeight: '1.5',
+                    overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    marginBottom: '10px' }}>
+                    {cleanPreview || '자세히 보기를 눌러주세요.'}
+                  </div>
+
+                  {/* 하단: 자세히보기 + 관리버튼 */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: `calc(12px * var(--fs,1))`, color: '#0056D2', fontWeight: '700' }}>자세히 보기 →</span>
+                    {isAdmin && (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/write?type=notice&editId=${String(notice._id || notice.id)}`); }}
+                          style={{ border: 'none', background: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '5px 10px', borderRadius: '7px', fontWeight: '700', fontSize: `calc(11px * var(--fs,1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Edit2 size={11} /> 수정
+                        </button>
+                        <button onClick={(e) => handleDeletePost(e, String(notice._id || notice.id), 'notice')}
+                          style={{ border: 'none', background: 'rgba(255,59,48,0.08)', color: '#FF3B30', padding: '5px 10px', borderRadius: '7px', fontWeight: '700', fontSize: `calc(11px * var(--fs,1))`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Trash2 size={11} /> 삭제
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : activeTab === 'open' ? (
           <div className="fade-in">
