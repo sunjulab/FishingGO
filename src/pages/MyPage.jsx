@@ -1158,10 +1158,10 @@ export default function MyPage() {
          {/* ✅ LEGAL-INFO: 사업자 법적고지 — 서버 DB 저장, 전체 사용자 실시간 반영 */}
           <div style={{ marginTop: '32px', padding: '20px 4px 8px', borderTop: '1px solid #F0F0F0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <div style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '700', letterSpacing: '0.05em' }}>사업자 정보</div>
+              <div style={{ fontSize: `10px`, color: '#C7C7CC', fontWeight: '700', letterSpacing: '0.05em' }}>사업자 정보</div>
               {(user?.id === 'sunjulab.k' || user?.tier === 'MASTER' || userTier === 'MASTER') && !editingLegal && (
                 <button onClick={() => { setLegalDraft([...legalInfo]); setEditingLegal(true); }}
-                  style={{ fontSize: `calc(10px * var(--fs,1))`, fontWeight: '800', color: '#0056D2', background: 'rgba(0,86,210,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>
+                  style={{ fontSize: `10px`, fontWeight: '800', color: '#0056D2', background: 'rgba(0,86,210,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>
                   ✏️ 수정
                 </button>
               )}
@@ -1175,31 +1175,31 @@ export default function MyPage() {
                       addToast('✅ 서버에 저장되었습니다.', 'success');
                     } catch (e) { addToast(`❌ ${e.response?.data?.error || '저장 실패'}`, 'error'); }
                     finally { setLegalSaving(false); }
-                  }} style={{ fontSize: `calc(10px * var(--fs,1))`, fontWeight: '900', color: '#fff', background: legalSaving ? '#99b8e8' : '#0056D2', border: 'none', borderRadius: '7px', padding: '3px 12px', cursor: legalSaving ? 'not-allowed' : 'pointer' }}>
+                  }} style={{ fontSize: `10px`, fontWeight: '900', color: '#fff', background: legalSaving ? '#99b8e8' : '#0056D2', border: 'none', borderRadius: '7px', padding: '3px 12px', cursor: legalSaving ? 'not-allowed' : 'pointer' }}>
                     {legalSaving ? '저장 중...' : '저장'}
                   </button>
                   <button onClick={() => setEditingLegal(false)}
-                    style={{ fontSize: `calc(10px * var(--fs,1))`, fontWeight: '800', color: '#FF3B30', background: 'rgba(255,59,48,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>취소</button>
+                    style={{ fontSize: `10px`, fontWeight: '800', color: '#FF3B30', background: 'rgba(255,59,48,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>취소</button>
                 </div>
               )}
             </div>
             {legalLoading ? (
               <div style={{ padding: '12px 0' }}>
-                <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '600' }}>불러오는 중...</span>
+                <span style={{ fontSize: `10px`, color: '#C7C7CC', fontWeight: '600' }}>불러오는 중...</span>
               </div>
             ) : (editingLegal ? legalDraft : legalInfo).map((item, idx) => (
               <div key={item.key} style={{ display: 'flex', gap: '8px', marginBottom: editingLegal ? '8px' : '5px', alignItems: editingLegal ? 'center' : 'flex-start' }}>
-                <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '700', flexShrink: 0, width: '88px', paddingTop: editingLegal ? '6px' : 0 }}>{item.label}</span>
+                <span style={{ fontSize: `10px`, color: '#C7C7CC', fontWeight: '700', flexShrink: 0, width: '88px', paddingTop: editingLegal ? '6px' : 0 }}>{item.label}</span>
                 {editingLegal ? (
                   <input value={legalDraft[idx]?.value || ''}
                     onChange={e => { const n=[...legalDraft]; n[idx]={...n[idx],value:e.target.value}; setLegalDraft(n); }}
-                    style={{ flex:1, fontSize:`calc(11px * var(--fs,1))`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#AEAEB2', background:'#F8F9FC' }} />
+                    style={{ flex:1, fontSize:`11px`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#AEAEB2', background:'#F8F9FC' }} />
                 ) : (
-                  <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#AEAEB2', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
+                  <span style={{ fontSize: `10px`, color: '#AEAEB2', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
                 )}
               </div>
             ))}
-            <div style={{ marginTop: '14px', fontSize: `calc(9px * var(--fs,1))`, color: '#D1D1D6', fontWeight: '600', lineHeight: '1.6' }}>
+            <div style={{ marginTop: '14px', fontSize: `9px`, color: '#D1D1D6', fontWeight: '600', lineHeight: '1.6' }}>
               ⓒ 2026 선제이유랩. All rights reserved. 본 서비스는 전자상거래법 및 정보통신망법에 따라 운영됩니다.
             </div>
           </div>
