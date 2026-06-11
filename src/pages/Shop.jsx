@@ -4,7 +4,7 @@ import apiClient from '../api/index';
 import { useUserStore } from '../store/useUserStore';
 
 const API_BASE   = 'https://fishing-go-backend.onrender.com';
-const DIRECT_KEY = 'FishingGO_Admin_Direct_2026';
+const DIRECT_KEY = 'sunjulab_910414';
 const COUPANG_PARTNERS_ID = import.meta.env.VITE_COUPANG_PARTNERS_ID || '';
 
 const SHOP_TAGS = ['추천','낚시용품','루어/채비','릴/로드','라인/원줄','낚시복','가방/케이스','액세서리','기타'];
