@@ -1,0 +1,29 @@
+{
+	"appId": "kr.fishinggo.app",
+	"appName": "낚시GO",
+	"webDir": "dist",
+	"server": {
+		"hostname": "www.fishing-go.com",
+		"androidScheme": "https"
+	},
+	"android": {},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 3000,
+			"backgroundColor": "#0B1F3A",
+			"showSpinner": false,
+			"autoHide": true
+		},
+		"StatusBar": {
+			"style": "Dark",
+			"backgroundColor": "#00000000",
+			"overlaysWebView": true
+		},
+		"AdMob": {
+			"appId": "ca-app-pub-9774243773523817~7409873309",
+			"initialize": true,
+			"requestTrackingAuthorization": false,
+			"testingDevices": []
+		}
+	}
+}
