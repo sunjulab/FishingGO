@@ -6877,7 +6877,16 @@ async function loadVvipSlotsFromDB() {
     if (restored > 0) saveVvipSlots(); // 복원된 슬롯을 JSON 파일로도 동기화
   } catch (e) { (logger?.error || console.error)('[VVIP] 슬롯 로드 실패:', e.message); }
 }
-setTimeout(loadVvipSlotsFromDB, 3500);
+// ✅ FIX-VVIP-COLD-START: dbReady 대기 후 즉시 로드 (3.5초 고정 대기 → DB 준비 즉시 실행)
+// Render 무료 플랜 cold start 시 3.5초 내 요청이 들어오면 빈 슬롯 반환하던 버그 수정
+let vvipSlotsLoaded = false;
+(function waitAndLoadVvipSlots() {
+  if (dbReady) {
+    loadVvipSlotsFromDB().then(() => { vvipSlotsLoaded = true; });
+  } else {
+    setTimeout(waitAndLoadVvipSlots, 500); // 500ms마다 DB 준비 확인
+  }
+})();
 
 // 항구 목록 + 슬롯 현황 조회 (만료 자동 해제 포함)
 app.get('/api/vvip/harbors', (req, res) => {
@@ -6895,6 +6904,10 @@ app.get('/api/vvip/harbors', (req, res) => {
     }
   });
   if (expiredCount > 0) saveVvipSlots(); // 만료 파일 반영
+  // ✅ FIX-VVIP-COLD-START: DB 로드 완료 전 요청 시 slotsReady 경고 헤더 추가
+  if (!vvipSlotsLoaded) {
+    res.setHeader('X-Slots-Ready', 'false');
+  }
   const harborData = HARBOR_LIST.map(h => ({
     ...h,
     isTaken: !!vvipSlots[h.id],
@@ -6905,7 +6918,7 @@ app.get('/api/vvip/harbors', (req, res) => {
       ? Math.max(0, Math.ceil((new Date(vvipSlots[h.id].expiresAt) - now) / 86400000))
       : null
   }));
-  res.json({ harbors: harborData });
+  res.json({ harbors: harborData, slotsReady: vvipSlotsLoaded });
 });
 
 // VVIP 슬롯 구매 (선착순) — 만료일 30일 자동 설정 + User DB 저장 — ✅ NEW-BUG-08: JWT 인증 추가

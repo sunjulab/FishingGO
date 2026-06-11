@@ -253,6 +253,11 @@ export default function VVIPSubscribe() {
         if (h.isTaken) map[h.id] = { takenBy: h.takenBy, expiresAt: h.expiresAt, daysLeft: h.daysLeft };
       });
       setTakenMap(map);
+      // ✅ FIX-COLD-START: 서버 DB 로드 미완료(slotsReady:false) 시 2초 후 자동 재시도
+      if (res.data.slotsReady === false) {
+        setTimeout(() => { if (isMountedRef.current) fetchHarborData(); }, 2000);
+      }
+
     } catch {} // ✅ 폴링 실패 시 old 데이터 유지 (네트워크 오류마다 깜빡임 방지)
     if (user && isMountedRef.current) { // ✅ BUG-V3 FIX: 언마운트 후 2차 API 호출 방지
       try {
