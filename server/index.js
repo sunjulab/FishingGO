@@ -433,6 +433,70 @@ if (process.env.ALLOWED_ORIGIN) {
   ALLOWED_ORIGINS.push(process.env.ALLOWED_ORIGIN);
 }
 
+// ✅ LEGAL-EARLY: 법적고지 API — 최상단 등록 (404 핸들러보다 무조건 먼저)
+app.get('/api/legal-info', async (req, res) => {
+  const DEFAULT = [
+    { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
+    { label: '대표자',         key: 'ceo',      value: '김승철' },
+    { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
+    { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
+    { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
+    { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
+    { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
+  ];
+  try {
+    if (!dbReady || !mongoose.models.LegalInfo) return res.json({ items: DEFAULT });
+    const doc = await mongoose.models.LegalInfo.findOne().lean();
+    res.json({ items: doc?.items?.length ? doc.items : DEFAULT });
+  } catch { res.json({ items: DEFAULT }); }
+});
+
+app.put('/api/admin/legal-info', express.json(), async (req, res) => {
+  const DEFAULT = [
+    { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
+    { label: '대표자',         key: 'ceo',      value: '김승철' },
+    { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
+    { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
+    { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
+    { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
+    { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
+  ];
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    console.log('[LegalInfo-PUT] 토큰:', tp.email, tp.tier);
+    if (!isAdminToken(tp)) return res.status(403).json({ error: 'MASTER 권한 필요', email: tp.email });
+    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중. 30초 후 재시도 하세요.' });
+
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0)
+      return res.status(400).json({ error: 'items 배열 필수' });
+
+    const sanitized = items.map(it => ({
+      label: String(it.label || '').slice(0, 30),
+      key:   String(it.key   || '').slice(0, 30),
+      value: String(it.value || '').slice(0, 200),
+    }));
+
+    // LegalInfo 모델 동적 획득
+    const LegalModel = mongoose.models.LegalInfo ||
+      mongoose.model('LegalInfo', new mongoose.Schema({
+        items: [{ label: String, key: String, value: String }],
+        updatedAt: { type: Date, default: Date.now },
+      }, { collection: 'legal_info' }));
+
+    const result = await LegalModel.findOneAndUpdate(
+      {}, { items: sanitized, updatedAt: new Date() }, { upsert: true, new: true }
+    );
+    console.log('[LegalInfo-PUT] ✅ DB 저장 완료 _id:', result?._id);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[LegalInfo-PUT] 오류:', err.message);
+    if (err.name === 'JsonWebTokenError') return res.status(401).json({ error: '토큰 오류' });
+    res.status(500).json({ error: '서버 오류: ' + err.message });
+  }
+});
 // Render 헬스체크 전용 (사전 등록 — CORS 이전에 응답)
 app.get('/api/health', (req, res) => {
   const fcmStatus = pushService?.isInitialized?.() ?? false;
