@@ -9655,10 +9655,6 @@ function flushAllData() {
   (logger?.info || (() => {}))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
 }
 
-// ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
-// ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
-require('./graceful_shutdown')(server, mongoose, flushAllData);
-
 // ─────────────────────────────────────────────────────────────────────────────
 // ✅ LEGAL-INFO: 사업자 법적고지 API (전자상거래법 제10조 — 마스터 수정 가능)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -9707,7 +9703,6 @@ app.put('/api/admin/legal-info', async (req, res) => {
     if (!Array.isArray(items) || items.length === 0)
       return res.status(400).json({ error: 'items 배열 필수' });
 
-    // label/key/value 필드만 허용 (XSS 방지)
     const sanitized = items.map(it => ({
       label: String(it.label || '').slice(0, 30),
       key:   String(it.key   || '').slice(0, 30),
@@ -9725,4 +9720,8 @@ app.put('/api/admin/legal-info', async (req, res) => {
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
+
+// ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
+// ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
+require('./graceful_shutdown')(server, mongoose, flushAllData);
 
