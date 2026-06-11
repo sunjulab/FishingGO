@@ -1159,13 +1159,13 @@ export default function MyPage() {
           <div style={{ marginTop: '32px', padding: '20px 4px 8px', borderTop: '1px solid #F0F0F0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <div style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '700', letterSpacing: '0.05em' }}>사업자 정보</div>
-              {userTier === 'MASTER' && !editingLegal && (
+              {(isAdmin || userTier === 'MASTER' || user?.tier === 'MASTER' || user?.id === 'sunjulab.k') && !editingLegal && (
                 <button onClick={() => { setLegalDraft([...legalInfo]); setEditingLegal(true); }}
                   style={{ fontSize: `calc(10px * var(--fs,1))`, fontWeight: '800', color: '#0056D2', background: 'rgba(0,86,210,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>
                   ✏️ 수정
                 </button>
               )}
-              {userTier === 'MASTER' && editingLegal && (
+              {(isAdmin || userTier === 'MASTER' || user?.tier === 'MASTER' || user?.id === 'sunjulab.k') && editingLegal && (
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button disabled={legalSaving} onClick={async () => {
                     setLegalSaving(true);
