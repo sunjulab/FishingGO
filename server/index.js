@@ -9658,3 +9658,71 @@ function flushAllData() {
 // ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
 // ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
 require('./graceful_shutdown')(server, mongoose, flushAllData);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ✅ LEGAL-INFO: 사업자 법적고지 API (전자상거래법 제10조 — 마스터 수정 가능)
+// ─────────────────────────────────────────────────────────────────────────────
+const LegalInfo = mongoose.models.LegalInfo || mongoose.model('LegalInfo',
+  new mongoose.Schema({
+    items: [{
+      label: { type: String },
+      key:   { type: String },
+      value: { type: String },
+    }],
+    updatedAt: { type: Date, default: Date.now },
+  }, { collection: 'legal_info' })
+);
+
+const DEFAULT_LEGAL_ITEMS = [
+  { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
+  { label: '대표자',         key: 'ceo',      value: '김승철' },
+  { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
+  { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
+  { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
+  { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
+  { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
+];
+
+/** GET /api/legal-info — 공개 API, DB 없으면 기본값 반환 */
+app.get('/api/legal-info', async (req, res) => {
+  try {
+    if (!dbReady) return res.json({ items: DEFAULT_LEGAL_ITEMS });
+    const doc = await LegalInfo.findOne().lean();
+    res.json({ items: doc?.items?.length ? doc.items : DEFAULT_LEGAL_ITEMS });
+  } catch (err) {
+    res.json({ items: DEFAULT_LEGAL_ITEMS });
+  }
+});
+
+/** PUT /api/admin/legal-info — 마스터 전용 수정 */
+app.put('/api/admin/legal-info', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(tp)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중' });
+
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0)
+      return res.status(400).json({ error: 'items 배열 필수' });
+
+    // label/key/value 필드만 허용 (XSS 방지)
+    const sanitized = items.map(it => ({
+      label: String(it.label || '').slice(0, 30),
+      key:   String(it.key   || '').slice(0, 30),
+      value: String(it.value || '').slice(0, 200),
+    }));
+
+    await LegalInfo.findOneAndUpdate(
+      {},
+      { items: sanitized, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') return res.status(401).json({ error: '토큰 오류' });
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+

@@ -101,6 +101,33 @@ export default function MyPage() {
     return () => { isMountedRef.current = false; };
   }, []);
 
+  // ✅ LEGAL-FETCH: 마운트 시 서버에서 법적고지 불러오기
+  useEffect(() => {
+    let cancelled = false;
+    const DEFAULT_LEGAL_CLIENT = [
+      { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
+      { label: '대표자',         key: 'ceo',      value: '김승철' },
+      { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
+      { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
+      { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
+      { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
+      { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
+    ];
+    apiClient.get('/api/legal-info')
+      .then(r => {
+        if (cancelled) return;
+        const items = r.data?.items?.length ? r.data.items : DEFAULT_LEGAL_CLIENT;
+        setLegalInfo(items);
+        setLegalDraft(items);
+      })
+      .catch(() => {
+        if (!cancelled) { setLegalInfo(DEFAULT_LEGAL_CLIENT); setLegalDraft(DEFAULT_LEGAL_CLIENT); }
+      })
+      .finally(() => { if (!cancelled) setLegalLoading(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
   const [error, setError] = useState('');
@@ -120,15 +147,11 @@ export default function MyPage() {
     { label: '고객센터 이메일',key: 'email',      value: 'sunjulab.a1@gmail.com' },
     { label: '통신판매업',     key: 'salesReg',   value: '신고 준비 중' },
   ];
-  const [legalInfo, setLegalInfo] = useState(() => {
-    try {
-      const saved = localStorage.getItem('fishinggo_legal_info');
-      if (saved) return JSON.parse(saved);
-    } catch { /* ignore */ }
-    return DEFAULT_LEGAL;
-  });
+  const [legalInfo,    setLegalInfo]    = useState([]);
+  const [legalLoading, setLegalLoading] = useState(true);
   const [editingLegal, setEditingLegal] = useState(false);
-  const [legalDraft, setLegalDraft] = useState(legalInfo);
+  const [legalDraft,   setLegalDraft]   = useState([]);
+  const [legalSaving,  setLegalSaving]  = useState(false);
 
   // NEW-B3: 카메라 오버레이 hover 상태 — DOM 직접 조작 anti-pattern 제거
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
@@ -1038,7 +1061,7 @@ export default function MyPage() {
               onClick={() => navigate('/admin-dashboard')}
               style={{ width: '100%', padding: '14px 16px', background: 'rgba(0,196,140,0.1)', border: '1px solid rgba(0,196,140,0.3)', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: '#fff', textAlign: 'left', marginTop: '8px' }}
             >
-              <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #00C48C, #00897B)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+<div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #00C48C, #00897B)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>📊</span>
               </div>
               <div style={{ flex: 1 }}>
@@ -1132,34 +1155,54 @@ export default function MyPage() {
            {user?.id === 'GUEST' ? '회원가입 / 로그인 하러가기' : '로그아웃'}
          </button>
 
-         {/* ✅ 법적고지 — 전자상거래법 제10조 사업자 정보 표시 의무 */}
-         <div style={{
-           marginTop: '32px',
-           padding: '20px 4px 8px',
-           borderTop: '1px solid #F0F0F0',
-         }}>
-           <div style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '700', marginBottom: '10px', letterSpacing: '0.05em' }}>
-             사업자 정보
-           </div>
-           {[
-             ['상호명',         '선제이유랩 (SUN J.U. Lab)'],
-             ['대표자',         '김승철'],
-             ['사업자등록번호', '865-10-03351'],
-             ['사업장 주소',    '강원특별자치도 강릉시 노가니남길 25, 202동 405호'],
-             ['업태/종목',      '정보통신업 · 전자상거래 소매업'],
-             ['고객센터 이메일','sunjulab.a1@gmail.com'],
-             ['통신판매업',     '신고 준비 중'],
-           ].map(([label, value]) => (
-             <div key={label} style={{ display: 'flex', gap: '8px', marginBottom: '5px', alignItems: 'flex-start' }}>
-               <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#AEAEB2', fontWeight: '700', flexShrink: 0, width: '88px' }}>{label}</span>
-               <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#8E8E93', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{value}</span>
-             </div>
-           ))}
-           <div style={{ marginTop: '14px', fontSize: `calc(9px * var(--fs,1))`, color: '#D1D1D6', fontWeight: '600', lineHeight: '1.6' }}>
-             ⓒ 2026 선제이유랩. All rights reserved.{'\n'}
-             본 서비스는 전자상거래법 및 정보통신망법에 따라 운영됩니다.
-           </div>
-         </div>
+         {/* ✅ LEGAL-INFO: 사업자 법적고지 — 서버 DB 저장, 전체 사용자 실시간 반영 */}
+          <div style={{ marginTop: '32px', padding: '20px 4px 8px', borderTop: '1px solid #F0F0F0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <div style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '700', letterSpacing: '0.05em' }}>사업자 정보</div>
+              {isAdmin && !editingLegal && !legalLoading && (
+                <button onClick={() => { setLegalDraft([...legalInfo]); setEditingLegal(true); }}
+                  style={{ fontSize: `calc(10px * var(--fs,1))`, fontWeight: '800', color: '#0056D2', background: 'rgba(0,86,210,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>
+                  ✏️ 수정
+                </button>
+              )}
+              {isAdmin && editingLegal && (
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button disabled={legalSaving} onClick={async () => {
+                    setLegalSaving(true);
+                    try {
+                      await apiClient.put('/api/admin/legal-info', { items: legalDraft });
+                      setLegalInfo(legalDraft); setEditingLegal(false);
+                      addToast('✅ 서버에 저장되었습니다.', 'success');
+                    } catch (e) { addToast(`❌ ${e.response?.data?.error || '저장 실패'}`, 'error'); }
+                    finally { setLegalSaving(false); }
+                  }} style={{ fontSize: `calc(10px * var(--fs,1))`, fontWeight: '900', color: '#fff', background: legalSaving ? '#99b8e8' : '#0056D2', border: 'none', borderRadius: '7px', padding: '3px 12px', cursor: legalSaving ? 'not-allowed' : 'pointer' }}>
+                    {legalSaving ? '저장 중...' : '저장'}
+                  </button>
+                  <button onClick={() => setEditingLegal(false)}
+                    style={{ fontSize: `calc(10px * var(--fs,1))`, fontWeight: '800', color: '#FF3B30', background: 'rgba(255,59,48,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>취소</button>
+                </div>
+              )}
+            </div>
+            {legalLoading ? (
+              <div style={{ padding: '12px 0' }}>
+                <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#C7C7CC', fontWeight: '600' }}>불러오는 중...</span>
+              </div>
+            ) : (editingLegal ? legalDraft : legalInfo).map((item, idx) => (
+              <div key={item.key} style={{ display: 'flex', gap: '8px', marginBottom: editingLegal ? '8px' : '5px', alignItems: editingLegal ? 'center' : 'flex-start' }}>
+                <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#AEAEB2', fontWeight: '700', flexShrink: 0, width: '88px', paddingTop: editingLegal ? '6px' : 0 }}>{item.label}</span>
+                {editingLegal ? (
+                  <input value={legalDraft[idx]?.value || ''}
+                    onChange={e => { const n=[...legalDraft]; n[idx]={...n[idx],value:e.target.value}; setLegalDraft(n); }}
+                    style={{ flex:1, fontSize:`calc(11px * var(--fs,1))`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#1c1c1e', background:'#F8F9FC' }} />
+                ) : (
+                  <span style={{ fontSize: `calc(10px * var(--fs,1))`, color: '#8E8E93', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
+                )}
+              </div>
+            ))}
+            <div style={{ marginTop: '14px', fontSize: `calc(9px * var(--fs,1))`, color: '#D1D1D6', fontWeight: '600', lineHeight: '1.6' }}>
+              ⓒ 2026 선제이유랩. All rights reserved. 본 서비스는 전자상거래법 및 정보통신망법에 따라 운영됩니다.
+            </div>
+          </div>
       </div>
 
       {/* 🟦 Settings Modals (Bottom Sheets) 🟦 */}
