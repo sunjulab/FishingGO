@@ -9635,10 +9635,20 @@ app.get('/api/legal-info', async (req, res) => {
 app.put('/api/admin/legal-info', async (req, res) => {
   try {
     const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    if (!auth.startsWith('Bearer ')) {
+      (logger?.warn||console.warn)('[LegalInfo] 401: 인증 헤더 없음');
+      return res.status(401).json({ error: '인증 필요' });
+    }
     const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
-    if (!isAdminToken(tp)) return res.status(403).json({ error: 'MASTER 권한 필요' });
-    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중' });
+    (logger?.info||console.log)('[LegalInfo] 토큰 확인:', tp.email, tp.tier);
+    if (!isAdminToken(tp)) {
+      (logger?.warn||console.warn)('[LegalInfo] 403: MASTER 아님 email='+tp.email+' tier='+tp.tier);
+      return res.status(403).json({ error: 'MASTER 권한 필요' });
+    }
+    if (!dbReady) {
+      (logger?.warn||console.warn)('[LegalInfo] 503: DB 초기화 중');
+      return res.status(503).json({ error: '서버 초기화 중. 30초 후 재시도 하세요.' });
+    }
 
     const { items } = req.body;
     if (!Array.isArray(items) || items.length === 0)
@@ -9650,15 +9660,18 @@ app.put('/api/admin/legal-info', async (req, res) => {
       value: String(it.value || '').slice(0, 200),
     }));
 
-    await LegalInfo.findOneAndUpdate(
+    (logger?.info||console.log)('[LegalInfo] DB 저장 시도, items:', sanitized.length);
+    const result = await LegalInfo.findOneAndUpdate(
       {},
       { items: sanitized, updatedAt: new Date() },
       { upsert: true, new: true }
     );
+    (logger?.info||console.log)('[LegalInfo] ✅ DB 저장 완료 _id:', result?._id);
     res.json({ ok: true });
   } catch (err) {
+    (logger?.error||console.error)('[LegalInfo] 오류:', err.message);
     if (err.name === 'JsonWebTokenError') return res.status(401).json({ error: '토큰 오류' });
-    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    res.status(500).json({ error: '서버 오류: ' + err.message });
   }
 });
 // ✅ FIX-404-HANDLER: 미매칭 라우트 404 응답
