@@ -433,70 +433,6 @@ if (process.env.ALLOWED_ORIGIN) {
   ALLOWED_ORIGINS.push(process.env.ALLOWED_ORIGIN);
 }
 
-// ✅ LEGAL-EARLY: 법적고지 API — 최상단 등록 (404 핸들러보다 무조건 먼저)
-app.get('/api/legal-info', async (req, res) => {
-  const DEFAULT = [
-    { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
-    { label: '대표자',         key: 'ceo',      value: '김승철' },
-    { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
-    { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
-    { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
-    { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
-    { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
-  ];
-  try {
-    if (!dbReady || !mongoose.models.LegalInfo) return res.json({ items: DEFAULT });
-    const doc = await mongoose.models.LegalInfo.findOne().lean();
-    res.json({ items: doc?.items?.length ? doc.items : DEFAULT });
-  } catch { res.json({ items: DEFAULT }); }
-});
-
-app.put('/api/admin/legal-info', express.json(), async (req, res) => {
-  const DEFAULT = [
-    { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
-    { label: '대표자',         key: 'ceo',      value: '김승철' },
-    { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
-    { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
-    { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
-    { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
-    { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
-  ];
-  try {
-    const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
-    const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
-    console.log('[LegalInfo-PUT] 토큰:', tp.email, tp.tier);
-    if (!isAdminToken(tp)) return res.status(403).json({ error: 'MASTER 권한 필요', email: tp.email });
-    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중. 30초 후 재시도 하세요.' });
-
-    const { items } = req.body;
-    if (!Array.isArray(items) || items.length === 0)
-      return res.status(400).json({ error: 'items 배열 필수' });
-
-    const sanitized = items.map(it => ({
-      label: String(it.label || '').slice(0, 30),
-      key:   String(it.key   || '').slice(0, 30),
-      value: String(it.value || '').slice(0, 200),
-    }));
-
-    // LegalInfo 모델 동적 획득
-    const LegalModel = mongoose.models.LegalInfo ||
-      mongoose.model('LegalInfo', new mongoose.Schema({
-        items: [{ label: String, key: String, value: String }],
-        updatedAt: { type: Date, default: Date.now },
-      }, { collection: 'legal_info' }));
-
-    const result = await LegalModel.findOneAndUpdate(
-      {}, { items: sanitized, updatedAt: new Date() }, { upsert: true, new: true }
-    );
-    console.log('[LegalInfo-PUT] ✅ DB 저장 완료 _id:', result?._id);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('[LegalInfo-PUT] 오류:', err.message);
-    if (err.name === 'JsonWebTokenError') return res.status(401).json({ error: '토큰 오류' });
-    res.status(500).json({ error: '서버 오류: ' + err.message });
-  }
-});
 // Render 헬스체크 전용 (사전 등록 — CORS 이전에 응답)
 app.get('/api/health', (req, res) => {
   const fcmStatus = pushService?.isInitialized?.() ?? false;
@@ -9660,86 +9596,8 @@ app.post('/api/auth/logout', verifyToken, async (req, res) => {
   } catch { res.json({ success: true }); }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ✅ LEGAL-INFO: 사업자 법적고지 API (전자상거래법 제10조 — 마스터 수정 가능)
-// ─────────────────────────────────────────────────────────────────────────────
-const LegalInfo = mongoose.models.LegalInfo || mongoose.model('LegalInfo',
-  new mongoose.Schema({
-    items: [{
-      label: { type: String },
-      key:   { type: String },
-      value: { type: String },
-    }],
-    updatedAt: { type: Date, default: Date.now },
-  }, { collection: 'legal_info' })
-);
-
-const DEFAULT_LEGAL_ITEMS = [
-  { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
-  { label: '대표자',         key: 'ceo',      value: '김승철' },
-  { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
-  { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
-  { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
-  { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
-  { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
-];
-
-/** GET /api/legal-info — 공개 API, DB 없으면 기본값 반환 */
-app.get('/api/legal-info', async (req, res) => {
-  try {
-    if (!dbReady) return res.json({ items: DEFAULT_LEGAL_ITEMS });
-    const doc = await LegalInfo.findOne().lean();
-    res.json({ items: doc?.items?.length ? doc.items : DEFAULT_LEGAL_ITEMS });
-  } catch (err) {
-    res.json({ items: DEFAULT_LEGAL_ITEMS });
-  }
-});
-
-/** PUT /api/admin/legal-info — 마스터 전용 수정 */
-app.put('/api/admin/legal-info', async (req, res) => {
-  try {
-    const auth = req.headers.authorization || '';
-    if (!auth.startsWith('Bearer ')) {
-      (logger?.warn||console.warn)('[LegalInfo] 401: 인증 헤더 없음');
-      return res.status(401).json({ error: '인증 필요' });
-    }
-    const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
-    (logger?.info||console.log)('[LegalInfo] 토큰 확인:', tp.email, tp.tier);
-    if (!isAdminToken(tp)) {
-      (logger?.warn||console.warn)('[LegalInfo] 403: MASTER 아님 email='+tp.email+' tier='+tp.tier);
-      return res.status(403).json({ error: 'MASTER 권한 필요' });
-    }
-    if (!dbReady) {
-      (logger?.warn||console.warn)('[LegalInfo] 503: DB 초기화 중');
-      return res.status(503).json({ error: '서버 초기화 중. 30초 후 재시도 하세요.' });
-    }
-
-    const { items } = req.body;
-    if (!Array.isArray(items) || items.length === 0)
-      return res.status(400).json({ error: 'items 배열 필수' });
-
-    const sanitized = items.map(it => ({
-      label: String(it.label || '').slice(0, 30),
-      key:   String(it.key   || '').slice(0, 30),
-      value: String(it.value || '').slice(0, 200),
-    }));
-
-    (logger?.info||console.log)('[LegalInfo] DB 저장 시도, items:', sanitized.length);
-    const result = await LegalInfo.findOneAndUpdate(
-      {},
-      { items: sanitized, updatedAt: new Date() },
-      { upsert: true, new: true }
-    );
-    (logger?.info||console.log)('[LegalInfo] ✅ DB 저장 완료 _id:', result?._id);
-    res.json({ ok: true });
-  } catch (err) {
-    (logger?.error||console.error)('[LegalInfo] 오류:', err.message);
-    if (err.name === 'JsonWebTokenError') return res.status(401).json({ error: '토큰 오류' });
-    res.status(500).json({ error: '서버 오류: ' + err.message });
-  }
-});
 // ✅ FIX-404-HANDLER: 미매칭 라우트 404 응답
-// ✅ LEGAL-PASSTHROUGH: /api/legal-info 는 next() 통과 — 뒤에 등록된 라우트가 처리
+// ✅ LEGAL-PASS: /api/legal-info → next()로 아래 라우트 전달
 app.use((req, res, next) => {
   if (req.path === '/api/legal-info' || req.path === '/api/admin/legal-info') return next();
   res.status(404).json({ error: '요청한 API를 찾을 수 없습니다.', path: req.path });
@@ -9800,6 +9658,71 @@ function flushAllData() {
   (logger?.info || (() => {}))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ✅ LEGAL-INFO: 사업자 법적고지 API (전자상거래법 제10조 — 마스터 수정 가능)
+// ─────────────────────────────────────────────────────────────────────────────
+const LegalInfo = mongoose.models.LegalInfo || mongoose.model('LegalInfo',
+  new mongoose.Schema({
+    items: [{
+      label: { type: String },
+      key:   { type: String },
+      value: { type: String },
+    }],
+    updatedAt: { type: Date, default: Date.now },
+  }, { collection: 'legal_info' })
+);
+
+const DEFAULT_LEGAL_ITEMS = [
+  { label: '상호명',         key: 'company',  value: '선제이유랩 (SUN J.U. Lab)' },
+  { label: '대표자',         key: 'ceo',      value: '김승철' },
+  { label: '사업자등록번호', key: 'bizNo',    value: '865-10-03351' },
+  { label: '사업장 주소',    key: 'address',  value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
+  { label: '업태/종목',      key: 'bizType',  value: '정보통신업 · 전자상거래 소매업' },
+  { label: '고객센터 이메일',key: 'email',    value: 'sunjulab.a1@gmail.com' },
+  { label: '통신판매업',     key: 'salesReg', value: '신고 준비 중' },
+];
+
+/** GET /api/legal-info — 공개 API, DB 없으면 기본값 반환 */
+app.get('/api/legal-info', async (req, res) => {
+  try {
+    if (!dbReady) return res.json({ items: DEFAULT_LEGAL_ITEMS });
+    const doc = await LegalInfo.findOne().lean();
+    res.json({ items: doc?.items?.length ? doc.items : DEFAULT_LEGAL_ITEMS });
+  } catch (err) {
+    res.json({ items: DEFAULT_LEGAL_ITEMS });
+  }
+});
+
+/** PUT /api/admin/legal-info — 마스터 전용 수정 */
+app.put('/api/admin/legal-info', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(tp)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+    if (!dbReady) return res.status(503).json({ error: '서버 초기화 중' });
+
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0)
+      return res.status(400).json({ error: 'items 배열 필수' });
+
+    const sanitized = items.map(it => ({
+      label: String(it.label || '').slice(0, 30),
+      key:   String(it.key   || '').slice(0, 30),
+      value: String(it.value || '').slice(0, 200),
+    }));
+
+    await LegalInfo.findOneAndUpdate(
+      {},
+      { items: sanitized, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') return res.status(401).json({ error: '토큰 오류' });
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
 
 // ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
 // ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
