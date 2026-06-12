@@ -1797,7 +1797,7 @@ async function getNifsAllStations() {
       const items = res.data?.body?.item;
       if (!items || !Array.isArray(items)) return nifsCache;
       // obs_lay=1(표층) 필터: 문자열'1' 및 숫자 1 양쪽 대응
-      const surface = items.filter(i => (i.obs_lay === '1' || i.obs_lay === 1) && i.rpr_yn === 'N');
+      const surface = items.filter(i => String(i.obs_lay) === '1' && String(i.rpr_yn) === 'N');
       const map = {};
       for (const item of surface) {
         const key = item.sta_cde;
