@@ -1764,8 +1764,64 @@ const WATER_TEMP_OBS_MAP = {
   'DT_0030': 'DT_0067',  // 태안 마도   → 태안 36.67°N ✅ 정확
   'DT_0010': 'DT_0094',  // 제주 한림   → 제주서 34.25°N/125.92°E (최근접)
   // 아래는 매핑 코드 없음 → 월별 baseTemp 사용
-  // DT_0018 완도, DT_0006 목포, DT_0007 인천, DT_0009 군산, DT_0011 서귀포, DT_0045 성산포
+  // DT_0007 인천, DT_0009 군산, DT_0006 목포, DT_0045 성산포
 };
+
+// ✅ NIFS-RISA-MAP: 실시간어장정보(risaList) sta_cde 매핑
+// 전수조사(2026-06-12) 결과 — 남해·제주 커버, 동해·서해 미커버
+const NIFS_STA_MAP = {
+  'DT_0018': 'wk094',  // 완도항      → 전남 완도(완도) ✅ 신규
+  'DT_0011': 'sg001',  // 서귀포      → 제주 서귀포(서귀포) ✅ 신규
+  'DT_0010': 'jt001',  // 제주 한림   → 제주 제주(탑동) (개선)
+  'DT_0016': 'ty004',  // 통영 도남   → 경남 통영(통영) (개선)
+  'DT_0034': 'gi086',  // 거제 지세포  → 경남 외양어장(진해만2) (개선)
+  'DT_0005': 'km001',  // 여수 국동항  → 전남 여수(고흥만) (개선)
+};
+
+// NIFS 전체 데이터 캐시 (30분 주기 — KHOA 캐시와 동기)
+let nifsCache = null;
+let nifsCacheTime = 0;
+
+async function getNifsAllStations() {
+  const NIFS_KEY = process.env.NIFS_KEY;
+  if (!NIFS_KEY) return null;
+  const now = Date.now();
+  if (nifsCache && (now - nifsCacheTime) < 28 * 60 * 1000) return nifsCache; // 28분 캐시
+  try {
+    const res = await axios.get(`https://www.nifs.go.kr/OpenAPI_json?id=risaList&key=${NIFS_KEY}`, { timeout: 8000 });
+    if (res.data?.header?.resultCode !== '00') return null;
+    const items = res.data?.body?.item;
+    if (!items || !Array.isArray(items)) return null;
+    // obs_lay=1(표층), rpr_yn=N(정상) 필터 후 sta_cde별 최신 데이터만
+    const surface = items.filter(i => i.obs_lay === '1' && i.rpr_yn === 'N');
+    const map = {};
+    for (const item of surface) {
+      const key = item.sta_cde;
+      if (!map[key] || item.obs_dat + item.obs_tim > map[key].obs_dat + map[key].obs_tim) {
+        map[key] = item;
+      }
+    }
+    nifsCache = map;
+    nifsCacheTime = now;
+    logger.info(`[NIFS] 실시간어장정보 캐시 갱신: ${Object.keys(map).length}개 관측소`);
+    return map;
+  } catch (e) {
+    logger.warn(`[NIFS] risaList API 실패: ${e.message}`);
+    return nifsCache; // 실패 시 이전 캐시 반환
+  }
+}
+
+async function getNifsWaterTemp(sid) {
+  const staCde = NIFS_STA_MAP[sid];
+  if (!staCde) return null;
+  const map = await getNifsAllStations();
+  if (!map) return null;
+  const item = map[staCde];
+  if (!item) return null;
+  const sst = item.wtr_tmp;
+  if (sst && sst !== '-' && !isNaN(parseFloat(sst))) return String(parseFloat(sst).toFixed(1));
+  return null;
+}
 
 // ✅ MONTHLY-BASE-TEMP: 월별 계절 기준 수온 (API 없는 관측소 fallback 정확도 향상)
 const MONTHLY_BASE_TEMP = {
@@ -1913,8 +1969,10 @@ async function updateAllStationsCache() {
     const seed    = parseInt(sid.replace(/\D/g, '')) || 1;
     const lcg     = (n) => ((seed * 9301 + 49297 * n) % 233280) / 233280;
 
-    // ① 수온 (KHOA 실측)
-    const realSst = await getWaterTemp(sid);
+    // ① 수온 (NIFS 우선 → KHOA 보완)
+    const nifsSst = await getNifsWaterTemp(sid);
+    const khoaSst = nifsSst ? null : await getWaterTemp(sid);
+    const realSst = nifsSst || khoaSst;
     // ② 풍속·파고 (기상청 해양부이)
     const marine  = await getMarineWeather(sid);
     // ③ 조석 (KHOA 조석예보)
@@ -1951,7 +2009,7 @@ async function updateAllStationsCache() {
         },
         tide: { phase: tidePhase, high: tideHigh, low: tideLow, current_level: `${tideLevel}cm` },
         _sources: {
-          sst:  realSst  ? 'KHOA_API' : 'fallback',
+          sst:  nifsSst ? 'NIFS_API' : (khoaSst ? 'KHOA_API' : 'fallback'),
           wind: marine   ? 'KMA_BUOY' : 'fallback',
           tide: realTide ? 'KHOA_TIDE' : 'fallback',
         },
