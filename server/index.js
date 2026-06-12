@@ -1823,6 +1823,56 @@ async function getNifsWaterTemp(sid) {
   return null;
 }
 
+// ✅ KMA-BEACH-MAP: 기상청 해수욕장 수온 API 매핑 (서해·제주 커버)
+// 5~10월 운영, 제공정보: beachNm, wTemp, reginNm
+const KMA_BEACH_MAP = {
+  'DT_0008': ['대천', '무창포', '보령'],          // 보령 대천항
+  'DT_0030': ['만리포', '몽산포', '꽃지', '백사장', '태안'], // 태안 마도
+  'DT_0009': ['선유도', '야미', '비응', '군산'],   // 군산
+  'DT_0007': ['을왕리', '왕산', '대부', '인천'],   // 인천
+  'DT_0006': ['목포', '무안', '함평', '진도'],     // 목포
+  'DT_0045': ['성산', '표선', '세화', '월정'],     // 제주 성산포
+};
+
+let kmaBeachCache = null;
+let kmaBeachCacheTime = 0;
+
+async function getKmaBeachAllStations() {
+  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
+  if (!KEY) return null;
+  const now = Date.now();
+  if (kmaBeachCache && (now - kmaBeachCacheTime) < 58 * 60 * 1000) return kmaBeachCache; // 58분 캐시
+  try {
+    const url = `https://apis.data.go.kr/1360000/BeachInfoservice/getBeachCurrentWeather?serviceKey=${encodeURIComponent(KEY)}&numOfRows=200&dataType=JSON`;
+    const res = await axios.get(url, { timeout: 8000 });
+    const rc = res.data?.response?.header?.resultCode;
+    if (rc !== '00') return kmaBeachCache; // 이전 캐시 유지
+    const items = res.data?.response?.body?.items?.item;
+    if (!items || !Array.isArray(items)) return kmaBeachCache;
+    kmaBeachCache = items;
+    kmaBeachCacheTime = now;
+    logger.info(`[KMA-BEACH] 해수욕장 수온 캐시 갱신: ${items.length}개 해수욕장`);
+    return items;
+  } catch (e) {
+    logger.warn(`[KMA-BEACH] 해수욕장 API 실패: ${e.message}`);
+    return kmaBeachCache;
+  }
+}
+
+async function getKmaBeachWaterTemp(sid) {
+  const keywords = KMA_BEACH_MAP[sid];
+  if (!keywords) return null;
+  const items = await getKmaBeachAllStations();
+  if (!items) return null;
+  for (const kw of keywords) {
+    const match = items.find(i => i.beachNm && i.beachNm.includes(kw));
+    if (match && match.wTemp && !isNaN(parseFloat(match.wTemp))) {
+      return String(parseFloat(match.wTemp).toFixed(1));
+    }
+  }
+  return null;
+}
+
 // ✅ MONTHLY-BASE-TEMP: 월별 계절 기준 수온 (API 없는 관측소 fallback 정확도 향상)
 const MONTHLY_BASE_TEMP = {
   '동해': [8.5,8.0,9.5,12.5,16.0,19.5,22.0,24.0,21.5,18.0,14.0,10.0],
@@ -1969,10 +2019,11 @@ async function updateAllStationsCache() {
     const seed    = parseInt(sid.replace(/\D/g, '')) || 1;
     const lcg     = (n) => ((seed * 9301 + 49297 * n) % 233280) / 233280;
 
-    // ① 수온 (NIFS 우선 → KHOA 보완)
-    const nifsSst = await getNifsWaterTemp(sid);
-    const khoaSst = nifsSst ? null : await getWaterTemp(sid);
-    const realSst = nifsSst || khoaSst;
+    // ① 수온 (NIFS 우선 → KHOA → 기상청 해수욕장 → 계절 fallback)
+    const nifsSst  = await getNifsWaterTemp(sid);
+    const khoaSst  = nifsSst  ? null : await getWaterTemp(sid);
+    const beachSst = (nifsSst || khoaSst) ? null : await getKmaBeachWaterTemp(sid);
+    const realSst  = nifsSst || khoaSst || beachSst;
     // ② 풍속·파고 (기상청 해양부이)
     const marine  = await getMarineWeather(sid);
     // ③ 조석 (KHOA 조석예보)
@@ -2009,7 +2060,7 @@ async function updateAllStationsCache() {
         },
         tide: { phase: tidePhase, high: tideHigh, low: tideLow, current_level: `${tideLevel}cm` },
         _sources: {
-          sst:  nifsSst ? 'NIFS_API' : (khoaSst ? 'KHOA_API' : 'fallback'),
+          sst:  nifsSst ? 'NIFS_API' : (khoaSst ? 'KHOA_API' : (beachSst ? 'KMA_BEACH' : 'fallback')),
           wind: marine   ? 'KMA_BUOY' : 'fallback',
           tide: realTide ? 'KHOA_TIDE' : 'fallback',
         },
