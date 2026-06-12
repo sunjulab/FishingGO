@@ -1888,7 +1888,16 @@ async function getKmaBeachAllStations() {
   kmaBeachFetchPromise = (async () => {
     try {
       const url = `https://apis.data.go.kr/1360000/BeachInfoservice/getBeachCurrentWeather?serviceKey=${encodeURIComponent(KEY)}&numOfRows=200&dataType=JSON`;
-      const res = await axios.get(url, { timeout: 8000 });
+      const res = await axios.get(url, {
+        timeout: 8000,
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36',
+          'Referer': 'https://www.data.go.kr/',
+        },
+      });
+
       const rc = res.data?.response?.header?.resultCode;
       if (rc !== '00') return kmaBeachCache;
       const items = res.data?.response?.body?.items?.item;
