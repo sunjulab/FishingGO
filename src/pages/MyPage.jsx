@@ -1187,7 +1187,7 @@ export default function MyPage() {
          {/* ✅ LEGAL-INFO: 사업자 법적고지 — 서버 DB 저장, 전체 사용자 실시간 반영 */}
           <div style={{ marginTop: '32px', padding: '20px 4px 8px', borderTop: '1px solid #F0F0F0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <div style={{ fontSize: `10px`, color: '#C7C7CC', fontWeight: '700', letterSpacing: '0.05em' }}>사업자 정보</div>
+              <div style={{ fontSize: `6px`, color: '#C7C7CC', fontWeight: '700', letterSpacing: '0.05em' }}>사업자 정보</div>
               {(user?.id === 'sunjulab.k' || user?.tier === 'MASTER' || userTier === 'MASTER') && !editingLegal && (
                 <button onClick={() => { setLegalDraft([...legalInfo]); setEditingLegal(true); }}
                   style={{ fontSize: `10px`, fontWeight: '800', color: '#0056D2', background: 'rgba(0,86,210,0.07)', border: 'none', borderRadius: '7px', padding: '3px 10px', cursor: 'pointer' }}>
@@ -1230,13 +1230,13 @@ export default function MyPage() {
               </div>
             ) : (editingLegal ? legalDraft : legalInfo).map((item, idx) => (
               <div key={item.key} style={{ display: 'flex', gap: '8px', marginBottom: editingLegal ? '8px' : '5px', alignItems: editingLegal ? 'center' : 'flex-start' }}>
-                <span style={{ fontSize: `10px`, color: '#C7C7CC', fontWeight: '700', flexShrink: 0, width: '88px', paddingTop: editingLegal ? '6px' : 0 }}>{item.label}</span>
+                <span style={{ fontSize: `6px`, color: '#C7C7CC', fontWeight: '700', flexShrink: 0, width: '88px', paddingTop: editingLegal ? '6px' : 0 }}>{item.label}</span>
                 {editingLegal ? (
                   <input value={legalDraft[idx]?.value || ''}
                     onChange={e => { const n=[...legalDraft]; n[idx]={...n[idx],value:e.target.value}; setLegalDraft(n); }}
                     style={{ flex:1, fontSize:`11px`, fontWeight:'600', padding:'5px 10px', borderRadius:'8px', border:'1.5px solid #E5E5EA', outline:'none', color:'#AEAEB2', background:'#F8F9FC' }} />
                 ) : (
-                  <span style={{ fontSize: `10px`, color: '#AEAEB2', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
+                  <span style={{ fontSize: `6px`, color: '#AEAEB2', fontWeight: '600', lineHeight: '1.4', wordBreak: 'keep-all' }}>{item.value}</span>
                 )}
               </div>
             ))}
