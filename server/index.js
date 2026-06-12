@@ -1269,7 +1269,7 @@ app.get('/api/custom-points', (req, res) => {
   res.json(Object.values(customPoints));
 });
 
-// POST: 새 포인트 추가 (MASTER 전용)
+// POST: 새 포인트 추가 (MASTER 전용) — 좌표 입력 시 관측소 자동 배정
 app.post('/api/custom-points', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
@@ -1277,44 +1277,52 @@ app.post('/api/custom-points', (req, res) => {
     const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
   const { name, type, region, lat, lng, fish, obsCode, aiDescription, season, recommend, status } = req.body;
   if (!name || !type || lat == null || lng == null) return res.status(400).json({ error: 'name, type, lat, lng 필수' });
+
   // ✅ FIX-POINT-LATNG-RANGE: 좌표 범위 검증 (한국 좌표 ± 넓은 범위 허용)
   const latNum = parseFloat(lat); const lngNum = parseFloat(lng);
   if (isNaN(latNum) || latNum < -90 || latNum > 90) return res.status(400).json({ error: '유효하지 않은 위도값 (-90~90)' });
   if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) return res.status(400).json({ error: '유효하지 않은 경도값 (-180~180)' });
+
   // ✅ FIX-POINT-NAME-LEN: 포인트명/어종 길이 제한
   if (typeof name !== 'string' || name.length > 100) return res.status(400).json({ error: '포인트명은 최대 100자입니다.' });
   if (typeof type !== 'string' || type.length > 50) return res.status(400).json({ error: '타입은 최대 50자입니다.' });
   if (typeof fish === 'string' && fish.length > 200) return res.status(400).json({ error: '어종 정보는 최대 200자입니다.' });
 
-  // ✅ AUTO-OBS: obsCode 미입력 시 좌표 기반 최근접 관측소 자동 매핑
-  let finalObsCode = obsCode || null;
-  let autoStation = null;
-  if (!finalObsCode) {
+  // ✅ AUTO-STATION: obsCode 미입력 시 위도/경도로 가장 가까운 관측소 자동 배정
+  let resolvedObsCode = obsCode || null;
+  let autoStationInfo = null;
+  let resolvedRegion = region || null;
+
+  if (!resolvedObsCode && !isNaN(latNum) && !isNaN(lngNum)) {
     const nearest = findNearestStation(latNum, lngNum);
     if (nearest) {
-      finalObsCode = nearest.stationId;
-      autoStation = { ...observationData[nearest.stationId], stationId: nearest.stationId, distKm: nearest.distKm };
-      (logger?.info || console.log)(`[AutoObs] ${name} → ${finalObsCode} (${observationData[nearest.stationId]?.name}, ${nearest.distKm}km)`);
+      resolvedObsCode = nearest.stationId;
+      resolvedRegion = resolvedRegion || nearest.region;
+      autoStationInfo = nearest;
+      (logger?.info || console.log)(`[AUTO-STATION] ${name} → ${nearest.name} (${nearest.distKm}km)`);
     }
   }
 
-  // ✅ AUTO-REGION: obsCode로 권역 자동 설정
-  const autoRegion = region || (finalObsCode ? (observationData[finalObsCode]?.region || '미지정') : '미지정');
+  // region이 아직 없으면 observationData에서 보완
+  if (!resolvedRegion && resolvedObsCode) {
+    resolvedRegion = observationData[resolvedObsCode]?.region || '미지정';
+  }
 
   const id = `custom_${Date.now()}`;
   customPoints[id] = {
     id,
     name,
     type,
-    region: autoRegion,
+    region: resolvedRegion || '미지정',
     lat: latNum,
     lng: lngNum,
     fish: fish || '미확인',
     score: 80,
     status: status || '보통',
-    obsCode: finalObsCode,
+    obsCode: resolvedObsCode,
     aiDescription: aiDescription || null,
     season: season || null,
     recommend: recommend || null,
@@ -1322,8 +1330,13 @@ app.post('/api/custom-points', (req, res) => {
     createdAt: new Date().toISOString(),
   };
   saveCustomPoints();
-  (logger?.info || console.log)(`[CustomPoint] 추가: ${name} (${type}) @ ${latNum},${lngNum} obsCode=${finalObsCode}`);
-  res.json({ ok: true, point: customPoints[id], autoStation });
+  (logger?.info || console.log)(`[CustomPoint] 추가: ${name} (${type}) @ ${lat},${lng} obsCode=${resolvedObsCode}`);
+
+  res.json({
+    ok: true,
+    point: customPoints[id],
+    autoStation: autoStationInfo,  // 자동 매핑 정보 응답에 포함
+  });
 });
 
 // DELETE: 커스텀 포인트 삭제 (MASTER 전용)
@@ -1341,6 +1354,26 @@ app.delete('/api/custom-points/:id', (req, res) => {
   saveCustomPoints();
   (logger?.info || console.log)(`[CustomPoint] 삭제: ${name} (${id})`);
   res.json({ ok: true });
+});
+
+// ✅ AUTO-STATION API: 좌표 → 가장 가까운 관측소 자동 탐색 (인증 불필요 — 프론트 미리보기용)
+app.get('/api/nearest-station', (req, res) => {
+  const lat = parseFloat(req.query.lat);
+  const lng = parseFloat(req.query.lng);
+  if (isNaN(lat) || isNaN(lng)) return res.status(400).json({ error: 'lat, lng 필수 (숫자)' });
+  if (lat < 33 || lat > 39 || lng < 124 || lng > 132) return res.status(400).json({ error: '한국 범위 내 좌표만 지원 (lat 33~39, lng 124~132)' });
+  const result = findNearestStation(lat, lng);
+  if (!result) return res.status(404).json({ error: '관측소 없음' });
+  // 현재 날씨 데이터도 함께 반환
+  const weather = weatherCache[result.stationId]?.data || null;
+  res.json({
+    ...result,
+    weather: weather ? {
+      sst: weather.sst,
+      temp: weather.temp,
+      _sources: weather._sources,
+    } : null,
+  });
 });
 
 // POST: AI 낚시 포인트 정보 자동 생성 (MASTER 전용)
@@ -1483,52 +1516,6 @@ function getServerLevel(totalExp = 0) {
 // 실시간 낚시 인원 서버 로직 (chatHistories는 상단에서 선언되었습니다)
 
 io.on('connection', (socket) => {
- const observationData = {
-  // 동해 (동위도 기준 북쥐)
-  'DT_0021': { name: '속초 영금정',   region: '동해', lat: 38.20, lng: 128.59, baseTemp: 13.5, baseWind: 5.5 },
-  'DT_0001': { name: '강릅 안목항',   region: '동해', lat: 37.77, lng: 128.90, baseTemp: 14.2, baseWind: 4.2 },
-  'DT_0033': { name: '동해 묵호',     region: '동해', lat: 37.51, lng: 129.12, baseTemp: 14.4, baseWind: 4.1 },
-  'DT_0003': { name: '삼첡항',         region: '동해', lat: 37.44, lng: 129.17, baseTemp: 13.8, baseWind: 4.8 },
-  'DT_0002': { name: '울진 후포',     region: '동해', lat: 36.99, lng: 129.41, baseTemp: 14.8, baseWind: 3.8 },
-  'DT_0036': { name: '경주 감포',     region: '동해', lat: 35.79, lng: 129.49, baseTemp: 15.2, baseWind: 3.2 },
-  // 남해
-  'DT_0004': { name: '부산 해운대',   region: '남해', lat: 35.16, lng: 129.09, baseTemp: 16.5, baseWind: 2.8 },
-  'DT_0034': { name: '거제 지세포',   region: '남해', lat: 34.85, lng: 128.73, baseTemp: 17.0, baseWind: 2.5 },
-  'DT_0016': { name: '통영 도남',     region: '남해', lat: 34.84, lng: 128.39, baseTemp: 16.8, baseWind: 2.4 },
-  'DT_0014': { name: '광양만 관측소',  region: '남해', lat: 34.92, lng: 127.70, baseTemp: 16.0, baseWind: 2.9 },
-  'DT_0005': { name: '여수 국동항',   region: '남해', lat: 34.74, lng: 127.74, baseTemp: 17.2, baseWind: 2.2 },
-  'DT_0018': { name: '완도항',         region: '남해', lat: 34.32, lng: 126.73, baseTemp: 16.2, baseWind: 3.1 },
-  'DT_0006': { name: '목포항',         region: '서해', lat: 34.78, lng: 126.38, baseTemp: 12.5, baseWind: 6.2 },
-  // 서해
-  'DT_0009': { name: '군산 비응항',   region: '서해', lat: 35.91, lng: 126.59, baseTemp: 13.2, baseWind: 5.8 },
-  'DT_0008': { name: '보령 대천항',   region: '서해', lat: 36.33, lng: 126.49, baseTemp: 12.8, baseWind: 6.5 },
-  'DT_0030': { name: '태안 마도',     region: '서해', lat: 36.74, lng: 126.30, baseTemp: 12.0, baseWind: 7.5 },
-  'DT_0007': { name: '인천 연안부두',  region: '서해', lat: 37.46, lng: 126.62, baseTemp: 11.5, baseWind: 7.2 },
-  // 제주
-  'DT_0010': { name: '제주 한림',     region: '제주', lat: 33.41, lng: 126.26, baseTemp: 18.2, baseWind: 3.8 },
-  'DT_0011': { name: '서귀포 외돌개',  region: '제주', lat: 33.25, lng: 126.56, baseTemp: 18.8, baseWind: 3.4 },
-  'DT_0045': { name: '성산포항',       region: '제주', lat: 33.47, lng: 126.92, baseTemp: 18.5, baseWind: 4.2 },
-};
-
-// ✅ AUTO-OBS: 하버사인 거리 계산 (km)
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-// ✅ AUTO-OBS: 좌표 기반 최근접 관측소 자동 매핑 (100km 이내)
-function findNearestStation(lat, lng) {
-  let bestId = null, bestDist = Infinity;
-  for (const [sid, info] of Object.entries(observationData)) {
-    if (!info.lat || !info.lng) continue;
-    const d = haversineKm(lat, lng, info.lat, info.lng);
-    if (d < bestDist) { bestDist = d; bestId = sid; }
-  }
-  return bestDist <= 100 ? { stationId: bestId, distKm: Math.round(bestDist) } : null;
-}
   // ✅ OPT-5: 연결 시 핸드셰이크 토큰 검증 (발신자 위조 방지)
   let verifiedUser = null;
   // ✅ FIX-SOCKET-FLOOD: 메시지 플러딩 방지
@@ -1837,6 +1824,63 @@ const observationData = {
   'DT_0006': { name: '목포항', region: '서해', baseTemp: 12.5, baseWind: 6.2 },
   'DT_0014': { name: '광양만 관측소', region: '남해', baseTemp: 16.0, baseWind: 2.9 },
 };
+
+// ✅ AUTO-STATION: 관측소별 실제 좌표 (Haversine 자동 매핑용)
+const STATION_COORDS = {
+  'DT_0001': { lat: 37.7734, lng: 128.9406 },  // 강릉 안목항
+  'DT_0021': { lat: 38.2048, lng: 128.5925 },  // 속초 영금정
+  'DT_0002': { lat: 36.6764, lng: 129.4627 },  // 울진 후포
+  'DT_0033': { lat: 37.5484, lng: 129.1128 },  // 동해 묵호
+  'DT_0003': { lat: 37.4432, lng: 129.1639 },  // 삼척항
+  'DT_0036': { lat: 35.8188, lng: 129.5012 },  // 경주 감포
+  'DT_0004': { lat: 35.1586, lng: 129.1603 },  // 부산 해운대
+  'DT_0005': { lat: 34.7462, lng: 127.7516 },  // 여수 국동항
+  'DT_0016': { lat: 34.8512, lng: 128.4342 },  // 통영 도남
+  'DT_0034': { lat: 34.8101, lng: 128.7021 },  // 거제 지세포
+  'DT_0018': { lat: 34.3108, lng: 126.7575 },  // 완도항
+  'DT_0014': { lat: 34.9123, lng: 127.7268 },  // 광양만 관측소
+  'DT_0007': { lat: 37.4643, lng: 126.6188 },  // 인천 연안부두
+  'DT_0008': { lat: 36.3523, lng: 126.5078 },  // 보령 대천항
+  'DT_0009': { lat: 35.9697, lng: 126.5621 },  // 군산 비응항
+  'DT_0030': { lat: 36.7265, lng: 126.1474 },  // 태안 마도
+  'DT_0006': { lat: 34.7891, lng: 126.3776 },  // 목포항
+  'DT_0011': { lat: 33.2460, lng: 126.5623 },  // 서귀포 외돌개
+  'DT_0010': { lat: 33.4139, lng: 126.2636 },  // 제주 한림
+  'DT_0045': { lat: 33.4714, lng: 126.9248 },  // 성산포항
+};
+
+/**
+ * Haversine 공식으로 두 좌표 간 거리(km) 계산
+ */
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * 위도/경도로 가장 가까운 관측소 자동 탐색
+ * @returns {{ stationId: string, distKm: number, name: string, region: string }}
+ */
+function findNearestStation(lat, lng) {
+  let nearest = null;
+  let minDist = Infinity;
+  for (const [sid, coords] of Object.entries(STATION_COORDS)) {
+    const d = haversineKm(lat, lng, coords.lat, coords.lng);
+    if (d < minDist) { minDist = d; nearest = sid; }
+  }
+  if (!nearest) return null;
+  const info = observationData[nearest] || {};
+  return {
+    stationId: nearest,
+    distKm: Math.round(minDist * 10) / 10,
+    name: info.name || nearest,
+    region: info.region || '미지정',
+  };
+}
 
 // ✅ SST-OBS-REMAP: 전수조사(DT_0001~0500) 결과 기반 정확한 obsCode 매핑
 // surveyWaterTemp API의 DT_XXXX 코드 ≠ 항만/조석 DT_XXXX 코드 (다른 체계)
