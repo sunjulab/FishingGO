@@ -1288,20 +1288,27 @@ app.post('/api/custom-points', (req, res) => {
   if (typeof type !== 'string' || type.length > 50) return res.status(400).json({ error: '타입은 최대 50자입니다.' });
   if (typeof fish === 'string' && fish.length > 200) return res.status(400).json({ error: '어종 정보는 최대 200자입니다.' });
 
-  // ✅ AUTO-OBS: obsCode 미입력 시 좌표로 가장 가까운 관측소 자동 배정
+  // ✅ AUTO-OBS: obsCode 미입력 시 좌표 기반 최근접 관측소 자동 매핑
   let finalObsCode = obsCode || null;
   let autoStation = null;
-  if (!finalObsCode && type !== '민물') {
-    autoStation = findNearestStation(latNum, lngNum);
-    if (autoStation) finalObsCode = autoStation.sid;
+  if (!finalObsCode) {
+    const nearest = findNearestStation(latNum, lngNum);
+    if (nearest) {
+      finalObsCode = nearest.stationId;
+      autoStation = { ...observationData[nearest.stationId], stationId: nearest.stationId, distKm: nearest.distKm };
+      (logger?.info || console.log)(`[AutoObs] ${name} → ${finalObsCode} (${observationData[nearest.stationId]?.name}, ${nearest.distKm}km)`);
+    }
   }
+
+  // ✅ AUTO-REGION: obsCode로 권역 자동 설정
+  const autoRegion = region || (finalObsCode ? (observationData[finalObsCode]?.region || '미지정') : '미지정');
 
   const id = `custom_${Date.now()}`;
   customPoints[id] = {
     id,
     name,
     type,
-    region: region || '미지정',
+    region: autoRegion,
     lat: latNum,
     lng: lngNum,
     fish: fish || '미확인',
@@ -1315,8 +1322,8 @@ app.post('/api/custom-points', (req, res) => {
     createdAt: new Date().toISOString(),
   };
   saveCustomPoints();
-  (logger?.info || console.log)(`[CustomPoint] 추가: ${name} (${type}) @ ${latNum},${lngNum} -> ${finalObsCode}${autoStation ? ' (자동:'+autoStation.name+' '+autoStation.dist+'km)' : ''}`);
-  res.json({ ok: true, point: customPoints[id], autoAssigned: autoStation ? { obsCode: finalObsCode, stationName: autoStation.name, distanceKm: autoStation.dist } : null });
+  (logger?.info || console.log)(`[CustomPoint] 추가: ${name} (${type}) @ ${latNum},${lngNum} obsCode=${finalObsCode}`);
+  res.json({ ok: true, point: customPoints[id], autoStation });
 });
 
 // DELETE: 커스텀 포인트 삭제 (MASTER 전용)
@@ -1476,6 +1483,52 @@ function getServerLevel(totalExp = 0) {
 // 실시간 낚시 인원 서버 로직 (chatHistories는 상단에서 선언되었습니다)
 
 io.on('connection', (socket) => {
+ const observationData = {
+  // 동해 (동위도 기준 북쥐)
+  'DT_0021': { name: '속초 영금정',   region: '동해', lat: 38.20, lng: 128.59, baseTemp: 13.5, baseWind: 5.5 },
+  'DT_0001': { name: '강릅 안목항',   region: '동해', lat: 37.77, lng: 128.90, baseTemp: 14.2, baseWind: 4.2 },
+  'DT_0033': { name: '동해 묵호',     region: '동해', lat: 37.51, lng: 129.12, baseTemp: 14.4, baseWind: 4.1 },
+  'DT_0003': { name: '삼첡항',         region: '동해', lat: 37.44, lng: 129.17, baseTemp: 13.8, baseWind: 4.8 },
+  'DT_0002': { name: '울진 후포',     region: '동해', lat: 36.99, lng: 129.41, baseTemp: 14.8, baseWind: 3.8 },
+  'DT_0036': { name: '경주 감포',     region: '동해', lat: 35.79, lng: 129.49, baseTemp: 15.2, baseWind: 3.2 },
+  // 남해
+  'DT_0004': { name: '부산 해운대',   region: '남해', lat: 35.16, lng: 129.09, baseTemp: 16.5, baseWind: 2.8 },
+  'DT_0034': { name: '거제 지세포',   region: '남해', lat: 34.85, lng: 128.73, baseTemp: 17.0, baseWind: 2.5 },
+  'DT_0016': { name: '통영 도남',     region: '남해', lat: 34.84, lng: 128.39, baseTemp: 16.8, baseWind: 2.4 },
+  'DT_0014': { name: '광양만 관측소',  region: '남해', lat: 34.92, lng: 127.70, baseTemp: 16.0, baseWind: 2.9 },
+  'DT_0005': { name: '여수 국동항',   region: '남해', lat: 34.74, lng: 127.74, baseTemp: 17.2, baseWind: 2.2 },
+  'DT_0018': { name: '완도항',         region: '남해', lat: 34.32, lng: 126.73, baseTemp: 16.2, baseWind: 3.1 },
+  'DT_0006': { name: '목포항',         region: '서해', lat: 34.78, lng: 126.38, baseTemp: 12.5, baseWind: 6.2 },
+  // 서해
+  'DT_0009': { name: '군산 비응항',   region: '서해', lat: 35.91, lng: 126.59, baseTemp: 13.2, baseWind: 5.8 },
+  'DT_0008': { name: '보령 대천항',   region: '서해', lat: 36.33, lng: 126.49, baseTemp: 12.8, baseWind: 6.5 },
+  'DT_0030': { name: '태안 마도',     region: '서해', lat: 36.74, lng: 126.30, baseTemp: 12.0, baseWind: 7.5 },
+  'DT_0007': { name: '인천 연안부두',  region: '서해', lat: 37.46, lng: 126.62, baseTemp: 11.5, baseWind: 7.2 },
+  // 제주
+  'DT_0010': { name: '제주 한림',     region: '제주', lat: 33.41, lng: 126.26, baseTemp: 18.2, baseWind: 3.8 },
+  'DT_0011': { name: '서귀포 외돌개',  region: '제주', lat: 33.25, lng: 126.56, baseTemp: 18.8, baseWind: 3.4 },
+  'DT_0045': { name: '성산포항',       region: '제주', lat: 33.47, lng: 126.92, baseTemp: 18.5, baseWind: 4.2 },
+};
+
+// ✅ AUTO-OBS: 하버사인 거리 계산 (km)
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ✅ AUTO-OBS: 좌표 기반 최근접 관측소 자동 매핑 (100km 이내)
+function findNearestStation(lat, lng) {
+  let bestId = null, bestDist = Infinity;
+  for (const [sid, info] of Object.entries(observationData)) {
+    if (!info.lat || !info.lng) continue;
+    const d = haversineKm(lat, lng, info.lat, info.lng);
+    if (d < bestDist) { bestDist = d; bestId = sid; }
+  }
+  return bestDist <= 100 ? { stationId: bestId, distKm: Math.round(bestDist) } : null;
+}
   // ✅ OPT-5: 연결 시 핸드셰이크 토큰 검증 (발신자 위조 방지)
   let verifiedUser = null;
   // ✅ FIX-SOCKET-FLOOD: 메시지 플러딩 방지
@@ -1759,47 +1812,32 @@ const REGIONAL_PROFILES = {
 
 const observationData = {
   // 동해
-  'DT_0001': { name: '강릉 안목항', region: '동해', baseTemp: 14.2, baseWind: 4.2, lat: 37.7725, lng: 128.9472 },
-  'DT_0021': { name: '속초 영금정', region: '동해', baseTemp: 13.5, baseWind: 5.5, lat: 38.2134, lng: 128.6010 },
-  'DT_0002': { name: '울진 후포', region: '동해', baseTemp: 14.8, baseWind: 3.8, lat: 36.6785, lng: 129.4589 },
-  'DT_0033': { name: '동해 묵호', region: '동해', baseTemp: 14.4, baseWind: 4.1, lat: 37.5489, lng: 129.1170 },
-  'DT_0036': { name: '경주 감포', region: '동해', baseTemp: 15.2, baseWind: 3.2, lat: 35.8154, lng: 129.5054 },
+  'DT_0001': { name: '강릉 안목항', region: '동해', baseTemp: 14.2, baseWind: 4.2 },
+  'DT_0021': { name: '속초 영금정', region: '동해', baseTemp: 13.5, baseWind: 5.5 },
+  'DT_0002': { name: '울진 후포', region: '동해', baseTemp: 14.8, baseWind: 3.8 },
+  'DT_0033': { name: '동해 묵호', region: '동해', baseTemp: 14.4, baseWind: 4.1 },
+  'DT_0036': { name: '경주 감포', region: '동해', baseTemp: 15.2, baseWind: 3.2 },
   // 남해
-  'DT_0004': { name: '부산 해운대', region: '남해', baseTemp: 16.5, baseWind: 2.8, lat: 35.1587, lng: 129.1603 },
-  'DT_0005': { name: '여수 국동항', region: '남해', baseTemp: 17.2, baseWind: 2.2, lat: 34.7436, lng: 127.7443 },
-  'DT_0016': { name: '통영 도남', region: '남해', baseTemp: 16.8, baseWind: 2.4, lat: 34.8542, lng: 128.4373 },
-  'DT_0034': { name: '거제 지세포', region: '남해', baseTemp: 17.0, baseWind: 2.5, lat: 34.8215, lng: 128.7125 },
-  'DT_0018': { name: '완도항', region: '남해', baseTemp: 16.2, baseWind: 3.1, lat: 34.3136, lng: 126.7543 },
+  'DT_0004': { name: '부산 해운대', region: '남해', baseTemp: 16.5, baseWind: 2.8 },
+  'DT_0005': { name: '여수 국동항', region: '남해', baseTemp: 17.2, baseWind: 2.2 },
+  'DT_0016': { name: '통영 도남', region: '남해', baseTemp: 16.8, baseWind: 2.4 },
+  'DT_0034': { name: '거제 지세포', region: '남해', baseTemp: 17.0, baseWind: 2.5 },
+  'DT_0018': { name: '완도항', region: '남해', baseTemp: 16.2, baseWind: 3.1 },
   // 서해
-  'DT_0007': { name: '인천 연안부두', region: '서해', baseTemp: 11.5, baseWind: 7.2, lat: 37.4558, lng: 126.6224 },
-  'DT_0008': { name: '보령 대천항', region: '서해', baseTemp: 12.8, baseWind: 6.5, lat: 36.3112, lng: 126.5154 },
-  'DT_0009': { name: '군산 비응항', region: '서해', baseTemp: 13.2, baseWind: 5.8, lat: 35.9814, lng: 126.7154 },
-  'DT_0030': { name: '태안 마도', region: '서해', baseTemp: 12.0, baseWind: 7.5, lat: 36.7114, lng: 126.3254 },
+  'DT_0007': { name: '인천 연안부두', region: '서해', baseTemp: 11.5, baseWind: 7.2 },
+  'DT_0008': { name: '보령 대천항', region: '서해', baseTemp: 12.8, baseWind: 6.5 },
+  'DT_0009': { name: '군산 비응항', region: '서해', baseTemp: 13.2, baseWind: 5.8 },
+  'DT_0030': { name: '태안 마도', region: '서해', baseTemp: 12.0, baseWind: 7.5 },
   // 제주
-  'DT_0011': { name: '서귀포 외돌개', region: '제주', baseTemp: 18.8, baseWind: 3.4, lat: 33.2544, lng: 126.5612 },
-  'DT_0010': { name: '제주 한림', region: '제주', baseTemp: 18.2, baseWind: 3.8, lat: 33.4112, lng: 126.2654 },
-  'DT_0045': { name: '성산포항', region: '제주', baseTemp: 18.5, baseWind: 4.2, lat: 33.4712, lng: 126.9254 },
+  'DT_0011': { name: '서귀포 외돌개', region: '제주', baseTemp: 18.8, baseWind: 3.4 },
+  'DT_0010': { name: '제주 한림', region: '제주', baseTemp: 18.2, baseWind: 3.8 },
+  'DT_0045': { name: '성산포항', region: '제주', baseTemp: 18.5, baseWind: 4.2 },
   // ✅ BUG-FIX: ALL_STATIONS에 있으나 observationData에 누락된 관측소 추가 (fallback 방지)
-  'DT_0003': { name: '삼척항', region: '동해', baseTemp: 13.8, baseWind: 4.8, lat: 37.4412, lng: 129.1712 },
-  'DT_0006': { name: '목포항', region: '서해', baseTemp: 12.5, baseWind: 6.2, lat: 34.7896, lng: 126.3954 },
-  'DT_0014': { name: '광양만 관측소', region: '남해', baseTemp: 16.0, baseWind: 2.9, lat: 34.9136, lng: 127.6454 },
+  'DT_0003': { name: '삼척항', region: '동해', baseTemp: 13.8, baseWind: 4.8 },
+  'DT_0006': { name: '목포항', region: '서해', baseTemp: 12.5, baseWind: 6.2 },
+  'DT_0014': { name: '광양만 관측소', region: '남해', baseTemp: 16.0, baseWind: 2.9 },
 };
 
-
-// ✅ AUTO-OBS: Haversine 공식으로 좌표→최근접 관측소 자동 배정
-function findNearestStation(latP, lngP) {
-  const R = 6371;
-  let minDist = Infinity, nearest = null;
-  for (const [sid, st] of Object.entries(observationData)) {
-    if (!st.lat || !st.lng) continue;
-    const dLat = (st.lat - latP) * Math.PI / 180;
-    const dLng = (st.lng - lngP) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(latP*Math.PI/180)*Math.cos(st.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-    const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    if (dist < minDist) { minDist = dist; nearest = { sid, name: st.name, dist: Math.round(dist) }; }
-  }
-  return nearest;
-}
 // ✅ SST-OBS-REMAP: 전수조사(DT_0001~0500) 결과 기반 정확한 obsCode 매핑
 // surveyWaterTemp API의 DT_XXXX 코드 ≠ 항만/조석 DT_XXXX 코드 (다른 체계)
 // 실제 확인된 코드: DT_0005(포항) DT_0006(묵호) DT_0011(울진) DT_0012(속초)
