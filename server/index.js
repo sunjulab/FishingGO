@@ -455,10 +455,27 @@ app.post('/api/internal/beach-push', (req, res) => {
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ ok: false, reason: 'items required' });
   kmaBeachCache = items;
   kmaBeachCacheTime = Date.now();
-  logger.info(`[BEACH-PUSH] 해수욕장 데이터 수신: ${items.length}개 → 캐시 즉시 갱신`);
-  // ✅ 캐시 업데이트 후 전체 지점 weatherCache 즉시 재계산
-  setImmediate(() => updateAllStationsCache().catch(e => logger.warn('[BEACH-PUSH] 재캐시 실패:', e.message)));
-  res.json({ ok: true, count: items.length, updated: new Date().toISOString() });
+  // ✅ weatherCache 직접 패치 (race condition 없음, 즉시 반영)
+  let patched = 0;
+  for (const [sid, keywords] of Object.entries(KMA_BEACH_MAP)) {
+    if (!weatherCache[sid]?.data) continue;
+    for (const kw of keywords) {
+      const match = items.find(i => i.beachNm?.includes(kw));
+      const wTemp = match?.wTemp ? parseFloat(match.wTemp) : null;
+      if (wTemp && !isNaN(wTemp) && wTemp > 0) {
+        weatherCache[sid].data.sst = parseFloat(wTemp.toFixed(1));
+        weatherCache[sid].data.temp = `${wTemp.toFixed(1)}\u00b0C`;
+        weatherCache[sid].data.layers = { upper: wTemp, middle: parseFloat((wTemp-1.2).toFixed(1)), lower: parseFloat((wTemp-3.4).toFixed(1)) };
+        weatherCache[sid].data._sources.sst = 'KMA_BEACH';
+        patched++;
+        break;
+      }
+    }
+  }
+  // weatherCache 초기화 전이면 배치 큐잉
+  if (patched === 0 && !batchRunning) setImmediate(() => updateAllStationsCache().catch(() => {}));
+  logger.info(`[BEACH-PUSH] ${items.length}개 수신, weatherCache 즉시 패치: ${patched}개`);
+  res.json({ ok: true, count: items.length, patched, updated: new Date().toISOString() });
 });
 
 // ── 동적 OG 태그 라우트 ─────────────────────────────────────────────────────
@@ -2042,7 +2059,10 @@ async function getRealTide(sid) {
   }
 }
 
+let batchRunning = false; // ✅ race condition 방지 플래그
 async function updateAllStationsCache() {
+  if (batchRunning) { logger.info('[Batch] 이미 실행 중 - 스킵'); return; }
+  batchRunning = true;
   logger.info(`[Batch] Updating ${ALL_STATIONS.length} stations (KMA+KHOA 실시간)...`);
   const results = await Promise.allSettled(ALL_STATIONS.map(async (sid) => {
     const base    = observationData[sid] || { region: '남해', baseTemp: 16.5, baseWind: 3.0 };
@@ -2102,6 +2122,7 @@ async function updateAllStationsCache() {
   const failCount = results.filter(r => r.status === 'rejected').length;
   if (failCount > 0) logger.warn(`[Batch] ${failCount}/${ALL_STATIONS.length} 지점 캐시 갱신 실패`);
   else logger.info(`[Batch] 전체 ${ALL_STATIONS.length} 지점 캐시 갱신 완료 (KMA+KHOA)`);
+  batchRunning = false;
 }
 
 updateAllStationsCache();
