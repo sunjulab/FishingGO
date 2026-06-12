@@ -1781,34 +1781,42 @@ const NIFS_STA_MAP = {
 // NIFS 전체 데이터 캐시 (30분 주기 — KHOA 캐시와 동기)
 let nifsCache = null;
 let nifsCacheTime = 0;
+let nifsFetchPromise = null; // ✅ singleton: 동시 호출 시 1번만 API 요청
 
 async function getNifsAllStations() {
   const NIFS_KEY = process.env.NIFS_KEY;
   if (!NIFS_KEY) return null;
   const now = Date.now();
-  if (nifsCache && (now - nifsCacheTime) < 28 * 60 * 1000) return nifsCache; // 28분 캐시
-  try {
-    const res = await axios.get(`https://www.nifs.go.kr/OpenAPI_json?id=risaList&key=${NIFS_KEY}`, { timeout: 8000 });
-    if (res.data?.header?.resultCode !== '00') return null;
-    const items = res.data?.body?.item;
-    if (!items || !Array.isArray(items)) return null;
-    // obs_lay=1(표층), rpr_yn=N(정상) 필터 후 sta_cde별 최신 데이터만
-    const surface = items.filter(i => i.obs_lay === '1' && i.rpr_yn === 'N');
-    const map = {};
-    for (const item of surface) {
-      const key = item.sta_cde;
-      if (!map[key] || item.obs_dat + item.obs_tim > map[key].obs_dat + map[key].obs_tim) {
-        map[key] = item;
+  if (nifsCache && (now - nifsCacheTime) < 28 * 60 * 1000) return nifsCache;
+  // 이미 fetch 진행 중이면 동일 Promise 대기 (중복 호출 방지)
+  if (nifsFetchPromise) return nifsFetchPromise;
+  nifsFetchPromise = (async () => {
+    try {
+      const res = await axios.get(`https://www.nifs.go.kr/OpenAPI_json?id=risaList&key=${NIFS_KEY}`, { timeout: 8000 });
+      if (res.data?.header?.resultCode !== '00') return nifsCache;
+      const items = res.data?.body?.item;
+      if (!items || !Array.isArray(items)) return nifsCache;
+      // obs_lay=1(표층) 필터: 문자열'1' 및 숫자 1 양쪽 대응
+      const surface = items.filter(i => (i.obs_lay === '1' || i.obs_lay === 1) && i.rpr_yn === 'N');
+      const map = {};
+      for (const item of surface) {
+        const key = item.sta_cde;
+        if (!map[key] || item.obs_dat + item.obs_tim > map[key].obs_dat + map[key].obs_tim) {
+          map[key] = item;
+        }
       }
+      nifsCache = map;
+      nifsCacheTime = Date.now();
+      logger.info(`[NIFS] 실시간어장정보 이넥 갱신: ${Object.keys(map).length}인 관측소`);
+      return map;
+    } catch (e) {
+      logger.warn(`[NIFS] risaList API 실패: ${e.message}`);
+      return nifsCache;
+    } finally {
+      nifsFetchPromise = null; // 완료 후 초기화
     }
-    nifsCache = map;
-    nifsCacheTime = now;
-    logger.info(`[NIFS] 실시간어장정보 캐시 갱신: ${Object.keys(map).length}개 관측소`);
-    return map;
-  } catch (e) {
-    logger.warn(`[NIFS] risaList API 실패: ${e.message}`);
-    return nifsCache; // 실패 시 이전 캐시 반환
-  }
+  })();
+  return nifsFetchPromise;
 }
 
 async function getNifsWaterTemp(sid) {
@@ -1836,27 +1844,34 @@ const KMA_BEACH_MAP = {
 
 let kmaBeachCache = null;
 let kmaBeachCacheTime = 0;
+let kmaBeachFetchPromise = null; // ✅ singleton
 
 async function getKmaBeachAllStations() {
   const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
   if (!KEY) return null;
   const now = Date.now();
-  if (kmaBeachCache && (now - kmaBeachCacheTime) < 58 * 60 * 1000) return kmaBeachCache; // 58분 캐시
-  try {
-    const url = `https://apis.data.go.kr/1360000/BeachInfoservice/getBeachCurrentWeather?serviceKey=${encodeURIComponent(KEY)}&numOfRows=200&dataType=JSON`;
-    const res = await axios.get(url, { timeout: 8000 });
-    const rc = res.data?.response?.header?.resultCode;
-    if (rc !== '00') return kmaBeachCache; // 이전 캐시 유지
-    const items = res.data?.response?.body?.items?.item;
-    if (!items || !Array.isArray(items)) return kmaBeachCache;
-    kmaBeachCache = items;
-    kmaBeachCacheTime = now;
-    logger.info(`[KMA-BEACH] 해수욕장 수온 캐시 갱신: ${items.length}개 해수욕장`);
-    return items;
-  } catch (e) {
-    logger.warn(`[KMA-BEACH] 해수욕장 API 실패: ${e.message}`);
-    return kmaBeachCache;
-  }
+  if (kmaBeachCache && (now - kmaBeachCacheTime) < 58 * 60 * 1000) return kmaBeachCache;
+  if (kmaBeachFetchPromise) return kmaBeachFetchPromise;
+  kmaBeachFetchPromise = (async () => {
+    try {
+      const url = `https://apis.data.go.kr/1360000/BeachInfoservice/getBeachCurrentWeather?serviceKey=${encodeURIComponent(KEY)}&numOfRows=200&dataType=JSON`;
+      const res = await axios.get(url, { timeout: 8000 });
+      const rc = res.data?.response?.header?.resultCode;
+      if (rc !== '00') return kmaBeachCache;
+      const items = res.data?.response?.body?.items?.item;
+      if (!items || !Array.isArray(items)) return kmaBeachCache;
+      kmaBeachCache = items;
+      kmaBeachCacheTime = Date.now();
+      logger.info(`[KMA-BEACH] 해수욕장 수온 이넥 갱신: ${items.length}개`);
+      return items;
+    } catch (e) {
+      logger.warn(`[KMA-BEACH] 해수욕장 API 실패: ${e.message}`);
+      return kmaBeachCache;
+    } finally {
+      kmaBeachFetchPromise = null;
+    }
+  })();
+  return kmaBeachFetchPromise;
 }
 
 async function getKmaBeachWaterTemp(sid) {
