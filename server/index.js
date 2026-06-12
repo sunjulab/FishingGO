@@ -446,7 +446,21 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ✅ BEACH-PUSH: 한국 IP PC에서 KMA 해수욕장 데이터를 서버로 푸시
+// PC 스케줄러(beach-push.ps1)가 1시간마다 호출 → kmaBeachCache 직접 갱신
+app.post('/api/internal/beach-push', (req, res) => {
+  const pushKey = process.env.BEACH_PUSH_KEY || 'fishinggo-beach-2024';
+  if (req.headers['x-push-key'] !== pushKey) return res.status(403).json({ ok: false });
+  const items = req.body?.items;
+  if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ ok: false, reason: 'items required' });
+  kmaBeachCache = items;
+  kmaBeachCacheTime = Date.now();
+  logger.info(`[BEACH-PUSH] 해수욕장 데이터 수신: ${items.length}개`);
+  res.json({ ok: true, count: items.length, updated: new Date().toISOString() });
+});
+
 // ── 동적 OG 태그 라우트 ─────────────────────────────────────────────────────
+
 // KakaoTalk/WhatsApp/Telegram 등 크롤러: OG HTML 반환
 // 일반 브라우저: 프론트엔드 SPA로 리다이렉트
 // 브라우저 리다이렉트 대상: ?ref=og 붙여서 Vercel의 missing 조건 우회 → index.html 서빙
