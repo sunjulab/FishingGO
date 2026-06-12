@@ -1867,12 +1867,14 @@ async function getNifsWaterTemp(sid) {
 // ✅ KMA-BEACH-MAP: 기상청 해수욕장 수온 API 매핑 (서해·제주 커버)
 // 5~10월 운영, 제공정보: beachNm, wTemp, reginNm
 const KMA_BEACH_MAP = {
-  'DT_0008': ['대천', '무창포', '보령'],          // 보령 대천항
+  'DT_0008': ['대천', '무창포', '보령'],               // 보령 대천항
   'DT_0030': ['만리포', '몽산포', '꽃지', '백사장', '태안'], // 태안 마도
-  'DT_0009': ['선유도', '야미', '비응', '군산'],   // 군산
-  'DT_0007': ['을왕리', '왕산', '대부', '인천'],   // 인천
-  'DT_0006': ['목포', '무안', '함평', '진도'],     // 목포
-  'DT_0045': ['성산', '표선', '세화', '월정'],     // 제주 성산포
+  'DT_0009': ['선유도', '야미', '비응', '군산'],        // 군산
+  'DT_0007': ['을왕리', '왕산', '대부', '인천'],        // 인천
+  'DT_0006': ['목포', '무안', '함평', '진도'],          // 목포
+  'DT_0045': ['성산', '세화', '월정'],                 // 제주 성산포 (표선 DT_0011 분리)
+  'DT_0010': ['협재', '한담', '곽지', '이호', '김녕'], // 제주한림 ✅ 신규 (제주 서쪽)
+  'DT_0011': ['중문', '화순', '신양', '표선', '서귀포'], // 서귀포 ✅ 신규 (제주 남쪽)
 };
 
 let kmaBeachCache = null;
@@ -6455,9 +6457,27 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   // 권역별 지능형 풀백 (API 통신 불가 시 즉시 고유 데이터 생성)
   const station = observationData[sid] || { region: '남해', baseTemp: 16.5 };
   const profile = REGIONAL_PROFILES[station.region] || REGIONAL_PROFILES['남해'];
-  const mockSst = (station.baseTemp || profile.temp || 15.2).toFixed(1);
 
-  const seed = parseInt(sid.replace(/\\D/g, '')) || 1;
+  // ✅ BEACH-FALLBACK: weatherCache 없어도 kmaBeachCache로 실측값 반환
+  let mockSst = null;
+  let sstSourceFb = 'fallback';
+  if (kmaBeachCache && KMA_BEACH_MAP && KMA_BEACH_MAP[sid]) {
+    for (const kw of KMA_BEACH_MAP[sid]) {
+      const match = kmaBeachCache.find(i => i.beachNm && i.beachNm.includes(kw));
+      const wTemp = match?.wTemp ? parseFloat(match.wTemp) : null;
+      if (wTemp && !isNaN(wTemp) && wTemp > 0) {
+        mockSst = wTemp.toFixed(1);
+        sstSourceFb = 'KMA_BEACH';
+        break;
+      }
+    }
+  }
+  if (!mockSst) {
+    mockSst = (station.baseTemp || profile.temp || 15.2).toFixed(1);
+    sstSourceFb = 'fallback';
+  }
+
+  const seed = parseInt(sid.replace(/\D/g, '')) || 1;
   const tideNum = (seed % 15) + 1; // ✅ BUG-FIX: 14→15 물때 15물 순환 수정 (3차 누락 패치)
   const tidePhase = tideNum === 7 ? '7물(사리)' : tideNum === 13 ? '13물(조금)' : tideNum === 14 ? '14물(무시)' : `${tideNum}물`;
   const baseHighMin = (tideNum * 45 + seed * 7) % 1440;
@@ -6485,7 +6505,8 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     tide_predictions: [
       { time: lowTime, type: '간조', level: 45 },
       { time: highTime, type: '고조', level: 185 }
-    ]
+    ],
+    _sources: { sst: sstSourceFb }
   });
 });
 
