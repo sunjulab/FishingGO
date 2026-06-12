@@ -1743,29 +1743,62 @@ const observationData = {
   'DT_0014': { name: '광양만 관측소', region: '남해', baseTemp: 16.0, baseWind: 2.9 },
 };
 
+// ✅ SST-OBS-REMAP: 전수조사(DT_0001~0500) 결과 기반 정확한 obsCode 매핑
+// surveyWaterTemp API의 DT_XXXX 코드 ≠ 항만/조석 DT_XXXX 코드 (다른 체계)
+// 실제 확인된 코드: DT_0005(포항) DT_0006(묵호) DT_0011(울진) DT_0012(속초)
+//   DT_0013(울릉도) DT_0020(포항북) DT_0061(남해서부) DT_0062(마산) DT_0063(거제)
+//   DT_0067(태안) DT_0091(포항) DT_0094(제주서)
+const WATER_TEMP_OBS_MAP = {
+  'DT_0001': 'DT_0006',  // 강릉 안목항 → 묵호 37.55°N/129.11°E (최근접 22km)
+  'DT_0021': 'DT_0012',  // 속초 영금정 → 속초 38.20°N/128.59°E ✅ 정확
+  'DT_0033': 'DT_0006',  // 동해 묵호   → 묵호 37.55°N/129.11°E ✅ 정확
+  'DT_0002': 'DT_0011',  // 울진 후포   → 울진 36.67°N/129.45°E ✅ 정확
+  'DT_0003': 'DT_0006',  // 삼척항      → 묵호 37.55°N (최근접)
+  'DT_0036': 'DT_0005',  // 경주 감포   → 포항 35.09°N/129.03°E (최근접)
+  'DT_0004': 'DT_0005',  // 부산 해운대  → 포항 35.09°N (동해남부 최근접)
+  'DT_0005': 'DT_0061',  // 여수 국동항  → 남해서부 34.92°N/128.07°E
+  'DT_0016': 'DT_0062',  // 통영 도남   → 마산 35.2°N/128.58°E
+  'DT_0034': 'DT_0063',  // 거제 지세포  → 거제 35.02°N/128.81°E ✅ 정확
+  'DT_0014': 'DT_0061',  // 광양만      → 남해서부 34.92°N
+  'DT_0008': 'DT_0067',  // 보령 대천항  → 태안 36.67°N/126.13°E (최근접)
+  'DT_0030': 'DT_0067',  // 태안 마도   → 태안 36.67°N ✅ 정확
+  'DT_0010': 'DT_0094',  // 제주 한림   → 제주서 34.25°N/125.92°E (최근접)
+  // 아래는 매핑 코드 없음 → 월별 baseTemp 사용
+  // DT_0018 완도, DT_0006 목포, DT_0007 인천, DT_0009 군산, DT_0011 서귀포, DT_0045 성산포
+};
+
+// ✅ MONTHLY-BASE-TEMP: 월별 계절 기준 수온 (API 없는 관측소 fallback 정확도 향상)
+const MONTHLY_BASE_TEMP = {
+  '동해': [8.5,8.0,9.5,12.5,16.0,19.5,22.0,24.0,21.5,18.0,14.0,10.0],
+  '남해': [10.0,10.0,12.0,15.0,18.5,21.5,24.5,26.0,24.0,20.0,15.5,11.5],
+  '서해': [5.0,5.0,7.5,11.5,16.5,20.5,23.5,25.0,22.5,17.5,12.0,7.0],
+  '제주': [15.5,15.0,16.5,18.5,21.5,24.5,27.0,28.5,26.5,23.5,19.5,16.5],
+};
+
 async function getWaterTemp(sid) {
-  // ✅ SST-PATH-FIX: 공공데이터포털 수온 API (response 래퍼 없음 → body.items.item 직접 접근)
+  // ✅ SST-REMAP: 전수조사 결과 기반 올바른 obsCode로 변환 후 API 호출
   const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
   if (!KEY) return null;
 
+  // 올바른 obsCode로 변환 (없으면 null → caller에서 월별 baseTemp 사용)
+  const apiObsCode = WATER_TEMP_OBS_MAP[sid];
+  if (!apiObsCode) return null;
+
   try {
-    // 어제 날짜 우선 (오늘 데이터 미집계 가능성)
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const dateStr = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
-    const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${sid}&date=${dateStr}&type=json&numOfRows=10&pageNo=1`;
+    const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${apiObsCode}&date=${dateStr}&type=json&numOfRows=10&pageNo=1`;
     const res = await axios.get(url, { timeout: 5000, headers: { Accept: 'application/json' } });
     const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
     if (text.trimStart().startsWith('<')) return null;
-    // ✅ 실제 응답 구조: data.body.items.item (response 래퍼 없음)
     const items = res.data?.body?.items?.item;
     if (!items) return null;
     const list = Array.isArray(items) ? items : [items];
     const last = list[list.length - 1];
-    // ✅ 실제 필드명: wtem (water_temp·waterTemp 아님)
     const sst = last?.wtem ?? last?.water_temp ?? last?.waterTemp ?? null;
     if (sst !== null && sst !== undefined && sst !== '-') return String(sst);
   } catch (e) {
-    if (!e.message?.includes('404')) logger.warn(`[Weather] 수온 API 실패 (${sid}): ${e.message}`);
+    if (!e.message?.includes('404')) logger.warn(`[Weather] 수온 API 실패 (${sid}→${apiObsCode}): ${e.message}`);
   }
   return null;
 }
@@ -1887,8 +1920,10 @@ async function updateAllStationsCache() {
     // ③ 조석 (KHOA 조석예보)
     const realTide = await getRealTide(sid);
 
-    // fallback
-    const finalTemp = realSst || (base.baseTemp + (lcg(1) * 1.5 - 0.75)).toFixed(1);
+    // fallback: 월별 계절 baseTemp (고정값 대신 현재 월 기준 정확한 수온)
+    const month = new Date().getMonth(); // 0-indexed
+    const monthlyBase = MONTHLY_BASE_TEMP[base.region]?.[month] ?? base.baseTemp;
+    const finalTemp = realSst || (monthlyBase + (lcg(1) * 0.8 - 0.4)).toFixed(1);
     const finalWind = marine?.wind?.speed  ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 3.0 - 1.5));
     const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.6 - 0.3));
     const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
