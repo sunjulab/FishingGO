@@ -6422,6 +6422,24 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   if (weatherCache[sid]) {
     // 실시간성 체감을 위해 캐시 데이터에도 호출 시마다 미세 노이즈 추가
     const d = { ...weatherCache[sid].data };
+
+    // ✅ BEACH-REALTIME: kmaBeachCache가 있으면 precision 요청 시 실시간 반영
+    // weatherCache 패치 race condition을 완전히 우회 (Fly.io ICN push → 즉시 적용)
+    if (kmaBeachCache && KMA_BEACH_MAP && KMA_BEACH_MAP[sid]) {
+      const beachKeywords = KMA_BEACH_MAP[sid];
+      for (const kw of beachKeywords) {
+        const match = kmaBeachCache.find(i => i.beachNm && i.beachNm.includes(kw));
+        const wTemp = match?.wTemp ? parseFloat(match.wTemp) : null;
+        if (wTemp && !isNaN(wTemp) && wTemp > 0) {
+          d.sst = wTemp.toFixed(1);
+          d.temp = `${d.sst}°C`;
+          if (!d._sources) d._sources = {};
+          d._sources.sst = 'KMA_BEACH';
+          break;
+        }
+      }
+    }
+
     const noise = (Math.random() * 0.4 - 0.2).toFixed(1);
     const baseSst = parseFloat(d.sst) || 15.2;
     d.sst = (baseSst + parseFloat(noise)).toFixed(1);
