@@ -455,7 +455,9 @@ app.post('/api/internal/beach-push', (req, res) => {
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ ok: false, reason: 'items required' });
   kmaBeachCache = items;
   kmaBeachCacheTime = Date.now();
-  logger.info(`[BEACH-PUSH] 해수욕장 데이터 수신: ${items.length}개`);
+  logger.info(`[BEACH-PUSH] 해수욕장 데이터 수신: ${items.length}개 → 캐시 즉시 갱신`);
+  // ✅ 캐시 업데이트 후 전체 지점 weatherCache 즉시 재계산
+  setImmediate(() => updateAllStationsCache().catch(e => logger.warn('[BEACH-PUSH] 재캐시 실패:', e.message)));
   res.json({ ok: true, count: items.length, updated: new Date().toISOString() });
 });
 
