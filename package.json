@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "cap:sync": "npx cap sync android",
     "cap:android": "npx cap open android",
-    "apk": "npm run build && npx cap sync android",
+    "apk": "npm run build:esbuild && npx cap sync android",
     "version:apply": "node update-version.cjs",
     "release:patch": "npm version patch --no-git-tag-version && node update-version.cjs --push",
     "release:minor": "npm version minor --no-git-tag-version && node update-version.cjs --push",
