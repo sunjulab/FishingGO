@@ -42,16 +42,18 @@ function cleanOldHashedFiles(dir, pattern) {
 // ✅ 프로덕션 빌드: .env.production 우선
 const envBase = parseEnvFile('.env');
 const envProd = parseEnvFile('.env.production');
+const e = process.env; // ✅ CI 환경(GitHub Actions 등) fallback
 
-const kakaoAppKey      = envProd.VITE_KAKAO_APP_KEY          || envBase.VITE_KAKAO_APP_KEY          || '';
-const siteUrl          = envProd.VITE_SITE_URL                || envBase.VITE_SITE_URL               || 'https://www.fishing-go.com';
-const apiUrl           = envProd.VITE_API_URL                 || envBase.VITE_API_URL                || 'https://fishing-go-backend.onrender.com';
-const tideKey          = envProd.VITE_TIDE_API_KEY            || envBase.VITE_TIDE_API_KEY           || '';
-const admobTesting     = envProd.VITE_ADMOB_TESTING           || envBase.VITE_ADMOB_TESTING          || 'false';
-const portoneId        = envProd.VITE_PORTONE_MERCHANT_ID     || envBase.VITE_PORTONE_MERCHANT_ID    || '';
-const portoneKey       = envProd.VITE_PORTONE_CHANNEL_KEY     || envBase.VITE_PORTONE_CHANNEL_KEY    || '';
-const adsenseDisplay   = envProd.VITE_ADSENSE_SLOT_DISPLAY    || envBase.VITE_ADSENSE_SLOT_DISPLAY   || '';
-const adsenseInfeed    = envProd.VITE_ADSENSE_SLOT_INFEED     || envBase.VITE_ADSENSE_SLOT_INFEED    || '';
+const kakaoAppKey      = e.VITE_KAKAO_APP_KEY          || envProd.VITE_KAKAO_APP_KEY          || envBase.VITE_KAKAO_APP_KEY          || '';
+const siteUrl          = e.VITE_SITE_URL               || envProd.VITE_SITE_URL               || envBase.VITE_SITE_URL               || 'https://www.fishing-go.com';
+const apiUrl           = e.VITE_API_URL                || envProd.VITE_API_URL                || envBase.VITE_API_URL                || 'https://fishing-go-backend.onrender.com';
+const tideKey          = e.VITE_TIDE_API_KEY           || envProd.VITE_TIDE_API_KEY           || envBase.VITE_TIDE_API_KEY           || '';
+const admobTesting     = e.VITE_ADMOB_TESTING          || envProd.VITE_ADMOB_TESTING          || envBase.VITE_ADMOB_TESTING          || 'false';
+const portoneId        = e.VITE_PORTONE_MERCHANT_ID    || envProd.VITE_PORTONE_MERCHANT_ID    || envBase.VITE_PORTONE_MERCHANT_ID    || '';
+const portoneKey       = e.VITE_PORTONE_CHANNEL_KEY    || envProd.VITE_PORTONE_CHANNEL_KEY    || envBase.VITE_PORTONE_CHANNEL_KEY    || '';
+const adsenseDisplay   = e.VITE_ADSENSE_SLOT_DISPLAY   || envProd.VITE_ADSENSE_SLOT_DISPLAY   || envBase.VITE_ADSENSE_SLOT_DISPLAY   || '';
+const adsenseInfeed    = e.VITE_ADSENSE_SLOT_INFEED    || envProd.VITE_ADSENSE_SLOT_INFEED    || envBase.VITE_ADSENSE_SLOT_INFEED    || '';
+const coupangPartnersId = e.VITE_COUPANG_PARTNERS_ID   || envProd.VITE_COUPANG_PARTNERS_ID    || envBase.VITE_COUPANG_PARTNERS_ID    || '';
 
 // ✅ AUTO-VERSION
 const appVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
@@ -96,6 +98,7 @@ await esbuild.build({
       VITE_PORTONE_CHANNEL_KEY:   portoneKey,
       VITE_ADSENSE_SLOT_DISPLAY:  adsenseDisplay,
       VITE_ADSENSE_SLOT_INFEED:   adsenseInfeed,
+      VITE_COUPANG_PARTNERS_ID:   coupangPartnersId,
       VITE_DISABLE_PWA:           'true',
     }),
     '__APP_VERSION__': JSON.stringify(appVersion),
