@@ -293,7 +293,7 @@ export default function MediaTab() {
       </div>
 
       {/* 카테고리 */}
-      <div style={{ backgroundColor: '#fff', padding: '0 0 14px', borderBottom: '1px solid #E5E5EA', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100 }}>
+      <div style={{ backgroundColor: '#fff', padding: '0 0 14px', borderBottom: '1px solid #E5E5EA', position: 'sticky', top: 'var(--header-height)', zIndex: 100 }}>
         <div style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '12px 20px 0', scrollbarWidth: 'none' }}>
           {CATEGORIES.map(c => (
             <button key={c} onClick={() => handleChipClick(c)} style={{ padding: '10px 20px', borderRadius: '20px', border: 'none', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', backgroundColor: activeChip === c ? '#0056D2' : '#F2F2F7', color: activeChip === c ? '#fff' : '#8E8E93', whiteSpace: 'nowrap', transition: 'all 0.2s', cursor: 'pointer' }}>
@@ -313,7 +313,7 @@ export default function MediaTab() {
 
       {/* 카드 리스트 */}
       {!loading && (
-        <div style={{ padding: '16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}>
+        <div style={{ padding: '16px', paddingBottom: 'var(--nav-height)' }}>
 
           {/* 검색 결과 */}
           {searchResults !== null ? (

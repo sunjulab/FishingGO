@@ -145,6 +145,26 @@ function FontScaleInit() {
   return null;
 }
 
+// ✅ FIX-SAFE-AREA: 앱(Capacitor) vs 웹(Chrome) 환경별 safe-area CSS 변수 명시 설정
+// 모바일 웹에서 env(safe-area-inset-*) 반환값이 기기/브라우저마다 달라 레이아웃 불일치 발생
+// — 앱: env() 자동 계산값 그대로 유지 (상태바/홈 인디케이터 높이 반영)
+// — 웹: 0px 강제 고정 (Chrome 주소창은 safe-area에 미포함, 변수화하면 오히려 오류)
+function SafeAreaInit() {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      // 웹 브라우저: safe-area 0으로 명시 → 헤더 60px, nav 75px 고정
+      document.documentElement.style.setProperty('--safe-top',    '0px');
+      document.documentElement.style.setProperty('--safe-bottom', '0px');
+      document.documentElement.style.setProperty('--safe-left',   '0px');
+      document.documentElement.style.setProperty('--safe-right',  '0px');
+      // --header-height, --nav-height 도 명시 재계산
+      document.documentElement.style.setProperty('--header-height', '60px');
+      document.documentElement.style.setProperty('--nav-height',    '75px');
+    }
+    // 앱(isNativePlatform) 환경은 env() CSS 변수 그대로 유지 — 수정 없음
+  }, []);
+  return null;
+}
 
 // ✅ BACK-FIX: 물리 뒤로가기 — 서브페이지(/post/,/crew/ 등)는 navigate(-1), 최상위 탭은 잠금
 function BackButtonHandler() {
@@ -495,6 +515,7 @@ export default function App() {
         <AppBanner />           {/* ✅ Android 브라우저에서 앱 설치/실행 유도 배너 */}
         <ForceUpdateChecker />
         <FontScaleInit />
+        <SafeAreaInit />  {/* ✅ FIX-SAFE-AREA: 앱/웹 환경별 safe-area CSS 변수 명시 설정 */}
         <KakaoSdkInit />     {/* ✅ KAKAO-SDK: useEffect 재시도 초기화 (onload 보완) */}
         <KakaoLoader />
         <Toast />

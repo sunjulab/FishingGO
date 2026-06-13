@@ -312,10 +312,10 @@ export default function Shop() {
 
   return (
     <>
-    <div className="page-container" style={{ backgroundColor: '#F8F9FA', paddingBottom: '80px' }}>
+    <div className="page-container" style={{ backgroundColor: '#F8F9FA' }}>
 
       {/* ── 헤더 + 검색 ── */}
-      <div style={{ backgroundColor: '#fff', padding: '10px 16px 8px', position: 'sticky', top: 'calc(var(--safe-top) + 60px)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
+      <div style={{ backgroundColor: '#fff', padding: '10px 16px 8px', position: 'sticky', top: 'var(--header-height)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <ShoppingBag size={16} color="#0056D2" />
           <h1 style={{ fontSize: `15px`, fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.03em', margin: 0 }}>낚시 장비 쇼핑</h1>
