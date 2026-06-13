@@ -97,7 +97,7 @@ export default defineConfig(({ mode }) => {
   build: {
     // ??ROLLUP-FIX: Windows 濡쒖뺄 鍮뚮뱶??npm run build:esbuild ?ъ슜
     // Vercel(Linux)?먯꽌???쒖? vite build ?ъ슜 (@rollup/wasm-node)
-    target: 'esnext',
+    target: ['es2020', 'chrome80'],
     minify: false,
     rollupOptions: {
       treeshake: false,
