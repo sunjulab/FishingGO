@@ -9479,12 +9479,10 @@ app.get('/api/shop/manual/add', async (req, res) => {
  */
 app.post('/api/shop/manual', verifyToken, async (req, res) => {
   const adminEmails = [ADMIN_EMAIL, 'sunjulab.k@gmail.com'];
-  console.log('[SHOP-POST] ① 핸들러 진입, user:', req.user?.email, '| id:', req.user?.id);
+  // ✅ FIX-CONSOLELOG: 디버그 console.log 제거 (민감 정보 로그 노출 방지)
   if (!adminEmails.includes(req.user?.email) && req.user?.id !== ADMIN_ID) {
-    console.log('[SHOP-POST] ② 403 관리자 권한 없음');
     return res.status(403).json({ error: '관리자 권한 필요' });
   }
-  console.log('[SHOP-POST] ③ 관리자 확인, dbReady:', dbReady);
   try {
     if (!dbReady) return res.status(503).json({ error: '서버 초기화 중입니다. 잠시 후 다시 시도해주세요.' });
     const { source = 'coupang', shortUrl, iframeCode, imageUrl, productName, tag } = req.body;
@@ -9550,6 +9548,8 @@ app.get('/api/shop/manual/delete-direct', async (req, res) => {
   const { key, id } = req.query;
   if (!process.env.DIRECT_KEY || key !== process.env.DIRECT_KEY) return res.status(401).json({ error: '키 불일치' }); // ✅ FIX-DIRECT-KEY-3
   if (!id) return res.status(400).json({ error: 'id 필수' });
+  // ✅ FIX-OBJID-DEL: ObjectId 유효성 검증 추가 — 잘못된 id로 Mongoose CastError 방지
+  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '잘못된 ID 형식' });
   try {
     await ManualShopItem.findByIdAndDelete(id);
     res.json({ ok: true, id });

@@ -121,6 +121,8 @@ export default function Shop() {
       if (data.ok) {
         setRegMsg('✅ 등록 완료!');
         setRegShortUrl(''); setRegIframeCode(''); setRegImageUrl(''); setRegProductName('');
+        // ✅ FIX-REGRESOLVED-RESET: 성공 후 regResolved 리셋 — 폼 재오픈 시 이전 상태 잔류 방지
+        setRegResolved(false); setRegNeedManual(false);
         apiClient.get('/api/shop/manual').then(r => setManualItems(r.data || [])).catch(() => {});
         setTimeout(() => { setShowRegForm(false); setRegMsg(''); }, 1500);
       } else { setRegMsg(`❌ ${data.error || '등록 실패'}`); }
@@ -139,12 +141,14 @@ export default function Shop() {
     } catch (e) { alert(`오류: ${e.message}`); }
   };
 
-  // ── 상품 로드 ─────────────────────────────────────────────────────────────────
+  // ─ 상품 로드 ─────────────────────────────────────────────────────────────────
   const fetchProducts = useCallback(async (category, source, pageNum = 1) => {
     if (pageNum === 1) {
       setLoading(true);
       setProducts([]);
       setPage(1);
+      // ✅ FIX-FRESHPRICE-RESET: 카테고리/검상 변경 시 freshPrices 스테일 데이터 초기화
+      setFreshPrices({});
     } else {
       setLoadingMore(true);
     }
@@ -179,8 +183,9 @@ export default function Shop() {
     try {
       setPromoLoading(true);
       const res = await apiClient.get('/api/shop/promo');
-      setPromos(res.data);
-    } catch { /* silent */ } finally { setPromoLoading(false); }
+      // ✅ FIX-PROMO-ARRAY: 서버 오류 시 배열이 아닌 객체 반환 가능 → promos.slice()/.length 크래시 방지
+      setPromos(Array.isArray(res.data) ? res.data : []);
+    } catch { setPromos([]); } finally { setPromoLoading(false); }
   }, []);
 
   // ─ 실시간 가격 백그라운드 갱신 (로드 2수 후 productdetail.get 호출) ───────
@@ -498,6 +503,10 @@ export default function Shop() {
                 )
               : products.map(p => {
                   const srcStyle = SOURCE_STYLE[p.source] || SOURCE_STYLE.ali;
+                  const aliId = p.source === 'ali' ? p.id?.replace('ali_', '') : null;
+                  const fresh = aliId ? (freshPrices[aliId] || null) : null;
+                  const displayDiscount     = (fresh && fresh.discount)     ? fresh.discount     : p.discount;
+                  const displayPriceConfirm = (fresh && fresh.priceConfirm) ? fresh.priceConfirm : p.priceConfirm;
                   return (
                     <div
                       key={p.id}
@@ -508,10 +517,10 @@ export default function Shop() {
                       <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: srcStyle.bg, color: srcStyle.text, padding: '2px 5px', borderRadius: '5px', fontSize: `8px`, fontWeight: '900', zIndex: 2 }}>
                         {srcStyle.label}
                       </div>
-                      {/* 할인율 */}
-                      {p.discount && p.discount !== '0%' && (
+                      {/* 할인율 배지 — freshPrices 우선 반영 */}
+                      {displayDiscount && displayDiscount !== '0%' && (
                         <div style={{ position: 'absolute', top: '6px', left: '6px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '6px', fontSize: `10px`, fontWeight: '900', zIndex: 2 }}>
-                          {p.discount}
+                          {displayDiscount}
                         </div>
                       )}
                       {/* 이미지 */}
@@ -526,11 +535,11 @@ export default function Shop() {
                         </h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                           {p.source === 'ali' ? (
-                            // 알리: 할인율 + 확인하기 CTA
+                            // 알리: freshPrices 최신 할인율 우선 + 최저가 CTA
                             <>
-                              {p.discount && p.discount !== '0%' && (
+                              {displayDiscount && displayDiscount !== '0%' && (
                                 <span style={{ fontSize: `11px`, fontWeight: '950', color: '#fff', background: 'linear-gradient(135deg,#FF5A5F,#FF6900)', borderRadius: '5px', padding: '1px 6px' }}>
-                                  {p.discount} 할인
+                                  {displayDiscount} 할인
                                 </span>
                               )}
                               <span style={{ fontSize: `10px`, fontWeight: '900', color: '#FF6900', background: '#FFF3EC', borderRadius: '6px', padding: '2px 7px', border: '1px solid #FFD4B0' }}>
@@ -538,8 +547,8 @@ export default function Shop() {
                               </span>
                             </>
                           ) : (
-                            // 쿠팸: 기존 가격 표시
-                            (!p.priceConfirm && p.price && p.price !== '0' && p.price !== '0원')
+                            // 쿠팡: 기존 가격 표시 (freshPrices.priceConfirm 우선)
+                            (!displayPriceConfirm && p.price && p.price !== '0')
                               ? (<>
                                   <span style={{ fontSize: `13px`, fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
                                   <span style={{ fontSize: `10px`, fontWeight: '800', color: '#1c1c1e' }}>원</span>
@@ -710,8 +719,16 @@ export default function Shop() {
             </div>
           </div>
           {regMsg && <div style={{ textAlign: 'center', fontSize: '13px', fontWeight: '800', color: regMsg.startsWith('✅')?'#00C48C':regMsg.startsWith('⏳')?'#FF9B26':'#FF3B30', marginBottom: '12px' }}>{regMsg}</div>}
-          <button onClick={handleRegSubmit} disabled={regLoading} style={{ width: '100%', padding: '15px', borderRadius: '14px', border: 'none', background: regLoading?'#C7C7CC':'linear-gradient(135deg,#0056D2,#003899)', color: '#fff', fontSize: '15px', fontWeight: '900', cursor: regLoading?'not-allowed':'pointer' }}>
-            {regLoading?'⏳ 등록 중...':'+ 쇼핑탭에 등록'}
+          {/* ✅ FIX-REGRESOLVED: 알리 자동조회 미완료 시 등록버튼 비활성 — 기존엔 regResolved가 dead state였음 */}
+          <button
+            onClick={handleRegSubmit}
+            disabled={regLoading || (regSrc === 'ali' && !regResolved && !regNeedManual)}
+            style={{ width: '100%', padding: '15px', borderRadius: '14px', border: 'none',
+              background: (regLoading || (regSrc === 'ali' && !regResolved && !regNeedManual)) ? '#C7C7CC' : 'linear-gradient(135deg,#0056D2,#003899)',
+              color: '#fff', fontSize: '15px', fontWeight: '900',
+              cursor: (regLoading || (regSrc === 'ali' && !regResolved && !regNeedManual)) ? 'not-allowed' : 'pointer' }}
+          >
+            {regLoading ? '⏳ 등록 중...' : (regSrc === 'ali' && !regResolved && !regNeedManual) ? '🔍 자동조회 후 등록 가능' : '+ 쇼핑탭에 등록'}
           </button>
         </div>
       </div>
