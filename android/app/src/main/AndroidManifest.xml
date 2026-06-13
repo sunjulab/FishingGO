@@ -29,7 +29,6 @@
                 <data android:scheme="https" android:host="fishing-go.vercel.app" />
             </intent-filter>
 
-
             <!-- ✅ DEEPLINK-SCHEME: 커스텀 스킴 fishinggo:// — 카카오톡 딥링크 직접 실행 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
