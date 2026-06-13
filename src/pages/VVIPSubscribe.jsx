@@ -210,7 +210,7 @@ export default function VVIPSubscribe() {
       .catch((err) => {
         clearTimeout(timer); // ✅ 실패 시도 타이머 해제
         const errMsg = err?.message || String(err);
-        console.warn('[IAP] init fail:', errMsg);
+        if (!import.meta.env.PROD) console.warn('[IAP] init fail:', errMsg); // ✅ FIX: PROD 가드 추가
         if (isMounted) {
           setIapReady(true);
           setStoreReady(false);

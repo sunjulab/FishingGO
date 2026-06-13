@@ -4147,15 +4147,18 @@ app.put('/api/user/password', async (req, res) => {
     const hashed = await bcrypt.hash(newPassword, 12);
 
     if (dbReady && User) {
-      await User.findOneAndUpdate({ email }, { password: hashed, passwordChangedAt: new Date() }); // ✅ FIX-PWD-CHANGED-AT
-      // ✅ FIX-PWD-CACHE-INVALIDATE: 비밀번호 변경 시 기존 JWT 즉시 무효화
-      if (typeof pwdChangedCache !== 'undefined') pwdChangedCache.set(email, Date.now());
-      pwdChangedCache.set(email, Date.now()); // ✅ FIX-PWD-IAT: 기존 토큰 무효화
-      user.password = hashed;
+      await User.findOneAndUpdate({ email }, { password: hashed, passwordChangedAt: new Date() });
+      // ✅ FIX-PWD-CACHE: pwdChangedCache.set 3중 호출 → 1회로 통합
+      pwdChangedCache.set(email, Date.now());
+    } else {
+      // ✅ FIX-PWD-INMEM: 인메모리 모드 분기 추가 (기존 누락 → hanging request 해결)
+      const memUser = memUsers.find(u => u.email === email);
+      if (!memUser) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+      memUser.password = hashed;
       saveMemUsers();
-      pwdChangedCache.set(email, Date.now()); // ✅ FIX-PWD-IAT: 기존 토큰 무효화
-      return res.json({ success: true });
+      pwdChangedCache.set(email, Date.now());
     }
+    return res.json({ success: true });
   } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
@@ -5120,7 +5123,8 @@ app.post('/api/community/posts/:id/comments', async (req, res) => {
       }
       return res.json(mem);
     }
-    res.json({ comments: [newComment] });
+    // ✅ FIX-COMMENT-404: 게시글이 DB에도 메모리에도 없는 경우 404 반환
+    return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
   } catch (err) { (logger?.error || console.error)('[API] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
@@ -9253,7 +9257,9 @@ app.post('/api/shop/click', searchLimiter, async (req, res) => { // ✅ FIX-CLIC
   try {
     const { productId, source, keyword } = req.body;
     if (dbReady && productId) {
-      await ShopClick.create({ productId, source: source || 'ali', keyword: safeKeyword || '' });
+      // ✅ FIX-SAFEKW: safeKeyword 미정의 변수 수정 — keyword 직접 sanitize
+      const safeKw = (typeof keyword === 'string') ? keyword.replace(/[<>"';]/g, '').slice(0, 100) : '';
+      await ShopClick.create({ productId, source: source || 'ali', keyword: safeKw });
     }
     res.json({ ok: true });
   } catch (err) {
