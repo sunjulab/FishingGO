@@ -477,6 +477,55 @@ function PermissionInitializer() {
   return null;
 }
 
+// ✅ WEB-CACHE-BUSTER: 100점짜리 모바일웹 실시간 동기화 플랜
+// 앱 마운트 시 원본 서버의 version.json을 난수와 함께 fetch하여 타임스탬프 대조
+function WebCacheBuster() {
+  const addToast = useToastStore((s) => s.addToast);
+
+  useEffect(() => {
+    // 안드로이드 앱(Capacitor) 내부라면 브라우저 캐시 무효화 불필요 (앱 업데이트로 처리)
+    if (Capacitor.isNativePlatform()) return;
+
+    let cancelled = false;
+    const checkWebVersion = async () => {
+      try {
+        // 빌드 타임에 주입된 내 타임스탬프
+        // eslint-disable-next-line no-undef
+        const myTs = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : null;
+        if (!myTs) return;
+
+        // 원본 서버에서 직접 확인 (캐시 완벽 회피)
+        const res = await fetch(`/version.json?t=${Date.now()}`);
+        if (!res.ok || cancelled) return;
+        
+        const data = await res.json();
+        if (cancelled) return;
+
+        const serverTs = data.timestamp ? String(data.timestamp) : null;
+        if (serverTs && serverTs !== String(myTs)) {
+          // 버전이 다름을 감지
+          addToast('🔄 새로운 버전이 배포되었습니다. 화면을 새로고침합니다.', 'info');
+          
+          setTimeout(() => {
+            if (cancelled) return;
+            // 쿼리 파라미터로 캐시 파괴 후 강제 리로드
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('v', serverTs);
+            window.location.href = newUrl.toString();
+          }, 1500);
+        }
+      } catch (err) {
+        // 오프라인 등 네트워크 에러 시 조용히 무시
+      }
+    };
+    checkWebVersion();
+
+    return () => { cancelled = true; };
+  }, [addToast]);
+
+  return null;
+}
+
 // ENH3-C1: 어드민 라우트 보호 컴포넌트 분리 — App() 에서 불필요한 리렌더 방지
 // ✅ HYDRATION-FIX v2: reactive selector + 1tick hydration delay 조합
 //   - 이전 방식(getState 1회): cleanup 경쟁조건으로 checked 영구 false → null 유지 버그
@@ -514,6 +563,7 @@ export default function App() {
       <ErrorBoundary>
         <AppBanner />           {/* ✅ Android 브라우저에서 앱 설치/실행 유도 배너 */}
         <ForceUpdateChecker />
+        <WebCacheBuster />
         <FontScaleInit />
         <SafeAreaInit />  {/* ✅ FIX-SAFE-AREA: 앱/웹 환경별 safe-area CSS 변수 명시 설정 */}
         <KakaoSdkInit />     {/* ✅ KAKAO-SDK: useEffect 재시도 초기화 (onload 보완) */}

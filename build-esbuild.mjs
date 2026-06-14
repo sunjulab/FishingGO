@@ -86,6 +86,7 @@ await esbuild.build({
     '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl',
   },
   define: {
+    '__BUILD_TIMESTAMP__': Date.now().toString(),
     'process.env.NODE_ENV':  '"production"',
     'import.meta.env': JSON.stringify({
       PROD: true, DEV: false, SSR: false, MODE: 'production', BASE_URL: '/',
@@ -159,3 +160,11 @@ console.log(`\n🎉 빌드 성공! (v${appVersion})`);
 console.log(`   JS : dist/assets/${jsHashedName}  (${(jsBuf.length / 1024 / 1024).toFixed(2)} MB)`);
 console.log(`   CSS: dist/assets/${cssHashedName}`);
 console.log(`   HTML: dist/index.html`);
+
+// ✅ CACHE-BUST: 모바일 캐시 회피용 version.json 생성
+const versionJsonData = JSON.stringify({
+  version: appVersion,
+  timestamp: Date.now()
+});
+writeFileSync('dist/version.json', versionJsonData, 'utf8');
+console.log(`✅ version.json 생성 완료`);

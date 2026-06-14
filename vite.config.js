@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
     // ✅ FIX-APIURL: import.meta.env.VITE_API_URL을 빌드 타임에 직접 주입
     // 환경변수 파일 로딩 실패 시에도 올바른 백엔드 URL 보장 (Vercel/Render 공통)
     'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'https://fishing-go-backend.onrender.com'),
+    '__BUILD_TIMESTAMP__': JSON.stringify(Date.now().toString()),
   },
   plugins: [
     react(),
