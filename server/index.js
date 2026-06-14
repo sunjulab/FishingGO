@@ -4954,7 +4954,7 @@ app.post('/api/community/posts', async (req, res) => {
     const author_email = tp.email || tp.id || 'guest@fishinggo.kr';
     if (!author || !category || !content) return res.status(400).json({ error: '필수 항목 누락' });
     // FIX-CATEGORY-WHITELIST: 허용된 카테고리만 수락
-    const VALID_POST_CATEGORIES = ['일반', '조황', '정보', '질문', '장터', '유머', '낚시터', '채비', '기타'];
+    const VALID_POST_CATEGORIES = ['일반', '조황', '정보', '질문', '장터', '유머', '낚시터', '채비', '기타', '전체', '루어', '찌낚시', '원투', '릴찌', '선상', '에깅', '조황 공유'];
     if (!VALID_POST_CATEGORIES.includes(category)) return res.status(400).json({ error: '유효하지 않은 카테고리' });
     if (typeof author !== 'string' || author.length > 30) return res.status(400).json({ error: 'author 최대 30자' });
     if (typeof content !== 'string' || content.length > 15000) return res.status(400).json({ error: 'content 최대 15000자' });
