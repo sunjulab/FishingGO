@@ -12,6 +12,9 @@ import { createHash } from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// ✅ 일관된 빌드 타임스탬프 (define과 version.json 간의 불일치 방지)
+const GLOBAL_BUILD_TIMESTAMP = Date.now().toString();
+
 // ── 환경변수 파싱 (CRLF 안전, BOM 제거) ─────────────────────────────────────
 function parseEnvFile(p) {
   if (!existsSync(p)) return {};
@@ -86,7 +89,7 @@ await esbuild.build({
     '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl',
   },
   define: {
-    '__BUILD_TIMESTAMP__': Date.now().toString(),
+    '__BUILD_TIMESTAMP__': JSON.stringify(GLOBAL_BUILD_TIMESTAMP),
     'process.env.NODE_ENV':  '"production"',
     'import.meta.env': JSON.stringify({
       PROD: true, DEV: false, SSR: false, MODE: 'production', BASE_URL: '/',
@@ -164,7 +167,7 @@ console.log(`   HTML: dist/index.html`);
 // ✅ CACHE-BUST: 모바일 캐시 회피용 version.json 생성
 const versionJsonData = JSON.stringify({
   version: appVersion,
-  timestamp: Date.now()
+  timestamp: GLOBAL_BUILD_TIMESTAMP
 });
 writeFileSync('dist/version.json', versionJsonData, 'utf8');
 console.log(`✅ version.json 생성 완료`);
