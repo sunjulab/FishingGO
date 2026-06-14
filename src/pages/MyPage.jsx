@@ -11,6 +11,8 @@ import {
   Trophy, Star, Heart, MessageSquare, Camera, History, Target, Moon,
   ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon, Users
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { initPushPermission } from '../services/PermissionService';
 
 // ✅ 6TH-C1: MENU_ITEMS 컴포넌트 외부 상수 — 불변 배열이므로 매 렌더마다 재생성 불필요
 // (아이콘은 모듈 레벨 import로 컴포넌트 외부에서 참조 가능)
@@ -48,6 +50,9 @@ export default function MyPage() {
   const canAccessPartnerCenter = useUserStore(s => s.canAccessBusinessShop?.());
   const addToast = useToastStore(s => s.addToast);
   const fileInputRef = useRef(null);
+
+  const [nativePushPerm, setNativePushPerm] = useState('default');
+  
   // ✅ FIX-ADMIN: isAdmin 4중 보장
   // - user.id === 'sunjulab.k' (서버 buildUserResponse가 MASTER 계정에 반환하는 resolved id)
   // - user.email === 'sunjulab.k' (마스터 계정 이메일)
@@ -167,15 +172,6 @@ export default function MyPage() {
   const [fontScale, setFontScale] = useState(() => localStorage.getItem('fishinggo_fs') || '1');
 
   // ✅ LEGAL-EDIT: 사업자 법적고지 — localStorage 저장/불러오기 (마스터 수정 가능)
-  const DEFAULT_LEGAL = [
-    { label: '상호명',         key: 'company',    value: '선제이유랩 (SUN J.U. Lab)' },
-    { label: '대표자',         key: 'ceo',        value: '김승철' },
-    { label: '사업자등록번호', key: 'bizNo',      value: '865-10-03351' },
-    { label: '사업장 주소',    key: 'address',    value: '강원특별자치도 강릉시 노가니남길 25, 202동 405호' },
-    { label: '업태/종목',      key: 'bizType',    value: '정보통신업 · 전자상거래 소매업' },
-    { label: '고객센터 이메일',key: 'email',      value: 'sunjulab.a1@gmail.com' },
-    { label: '통신판매업',     key: 'salesReg',   value: '신고 준비 중' },
-  ];
   const [legalInfo,    setLegalInfo]    = useState([]);
   const [legalLoading, setLegalLoading] = useState(true);
   const [editingLegal, setEditingLegal] = useState(false);
@@ -458,6 +454,15 @@ export default function MyPage() {
     }
   }, [user?.email, fetchUserData]); // ✅ 26TH-B3: fetchUserData deps에 명시적 포함
 
+  useEffect(() => {
+    if (showModal === 'noti' && Capacitor.isNativePlatform()) {
+      import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+        PushNotifications.checkPermissions().then(res => {
+          setNativePushPerm(res.receive);
+        }).catch(() => setNativePushPerm('unsupported'));
+      });
+    }
+  }, [showModal]);
 
   const handleNicknameChange = async () => {
     const trimmed = newName.trim();
@@ -1254,29 +1259,45 @@ export default function MyPage() {
               
               {showModal === 'noti' && (() => {
                 // 브라우저 알림 권한 상태
-                const notiPerm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
-                const permColor = notiPerm === 'granted' ? '#00C48C' : notiPerm === 'denied' ? '#FF3B30' : '#FF9B26';
-                const permLabel = notiPerm === 'granted' ? '✅ 허용됨' : notiPerm === 'denied' ? '❌ 차단됨 (설정에서 허용 필요)' : '⚠️ 미설정 (탭하여 허용)';
+                const webPerm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+                const isNative = Capacitor.isNativePlatform();
+                const actualPerm = isNative ? nativePushPerm : webPerm;
+
+                const permColor = actualPerm === 'granted' ? '#00C48C' : actualPerm === 'denied' ? '#FF3B30' : '#FF9B26';
+                const permLabel = actualPerm === 'granted' ? '✅ 허용됨' : actualPerm === 'denied' ? '❌ 차단됨 (설정에서 허용 필요)' : '⚠️ 미설정 (탭하여 허용)';
                 return (
                   <>
                     <h3 style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '900', marginBottom: '8px' }}>알림 설정</h3>
 
-                    {/* 브라우저 알림 권한 상태 */}
+                    {/* 기기 알림 권한 상태 */}
                     <div
                       onClick={async () => {
-                        if (notiPerm === 'default') {
-                          const result = await Notification.requestPermission();
-                          if (result === 'granted') addToast('✅ 알림이 허용되었습니다!', 'success');
-                          else addToast('알림 허용이 필요합니다. 브라우저 설정에서 허용해주세요.', 'error');
-                        } else if (notiPerm === 'denied') {
-                          addToast('브라우저 설정(주소창 자물쇠 아이콘)에서 직접 허용해주세요.', 'info');
+                        if (isNative) {
+                          if (actualPerm !== 'granted') {
+                            const res = await initPushPermission(user?.id);
+                            if (res.ok) {
+                              setNativePushPerm('granted');
+                              addToast('✅ 앱 알림이 허용되었습니다!', 'success');
+                            } else {
+                              setNativePushPerm('denied');
+                              addToast('기기 설정 > 애플리케이션 > 낚시GO 에서 알림을 직접 켜주세요.', 'error');
+                            }
+                          }
+                        } else {
+                          if (actualPerm === 'default') {
+                            const result = await Notification.requestPermission();
+                            if (result === 'granted') addToast('✅ 알림이 허용되었습니다!', 'success');
+                            else addToast('알림 허용이 필요합니다. 브라우저 설정에서 허용해주세요.', 'error');
+                          } else if (actualPerm === 'denied') {
+                            addToast('브라우저 설정(주소창 자물쇠 아이콘)에서 직접 허용해주세요.', 'info');
+                          }
                         }
                       }}
                       style={{
                         marginBottom: '20px', padding: '12px 16px',
-                        background: notiPerm === 'granted' ? '#F0FFF8' : notiPerm === 'denied' ? '#FFF0F0' : '#FFF8E6',
+                        background: actualPerm === 'granted' ? '#F0FFF8' : actualPerm === 'denied' ? '#FFF0F0' : '#FFF8E6',
                         border: `1.5px solid ${permColor}40`,
-                        borderRadius: '14px', cursor: notiPerm !== 'granted' ? 'pointer' : 'default',
+                        borderRadius: '14px', cursor: actualPerm !== 'granted' ? 'pointer' : 'default',
                         display: 'flex', alignItems: 'center', gap: '10px',
                       }}
                     >
@@ -1285,7 +1306,7 @@ export default function MyPage() {
                         <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: permColor }}>기기 알림 권한</div>
                         <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#555', marginTop: '2px' }}>{permLabel}</div>
                       </div>
-                      {notiPerm !== 'granted' && <ChevronRight size={16} color={permColor} />}
+                      {actualPerm !== 'granted' && <ChevronRight size={16} color={permColor} />}
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
