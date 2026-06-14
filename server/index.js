@@ -914,7 +914,7 @@ try {
   // 로그인/회원가입: IP당 10분/10회 (통신사 NAT 환경 수백명 커버)
   authLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 10,
+    max: 50,
     message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -3830,7 +3830,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => { // ✅ FIX-REG
     if (!email || !password || !name) return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
     // 입력값 검증
     if (email.trim().length < 4) return res.status(400).json({ error: 'ID는 4자 이상이어야 합니다.' });
-    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim())) { return res.status(400).json({ error: '이메일 형식이 올바르지 않습니다.' }); } // ✅ FIX-EMAIL
+    if (!/^([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}|[a-zA-Z0-9_-]{4,30})$/.test(email.trim())) { return res.status(400).json({ error: '이메일 또는 아이디 형식이 올바르지 않습니다. (영문, 숫자 허용)' }); } // ✅ FIX-EMAIL
     if (password.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
     if (!/(?=.*[A-Za-z])(?=.*[0-9]).{8,}/.test(password)) return res.status(400).json({ error: '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.' }); // ✅ FIX-PWD-COMPLEXITY
     if (name.trim().length < 2) return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
