@@ -24,8 +24,12 @@ const userSchema = new mongoose.Schema({
   notiSettings:   {
     flow: { type: Boolean, default: true },
     bait: { type: Boolean, default: true },
-    comm: { type: Boolean, default: true }
+    comm: { type: Boolean, default: true },
+    score: { type: Boolean, default: true },
+    nightMode: { type: Boolean, default: true }
   },
+  lastStationId: { type: String, default: null },
+  lastLocationUpdatedAt: { type: Date, default: null },
   favorites:           [{ type: String }],
   subscriptionExpiresAt: { type: Date, default: null },
   // ✅ IAP 인앱결제 필드 — 스키마에 없으면 Mongoose strict mode가 $set을 무시

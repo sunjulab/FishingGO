@@ -394,6 +394,13 @@ export default function MapHome() {
                 position: cp, map: mapRef.current,
                 content: `<div style="width:14px;height:14px;background:#0056D2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,86,180,0.5);z-index:100;"></div>`
               });
+              // ✅ 서버에 최근 위치 (가까운 관측소) 갱신 (알림용)
+              try {
+                const nearest = findNearestStation(pos.coords.latitude, pos.coords.longitude);
+                if (nearest && nearest.id) {
+                  apiClient.post('/api/user/location', { stationId: nearest.id }).catch(() => {});
+                }
+              } catch (e) { /* ignore */ }
             },
             // ENH6-A1/B2: 위치 거부 시 PROD 가드 + 사용자 toast 피드백
             () => {

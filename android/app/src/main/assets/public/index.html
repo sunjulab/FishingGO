@@ -4,6 +4,10 @@
     <!-- ✅ HTTPS 강제 리다이렉트: http 또는 www 없는 apex 도메인 접속 시 즉시 이동 -->
     <script>
       (function(){
+        // ✅ FIX: Capacitor(안드로이드 앱) 내부에서는 리다이렉트 완전 차단
+        var isCapacitor = (typeof window.Capacitor !== 'undefined') || (window.navigator && window.navigator.userAgent.indexOf('Capacitor') >= 0);
+        if (isCapacitor) return;
+
         var h = location.hostname;
         var proto = location.protocol;
         if (proto !== 'https:' || h === 'fishing-go.com') {
@@ -132,7 +136,7 @@
         setTimeout(function(){var h=document.getElementById('reload-hint');if(h)h.style.display='block';},15000);
       </script>
     </div>
-    <link rel="stylesheet" href="/assets/index-3ad79ec3.css" />
-    <script type="module" src="/assets/index-19fa34c3.js"></script>
+    <link rel="stylesheet" href="/assets/index-979cebcf.css" />
+    <script type="module" src="/assets/index-c6568441.js"></script>
   </body>
 </html>

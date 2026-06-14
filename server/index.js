@@ -3532,6 +3532,24 @@ app.post('/api/user/point-visit-check', async (req, res) => {
   }
 });
 
+// --- 알림을 위한 유저 위치 업데이트 ---
+app.post('/api/user/location', verifyToken, async (req, res) => {
+  const { stationId } = req.body;
+  if (!stationId) return res.status(400).json({ error: 'stationId required' });
+  const userId = req.user.id || req.user._id;
+  try {
+    if (dbReady && User) {
+      await User.findByIdAndUpdate(userId, {
+        lastStationId: stationId,
+        lastLocationUpdatedAt: new Date()
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- 알림 설정 변경 ---
 app.post('/api/user/settings', async (req, res) => {
   try {
@@ -3645,6 +3663,12 @@ async function sendAppPushNotification(userEmail, type, title, message, data = {
   if (!user) return;
   // 알림 설정 체크 (설정이 없으면 기본 true로 간주, 명시적으로 false인 경우만 발송 제외)
   if (user.notiSettings && user.notiSettings[type] === false) return;
+
+  // ✅ 야간 방해 금지 모드 (23:00 ~ 07:00)
+  const hour = new Date().getHours();
+  if (user.notiSettings?.nightMode !== false && (hour >= 23 || hour < 7)) {
+    if (type !== 'announcement') return; // 긴급 관리자 공지 제외하고 발송 차단
+  }
 
   // ① socket.io broadcast (포그라운드용)
   io.emit('push_notification', {
@@ -5193,6 +5217,17 @@ app.post('/api/community/posts/:id/like', async (req, res) => {
         post.likedBy.push(voterEmail);
         post.likes = (post.likes || 0) + 1;
         await post.save();
+        // ✅ 좋아요 푸시 알림 발송
+        if (post.author_email && post.author_email !== voterEmail) {
+          const voterName = voterEmail.split('@')[0];
+          sendAppPushNotification(
+            post.author_email,
+            'comm',
+            '새로운 좋아요',
+            `[낚시GO] ${voterName}님이 회원님의 커뮤니티 게시글을 좋아합니다!`,
+            { route: `/community/${post._id}` }
+          );
+        }
         return res.json(post);
       }
     }
@@ -6620,83 +6655,79 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   });
 });
 
+// ✅ 낚시 점수 계산 헬퍼 함수
+function calcFishingScoreForStation(sid) {
+  const entry = weatherCache[sid];
+  if (!entry || !entry.data) return null;
+  const hour  = new Date().getHours();
+  const month = new Date().getMonth() + 1;
+  const isNight = hour >= 19 || hour < 5;
+  const d = entry.data;
+  const sst   = parseFloat(d.sst)          || 14;
+  const wind  = parseFloat(d.wind?.speed)   || 3;
+  const wave  = parseFloat(d.wave?.coastal) || 0.5;
+  const phase = d.tide?.phase               || '';
+  const seed  = parseInt(sid.replace(/\D/g, '')) || 1;
+
+  let score = 45 + (seed % 10) + ((seed % 14 - 7) / 10);
+  if      (wind > 14) score -= 65;
+  else if (wind > 10) score -= 40;
+  else if (wind >  8) score -= 28;
+  else if (wind >  6) score -= 18;
+  else if (wind >  4) score -= 8;
+  else if (wind <  2) score += 12;
+  else if (wind <  3) score += 7;
+
+  if      (wave > 2.5) score -= 60;
+  else if (wave > 2.0) score -= 45;
+  else if (wave > 1.5) score -= 30;
+  else if (wave > 1.2) score -= 20;
+  else if (wave > 0.8) score -= 10;
+  else if (wave < 0.3) score += 8;
+  else if (wave < 0.5) score += 4;
+
+  if      (sst < 8)              score -= 40;
+  else if (sst < 11)             score -= 25;
+  else if (sst < 14)             score -= 12;
+  else if (sst < 17)             score -= 3;
+  else if (sst >= 17 && sst < 20) score += 10;
+  else if (sst >= 20 && sst < 24) score += 6;
+  else if (sst >= 24 && sst < 27) score -= 5;
+  else if (sst >= 27)             score -= 25;
+
+  const seasons = [
+    { min:10, max:18, months:[3,4,5] },
+    { min:18, max:26, months:[6,7,8] },
+    { min:16, max:22, months:[9,10,11] },
+    { min:8,  max:14, months:[12,1,2] },
+  ];
+  for (const s of seasons) {
+    if (s.months.includes(month)) {
+      if (sst >= s.min && sst <= s.max) score += 8;
+      else if (sst < s.min - 4 || sst > s.max + 4) score -= 15;
+      break;
+    }
+  }
+
+  const tideMatch = phase.match(/(\d+)물/);
+  const tideNum = tideMatch ? parseInt(tideMatch[1]) : 0;
+  const TIDE_BONUS = { 1:3,2:5,3:7,4:9,5:10,6:10,7:8,8:6,9:4,10:2,11:-2,12:-4,14:-8,15:-6 };
+  score += TIDE_BONUS[tideNum] || 0;
+  if (phase.includes('조금') || phase.includes('무시')) score -= 7;
+  if (isNight) score -= 2;
+
+  return Math.min(100, Math.max(5, Math.round(score)));
+}
+
 // ── 낚시 포인트 일괄 점수 반환 API ────────────────────────────────────
 // ✅ SCORE-UNIFIED: 서버 공식 = 클라이언트 evaluator.js 완전 통일 (베이스 45~55점)
 // ✅ REAL-DATA: KMA 해양부이(풍속·파고) + KHOA 조석(물때) 실시간 데이터 반영
 app.get('/api/fishing-scores', (req, res) => {
   try {
     const scores = {};
-    const hour  = new Date().getHours();
-    const month = new Date().getMonth() + 1;
-    const isNight = hour >= 19 || hour < 5;
-
     Object.keys(weatherCache).forEach(sid => {
-      const entry = weatherCache[sid];
-      if (!entry || !entry.data) return;
-      const d = entry.data;
-      const sst   = parseFloat(d.sst)          || 14;
-      const wind  = parseFloat(d.wind?.speed)   || 3;
-      const wave  = parseFloat(d.wave?.coastal) || 0.5;
-      const phase = d.tide?.phase               || '';
-      const seed  = parseInt(sid.replace(/\D/g, '')) || 1;
-
-      // ── 베이스: evaluator.js 동일 (45 + seed 보정) ──
-      let score = 45 + (seed % 10) + ((seed % 14 - 7) / 10);
-
-      // ── 풍속 보정 (evaluator.js 동일) ──
-      if      (wind > 14) score -= 65;
-      else if (wind > 10) score -= 40;
-      else if (wind >  8) score -= 28;
-      else if (wind >  6) score -= 18;
-      else if (wind >  4) score -= 8;
-      else if (wind <  2) score += 12;
-      else if (wind <  3) score += 7;
-
-      // ── 파고 보정 (evaluator.js 동일) ──
-      if      (wave > 2.5) score -= 60;
-      else if (wave > 2.0) score -= 45;
-      else if (wave > 1.5) score -= 30;
-      else if (wave > 1.2) score -= 20;
-      else if (wave > 0.8) score -= 10;
-      else if (wave < 0.3) score += 8;
-      else if (wave < 0.5) score += 4;
-
-      // ── 수온 보정 (evaluator.js 동일) ──
-      if      (sst < 8)              score -= 40;
-      else if (sst < 11)             score -= 25;
-      else if (sst < 14)             score -= 12;
-      else if (sst < 17)             score -= 3;
-      else if (sst >= 17 && sst < 20) score += 10;
-      else if (sst >= 20 && sst < 24) score += 6;
-      else if (sst >= 24 && sst < 27) score -= 5;
-      else if (sst >= 27)             score -= 25;
-
-      // ── 계절 보정 ──
-      const seasons = [
-        { min:10, max:18, months:[3,4,5] },
-        { min:18, max:26, months:[6,7,8] },
-        { min:16, max:22, months:[9,10,11] },
-        { min:8,  max:14, months:[12,1,2] },
-      ];
-      for (const s of seasons) {
-        if (s.months.includes(month)) {
-          if (sst >= s.min && sst <= s.max) score += 8;
-          else if (sst < s.min - 4 || sst > s.max + 4) score -= 15;
-          break;
-        }
-      }
-
-      // ── 물때 보정 (evaluator.js TIDE_BONUS 동일) ──
-      const tideMatch = phase.match(/(\d+)물/);
-      const tideNum = tideMatch ? parseInt(tideMatch[1]) : 0;
-      const TIDE_BONUS = { 1:3,2:5,3:7,4:9,5:10,6:10,7:8,8:6,9:4,10:2,11:-2,12:-4,14:-8,15:-6 };
-      score += TIDE_BONUS[tideNum] || 0;
-      if (phase.includes('조금') || phase.includes('무시')) score -= 7;
-
-      // ── 야간 보정 (서버도 추가) ──
-      if (isNight) score -= 2; // 평균적 야간 패널티 (어종별 분기 불가)
-
-      scores[sid] = Math.min(100, Math.max(5, Math.round(score)));
+      const score = calcFishingScoreForStation(sid);
+      if (score !== null) scores[sid] = score;
     });
     res.json({ scores, updatedAt: new Date().toISOString(), count: Object.keys(scores).length });
   } catch (err) {
@@ -8142,10 +8173,54 @@ async function runBillingScheduler() {
   }
 }
 
+// ✅ FISHING-SCORE-ALARM: 매일 08:00, 12:00, 16:00 낚시 점수 푸시
+async function runFishingScoreAlarm() {
+  if (!dbReady || !User) return;
+  try {
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const users = await User.find({
+      'notiSettings.score': { $ne: false },
+      lastStationId: { $ne: null },
+      lastLocationUpdatedAt: { $gte: threeDaysAgo }
+    }).select('email lastStationId notiSettings');
+
+    let sentCount = 0;
+    for (const user of users) {
+      const score = calcFishingScoreForStation(user.lastStationId);
+      if (score !== null && score >= 70) {
+        sendAppPushNotification(
+          user.email,
+          'score',
+          '🎣 출조 최적기!',
+          `현재 계신 지역의 낚시 점수가 ${score}점 이상입니다. 출조하기 아주 좋은 날씨예요!`,
+          { route: `/weather/${user.lastStationId}` }
+        );
+        sentCount++;
+      }
+    }
+    logger.info(`✅ [Fishing Score Alarm] ${sentCount}명 발송 완료`);
+  } catch (err) {
+    logger.error(`[Fishing Score Alarm] 실패: ${err.message}`);
+  }
+}
+
+// 가상 알람푸쉬 테스트용 임시 API
+app.get('/api/test-score-alarm', async (req, res) => {
+  try {
+    await runFishingScoreAlarm();
+    res.json({ success: true, message: '가상 알람 스케줄러 수동 실행 완료' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // node-cron 또는 24시간 인터벌 폴백
 if (cron) {
   cron.schedule('0 9 * * *', runBillingScheduler, { timezone: 'Asia/Seoul' });
   logger.info('✅ [Billing Scheduler] node-cron 매일 09:00(KST) 자동청구 활성화');
+  
+  cron.schedule('0 8,12,16 * * *', runFishingScoreAlarm, { timezone: 'Asia/Seoul' });
+  logger.info('✅ [Fishing Score Alarm] node-cron 08,12,16시 활성화');
 } else {
   setInterval(runBillingScheduler, 24 * 60 * 60 * 1000); // 24시간 인터벌 폴백
   logger.info('✅ [Billing Scheduler] 인터벌 폴백 자동청구 활성화 (24h)');
@@ -9745,7 +9820,20 @@ app.post('/api/catch/:id/like', async (req, res) => {
     if (!record) return res.status(404).json({ error: '없는 조황' });
     const liked = record.likes.includes(userId);
     if (liked) record.likes.pull(userId);
-    else record.likes.push(userId);
+    else {
+      record.likes.push(userId);
+      // ✅ 좋아요 푸시 알림 발송 (새로 눌렀을 때만)
+      if (record.author_email && record.author_email !== userId) {
+        const voterName = userId.split('@')[0];
+        sendAppPushNotification(
+          record.author_email,
+          'comm',
+          '새로운 좋아요',
+          `[낚시GO] ${voterName}님이 회원님의 조황 인증을 좋아합니다!`,
+          { route: `/catch/${record._id}` }
+        );
+      }
+    }
     await record.save();
     res.json({ liked: !liked, count: record.likes.length });
   } catch (err) {

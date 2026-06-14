@@ -8,7 +8,7 @@ import { AdSenseDisplay } from '../components/ads/AdSenseAd';
 import { 
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
   ShieldAlert, ChevronRight, LayoutGrid, Edit3, Check, X, 
-  Trophy, Star, Heart, MessageSquare, Camera, History,
+  Trophy, Star, Heart, MessageSquare, Camera, History, Target, Moon,
   ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon, Users
 } from 'lucide-react';
 
@@ -31,7 +31,7 @@ const safeLS = {
 };
 
 // 알림 설정 기본값 (컴포넌트 외부 상수 — 렌더마다 새 객체 생성 방지)
-const DEFAULT_NOTI = { flow: true, bait: true, comm: true, chat: true };
+const DEFAULT_NOTI = { score: true, comm: true, chat: true, nightMode: true };
 
 // ✅ TIER-PROTECT: 티어 우선순위 맵 (0=무료, 4=마스터) — 컨포넌트 외부 상수
 const TIER_RANK_CLIENT = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
@@ -1290,10 +1290,10 @@ export default function MyPage() {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                       {[
-                          { key: 'flow', label: '물때 및 피딩 타임 알림', icon: History },
-                          { key: 'bait', label: '실시간 미끼 추천 알림', icon: Trophy },
+                          { key: 'score', label: '낚시 점수 (출조 추천) 알림', icon: Target },
                           { key: 'comm', label: '커뮤니티 댓글 알림',    icon: MessageSquare },
                           { key: 'chat', label: '채팅방 답장 · 멘션 알림', icon: Bell },
+                          { key: 'nightMode', label: '야간 방해 금지 모드 (23시~07시)', icon: Moon },
                       ].map(n => (
                           <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

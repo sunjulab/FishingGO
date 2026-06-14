@@ -464,7 +464,12 @@ export default function CommunityTab() {
           setNoticePosts(noticesRes.data);
         }
         if (Array.isArray(businessRes.data)) {
-          const filtered = businessRes.data.filter(p => !blocked.includes(p.author));
+          let filtered = businessRes.data.filter(p => !blocked.includes(p.author));
+          // ✅ RANDOM-SHUFFLE: 선상배 홍보글의 공평한 노출을 위해 랜덤 섞기 적용
+          for (let i = filtered.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+          }
           _communityCache.business = filtered;
           setBusinessPosts(filtered);
         }
@@ -679,6 +684,163 @@ export default function CommunityTab() {
     }
   };
 
+
+  const renderBusinessCard = (post, isAd = false) => {
+    if (!post) return null;
+    return (
+      <div key={isAd ? `ad_${post._id || post.id}` : String(post._id || post.id)}>
+        
+                {post.isPinned ? (
+                  /* VVIP 프리미엄 대형 카드 */
+                  <div style={{ backgroundColor: '#FEFCF5', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 12px 40px rgba(255,215,0,0.25)', border: '2.5px solid #FFD700', overflow: 'hidden' }}>
+                    <div style={{ background: 'linear-gradient(90deg, #FFD700, #FF9B26)', color: '#5C3A00', padding: '10px 16px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Award size={14} fill="#5C3A00" /> VVIP 프리미엄 스폰서 — 해당 항구 1위 독점</span>
+                      {/* ✅ VVIP 카드: 작성자 or 마스터만 수정/삭제 */}
+                      {!isAd && (isAdmin || post.author_email === user?.email) && (
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
+                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
+                          ><Edit2 size={11} /> 수정</button>
+                          <button
+                            onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
+                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
+                          ><Trash2 size={11} /> 삭제</button>
+                        </div>
+                      )}
+                    </div>
+                    {/* ✅ MULTI-IMG: VVIP 대형 카드 이미지 갤러리 슬라이드 */}
+                    <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
+                      {(Array.isArray(post.images) && post.images.length > 0) || post.cover ? (
+                        <div onClick={e => e.stopPropagation()}>
+                          <ImageGallery
+                            images={post.images}
+                            image={post.cover}
+                            maxHeight={220}
+                            borderRadius="0"
+                            showZoom={false}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ width: '100%', height: '220px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(48px * var(--fs, 1))` }}>🚢</div>
+                      )}
+                      <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.65)', color: '#FFD700', padding: '5px 14px', borderRadius: '20px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', pointerEvents: 'none' }}>
+                        👑 {post.region || '항구 전용 VVIP'}
+                      </div>
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '8px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', pointerEvents: 'none' }}>예약 모집중</div>
+                    </div>
+                    <div style={{ padding: '20px 18px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
+                      <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>{post.shipName}</div>
+                      {/* ✅ WARN-CT1: post.content null guard */}
+                      <p style={{ margin: '0 0 16px', fontSize: `calc(14px * var(--fs, 1))`, color: '#333', lineHeight: '1.8', fontWeight: '600' }}>{(post.content || '').slice(0, 140)}{(post.content || '').length > 140 ? '...' : ''}</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: `calc(13px * var(--fs, 1))` }}>
+                        <span style={{ background: '#F4F6FA', padding: '7px 14px', borderRadius: '12px', color: '#333', fontWeight: '800' }}>🎣 {post.target}</span>
+                        <span style={{ background: '#F4F6FA', padding: '7px 14px', borderRadius: '12px', color: '#333', fontWeight: '800' }}>📅 {post.date}</span>
+                        <span style={{ background: '#FFF3E0', padding: '7px 14px', borderRadius: '12px', color: '#E65100', fontWeight: '950' }}>💰 {post.price}</span>
+                      </div>
+                    </div>
+                    <div style={{ padding: '0 18px 20px', display: 'flex', gap: '12px' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '18px', borderRadius: '16px', fontWeight: '950', fontSize: `calc(16px * var(--fs, 1))`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 18px rgba(0,86,210,0.3)' }}>
+                        <Phone size={20} fill="#fff" /> 선장님께 즉시 전화
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 선상낚시 예약 문의드립니다.\n\n▶ 원하는 날짜:\n▶ 인원:\n▶ 기타 문의:`)}` ; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '18px 20px', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <MessageSquare size={20} /> 문자 보내기
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {/* ✅ NATIVE-AD 제거됨 (loadNativeAd 미정의 → 모바일 크래시 버그 수정) */}
+                {!post.isPinned && (
+
+                  <div style={{
+                    backgroundColor: '#fff', borderRadius: '16px', marginBottom: '12px',
+                    boxShadow: post.region === '전국 (전체)'
+                      ? '0 4px 16px rgba(0,86,210,0.15)'
+                      : '0 2px 8px rgba(0,0,0,0.04)',
+                    border: post.region === '전국 (전체)'
+                      ? '1.5px solid #0056D2'
+                      : '1px solid #F0F2F7',
+                    overflow: 'hidden'
+                  }}>
+                    {/* ✅ 전국(전체) 게시글: 상단 MASTER 배지 헤더 */}
+                    {post.region === '전국 (전체)' && (
+                      <div style={{
+                        background: 'linear-gradient(90deg, #0056D2, #0096FF)',
+                        color: '#fff', padding: '7px 14px',
+                        fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                      }}>
+                        <span>🌐 MASTER 공식 전국 홍보 &mdash; 모든 지역 출항 정보</span>
+                        {/* ✅ 전국 게시글은 마스터만 작성 가능 → 작성자 or 관리자 수정/삭제 */}
+                        {!isAd && (isAdmin || post.author_email === user?.email) && (
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
+                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
+                            ><Edit2 size={10} /> 수정</button>
+                            <button
+                              onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
+                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
+                            ><Trash2 size={10} /> 삭제</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div style={{ padding: '12px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        {/* ✅ MULTI-IMG: 일반 카드 썸네일 — 여러 장 있을 때 미니 갤러리 */}
+                        <div style={{ width: '76px', height: '76px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: '#E8EBF0' }}
+                          onClick={e => e.stopPropagation()}>
+                          <ImageGallery
+                            images={post.images}
+                            image={post.cover}
+                            maxHeight={76}
+                            borderRadius="0"
+                            showZoom={false}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
+                            <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
+                            {/* ✅ 지역 배지 */}
+                            {post.region === '전국 (전체)' ? (
+                              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: 'rgba(0,86,210,0.12)', color: '#0056D2', padding: '2px 7px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>🌐 전국</span>
+                            ) : post.region ? (
+                              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#F0F0F5', color: '#555', padding: '2px 7px', borderRadius: '5px', fontWeight: '800', flexShrink: 0 }}>📍 {post.region}</span>
+                            ) : null}
+                            <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.shipName}</span>
+                            {/* ✅ 작성자 or 마스터: 수정/삭제 (region 제한 없이 모든 카드에 표시) */}
+                            {!isAd && (isAdmin || post.author_email === user?.email) && post.region !== '전국 (전체)' && (
+                              <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
+                                <button onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={14} /></button>
+                                <button onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={14} /></button>
+                              </div>
+                            )}
+                          </div>
+                          {/* ✅ WARN-CT1: post.content null guard (소형 카드) */}
+                          <p style={{ margin: '0 0 6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#666', lineHeight: '1.5' }}>{(post.content || '').slice(0, 45)}{(post.content || '').length > 45 ? '...' : ''}</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: `calc(10px * var(--fs, 1))` }}>
+                            <span style={{ background: '#F4F6FA', padding: '3px 8px', borderRadius: '6px', color: '#333' }}>{post.target}</span>
+                            <span style={{ background: '#FFF3E0', padding: '3px 8px', borderRadius: '6px', color: '#E65100', fontWeight: '800' }}>{post.price}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ padding: '8px 12px', background: '#F8F9FA', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '6px' }}>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '950', fontSize: `calc(12px * var(--fs, 1))`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <Phone size={13} fill="#fff" /> 즉시 전화
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}`; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: `calc(12px * var(--fs, 1))`, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <MessageSquare size={13} /> 문자
+                      </button>
+                    </div>
+                  </div>
+                )}
+              
+      </div>
+    );
+  };
+  
   return (
     <div className="page-container" style={{ backgroundColor: '#F2F2F7' }}>
       {/* 프리미엄 헤더 */}
@@ -1340,8 +1502,20 @@ export default function CommunityTab() {
                       </div>
                     )}
                   </div>
-                  {!canAccessPremium && (index + 1) % 4 === 0 && <NativeAd slotId={`feed_native_${index}`} />}
-                  {!canAccessPremium && (index + 1) % 3 === 0 && <InFeedAd />}
+                  
+                  
+                  {/* ✅ ADSENSE 대체: 5번째마다 자체 선상배 홍보글 삽입 */}
+                  {!canAccessPremium && businessPosts.length > 0 && (index + 1) % 5 === 0 && (
+                    <div style={{ margin: '16px 0', border: '1.5px solid #FFD700', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(255,215,0,0.15)' }}>
+                      <div style={{ background: '#FFD700', color: '#5C3A00', padding: '6px 12px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', textAlign: 'center', letterSpacing: '-0.2px' }}>
+                        ✨ 프리미엄 스폰서
+                      </div>
+                      <div style={{ pointerEvents: 'auto' }}>
+                        {renderBusinessCard(businessPosts[Math.floor((index + 1) / 5) % businessPosts.length], true)}
+                      </div>
+                    </div>
+                  )}
+  
                 </React.Fragment>
               );
             })}
@@ -1638,152 +1812,7 @@ export default function CommunityTab() {
 
             {effectiveBusinessPosts.map((post, index) => (
               <React.Fragment key={String(post._id || post.id)}>
-                {post.isPinned ? (
-                  /* VVIP 프리미엄 대형 카드 */
-                  <div style={{ backgroundColor: '#FEFCF5', borderRadius: '20px', marginBottom: '20px', boxShadow: '0 12px 40px rgba(255,215,0,0.25)', border: '2.5px solid #FFD700', overflow: 'hidden' }}>
-                    <div style={{ background: 'linear-gradient(90deg, #FFD700, #FF9B26)', color: '#5C3A00', padding: '10px 16px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Award size={14} fill="#5C3A00" /> VVIP 프리미엄 스폰서 — 해당 항구 1위 독점</span>
-                      {/* ✅ VVIP 카드: 작성자 or 마스터만 수정/삭제 */}
-                      {(isAdmin || post.author_email === user?.email) && (
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
-                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
-                          ><Edit2 size={11} /> 수정</button>
-                          <button
-                            onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
-                            style={{ background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', color: '#5C3A00', borderRadius: '6px', padding: '3px 8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '3px' }}
-                          ><Trash2 size={11} /> 삭제</button>
-                        </div>
-                      )}
-                    </div>
-                    {/* ✅ MULTI-IMG: VVIP 대형 카드 이미지 갤러리 슬라이드 */}
-                    <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
-                      {(Array.isArray(post.images) && post.images.length > 0) || post.cover ? (
-                        <div onClick={e => e.stopPropagation()}>
-                          <ImageGallery
-                            images={post.images}
-                            image={post.cover}
-                            maxHeight={220}
-                            borderRadius="0"
-                            showZoom={false}
-                          />
-                        </div>
-                      ) : (
-                        <div style={{ width: '100%', height: '220px', background: '#E8EBF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(48px * var(--fs, 1))` }}>🚢</div>
-                      )}
-                      <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.65)', color: '#FFD700', padding: '5px 14px', borderRadius: '20px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', pointerEvents: 'none' }}>
-                        👑 {post.region || '항구 전용 VVIP'}
-                      </div>
-                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#FF5A5F', color: '#fff', padding: '5px 12px', borderRadius: '8px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '950', pointerEvents: 'none' }}>예약 모집중</div>
-                    </div>
-                    <div style={{ padding: '20px 18px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
-                      <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>{post.shipName}</div>
-                      {/* ✅ WARN-CT1: post.content null guard */}
-                      <p style={{ margin: '0 0 16px', fontSize: `calc(14px * var(--fs, 1))`, color: '#333', lineHeight: '1.8', fontWeight: '600' }}>{(post.content || '').slice(0, 140)}{(post.content || '').length > 140 ? '...' : ''}</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: `calc(13px * var(--fs, 1))` }}>
-                        <span style={{ background: '#F4F6FA', padding: '7px 14px', borderRadius: '12px', color: '#333', fontWeight: '800' }}>🎣 {post.target}</span>
-                        <span style={{ background: '#F4F6FA', padding: '7px 14px', borderRadius: '12px', color: '#333', fontWeight: '800' }}>📅 {post.date}</span>
-                        <span style={{ background: '#FFF3E0', padding: '7px 14px', borderRadius: '12px', color: '#E65100', fontWeight: '950' }}>💰 {post.price}</span>
-                      </div>
-                    </div>
-                    <div style={{ padding: '0 18px 20px', display: 'flex', gap: '12px' }}>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '18px', borderRadius: '16px', fontWeight: '950', fontSize: `calc(16px * var(--fs, 1))`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 6px 18px rgba(0,86,210,0.3)' }}>
-                        <Phone size={20} fill="#fff" /> 선장님께 즉시 전화
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 선상낚시 예약 문의드립니다.\n\n▶ 원하는 날짜:\n▶ 인원:\n▶ 기타 문의:`)}` ; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '2px solid #00875A', padding: '18px 20px', borderRadius: '16px', fontWeight: '900', fontSize: `calc(15px * var(--fs, 1))`, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <MessageSquare size={20} /> 문자 보내기
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-                {/* ✅ NATIVE-AD 제거됨 (loadNativeAd 미정의 → 모바일 크래시 버그 수정) */}
-                {!post.isPinned && (
-
-                  <div style={{
-                    backgroundColor: '#fff', borderRadius: '16px', marginBottom: '12px',
-                    boxShadow: post.region === '전국 (전체)'
-                      ? '0 4px 16px rgba(0,86,210,0.15)'
-                      : '0 2px 8px rgba(0,0,0,0.04)',
-                    border: post.region === '전국 (전체)'
-                      ? '1.5px solid #0056D2'
-                      : '1px solid #F0F2F7',
-                    overflow: 'hidden'
-                  }}>
-                    {/* ✅ 전국(전체) 게시글: 상단 MASTER 배지 헤더 */}
-                    {post.region === '전국 (전체)' && (
-                      <div style={{
-                        background: 'linear-gradient(90deg, #0056D2, #0096FF)',
-                        color: '#fff', padding: '7px 14px',
-                        fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                      }}>
-                        <span>🌐 MASTER 공식 전국 홍보 &mdash; 모든 지역 출항 정보</span>
-                        {/* ✅ 전국 게시글은 마스터만 작성 가능 → 작성자 or 관리자 수정/삭제 */}
-                        {(isAdmin || post.author_email === user?.email) && (
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }}
-                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
-                            ><Edit2 size={10} /> 수정</button>
-                            <button
-                              onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')}
-                              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '6px', padding: '2px 7px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '2px' }}
-                            ><Trash2 size={10} /> 삭제</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div style={{ padding: '12px', cursor: 'pointer' }} onClick={() => setSelectedBusinessPost(post)}>
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        {/* ✅ MULTI-IMG: 일반 카드 썸네일 — 여러 장 있을 때 미니 갤러리 */}
-                        <div style={{ width: '76px', height: '76px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: '#E8EBF0' }}
-                          onClick={e => e.stopPropagation()}>
-                          <ImageGallery
-                            images={post.images}
-                            image={post.cover}
-                            maxHeight={76}
-                            borderRadius="0"
-                            showZoom={false}
-                          />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
-                            <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '5px', fontWeight: '950', flexShrink: 0 }}>모집중</span>
-                            {/* ✅ 지역 배지 */}
-                            {post.region === '전국 (전체)' ? (
-                              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: 'rgba(0,86,210,0.12)', color: '#0056D2', padding: '2px 7px', borderRadius: '5px', fontWeight: '900', flexShrink: 0 }}>🌐 전국</span>
-                            ) : post.region ? (
-                              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#F0F0F5', color: '#555', padding: '2px 7px', borderRadius: '5px', fontWeight: '800', flexShrink: 0 }}>📍 {post.region}</span>
-                            ) : null}
-                            <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.shipName}</span>
-                            {/* ✅ 작성자 or 마스터: 수정/삭제 (region 제한 없이 모든 카드에 표시) */}
-                            {(isAdmin || post.author_email === user?.email) && post.region !== '전국 (전체)' && (
-                              <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
-                                <button onClick={(e) => { e.stopPropagation(); navigate(`/write-business?editId=${String(post._id || post.id)}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={14} /></button>
-                                <button onClick={(e) => handleDeletePost(e, String(post._id || post.id), 'business')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF3B30' }}><Trash2 size={14} /></button>
-                              </div>
-                            )}
-                          </div>
-                          {/* ✅ WARN-CT1: post.content null guard (소형 카드) */}
-                          <p style={{ margin: '0 0 6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#666', lineHeight: '1.5' }}>{(post.content || '').slice(0, 45)}{(post.content || '').length > 45 ? '...' : ''}</p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: `calc(10px * var(--fs, 1))` }}>
-                            <span style={{ background: '#F4F6FA', padding: '3px 8px', borderRadius: '6px', color: '#333' }}>{post.target}</span>
-                            <span style={{ background: '#FFF3E0', padding: '3px 8px', borderRadius: '6px', color: '#E65100', fontWeight: '800' }}>{post.price}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ padding: '8px 12px', background: '#F8F9FA', borderTop: '1px solid #F0F2F7', display: 'flex', gap: '6px' }}>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${post.phone || ''}`; }} style={{ flex: 1, backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '950', fontSize: `calc(12px * var(--fs, 1))`, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-                        <Phone size={13} fill="#fff" /> 즉시 전화
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); window.location.href = `sms:${post.phone || ''}?body=${encodeURIComponent(`안녕하세요! 낚시GO에서 [${post.shipName}] 예약 문의드립니다.\n▶ 날짜:\n▶ 인원:`)}`; }} style={{ backgroundColor: '#fff', color: '#00875A', border: '1.5px solid #00875A', padding: '10px 12px', borderRadius: '10px', fontWeight: '900', fontSize: `calc(12px * var(--fs, 1))`, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <MessageSquare size={13} /> 문자
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {renderBusinessCard(post, false)}
               {/* ✅ ADSENSE: 선상배 홍보 5개마다 광고 */}
               {!canAccessPremium && (index + 1) % 5 === 0 && (
                 <div style={{ margin: '4px 0 12px' }}>

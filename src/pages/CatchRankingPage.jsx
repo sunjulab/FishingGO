@@ -470,10 +470,7 @@ export default function CatchRankingPage({ embedded = false }) {
                       </div>
                     </div>
                   </div>
-                  {/* 조황랭킹 목록 사이 네이티브 광고: 5개마다 1번 (무료 유저만) */}
-                  {!canAccessPremium && (i + 1) % 5 === 0 && (
-                    <NativeAd slotId={`ranking_native_${i}`} style={{ margin: '4px 0' }} />
-                  )}
+
                   </React.Fragment>
                 );
               })}
