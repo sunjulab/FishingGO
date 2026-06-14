@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, ChevronLeft, X, ChevronRight, Trash2 } from 'lucide-react';
 import apiClient from '../api/index';
+import BusinessAdCard from '../components/BusinessAdCard';
 import { useUserStore } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import { getFishEmoji } from '../data/fishRules';
@@ -155,6 +156,7 @@ export default function CatchRankingPage({ embedded = false }) {
   const [contests, setContests] = useState([]);
   const [viewer, setViewer]     = useState(null);
   const [expanded, setExpanded] = useState(null);
+  const [businessPosts, setBusinessPosts] = useState([]);
 
   const isMaster = user?.tier === 'MASTER' || user?.tier === 'BUSINESS_VIP' || user?.role === 'admin';
   const canAccessPremium = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(user?.tier);
@@ -173,6 +175,17 @@ export default function CatchRankingPage({ embedded = false }) {
   useEffect(() => { load(); }, [fish, period]);
   useEffect(() => {
     apiClient.get('/api/contest/active').then(r => setContests(r.data.contests || [])).catch(() => {});
+    // ✅ BUSINESS ADS 로드 및 셔플링
+    apiClient.get('/api/community/posts?type=business').then(r => {
+      if (Array.isArray(r.data)) {
+        let filtered = r.data;
+        for (let i = filtered.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+        }
+        setBusinessPosts(filtered);
+      }
+    }).catch(() => {});
   }, []);
 
   const handleLike = async (id) => {
@@ -471,6 +484,12 @@ export default function CatchRankingPage({ embedded = false }) {
                     </div>
                   </div>
 
+                  {/* ✅ ADS 대체: 5번째마다 자체 선상배 홍보글 삽입 */}
+                  {(i + 1) % 5 === 0 && businessPosts.length > 0 && (
+                    <div style={{ marginTop: '14px', marginBottom: '4px' }}>
+                      <BusinessAdCard post={businessPosts[Math.floor((i + 1) / 5) % businessPosts.length]} />
+                    </div>
+                  )}
                   </React.Fragment>
                 );
               })}
