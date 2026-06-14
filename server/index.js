@@ -293,7 +293,16 @@ if (MONGO_URI) {
           { new: true }
         );
         if (result) (global.logger?.info || (() => {}))(`[Bootstrap] 마스터 계정 tier → MASTER 보장 (email: ${result.email})`);
-      } catch (e) { (global.logger?.warn || (() => {}))(`[Bootstrap] 마스터 tier 보장 실패: ${e.message}`); }
+        
+        // [1회성 데이터 정제] 테스트 결제(110,000원 PRO) 내역 일괄 영구 삭제
+        const PH = require('./models/PaymentHistory');
+        const SUB = require('./models/Subscription');
+        const phDel = await PH.deleteMany({ amount: 110000 });
+        const subDel = await SUB.deleteMany({ amount: 110000 });
+        if (phDel.deletedCount > 0 || subDel.deletedCount > 0) {
+          (global.logger?.info || (() => {}))(`[Bootstrap] 🗑️ 수익 대시보드 정제: 테스트 결제내역 ${phDel.deletedCount}건, 구독 ${subDel.deletedCount}건 영구 삭제 완료`);
+        }
+      } catch (e) { (global.logger?.warn || (() => {}))(`[Bootstrap] 초기화/정제 실패: ${e.message}`); }
     })
     .catch(err => {
       dbReady = false; dbConnecting = false;
@@ -8534,7 +8543,7 @@ app.get('/api/payment/history', async (req, res) => {
 // ✅ BUG-42: JWT 인증 추가 — 미인증 결제 기록 위조 방지
 app.post('/api/payment/history/record', verifyToken, async (req, res) => {
   try {
-    const { userId, userName, planId, pgProvider, paymentType, amount, status, imp_uid, merchant_uid, failReason } = req.body;
+    const { userId, userName, planId, pgProvider, paymentType, amount, status, imp_uid, merchant_uid, failReason, isTest } = req.body;
     // 요청 userId와 토큰 userId 일치 여부 확인 (본인 결제만 기록 가능)
     const tokenId = req.user.email || req.user.id;
     const isAdmin = isAdminToken(req.user);
@@ -8545,7 +8554,7 @@ app.post('/api/payment/history/record', verifyToken, async (req, res) => {
     if (dbReady && PaymentHistory && merchant_uid) {
       const used = await isMerchantUidUsed(merchant_uid);
       if (used) return res.status(409).json({ error: '이미 처리된 결제입니다.' });
-      await PaymentHistory.create({ userId, userName, planId, pgProvider, paymentType, amount, status, imp_uid, merchant_uid, failReason });
+      await PaymentHistory.create({ userId, userName, planId, pgProvider, paymentType, amount, status, imp_uid, merchant_uid, failReason, isTest: isTest || false });
     }
     res.json({ success: true });
   } catch (err) {
@@ -8755,12 +8764,12 @@ app.get('/api/admin/revenue', async (req, res) => {
 
     if (dbReady && PaymentHistory && Subscription) {
       const [allPaid, monthPaid, activeSubs, recentList] = await Promise.all([
-        PaymentHistory.aggregate([{ $match: { status: 'paid' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-        PaymentHistory.aggregate([{ $match: { status: 'paid', createdAt: { $gte: month1 } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-        Subscription.countDocuments({ status: 'active' }),
-        PaymentHistory.find().sort({ createdAt: -1 }).limit(10).lean(),
+        PaymentHistory.aggregate([{ $match: { status: 'paid', isTest: { $ne: true } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+        PaymentHistory.aggregate([{ $match: { status: 'paid', createdAt: { $gte: month1 }, isTest: { $ne: true } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+        Subscription.countDocuments({ status: 'active', isTest: { $ne: true } }),
+        PaymentHistory.find({ status: 'paid', isTest: { $ne: true } }).sort({ createdAt: -1 }).limit(10).lean(),
       ]);
-      const breakdown = await Subscription.aggregate([{ $group: { _id: '$planId', count: { $sum: 1 }, revenue: { $sum: '$amount' } } }]);
+      const breakdown = await Subscription.aggregate([{ $match: { status: 'active', isTest: { $ne: true } } }, { $group: { _id: '$planId', count: { $sum: 1 }, revenue: { $sum: '$amount' } } }]);
 
       stats.totalRevenue = allPaid[0]?.total || 0;
       stats.monthRevenue = monthPaid[0]?.total || 0;

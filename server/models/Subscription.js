@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 /**
  * Subscription ???뺢린寃곗젣(鍮뚮쭅) 援щ룆 紐⑤뜽
@@ -10,6 +10,7 @@ const subscriptionSchema = new mongoose.Schema({
   planId:          { type: String, trim: true, enum: ['LITE', 'BUSINESS_LITE', 'PRO', 'VVIP', 'BUSINESS_VIP'], required: true }, // ??27TH-B1: BUSINESS_LITE 異붽? ??25TH-C4 payment.js PLAN_LABEL ?숆린??(?꾨씫 ??ValidationError 諛쒖깮)
   tier:            { type: String, trim: true, required: true },
   amount:          { type: Number, required: true },            // ??泥?뎄 湲덉븸(??
+  isTest:          { type: Boolean, default: false },           // 테스트 결제 여부
 
   // ?ы듃??鍮뚮쭅???뺣낫
   customerUid:     { type: String, trim: true, required: true },           // ?ы듃??customer_uid
