@@ -387,7 +387,7 @@ export default function MyPage() {
         shipName: shipInfo.shipName,
         phone: shipInfo.phone,
       });
-      addToast(res.data.message || '오픈게시판 선상에 등록되었습니다! 🎣', 'success');
+      addToast(res.data.message || '🐟 낚시그램 선상에 등록되었습니다! 🎣', 'success');
       setGalleryModal(false);
       setGalleryForm({ fish: '', size: '', weight: '', location: '', memo: '', image: null });
     } catch (err) { addToast(err.response?.data?.error || '등록 실패', 'error'); }
@@ -1695,7 +1695,7 @@ export default function MyPage() {
               <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight:'950', color:'#1c1c1e' }}>🎣 조과 갤러리 등록</div>
               <button onClick={() => setGalleryModal(false)} style={{ background:'none', border:'none', fontSize: `calc(22px * var(--fs, 1))`, cursor:'pointer', color:'#8E8E93' }}>✕</button>
             </div>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>오픈게시판 선상 카테고리에 자동으로 등록됩니다 🚢</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color:'#8E8E93', fontWeight:'600', marginBottom:'20px' }}>낚시그램 선상 카테고리에 자동으로 등록됩니다 🚢</div>
             <div onClick={() => galleryFileRef.current?.click()} style={{ width:'100%', height:'150px', background:'#F8F9FA', borderRadius:'18px', border:'2px dashed #D1D1D6', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', marginBottom:'16px', overflow:'hidden' }}>
               {galleryForm.image
                 ? <img src={galleryForm.image} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'16px' }} />
@@ -1715,7 +1715,7 @@ export default function MyPage() {
               </div>
             ))}
             <button onClick={handleGallerySubmit} disabled={gallerySubmitting} style={{ width:'100%', padding:'15px', background: gallerySubmitting ? '#ccc' : 'linear-gradient(135deg,#00C48C,#00897B)', color:'#fff', border:'none', borderRadius:'16px', fontWeight:'900', fontSize: `calc(15px * var(--fs, 1))`, cursor: gallerySubmitting ? 'not-allowed' : 'pointer', marginTop:'4px' }}>
-              {gallerySubmitting ? '등록 중...' : '🎣 오픈게시판에 등록하기'}
+              {gallerySubmitting ? '등록 중...' : '🎣 낚시그램에 등록하기'}
             </button>
           </div>
         </div>

@@ -495,7 +495,7 @@ export default function CrewChat() {
                       {(msg.postCategory || '').includes('공지') ? '📢' : (msg.postCategory || '').includes('선상배') ? '🚢' : '📸'}
                     </span>
                     <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: isMe ? 'rgba(255,255,255,0.9)' : '#0056D2' }}>
-                      {(msg.postCategory || '').includes('공지') ? '공지사항' : (msg.postCategory || '').includes('선상배') ? '선상배 홍보' : '오픈게시판'}
+                      {(msg.postCategory || '').includes('공지') ? '공지사항' : (msg.postCategory || '').includes('선상배') ? '선상배 홍보' : '🐟 낚시그램'}
                     </span>
                     <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: isMe ? 'rgba(255,255,255,0.55)' : '#aaa', marginLeft: 'auto' }}>{msg.postCategory}</span>
                   </div>

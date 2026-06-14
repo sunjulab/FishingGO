@@ -848,7 +848,7 @@ export default function CommunityTab() {
         <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '900', marginBottom: '20px' }}>커뮤니티</h1>
         <div style={{ display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', gap: '0' }}>
           {[
-            { key: 'open',     label: '오픈게시판',  color: '#0056D2' },
+            { key: 'open',     label: '🐟 낚시그램',  color: '#0056D2' },
             { key: 'crew',     label: '크루',       color: '#0056D2' },
             { key: 'notice',   label: '공지사항',   color: '#FF3B30' },
             { key: 'business', label: '선상배홍보', color: '#0056D2' },

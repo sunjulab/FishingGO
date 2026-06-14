@@ -83,7 +83,7 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
           content: boardContent.trim(),
           image: form.image || null,
         });
-        addToast('🌊 조과 기록 + 오픈게시판 동시 등록 완료!', 'success');
+        addToast('🌊 조과 기록 + 🐟 낚시그램 동시 등록 완료!', 'success');
       } else {
         addToast('🎣 조과 기록이 저장되었습니다!', 'success');
       }
@@ -199,10 +199,10 @@ function CatchRecordModal({ point, user, onClose, onSuccess }) {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: form.shareToBoard ? '#0056D2' : '#1c1c1e' }}>
-              🌊 오픈게시판에도 공유하기
+              🌊 낚시그램에도 공유하기
             </div>
             <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', marginTop: '2px', fontWeight: '600' }}>
-              체크 시 조과 내용이 오픈게시판 '조황 공유' 카테고리에 자동 등록됩니다
+              체크 시 조과 내용이 낚시그램 '조황 공유' 카테고리에 자동 등록됩니다
             </div>
           </div>
           <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>{form.shareToBoard ? '🌊' : '🔒'}</span>
