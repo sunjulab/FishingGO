@@ -371,11 +371,11 @@ export default function Shop() {
             <Zap size={15} color="#FF6900" fill="#FF6900" />
             <span style={{ fontSize: `13px`, fontWeight: '900', color: '#1c1c1e' }}>낚시GO 오늘 특가 🔥</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', margin: '0 -12px', padding: '0 12px 12px' }}>
+          <div style={{ display: 'grid', gridTemplateRows: 'repeat(3, auto)', gridAutoFlow: 'column', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', margin: '0 -12px', padding: '0 12px 12px' }}>
             {promoLoading
-              ? [1, 2, 3, 4, 5, 6].map(n => <div key={n} style={{ height: '70px', width: '220px', flexShrink: 0, backgroundColor: '#eee', borderRadius: '14px', animation: 'pulse 1.5s infinite' }} />)
-              : promos.slice(0, 10).map(p => (
-                  <div key={p.id} onClick={() => handleProductClick(p)} style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#fff8f3', border: '1px solid #FFE0CC', borderRadius: '14px', padding: '8px', cursor: 'pointer', flexShrink: 0, width: '240px' }}>
+              ? [1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => <div key={n} style={{ height: '72px', width: '240px', backgroundColor: '#eee', borderRadius: '14px', animation: 'pulse 1.5s infinite' }} />)
+              : promos.slice(0, 30).map(p => (
+                  <div key={p.id} onClick={() => handleProductClick(p)} style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#fff8f3', border: '1px solid #FFE0CC', borderRadius: '14px', padding: '8px', cursor: 'pointer', width: '250px' }}>
                     <div style={{ width: '54px', height: '54px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
                       <ProductImage src={p.img} alt={p.name} source="ali" />
                     </div>

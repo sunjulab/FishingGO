@@ -9212,7 +9212,7 @@ app.get('/api/shop/ali-debug', async (req, res) => {
  */
 app.get('/api/shop/promo', async (req, res) => {
   try {
-    const promoProducts = await ali.getAliPromoProducts(6);
+    const promoProducts = await ali.getAliPromoProducts(30);
     res.json(promoProducts.map(p => ({
       id:           `ali_${p.productId}`,
       name:         p.title,
