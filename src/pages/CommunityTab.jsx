@@ -1505,7 +1505,7 @@ export default function CommunityTab() {
                   
                   
                   {/* ✅ ADSENSE 대체: 5번째마다 자체 선상배 홍보글 삽입 */}
-                  {!canAccessPremium && businessPosts.length > 0 && (index + 1) % 5 === 0 && (
+                  {businessPosts.length > 0 && (index + 1) % 5 === 0 && (
                     <div style={{ margin: '16px 0', border: '1.5px solid #FFD700', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(255,215,0,0.15)' }}>
                       <div style={{ background: '#FFD700', color: '#5C3A00', padding: '6px 12px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', textAlign: 'center', letterSpacing: '-0.2px' }}>
                         ✨ 프리미엄 스폰서
