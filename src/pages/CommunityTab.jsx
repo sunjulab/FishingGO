@@ -106,7 +106,7 @@ export default function CommunityTab() {
   const [activeTab, setActiveTab] = useState(() => {
     const rt = sessionStorage.getItem('community_return_tab');
     if (rt) sessionStorage.removeItem('community_return_tab'); // 즉시 삭제
-    return rt || 'business';
+    return rt || 'open';
   });
   // ENH4-B3: DOM 직접 조작 대신 React state 기반 하이라이트
   const [highlightedPostId, setHighlightedPostId] = useState(null);
