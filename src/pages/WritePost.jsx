@@ -137,7 +137,8 @@ export default function WritePost() {
     if (!trimmedContent) return addToast('내용을 입력해주세요.', 'error');
     if (trimmedContent.length > 2000) return addToast('게시글은 2,000자 이하로 작성해주세요.', 'error');
     if (isNoticeType && !title.trim()) { addToast('제목을 입력해주세요.', 'error'); return; }
-    if (isBusinessLite) { doPost(); } else { setShowAdGate(true); }
+    // if (isBusinessLite) { doPost(); } else { setShowAdGate(true); }
+    doPost(); // ✅ TWEAK: 임시로 광고 게이트 해제 (무료 유저도 즉시 등록)
   };
 
 

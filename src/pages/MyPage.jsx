@@ -1350,7 +1350,7 @@ export default function MyPage() {
                     badge: null,
                     badgeColor: null,
                     badgeBg: null,
-                    features: ['낚시 포인트 검색', '커뮤니티 열람', '조과 기록 등록', '게시글 등록 시 광고 시청 필요'],
+                    features: ['낚시 포인트 검색', '커뮤니티 열람', '조과 기록 등록', '게시글 무료 등록'],
                     highlight: false,
                   },
                   {
