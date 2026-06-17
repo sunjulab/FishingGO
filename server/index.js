@@ -2320,7 +2320,8 @@ app.post('/api/upload/image', async (req, res) => {
 });
 
 let multer;
-try { multer = require('multer'); } catch (e) { }
+let multerErrObj = null;
+try { multer = require('multer'); } catch (e) { multerErrObj = e.message; }
 
 // ─── Cloudinary 다이렉트 업로드를 위한 서명 발급 API ───
 app.get('/api/upload/signature', async (req, res) => {
@@ -2364,6 +2365,7 @@ app.get('/api/debug-multer', (req, res) => {
     multerType: typeof multer,
     uploadDiskIsNull: uploadDisk === null,
     tmpdir: os.tmpdir(),
+    multerErrObj,
     routes: app._router.stack.filter(r => r.route && r.route.path.includes('/api/upload')).map(r => r.route.path)
   });
 });
