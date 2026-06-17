@@ -7040,9 +7040,9 @@ app.put('/api/admin/cctv/:obsCode', async (req, res) => {
   const { youtubeId, type, label } = req.body;
   if (!obsCode) return res.status(400).json({ error: 'obsCode 필요' });
   // FIX-CCTV-VALID: 입력 길이/형식 검증
-  if (youtubeId !== undefined && (typeof youtubeId !== 'string' || youtubeId.length > 20)) return res.status(400).json({ error: '유효하지 않은 YouTube ID' });
-  if (type !== undefined && !['live', 'youtube', 'hls', 'dash', 'cctv'].includes(type)) return res.status(400).json({ error: '유효하지 않은 타입' });
-  if (label !== undefined && (typeof label !== 'string' || label.length > 50)) return res.status(400).json({ error: '라벨은 최대 50자' });
+  if (youtubeId !== undefined && (typeof youtubeId !== 'string' || youtubeId.length > 255)) return res.status(400).json({ error: '유효하지 않은 YouTube ID 또는 URL입니다.' });
+  if (type !== undefined && !['live', 'youtube', 'hls', 'dash', 'cctv', 'iframe'].includes(type)) return res.status(400).json({ error: '유효하지 않은 타입입니다.' });
+  if (label !== undefined && (typeof label !== 'string' || label.length > 50)) return res.status(400).json({ error: '라벨은 최대 50자입니다.' });
 
   const prev = cctvOverrides[obsCode] || {};
   const updated = {
