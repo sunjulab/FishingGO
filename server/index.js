@@ -2328,7 +2328,7 @@ app.get('/api/upload/signature', async (req, res) => {
   try {
     if (!process.env.CLOUDINARY_URL) return res.status(500).json({ error: 'Cloudinary 설정 필요' });
     let cloudinary;
-    try { cloudinary = require('cloudinary').v2; } catch (e) { return res.status(500).json({ error: 'Cloudinary 모듈 없음' }); }
+    try { cloudinary = require('cloudinary').v2; } catch (e) { return res.status(500).json({ error: 'Cloudinary 모듈 없음: ' + e.message }); }
     
     const url = process.env.CLOUDINARY_URL || '';
     const match = url.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/);
@@ -2414,7 +2414,7 @@ app.get('/api/debug-multer', (req, res) => {
       let cloudinary;
       try { cloudinary = require('cloudinary').v2; } catch (e) {
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        return res.status(500).json({ error: 'Cloudinary 모듈 없음' });
+        return res.status(500).json({ error: 'Cloudinary 모듈 없음: ' + e.message });
       }
       
       const folder = req.body.folder || 'fishinggo_video';
