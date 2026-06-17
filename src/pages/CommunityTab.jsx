@@ -684,6 +684,23 @@ export default function CommunityTab() {
     }
   };
 
+  const handleDeleteComment = async (postId, commentId) => {
+    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+    try {
+      const res = await apiClient.delete(`/api/community/posts/${postId}/comments/${commentId}`, { data: { email: user?.email } });
+      const serverComments = res.data?.comments;
+      if (Array.isArray(serverComments)) {
+        setPosts(prev => prev.map(p =>
+          String(p._id || p.id) === postId
+            ? { ...p, comments: serverComments }
+            : p
+        ));
+      }
+      addToast('댓글이 삭제되었습니다.', 'success');
+    } catch (err) {
+      addToast(err.response?.data?.error || '삭제에 실패했습니다.', 'error');
+    }
+  };
 
   const renderBusinessCard = (post, isAd = false) => {
     if (!post) return null;
@@ -1431,11 +1448,21 @@ export default function CommunityTab() {
                     {post.comments?.length > 0 && (
                       <div style={{ padding: '0 16px 10px', borderTop: '1px solid #f8f8f8', paddingTop: '10px' }}>
                         {post.comments.slice(0, isExpanded ? post.comments.length : 2).map((c, i) => (
-                          <div key={i} style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#333', marginBottom: '5px',
+                          <div key={i} style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#333', marginBottom: '5px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             ...(isExpanded ? {} : { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' })
                           }}>
-                            <strong style={{ color: '#1c1c1e', marginRight: '5px' }}>{c.author}</strong>
-                            <span style={{ color: '#555' }}>{c.text || c.content}</span>
+                            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <strong style={{ color: '#1c1c1e', marginRight: '5px' }}>{c.author}</strong>
+                              <span style={{ color: '#555' }}>{c.text || c.content}</span>
+                            </div>
+                            {(isAdmin || (user && c.author_email && c.author_email === (user.email || user.id))) && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteComment(postId, c._id || c.id); }}
+                                style={{ background: 'none', border: 'none', color: '#ff3b30', cursor: 'pointer', padding: '2px 4px', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
                           </div>
                         ))}
                         {!isExpanded && post.comments.length > 2 && (
