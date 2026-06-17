@@ -915,12 +915,12 @@ export default function MyPage() {
                 </div>
               )}
               <div
-                onClick={() => { addToast('지도에서 낚시 포인트를 선택하면 조과 기록을 남길 수 있습니다! 🎣', 'info'); navigate('/'); }}
+                onClick={() => navigate('/catch/upload')}
                 style={{ height: '190px', borderRadius: '28px', border: '2px dashed #00C48C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#00C48C', cursor: 'pointer', background: 'rgba(0,196,140,0.03)' }}
               >
                  <Camera size={28} color="#00C48C" />
                  <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#00C48C' }}>조과 기록 추가하기</span>
-                 <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', textAlign: 'center' }}>낚시 포인트 선택 → 조과 기록 남기기</span>
+                 <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', textAlign: 'center' }}>어종/크기 입력 → 랭킹 올리기</span>
               </div>
            </div>
           ) : activeTab === 'crews' ? (
