@@ -7,6 +7,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 
+const isVideoUrl = (s) => typeof s === 'string' && (s.match(/\.(mp4|mov|webm)$/i) || s.includes('video/upload'));
+
 /**
  * getImages: images 배열 또는 단일 image 필드에서 이미지 배열 반환
  * @param {string[]} images
@@ -69,21 +71,41 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* 현재 이미지 */}
-        <img
-          src={list[idx]}
-          alt={`사진 ${idx + 1}`}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            transition: 'opacity 0.2s',
-          }}
-          onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
-        />
+        {/* 현재 미디어 */}
+        {isVideoUrl(list[idx]) ? (
+          <video
+            src={list[idx]}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              transition: 'opacity 0.2s',
+            }}
+            autoPlay
+            muted
+            loop
+            playsInline
+            onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
+          />
+        ) : (
+          <img
+            src={list[idx]}
+            alt={`사진 ${idx + 1}`}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              transition: 'opacity 0.2s',
+            }}
+            onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
+          />
+        )}
 
         {/* 좌우 화살표 (다중일 때만) */}
         {list.length > 1 && (
@@ -183,7 +205,11 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
                 transition: 'border-color 0.15s',
               }}
             >
-              <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              {isVideoUrl(src) ? (
+                <video src={src} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} muted playsInline />
+              ) : (
+                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              )}
             </button>
           ))}
         </div>
@@ -213,13 +239,21 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
             <X size={22} color="#fff" />
           </button>
 
-          {/* 전체화면 이미지 */}
-          <img
-            src={list[idx]}
-            alt={`사진 ${idx + 1}`}
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: '95vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px' }}
-          />
+          {isVideoUrl(list[idx]) ? (
+            <video
+              src={list[idx]}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '95vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px' }}
+              controls autoPlay loop playsInline
+            />
+          ) : (
+            <img
+              src={list[idx]}
+              alt={`사진 ${idx + 1}`}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '95vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px' }}
+            />
+          )}
 
           {/* 전체화면 화살표 */}
           {list.length > 1 && (

@@ -22,6 +22,8 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // 언마운트/재마운트(뒤로가기 후 재진입) 시 데이터가 이미 있으면 loading=false로 시작
 let _communityCache = { business: [], crews: [], notices: [], stories: [] };
 
+const isVideoUrl = (s) => typeof s === 'string' && (s.match(/\.(mp4|mov|webm)$/i) || s.includes('video/upload'));
+
 // ✅ ADSENSE: 인피드 광고 (오픈게시판 목록 사이 삽입)
 function InFeedAd() {
   return (
@@ -1080,7 +1082,11 @@ export default function CommunityTab() {
                       style={{ aspectRatio: '1', overflow: 'hidden', position: 'relative', cursor: 'pointer', background: '#F2F2F7' }}
                     >
                       {imgSrc ? (
-                        <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        isVideoUrl(imgSrc) ? (
+                          <video src={imgSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted loop playsInline />
+                        ) : (
+                          <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        )
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', background: '#F8F9FA', fontSize: `calc(9px * var(--fs, 1))`, color: '#555', textAlign: 'center', lineHeight: 1.4 }}>
                           <span style={{ fontSize: `calc(18px * var(--fs, 1))`, marginBottom: '3px' }}>🎣</span>
@@ -2134,7 +2140,11 @@ export default function CommunityTab() {
             </div>
             <div style={{ background: '#F8F9FA', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #E5E5EA' }}>
               {(shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover) && (
-                <img src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                isVideoUrl(shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover) ? (
+                  <video src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} muted playsInline />
+                ) : (
+                  <img src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                )
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', marginBottom: '3px' }}>

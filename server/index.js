@@ -2314,6 +2314,36 @@ app.post('/api/upload/image', async (req, res) => {
   }
 });
 
+let multer;
+try { multer = require('multer'); } catch (e) { }
+const uploadMem = multer ? multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } }) : null;
+
+if (uploadMem) {
+  app.post('/api/upload/media', uploadMem.single('file'), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
+      if (!process.env.CLOUDINARY_URL) return res.status(500).json({ error: 'Cloudinary 설정 필요' });
+      let cloudinary;
+      try { cloudinary = require('cloudinary').v2; } catch (e) { return res.status(500).json({ error: 'Cloudinary 모듈 없음' }); }
+      
+      const isVideo = req.file.mimetype.startsWith('video/');
+      const folder = req.body.folder || 'fishinggo_video';
+      
+      const stream = cloudinary.uploader.upload_stream(
+        { folder, resource_type: isVideo ? 'video' : 'auto' },
+        (error, result) => {
+          if (error) return res.status(500).json({ error: 'Cloudinary 업로드 실패: ' + error.message });
+          res.json({ url: result.secure_url, type: 'cloudinary', publicId: result.public_id, isVideo });
+        }
+      );
+      stream.end(req.file.buffer);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: '서버 에러' });
+    }
+  });
+}
+
 // ─── 포트원 결제 검증 + 구독 처리 ─────────────────────────────────────────────
 // 환경변수:
 //   PORTONE_API_KEY    : 포트원 REST API 키 (테스트: test_ak_...)

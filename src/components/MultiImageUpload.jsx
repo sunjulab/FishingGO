@@ -8,6 +8,9 @@ import React, { useRef, useState } from 'react';
 import { Image, X, Star, Edit2 } from 'lucide-react';
 import { fileToCompressedBase64 } from '../utils/imageUtils';
 import ImagePositionEditor from './ImagePositionEditor';
+import apiClient from '../api/index';
+
+const isVideoUrl = (s) => typeof s === 'string' && (s.match(/\.(mp4|mov|webm)$/i) || s.includes('video/upload'));
 
 export default function MultiImageUpload({
   images = [],
@@ -18,6 +21,7 @@ export default function MultiImageUpload({
 }) {
   const inputRef = useRef(null);
   const [editingIdx, setEditingIdx] = useState(null); // 위치 편집 중인 이미지 인덱스
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -27,21 +31,42 @@ export default function MultiImageUpload({
     const remaining = maxCount - images.length;
     const toProcess = files.slice(0, remaining);
 
+    setIsUploadingMedia(true);
     const compressed = await Promise.all(
       toProcess.map(async (file) => {
+        if (file.type.startsWith('video/')) {
+          if (file.size > 30 * 1024 * 1024) {
+            alert('동영상은 최대 30MB까지만 업로드 가능합니다.');
+            return null;
+          }
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('folder', 'fishinggo_video');
+            const res = await apiClient.post('/api/upload/media', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return res.data?.url || null;
+          } catch (err) {
+            console.error(err);
+            alert('동영상 업로드 실패');
+            return null;
+          }
+        }
+
         try {
           return await fileToCompressedBase64(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.82, preset: 'post' });
         } catch {
           return await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result);
-            // ✅ FILEREADER-FIX: onerror 핸들러 추가 — 파일 읽기 실패 시 Promise hang 방지
             reader.onerror = (err) => reject(err);
             reader.readAsDataURL(file);
-          }).catch(() => null); // 읽기 실패 시 null 반환하여 업로드 계속 진행
+          }).catch(() => null); 
         }
       })
     );
+    setIsUploadingMedia(false);
     onChange([...images, ...compressed.filter(Boolean)].slice(0, maxCount));
   };
 
@@ -81,16 +106,29 @@ export default function MultiImageUpload({
                 flexShrink: 0,
               }}
             >
-              <img
-                src={src}
-                alt={`이미지 ${idx + 1}`}
-                style={{
-                  width: '80px', height: '80px',
-                  objectFit: 'cover', borderRadius: '12px',
-                  border: idx === 0 ? '2.5px solid #0056D2' : '2px solid #E5E5EA',
-                  display: 'block',
-                }}
-              />
+              {isVideoUrl(src) ? (
+                <video
+                  src={src}
+                  style={{
+                    width: '80px', height: '80px',
+                    objectFit: 'cover', borderRadius: '12px',
+                    border: idx === 0 ? '2.5px solid #0056D2' : '2px solid #E5E5EA',
+                    display: 'block',
+                  }}
+                  muted autoPlay loop playsInline
+                />
+              ) : (
+                <img
+                  src={src}
+                  alt={`첨부 ${idx + 1}`}
+                  style={{
+                    width: '80px', height: '80px',
+                    objectFit: 'cover', borderRadius: '12px',
+                    border: idx === 0 ? '2.5px solid #0056D2' : '2px solid #E5E5EA',
+                    display: 'block',
+                  }}
+                />
+              )}
 
               {/* 대표 이미지 배지 */}
               {idx === 0 && (
@@ -170,18 +208,18 @@ export default function MultiImageUpload({
       {/* 이미지 추가 버튼 (maxCount 미만일 때) */}
       {images.length < maxCount && (
         <div
-          onClick={() => !isLoading && inputRef.current?.click()}
+          onClick={() => !isLoading && !isUploadingMedia && inputRef.current?.click()}
           style={{
             display: 'flex', alignItems: 'center', gap: '8px',
-            color: isLoading ? '#FF9B26' : images.length > 0 ? '#0056D2' : '#666',
-            fontSize: `calc(14px * var(--fs, 1))`, cursor: isLoading ? 'not-allowed' : 'pointer',
+            color: (isLoading || isUploadingMedia) ? '#FF9B26' : images.length > 0 ? '#0056D2' : '#666',
+            fontSize: `calc(14px * var(--fs, 1))`, cursor: (isLoading || isUploadingMedia) ? 'not-allowed' : 'pointer',
             marginTop: images.length > 0 ? '28px' : 0,
           }}
         >
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/mp4,video/quicktime,video/webm"
             multiple
             style={{ display: 'none' }}
             onChange={handleFileChange}
@@ -192,16 +230,16 @@ export default function MultiImageUpload({
             borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: images.length > 0 ? '1.5px solid rgba(0,86,210,0.3)' : 'none',
           }}>
-            {isLoading
+            {isLoading || isUploadingMedia
               ? <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF9B26', fontWeight: '800' }}>처리중</span>
               : <Image size={20} />
             }
           </div>
           <div>
             <div style={{ fontWeight: '700', fontSize: `calc(13px * var(--fs, 1))` }}>
-              {isLoading ? '사진 처리 중...' : `${label} (${images.length}/${maxCount})`}
+              {isUploadingMedia ? '동영상 처리 중...' : isLoading ? '사진 처리 중...' : `${label} (${images.length}/${maxCount})`}
             </div>
-            {images.length === 0 && (
+            {images.length === 0 && !isUploadingMedia && !isLoading && (
               <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#aaa', marginTop: '1px' }}>
                 최대 {maxCount}장 | 순서 변경 가능
               </div>
