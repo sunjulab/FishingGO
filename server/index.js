@@ -2316,8 +2316,6 @@ app.post('/api/upload/image', async (req, res) => {
 
 let multer;
 try { multer = require('multer'); } catch (e) { }
-const os = require('os');
-const fs = require('fs');
 
 // ─── Cloudinary 다이렉트 업로드를 위한 서명 발급 API ───
 app.get('/api/upload/signature', async (req, res) => {
@@ -2353,6 +2351,7 @@ app.get('/api/upload/signature', async (req, res) => {
   }
 });
 
+const os = require('os');
 const uploadDisk = multer ? multer({ dest: os.tmpdir(), limits: { fileSize: 30 * 1024 * 1024 } }) : null;
 
 if (uploadDisk) {
