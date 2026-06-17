@@ -6923,10 +6923,10 @@ app.get('/api/weather/cctv/stream/:beachCode', async (req, res) => {
 });
 
 app.get('/api/weather/cctv', async (req, res) => {
-  const { pointId, stationId } = req.query;
+  const { stationId, pointId } = req.query;
   try {
     const { getCctvInfo, CCTV_MAP } = require('./cctvMapping');
-    // ✅ FIX-CCTV-SCOPE: 포인트별(pointId) 고유 오버라이드가 있으면 최우선 적용, 없으면 지역별(stationId) 적용
+    // pointId 기반 오버라이드가 있으면 최우선 적용, 없으면 기존 stationId 오버라이드 사용
     const override = (pointId && cctvOverrides[pointId]) ? cctvOverrides[pointId] : cctvOverrides[stationId];
     let info;
     if (override) {
@@ -7040,9 +7040,9 @@ app.put('/api/admin/cctv/:obsCode', async (req, res) => {
   const { youtubeId, type, label } = req.body;
   if (!obsCode) return res.status(400).json({ error: 'obsCode 필요' });
   // FIX-CCTV-VALID: 입력 길이/형식 검증
-  if (youtubeId !== undefined && (typeof youtubeId !== 'string' || youtubeId.length > 255)) return res.status(400).json({ error: '유효하지 않은 YouTube ID 또는 URL입니다.' });
-  if (type !== undefined && !['live', 'youtube', 'hls', 'dash', 'cctv', 'iframe'].includes(type)) return res.status(400).json({ error: '유효하지 않은 타입입니다.' });
-  if (label !== undefined && (typeof label !== 'string' || label.length > 50)) return res.status(400).json({ error: '라벨은 최대 50자입니다.' });
+  if (youtubeId !== undefined && (typeof youtubeId !== 'string' || youtubeId.length > 20)) return res.status(400).json({ error: '유효하지 않은 YouTube ID' });
+  if (type !== undefined && !['live', 'youtube', 'hls', 'dash', 'cctv'].includes(type)) return res.status(400).json({ error: '유효하지 않은 타입' });
+  if (label !== undefined && (typeof label !== 'string' || label.length > 50)) return res.status(400).json({ error: '라벨은 최대 50자' });
 
   const prev = cctvOverrides[obsCode] || {};
   const updated = {

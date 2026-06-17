@@ -276,9 +276,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     const finalYoutubeId = isYoutube ? extractYoutubeId(trimmedInput) : trimmedInput;
 
     const sid = selectedPoint.obsCode || 'DT_0001';
+    const cctvOverrideId = selectedPoint.id ? `point_${selectedPoint.id}` : sid;
     try {
       setIsSavingCctv(true);
-      const res = await apiClient.put(`/api/admin/cctv/${selectedPoint.id}`, {
+      const res = await apiClient.put(`/api/admin/cctv/${cctvOverrideId}`, {
         type: finalType,
         youtubeId: finalYoutubeId,
         label: cctvData?.label || `${selectedPoint.name} 수동업데이트` // ✅ 7TH-C4: 한글 직접 표기
@@ -288,7 +289,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         setIsEditingCctv(false);
         // 수정한 링크로 즉시 다시 로드
         setCctvLoading(true);
-        const cctvResp = await apiClient.get(`/api/weather/cctv?pointId=${selectedPoint.id}&stationId=${sid}`);
+        const cctvResp = await apiClient.get(`/api/weather/cctv?stationId=${sid}&pointId=point_${selectedPoint.id || ''}`);
         setCctvData(cctvResp.data);
       } else {
         addToast(res.data.error || '수정에 실패했습니다.', 'error'); // ✅ 7TH-C4: 한글 직접 표기
@@ -390,7 +391,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         return `${y}${m}${day}`;
       })();
 
-      const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}`)
+      const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}&pointId=point_${selectedPoint.id || ''}`)
         .then(res => { if (!cancelled) setCctvData(res.data); }) // ✅ BUG-01 FIX
         .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
         .finally(() => { if (!cancelled) setCctvLoading(false); }); // ✅ BUG-01 FIX
