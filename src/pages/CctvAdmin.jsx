@@ -367,7 +367,7 @@ export default function CctvAdmin() {
                 <div style={{ padding: '0 16px 14px' }}>
                   <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9' }}>
                     <iframe
-                      src={getEmbedUrl(item.youtubeId)}
+                      src={item.type === 'youtube' ? getEmbedUrl(item.youtubeId) : item.youtubeId}
                       allow="autoplay; encrypted-media"
                       allowFullScreen
                       style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}

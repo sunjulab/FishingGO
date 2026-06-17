@@ -4811,14 +4811,14 @@ app.delete('/api/user/records/:id', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '유효하지 않은 ID' }); // ✅ FIX-CASTID-CastError-CATCH
       const record = await CatchRecord.findById(req.params.id);
       if (!record) return res.status(404).json({ error: '기록 없음' });
-      if (!isAdmin && record.author_email !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
+      if (!isAdmin && record.userId !== jwtEmail) return res.status(403).json({ error: '권한 없음' });
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: '잘못된 ID' }); // FIX-CATCH-DEL-OBJID
     await CatchRecord.findByIdAndDelete(req.params.id);
       return res.json({ success: true });
     }
     // ✅ FIX-MEM-CATCH-IDOR: 인메모리 폴백에서도 본인만 삭제 가능
     const memTarget = memRecords.find(r => r.id === req.params.id || r._id === req.params.id);
-    if (memTarget && !isAdmin && memTarget.author_email && memTarget.author_email !== jwtEmail) {
+    if (memTarget && !isAdmin && memTarget.userId !== jwtEmail) {
       return res.status(403).json({ error: '본인의 기록만 삭제할 수 있습니다.' }); // FIX-MEM-CATCH-IDOR
     }
     memRecords = memRecords.filter(r => r.id !== req.params.id);
@@ -5110,7 +5110,6 @@ setInterval(() => {
 app.post('/api/community/posts/:id/comments', async (req, res) => {
   try {
     const rawCmtIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || 'unknown';
-    if (!checkCommentRate(rawCmtIp)) return res.status(429).json({ error: '댓글을 너무 빠르게 작성하고 있습니다. 잠시 후 다시 시도해주세요.' }); // FIX-COMMENT-RATE-CHECK
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;

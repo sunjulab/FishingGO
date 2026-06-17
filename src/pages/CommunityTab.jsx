@@ -1459,6 +1459,7 @@ export default function CommunityTab() {
                           backgroundColor: '#F7F8FA', borderRadius: '24px',
                           padding: '8px 14px', border: '1.5px solid #E5E7EB',
                           transition: 'border-color 0.15s',
+                          boxSizing: 'border-box'
                         }}>
                           {/* 작성자 아바타 */}
                           <div style={{
@@ -1476,7 +1477,7 @@ export default function CommunityTab() {
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommentSubmit(postId); } }}
                             placeholder="댓글을 입력하세요..."
                             style={{
-                              flex: 1, border: 'none', background: 'transparent',
+                              flex: 1, minWidth: 0, border: 'none', background: 'transparent',
                               outline: 'none', fontSize: `calc(14px * var(--fs, 1))`, color: '#1c1c1e',
                               fontWeight: '400',
                             }}

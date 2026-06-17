@@ -288,7 +288,7 @@ export default function CatchUploadPage() {
 
         {/* ── STEP 2: 정보 입력 ── */}
         {step === 2 && (
-          <div style={{ background: 'rgba(255,255,255,0.97)', borderRadius: '24px', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.97)', borderRadius: '24px', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)' }}>
             {imagePreview && (
               <div style={{ borderRadius: '16px', overflow: 'hidden', height: '200px' }}>
                 <img src={imagePreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

@@ -270,14 +270,16 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
   const saveCctvOverride = useCallback(async () => {
     if (!editYoutubeId.trim()) return;
 
-    // ✅ 7TH-B4: extractYoutubeId 컴포넌트 외부 함수로 이동 — 호출마다 재정의 제거
-    const finalYoutubeId = extractYoutubeId(editYoutubeId.trim());
+    const trimmedInput = editYoutubeId.trim();
+    const isYoutube = /youtu\.be|youtube\.com|v\/|embed\//.test(trimmedInput);
+    const finalType = isYoutube ? 'youtube' : 'iframe';
+    const finalYoutubeId = isYoutube ? extractYoutubeId(trimmedInput) : trimmedInput;
 
     const sid = selectedPoint.obsCode || 'DT_0001';
     try {
       setIsSavingCctv(true);
       const res = await apiClient.put(`/api/admin/cctv/${sid}`, {
-        type: 'youtube',
+        type: finalType,
         youtubeId: finalYoutubeId,
         label: cctvData?.label || `${selectedPoint.name} 수동업데이트` // ✅ 7TH-C4: 한글 직접 표기
       });
@@ -657,7 +659,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <div style={{ color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>📡 대상어 현장 영상 연결 중...</div>
             </div>
           ) : cctvData ? (
-             cctvData.type === 'youtube' && cctvData.url ? (
+             (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <iframe
                     src={cctvData.url}
@@ -667,11 +669,14 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                   />
                   {/* 임베딩 차단 우회 및 전체화면용 외부 링크 버튼 */}
                   <button 
-                    onClick={() => window.open(`https://www.youtube.com/watch?v=${cctvData.youtubeId}`, '_blank')}
+                    onClick={() => window.open(cctvData.type === 'youtube' ? `https://www.youtube.com/watch?v=${cctvData.youtubeId}` : cctvData.url, '_blank')}
                     style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,0,0,0.85)', color: '#fff', border: 'none', borderRadius: '20px', padding: '6px 12px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10 15l5.19-3-5.19-3v6zm11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>
-                    앱으로 보기
+                    {cctvData.type === 'youtube' ? (
+                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10 15l5.19-3-5.19-3v6zm11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>앱으로 보기</>
+                    ) : (
+                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>원본 보기</>
+                    )}
                   </button>
                 </div>
              ) : cctvData.fallbackImg ? (
