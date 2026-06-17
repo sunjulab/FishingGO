@@ -1672,7 +1672,7 @@ io.on('connection', (socket) => {
         postPreview: (data.postPreview || '').toString().slice(0, 120),
         postImage:   rawImage,  // 실시간 emit: 전체 (base64 포함)
         postCategory:(data.postCategory|| '').toString().slice(0, 20),
-        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' }),
         socketId: socket.id,
         senderLevel: cachedLevel.level,
         senderEmoji: cachedLevel.emoji,
@@ -1711,7 +1711,7 @@ io.on('connection', (socket) => {
     const msgData = {
       sender,
       text,
-      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' }),
       socketId: socket.id,
       senderLevel: cachedLevel.level,
       senderEmoji: cachedLevel.emoji,
@@ -2119,11 +2119,11 @@ async function getMarineWeather(sid) {
   const buoyNum = BUOY_MAP[sid];
   if (!buoyNum) return null;
   try {
-    const now  = new Date();
-    const prev = new Date(now - 70 * 60 * 1000); // 70분 전 (API 지연 보상)
+    const now  = new Date(Date.now() + 9 * 3600 * 1000);
+    const prev = new Date(now.getTime() - 70 * 60 * 1000); // 70분 전 (API 지연 보상)
     const pad  = (n) => String(n).padStart(2, '0');
-    const tm2  = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}00`;
-    const tm1  = `${prev.getFullYear()}${pad(prev.getMonth()+1)}${pad(prev.getDate())}${pad(prev.getHours())}00`;
+    const tm2  = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}00`;
+    const tm1  = `${prev.getUTCFullYear()}${pad(prev.getUTCMonth()+1)}${pad(prev.getUTCDate())}${pad(prev.getUTCHours())}00`;
     // ✅ tm1/tm2 파라미터 사용 (tm 단일 아님)
     const url  = `https://apihub.kma.go.kr/api/typ01/url/kma_buoy2.php?tm1=${tm1}&tm2=${tm2}&stn=${buoyNum}&help=1&authKey=${KMA_KEY}`;
     const res  = await axios.get(url, { timeout: 8000 });
@@ -2234,7 +2234,7 @@ async function updateAllStationsCache() {
     const tidePhase = realTide?.phase || mockPhase;
     const tideHigh  = realTide?.high  || fmtMin(baseHighMin);
     const tideLow   = realTide?.low   || fmtMin(baseHighMin + 375);
-    const tideLevel = 10 + (seed * 7 + new Date().getHours() * 13) % 250;
+    const tideLevel = 10 + (seed * 7 + new Date(Date.now() + 9 * 3600 * 1000).getUTCHours() * 13) % 250;
 
     weatherCache[sid] = {
       data: {
@@ -2269,7 +2269,7 @@ updateAllStationsCache();
 
 // ─── 30분 주기 갱신 (주간), 새벽 2시간 ──────────────────────────────────────
 function scheduleWeatherCache() {
-  const hour = new Date().getHours();
+  const hour = new Date(Date.now() + 9 * 3600 * 1000).getUTCHours();
   const delay = (hour >= 2 && hour < 6) ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000;
   setTimeout(() => { updateAllStationsCache(); scheduleWeatherCache(); }, delay);
 }
@@ -3816,7 +3816,7 @@ async function sendAppPushNotification(userEmail, type, title, message, data = {
   if (user.notiSettings && user.notiSettings[type] === false) return;
 
   // ✅ 야간 방해 금지 모드 (23:00 ~ 07:00)
-  const hour = new Date().getHours();
+  const hour = new Date(Date.now() + 9 * 3600 * 1000).getUTCHours();
   if (user.notiSettings?.nightMode !== false && (hour >= 23 || hour < 7)) {
     if (type !== 'announcement') return; // 긴급 관리자 공지 제외하고 발송 차단
   }
@@ -3827,7 +3827,7 @@ async function sendAppPushNotification(userEmail, type, title, message, data = {
     title: title,
     message: message,
     type: type,
-    time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' })
   });
 
   // ② FCM 실제 푸시 (백그라운드/잠금화면용)
@@ -4832,7 +4832,7 @@ const expDailyCount = new Map();
 // 키가 이미 날짜(today)를 포함하므로 메모리 누적 방지를 위해 자정에만 정리
 const scheduleExpReset = () => {
   const now = new Date();
-  const msToMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 1, 0) - now;
+  const msToMidnight = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 1, 0) - now;
   setTimeout(() => { expDailyCount.clear(); scheduleExpReset(); }, msToMidnight);
 };
 scheduleExpReset();
@@ -6817,7 +6817,7 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
 function calcFishingScoreForStation(sid) {
   const entry = weatherCache[sid];
   if (!entry || !entry.data) return null;
-  const hour  = new Date().getHours();
+  const hour  = new Date(Date.now() + 9 * 3600 * 1000).getUTCHours();
   const month = new Date().getMonth() + 1;
   const isNight = hour >= 19 || hour < 5;
   const d = entry.data;
@@ -8908,7 +8908,7 @@ app.get('/api/admin/revenue', async (req, res) => {
     if (!isAdmin) return res.status(403).json({ error: '접근 권한 없음' });
 
     const now = new Date();
-    const month1 = new Date(now.getFullYear(), now.getMonth(), 1);
+    const month1 = new Date(now.getUTCFullYear(), now.getUTCMonth(), 1);
     let stats = { totalRevenue: 0, monthRevenue: 0, activeSubscriptions: 0, planBreakdown: {}, recentPayments: [] };
 
     if (dbReady && PaymentHistory && Subscription) {
@@ -8949,7 +8949,7 @@ app.post('/api/admin/alert', verifyToken, (req, res) => {
     message,
     location: location || '',
     pointName: pointName || '',
-    time: time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+    time: time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' }),
   };
   io.emit('fishing_alert', payload); // 전체 연결 사용자에게 브로드캐스트
   (logger?.info || console.log)(`[Admin Alert] 낚시 알림 발송: ${message}`);
@@ -8968,7 +8968,7 @@ app.post('/api/admin/push', verifyToken, (req, res) => {
     targetEmail,
     title: title || '낚시GO 알림',
     message,
-    time: time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+    time: time || new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' }),
   };
   // ✅ FIX-PUSH-TARGET-ONLY: 특정 소켓에만 발송 (전체 방송 → 타겟 필터링)
   let pushed = false;
@@ -9930,8 +9930,8 @@ app.get('/api/catch/ranking', async (req, res) => {
     await waitForDb(5000);
     const now = new Date();
     let startDate = new Date();
-    if (period === 'week') startDate.setDate(now.getDate() - 7);
-    else if (period === 'month') startDate.setMonth(now.getMonth() - 1);
+    if (period === 'week') startDate.setDate(now.getUTCDate() - 7);
+    else if (period === 'month') startDate.setMonth(now.getUTCMonth() - 1);
     else startDate = new Date(0); // all
     const query = { createdAt: { $gte: startDate } };
     if (fishName) query.fishName = fishName;
