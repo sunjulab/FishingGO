@@ -2282,8 +2282,6 @@ scheduleWeatherCache();
 // ✅ 9TH-A2: /api/health 중복 라우트 제거 — L247에서 이미 정의됨 (Express 첫 번째 핸들러 우선)
 // uptime/time/db 응답은 L247 핸들러로 통합됨
 
-const path = require('path');
-const fs = require('fs');
 if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
   fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true });
 }
@@ -2370,8 +2368,10 @@ app.get('/api/debug-multer', (req, res) => {
   });
 });
 
-if (uploadDisk) {
   const uploadMediaHandler = (req, res, next) => {
+    if (!uploadDisk) {
+      return res.status(500).json({ error: '서버에 Multer 모듈이 로드되지 않았습니다. (uploadDisk is null)' });
+    }
     uploadDisk.single('file')(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -2379,7 +2379,7 @@ if (uploadDisk) {
         }
         return res.status(400).json({ error: err.message });
       } else if (err) {
-        return res.status(500).json({ error: '업로드 처리 중 오류 발생' });
+        return res.status(500).json({ error: '업로드 처리 중 오류 발생: ' + err.message });
       }
       next();
     });
@@ -2425,7 +2425,7 @@ if (uploadDisk) {
       res.status(500).json({ error: '서버 에러' });
     }
   });
-}
+
 
 // ─── 포트원 결제 검증 + 구독 처리 ─────────────────────────────────────────────
 // 환경변수:
