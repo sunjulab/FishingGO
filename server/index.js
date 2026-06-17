@@ -2150,9 +2150,16 @@ async function getMarineWeather(sid) {
 
 // ✅ REAL-TIDE: KHOA 조석예보 — 실제 물때·고조·간조
 function getLunarDay() {
-  const known = new Date('2024-01-11');
-  const diff = Math.floor((Date.now() - known) / (1000 * 60 * 60 * 24));
-  return (diff % 30) + 1;
+  const known = new Date('2024-02-10T00:00:00+09:00'); // 2024년 설날 (음력 1월 1일)
+  const diffDays = (Date.now() - known.getTime()) / (1000 * 60 * 60 * 24);
+  return Math.floor(diffDays % 29.530588) + 1;
+}
+
+function getTidePhase(lunarDay) {
+  const val = (lunarDay + 6) % 15;
+  const tideNum = val === 0 ? 15 : val;
+  const phaseMap = { 7: '7물(사리)', 14: '조금', 15: '무시' };
+  return phaseMap[tideNum] || `${tideNum}물`;
 }
 
 async function getRealTide(sid) {
@@ -2174,9 +2181,7 @@ async function getRealTide(sid) {
     const highTime = (highs[0]?.hl_time || highs[0]?.tideTime || highs[0]?.hl_Apear || '').slice(11,16) || null;
     const lowTime  = (lows[0]?.hl_time  || lows[0]?.tideTime  || lows[0]?.hl_Apear  || '').slice(11,16) || null;
     const lunarDay = getLunarDay();
-    const tideNum  = lunarDay <= 15 ? lunarDay : 30 - lunarDay;
-    const phaseMap = { 7:'7물(사리)', 13:'13물(조금)', 14:'14물(무시)' };
-    const phase = phaseMap[tideNum] || `${tideNum}물`;
+    const phase = getTidePhase(lunarDay);
     return { phase, high: highTime, low: lowTime };
   } catch (e) {
     // 500 오류는 obsCode 미지원 관측소로 정상
@@ -6630,11 +6635,19 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     sstSourceFb = 'fallback';
   }
 
+  const lunarDay = getLunarDay();
+  const tidePhase = getTidePhase(lunarDay);
+
+  const known = new Date('2024-02-10T00:00:00+09:00');
+  const diffDays = Math.floor((Date.now() - known.getTime()) / (1000 * 60 * 60 * 24));
+  
   const seed = parseInt(sid.replace(/\D/g, '')) || 1;
-  const tideNum = (seed % 15) + 1; // ✅ BUG-FIX: 14→15 물때 15물 순환 수정 (3차 누락 패치)
-  const tidePhase = tideNum === 7 ? '7물(사리)' : tideNum === 13 ? '13물(조금)' : tideNum === 14 ? '14물(무시)' : `${tideNum}물`;
-  const baseHighMin = (tideNum * 45 + seed * 7) % 1440;
+  const stationOffset = (seed * 37) % 360; 
+  const dailyShift = (diffDays * 49) % 720; 
+  
+  const baseHighMin = (stationOffset + dailyShift) % 720;
   const baseLowMin = (baseHighMin + 375) % 1440;
+  
   const fmt = (mins) => {
     const m = ((mins % 1440) + 1440) % 1440;
     return `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
