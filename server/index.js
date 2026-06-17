@@ -2326,19 +2326,25 @@ app.get('/api/upload/signature', async (req, res) => {
     let cloudinary;
     try { cloudinary = require('cloudinary').v2; } catch (e) { return res.status(500).json({ error: 'Cloudinary 모듈 없음' }); }
     
+    const url = process.env.CLOUDINARY_URL || '';
+    const match = url.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/);
+    const api_secret = match ? match[2] : cloudinary.config().api_secret;
+    const api_key = match ? match[1] : cloudinary.config().api_key;
+    const cloud_name = match ? match[3] : cloudinary.config().cloud_name;
+
     const timestamp = Math.round((new Date).getTime() / 1000);
     const folder = req.query.folder || 'fishinggo_video';
     
     const signature = cloudinary.utils.api_sign_request(
       { timestamp, folder },
-      cloudinary.config().api_secret
+      api_secret
     );
     
     res.json({
       signature,
       timestamp,
-      api_key: cloudinary.config().api_key,
-      cloud_name: cloudinary.config().cloud_name,
+      api_key,
+      cloud_name,
       folder
     });
   } catch (err) {
