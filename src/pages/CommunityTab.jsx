@@ -1260,20 +1260,39 @@ export default function CommunityTab() {
                                 background: '#000',
                               }}
                             >
-                              <img
-                                src={imgSrc}
-                                alt={`사진 ${imgIdx + 1}`}
-                                loading="lazy"
-                                style={{
-                                  position: 'absolute',
-                                  inset: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'cover',
-                                  display: 'block',
-                                  pointerEvents: 'none',
-                                }}
-                              />
+                              {isVideoUrl(imgSrc) ? (
+                                <video
+                                  src={imgSrc}
+                                  style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                    pointerEvents: 'none',
+                                  }}
+                                  autoPlay
+                                  muted
+                                  loop
+                                  playsInline
+                                />
+                              ) : (
+                                <img
+                                  src={imgSrc}
+                                  alt={`사진 ${imgIdx + 1}`}
+                                  loading="lazy"
+                                  style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                    pointerEvents: 'none',
+                                  }}
+                                />
+                              )}
                             </div>
                           ))}
                         </div>
