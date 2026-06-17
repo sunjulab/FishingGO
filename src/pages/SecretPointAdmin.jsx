@@ -72,6 +72,7 @@ export default function SecretPointAdmin() {
   const [serverOnline,  setServerOnline]  = useState(true);
   const [saveError,     setSaveError]     = useState(null); // ✅ FIX-ERR: 저장 오류 메세지 상태
   const savedTimerRef   = useRef(null); // ✅ 5TH-A4: 저장 완료 타이머 ref — 언마운트 후 setState 방지
+  const [customSecretPoints, setCustomSecretPoints] = useState([]);
 
   /* ── 서버에서 오버라이드 불러오기 ── */
   const fetchOverrides = useCallback(async () => {
@@ -95,7 +96,18 @@ export default function SecretPointAdmin() {
   }, []);
 
   // ✅ authChecked 전에는 데이터 fetch 불필요
-  useEffect(() => { if (authChecked && isAdmin) fetchOverrides(); }, [authChecked, isAdmin, fetchOverrides]);
+  useEffect(() => { 
+    if (authChecked && isAdmin) {
+      fetchOverrides(); 
+      apiClient.get('/api/custom-points').then(res => {
+        if (Array.isArray(res.data)) {
+          setCustomSecretPoints(res.data.filter(p => p.type === '비밀포인트'));
+        }
+      }).catch(() => {});
+    }
+  }, [authChecked, isAdmin, fetchOverrides]);
+
+  const allSecretPoints = [...SECRET_FISHING_POINTS, ...customSecretPoints];
 
   /* ── 지도 초기화: callback ref ── */
   // ENH6-C5: window.kakao는 전역 객체 — React 의존성 추적 불필요, eslint 경고 억제
@@ -390,7 +402,7 @@ export default function SecretPointAdmin() {
             📍 포인트 선택 {selectedPoint && <span style={{ color: '#FFD700', fontSize: `calc(12px * var(--fs, 1))` }}>— {selectedPoint.name.replace('⭐ ', '')}</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '200px', overflowY: 'auto' }}>
-            {SECRET_FISHING_POINTS.map(p => {
+            {allSecretPoints.map(p => {
               const ov = overrides[String(p.id)];
               const isSelected = selectedPoint?.id === p.id;
               return (
@@ -460,7 +472,7 @@ export default function SecretPointAdmin() {
               <Zap size={12} color="#FFD700" /> 수정된 포인트 ({overrideCount}개) {serverOnline && <span style={{ color: '#00C48C', fontSize: `calc(10px * var(--fs, 1))` }}>● 서버 반영됨</span>}
             </div>
             {Object.entries(overrides).map(([id, coords]) => {
-              const p = SECRET_FISHING_POINTS.find(x => x.id === parseInt(id));
+              const p = allSecretPoints.find(x => String(x.id) === String(id));
               if (!p) return null;
               return (
                 <div key={id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,215,0,0.12)', borderRadius: '10px', padding: '9px 13px', marginBottom: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

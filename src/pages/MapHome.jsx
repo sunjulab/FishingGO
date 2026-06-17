@@ -24,6 +24,7 @@ import DashboardView from './DashboardView';
 import NotifPanel from '../components/NotifPanel';
 import { useNotifStore } from '../store/useNotifStore';
 import SpotLocationEditor from '../components/SpotLocationEditor';
+import AddPointModal from '../components/AddPointModal';
 
 
 // ✅ 5TH-C4: EMOJI_MAP — WeatherDashboard와 동일 객체; 향후 constants/ui.js 추출 검토 권장
@@ -135,6 +136,8 @@ export default function MapHome() {
   const [weatherCache, setWeatherCache]   = useState({}); // ✅ FIX-HEATMAP: 히트맵 실시간 날씨 캐시 (stationId → precisionData)
   // ✅ SHARE-COND: 바텀시트의 AI 낚시 컨디션 결과 공유 (홈화면 멘트 완전 동기화)
   const [sharedCond, setSharedCond]       = useState(null);  // { cond, pointId }
+  const [isAddMode, setIsAddMode]         = useState(false);
+  const [addModalPos, setAddModalPos]     = useState(null);
 
   /* ── 마운트 시 기본 포인트 AI 컨디션 전체 패치 (세로고침 대응) ── */
   useEffect(() => {
@@ -447,6 +450,21 @@ export default function MapHome() {
     }
   }, [viewMode]);
 
+  /* ── 맵 클릭 시 포인트 추가 모드 처리 ── */
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || !window.kakao?.maps) return;
+    const handler = (mouseEvent) => {
+      if (!isAddMode) return;
+      const latlng = mouseEvent.latLng;
+      setAddModalPos({ lat: latlng.getLat(), lng: latlng.getLng() });
+      setIsAddMode(false); // 한번 클릭하면 추가 모드 해제
+    };
+    window.kakao.maps.event.addListener(mapRef.current, 'click', handler);
+    return () => {
+      window.kakao.maps.event.removeListener(mapRef.current, 'click', handler);
+    };
+  }, [mapLoaded, isAddMode]);
+
 
   /* ── FREE 플랜 포인트 입장 일일 제한 체크 ── */
   // 로그인 사용자: 서버 API 기준 (DB 이중 기록, KST 자정 리셋)
@@ -542,30 +560,36 @@ export default function MapHome() {
     }
     
     const basePts   = filter === '전체' ? effectiveAllPoints : effectiveAllPoints.filter(p => p.type === filter);
-    const customPts = filter === '전체' ? customPoints       : customPoints.filter(p => p.type === filter);
+    const customPts = (filter === '전체' ? customPoints : customPoints.filter(p => p.type === filter))
+                      .filter(p => p.type !== '비밀포인트'); // 비밀포인트는 일반 마커에서 제외
     const pts = [...basePts, ...customPts];
     
     // 대규모 데이터 렌더링 최적화
     const newMarkers = pts.map(point => {
       if (!window.kakao?.maps) return null;
+      const isSecret = point.type === '비밀포인트';
       const isCustom = !!point.isCustom;
-      const color = isCustom ? '#FF6B35'
+      // ✅ 비밀포인트가 아닌 커스텀 포인트는 기본 포인트와 동일한 색상 적용
+      const color = isSecret ? '#FF6B35'
         : point.type === '방파제' ? '#00C48C'
         : point.type === '갯바위' ? '#0056D2'
         : point.type === '항구' ? '#9B59B6'
         : point.type === '민물' ? '#43A047' : '#FF9B26';
+        
+      const isStar = isSecret; // 비밀포인트만 별(★) 모양
+      
       const el = document.createElement('div');
       el.style.cssText = `
         background: ${color};
-        width: ${isCustom ? '28px' : '24px'}; height: ${isCustom ? '28px' : '24px'};
+        width: ${isStar ? '28px' : '24px'}; height: ${isStar ? '28px' : '24px'};
         display: flex; align-items: center; justify-content: center;
         color: #fff; font-weight: 950;
-        border: ${isCustom ? '2.5px solid #FFD700' : '2px solid #fff'}; border-radius: 50%;
-        box-shadow: ${isCustom ? '0 4px 16px rgba(255,107,53,0.6)' : '0 4px 12px rgba(0,0,0,0.15)'};
-        cursor: pointer; font-size: calc(${isCustom ? '11px' : '10px'} * var(--fs, 1));
+        border: ${isStar ? '2.5px solid #FFD700' : '2px solid #fff'}; border-radius: 50%;
+        box-shadow: ${isStar ? '0 4px 16px rgba(255,107,53,0.6)' : '0 4px 12px rgba(0,0,0,0.15)'};
+        cursor: pointer; font-size: calc(${isStar ? '11px' : '10px'} * var(--fs, 1));
         transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       `;
-      el.textContent = isCustom ? '★' : (point.type || '?').charAt(0);
+      el.textContent = isStar ? '★' : (point.type || '?').charAt(0);
       
       el.onmouseenter = () => { el.style.transform = 'scale(1.3) translateY(-2px)'; el.style.zIndex = '50'; };
       el.onmouseleave = () => { el.style.transform = 'scale(1)'; el.style.zIndex = '10'; };
@@ -596,7 +620,9 @@ export default function MapHome() {
 
     if (!showSecretPoints) return;
 
-    effectiveSecretPoints.forEach(point => {
+    const allSecretPts = [...effectiveSecretPoints, ...customPoints.filter(p => p.type === '비밀포인트')];
+
+    allSecretPts.forEach(point => {
 
       if (!window.kakao?.maps) return;
 
@@ -964,8 +990,8 @@ export default function MapHome() {
       ? ALL_FISHING_POINTS.filter(p => p.type !== '민물')
       : ALL_FISHING_POINTS.filter(p => p.type === filter);
     const baseCustom  = filter === '전체'
-      ? customPoints.filter(p => p.type !== '민물')
-      : customPoints.filter(p => p.type === filter);
+      ? customPoints.filter(p => p.type !== '민물' && p.type !== '비밀포인트')
+      : customPoints.filter(p => p.type === filter && p.type !== '비밀포인트');
     const base = [...baseStatic, ...baseCustom];
     return base
       .map(p => {
@@ -1121,6 +1147,22 @@ export default function MapHome() {
                     transition: 'all 0.2s',
                   }}>{f}</button>
                 ))}
+                {isAdmin && (
+                  <button 
+                    onClick={() => {
+                      setIsAddMode(!isAddMode);
+                      if (!isAddMode) addToast('지도에서 원하는 위치를 터치하여 포인트를 추가하세요.', 'info');
+                    }} 
+                    style={{
+                      padding: '5px 12px', borderRadius: '20px', border: '1.5px solid #FF9800', cursor: 'pointer',
+                      fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', flexShrink: 0,
+                      background: isAddMode ? '#FF9800' : '#fff',
+                      color: isAddMode ? '#fff' : '#FF9800',
+                      transition: 'all 0.2s',
+                    }}>
+                    {isAddMode ? '🎯 터치하여 추가 중...' : '🎯 포인트 추가 모드'}
+                  </button>
+                )}
                 <button 
                   onClick={() => {
                     if (!canAccessPremium) {
@@ -1417,6 +1459,18 @@ export default function MapHome() {
               }));
               setSelectedPoint(updated);
               setShowLocationEditor(false);
+            }}
+          />
+        )}
+
+        {/* ── 포인트 추가 모달 ── */}
+        {addModalPos && (
+          <AddPointModal
+            lat={addModalPos.lat}
+            lng={addModalPos.lng}
+            onClose={() => setAddModalPos(null)}
+            onSuccess={(newPt) => {
+              setCustomPoints(prev => [...prev, newPt]);
             }}
           />
         )}
