@@ -15,8 +15,8 @@ if (-not (Test-Path "node_modules\vite\bin\vite.js")) {
     Write-Host "  node_modules OK" -ForegroundColor Green
 }
 
-Write-Host "[2/5] Vite build..." -ForegroundColor Yellow
-npm run build
+Write-Host "[2/5] Vite (esbuild) build..." -ForegroundColor Yellow
+npm run build:esbuild
 if ($LASTEXITCODE -ne 0) { Write-Host "Build failed!" -ForegroundColor Red; exit 1 }
 Write-Host "  Build OK" -ForegroundColor Green
 

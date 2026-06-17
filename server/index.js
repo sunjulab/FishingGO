@@ -2155,8 +2155,9 @@ function getLunarDay() {
   return Math.floor(diffDays % 29.530588) + 1;
 }
 
-function getTidePhase(lunarDay) {
-  const val = (lunarDay + 6) % 15;
+function getTidePhase(lunarDay, region = '남해') {
+  const isEastCoast = ['강원', '경북', '동해'].includes(region);
+  const val = (lunarDay + (isEastCoast ? 7 : 6)) % 15;
   const tideNum = val === 0 ? 15 : val;
   const phaseMap = { 7: '7물(사리)', 14: '조금', 15: '무시' };
   return phaseMap[tideNum] || `${tideNum}물`;
@@ -2181,7 +2182,8 @@ async function getRealTide(sid) {
     const highTime = (highs[0]?.hl_time || highs[0]?.tideTime || highs[0]?.hl_Apear || '').slice(11,16) || null;
     const lowTime  = (lows[0]?.hl_time  || lows[0]?.tideTime  || lows[0]?.hl_Apear  || '').slice(11,16) || null;
     const lunarDay = getLunarDay();
-    const phase = getTidePhase(lunarDay);
+    const station = observationData[sid] || { region: '남해' };
+    const phase = getTidePhase(lunarDay, station.region);
     return { phase, high: highTime, low: lowTime };
   } catch (e) {
     // 500 오류는 obsCode 미지원 관측소로 정상
@@ -2220,7 +2222,7 @@ async function updateAllStationsCache() {
     const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
 
     const lunarDay = getLunarDay();
-    const mockPhase = getTidePhase(lunarDay);
+    const mockPhase = getTidePhase(lunarDay, base.region);
     const known = new Date('2024-02-10T00:00:00+09:00');
     const diffDays = Math.floor((Date.now() - known.getTime()) / (1000 * 60 * 60 * 24));
     const stationOffset = (seed * 37) % 360; 
@@ -6643,7 +6645,7 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   }
 
   const lunarDay = getLunarDay();
-  const tidePhase = getTidePhase(lunarDay);
+  const tidePhase = getTidePhase(lunarDay, station.region);
 
   const known = new Date('2024-02-10T00:00:00+09:00');
   const diffDays = Math.floor((Date.now() - known.getTime()) / (1000 * 60 * 60 * 24));

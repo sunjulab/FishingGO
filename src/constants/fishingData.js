@@ -157,7 +157,8 @@ export const getPointSpecificData = (point) => {
   const known = new Date('2024-02-10T00:00:00+09:00');
   const diffDays = Math.floor((Date.now() - known.getTime()) / (1000 * 60 * 60 * 24));
   const lunarDay = Math.floor(diffDays % 29.530588) + 1;
-  const val = (lunarDay + 6) % 15;
+  const isEastCoast = ['강원', '경북', '동해'].includes(reg);
+  const val = (lunarDay + (isEastCoast ? 7 : 6)) % 15;
   const tideNum = val === 0 ? 15 : val;
   const phaseMap = { 7: '7물(사리)', 14: '조금', 15: '무시' };
   const tidePhase = phaseMap[tideNum] || `${tideNum}물`;
