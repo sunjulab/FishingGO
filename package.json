@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:esbuild",
     "build:esbuild": "node build-esbuild.mjs",
     "preview": "vite preview",
     "cap:sync": "npx cap sync android",
