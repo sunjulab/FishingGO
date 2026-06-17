@@ -154,14 +154,18 @@ export const getPointSpecificData = (point) => {
   const microWind = Math.max(0.5, p.wind + (pointSeed % 7  - 3) / 6).toFixed(1);
   const microWave = Math.max(0.1, p.wave + (pointSeed % 5  - 2) / 20).toFixed(2);
 
-  // 물때: 포인트 시드 기반 (1~15물 순환)
-  // ✅ BUG-FIX: (pointSeed % 14) + 1 → (pointSeed % 15) + 1 — 기존은 15물이 절대 출력 안됨
-  const tideNum = (pointSeed % 15) + 1;
-  const tidePhase = tideNum === 7 ? '7물(사리)' : tideNum === 13 ? '13물(조금)' : tideNum === 14 ? '14물(무시)' : `${tideNum}물`;
+  const known = new Date('2024-02-10T00:00:00+09:00');
+  const diffDays = Math.floor((Date.now() - known.getTime()) / (1000 * 60 * 60 * 24));
+  const lunarDay = Math.floor(diffDays % 29.530588) + 1;
+  const val = (lunarDay + 6) % 15;
+  const tideNum = val === 0 ? 15 : val;
+  const phaseMap = { 7: '7물(사리)', 14: '조금', 15: '무시' };
+  const tidePhase = phaseMap[tideNum] || `${tideNum}물`;
 
-  // 만조/간조 시간 동적 계산 (물때 기준 매일 약 45분씩 지연되는 점 반영)
-  const baseHighMin = (tideNum * 45 + pointSeed * 7) % 1440;
-  const baseLowMin  = (baseHighMin + 375) % 1440; // 만조 약 6시간 15분 전후
+  const stationOffset = (pointSeed * 37) % 360;
+  const dailyShift = (diffDays * 49) % 720;
+  const baseHighMin = (stationOffset + dailyShift) % 720;
+  const baseLowMin  = (baseHighMin + 375) % 1440;
 
   const formatTime = (mins) => {
     const m = ((mins % 1440) + 1440) % 1440;

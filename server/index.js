@@ -2219,12 +2219,19 @@ async function updateAllStationsCache() {
     const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.6 - 0.3));
     const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
 
-    const seed15 = (seed % 15) + 1;
+    const lunarDay = getLunarDay();
+    const mockPhase = getTidePhase(lunarDay);
+    const known = new Date('2024-02-10T00:00:00+09:00');
+    const diffDays = Math.floor((Date.now() - known.getTime()) / (1000 * 60 * 60 * 24));
+    const stationOffset = (seed * 37) % 360; 
+    const dailyShift = (diffDays * 49) % 720; 
+    const baseHighMin = (stationOffset + dailyShift) % 720;
+
     const fmtMin = (mins) => { const m = ((mins % 1440) + 1440) % 1440; return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`; };
-    const phaseMap = { 7:'7물(사리)', 13:'13물(조금)', 14:'14물(무시)' };
-    const tidePhase = realTide?.phase || phaseMap[seed15] || `${seed15}물`;
-    const tideHigh  = realTide?.high  || fmtMin((seed15 * 45 + seed * 7) % 1440);
-    const tideLow   = realTide?.low   || fmtMin(((seed15 * 45 + seed * 7) + 375) % 1440);
+    
+    const tidePhase = realTide?.phase || mockPhase;
+    const tideHigh  = realTide?.high  || fmtMin(baseHighMin);
+    const tideLow   = realTide?.low   || fmtMin(baseHighMin + 375);
     const tideLevel = 10 + (seed * 7 + new Date().getHours() * 13) % 250;
 
     weatherCache[sid] = {
