@@ -6923,11 +6923,11 @@ app.get('/api/weather/cctv/stream/:beachCode', async (req, res) => {
 });
 
 app.get('/api/weather/cctv', async (req, res) => {
-  const { stationId } = req.query;
+  const { pointId, stationId } = req.query;
   try {
     const { getCctvInfo, CCTV_MAP } = require('./cctvMapping');
-    // 마스터가 앱에서 직접 변경한 오버라이드가 있으면 우선 적용
-    const override = cctvOverrides[stationId];
+    // ✅ FIX-CCTV-SCOPE: 포인트별(pointId) 고유 오버라이드가 있으면 최우선 적용, 없으면 지역별(stationId) 적용
+    const override = (pointId && cctvOverrides[pointId]) ? cctvOverrides[pointId] : cctvOverrides[stationId];
     let info;
     if (override) {
       const base = CCTV_MAP[stationId] || {};
