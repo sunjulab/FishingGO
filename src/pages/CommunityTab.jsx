@@ -1083,7 +1083,7 @@ export default function CommunityTab() {
                     >
                       {imgSrc ? (
                         isVideoUrl(imgSrc) ? (
-                          <video src={imgSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted loop playsInline />
+                          <video src={imgSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted loop playsInline controls />
                         ) : (
                           <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         )

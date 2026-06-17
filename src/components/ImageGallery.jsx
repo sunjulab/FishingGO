@@ -88,6 +88,7 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
             muted
             loop
             playsInline
+            controls
             onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
           />
         ) : (
