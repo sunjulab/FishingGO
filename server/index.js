@@ -2318,6 +2318,35 @@ let multer;
 try { multer = require('multer'); } catch (e) { }
 const os = require('os');
 const fs = require('fs');
+
+// ─── Cloudinary 다이렉트 업로드를 위한 서명 발급 API ───
+app.get('/api/upload/signature', async (req, res) => {
+  try {
+    if (!process.env.CLOUDINARY_URL) return res.status(500).json({ error: 'Cloudinary 설정 필요' });
+    let cloudinary;
+    try { cloudinary = require('cloudinary').v2; } catch (e) { return res.status(500).json({ error: 'Cloudinary 모듈 없음' }); }
+    
+    const timestamp = Math.round((new Date).getTime() / 1000);
+    const folder = req.query.folder || 'fishinggo_video';
+    
+    const signature = cloudinary.utils.api_sign_request(
+      { timestamp, folder },
+      cloudinary.config().api_secret
+    );
+    
+    res.json({
+      signature,
+      timestamp,
+      api_key: cloudinary.config().api_key,
+      cloud_name: cloudinary.config().cloud_name,
+      folder
+    });
+  } catch (err) {
+    console.error('[Signature Error]', err);
+    res.status(500).json({ error: '서명 발급 실패' });
+  }
+});
+
 const uploadDisk = multer ? multer({ dest: os.tmpdir(), limits: { fileSize: 30 * 1024 * 1024 } }) : null;
 
 if (uploadDisk) {

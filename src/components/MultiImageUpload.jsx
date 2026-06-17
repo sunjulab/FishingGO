@@ -22,6 +22,7 @@ export default function MultiImageUpload({
   const inputRef = useRef(null);
   const [editingIdx, setEditingIdx] = useState(null); // 위치 편집 중인 이미지 인덱스
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [uploadProgresses, setUploadProgresses] = useState({}); // { filename: progress }
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -32,6 +33,7 @@ export default function MultiImageUpload({
     const toProcess = files.slice(0, remaining);
 
     setIsUploadingMedia(true);
+    setUploadProgresses({});
     const compressed = await Promise.all(
       toProcess.map(async (file) => {
         if (file.type.startsWith('video/')) {
@@ -40,18 +42,34 @@ export default function MultiImageUpload({
             return null;
           }
           try {
+            setUploadProgresses(prev => ({ ...prev, [file.name]: 0 }));
+            const sigRes = await apiClient.get(`/api/upload/signature?folder=fishinggo_video`);
+            const { signature, timestamp, api_key, cloud_name, folder } = sigRes.data;
+
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('folder', 'fishinggo_video');
-            const res = await apiClient.post('/api/upload/media', formData, {
+            formData.append('api_key', api_key);
+            formData.append('timestamp', timestamp);
+            formData.append('signature', signature);
+            formData.append('folder', folder);
+
+            // Import axios directly for direct cloudinary call to avoid our apiClient interceptors
+            const axios = (await import('axios')).default;
+            const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloud_name}/video/upload`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' },
-              timeout: 0 // 동영상 업로드는 용량이 커서 기본 타임아웃 해제
+              timeout: 0,
+              onUploadProgress: (progressEvent) => {
+                if (progressEvent.total) {
+                  const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                  setUploadProgresses(prev => ({ ...prev, [file.name]: percent }));
+                }
+              }
             });
-            return res.data?.url || null;
+            return res.data?.secure_url || null;
           } catch (err) {
             console.error(err);
-            const msg = err.response?.data?.error || err.message;
-            alert(`동영상 업로드 실패: ${msg}`);
+            const msg = err.response?.data?.error?.message || err.message;
+            alert(`동영상 다이렉트 업로드 실패: ${msg}`);
             return null;
           }
         }
@@ -69,8 +87,14 @@ export default function MultiImageUpload({
       })
     );
     setIsUploadingMedia(false);
+    setUploadProgresses({});
     onChange([...images, ...compressed.filter(Boolean)].slice(0, maxCount));
   };
+
+  const totalVideoCount = Object.keys(uploadProgresses).length;
+  const avgProgress = totalVideoCount > 0 
+    ? Math.round(Object.values(uploadProgresses).reduce((a, b) => a + b, 0) / totalVideoCount)
+    : 0;
 
   const removeImage = (idx) => {
     onChange(images.filter((_, i) => i !== idx));
@@ -233,13 +257,15 @@ export default function MultiImageUpload({
             border: images.length > 0 ? '1.5px solid rgba(0,86,210,0.3)' : 'none',
           }}>
             {isLoading || isUploadingMedia
-              ? <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF9B26', fontWeight: '800' }}>처리중</span>
+              ? <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FF9B26', fontWeight: '800' }}>
+                  {totalVideoCount > 0 ? `${avgProgress}%` : '처리중'}
+                </span>
               : <Image size={20} />
             }
           </div>
           <div>
             <div style={{ fontWeight: '700', fontSize: `calc(13px * var(--fs, 1))` }}>
-              {isUploadingMedia ? '동영상 처리 중...' : isLoading ? '사진 처리 중...' : `${label} (${images.length}/${maxCount})`}
+              {isUploadingMedia ? `동영상 업로드 중... ${totalVideoCount > 0 ? avgProgress + '%' : ''}` : isLoading ? '사진 처리 중...' : `${label} (${images.length}/${maxCount})`}
             </div>
             {images.length === 0 && !isUploadingMedia && !isLoading && (
               <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#aaa', marginTop: '1px' }}>
