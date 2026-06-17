@@ -2422,10 +2422,12 @@ app.get('/api/debug-multer', (req, res) => {
       const folder = req.body.folder || 'fishinggo_video';
       
       try {
-        const result = await cloudinary.uploader.upload(req.file.path, { 
-          folder, 
-          resource_type: isVideo ? 'video' : 'auto' 
-        });
+        const uploadOptions = { folder, resource_type: isVideo ? 'video' : 'auto' };
+        if (isVideo) {
+          uploadOptions.format = 'mp4';
+          uploadOptions.video_codec = 'auto';
+        }
+        const result = await cloudinary.uploader.upload(req.file.path, uploadOptions);
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         res.json({ url: result.secure_url, type: 'cloudinary', publicId: result.public_id, isVideo });
       } catch (uploadError) {
