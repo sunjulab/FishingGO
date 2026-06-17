@@ -2365,6 +2365,8 @@ app.get('/api/debug-multer', (req, res) => {
     multerType: typeof multer,
     uploadDiskIsNull: uploadDisk === null,
     tmpdir: os.tmpdir(),
+    cloudinaryUrlLength: process.env.CLOUDINARY_URL ? process.env.CLOUDINARY_URL.length : 0,
+    cloudinaryUrl: process.env.CLOUDINARY_URL ? process.env.CLOUDINARY_URL.replace(/:(.*)@/, ':(SECRET)@') : null,
     multerErrObj,
     routes: app._router.stack.filter(r => r.route && r.route.path.includes('/api/upload')).map(r => r.route.path)
   });
