@@ -48,9 +48,7 @@ export default function MultiImageUpload({
             formData.append('file', file);
             formData.append('folder', 'fishinggo_video');
 
-            // Import axios directly for upload progress
-            const axios = (await import('axios')).default;
-            const res = await axios.post(`/api/upload/media`, formData, {
+            const res = await apiClient.post(`/api/upload/media`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' },
               timeout: 0,
               onUploadProgress: (progressEvent) => {
