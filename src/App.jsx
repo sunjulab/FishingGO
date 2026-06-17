@@ -503,6 +503,11 @@ function WebCacheBuster() {
 
         const serverTs = data.timestamp ? String(data.timestamp) : null;
         if (serverTs && serverTs !== String(myTs)) {
+          const currentV = new URLSearchParams(window.location.search).get('v');
+          if (currentV === serverTs) {
+            // CDN 캐시 때문에 새로고침해도 구버전이 로드되는 상태 -> 무한 루프 방지
+            return;
+          }
           // 버전이 다름을 감지
           addToast('🔄 새로운 버전이 배포되었습니다. 화면을 새로고침합니다.', 'info');
           
