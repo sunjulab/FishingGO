@@ -32,6 +32,7 @@
     "@capawesome/capacitor-app-update": "^8.0.3",
     "@react-oauth/google": "^0.13.4",
     "axios": "^1.14.0",
+    "cloudinary": "^2.10.0",
     "cordova-plugin-purchase": "^13.16.0",
     "googleapis": "^172.0.0",
     "lucide-react": "^0.344.0",
