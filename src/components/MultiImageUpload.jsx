@@ -44,12 +44,14 @@ export default function MultiImageUpload({
             formData.append('file', file);
             formData.append('folder', 'fishinggo_video');
             const res = await apiClient.post('/api/upload/media', formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
+              headers: { 'Content-Type': 'multipart/form-data' },
+              timeout: 0 // 동영상 업로드는 용량이 커서 기본 타임아웃 해제
             });
             return res.data?.url || null;
           } catch (err) {
             console.error(err);
-            alert('동영상 업로드 실패');
+            const msg = err.response?.data?.error || err.message;
+            alert(`동영상 업로드 실패: ${msg}`);
             return null;
           }
         }

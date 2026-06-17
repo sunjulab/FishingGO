@@ -2316,29 +2316,55 @@ app.post('/api/upload/image', async (req, res) => {
 
 let multer;
 try { multer = require('multer'); } catch (e) { }
-const uploadMem = multer ? multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } }) : null;
+const os = require('os');
+const fs = require('fs');
+const uploadDisk = multer ? multer({ dest: os.tmpdir(), limits: { fileSize: 30 * 1024 * 1024 } }) : null;
 
-if (uploadMem) {
-  app.post('/api/upload/media', uploadMem.single('file'), async (req, res) => {
+if (uploadDisk) {
+  const uploadMediaHandler = (req, res, next) => {
+    uploadDisk.single('file')(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ error: '파일 크기가 너무 큽니다 (최대 30MB)' });
+        }
+        return res.status(400).json({ error: err.message });
+      } else if (err) {
+        return res.status(500).json({ error: '업로드 처리 중 오류 발생' });
+      }
+      next();
+    });
+  };
+
+  app.post('/api/upload/media', uploadMediaHandler, async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
-      if (!process.env.CLOUDINARY_URL) return res.status(500).json({ error: 'Cloudinary 설정 필요' });
+      if (!process.env.CLOUDINARY_URL) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(500).json({ error: 'Cloudinary 설정 필요' });
+      }
       let cloudinary;
-      try { cloudinary = require('cloudinary').v2; } catch (e) { return res.status(500).json({ error: 'Cloudinary 모듈 없음' }); }
+      try { cloudinary = require('cloudinary').v2; } catch (e) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(500).json({ error: 'Cloudinary 모듈 없음' });
+      }
       
       const isVideo = req.file.mimetype.startsWith('video/');
       const folder = req.body.folder || 'fishinggo_video';
       
-      const stream = cloudinary.uploader.upload_stream(
-        { folder, resource_type: isVideo ? 'video' : 'auto' },
-        (error, result) => {
-          if (error) return res.status(500).json({ error: 'Cloudinary 업로드 실패: ' + error.message });
-          res.json({ url: result.secure_url, type: 'cloudinary', publicId: result.public_id, isVideo });
-        }
-      );
-      stream.end(req.file.buffer);
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, { 
+          folder, 
+          resource_type: isVideo ? 'video' : 'auto' 
+        });
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.json({ url: result.secure_url, type: 'cloudinary', publicId: result.public_id, isVideo });
+      } catch (uploadError) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ error: 'Cloudinary 업로드 실패: ' + uploadError.message });
+      }
     } catch (err) {
       console.error(err);
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       res.status(500).json({ error: '서버 에러' });
     }
   });
