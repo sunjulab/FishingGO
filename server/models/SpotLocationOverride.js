@@ -6,6 +6,9 @@ const spotLocationOverrideSchema = new mongoose.Schema({
   lat:       { type: Number, required: true },
   lng:       { type: Number, required: true },
   name:      { type: String, default: null },
+  type:      { type: String, default: null },
+  targets:   { type: [String], default: [] },
+  isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('SpotLocationOverride', spotLocationOverrideSchema);

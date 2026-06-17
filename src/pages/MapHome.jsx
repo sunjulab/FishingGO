@@ -5,7 +5,7 @@ import {
   Map, Anchor, Droplets, Wind, Waves, Ship, Crown, Navigation,
   Search, Clock, Compass, BarChart2, Zap, ChevronRight, Bell,
   MapPin, Thermometer, Info, Fish, X, Tv, ArrowLeft, RefreshCw,
-  AlertCircle, Star, Lock
+  AlertCircle, Star, Lock, Settings
 } from 'lucide-react';
 import { findNearestStation, calculateFishingIndex } from '../utils/weather';
 import { evaluateFishingCondition } from '../utils/evaluator';
@@ -138,6 +138,7 @@ export default function MapHome() {
   const [sharedCond, setSharedCond]       = useState(null);  // { cond, pointId }
   const [isAddMode, setIsAddMode]         = useState(false);
   const [addModalPos, setAddModalPos]     = useState(null);
+  const [showPointManager, setShowPointManager] = useState(false);
 
   /* ── 마운트 시 기본 포인트 AI 컨디션 전체 패치 (세로고침 대응) ── */
   useEffect(() => {
@@ -340,10 +341,22 @@ export default function MapHome() {
         if (cancelled) return;
         const ov = res.data || {};
         setSpotLocOverrides(ov);
-        const applied = ALL_FISHING_POINTS.map(p => {
-          const key = String(p.id);
-          return ov[key] ? { ...p, lat: ov[key].lat, lng: ov[key].lng } : p;
-        });
+        const applied = ALL_FISHING_POINTS
+          .filter(p => !ov[String(p.id)] || !ov[String(p.id)].isDeleted) // 삭제(숨김) 처리된 포인트 제거
+          .map(p => {
+            const key = String(p.id);
+            if (ov[key]) {
+              return { 
+                ...p, 
+                lat: ov[key].lat, 
+                lng: ov[key].lng,
+                name: ov[key].name || p.name,
+                type: ov[key].type || p.type,
+                targets: (ov[key].targets && ov[key].targets.length > 0) ? ov[key].targets : p.targets
+              };
+            }
+            return p;
+          });
         setEffectiveAllPoints(applied);
       })
       .catch(() => { /* 오버라이드 없으면 원본 사용 */ });
@@ -1417,25 +1430,43 @@ export default function MapHome() {
           />
         )}
 
-        {/* ── MASTER 전용: 위치 수정 플로팅 버튼 ── */}
+        {/* ── MASTER 전용: 관리자 플로팅 버튼 모음 ── */}
         {isAdmin && selectedPoint && sheetVisible && (
-          <button
-            onClick={() => setShowLocationEditor(true)}
-            style={{
-              position: 'absolute', bottom: '52%', right: '12px',
-              zIndex: 1200,
-              background: 'linear-gradient(135deg, #1A1A2E, #0056D2)',
-              border: 'none', borderRadius: '50px',
-              color: '#fff', fontWeight: '900', fontSize: '12px',
-              padding: '8px 14px',
-              display: 'flex', alignItems: 'center', gap: '6px',
-              boxShadow: '0 4px 20px rgba(0,86,210,0.5)',
-              cursor: 'pointer',
-              animation: 'fadeInUp 0.3s ease',
-            }}
-          >
-            <MapPin size={14} /> 위치 수정
-          </button>
+          <div style={{
+            position: 'absolute', bottom: '52%', right: '12px',
+            zIndex: 1200, display: 'flex', flexDirection: 'column', gap: '8px'
+          }}>
+            <button
+              onClick={() => setShowPointManager(true)}
+              style={{
+                background: 'linear-gradient(135deg, #1A1A2E, #00C48C)',
+                border: 'none', borderRadius: '50px',
+                color: '#fff', fontWeight: '900', fontSize: '12px',
+                padding: '8px 14px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 4px 20px rgba(0,196,140,0.5)',
+                cursor: 'pointer',
+                animation: 'fadeInUp 0.3s ease',
+              }}
+            >
+              <Settings size={14} /> 정보 수정
+            </button>
+            <button
+              onClick={() => setShowLocationEditor(true)}
+              style={{
+                background: 'linear-gradient(135deg, #1A1A2E, #0056D2)',
+                border: 'none', borderRadius: '50px',
+                color: '#fff', fontWeight: '900', fontSize: '12px',
+                padding: '8px 14px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 4px 20px rgba(0,86,210,0.5)',
+                cursor: 'pointer',
+                animation: 'fadeInUp 0.3s ease',
+              }}
+            >
+              <MapPin size={14} /> 위치 수정
+            </button>
+          </div>
         )}
 
         {/* ── MASTER 위치 편집 모달 ── */}
@@ -1459,6 +1490,48 @@ export default function MapHome() {
               }));
               setSelectedPoint(updated);
               setShowLocationEditor(false);
+            }}
+          />
+        )}
+
+        {/* ── MASTER 포인트 정보 관리 모달 ── */}
+        {showPointManager && selectedPoint && (
+          <AddPointModal
+            lat={selectedPoint.lat}
+            lng={selectedPoint.lng}
+            initialData={selectedPoint}
+            isCustom={customPoints.some(p => String(p.id) === String(selectedPoint.id))}
+            onClose={() => setShowPointManager(false)}
+            onSuccess={(updatedPt, action) => {
+              const isCustom = customPoints.some(p => String(p.id) === String(selectedPoint.id));
+              if (isCustom) {
+                if (action === 'delete') {
+                  setCustomPoints(prev => prev.filter(p => String(p.id) !== String(selectedPoint.id)));
+                } else {
+                  setCustomPoints(prev => prev.map(p => String(p.id) === String(updatedPt.id) ? updatedPt : p));
+                }
+              } else {
+                // 기존 포인트 오버라이드
+                const ovKey = String(updatedPt.id);
+                const newOv = { ...spotLocOverrides };
+                if (action === 'delete') {
+                  newOv[ovKey] = { ...newOv[ovKey], isDeleted: true };
+                } else {
+                  newOv[ovKey] = { ...newOv[ovKey], ...updatedPt };
+                }
+                setSpotLocOverrides(newOv);
+                setEffectiveAllPoints(prev => {
+                  if (action === 'delete') return prev.filter(p => String(p.id) !== ovKey);
+                  return prev.map(p => {
+                    if (String(p.id) === ovKey) {
+                      return { ...p, ...newOv[ovKey] };
+                    }
+                    return p;
+                  });
+                });
+              }
+              setSelectedPoint(null);
+              setShowPointManager(false);
             }}
           />
         )}

@@ -1221,7 +1221,7 @@ app.get('/api/spot-location-overrides', (req, res) => {
   res.json(spotLocationOverrides);
 });
 
-// POST: 좌표 저장 (MASTER 전용)
+// POST: 좌표 및 정보(이름, 타입, 삭제여부) 오버라이드 저장 (MASTER 전용)
 app.post('/api/spot-location-overrides', (req, res) => {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
@@ -1229,29 +1229,60 @@ app.post('/api/spot-location-overrides', (req, res) => {
     const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
     if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
   } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-  const { id, lat, lng, name } = req.body;
-  if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
-  // ✅ FIX-SPOT-LATNG-RANGE: 좌표 범위 검증
-  const latNumS = parseFloat(lat); const lngNumS = parseFloat(lng);
-  if (isNaN(latNumS) || latNumS < -90 || latNumS > 90) return res.status(400).json({ error: '유효하지 않은 위도값' });
-  if (isNaN(lngNumS) || lngNumS < -180 || lngNumS > 180) return res.status(400).json({ error: '유효하지 않은 경도값' });
+  
+  // lat, lng가 필수가 아니게 될 수도 있음. (이름/타입/삭제여부만 수정하는 경우)
+  // 하지만 보통 좌표와 함께 전달됨. 만약 lat/lng이 없으면 기존 값을 유지하도록 로직 보강
+  const { id, lat, lng, name, type, targets, isDeleted } = req.body;
+  if (!id) return res.status(400).json({ error: 'id 필수' });
+
+  // 기존 저장된 오버라이드 객체가 있으면 가져오고 없으면 빈 객체
+  const existing = spotLocationOverrides[String(id)] || {};
+  
+  // 전달된 좌표가 있으면 사용, 없으면 기존 오버라이드 또는 null
+  const newLat = lat !== undefined ? parseFloat(lat) : existing.lat;
+  const newLng = lng !== undefined ? parseFloat(lng) : existing.lng;
+
+  // 좌표가 존재하면 유효성 검증
+  if (newLat !== undefined && newLat !== null) {
+    if (isNaN(newLat) || newLat < -90 || newLat > 90) return res.status(400).json({ error: '유효하지 않은 위도값' });
+  }
+  if (newLng !== undefined && newLng !== null) {
+    if (isNaN(newLng) || newLng < -180 || newLng > 180) return res.status(400).json({ error: '유효하지 않은 경도값' });
+  }
+
+  // 병합
   spotLocationOverrides[String(id)] = {
-    lat: parseFloat(lat),
-    lng: parseFloat(lng),
-    name: name || undefined,
+    ...existing,
+    lat: newLat,
+    lng: newLng,
+    name: name !== undefined ? name : existing.name,
+    type: type !== undefined ? type : existing.type,
+    targets: targets !== undefined ? targets : existing.targets,
+    isDeleted: isDeleted !== undefined ? isDeleted : existing.isDeleted,
     updatedAt: new Date().toISOString(),
   };
+
   saveSpotLocationOverrides();
+  
   // ✅ DB 영구 저장 (재배포 후에도 유지)
   if (dbReady && SpotLocationOverrideModel) {
     SpotLocationOverrideModel.findOneAndUpdate(
       { id: String(id) },
-      { id: String(id), lat: parseFloat(lat), lng: parseFloat(lng), name: name || null },
+      { 
+        id: String(id), 
+        lat: newLat, 
+        lng: newLng, 
+        name: spotLocationOverrides[String(id)].name || null,
+        type: spotLocationOverrides[String(id)].type || null,
+        targets: spotLocationOverrides[String(id)].targets || [],
+        isDeleted: spotLocationOverrides[String(id)].isDeleted || false
+      },
       { upsert: true, new: true }
     ).catch(e => logger.error('[SpotOverride] DB 저장 실패:', e.message));
   }
-  (logger?.info || console.log)(`[SpotLocation] id=${id} 좌표 수정: (${lat}, ${lng})`);
-  res.json({ ok: true, id, lat: parseFloat(lat), lng: parseFloat(lng) });
+  
+  (logger?.info || console.log)(`[SpotLocation] id=${id} 정보 오버라이드 업데이트: ${JSON.stringify(spotLocationOverrides[String(id)])}`);
+  res.json({ ok: true, id, override: spotLocationOverrides[String(id)] });
 });
 
 // DELETE: 특정 포인트 원래대로 초기화 (MASTER 전용)
@@ -1346,6 +1377,39 @@ app.post('/api/custom-points', (req, res) => {
     point: customPoints[id],
     autoStation: autoStationInfo,  // 자동 매핑 정보 응답에 포함
   });
+});
+
+// PUT: 커스텀 포인트 수정 (MASTER 전용)
+app.put('/api/custom-points/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  
+  const { id } = req.params;
+  if (!customPoints[id]) return res.status(404).json({ error: '포인트 없음' });
+  
+  const { name, type, targets, lat, lng } = req.body;
+  if (!name || !type) return res.status(400).json({ error: 'name, type 필수' });
+  
+  const pt = customPoints[id];
+  pt.name = name;
+  pt.type = type;
+  if (targets) pt.targets = targets;
+  if (lat !== undefined && lng !== undefined) {
+    pt.lat = parseFloat(lat);
+    pt.lng = parseFloat(lng);
+    // 좌표 변경 시 관측소도 재계산
+    const result = findNearestStation(pt.lat, pt.lng);
+    if (result) pt.obsCode = result.stationId;
+  }
+  
+  saveCustomPoints();
+  (logger?.info || console.log)(`[CustomPoint] 수정: ${name} (${id})`);
+  
+  res.json({ ok: true, point: pt });
 });
 
 // DELETE: 커스텀 포인트 삭제 (MASTER 전용)
