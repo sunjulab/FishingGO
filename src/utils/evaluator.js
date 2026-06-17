@@ -318,8 +318,9 @@ export const evaluateFishingCondition = (data, point = {}) => {
   const _month   = new Date().getMonth() + 1;
   const _region  = point?.region || data?.region || '남해';
   const _seasonalFish = getSeasonalFish(_region, _month);
-  // 포인트 고유 어종이 있으면 무조건 1순위로 사용, 없으면 계절 어종 추천
-  const _pointFish = (point?.fish || data?.fish || '').split(',')[0].trim();
+  // 포인트 고유 어종(fish 문자열 또는 targets 배열) 1순위, 없으면 계절 어종
+  const _pointFishStr = point?.fish || (point?.targets && point.targets.length > 0 ? point.targets.join(',') : '') || data?.fish || '';
+  const _pointFish = _pointFishStr.split(',')[0].trim();
   const _fish  = _pointFish || _seasonalFish; // 포인트 어종 우선
   const _sst   = parseFloat(data?.sst ?? data?.waterTemp ?? 13);
   const _wind  = parseFloat(data?.wind?.speed ?? 0);

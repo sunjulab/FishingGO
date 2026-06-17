@@ -129,7 +129,7 @@ export default function DashboardView({
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {(p.fish || '').split(',')[0]}</div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginTop: '2px' }}>{p.region} · {p.type} · {(p.fish || (p.targets && p.targets.length > 0 ? p.targets.join(',') : '')).split(',')[0]}</div>
                   </div>
                   {(() => {
                     const _st = findNearestStation(p.lat, p.lng);
@@ -175,7 +175,7 @@ export default function DashboardView({
                 <span style={{ fontSize: `calc(36px * var(--fs, 1))` }}>🐟</span>
                 <div>
                   <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: '#fff', lineHeight: 1.3 }}>{selectedPoint.region} 민물낚시 포인트</div>
-                  <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.75)', fontWeight: '700', marginTop: '4px' }}>{selectedPoint.fish}</div>
+                  <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.75)', fontWeight: '700', marginTop: '4px' }}>{selectedPoint.fish || (selectedPoint.targets ? selectedPoint.targets.join(', ') : '')}</div>
                 </div>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '12px', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.15)', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.8)', fontWeight: '700', lineHeight: 1.6 }}>

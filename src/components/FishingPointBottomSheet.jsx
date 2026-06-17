@@ -396,7 +396,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
         .finally(() => { if (!cancelled) setCctvLoading(false); }); // ✅ BUG-01 FIX
 
-      const fish = selectedPoint.fish ? selectedPoint.fish.split(',')[0].trim() : '';
+      const _fishStr = selectedPoint.fish || (selectedPoint.targets && selectedPoint.targets.length > 0 ? selectedPoint.targets.join(',') : '');
+      const fish = _fishStr ? _fishStr.split(',')[0].trim() : '';
       const pointType = selectedPoint.region || '바다';
       const shopPromise = apiClient.get(
         `/api/shop/recommend?pointType=${encodeURIComponent(pointType)}&fish=${encodeURIComponent(fish)}`
