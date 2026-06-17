@@ -2397,7 +2397,16 @@ app.get('/api/debug-multer', (req, res) => {
       if (!process.env.CLOUDINARY_URL) {
         // 클라우디너리 설정이 없으면 로컬 uploads 폴더로 이동 후 서빙
         const targetPath = path.join(__dirname, 'uploads', req.file.filename + ext);
-        fs.renameSync(req.file.path, targetPath);
+        try {
+          fs.renameSync(req.file.path, targetPath);
+        } catch (renameErr) {
+          if (renameErr.code === 'EXDEV') {
+            fs.copyFileSync(req.file.path, targetPath);
+            fs.unlinkSync(req.file.path);
+          } else {
+            throw renameErr;
+          }
+        }
         const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}${ext}`;
         return res.json({ url, type: isVideo ? 'video' : 'image' });
       }
