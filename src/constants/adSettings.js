@@ -15,7 +15,7 @@ export const ADMOB_CONFIG = {
   BANNER_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/7590161071'  // ✅ 배너 전용 단위 (신규 발급)
     : 'ca-app-pub-3940256099942544/6300978111', // 구글 공식 테스트 배너 ID
-  // 전면(인터스티셜) 광고 — 선상배홍보 탭 진입 시 FREE 유저
+  // 전면(인터스티셜) 광고 — 선상예약 탭 진입 시 FREE 유저
   INTERSTITIAL_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/1020026097'  // 보상형과 동일 단위 사용 (전면용 별도 단위 없을 때)
     : 'ca-app-pub-3940256099942544/1033173712', // 구글 공식 테스트 전면광고 ID

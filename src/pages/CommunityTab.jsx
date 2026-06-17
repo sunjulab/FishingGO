@@ -870,7 +870,7 @@ export default function CommunityTab() {
             { key: 'open',     label: '🐟 낚시그램',  color: '#0056D2' },
             { key: 'crew',     label: '크루',       color: '#0056D2' },
             { key: 'notice',   label: '공지사항',   color: '#FF3B30' },
-            { key: 'business', label: '선상배홍보', color: '#0056D2' },
+            { key: 'business', label: '선상예약', color: '#0056D2' },
             { key: 'ranking',  label: '🏆 조황랭킹', color: '#6366f1' },
           ].map(tab => (
             <button
