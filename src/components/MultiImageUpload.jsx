@@ -43,19 +43,14 @@ export default function MultiImageUpload({
           }
           try {
             setUploadProgresses(prev => ({ ...prev, [file.name]: 0 }));
-            const sigRes = await apiClient.get(`/api/upload/signature?folder=fishinggo_video`);
-            const { signature, timestamp, api_key, cloud_name, folder } = sigRes.data;
-
+            
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('api_key', api_key);
-            formData.append('timestamp', timestamp);
-            formData.append('signature', signature);
-            formData.append('folder', folder);
+            formData.append('folder', 'fishinggo_video');
 
-            // Import axios directly for direct cloudinary call to avoid our apiClient interceptors
+            // Import axios directly for upload progress
             const axios = (await import('axios')).default;
-            const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloud_name}/video/upload`, formData, {
+            const res = await axios.post(`/api/upload/media`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' },
               timeout: 0,
               onUploadProgress: (progressEvent) => {
@@ -65,11 +60,12 @@ export default function MultiImageUpload({
                 }
               }
             });
-            return res.data?.secure_url || null;
+            // 이전의 /api/upload/media 백엔드 라우트가 응답하던 형식은 { url: '...', type: '...' }
+            return res.data?.url || null;
           } catch (err) {
             console.error(err);
-            const msg = err.response?.data?.error?.message || err.message;
-            alert(`동영상 다이렉트 업로드 실패: ${msg}`);
+            const msg = err.response?.data?.error || err.message;
+            alert(`동영상 업로드 실패: ${msg}`);
             return null;
           }
         }

@@ -2282,6 +2282,13 @@ scheduleWeatherCache();
 // ✅ 9TH-A2: /api/health 중복 라우트 제거 — L247에서 이미 정의됨 (Express 첫 번째 핸들러 우선)
 // uptime/time/db 응답은 L247 핸들러로 통합됨
 
+const path = require('path');
+const fs = require('fs');
+if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
+  fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true });
+}
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // ─── Cloudinary 조건부 이미지 업로드 ─────────────────────────────────────────
 // CLOUDINARY_URL 환경변수가 설정된 경우에만 CDN 업로드 활성화
 // 미설정 시: base64 그대로 반환 (기존 방식 유지, 하위 호환)
@@ -2372,17 +2379,24 @@ if (uploadDisk) {
   app.post('/api/upload/media', uploadMediaHandler, async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
+      
+      const isVideo = req.file.mimetype.startsWith('video/');
+      const ext = isVideo ? '.mp4' : '.jpg';
+      
       if (!process.env.CLOUDINARY_URL) {
-        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        return res.status(500).json({ error: 'Cloudinary 설정 필요' });
+        // 클라우디너리 설정이 없으면 로컬 uploads 폴더로 이동 후 서빙
+        const targetPath = path.join(__dirname, 'uploads', req.file.filename + ext);
+        fs.renameSync(req.file.path, targetPath);
+        const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}${ext}`;
+        return res.json({ url, type: isVideo ? 'video' : 'image' });
       }
+      
       let cloudinary;
       try { cloudinary = require('cloudinary').v2; } catch (e) {
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         return res.status(500).json({ error: 'Cloudinary 모듈 없음' });
       }
       
-      const isVideo = req.file.mimetype.startsWith('video/');
       const folder = req.body.folder || 'fishinggo_video';
       
       try {
