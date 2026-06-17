@@ -2361,6 +2361,15 @@ app.get('/api/upload/signature', async (req, res) => {
 const os = require('os');
 const uploadDisk = multer ? multer({ dest: os.tmpdir(), limits: { fileSize: 30 * 1024 * 1024 } }) : null;
 
+app.get('/api/debug-multer', (req, res) => {
+  res.json({
+    multerType: typeof multer,
+    uploadDiskIsNull: uploadDisk === null,
+    tmpdir: os.tmpdir(),
+    routes: app._router.stack.filter(r => r.route && r.route.path.includes('/api/upload')).map(r => r.route.path)
+  });
+});
+
 if (uploadDisk) {
   const uploadMediaHandler = (req, res, next) => {
     uploadDisk.single('file')(req, res, (err) => {
