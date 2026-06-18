@@ -50,7 +50,7 @@ const CHATS_FILE = path.join(__dirname, 'chats.json');
 const NOTICES_FILE = path.join(__dirname, 'notices.json');
 const BUSINESS_FILE = path.join(__dirname, 'business.json');
 const SECRET_OVERRIDES_FILE = path.join(__dirname, 'secretPointOverrides.json');
-const CCTV_OVERRIDES_FILE = path.join(__dirname, 'cctvOverrides.json');
+
 const APP_CONFIG_FILE = path.join(__dirname, 'appConfig.json');
 const SPOT_LOC_OVERRIDES_FILE = path.join(__dirname, 'spotLocationOverrides.json');
 const CUSTOM_POINTS_FILE      = path.join(__dirname, 'customPoints.json');
@@ -71,7 +71,7 @@ let memBusinessPosts = [];
 
 // ⚠️ 아래 4개 변수는 파일 로드 코드(55줄) 이전에 선언해야 TDZ 에러가 없습니다
 let secretPointOverrides = {};
-let cctvOverrides = {};
+
 let appConfig = { min_version: "1.0.0", store_url: "https://play.google.com/apps/internaltest/4701312289208373704" };
 let memProSubs = {};
 let memVvipSlots = {};
@@ -87,7 +87,7 @@ try {
   if (fs.existsSync(NOTICES_FILE)) memNotices = JSON.parse(fs.readFileSync(NOTICES_FILE, 'utf-8'));
   if (fs.existsSync(BUSINESS_FILE)) memBusinessPosts = JSON.parse(fs.readFileSync(BUSINESS_FILE, 'utf-8'));
   if (fs.existsSync(SECRET_OVERRIDES_FILE)) secretPointOverrides = JSON.parse(fs.readFileSync(SECRET_OVERRIDES_FILE, 'utf-8'));
-  if (fs.existsSync(CCTV_OVERRIDES_FILE)) cctvOverrides = JSON.parse(fs.readFileSync(CCTV_OVERRIDES_FILE, 'utf-8'));
+
   if (fs.existsSync(APP_CONFIG_FILE)) appConfig = Object.assign(appConfig, JSON.parse(fs.readFileSync(APP_CONFIG_FILE, 'utf-8')));
   if (fs.existsSync(PRO_SUBS_FILE)) memProSubs = JSON.parse(fs.readFileSync(PRO_SUBS_FILE, 'utf-8'));
   if (fs.existsSync(VVIP_SLOTS_FILE)) memVvipSlots = JSON.parse(fs.readFileSync(VVIP_SLOTS_FILE, 'utf-8'));
@@ -122,7 +122,7 @@ function saveChatHistories()     { _saveFile(CHATS_FILE, chatHistories); }
 function saveMemNotices()        { _saveFile(NOTICES_FILE, memNotices); }
 function saveMemBusinessPosts()  { _saveFile(BUSINESS_FILE, memBusinessPosts); }
 function saveSecretPointOverrides() { _saveFile(SECRET_OVERRIDES_FILE, secretPointOverrides); }
-function saveCctvOverrides()     { _saveFile(CCTV_OVERRIDES_FILE, cctvOverrides); }
+
 function saveAppConfig()         { _saveFile(APP_CONFIG_FILE, appConfig); }
 function saveProSubs()           { _saveFile(PRO_SUBS_FILE, memProSubs); }
 function saveVvipSlots()         { _saveFile(VVIP_SLOTS_FILE, memVvipSlots); }
@@ -7039,7 +7039,8 @@ app.get('/api/weather/cctv', async (req, res) => {
   try {
     const { getCctvInfo, CCTV_MAP } = require('./cctvMapping');
     // pointId 기반 오버라이드가 있으면 최우선 적용, 없으면 기존 stationId 오버라이드 사용
-    const override = (pointId && cctvOverrides[pointId]) ? cctvOverrides[pointId] : cctvOverrides[stationId];
+    const globalCctv = global.cctvOverrides || {};
+    const override = (pointId && globalCctv[pointId]) ? globalCctv[pointId] : globalCctv[stationId];
     let info;
     if (override) {
       const base = CCTV_MAP[stationId] || {};
@@ -7108,18 +7109,7 @@ async function loadSecretPointOverridesFromDB() {
 setTimeout(loadSpotOverridesFromDB, 4000);
 setTimeout(loadSecretPointOverridesFromDB, 4500);
 
-async function loadCctvOverridesFromDB() {
-  if (!dbReady || !CctvOverrideModel) return;
-  try {
-    const overrides = await CctvOverrideModel.find();
-    overrides.forEach(o => {
-      cctvOverrides[o.obsCode] = { youtubeId: o.youtubeId, type: o.type, label: o.label, updatedAt: o.updatedAt };
-    });
-    logger.info(`[CCTV] DB에서 ${overrides.length}개 오버라이드 로드 완료`); // ✅ 22TH-C2
-    saveCctvOverrides(); // DB 로드 후 JSON 파일도 동기화
-  } catch (e) { logger.error('[CCTV] 오버라이드 로드 실패:', e.message); } // ✅ 22TH-C2
-}
-setTimeout(loadCctvOverridesFromDB, 3000); // DB 연결 후 3초 대기 후 로드
+
 
 
 function isMaster(req) {
@@ -8175,7 +8165,7 @@ function flushAllData() {
   try { saveMemNotices(); logger.info('[Flush] notices.json ✅'); } catch (e) { }
   try { saveMemBusinessPosts(); logger.info('[Flush] business.json ✅'); } catch (e) { }
   try { saveSecretPointOverrides(); logger.info('[Flush] secretPointOverrides.json ✅'); } catch (e) { }
-  try { saveCctvOverrides(); logger.info('[Flush] cctvOverrides.json ✅'); } catch (e) { }
+
   try { saveProSubs(); logger.info('[Flush] proSubscriptions.json ✅'); } catch (e) { }
   try { saveVvipSlots(); logger.info('[Flush] vvipSlots.json ✅'); } catch (e) { }
   logger.info('[Flush] ✅ 전체 데이터 동기화 완료.');
@@ -10217,7 +10207,7 @@ function flushAllData() {
   saveMemNotices();
   saveMemBusinessPosts();
   saveSecretPointOverrides();
-  saveCctvOverrides();
+
   saveProSubs();
   saveVvipSlots();
   (logger?.info || (() => {}))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
