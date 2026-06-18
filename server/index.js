@@ -6034,17 +6034,11 @@ app.get('/api/weather/kbs-cctv', async (req, res) => {
       }
     });
 
-    // 3. 응답(줄바꿈으로 구분된 아스키 코드)을 실제 문자열(.m3u8 주소)로 디코딩
-    const codes = apiRes.data.trim().split('\n');
-    let m3u8Url = '';
-    for (let code of codes) {
-      if (code) {
-        m3u8Url += String.fromCharCode(parseInt(code, 10));
-      }
-    }
+    // 3. 응답은 평문 URL 자체임
+    let m3u8Url = typeof apiRes.data === 'string' ? apiRes.data.trim() : apiRes.data.toString().trim();
 
     if (!m3u8Url.includes('.m3u8')) {
-      return res.status(404).send('Failed to decode m3u8 URL');
+      return res.status(404).send('Failed to parse m3u8 URL');
     }
 
     // 추출한 1회용 토큰이 포함된 m3u8 주소로 302 리다이렉트
