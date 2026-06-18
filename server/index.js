@@ -6002,6 +6002,58 @@ app.get('/api/user/crews', async (req, res) => {
   } catch (err) { (logger?.error || console.error)('[USER CREWS]', err.message); res.status(500).json({ error: '서버 오류' }); }
 });
 
+// ==========================================
+// KBS 실시간 CCTV 스트리밍 우회 프록시 (HLS token 추출기)
+// ==========================================
+app.get('/api/weather/kbs-cctv', async (req, res) => {
+  try {
+    const { cctvId } = req.query;
+    if (!cctvId) {
+      return res.status(400).send('cctvId is required');
+    }
+
+    // 1. KBS CCTV Popup 페이지에서 암호화된 API URL 추출
+    const popupUrl = `https://d.kbs.co.kr/special/cctv/cctvPopup?type=LIVE&cctvId=${cctvId}`;
+    const popupRes = await axios.get(popupUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    const urlMatch = popupRes.data.match(/<input type="hidden" id="url" value="([^"]+)"/);
+    if (!urlMatch || !urlMatch[1]) {
+      return res.status(404).send('Stream API URL not found in KBS popup');
+    }
+    const apiUrl = urlMatch[1];
+
+    // 2. Loomex API 호출하여 CharCode 배열 문자열 응답 획득
+    const apiRes = await axios.get(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://d.kbs.co.kr/'
+      }
+    });
+
+    // 3. 응답(줄바꿈으로 구분된 아스키 코드)을 실제 문자열(.m3u8 주소)로 디코딩
+    const codes = apiRes.data.trim().split('\n');
+    let m3u8Url = '';
+    for (let code of codes) {
+      if (code) {
+        m3u8Url += String.fromCharCode(parseInt(code, 10));
+      }
+    }
+
+    if (!m3u8Url.includes('.m3u8')) {
+      return res.status(404).send('Failed to decode m3u8 URL');
+    }
+
+    // 추출한 1회용 토큰이 포함된 m3u8 주소로 302 리다이렉트
+    res.redirect(m3u8Url);
+  } catch (error) {
+    console.error('KBS CCTV Proxy Error:', error.message);
+    res.status(500).send('Internal Server Error fetching KBS stream');
+  }
+});
 
 // ── 공지사항 전체 조회 ────────────────────────────────────────────────────────
 app.get('/api/community/notices', async (req, res) => {
@@ -6986,32 +7038,7 @@ app.get('/api/weather/cctv/stream/:beachCode', async (req, res) => {
   }
 });
 
-// KBS 실시간 CCTV 토큰 프록시 (HLS m3u8 우회 연결)
-app.get('/api/weather/kbs-cctv', async (req, res) => {
-  const { cctvId } = req.query;
-  if (!/^[0-9a-zA-Z_-]+$/.test(cctvId)) return res.status(400).send('Invalid CCTV ID');
-  
-  try {
-    const response = await axios.get(`https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvId}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://d.kbs.co.kr/'
-      },
-      timeout: 3000
-    });
-    
-    // HTML에서 m3u8 주소 추출
-    const match = response.data.match(/(https:\/\/[^"']+\.m3u8[^"']*)/);
-    if (match && match[1]) {
-      return res.redirect(302, match[1]);
-    } else {
-      return res.status(404).send('Streaming URL not found in KBS page');
-    }
-  } catch (err) {
-    console.error('[KBS Proxy Error]', err.message);
-    return res.status(502).send('Error fetching from KBS');
-  }
-});
+
 
 app.get('/api/weather/cctv', async (req, res) => {
   const { stationId, pointId } = req.query;

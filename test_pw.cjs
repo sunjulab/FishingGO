@@ -1,0 +1,1 @@
+const { chromium } = require('playwright'); (async () => { const browser = await chromium.launch(); const page = await browser.newPage(); page.on('request', request => console.log('>>', request.method(), request.url())); await page.goto('https://d.kbs.co.kr/special/cctvShare?cctvId=73'); await page.waitForTimeout(3000); await browser.close(); })();
