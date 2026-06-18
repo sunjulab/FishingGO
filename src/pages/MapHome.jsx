@@ -128,9 +128,6 @@ export default function MapHome() {
   const [showSecretPoints, setShowSecretPoints] = useState(false);
   const [precisionData, setPrecisionData]       = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  // ✅ REWARD-GATE: 무료 유저 포인트 입장 시 보상형 광고 게이트
-  const [showRewardGate, setShowRewardGate]     = useState(false);
-  const [pendingPoint, setPendingPoint]         = useState(null); // { point, fromDashboard }
   // ✅ REALTIME-FIX: 실시간 점수 갱신 용 tick (10분마다 증가 → useMemo 재계산 트리거)
   const [rankTick, setRankTick] = useState(0);
   const [weatherCache, setWeatherCache]   = useState({}); // ✅ FIX-HEATMAP: 히트맵 실시간 날씨 캐시 (stationId → precisionData)
@@ -551,18 +548,11 @@ export default function MapHome() {
   /* ── 포인트 클릭 ── */
   // ✅ 5TH-B1: useCallback — 마커 useEffect 업데이트 시 매 렌더마다 새 함수 생성 방지
   // ✅ FIX-TDZ: 마커 렌더링 useEffect보다 먼저 선언해야 TDZ(Cannot access before initialization) 방지
-  // ✅ REWARD-GATE: 무료 유저 → 보상형 광고 시청 후 입장 (3회 일일 제한 제거)
+  // ✅ REWARD-GATE: 무료 유저 → 보상형 광고 시청 후 입장 (전면 개편: 광고 제거하고 즉시 입장)
   const handlePointClick = useCallback(async (point, fromDashboard = false) => {
-    // 프리미엄/관리자: 광고 없이 바로 입장
-    if (canAccessPremium || isAdmin) {
-      await _enterPoint(point, fromDashboard);
-      return;
-    }
-    // 무료 유저: 보상형 광고 게이트 오픈
-    setPendingPoint({ point, fromDashboard });
-    setShowRewardGate(true);
+    await _enterPoint(point, fromDashboard);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAccessPremium, isAdmin, _enterPoint]);
+  }, [_enterPoint]);
 
   /* ── 마커 렌더링 (일반 + 커스텀 포인트 병합) ── */
   useEffect(() => {
@@ -1382,20 +1372,6 @@ export default function MapHome() {
           <UpgradeModal onClose={() => setShowUpgradeModal(false)} />
         )}
 
-        {/* ── 보상형 광고 게이트 (무료 유저 포인트 입장) ── */}
-        <RewardGateModal
-          isOpen={showRewardGate}
-          context="point"
-          onClose={() => { setShowRewardGate(false); setPendingPoint(null); }}
-          onRewardComplete={() => {
-            setShowRewardGate(false);
-            if (pendingPoint) {
-              _enterPoint(pendingPoint.point, pendingPoint.fromDashboard);
-              setPendingPoint(null);
-            }
-          }}
-          onSubscribe={() => { setShowRewardGate(false); setShowUpgradeModal(true); }}
-        />
 
         {/* ── 바텀 시트 (포인트 상세) ── */}
         {/* 배경 오버레이 */}

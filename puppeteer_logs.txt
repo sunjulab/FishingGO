@@ -1,0 +1,65 @@
+[RESPONSE] https://fishing-go.com/?v=1781800447777 - Status: 301
+[RESPONSE] https://www.fishing-go.com/?v=1781800447777 - Status: 200
+[RESPONSE] https://www.fishing-go.com/assets/index-979cebcf.css - Status: 200
+[RESPONSE] https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css - Status: 200
+[RESPONSE] https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js - Status: 200
+[RESPONSE] https://www.fishing-go.com/assets/index-93365632.js - Status: 200
+[RESPONSE] https://cdn.iamport.kr/v1/iamport.js - Status: 200
+[RESPONSE] https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2/Pretendard-Black.woff2 - Status: 200
+[RESPONSE] https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2/Pretendard-Regular.woff2 - Status: 200
+[RESPONSE] https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9774243773523817 - Status: 200
+[RESPONSE] https://www.fishing-go.com/version.json?t=1781803849347 - Status: 200
+[RESPONSE] https://www.fishing-go.com/data-go-api/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?serviceKey=&numOfRows=10&pageNo=1&type=json&obsCode=DT_0001&date=20260618 - Status: 404
+[CONSOLE] error: Failed to load resource: the server responded with a status of 404 ()
+[RESPONSE] https://www.fishing-go.com/data-go-api/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=&numOfRows=10&pageNo=1&type=json&obsCode=DT_0001&date=20260618 - Status: 404
+[CONSOLE] error: Failed to load resource: the server responded with a status of 404 ()
+[CONSOLE] error: Access to fetch at 'https://fishing-go-backend.onrender.com/api/health' from origin 'https://www.fishing-go.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+[FAILED] https://fishing-go-backend.onrender.com/api/health - net::ERR_FAILED
+[CONSOLE] error: Failed to load resource: net::ERR_FAILED
+[RESPONSE] https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2/Pretendard-ExtraBold.woff2 - Status: 200
+[RESPONSE] https://www.fishing-go.com/data-go-api/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?serviceKey=&numOfRows=10&pageNo=1&type=json&obsCode=DT_0001&date=20260618 - Status: 404
+[CONSOLE] error: Failed to load resource: the server responded with a status of 404 ()
+[RESPONSE] https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2/Pretendard-Bold.woff2 - Status: 200
+[RESPONSE] https://dapi.kakao.com/v2/maps/sdk.js?appkey=d353be56977b1c13b03d8981bcf8b5ba&libraries=services,clusterer&autoload=false - Status: 200
+[RESPONSE] https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2/Pretendard-SemiBold.woff2 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/socket.io/?EIO=4&transport=polling&t=s096v6hz - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/fishing-scores - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/custom-points - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0008 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0033 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/spot-location-overrides - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0006 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0011 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0018 - Status: 200
+[RESPONSE] https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202606150101/show_ads_impl.js - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/socket.io/?EIO=4&transport=polling&t=s09avnx6&sid=ChIVHL-KRB9dx-aJAAAK - Status: 200
+[RESPONSE] https://pagead2.googlesyndication.com/pagead/gen_204?id=ach_evt&tn=NAV&cls=bottom-nav&ign=false&pw=1280&ph=720&x=640&y=650.4 - Status: 204
+[RESPONSE] https://googleads.g.doubleclick.net/pagead/html/r20260612/r20190131/zrt_lookup.html - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/app-config - Status: 200
+[RESPONSE] https://googleads.g.doubleclick.net/pagead/ads?client=ca-pub-9774243773523817&output=html&adk=1812271804&adf=3025194257&abgtt=6&lmt=1781803338&plat=1%3A16777216%2C9%3A32776%2C16%3A8388608%2C17%3A32%2C24%3A32%2C25%3A32%2C30%3A1081344%2C32%3A32%2C41%3A32%2C42%3A32%2C43%3A32%2C44%3A32&format=0x0&url=https%3A%2F%2Fwww.fishing-go.com%2F%3Fv%3D1781800447777&pra=5&asro=0&aimartd=4&aieuf=1&aicrs=1&uach=WyJXaW5kb3dzIiwiMTkuMC4wIiwieDg2IiwiIiwiMTQ4LjAuNzc3OC45NiIsbnVsbCwwLG51bGwsIjY0IixbWyJDaHJvbWl1bSIsIjE0OC4wLjc3NzguOTYiXSxbIkhlYWRsZXNzQ2hyb21lIiwiMTQ4LjAuNzc3OC45NiJdLFsiTm90L0EpQnJhbmQiLCI5OS4wLjAuMCJdXSwwXQ..&dt=1781803849379&bpp=2&bdt=355&idt=239&shv=r20260612&mjsv=m202606150101&ptt=9&saldr=aa&abxe=1&cookie_enabled=1&eoidce=1&nras=1&correlator=2931400838391&frm=20&pv=2&u_tz=540&u_his=2&u_h=720&u_w=1280&u_ah=720&u_aw=1280&u_cd=24&u_sd=1&dmc=16&adx=-12245933&ady=-12245933&biw=1280&bih=720&scr_x=0&scr_y=0&oid=2&pvsid=663165433142652&tmod=876429947&uas=0&nvt=1&fsapi=1&fc=1920&brdim=0%2C0%2C0%2C0%2C1280%2C0%2C1280%2C720%2C1280%2C720&vis=1&rsz=%7C%7Cs%7C&abl=NS&fu=32768&bc=31&plas=327x567_l%7C327x567_r&bz=1&pgls=CAk.&ifi=1&uci=a!1&fsb=1&dtd=255 - Status: 200
+[RESPONSE] https://googleads.g.doubleclick.net/pagead/ads?client=ca-pub-9774243773523817&output=html&h=280&slotname=4975909941&adk=1699242970&adf=1420654835&pi=t.ma~as.4975909941&abgtt=6&w=448&fwrn=4&fwrnh=100&lmt=1781803338&rafmt=1&format=448x280&url=https%3A%2F%2Fwww.fishing-go.com%2F%3Fv%3D1781800447777&fwr=0&fwrattr=true&rpe=1&resp_fmts=3&asro=0&aimartd=4&aieuf=1&aicrs=1&uach=WyJXaW5kb3dzIiwiMTkuMC4wIiwieDg2IiwiIiwiMTQ4LjAuNzc3OC45NiIsbnVsbCwwLG51bGwsIjY0IixbWyJDaHJvbWl1bSIsIjE0OC4wLjc3NzguOTYiXSxbIkhlYWRsZXNzQ2hyb21lIiwiMTQ4LjAuNzc3OC45NiJdLFsiTm90L0EpQnJhbmQiLCI5OS4wLjAuMCJdXSwwXQ..&dt=1781803849381&bpp=12&bdt=356&idt=256&shv=r20260612&mjsv=m202606150101&ptt=9&saldr=aa&abxe=1&cookie_enabled=1&eoidce=1&prev_fmts=0x0&nras=1&correlator=2931400838391&frm=20&pv=1&u_tz=540&u_his=2&u_h=720&u_w=1280&u_ah=720&u_aw=1280&u_cd=24&u_sd=1&dmc=16&adx=416&ady=1282&biw=1280&bih=720&scr_x=0&scr_y=0&oid=2&pvsid=663165433142652&tmod=876429947&uas=0&nvt=1&fc=1920&brdim=0%2C0%2C0%2C0%2C1280%2C0%2C1280%2C720%2C1280%2C720&vis=1&rsz=%7Cdm%7CoeEbr%7Cp&abl=XS&pfx=0&fu=128&bc=31&plas=327x567_l%7C327x567_r&bz=1&pgls=CAk.&ifi=2&uci=a!2&btvi=1&fsb=1&dtd=260 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0001 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0021 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0003 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0005 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0002 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0016 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0036 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0004 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0009 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0034 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0045 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0010 - Status: 200
+[RESPONSE] https://ep1.adtrafficquality.google/getconfig/sodar?sv=200&tid=gda&tv=r20260612&st=env&sjk=663165433142652 - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/socket.io/?EIO=4&transport=polling&t=s09awdcl&sid=ChIVHL-KRB9dx-aJAAAK - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/weather/precision?stationId=DT_0001 - Status: 200
+[RESPONSE] https://ep2.adtrafficquality.google/sodar/sodar2.js - Status: 200
+[RESPONSE] https://ep2.adtrafficquality.google/sodar/sodar2/254/runner.html - Status: 200
+[RESPONSE] https://pagead2.googlesyndication.com/bg/oN1Ml1HfCNjbR6ssXW5RjzE7agB7tdJ1txBk1UC1s3c.js - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/socket.io/?EIO=4&transport=polling&t=s09m0rsn&sid=ChIVHL-KRB9dx-aJAAAK - Status: 200
+[RESPONSE] https://www.google.com/recaptcha/api2/aframe - Status: 200
+[RESPONSE] https://ep2.adtrafficquality.google/generate_204?z3GZGQ - Status: 204
+[RESPONSE] https://pagead2.googlesyndication.com/pagead/sodar?id=sodar2&v=254&li=gda_r20260612&jk=663165433142652&rc= - Status: 204
+[RESPONSE] https://ep1.adtrafficquality.google/pagead/sodar?id=sodar2&v=254&t=2&li=gda_r20260612&jk=663165433142652&bg=!IyClIELNAAYUzILKNMw7AEcBe5WfOCWqxqS6fue--dYqc-4irbIb6UXS_lVcTGZ0NrZBp7yI6mhx4Ad6zwI2aBvPvUo0li0QlIHFQrTCsrgPDVaN9Lu3YAIAAABUUgAAAAFoAQd-ADZAJonTRpI5OPwROgFmN3iw_KITjLHk9IP8q9sUCt_oseLXbkeg8k6AFUcnufTrNOaOCcQwXrMKAF28ZkakFuGYpfIGll1QW_va4U8ar-z9uRR1hHFrh1pjPBS5WFDO6YSQI0fnXxzVL77JyUVx5nMMdHNAEYToKUjs78eSA11p75UcdEckYZ6FRz1Kv6PyGZXbkPXTQJ6ZAo24Tk4EFy0uL4N9U48vbrIRGmKvOgEEKRgSY0l4Wp8K7bNJZZQcBsW2_22QtLe2upfWkmJCOev9YbkrH4j2Y9B2u0EAUM84CUEW2CIYECS_936gr2ZoVz547VR0Icmc2pjL8jjItoJTgCJlr5SnmAGEOFeKn-e2BojmbMY6XZ4eByXPCEoKYTknyaX-KayPJWJbqut5vJhWTbI0qkv7xeKfPuYp9bAq2-ENtVTkFLwR4fT0y-SHmO-h8BCBcujhGQhdP_A0XESETdLjCnwAcgh9Gc2NWdbPvLcyOvAvxMdKI57D4_LtBbBW_W7QHF6RsYgRSZQDlGyk7Gaf5wBO9jcNhZGhd3UPXoUIl4Xzth03tQ2g6yPU0fWrbnJfSLCTO1FZ79A8mzDqX-NUhk9YFC8yKrcJJ2Ht3KA68nAzcwTOFcj1TY7addzjWGI9FWcsTFoOQKg_ASSPwqkwTfI3LaVqIpRroXwmEpd2KcALCaD2cvjJA7c7aQknsXPHH-CLynj3Ady2ZdfhsTybI5BjSajYO7mjy8X67PMmI1u0aQZzuHpz_D9SXWuq0Lkdxwsi7UxjiM8G9e7EaflIASA_rj-6H7ilbi--jjZgROEqgclBOZCjTSnBvgtwuqLKObU55HWxfNvUTAg8gle7kj2wbRjGjGwQEMHGrRBi9jud7RJpZFn9uiXf_IKbHdr-fyhQDyJlPajg_RudFN7k_JEczdaEuzpMmZ1OJnM1EaflMcjwS0AFQ_XC0_0XovIJUmZ3AqncdHJBdzmMQuEuf8M8QqY5wLFwEGHORCpCBhVkJA8o-7xKO11t67MYgOr-waucnX7ohtK-7VWjcTuijTdyBtK4r07AgswdfF0_Q8LXfg - Status: 204
+[RESPONSE] https://fishing-go-backend.onrender.com/api/community/notices - Status: 200
+[RESPONSE] https://fishing-go-backend.onrender.com/api/community/posts?limit=3&page=1 - Status: 200

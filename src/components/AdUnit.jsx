@@ -170,13 +170,25 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
   const [webAdFullscreen, setWebAdFullscreen] = useState(false); // ✅ WEB-AD: 웹 전체화면 광고 오버레이
   const [skipVisible, setSkipVisible] = useState(false);        // ✅ WEB-AD: 5초 후 스킵 버튼 표시
 
+  const [cctvAdCount, setCctvAdCount] = useState(0);
+
   const CONTEXT_TEXT = {
     post:  { title: '🎣 게시글 무료 등록', action: '글 등록 완료!' },
     crew:  { title: '🏕️ 크루 방 무료 개설', action: '크루 개설 완료!' },
     point: { title: '📍 낚시 포인트 확인', action: '포인트 확인 완료!' },
     secret: { title: '⭐ 비밀 포인트 확인', action: '비밀 포인트 오픈!' },
+    cctv:  { title: '📺 실시간 현장 영상', action: '영상 재생 준비 완료!' }
   };
   const ctx = CONTEXT_TEXT[context] || CONTEXT_TEXT.post;
+
+  // ✅ VVIP-NUDGE: 일일 시청 횟수 로드
+  useEffect(() => {
+    if (context === 'cctv') {
+      const today = new Date().toLocaleDateString();
+      const stored = localStorage.getItem(`cctvAdCount_${today}`);
+      if (stored) setCctvAdCount(parseInt(stored, 10));
+    }
+  }, [context, isOpen]);
 
   const intervalRef  = useRef(null); // 광고 진행 타이머
   const autoTimerRef = useRef(null); // ✅ FIX-AUTO: 자동 등록 타이머
@@ -216,9 +228,18 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     if (intervalRef.current)  { clearInterval(intervalRef.current);  intervalRef.current  = null; }
     if (autoTimerRef.current) { clearInterval(autoTimerRef.current); autoTimerRef.current = null; }
     if (skipTimerRef.current) { clearTimeout(skipTimerRef.current);  skipTimerRef.current = null; }
+
+    // ✅ VVIP-NUDGE: 시청 완료 시 카운트 증가
+    if (context === 'cctv') {
+      const today = new Date().toLocaleDateString();
+      const count = cctvAdCount + 1;
+      localStorage.setItem(`cctvAdCount_${today}`, count.toString());
+      setCctvAdCount(count);
+    }
+
     onRewardComplete?.();
     onClose?.();
-  }, [onRewardComplete, onClose]);
+  }, [onRewardComplete, onClose, context, cctvAdCount]);
 
   // ✅ FIX-AUTO: adDone=true 시 1.5초 카운트다운 후 자동 등록
   useEffect(() => {
@@ -480,8 +501,16 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.85, fontWeight: '700', marginBottom: '4px' }}>⭐ LITE 이상</div>
-              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>광고 없이 무제한 등록</div>
-              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.9 }}>광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음</div>
+              <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>
+                {context === 'cctv' ? '광고 없이 1초 만에 바다 보기' : '광고 없이 무제한 등록'}
+              </div>
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.9 }}>
+                {context === 'cctv' && cctvAdCount >= 3 
+                  ? '☕ 오늘만 3번째! 커피 한 잔 값이면 평생 광고 제거'
+                  : context === 'cctv'
+                  ? '광고 없이 모든 포인트 CCTV 무제한 쾌속 시청'
+                  : '광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음'}
+              </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
               <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900' }}>₩9,900</div>
@@ -489,7 +518,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
             </div>
           </div>
           <div style={{ marginTop: '14px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '10px 16px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', textAlign: 'center' }}>
-            🚀 지금 구독하고 바로 등록하기
+            {context === 'cctv' && cctvAdCount >= 3 ? '🚀 1초만에 바다 보러가기' : '🚀 지금 구독하고 혜택받기'}
           </div>
         </div>
 
@@ -497,7 +526,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
         {!adDone ? (
           <div style={{ border: `1.5px solid #E5E5EA`, borderRadius: '18px', padding: '20px' }}>
             <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '4px', color: '#1c1c1e' }}>
-              📺 30초 광고 시청 후 무료 등록
+              📺 30초 광고 시청 후 {context === 'cctv' ? '실시간 영상 보기' : '무료 등록'}
             </div>
             <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#8E8E93', marginBottom: '16px' }}>
               광고를 시청하면 1회 무료로 이용하실 수 있어요.

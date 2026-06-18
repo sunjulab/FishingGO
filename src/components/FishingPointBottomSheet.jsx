@@ -4,7 +4,8 @@ import { evaluateFishingCondition } from '../utils/evaluator';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
-import { NativeAd } from './AdUnit';
+import { NativeAd, RewardGateModal } from './AdUnit';
+import UpgradeModal from './UpgradeModal';
 
 import { Capacitor } from '@capacitor/core';
 // ✅ TIDE-API: 공공데이터포털 해양 3종 API
@@ -255,6 +256,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
   const [editYoutubeId, setEditYoutubeId] = useState('');
   const [isSavingCctv, setIsSavingCctv] = useState(false);
   const [showCatchModal, setShowCatchModal] = useState(false);
+
+  // ✅ AD-GATE: CCTV 광고 게이트 상태
+  const [isCctvUnlocked, setIsCctvUnlocked] = useState(canAccessPremium || isAdmin);
+  const [showRewardGate, setShowRewardGate] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
 
 
@@ -688,43 +694,70 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             </div>
           ) : cctvData ? (
              (cctvData.type === 'hls') && cctvData.url ? (
-                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                  <ReactPlayer 
-                    url={cctvData.url} 
-                    playing={true} 
-                    controls={true} 
-                    muted={true}
-                    width="100%" 
-                    height="100%"
-                    config={{ file: { forceHLS: true } }}
-                  />
+                <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: isCctvUnlocked ? 1 : 0, transition: 'opacity 0.3s' }}>
+                    <ReactPlayer 
+                      url={cctvData.url} 
+                      playing={true} 
+                      controls={true} 
+                      muted={true}
+                      width="100%" 
+                      height="100%"
+                      config={{ file: { forceHLS: true } }}
+                    />
+                  </div>
+                  {!isCctvUnlocked && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
+                      <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '12px' }}>🔒</div>
+                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#fff', marginBottom: '8px' }}>실시간 영상이 준비되었습니다</div>
+                      <button 
+                        onClick={() => setShowRewardGate(true)}
+                        style={{ background: 'linear-gradient(135deg, #0056D2, #0096FF)', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,86,210,0.4)' }}
+                      >
+                        📺 30초 광고 보고 재생하기
+                      </button>
+                    </div>
+                  )}
                 </div>
              ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
-                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
                   <iframe
                     src={cctvData.url}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
-                    style={{ width: '100%', height: '100%', border: 'none' }}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none', opacity: isCctvUnlocked ? 1 : 0, transition: 'opacity 0.3s' }}
                   />
-                  {/* 임베딩 차단 우회 및 전체화면용 외부 링크 버튼 */}
-                  <button 
-                    onClick={() => window.open(cctvData.type === 'youtube' ? `https://www.youtube.com/watch?v=${cctvData.youtubeId}` : cctvData.type === 'kbs_share' ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` : cctvData.url, '_blank')}
-                    style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,0,0,0.85)', color: '#fff', border: 'none', borderRadius: '20px', padding: '6px 12px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}
-                  >
-                    {cctvData.type === 'youtube' ? (
-                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10 15l5.19-3-5.19-3v6zm11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>앱으로 보기</>
-                    ) : (
-                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>원본 보기</>
-                    )}
-                  </button>
+                  {!isCctvUnlocked && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
+                      <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '12px' }}>🔒</div>
+                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#fff', marginBottom: '8px' }}>실시간 영상이 준비되었습니다</div>
+                      <button 
+                        onClick={() => setShowRewardGate(true)}
+                        style={{ background: 'linear-gradient(135deg, #0056D2, #0096FF)', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,86,210,0.4)' }}
+                      >
+                        📺 30초 광고 보고 재생하기
+                      </button>
+                    </div>
+                  )}
+                  {isCctvUnlocked && (
+                    <button 
+                      onClick={() => window.open(cctvData.type === 'youtube' ? `https://www.youtube.com/watch?v=${cctvData.youtubeId}` : cctvData.type === 'kbs_share' ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` : cctvData.url, '_blank')}
+                      style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,0,0,0.85)', color: '#fff', border: 'none', borderRadius: '20px', padding: '6px 12px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}
+                    >
+                      {cctvData.type === 'youtube' ? (
+                        <><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10 15l5.19-3-5.19-3v6zm11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>앱으로 보기</>
+                      ) : (
+                        <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>원본 보기</>
+                      )}
+                    </button>
+                  )}
                 </div>
              ) : cctvData.fallbackImg ? (
-                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
                   <img 
                     src={cctvData.type === 'mof' ? `${API_BASE}${cctvData.fallbackImg}?t=${mofTimestamp}` : cctvData.fallbackImg} 
                     alt={cctvData.areaName} 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isCctvUnlocked ? 1 : 0, transition: 'opacity 0.3s' }} 
                     onError={(e) => {
                       if (cctvData.safeFallbackImg && e.target.src !== cctvData.safeFallbackImg) {
                         e.target.src = cctvData.safeFallbackImg;
@@ -734,20 +767,36 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                       }
                     }}
                   />
-                  {/* MOF 실시간 연안침식 모니터링 워터마크 레이아웃 */}
-                  <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5 }}>
-                    <span style={{color: '#ff4444'}}>● REC</span>
-                    <span>MOF_{selectedPoint?.obsCode}</span>
-                  </div>
-                  
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6 }}>
-                    <div style={{ color: '#00D1FF', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      🌊 해양수산부 공식 실시간 연안 모니터링
+                  {!isCctvUnlocked && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
+                      <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '12px' }}>🔒</div>
+                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#fff', marginBottom: '8px' }}>실시간 영상이 준비되었습니다</div>
+                      <button 
+                        onClick={() => setShowRewardGate(true)}
+                        style={{ background: 'linear-gradient(135deg, #0056D2, #0096FF)', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,86,210,0.4)' }}
+                      >
+                        📺 30초 광고 보고 재생하기
+                      </button>
                     </div>
-                    <div style={{ color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, marginTop: '4px', fontWeight: '600', opacity: 0.8 }}>
-                      현장의 파고 및 연안침식 상태를 파악할 수 있는 해양수산부 공식 뷰어 시스템과 연동되어 있습니다.
-                    </div>
-                  </div>
+                  )}
+                  {isCctvUnlocked && (
+                    <>
+                      {/* MOF 실시간 연안침식 모니터링 워터마크 레이아웃 */}
+                      <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5 }}>
+                        <span style={{color: '#ff4444'}}>● REC</span>
+                        <span>MOF_{selectedPoint?.obsCode}</span>
+                      </div>
+                      
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6 }}>
+                        <div style={{ color: '#00D1FF', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          🌊 해양수산부 공식 실시간 연안 모니터링
+                        </div>
+                        <div style={{ color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, marginTop: '4px', fontWeight: '600', opacity: 0.8 }}>
+                          현장의 파고 및 연안침식 상태를 파악할 수 있는 해양수산부 공식 뷰어 시스템과 연동되어 있습니다.
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
              ) : (
                 <div style={{ color: '#888', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>현재 송출 가능한 영상이 없습니다.</div>
@@ -1150,6 +1199,22 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           onSuccess={() => { /* 저장 후 토스트는 모달 내부에서 표시 */ }}
         />
       )}
+
+      {/* ── CCTV 보상형 광고 게이트 ── */}
+      <RewardGateModal
+        isOpen={showRewardGate}
+        context="cctv"
+        onClose={() => setShowRewardGate(false)}
+        onRewardComplete={() => {
+          setShowRewardGate(false);
+          setIsCctvUnlocked(true);
+        }}
+        onSubscribe={() => {
+          setShowRewardGate(false);
+          setShowUpgradeModal(true);
+        }}
+      />
+      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
     </div>
   );
 }

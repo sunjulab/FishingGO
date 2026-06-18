@@ -3,6 +3,8 @@ import { X, AlertCircle } from 'lucide-react';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api';
+import { RewardGateModal } from './AdUnit';
+import UpgradeModal from './UpgradeModal';
 
 const YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
 function extractYoutubeId(str) {
@@ -12,6 +14,8 @@ function extractYoutubeId(str) {
 
 export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClose }) {
   const addToast = useToastStore(state => state.addToast);
+  const userTier = useUserStore(s => s.userTier);
+  const canAccessPremium = userTier === 'LITE' || userTier === 'PRO' || userTier === 'VIP' || userTier === 'VVIP' || userTier === 'MASTER';
   const isAdmin = useUserStore(s =>
     s.user?.id === ADMIN_ID ||
     s.user?.email === ADMIN_EMAIL ||
@@ -22,6 +26,11 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
   const [isEditingCctv, setIsEditingCctv] = useState(false);
   const [editYoutubeId, setEditYoutubeId] = useState('');
   const [isSavingCctv, setIsSavingCctv] = useState(false);
+
+  // ✅ AD-GATE: CCTV 광고 게이트 상태
+  const [isCctvUnlocked, setIsCctvUnlocked] = useState(canAccessPremium || isAdmin);
+  const [showRewardGate, setShowRewardGate] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // 실시간 연속 재생(스트리밍) 효과를 위한 타임스탬프 (mof 전용)
   const [mofTimestamp, setMofTimestamp] = useState(Date.now());
@@ -152,25 +161,53 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
         )}
 
         {(cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
-          <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+          <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', background: '#000' }}>
             <iframe
               src={cctvData.url}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none', opacity: isCctvUnlocked ? 1 : 0, transition: 'opacity 0.3s' }}
             />
+            {!isCctvUnlocked && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
+                <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '12px' }}>🔒</div>
+                <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#fff', marginBottom: '8px' }}>실시간 영상이 준비되었습니다</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', marginBottom: '20px' }}>광고 시청 후 끊김 없이 바로 재생됩니다.</div>
+                <button 
+                  onClick={() => setShowRewardGate(true)}
+                  style={{ background: 'linear-gradient(135deg, #0056D2, #0096FF)', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,86,210,0.4)' }}
+                >
+                  📺 30초 광고 보고 재생하기
+                </button>
+              </div>
+            )}
           </div>
         ) : cctvData.fallbackImg ? (
-          <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+          <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', background: '#000' }}>
             <img
               src={cctvData.fallbackImg.startsWith('http') ? `${cctvData.fallbackImg}?t=${mofTimestamp}` : `${import.meta.env.VITE_API_BASE_URL || 'https://fishing-go-backend.onrender.com'}${cctvData.fallbackImg}?t=${mofTimestamp}`}
               alt={cctvData.areaName}
-              style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block', opacity: isCctvUnlocked ? 1 : 0, transition: 'opacity 0.3s' }}
             />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
-              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#FFD700', fontWeight: '800' }}>📷 현장 실시간 영상</div>
-              <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '2px' }}>{cctvData.type === 'mof' ? '1.5초 간격으로 자동 새로고침 중' : '실시간 스트리밍 준비 중 · 연결 시 자동 업데이트'}</div>
-            </div>
+            {!isCctvUnlocked && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 10 }}>
+                <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '12px' }}>🔒</div>
+                <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', color: '#fff', marginBottom: '8px' }}>실시간 영상이 준비되었습니다</div>
+                <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', marginBottom: '20px' }}>광고 시청 후 끊김 없이 바로 재생됩니다.</div>
+                <button 
+                  onClick={() => setShowRewardGate(true)}
+                  style={{ background: 'linear-gradient(135deg, #0056D2, #0096FF)', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,86,210,0.4)' }}
+                >
+                  📺 30초 광고 보고 재생하기
+                </button>
+              </div>
+            )}
+            {isCctvUnlocked && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#FFD700', fontWeight: '800' }}>📷 현장 실시간 영상</div>
+                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '2px' }}>{cctvData.type === 'mof' ? '1.5초 간격으로 자동 새로고침 중' : '실시간 스트리밍 준비 중 · 연결 시 자동 업데이트'}</div>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
@@ -190,6 +227,21 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
             : '📡 지역 대표 해안 이미지 · 실시간 스트리밍 추가 예정'}
         </div>
       </div>
+
+      <RewardGateModal
+        isOpen={showRewardGate}
+        context="cctv"
+        onClose={() => setShowRewardGate(false)}
+        onRewardComplete={() => {
+          setShowRewardGate(false);
+          setIsCctvUnlocked(true);
+        }}
+        onSubscribe={() => {
+          setShowRewardGate(false);
+          setShowUpgradeModal(true);
+        }}
+      />
+      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
     </div>
   );
 }

@@ -56,9 +56,6 @@ export default function DashboardView({
   const navigate = useNavigate();
 
   // ── 포인트 확인 광고 게이트 ──────────────────────────────────────────
-  const [showPointAdGate, setShowPointAdGate] = useState(false);
-  const [pendingPoint, setPendingPoint] = useState(null);
-  const [pointAdContext, setPointAdContext] = useState('point');
   // 이번 세션에서 광고로 잠금 해제된 포인트 ID Set
   const [unlockedPoints, setUnlockedPoints] = useState(() => new Set());
 
@@ -250,7 +247,6 @@ export default function DashboardView({
                 {selectedPoint?.type !== '민물' && (
                   <div
                     onClick={async () => {
-                      if (!canAccessPremium) { addToast('📺 실시간 해양 CCTV는 LITE 플랜 이상에서 제공됩니다.', 'error'); return; }
                       const sid = selectedPoint?.obsCode || 'DT_0001';
                       try {
                         const pointIdQuery = selectedPoint?.id ? `&pointId=point_${selectedPoint.id}` : '';
@@ -561,15 +557,6 @@ export default function DashboardView({
 
       </div>
     </div>
-
-    {/* 포인트 확인 보상형 광고 게이트 */}
-    <RewardGateModal
-      isOpen={showPointAdGate}
-      onClose={() => { setShowPointAdGate(false); setPendingPoint(null); }}
-      onRewardComplete={handlePointAdComplete}
-      onSubscribe={() => { setShowPointAdGate(false); navigate('/vvip-subscribe'); }}
-      context={pointAdContext}
-    />
     </>
   );
 }
