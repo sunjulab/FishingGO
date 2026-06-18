@@ -6059,7 +6059,6 @@ app.get('/api/weather/kbs-cctv.m3u8', async (req, res) => {
     }).join('\n');
 
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // ✅ CORS 실패 캐싱 방지
     res.send(m3u8Content);
   } catch (error) {
