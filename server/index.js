@@ -6085,6 +6085,7 @@ app.get('/api/weather/kbs-player', async (req, res) => {
     `;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.removeHeader('X-Frame-Options'); // ✅ Helmet의 SAMEORIGIN 차단 방지 (iframe 허용)
     res.send(html);
   } catch (error) {
     console.error('KBS CCTV Proxy Error:', error.message);
