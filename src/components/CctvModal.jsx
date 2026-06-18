@@ -29,7 +29,7 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
     if (cctvData?.type !== 'mof') return;
     const interval = setInterval(() => {
       setMofTimestamp(Date.now());
-    }, 1500); // 연안포털 규격에 맞춰 1.5초마다 새 프레임 호출
+    }, 5000); // 프록시 응답 지연을 고려해 5초 주기로 늘림
     return () => clearInterval(interval);
   }, [cctvData?.type]);
 

@@ -264,7 +264,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     if (cctvData?.type !== 'mof') return;
     const interval = setInterval(() => {
       setMofTimestamp(Date.now());
-    }, 1500); // 연안포털 규격에 맞춰 1.5초마다 새 프레임 호출
+    }, 5000); // 프록시 다운로드 시간 고려 (1.5초 -> 5초)
     return () => clearInterval(interval);
   }, [cctvData?.type]);
 
