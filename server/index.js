@@ -7047,6 +7047,34 @@ app.get('/api/fishing-scores', (req, res) => {
   }
 });
 
+// 제3자 이미지/MOF 스트리밍 프록시 (CORS/Mixed Content 우회)
+app.get('/api/weather/cctv/proxy', async (req, res) => {
+  const { url } = req.query;
+  if (!url || !url.startsWith('http')) return res.status(400).json({ error: '잘못된 URL' });
+
+  try {
+    const response = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,*/*',
+        'Referer': 'https://coast.mof.go.kr/'
+      },
+      timeout: 5000
+    });
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+
+    response.data.pipe(res);
+  } catch (err) {
+    res.status(502).end();
+  }
+});
+
 // 프론트엔드 Mixed Content / CORS 블락 우회용 MOF 이미지 스트리밍 프록시
 app.get('/api/weather/cctv/stream/:beachCode', async (req, res) => {
   const { beachCode } = req.params;
@@ -7100,6 +7128,10 @@ app.get('/api/weather/cctv', async (req, res) => {
         merged.embedUrl = merged.youtubeId;
       } else if (merged.type === 'hls' && merged.youtubeId) {
         merged.embedUrl = merged.youtubeId;
+      } else if (merged.type === 'mof_custom' && merged.youtubeId) {
+        merged.type = 'mof';
+        const cleanUrl = merged.youtubeId.replace(/\?\d+$/, ''); // Remove timestamp query
+        merged.fallbackImg = `/api/weather/cctv/proxy?url=${encodeURIComponent(cleanUrl)}`;
       }
       info = merged;
     } else {

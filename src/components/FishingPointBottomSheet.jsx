@@ -286,6 +286,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       finalYoutubeId = match ? match[1] : trimmedInput;
     } else if (trimmedInput.endsWith('.m3u8') || trimmedInput.includes('.m3u8?')) {
       finalType = 'hls';
+    } else if (trimmedInput.includes('coast.mof.go.kr')) {
+      finalType = 'mof_custom';
+      finalYoutubeId = trimmedInput;
     } else if (/^\d+$/.test(trimmedInput)) {
       finalType = 'kbs_share';
       finalYoutubeId = trimmedInput;

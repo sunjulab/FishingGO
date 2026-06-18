@@ -23,6 +23,16 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
   const [editYoutubeId, setEditYoutubeId] = useState('');
   const [isSavingCctv, setIsSavingCctv] = useState(false);
 
+  // 실시간 연속 재생(스트리밍) 효과를 위한 타임스탬프 (mof 전용)
+  const [mofTimestamp, setMofTimestamp] = useState(Date.now());
+  React.useEffect(() => {
+    if (cctvData?.type !== 'mof') return;
+    const interval = setInterval(() => {
+      setMofTimestamp(Date.now());
+    }, 1500); // 연안포털 규격에 맞춰 1.5초마다 새 프레임 호출
+    return () => clearInterval(interval);
+  }, [cctvData?.type]);
+
   const saveCctvOverride = useCallback(async () => {
     if (!editYoutubeId.trim()) return;
 
@@ -39,6 +49,9 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
       finalYoutubeId = match ? match[1] : trimmedInput;
     } else if (trimmedInput.endsWith('.m3u8') || trimmedInput.includes('.m3u8?')) {
       finalType = 'hls';
+    } else if (trimmedInput.includes('coast.mof.go.kr')) {
+      finalType = 'mof_custom';
+      finalYoutubeId = trimmedInput;
     } else if (/^\d+$/.test(trimmedInput)) {
       finalType = 'kbs_share';
       finalYoutubeId = trimmedInput;
@@ -150,13 +163,13 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
         ) : cctvData.fallbackImg ? (
           <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
             <img
-              src={cctvData.fallbackImg.startsWith('http') ? cctvData.fallbackImg : `${import.meta.env.VITE_API_BASE_URL || 'https://fishing-go-backend.onrender.com'}${cctvData.fallbackImg}?t=${Date.now()}`}
+              src={cctvData.fallbackImg.startsWith('http') ? `${cctvData.fallbackImg}?t=${mofTimestamp}` : `${import.meta.env.VITE_API_BASE_URL || 'https://fishing-go-backend.onrender.com'}${cctvData.fallbackImg}?t=${mofTimestamp}`}
               alt={cctvData.areaName}
               style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
             />
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
-              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#FFD700', fontWeight: '800' }}>📷 현장 대표 이미지</div>
-              <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '2px' }}>실시간 스트리밍 준비 중 · 연결 시 자동 업데이트</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#FFD700', fontWeight: '800' }}>📷 현장 실시간 영상</div>
+              <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '2px' }}>{cctvData.type === 'mof' ? '1.5초 간격으로 자동 새로고침 중' : '실시간 스트리밍 준비 중 · 연결 시 자동 업데이트'}</div>
             </div>
           </div>
         ) : (
