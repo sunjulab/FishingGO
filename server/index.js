@@ -7066,19 +7066,12 @@ app.get('/api/weather/cctv', async (req, res) => {
       if (merged.type === 'youtube' && merged.youtubeId) {
         merged.embedUrl = `https://www.youtube.com/embed/${merged.youtubeId}?autoplay=1&mute=1&controls=1&rel=0`;
         merged.thumbnailUrl = `https://img.youtube.com/vi/${merged.youtubeId}/maxresdefault.jpg`;
-      } else if (merged.type === 'iframe' && merged.youtubeId) {
-        if (/^\d+$/.test(merged.youtubeId)) {
-          // ✅ 캐시된 구버전 프론트엔드가 '9995'를 iframe으로 보낼 때 HLS로 강제 변환
-          merged.type = 'hls';
-          merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-cctv.m3u8?cctvId=${merged.youtubeId}`;
-        } else {
-          // ✅ iframe 타입: youtubeId 필드에 커스텀 URL이 직접 저장됨
-          merged.embedUrl = merged.youtubeId; // 예: HLS, 포탈 영상, 지자체 CCTV 등
-        }
-      } else if (merged.type === 'kbs_share' && merged.youtubeId) {
-        // ✅ kbs_share를 iframe으로 변환. 헤더 없는 cctvPopup 사용.
+      } else if ((merged.type === 'iframe' || merged.type === 'hls' || merged.type === 'kbs_share') && merged.youtubeId && /^\d+$/.test(merged.youtubeId)) {
+        // ✅ KBS CCTV (youtubeId가 숫자)는 모조리 iframe(cctvPopup)으로 강제 통일하여 블랙스크린 방지
         merged.type = 'iframe';
         merged.embedUrl = `https://d.kbs.co.kr/special/cctv/cctvPopup?type=LIVE&cctvId=${merged.youtubeId}`;
+      } else if (merged.type === 'iframe' && merged.youtubeId) {
+        merged.embedUrl = merged.youtubeId;
       } else if (merged.type === 'hls' && merged.youtubeId) {
         merged.embedUrl = merged.youtubeId;
       }
