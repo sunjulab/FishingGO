@@ -6009,7 +6009,7 @@ app.get('/api/user/crews', async (req, res) => {
 // ==========================================
 // KBS 실시간 CCTV 스트리밍 우회 프록시 (HLS token 추출기)
 // ==========================================
-app.get('/api/weather/kbs-cctv.m3u8', async (req, res) => {
+app.get('/api/weather/kbs-player', async (req, res) => {
   try {
     const { cctvId } = req.query;
     if (!cctvId) {
@@ -6045,25 +6045,50 @@ app.get('/api/weather/kbs-cctv.m3u8', async (req, res) => {
       return res.status(404).send('Failed to parse m3u8 URL');
     }
 
-    // 4. 마스터 플레이리스트(M3U8)를 직접 다운로드하여 상대 경로를 절대 경로로 변환 (ReactPlayer HLS 오류 방지)
-    const m3u8Res = await axios.get(m3u8Url);
-    let m3u8Content = m3u8Res.data;
-
-    const baseUrl = new URL('.', m3u8Url).href;
-    m3u8Content = m3u8Content.split('\n').map(line => {
-      // 주석이나 빈 줄이 아닌 경우 (청크리스트 경로)
-      if (line && !line.startsWith('#')) {
-        return new URL(line, baseUrl).href;
-      }
-      return line;
-    }).join('\n');
-
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // ✅ CORS 실패 캐싱 방지
-    res.send(m3u8Content);
+    // 4. hls.js를 내장한 독립적인 HTML 플레이어 렌더링 (CORS 및 iframe 블랙스크린 우회)
+    const html = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+  <style>
+    body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    video { width: 100vw; height: 100vh; object-fit: contain; }
+    .header { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 4px; font-family: sans-serif; font-size: 12px; z-index: 10; pointer-events: none; }
+    .live-badge { color: red; font-weight: bold; margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <div class="header"><span class="live-badge">● LIVE</span>KBS 재난감시 CCTV</div>
+  <video id="video" autoplay muted playsinline controls></video>
+  <script>
+    var video = document.getElementById('video');
+    var videoSrc = '${m3u8Url}';
+    if (Hls.isSupported()) {
+      var hls = new Hls({ debug: false });
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function() {
+        video.play().catch(e => console.log('Autoplay blocked:', e));
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = videoSrc;
+      video.addEventListener('loadedmetadata', function() {
+        video.play().catch(e => console.log('Autoplay blocked:', e));
+      });
+    }
+  </script>
+</body>
+</html>
+    `;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(html);
   } catch (error) {
     console.error('KBS CCTV Proxy Error:', error.message);
-    res.status(500).send('Internal Server Error fetching KBS stream');
+    res.status(500).send('<body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">Error loading video</body>');
   }
 });
 
@@ -7067,9 +7092,9 @@ app.get('/api/weather/cctv', async (req, res) => {
         merged.embedUrl = `https://www.youtube.com/embed/${merged.youtubeId}?autoplay=1&mute=1&controls=1&rel=0`;
         merged.thumbnailUrl = `https://img.youtube.com/vi/${merged.youtubeId}/maxresdefault.jpg`;
       } else if ((merged.type === 'iframe' || merged.type === 'hls' || merged.type === 'kbs_share') && merged.youtubeId && /^\d+$/.test(merged.youtubeId)) {
-        // ✅ KBS CCTV (youtubeId가 숫자)는 모조리 iframe(cctvPopup)으로 강제 통일하여 블랙스크린 방지
+        // ✅ KBS CCTV (youtubeId가 숫자)는 모조리 자체 개발한 독립 플레이어(kbs-player)로 강제 통일
         merged.type = 'iframe';
-        merged.embedUrl = `https://d.kbs.co.kr/special/cctv/cctvPopup?type=LIVE&cctvId=${merged.youtubeId}`;
+        merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-player?cctvId=${merged.youtubeId}`;
       } else if (merged.type === 'iframe' && merged.youtubeId) {
         merged.embedUrl = merged.youtubeId;
       } else if (merged.type === 'hls' && merged.youtubeId) {
