@@ -7067,8 +7067,8 @@ app.get('/api/weather/cctv', async (req, res) => {
         merged.embedUrl = merged.youtubeId; // 예: HLS, 포탈 영상, 지자체 CCTV 등
       } else if (merged.type === 'kbs_share' && merged.youtubeId) {
         // ✅ 구버전 앱(캐시)도 완벽 지원하기 위해 백엔드에서 강제 변환
-        merged.type = 'iframe';
-        merged.embedUrl = `https://d.kbs.co.kr/special/cctvShare?cctvId=${merged.youtubeId}`;
+        merged.type = 'hls';
+        merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-cctv?cctvId=${merged.youtubeId}`;
       } else if (merged.type === 'hls' && merged.youtubeId) {
         merged.embedUrl = merged.youtubeId;
       }
