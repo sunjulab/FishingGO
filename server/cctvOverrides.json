@@ -10,5 +10,29 @@
     "type": "youtube",
     "label": "🎣 속초항 실시간",
     "updatedAt": "2026-04-19T15:40:31.952Z"
+  },
+  "point_26": {
+    "youtubeId": "0fdMfyHRd44",
+    "type": "youtube",
+    "label": "🎣 속초/고성 실시간",
+    "updatedAt": "2026-06-17T13:37:08.405Z"
+  },
+  "point_41": {
+    "youtubeId": "80OT9PgWG-k",
+    "type": "youtube",
+    "label": "🎣 속초/고성 실시간",
+    "updatedAt": "2026-06-17T13:37:35.325Z"
+  },
+  "point_101": {
+    "youtubeId": "80OT9PgWG-k",
+    "type": "youtube",
+    "label": "🎣 속초/고성 실시간",
+    "updatedAt": "2026-06-17T13:37:42.480Z"
+  },
+  "point_2": {
+    "youtubeId": "80OT9PgWG-k",
+    "type": "youtube",
+    "label": "🎣 속초/고성 실시간",
+    "updatedAt": "2026-06-17T13:37:47.427Z"
   }
 }

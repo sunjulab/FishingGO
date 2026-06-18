@@ -194,9 +194,14 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
   app.put('/api/admin/cctv/:obsCode', async (req, res) => {
     if (!verifyCctvAdmin(req, res)) return;
     const { obsCode } = req.params;
-    const { youtubeId, type, label } = req.body;
+    let { youtubeId, type, label } = req.body;
     const base = BASE_CCTV_MAP.find(b => b.obsCode === obsCode);
     
+    // 클라이언트 캐시로 인해 구버전에서 youtube로 올라올 수 있으므로 강제 보정
+    if ((type === 'youtube' || type === 'iframe') && /^\d{4,5}$/.test(youtubeId)) {
+      type = 'kbs_share';
+    }
+
     if (type === 'youtube' && youtubeId && !/^[a-zA-Z0-9_-]{11}$/.test(youtubeId)) {
       return res.status(400).json({ error: 'YouTube ID는 정확히 11자리여야 합니다.' });
     }

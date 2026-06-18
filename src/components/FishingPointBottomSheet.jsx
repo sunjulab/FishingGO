@@ -284,9 +284,6 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       finalType = 'kbs_share';
       const match = trimmedInput.match(/cctvId=([a-zA-Z0-9_-]+)/);
       finalYoutubeId = match ? match[1] : trimmedInput;
-    } else if (/^\d{4,5}$/.test(trimmedInput)) { // 4~5자리 숫자는 KBS CCTV ID로 간주
-      finalType = 'kbs_share';
-      finalYoutubeId = trimmedInput;
     } else if (trimmedInput.endsWith('.m3u8') || trimmedInput.includes('.m3u8?')) {
       finalType = 'hls';
     }
@@ -632,7 +629,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <input 
                 value={editYoutubeId}
                 onChange={(e) => setEditYoutubeId(e.target.value)}
-                placeholder="YouTube URL, m3u8 주소, KBS 공유링크 입력"
+                placeholder="YouTube URL 뒤 11자리 (예: jfKfPfyJRdk)"
                 style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #FFD700', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', marginBottom: '16px', textAlign: 'center', outline: 'none' }}
               />
               <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
@@ -677,10 +674,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <div style={{ color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>📡 대상어 현장 영상 연결 중...</div>
             </div>
           ) : cctvData ? (
-             (cctvData.type === 'kbs_share' || cctvData.type === 'hls') && cctvData.url ? (
+             cctvData.type === 'hls' && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <ReactPlayer 
-                    url={cctvData.type === 'kbs_share' ? `${API_BASE}/api/weather/kbs-cctv?cctvId=${cctvData.youtubeId}` : cctvData.url} 
+                    url={cctvData.url} 
                     playing={true} 
                     controls={true} 
                     muted={true}
@@ -689,17 +686,17 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                     config={{ file: { forceHLS: true } }}
                   />
                 </div>
-             ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
+             ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe' || cctvData.type === 'kbs_share') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <iframe
-                    src={cctvData.url}
+                    src={cctvData.type === 'kbs_share' ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` : cctvData.url}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     style={{ width: '100%', height: '100%', border: 'none' }}
                   />
                   {/* 임베딩 차단 우회 및 전체화면용 외부 링크 버튼 */}
                   <button 
-                    onClick={() => window.open(cctvData.type === 'youtube' ? `https://www.youtube.com/watch?v=${cctvData.youtubeId}` : cctvData.url, '_blank')}
+                    onClick={() => window.open(cctvData.type === 'youtube' ? `https://www.youtube.com/watch?v=${cctvData.youtubeId}` : cctvData.type === 'kbs_share' ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` : cctvData.url, '_blank')}
                     style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,0,0,0.85)', color: '#fff', border: 'none', borderRadius: '20px', padding: '6px 12px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}
                   >
                     {cctvData.type === 'youtube' ? (
