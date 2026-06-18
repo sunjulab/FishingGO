@@ -202,6 +202,11 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
       type = 'kbs_share';
     }
 
+    // 구버전 PWA 캐시가 coast.mof.go.kr 주소를 iframe으로 보내는 것을 서버단에서 강제 보정 (사용자 캐시 비우기 불필요)
+    if (youtubeId && youtubeId.includes('coast.mof.go.kr')) {
+      type = 'mof_custom';
+    }
+
     if (type === 'youtube' && youtubeId && !/^[a-zA-Z0-9_-]{11}$/.test(youtubeId)) {
       return res.status(400).json({ error: 'YouTube ID는 정확히 11자리여야 합니다.' });
     }
