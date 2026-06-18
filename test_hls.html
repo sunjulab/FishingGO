@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-  <video id="video" controls autoplay style="width: 100%; max-width: 600px;"></video>
+  <video id="video" controls></video>
   <script>
-    var video = document.getElementById('video');
-    var videoSrc = 'https://fishing-go-backend.onrender.com/api/weather/kbs-cctv?cctvId=9995';
     if (Hls.isSupported()) {
+      var video = document.getElementById('video');
       var hls = new Hls({ debug: true });
-      hls.loadSource(videoSrc);
+      hls.loadSource('https://d.kbs.co.kr/special/cctvShare?cctvId=9995');
       hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function() {
+        console.log("MANIFEST_PARSED SUCCESS");
+      });
       hls.on(Hls.Events.ERROR, function (event, data) {
-        console.error('HLS Error:', data);
+        console.error("HLS ERROR:", data.type, data.details, data.fatal);
       });
     }
   </script>

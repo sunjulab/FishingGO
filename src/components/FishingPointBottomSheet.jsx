@@ -677,7 +677,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
              (cctvData.type === 'kbs_share' || cctvData.type === 'hls') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <ReactPlayer 
-                    url={cctvData.type === 'kbs_share' ? `${API_BASE}/api/weather/kbs-cctv?cctvId=${cctvData.youtubeId}` : cctvData.url} 
+                    url={cctvData.type === 'kbs_share' ? `${API_BASE}/api/weather/kbs-cctv.m3u8?cctvId=${cctvData.youtubeId}` : cctvData.url} 
                     playing={true} 
                     controls={true} 
                     muted={true}

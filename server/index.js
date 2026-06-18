@@ -6009,7 +6009,7 @@ app.get('/api/user/crews', async (req, res) => {
 // ==========================================
 // KBS 실시간 CCTV 스트리밍 우회 프록시 (HLS token 추출기)
 // ==========================================
-app.get('/api/weather/kbs-cctv', async (req, res) => {
+app.get('/api/weather/kbs-cctv.m3u8', async (req, res) => {
   try {
     const { cctvId } = req.query;
     if (!cctvId) {
@@ -6060,6 +6060,7 @@ app.get('/api/weather/kbs-cctv', async (req, res) => {
 
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // ✅ CORS 실패 캐싱 방지
     res.send(m3u8Content);
   } catch (error) {
     console.error('KBS CCTV Proxy Error:', error.message);
@@ -7072,7 +7073,7 @@ app.get('/api/weather/cctv', async (req, res) => {
       } else if (merged.type === 'kbs_share' && merged.youtubeId) {
         // ✅ 구버전 앱(캐시)도 완벽 지원하기 위해 백엔드에서 강제 변환
         merged.type = 'hls';
-        merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-cctv?cctvId=${merged.youtubeId}`;
+        merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-cctv.m3u8?cctvId=${merged.youtubeId}`;
       } else if (merged.type === 'hls' && merged.youtubeId) {
         merged.embedUrl = merged.youtubeId;
       }
