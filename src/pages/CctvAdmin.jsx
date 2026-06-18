@@ -5,6 +5,10 @@ import { useToastStore } from '../store/useToastStore';
 import { Tv, Edit3, Check, X, RotateCcw, ArrowLeft, Youtube, Image, AlertCircle, ChevronDown, ChevronUp, Link } from 'lucide-react';
 
 import apiClient from '../api/index';
+import ReactPlayer from 'react-player';
+
+// API_BASE for absolute URLs
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ✅ 25TH-B1: extractYoutubeId 모듈 레벨 상수로 추출 — saveEdit 호출마다 재정의 제거 (7TH-B4 FishingPointBottomSheet 패턴 통일)
 const YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -119,8 +123,18 @@ export default function CctvAdmin() {
         // ✅ YouTube: 11자리 ID만 추출
         body.youtubeId = extractYoutubeId(body.youtubeId.trim());
       } else if (body.type === 'iframe') {
-        // ✅ iframe: URL 그대로 저장 (youtubeId 필드 재활용)
-        body.youtubeId = body.youtubeId.trim();
+        const trimmedInput = body.youtubeId.trim();
+        if (trimmedInput.includes('d.kbs.co.kr/special/cctvShare')) {
+          body.type = 'kbs_share';
+          const match = trimmedInput.match(/cctvId=([a-zA-Z0-9_-]+)/);
+          body.youtubeId = match ? match[1] : trimmedInput;
+        } else if (trimmedInput.endsWith('.m3u8') || trimmedInput.includes('.m3u8?')) {
+          body.type = 'hls';
+          body.youtubeId = trimmedInput;
+        } else {
+          // ✅ iframe: URL 그대로 저장
+          body.youtubeId = trimmedInput;
+        }
       } else if (body.type === 'image') {
         body.youtubeId = '';
       }
@@ -365,13 +379,26 @@ export default function CctvAdmin() {
               {/* 미리보기 패널 */}
               {isPreviewing && item.youtubeId && (
                 <div style={{ padding: '0 16px 14px' }}>
-                  <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9' }}>
-                    <iframe
-                      src={item.type === 'youtube' ? getEmbedUrl(item.youtubeId) : item.youtubeId}
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
-                      style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                    />
+                  <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative' }}>
+                    {item.type === 'kbs_share' || item.type === 'hls' ? (
+                      <ReactPlayer 
+                        url={item.type === 'kbs_share' ? `${API_BASE}/api/weather/kbs-cctv?cctvId=${item.youtubeId}` : item.youtubeId} 
+                        playing={true} 
+                        controls={true} 
+                        muted={true}
+                        width="100%" 
+                        height="100%"
+                        style={{ position: 'absolute', top: 0, left: 0 }}
+                        config={{ file: { forceHLS: true } }}
+                      />
+                    ) : (
+                      <iframe
+                        src={item.type === 'youtube' ? getEmbedUrl(item.youtubeId) : item.youtubeId}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        style={{ width: '100%', height: '100%', border: 'none', display: 'block', position: 'absolute', top: 0, left: 0 }}
+                      />
+                    )}
                   </div>
                 </div>
               )}

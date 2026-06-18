@@ -6986,6 +6986,33 @@ app.get('/api/weather/cctv/stream/:beachCode', async (req, res) => {
   }
 });
 
+// KBS 실시간 CCTV 토큰 프록시 (HLS m3u8 우회 연결)
+app.get('/api/weather/kbs-cctv', async (req, res) => {
+  const { cctvId } = req.query;
+  if (!/^[0-9a-zA-Z_-]+$/.test(cctvId)) return res.status(400).send('Invalid CCTV ID');
+  
+  try {
+    const response = await axios.get(`https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://d.kbs.co.kr/'
+      },
+      timeout: 3000
+    });
+    
+    // HTML에서 m3u8 주소 추출
+    const match = response.data.match(/(https:\/\/[^"']+\.m3u8[^"']*)/);
+    if (match && match[1]) {
+      return res.redirect(302, match[1]);
+    } else {
+      return res.status(404).send('Streaming URL not found in KBS page');
+    }
+  } catch (err) {
+    console.error('[KBS Proxy Error]', err.message);
+    return res.status(502).send('Error fetching from KBS');
+  }
+});
+
 app.get('/api/weather/cctv', async (req, res) => {
   const { stationId, pointId } = req.query;
   try {
@@ -7002,6 +7029,8 @@ app.get('/api/weather/cctv', async (req, res) => {
       } else if (merged.type === 'iframe' && merged.youtubeId) {
         // ✅ iframe 타입: youtubeId 필드에 커스텀 URL이 직접 저장됨
         merged.embedUrl = merged.youtubeId; // 예: HLS, 포탈 영상, 지자체 CCTV 등
+      } else if ((merged.type === 'kbs_share' || merged.type === 'hls') && merged.youtubeId) {
+        merged.embedUrl = merged.youtubeId;
       }
       info = merged;
     } else {

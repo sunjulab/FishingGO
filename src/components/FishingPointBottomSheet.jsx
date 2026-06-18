@@ -13,6 +13,8 @@ import { fetchTideForecast, fetchWaterTemp, fetchFishingIndex } from '../api/mar
 // ENH3-B5: 환경변수는 불변 — 컴포넌트 외부 상수로 분리
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+import ReactPlayer from 'react-player';
+
 // ✅ 7TH-B4: extractYoutubeId 컴포넌트 외부 추출 — saveCctvOverride 호출마다 재정의 제거
 const YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
 function extractYoutubeId(str) {
@@ -271,9 +273,20 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     if (!editYoutubeId.trim()) return;
 
     const trimmedInput = editYoutubeId.trim();
-    const isYoutube = /youtu\.be|youtube\.com|v\/|embed\//.test(trimmedInput);
-    const finalType = isYoutube ? 'youtube' : 'iframe';
-    const finalYoutubeId = isYoutube ? extractYoutubeId(trimmedInput) : trimmedInput;
+    
+    let finalType = 'iframe';
+    let finalYoutubeId = trimmedInput;
+    
+    if (/youtu\.be|youtube\.com|v\/|embed\//.test(trimmedInput)) {
+      finalType = 'youtube';
+      finalYoutubeId = extractYoutubeId(trimmedInput);
+    } else if (trimmedInput.includes('d.kbs.co.kr/special/cctvShare')) {
+      finalType = 'kbs_share';
+      const match = trimmedInput.match(/cctvId=([a-zA-Z0-9_-]+)/);
+      finalYoutubeId = match ? match[1] : trimmedInput;
+    } else if (trimmedInput.endsWith('.m3u8') || trimmedInput.includes('.m3u8?')) {
+      finalType = 'hls';
+    }
 
     const sid = selectedPoint.obsCode || 'DT_0001';
     const cctvOverrideId = selectedPoint.id ? `point_${selectedPoint.id}` : sid;
@@ -661,7 +674,19 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <div style={{ color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>📡 대상어 현장 영상 연결 중...</div>
             </div>
           ) : cctvData ? (
-             (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
+             (cctvData.type === 'kbs_share' || cctvData.type === 'hls') && cctvData.url ? (
+                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                  <ReactPlayer 
+                    url={cctvData.type === 'kbs_share' ? `${API_BASE}/api/weather/kbs-cctv?cctvId=${cctvData.youtubeId}` : cctvData.url} 
+                    playing={true} 
+                    controls={true} 
+                    muted={true}
+                    width="100%" 
+                    height="100%"
+                    config={{ file: { forceHLS: true } }}
+                  />
+                </div>
+             ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <iframe
                     src={cctvData.url}

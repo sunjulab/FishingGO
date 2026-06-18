@@ -196,7 +196,7 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
     const { obsCode } = req.params;
     const { youtubeId, type, label } = req.body;
     const base = BASE_CCTV_MAP.find(b => b.obsCode === obsCode);
-    if (!base) return res.status(404).json({ error: '존재하지 않는 CCTV 코드입니다.' });
+    
     if (type === 'youtube' && youtubeId && !/^[a-zA-Z0-9_-]{11}$/.test(youtubeId)) {
       return res.status(400).json({ error: 'YouTube ID는 정확히 11자리여야 합니다.' });
     }
@@ -204,13 +204,13 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
     const data = {
       youtubeId: youtubeId || '',
       type:      type || 'image',
-      label:     label || base.label,
+      label:     label || (base ? base.label : '커스텀 CCTV'),
     };
 
     // 1순위: MongoDB 저장
     if (getDbReady() && CctvOverrideModel) {
       try {
-        await saveToDb(CctvOverrideModel, obsCode, { ...data, areaName: base.areaName });
+        await saveToDb(CctvOverrideModel, obsCode, { ...data, areaName: base ? base.areaName : '추가 포인트' });
       } catch (e) {
         // DB 실패 시 JSON fallback으로 계속 진행
         _log.warn('[CCTV PUT] DB 실패 → JSON fallback:', e.message);
