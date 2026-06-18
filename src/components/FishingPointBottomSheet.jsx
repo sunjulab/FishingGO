@@ -628,11 +628,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           {/* 마스터 전용 UI: 입력 폼 오버레이 */}
           {isAdmin && isEditingCctv && (
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px' }}>
-              <div style={{ color: '#FFD700', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', marginBottom: '16px' }}>🛠 [{selectedPoint.name}] 실시간 유튜브 영상 ID 교체</div>
+              <div style={{ color: '#FFD700', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', marginBottom: '16px' }}>🛠 [{selectedPoint.name}] 실시간 유튜브/KBS 영상 주소 교체</div>
               <input 
                 value={editYoutubeId}
                 onChange={(e) => setEditYoutubeId(e.target.value)}
-                placeholder="YouTube URL 뒤 11자리 (예: jfKfPfyJRdk)"
+                placeholder="유튜브 또는 KBS 전체 주소 입력"
                 style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #FFD700', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', marginBottom: '16px', textAlign: 'center', outline: 'none' }}
               />
               <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
