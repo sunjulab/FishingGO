@@ -35,7 +35,7 @@ export default function CctvModal({ cctvData, selectedPoint, onClose }) {
         ) : cctvData.fallbackImg ? (
           <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
             <img
-              src={cctvData.fallbackImg}
+              src={cctvData.fallbackImg.startsWith('http') ? cctvData.fallbackImg : `${import.meta.env.VITE_API_BASE_URL || 'https://fishing-go-backend.onrender.com'}${cctvData.fallbackImg}?t=${Date.now()}`}
               alt={cctvData.areaName}
               style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
             />

@@ -253,7 +253,8 @@ export default function DashboardView({
                       if (!canAccessPremium) { addToast('📺 실시간 해양 CCTV는 LITE 플랜 이상에서 제공됩니다.', 'error'); return; }
                       const sid = selectedPoint?.obsCode || 'DT_0001';
                       try {
-                        const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}`);
+                        const pointIdQuery = selectedPoint?.id ? `&pointId=${selectedPoint.id}` : '';
+                        const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}${pointIdQuery}`);
                         setCctvData(res.data); setShowCCTV(true);
                       } catch { addToast('영상 데이터를 불러오는 데 실패했습니다.', 'error'); }
                     }}
