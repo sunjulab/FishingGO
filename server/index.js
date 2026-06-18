@@ -7068,8 +7068,14 @@ app.get('/api/weather/cctv', async (req, res) => {
         merged.embedUrl = `https://www.youtube.com/embed/${merged.youtubeId}?autoplay=1&mute=1&controls=1&rel=0`;
         merged.thumbnailUrl = `https://img.youtube.com/vi/${merged.youtubeId}/maxresdefault.jpg`;
       } else if (merged.type === 'iframe' && merged.youtubeId) {
-        // ✅ iframe 타입: youtubeId 필드에 커스텀 URL이 직접 저장됨
-        merged.embedUrl = merged.youtubeId; // 예: HLS, 포탈 영상, 지자체 CCTV 등
+        if (/^\d+$/.test(merged.youtubeId)) {
+          // ✅ 캐시된 구버전 프론트엔드가 '9995'를 iframe으로 보낼 때 HLS로 강제 변환
+          merged.type = 'hls';
+          merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-cctv.m3u8?cctvId=${merged.youtubeId}`;
+        } else {
+          // ✅ iframe 타입: youtubeId 필드에 커스텀 URL이 직접 저장됨
+          merged.embedUrl = merged.youtubeId; // 예: HLS, 포탈 영상, 지자체 CCTV 등
+        }
       } else if (merged.type === 'kbs_share' && merged.youtubeId) {
         // ✅ 구버전 앱(캐시)도 완벽 지원하기 위해 백엔드에서 강제 변환
         merged.type = 'hls';
