@@ -7078,7 +7078,7 @@ app.get('/api/weather/cctv', async (req, res) => {
       } else if (merged.type === 'kbs_share' && merged.youtubeId) {
         // ✅ 구버전 앱(캐시)도 완벽 지원하기 위해 백엔드에서 강제 변환
         merged.type = 'hls';
-        merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-cctv.m3u8?cctvId=${merged.youtubeId}`;
+        merged.embedUrl = `https://fishing-go-backend.onrender.com/api/weather/kbs-cctv.m3u8?cctvId=${merged.youtubeId}&t=${Date.now()}`;
       } else if (merged.type === 'hls' && merged.youtubeId) {
         merged.embedUrl = merged.youtubeId;
       }
