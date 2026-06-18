@@ -1,7 +1,74 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { X, AlertCircle } from 'lucide-react';
+import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
+import { useToastStore } from '../store/useToastStore';
+import apiClient from '../api';
 
-export default function CctvModal({ cctvData, selectedPoint, onClose }) {
+const YOUTUBE_REGEXP = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+function extractYoutubeId(str) {
+  const match = str.match(YOUTUBE_REGEXP);
+  return (match && match[2].length === 11) ? match[2] : str;
+}
+
+export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClose }) {
+  const addToast = useToastStore(state => state.addToast);
+  const isAdmin = useUserStore(s =>
+    s.user?.id === ADMIN_ID ||
+    s.user?.email === ADMIN_EMAIL ||
+    s.user?.email === ADMIN_ID ||
+    s.userTier === 'MASTER'
+  );
+
+  const [isEditingCctv, setIsEditingCctv] = useState(false);
+  const [editYoutubeId, setEditYoutubeId] = useState('');
+  const [isSavingCctv, setIsSavingCctv] = useState(false);
+
+  const saveCctvOverride = useCallback(async () => {
+    if (!editYoutubeId.trim()) return;
+
+    const trimmedInput = editYoutubeId.trim();
+    let finalType = 'iframe';
+    let finalYoutubeId = trimmedInput;
+    
+    if (/youtu\.be|youtube\.com|v\/|embed\//.test(trimmedInput)) {
+      finalType = 'youtube';
+      finalYoutubeId = extractYoutubeId(trimmedInput);
+    } else if (trimmedInput.includes('d.kbs.co.kr/special/cctvShare')) {
+      finalType = 'kbs_share';
+      const match = trimmedInput.match(/cctvId=([a-zA-Z0-9_-]+)/);
+      finalYoutubeId = match ? match[1] : trimmedInput;
+    } else if (trimmedInput.endsWith('.m3u8') || trimmedInput.includes('.m3u8?')) {
+      finalType = 'hls';
+    } else if (/^\d+$/.test(trimmedInput)) {
+      finalType = 'kbs_share';
+      finalYoutubeId = trimmedInput;
+    }
+
+    const sid = selectedPoint?.obsCode || 'DT_0001';
+    const cctvOverrideId = selectedPoint?.id ? `point_${selectedPoint.id}` : sid;
+    
+    try {
+      setIsSavingCctv(true);
+      const res = await apiClient.put(`/api/admin/cctv/${cctvOverrideId}`, {
+        type: finalType,
+        youtubeId: finalYoutubeId,
+        label: cctvData?.label || `${selectedPoint?.name || '포인트'} 수동업데이트`
+      });
+      if (res.data.success) {
+        addToast('✅ CCTV 링크가 정상적으로 수정되었습니다.', 'success');
+        setIsEditingCctv(false);
+        const cctvResp = await apiClient.get(`/api/weather/cctv?stationId=${sid}&pointId=point_${selectedPoint?.id || ''}`);
+        if (setCctvData) setCctvData(cctvResp.data);
+      } else {
+        addToast(res.data.error || '수정에 실패했습니다.', 'error');
+      }
+    } catch (err) {
+      addToast('수정 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsSavingCctv(false);
+    }
+  }, [editYoutubeId, selectedPoint, cctvData, addToast, setCctvData]);
+
   if (!cctvData) return null;
   return (
     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1200, display: 'flex', flexDirection: 'column' }}>
@@ -22,7 +89,55 @@ export default function CctvModal({ cctvData, selectedPoint, onClose }) {
       </div>
 
       {/* 영상/이미지 */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative' }}>
+        
+        {/* 마스터 전용 수정 버튼 */}
+        {isAdmin && (
+          <button 
+            onClick={() => {
+              setIsEditingCctv(!isEditingCctv);
+              if (!isEditingCctv) {
+                const isKbs = cctvData?.type === 'kbs_share' || (cctvData?.type === 'hls' && /^\d+$/.test(cctvData?.youtubeId || ''));
+                const initValue = isKbs
+                  ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` 
+                  : (cctvData?.youtubeId || '');
+                setEditYoutubeId(initValue);
+              }
+            }}
+            style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(255,215,0,0.9)', color: '#000', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', padding: '6px 10px', borderRadius: '8px', zIndex: 40, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
+          >
+            🔄 {isEditingCctv ? '수정 닫기' : `마스터 편집`}
+          </button>
+        )}
+
+        {/* 마스터 전용 UI: 입력 폼 오버레이 */}
+        {isAdmin && isEditingCctv && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px' }}>
+            <div style={{ color: '#FFD700', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', marginBottom: '16px' }}>🛠 [{selectedPoint?.name}] 실시간 영상 교체</div>
+            <input 
+              value={editYoutubeId}
+              onChange={(e) => setEditYoutubeId(e.target.value)}
+              placeholder="유튜브 또는 KBS 전체 주소 입력"
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #FFD700', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', marginBottom: '16px', textAlign: 'center', outline: 'none' }}
+            />
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <button 
+                onClick={() => setIsEditingCctv(false)}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '800' }}
+              >
+                취소
+              </button>
+              <button 
+                onClick={saveCctvOverride}
+                disabled={isSavingCctv}
+                style={{ flex: 2, padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', color: '#000', border: 'none', cursor: 'pointer', fontWeight: '900', opacity: isSavingCctv ? 0.6 : 1 }}
+              >
+                {isSavingCctv ? '업데이트 중...' : '즉시 적용'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {(cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
           <div style={{ width: '100%', borderRadius: '16px', overflow: 'hidden', aspectRatio: '16/9', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
             <iframe

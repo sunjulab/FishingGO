@@ -1425,6 +1425,7 @@ export default function MapHome() {
         {showCCTV && cctvData && (
           <CctvModal
             cctvData={cctvData}
+            setCctvData={setCctvData}
             selectedPoint={selectedPoint}
             onClose={() => { setShowCCTV(false); setCctvData(null); }}
           />
