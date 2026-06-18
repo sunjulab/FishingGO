@@ -431,3 +431,5 @@ ins.adsbygoogle[data-ad-status="unfilled"]::after {
 /* 가로 스크롤 필터 바 스크롤바 숨기기 (Chrome/Safari webkit + Firefox) */
 .scroll-hide::-webkit-scrollbar { display: none; }
 .scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
+
+@keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }

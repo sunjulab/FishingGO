@@ -467,15 +467,15 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
       position: 'fixed', inset: 0, zIndex: 9000,
       backgroundColor: 'rgba(0,0,0,0.7)',
       backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
-    }}> {/* PC 웹: 최대 480px 컨테이너 내 정렬 */}
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '20px'
+    }}> {/* PC 웹/앱: 중앙 정렬 모달 */}
       <div style={{
-        width: '100%', maxWidth: '480px', backgroundColor: '#ffffff',
-        borderRadius: '24px 24px 0 0', padding: '28px 24px 40px',
-        animation: 'slideUp 0.3s ease'
+        width: '100%', maxWidth: '400px', backgroundColor: '#ffffff',
+        borderRadius: '24px', padding: '28px 24px 32px',
+        animation: 'zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}>
-        {/* 핸들 */}
-        <div style={{ width: '40px', height: '4px', backgroundColor: '#E5E5EA', borderRadius: '2px', margin: '0 auto 20px' }} />
+        {/* 핸들 제거 (중앙 팝업이므로) */}
         
         <h2 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', textAlign: 'center', marginBottom: '6px' }}>
           {ctx.title}
