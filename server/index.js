@@ -7051,7 +7051,11 @@ app.get('/api/weather/cctv', async (req, res) => {
       } else if (merged.type === 'iframe' && merged.youtubeId) {
         // ✅ iframe 타입: youtubeId 필드에 커스텀 URL이 직접 저장됨
         merged.embedUrl = merged.youtubeId; // 예: HLS, 포탈 영상, 지자체 CCTV 등
-      } else if ((merged.type === 'kbs_share' || merged.type === 'hls') && merged.youtubeId) {
+      } else if (merged.type === 'kbs_share' && merged.youtubeId) {
+        // ✅ 구버전 앱(캐시)도 완벽 지원하기 위해 백엔드에서 강제 변환
+        merged.type = 'iframe';
+        merged.embedUrl = `https://d.kbs.co.kr/special/cctvShare?cctvId=${merged.youtubeId}`;
+      } else if (merged.type === 'hls' && merged.youtubeId) {
         merged.embedUrl = merged.youtubeId;
       }
       info = merged;
