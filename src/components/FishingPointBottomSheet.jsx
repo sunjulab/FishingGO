@@ -615,13 +615,20 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           {/* 마스터 전용 UI: CCTV 정보 수정 버튼 */}
           {isAdmin && (
             <button 
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setIsEditingCctv(!isEditingCctv);
-                if (!isEditingCctv) setEditYoutubeId(cctvData?.youtubeId || '');
+                if (!isEditingCctv) {
+                  const isKbs = cctvData?.type === 'kbs_share' || (cctvData?.type === 'hls' && /^\d+$/.test(cctvData?.youtubeId || ''));
+                  const initValue = isKbs
+                    ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` 
+                    : (cctvData?.youtubeId || '');
+                  setEditYoutubeId(initValue);
+                }
               }}
               style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(255,215,0,0.9)', color: '#000', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', padding: '6px 10px', borderRadius: '8px', zIndex: 40, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
             >
-              🔄 {isEditingCctv ? '수정 닫기' : `마스터 편집 (${cctvData?.youtubeId || '미등록'})`}
+              🔄 {isEditingCctv ? '수정 닫기' : `마스터 편집`}
             </button>
           )}
 
