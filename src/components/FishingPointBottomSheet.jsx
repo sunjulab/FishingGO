@@ -696,7 +696,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                     config={{ file: { forceHLS: true } }}
                   />
                 </div>
-             ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe' || cctvData.type === 'kbs_share') && cctvData.url ? (
+             ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <iframe
                     src={cctvData.url}
