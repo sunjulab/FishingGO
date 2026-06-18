@@ -387,10 +387,14 @@ const app = express();
 // ─── 보안 헤더 (Helmet) ────────────────────────────────────────
 try {
   const helmet = require('helmet');
-  app.use(helmet({ contentSecurityPolicy: false, hidePoweredBy: true, // ✅ FIX-HELMET: FIX-HELMET-NO-POWERED-BY
+  app.use(helmet({ 
+    contentSecurityPolicy: false, 
+    hidePoweredBy: true, // ✅ FIX-HELMET: FIX-HELMET-NO-POWERED-BY
     strictTransportSecurity: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false, // ✅ FIX-HSTS CSP는 Vite SPA가 관리 (script-src 'unsafe-inline' 필요)
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    crossOriginEmbedderPolicy: false })); // CSP는 SPA 프론트 판단에 맡김으로 off
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false // ✅ hls.js ReactPlayer CORS 차단 방지
+  })); // CSP는 SPA 프론트 판단에 맡김으로 off
 } catch (e) { /* helmet 미설치 — npm install helmet */ }
 
 // ─── 응답 압축 (Compression) - 응답 속도 30~70% 향상 ──────────
