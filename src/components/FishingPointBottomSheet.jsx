@@ -284,6 +284,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       finalType = 'kbs_share';
       const match = trimmedInput.match(/cctvId=([a-zA-Z0-9_-]+)/);
       finalYoutubeId = match ? match[1] : trimmedInput;
+    } else if (/^\d{4,5}$/.test(trimmedInput)) { // 4~5자리 숫자는 KBS CCTV ID로 간주
+      finalType = 'kbs_share';
+      finalYoutubeId = trimmedInput;
     } else if (trimmedInput.endsWith('.m3u8') || trimmedInput.includes('.m3u8?')) {
       finalType = 'hls';
     }
@@ -629,7 +632,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <input 
                 value={editYoutubeId}
                 onChange={(e) => setEditYoutubeId(e.target.value)}
-                placeholder="YouTube URL 뒤 11자리 (예: jfKfPfyJRdk)"
+                placeholder="YouTube URL, m3u8 주소, KBS 공유링크 입력"
                 style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #FFD700', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', marginBottom: '16px', textAlign: 'center', outline: 'none' }}
               />
               <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
