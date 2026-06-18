@@ -674,10 +674,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               <div style={{ color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>📡 대상어 현장 영상 연결 중...</div>
             </div>
           ) : cctvData ? (
-             cctvData.type === 'hls' && cctvData.url ? (
+             (cctvData.type === 'kbs_share' || cctvData.type === 'hls') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <ReactPlayer 
-                    url={cctvData.url} 
+                    url={cctvData.type === 'kbs_share' ? `${API_BASE}/api/weather/kbs-cctv?cctvId=${cctvData.youtubeId}` : cctvData.url} 
                     playing={true} 
                     controls={true} 
                     muted={true}
@@ -686,10 +686,10 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                     config={{ file: { forceHLS: true } }}
                   />
                 </div>
-             ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe' || cctvData.type === 'kbs_share') && cctvData.url ? (
+             ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <iframe
-                    src={cctvData.type === 'kbs_share' ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` : cctvData.url}
+                    src={cctvData.url}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     style={{ width: '100%', height: '100%', border: 'none' }}

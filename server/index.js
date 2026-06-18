@@ -6041,8 +6041,22 @@ app.get('/api/weather/kbs-cctv', async (req, res) => {
       return res.status(404).send('Failed to parse m3u8 URL');
     }
 
-    // 추출한 1회용 토큰이 포함된 m3u8 주소로 302 리다이렉트
-    res.redirect(m3u8Url);
+    // 4. 마스터 플레이리스트(M3U8)를 직접 다운로드하여 상대 경로를 절대 경로로 변환 (ReactPlayer HLS 오류 방지)
+    const m3u8Res = await axios.get(m3u8Url);
+    let m3u8Content = m3u8Res.data;
+
+    const baseUrl = new URL('.', m3u8Url).href;
+    m3u8Content = m3u8Content.split('\n').map(line => {
+      // 주석이나 빈 줄이 아닌 경우 (청크리스트 경로)
+      if (line && !line.startsWith('#')) {
+        return new URL(line, baseUrl).href;
+      }
+      return line;
+    }).join('\n');
+
+    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(m3u8Content);
   } catch (error) {
     console.error('KBS CCTV Proxy Error:', error.message);
     res.status(500).send('Internal Server Error fetching KBS stream');
