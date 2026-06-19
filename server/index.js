@@ -7163,7 +7163,7 @@ app.get('/api/weather/cctv', async (req, res) => {
       }
 
       // [BACKEND SAFETY NET] Prevent recursive iframe rendering for invalid URLs or keywords
-      if (merged.type === 'iframe' && merged.youtubeId && !merged.youtubeId.startsWith('http') && !merged.youtubeId.startsWith('//')) {
+      if (merged.type === 'iframe' && merged.embedUrl && !merged.embedUrl.startsWith('http') && !merged.embedUrl.startsWith('//')) {
         merged.type = 'fishinggo_placeholder';
         merged.embedUrl = undefined;
       }
