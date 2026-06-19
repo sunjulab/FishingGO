@@ -363,6 +363,10 @@ let SpotLocationOverrideModel = null;
 try { SpotLocationOverrideModel = require('./models/SpotLocationOverride'); } catch (e) { SpotLocationOverrideModel = null; }
 let SecretPointOverrideModel = null;
 try { SecretPointOverrideModel = require('./models/SecretPointOverride'); } catch (e) { SecretPointOverrideModel = null; }
+let CustomPointModel = null;
+try { CustomPointModel = require('./models/CustomPoint'); } catch (e) { CustomPointModel = null; }
+let AppConfigModel = null;
+try { AppConfigModel = require('./models/AppConfig'); } catch (e) { AppConfigModel = null; }
 // 인메모리 fallback: MongoDB 미연결 시 Set으로 유니크 카운트
 const memVisitorToday = new Set(); // 'YYYY-MM-DD:ipHash'
 const memVisitorTotal = new Set(); // 'ipHash'
@@ -1374,6 +1378,13 @@ app.post('/api/custom-points', (req, res) => {
     createdAt: new Date().toISOString(),
   };
   saveCustomPoints();
+  if (dbReady && CustomPointModel) {
+    CustomPointModel.findOneAndUpdate(
+      { id },
+      { $set: customPoints[id] },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[CustomPoint] DB 저장 실패:', e.message));
+  }
   (logger?.info || console.log)(`[CustomPoint] 추가: ${name} (${type}) @ ${lat},${lng} obsCode=${resolvedObsCode}`);
 
   res.json({
@@ -1411,6 +1422,13 @@ app.put('/api/custom-points/:id', (req, res) => {
   }
   
   saveCustomPoints();
+  if (dbReady && CustomPointModel) {
+    CustomPointModel.findOneAndUpdate(
+      { id },
+      { $set: pt },
+      { new: true }
+    ).catch(e => logger.error('[CustomPoint] DB 수정 실패:', e.message));
+  }
   (logger?.info || console.log)(`[CustomPoint] 수정: ${name} (${id})`);
   
   res.json({ ok: true, point: pt });
@@ -1429,6 +1447,9 @@ app.delete('/api/custom-points/:id', (req, res) => {
   const name = customPoints[id].name;
   delete customPoints[id];
   saveCustomPoints();
+  if (dbReady && CustomPointModel) {
+    CustomPointModel.deleteOne({ id }).catch(e => logger.error('[CustomPoint] DB 삭제 실패:', e.message));
+  }
   (logger?.info || console.log)(`[CustomPoint] 삭제: ${name} (${id})`);
   res.json({ ok: true });
 });
@@ -1522,6 +1543,13 @@ app.post('/api/admin/app-config', (req, res) => {
   }
   
   saveAppConfig();
+  if (dbReady && AppConfigModel) {
+    AppConfigModel.findOneAndUpdate(
+      { key: 'global_config' },
+      { $set: { min_version: appConfig.min_version, store_url: appConfig.store_url } },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[AppConfig] DB 저장 실패:', e.message));
+  }
   res.json({ ok: true, appConfig });
 });
 
@@ -7199,6 +7227,35 @@ async function loadSecretPointOverridesFromDB() {
 setTimeout(loadSpotOverridesFromDB, 4000);
 setTimeout(loadSecretPointOverridesFromDB, 4500);
 
+async function loadCustomPointsFromDB() {
+  if (!dbReady || !CustomPointModel) return;
+  try {
+    const docs = await CustomPointModel.find().lean();
+    docs.forEach(d => {
+      customPoints[d.id] = { ...d };
+      delete customPoints[d.id]._id;
+      delete customPoints[d.id].__v;
+    });
+    logger.info(`[CustomPoint] DB에서 ${docs.length}개 커스텀 포인트 복원 완료`);
+    if (docs.length > 0) saveCustomPoints();
+  } catch (e) { logger.error('[CustomPoint] DB 로드 실패:', e.message); }
+}
+
+async function loadAppConfigFromDB() {
+  if (!dbReady || !AppConfigModel) return;
+  try {
+    const doc = await AppConfigModel.findOne({ key: 'global_config' }).lean();
+    if (doc) {
+      appConfig.min_version = doc.min_version;
+      appConfig.store_url = doc.store_url;
+      logger.info(`[AppConfig] DB에서 설정 복원 완료 (min_version: ${appConfig.min_version})`);
+      saveAppConfig();
+    }
+  } catch (e) { logger.error('[AppConfig] DB 로드 실패:', e.message); }
+}
+
+setTimeout(loadCustomPointsFromDB, 4800);
+setTimeout(loadAppConfigFromDB, 5000);
 
 
 

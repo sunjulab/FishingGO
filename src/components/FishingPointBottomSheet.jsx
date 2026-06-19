@@ -637,7 +637,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                 e.stopPropagation();
                 setIsEditingCctv(!isEditingCctv);
                 if (!isEditingCctv) {
-                  const isKbs = cctvData?.type === 'kbs_share' || (cctvData?.type === 'hls' && /^\d+$/.test(cctvData?.youtubeId || ''));
+                  // backend changes kbs_share to iframe, so we must check for iframe + digits
+                  const isKbs = cctvData?.type === 'kbs_share' || ((cctvData?.type === 'hls' || cctvData?.type === 'iframe') && /^\d+$/.test(cctvData?.youtubeId || ''));
                   const initValue = isKbs
                     ? `https://d.kbs.co.kr/special/cctvShare?cctvId=${cctvData.youtubeId}` 
                     : (cctvData?.youtubeId || '');

@@ -1411,7 +1411,7 @@ export default function MapHome() {
         {isAdmin && selectedPoint && sheetVisible && (
           <div style={{
             position: 'absolute', bottom: '52%', right: '12px',
-            zIndex: 1200, display: 'flex', flexDirection: 'column', gap: '8px'
+            zIndex: 900, display: 'flex', flexDirection: 'column', gap: '8px'
           }}>
             <button
               onClick={() => setShowPointManager(true)}
