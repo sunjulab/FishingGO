@@ -703,7 +703,13 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                       muted={true}
                       width="100%" 
                       height="100%"
-                      config={{ file: { forceHLS: true } }}
+                      style={{ position: 'absolute', top: 0, left: 0 }}
+                      config={{ 
+                        file: { 
+                          forceHLS: true,
+                          attributes: { style: { width: '100%', height: '100%', objectFit: 'cover' } }
+                        } 
+                      }}
                     />
                   </div>
                   {!isCctvUnlocked && (

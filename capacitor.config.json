@@ -10,6 +10,9 @@
     "buildOptions": {}
   },
   "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
     "SplashScreen": {
       "launchShowDuration": 3000,
       "backgroundColor": "#0B1F3A",
