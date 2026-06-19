@@ -724,6 +724,22 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                       </button>
                     </div>
                   )}
+                  {isCctvUnlocked && cctvData.url?.includes('geoje.go.kr') && (
+                    <>
+                      <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5, pointerEvents: 'none' }}>
+                        <span style={{color: '#ff4444'}}>● LIVE</span>
+                        <span>GEOJE_{selectedPoint?.id || 'CCTV'}</span>
+                      </div>
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6, pointerEvents: 'none' }}>
+                        <div style={{ color: '#00D1FF', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          🚨 거제시청 재난안전상황실 실시간 관제망
+                        </div>
+                        <div style={{ color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, marginTop: '4px', fontWeight: '600', opacity: 0.8 }}>
+                          거제시 재난 CCTV 시스템과 연동된 실시간 현장 모니터링 영상입니다.
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
              ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
@@ -785,15 +801,15 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                       </button>
                     </div>
                   )}
-                  {isCctvUnlocked && (
+                  {isCctvUnlocked && cctvData.type === 'mof' && (
                     <>
                       {/* MOF 실시간 연안침식 모니터링 워터마크 레이아웃 */}
-                      <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5 }}>
+                      <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5, pointerEvents: 'none' }}>
                         <span style={{color: '#ff4444'}}>● REC</span>
                         <span>MOF_{selectedPoint?.obsCode}</span>
                       </div>
                       
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6 }}>
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6, pointerEvents: 'none' }}>
                         <div style={{ color: '#00D1FF', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           🌊 해양수산부 공식 실시간 연안 모니터링
                         </div>
