@@ -1410,8 +1410,8 @@ export default function MapHome() {
         {/* ── MASTER 전용: 관리자 플로팅 버튼 모음 ── */}
         {isAdmin && selectedPoint && sheetVisible && (
           <div style={{
-            position: 'absolute', bottom: '52%', right: '12px',
-            zIndex: 900, display: 'flex', flexDirection: 'column', gap: '8px'
+            position: 'absolute', top: '120px', right: '12px',
+            zIndex: 1200, display: 'flex', flexDirection: 'column', gap: '8px'
           }}>
             <button
               onClick={() => setShowPointManager(true)}
