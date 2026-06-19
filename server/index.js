@@ -7133,6 +7133,17 @@ app.get('/api/weather/cctv', async (req, res) => {
         const cleanUrl = merged.youtubeId.replace(/\?\d+$/, ''); // Remove timestamp query
         merged.fallbackImg = `/api/weather/cctv/proxy?url=${encodeURIComponent(cleanUrl)}`;
       }
+
+      // [BACKEND SAFETY NET] Prevent recursive iframe rendering for invalid URLs or keywords
+      if (merged.type === 'iframe' && merged.youtubeId && !merged.youtubeId.startsWith('http') && !merged.youtubeId.startsWith('//')) {
+        merged.type = 'fishinggo_placeholder';
+        merged.embedUrl = undefined;
+      }
+      
+      // Also catch explicit fishinggo_placeholder
+      if (merged.type === 'fishinggo_placeholder') {
+         merged.embedUrl = undefined;
+      }
       info = merged;
     } else {
       info = getCctvInfo(stationId || 'DT_0001');
