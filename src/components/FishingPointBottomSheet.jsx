@@ -678,22 +678,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             </div>
           )}
 
-          {/* LITE 잠금 오버레이 */}
-          {!canAccessPremium && (
-            <div style={{ position: 'absolute', inset: 0, backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10, background: 'rgba(10,10,15,0.7)' }}>
-              <div style={{ fontSize: `calc(32px * var(--fs, 1))`, marginBottom: '12px', filter: 'drop-shadow(0 2px 8px rgba(255,255,255,0.2))' }}>🔐</div>
-              <div style={{ fontSize: `calc(16px * var(--fs, 1))`, color: '#fff', fontWeight: '950', marginBottom: '8px' }}>LITE 플랜 이상 전용 영상</div>
-              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#aaa', fontWeight: '600', marginBottom: '20px', textAlign: 'center', padding: '0 20px' }}>
-                현장의 파도와 분위기를 1초 단위로 <br/> 파악할 수 있는 인라인 라이브 시스템입니다.
-              </div>
-              <button 
-                onClick={() => navigate('/vvip-subscribe')}
-                style={{ background: 'linear-gradient(135deg, #FF3B30, #D32F2F)', color: '#fff', border: 'none', borderRadius: '30px', padding: '10px 28px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', cursor: 'pointer', boxShadow: '0 6px 20px rgba(255,59,48,0.4)' }}
-              >
-                LITE 플랜 업그레이드
-              </button>
-            </div>
-          )}
+
 
           {/* 실제 영상 / 콘텐츠 */}
           {cctvLoading ? (
