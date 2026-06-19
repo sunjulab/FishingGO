@@ -295,6 +295,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     } else if (trimmedInput.includes('coast.mof.go.kr')) {
       finalType = 'mof_custom';
       finalYoutubeId = trimmedInput;
+    } else if (trimmedInput === '준비중' || trimmedInput === 'fishinggo') {
+      finalType = 'fishinggo_placeholder';
+      finalYoutubeId = 'placeholder';
     } else if (/^\d+$/.test(trimmedInput)) {
       finalType = 'kbs_share';
       finalYoutubeId = trimmedInput;
@@ -724,22 +727,6 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                       </button>
                     </div>
                   )}
-                  {isCctvUnlocked && cctvData.url?.includes('geoje.go.kr') && (
-                    <>
-                      <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5, pointerEvents: 'none' }}>
-                        <span style={{color: '#ff4444'}}>● LIVE</span>
-                        <span>GEOJE_{selectedPoint?.id || 'CCTV'}</span>
-                      </div>
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6, pointerEvents: 'none' }}>
-                        <div style={{ color: '#00D1FF', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          🚨 거제시청 재난안전상황실 실시간 관제망
-                        </div>
-                        <div style={{ color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, marginTop: '4px', fontWeight: '600', opacity: 0.8 }}>
-                          거제시 재난 CCTV 시스템과 연동된 실시간 현장 모니터링 영상입니다.
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
              ) : (cctvData.type === 'youtube' || cctvData.type === 'iframe') && cctvData.url ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
@@ -774,6 +761,20 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                     </button>
                   )}
                 </div>
+             ) : cctvData.type === 'fishinggo_placeholder' ? (
+                <div style={{ width: '100%', height: '100%', position: 'relative', background: '#0B1221', borderRadius: '18px', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, #1A2942 0%, #0B1221 100%)', opacity: 0.8 }} />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}>
+                    <div style={{ fontSize: `calc(48px * var(--fs, 1))`, marginBottom: '16px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>🎣</div>
+                    <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', color: '#fff', marginBottom: '8px', letterSpacing: '-0.5px' }}>포인트 현장 영상 준비 중입니다</div>
+                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#A0B0D0', fontWeight: '600' }}>가장 빠른 시일 내에 연동을 완료하겠습니다</div>
+                  </div>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 16px 14px', background: 'linear-gradient(transparent, rgba(11,18,33,0.95))', zIndex: 6 }}>
+                    <div style={{ color: '#00D1FF', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{color: '#ff4444'}}>● REC</span> 낚시GO 전용 모니터링 시스템
+                    </div>
+                  </div>
+                </div>
              ) : cctvData.fallbackImg ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
                   <img 
@@ -801,15 +802,15 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                       </button>
                     </div>
                   )}
-                  {isCctvUnlocked && cctvData.type === 'mof' && (
+                  {isCctvUnlocked && (
                     <>
                       {/* MOF 실시간 연안침식 모니터링 워터마크 레이아웃 */}
-                      <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5, pointerEvents: 'none' }}>
+                      <div style={{ position: 'absolute', bottom: '60px', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontFamily: 'monospace', textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8)', fontWeight: 'bold', zIndex: 5 }}>
                         <span style={{color: '#ff4444'}}>● REC</span>
                         <span>MOF_{selectedPoint?.obsCode}</span>
                       </div>
                       
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6, pointerEvents: 'none' }}>
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '36px 16px 12px', background: 'linear-gradient(transparent, rgba(0,0,0,0.95))', zIndex: 6 }}>
                         <div style={{ color: '#00D1FF', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           🌊 해양수산부 공식 실시간 연안 모니터링
                         </div>
