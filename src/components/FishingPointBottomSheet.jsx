@@ -295,12 +295,18 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     } else if (trimmedInput.includes('coast.mof.go.kr')) {
       finalType = 'mof_custom';
       finalYoutubeId = trimmedInput;
-    } else if (trimmedInput === '준비중' || trimmedInput === 'fishinggo') {
+    } else if (trimmedInput.replace(/\s+/g, '').includes('준비') || trimmedInput.toLowerCase().includes('fishinggo')) {
       finalType = 'fishinggo_placeholder';
       finalYoutubeId = 'placeholder';
     } else if (/^\d+$/.test(trimmedInput)) {
       finalType = 'kbs_share';
       finalYoutubeId = trimmedInput;
+    }
+
+    // 보안: iframe 타입인데 http로 시작하지 않으면 오류 방지를 위해 placeholder로 강제 전환
+    if (finalType === 'iframe' && !finalYoutubeId.startsWith('http') && !finalYoutubeId.startsWith('//')) {
+      finalType = 'fishinggo_placeholder';
+      finalYoutubeId = 'placeholder';
     }
 
     const sid = selectedPoint.obsCode || 'DT_0001';
