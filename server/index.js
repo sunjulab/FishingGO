@@ -1896,10 +1896,10 @@ let weatherCache = {};
 
 // --- 권역별 기본 기상 프로파일 (Realism 강화) ---
 const REGIONAL_PROFILES = {
-  '동해': { temp: 14.5, wind: 4.5, wave: 0.8 },
-  '남해': { temp: 16.8, wind: 3.2, wave: 0.5 },
-  '서해': { temp: 12.2, wind: 6.8, wave: 1.1 },
-  '제주': { temp: 18.5, wind: 3.5, wave: 0.6 }
+  '동해': { temp: 14.5, wind: 3.5, wave: 0.6 },
+  '남해': { temp: 16.8, wind: 2.5, wave: 0.4 },
+  '서해': { temp: 12.2, wind: 4.0, wave: 0.7 },
+  '제주': { temp: 18.5, wind: 3.0, wave: 0.5 }
 };
 
 const observationData = {
@@ -1916,17 +1916,17 @@ const observationData = {
   'DT_0034': { name: '거제 지세포', region: '남해', baseTemp: 17.0, baseWind: 2.5 },
   'DT_0018': { name: '완도항', region: '남해', baseTemp: 16.2, baseWind: 3.1 },
   // 서해
-  'DT_0007': { name: '인천 연안부두', region: '서해', baseTemp: 11.5, baseWind: 7.2 },
-  'DT_0008': { name: '보령 대천항', region: '서해', baseTemp: 12.8, baseWind: 6.5 },
-  'DT_0009': { name: '군산 비응항', region: '서해', baseTemp: 13.2, baseWind: 5.8 },
-  'DT_0030': { name: '태안 마도', region: '서해', baseTemp: 12.0, baseWind: 7.5 },
+  'DT_0007': { name: '인천 연안부두', region: '서해', baseTemp: 11.5, baseWind: 3.5 },
+  'DT_0008': { name: '보령 대천항', region: '서해', baseTemp: 12.8, baseWind: 3.2 },
+  'DT_0009': { name: '군산 비응항', region: '서해', baseTemp: 13.2, baseWind: 3.0 },
+  'DT_0030': { name: '태안 마도', region: '서해', baseTemp: 12.0, baseWind: 3.5 },
   // 제주
   'DT_0011': { name: '서귀포 외돌개', region: '제주', baseTemp: 18.8, baseWind: 3.4 },
   'DT_0010': { name: '제주 한림', region: '제주', baseTemp: 18.2, baseWind: 3.8 },
   'DT_0045': { name: '성산포항', region: '제주', baseTemp: 18.5, baseWind: 4.2 },
   // ✅ BUG-FIX: ALL_STATIONS에 있으나 observationData에 누락된 관측소 추가 (fallback 방지)
-  'DT_0003': { name: '삼척항', region: '동해', baseTemp: 13.8, baseWind: 4.8 },
-  'DT_0006': { name: '목포항', region: '서해', baseTemp: 12.5, baseWind: 6.2 },
+  'DT_0003': { name: '삼척항', region: '동해', baseTemp: 13.8, baseWind: 3.5 },
+  'DT_0006': { name: '목포항', region: '남해', baseTemp: 20.0, baseWind: 3.0 },
   'DT_0014': { name: '광양만 관측소', region: '남해', baseTemp: 16.0, baseWind: 2.9 },
 };
 
@@ -2314,8 +2314,8 @@ async function updateAllStationsCache() {
     const month = new Date().getMonth(); // 0-indexed
     const monthlyBase = MONTHLY_BASE_TEMP[base.region]?.[month] ?? base.baseTemp;
     const finalTemp = realSst || (monthlyBase + (lcg(1) * 0.8 - 0.4)).toFixed(1);
-    const finalWind = marine?.wind?.speed  ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 3.0 - 1.5));
-    const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.6 - 0.3));
+    const finalWind = marine?.wind?.speed  ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 1.0 - 0.5));
+    const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.3 - 0.15));
     const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
 
     const lunarDay = getLunarDay();
