@@ -7004,9 +7004,9 @@ function calcFishingScoreForStation(sid) {
   const month = new Date().getMonth() + 1;
   const isNight = hour >= 19 || hour < 5;
   const d = entry.data;
-  const sst   = parseFloat(d.sst)          || 14;
-  const wind  = parseFloat(d.wind?.speed)   || 3;
-  const wave  = parseFloat(d.wave?.coastal) || 0.5;
+  const sst   = (d.sst !== undefined && !isNaN(parseFloat(d.sst))) ? parseFloat(d.sst) : 14;
+  const wind  = (d.wind?.speed !== undefined && !isNaN(parseFloat(d.wind.speed))) ? parseFloat(d.wind.speed) : 3;
+  const wave  = (d.wave?.coastal !== undefined && !isNaN(parseFloat(d.wave.coastal))) ? parseFloat(d.wave.coastal) : 0.5;
   const phase = d.tide?.phase               || '';
   const seed  = parseInt(sid.replace(/\D/g, '')) || 1;
 
@@ -7052,7 +7052,7 @@ function calcFishingScoreForStation(sid) {
 
   const tideMatch = phase.match(/(\d+)물/);
   const tideNum = tideMatch ? parseInt(tideMatch[1]) : 0;
-  const TIDE_BONUS = { 1:3,2:5,3:7,4:9,5:10,6:10,7:8,8:6,9:4,10:2,11:-2,12:-4,14:-8,15:-6 };
+  const TIDE_BONUS = { 1:3,2:5,3:7,4:9,5:10,6:10,7:8,8:6,9:4,10:2,11:-2,12:-4,13:-6,14:-8,15:-6 };
   score += TIDE_BONUS[tideNum] || 0;
   if (phase.includes('조금') || phase.includes('무시')) score -= 7;
   if (isNight) score -= 2;
