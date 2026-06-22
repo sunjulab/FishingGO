@@ -53,7 +53,7 @@ const TIDE_BONUS = {
   '1물': +3, '2물': +5, '3물': +7, '4물': +9, '5물': +10,
   '6물': +10, '7물': +8, '8물': +6, '9물': +4, '10물': +2,
   // ✅ BUG-1 FIX: '7물' 키 추가 — 정규식 매핑(tideMatch[1])이 '7물(사리)' → '7물' 추출 시 정상 반영
-  '11물': -2, '12물': -4,         '14물': -8, '15물': -6,
+  '11물': -2, '12물': -4, '13물': -6, '14물': -8, '15물': -6,
   // 괄호 포함 전체 표기도 별도 키로 유지 (API에 따라 다른 포맷 대응)
   '7물(사리)': +8, '13물(조금)': -7, '14물(무시)': -9,
 };
@@ -252,7 +252,7 @@ export const calculateFishingScore = (data, point = {}) => {
   let score = 45 + (seed % 10) + microVar; // 45~55 범위에서 시작
 
   // [3] 풍속 보정 — 4m/s 이상부터 페널티, 한국 봄 평균 4~6m/s
-  const wind = parseFloat(data.wind?.speed || 5.0);
+  const wind = (data.wind?.speed !== undefined && !isNaN(parseFloat(data.wind.speed))) ? parseFloat(data.wind.speed) : 5.0;
   if      (wind > 14)  score -= 65;
   else if (wind > 10)  score -= 40;
   else if (wind >  8)  score -= 28;
@@ -262,7 +262,7 @@ export const calculateFishingScore = (data, point = {}) => {
   else if (wind <  3)  score += 7;  // 미풍
 
   // [4] 파고 보정 — 한국 봄 연안 평균 0.5~1.0m
-  const wave = parseFloat(data.wave?.coastal || 0.8);
+  const wave = (data.wave?.coastal !== undefined && !isNaN(parseFloat(data.wave.coastal))) ? parseFloat(data.wave.coastal) : 0.8;
   if      (wave > 2.5) score -= 60;
   else if (wave > 2.0) score -= 45;
   else if (wave > 1.5) score -= 30;
@@ -272,7 +272,7 @@ export const calculateFishingScore = (data, point = {}) => {
   else if (wave < 0.5) score += 4;
 
   // [5] 수온 보정 — 4월 한국 실제 수온: 동해 11-14°C / 서해 9-12°C / 남해 13-17°C
-  const sst = parseFloat(data.sst || 13);
+  const sst = (data.sst !== undefined && !isNaN(parseFloat(data.sst))) ? parseFloat(data.sst) : 13;
   if      (sst < 8)               score -= 40; // 극저수온: 물고기 동면 수준
   else if (sst < 11)              score -= 25; // 저수온: 입질 거의 없음
   else if (sst < 14)              score -= 12; // 4월 동해: 아직 차가움

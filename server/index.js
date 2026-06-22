@@ -2093,7 +2093,7 @@ let kmaBeachCacheTime = 0;
 let kmaBeachFetchPromise = null; // ✅ singleton
 
 async function getKmaBeachAllStations() {
-  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
+  const KEY = process.env.KHOA_KEY; // 해수욕장 API는 공공데이터포털 키만 사용
   if (!KEY) return null;
   const now = Date.now();
   if (kmaBeachCache && (now - kmaBeachCacheTime) < 58 * 60 * 1000) return kmaBeachCache;
@@ -2153,7 +2153,7 @@ const MONTHLY_BASE_TEMP = {
 
 async function getWaterTemp(sid) {
   // ✅ SST-REMAP: 전수조사 결과 기반 올바른 obsCode로 변환 후 API 호출
-  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
+  const KEY = process.env.KHOA_KEY; // 수온 API는 공공데이터포털 키만 사용
   if (!KEY) return null;
 
   // 올바른 obsCode로 변환 (없으면 null → caller에서 월별 baseTemp 사용)
