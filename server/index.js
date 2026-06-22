@@ -2260,7 +2260,7 @@ function getTidePhase(lunarDay, region = '남해') {
 }
 
 async function getRealTide(sid) {
-  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
+  const KEY = process.env.KHOA_KEY;
   if (!KEY) return null;
   try {
     const d = new Date();
@@ -2303,7 +2303,8 @@ async function updateAllStationsCache() {
     const nifsSst  = await getNifsWaterTemp(sid);
     const khoaSst  = nifsSst  ? null : await getWaterTemp(sid);
     const beachSst = (nifsSst || khoaSst) ? null : await getKmaBeachWaterTemp(sid);
-    const realSst  = nifsSst || khoaSst || beachSst;
+    let realSst  = nifsSst || khoaSst || beachSst;
+    if (realSst && parseFloat(realSst) <= 0.1) realSst = null; // 0.0℃ API 오류 데이터 폐기 및 fallback 유도
     // ② 풍속·파고 (기상청 해양부이)
     const marine  = await getMarineWeather(sid);
     // ③ 조석 (KHOA 조석예보)
