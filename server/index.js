@@ -2246,16 +2246,28 @@ async function getMarineWeather(sid) {
 
 // ✅ REAL-TIDE: KHOA 조석예보 — 실제 물때·고조·간조
 function getLunarDay() {
-  const known = new Date('2024-02-10T00:00:00+09:00'); // 2024년 설날 (음력 1월 1일)
-  const diffDays = (Date.now() - known.getTime()) / (1000 * 60 * 60 * 24);
-  return Math.floor(diffDays % 29.530588) + 1;
+  // 기준: 2026-06-23 = 음력 5월 9일 (실측 보정)
+  const anchor = new Date('2026-06-23T00:00:00+09:00'); // 음력 5월 9일
+  const anchorLunar = 9;
+  const diffDays = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
+  const raw = anchorLunar + diffDays;
+  const cycled = ((raw - 1) % 29.530588 + 29.530588) % 29.530588;
+  return Math.floor(cycled) + 1; // 1~29
 }
 
 function getTidePhase(lunarDay, region = '남해') {
-  const isEastCoast = ['강원', '경북', '동해'].includes(region);
-  const val = (lunarDay + (isEastCoast ? 7 : 6)) % 15;
-  const tideNum = val === 0 ? 15 : val;
-  const phaseMap = { 7: '7물(사리)', 14: '조금', 15: '무시' };
+  // 물때는 음력일 기반: 음력 7~8일=사리(7~8물), 14~15일=조금/무시
+  // 동해는 조차가 작아 물때 개념이 약하지만 동일 기준 적용
+  // 음력 1~15일: 1물~15물 직접 매핑
+  // 음력 16~29일: 반대로 카운트 (16일=1물, 22~23일=사리, 29~30일=조금)
+  let tideNum;
+  if (lunarDay <= 15) {
+    tideNum = lunarDay;
+  } else {
+    tideNum = 30 - lunarDay; // 16→14, 17→13, 22→8(사리), 29→1
+  }
+  if (tideNum <= 0) tideNum = 1;
+  const phaseMap = { 7: '7물(사리)', 8: '8물(사리)', 14: '조금', 15: '무시' };
   return phaseMap[tideNum] || `${tideNum}물`;
 }
 
