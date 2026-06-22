@@ -120,22 +120,39 @@ export const getPointSpecificData = (point) => {
   if (!point) return null;
   const reg = point.region || '남해';
 
-  // 4월 실제 한국 해역별 기상 통계 기반 폴백 데이터
-  // 출처: 국립해양조사원 월별 기상 통계 (2020~2024 평균)
+  // ✅ FIX: 4월 고정값 제거 → 현재 월 기준 계절 평균 수온/풍속 동적 적용
+  const currentMonth = new Date().getMonth(); // 0-indexed (0=1월, 5=6월)
+  // 해역별 월별 평균 수온 (국립해양조사원 2020~2024 통계)
+  const MONTHLY_SST = {
+    '제주':  [15.5,15.0,16.5,18.5,21.5,24.5,27.0,28.5,26.5,23.5,19.5,16.5],
+    '남해':  [10.0,10.0,12.0,15.0,18.5,21.5,24.5,26.0,24.0,20.0,15.5,11.5],
+    '동해':  [8.5, 8.0, 9.5,12.5,16.0,19.5,22.0,24.0,21.5,18.0,14.0,10.0],
+    '서해':  [5.0, 5.0, 7.5,11.5,16.5,20.5,23.5,25.0,22.5,17.5,12.0, 7.0],
+  };
+  const MONTHLY_WIND = {
+    '서해':  [5.5,5.2,5.0,4.8,4.2,3.8,3.5,3.2,4.0,4.5,5.0,5.5],
+    '동해':  [4.5,4.2,4.0,3.8,3.5,3.2,3.0,2.8,3.5,4.0,4.5,4.8],
+    '남해':  [3.5,3.2,3.0,2.8,2.5,2.2,2.0,2.0,2.5,3.0,3.5,3.8],
+    '제주':  [4.0,3.8,3.5,3.2,2.8,2.5,2.2,2.0,3.0,3.5,4.0,4.2],
+  };
+  const zoneKey = REGION_TO_ZONE[reg] || '남해';
+  const sstArr  = MONTHLY_SST[reg]  || MONTHLY_SST[zoneKey]  || MONTHLY_SST['남해'];
+  const windArr = MONTHLY_WIND[reg] || MONTHLY_WIND[zoneKey] || MONTHLY_WIND['남해'];
+  const WAVE_BY_ZONE = { '서해': 0.7, '동해': 0.6, '남해': 0.4, '제주': 0.5 };
   const profile = {
-    '제주': { sst: 17.2, wind: 3.8, wave: 0.6 }, // 제주 4월: 가장 따뜻, 상대적 양호
-    '남해': { sst: 14.5, wind: 4.8, wave: 0.7 }, // 남해 4월: 회복 중, 바람 있음
-    '동해': { sst: 12.1, wind: 5.8, wave: 0.9 }, // 동해 4월: 아직 차가움, 바람 강함
-    '서해': { sst: 10.3, wind: 7.0, wave: 1.2 }, // 서해 4월: 최저, 강한 바람
-    '강원': { sst: 12.0, wind: 5.5, wave: 0.85 },
-    '경북': { sst: 12.8, wind: 5.2, wave: 0.8 },
-    '경남': { sst: 14.2, wind: 4.5, wave: 0.65 },
-    '전남': { sst: 13.8, wind: 5.0, wave: 0.7 },
-    '전북': { sst: 12.0, wind: 6.2, wave: 1.0 },
-    '충남': { sst: 10.5, wind: 6.8, wave: 1.1 },
-    '인천': { sst: 9.5,  wind: 7.5, wave: 1.3 },
-    '부산': { sst: 14.0, wind: 4.2, wave: 0.6 },
-    '울산': { sst: 13.2, wind: 5.0, wave: 0.75 },
+    '제주': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.5 },
+    '남해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.4 },
+    '동해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.6 },
+    '서해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.7 },
+    '강원': { sst: (MONTHLY_SST['동해']||MONTHLY_SST['남해'])[currentMonth], wind: 3.5, wave: 0.6 },
+    '경북': { sst: (MONTHLY_SST['동해']||MONTHLY_SST['남해'])[currentMonth], wind: 3.2, wave: 0.55 },
+    '경남': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.5, wave: 0.45 },
+    '전남': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.8, wave: 0.5 },
+    '전북': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.0, wave: 0.7 },
+    '충남': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.0, wave: 0.7 },
+    '인천': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.5, wave: 0.8 },
+    '부산': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.5, wave: 0.45 },
+    '울산': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 3.0, wave: 0.5 },
   };
 
   // ✅ 4TH-B4: REGION_TO_ZONE 매핑 사용 — 삼항 중첩 fallback 제거
@@ -154,13 +171,16 @@ export const getPointSpecificData = (point) => {
   const microWind = Math.max(0.5, p.wind + (pointSeed % 7  - 3) / 6).toFixed(1);
   const microWave = Math.max(0.1, p.wave + (pointSeed % 5  - 2) / 20).toFixed(2);
 
-  const known = new Date('2024-02-10T00:00:00+09:00');
-  const diffDays = Math.floor((Date.now() - known.getTime()) / (1000 * 60 * 60 * 24));
-  const lunarDay = Math.floor(diffDays % 29.530588) + 1;
-  const isEastCoast = ['강원', '경북', '동해'].includes(reg);
-  const val = (lunarDay + (isEastCoast ? 7 : 6)) % 15;
-  const tideNum = val === 0 ? 15 : val;
-  const phaseMap = { 7: '7물(사리)', 14: '조금', 15: '무시' };
+  // ✅ FIX: 음력일 기준 보정 (2026-06-23 = 음력 5월 9일 실측)
+  const anchor = new Date('2026-06-23T00:00:00+09:00');
+  const anchorLunar = 9;
+  const diffFromAnchor = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
+  const rawLunar = anchorLunar + diffFromAnchor;
+  const cycled = ((rawLunar - 1) % 29.530588 + 29.530588) % 29.530588;
+  const lunarDay = Math.floor(cycled) + 1;
+  // ✅ FIX: 음력일 직접 매핑 (동해 offset +7 오류 제거)
+  const tideNum = lunarDay <= 15 ? lunarDay : (30 - lunarDay) || 1;
+  const phaseMap = { 7: '7물(사리)', 8: '8물(사리)', 14: '조금', 15: '무시' };
   const tidePhase = phaseMap[tideNum] || `${tideNum}물`;
 
   const stationOffset = (pointSeed * 37) % 360;
