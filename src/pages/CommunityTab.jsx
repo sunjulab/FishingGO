@@ -105,7 +105,14 @@ export default function CommunityTab() {
   const navigate = useNavigate();
   const location = useLocation();
   // ✅ BUG-FIX: 복귀 시 sessionStorage에 returnTab이 있으면 'open'으로 시작, 즉시 삭제 (일반 진입 시 오염 방지)
+  // ✅ KAKAO-FIX: 카카오톡 내부브라우저 진입 시 항상 'open'(낚시그램) 탭으로 강제 초기화
   const [activeTab, setActiveTab] = useState(() => {
+    const isKakao = /KAKAOTALK/i.test(navigator.userAgent || '');
+    if (isKakao) {
+      // 카카오톡 WebView: 세션스토리지 탭 잔류값 초기화 → 항상 낚시그램 탭으로 시작
+      sessionStorage.removeItem('community_return_tab');
+      return 'open';
+    }
     const rt = sessionStorage.getItem('community_return_tab');
     if (rt) sessionStorage.removeItem('community_return_tab'); // 즉시 삭제
     return rt || 'open';

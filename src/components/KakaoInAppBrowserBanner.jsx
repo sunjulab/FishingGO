@@ -19,6 +19,12 @@ export default function KakaoInAppBrowserBanner() {
     const isKakao = /KAKAOTALK/i.test(ua);
     if (!isKakao) return;
 
+    // ✅ KAKAO-FIX: 카카오톡 WebView 진입 시 탭 세션스토리지 잔류값 모두 초기화
+    // → CommunityTab이 항상 낚시그램 탭으로 시작되도록 보장
+    sessionStorage.removeItem('community_return_tab');
+    sessionStorage.removeItem('lastTab');
+    sessionStorage.removeItem('activeTab');
+
     // 이미 닫은 적 있으면 세션 동안 다시 안 보임
     if (sessionStorage.getItem('kakao_banner_dismissed') === '1') return;
 
