@@ -472,21 +472,23 @@ app.post('/api/internal/beach-push', (req, res) => {
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ ok: false, reason: 'items required' });
   kmaBeachCache = items;
   kmaBeachCacheTime = Date.now();
-  // ✅ weatherCache 직접 패치 (race condition 없음, 즉시 반영)
+  // ✅ weatherCache 직접 패치 — beach_num 숫자 우선, beachNm 키워드 fallback
   let patched = 0;
-  for (const [sid, keywords] of Object.entries(KMA_BEACH_MAP)) {
+  for (const [sid, mapEntry] of Object.entries(KMA_BEACH_MAP)) {
     if (!weatherCache[sid]?.data) continue;
-    for (const kw of keywords) {
-      const match = items.find(i => i.beachNm?.includes(kw));
-      const wTemp = match?.wTemp ? parseFloat(match.wTemp) : null;
-      if (wTemp && !isNaN(wTemp) && wTemp > 0) {
-        weatherCache[sid].data.sst = parseFloat(wTemp.toFixed(1));
-        weatherCache[sid].data.temp = `${wTemp.toFixed(1)}\u00b0C`;
-        weatherCache[sid].data.layers = { upper: wTemp, middle: parseFloat((wTemp-1.2).toFixed(1)), lower: parseFloat((wTemp-3.4).toFixed(1)) };
-        weatherCache[sid].data._sources.sst = 'KMA_BEACH';
-        patched++;
-        break;
-      }
+    const nums = mapEntry.nums || [];
+    const kws  = mapEntry.kws  || (Array.isArray(mapEntry) ? mapEntry : []);
+    // 1순위: beachNum 숫자 매칭
+    let match = items.find(i => nums.includes(parseInt(i.beachNum || i.beach_num || 0)));
+    // 2순위: beachNm 한글 키워드 fallback
+    if (!match) match = items.find(i => kws.some(kw => (i.beachNm||'').includes(kw)));
+    const wTemp = match?.wTemp ? parseFloat(match.wTemp) : (match?.tw ? parseFloat(match.tw) : null);
+    if (wTemp && !isNaN(wTemp) && wTemp > 0) {
+      weatherCache[sid].data.sst = parseFloat(wTemp.toFixed(1));
+      weatherCache[sid].data.temp = `${wTemp.toFixed(1)}\u00b0C`;
+      weatherCache[sid].data.layers = { upper: wTemp, middle: parseFloat((wTemp-1.2).toFixed(1)), lower: parseFloat((wTemp-3.4).toFixed(1)) };
+      weatherCache[sid].data._sources.sst = 'KMA_BEACH';
+      patched++;
     }
   }
   // weatherCache 초기화 전이면 배치 큐잉
