@@ -42,11 +42,11 @@ function buildMarineDisplay(data) {
   }
 
   let status = '보통';
-  if (score >= 80)      status = '최고';
-  else if (score >= 65) status = '활발';
-  else if (score >= 50) status = '보통';
-  else if (score >= 35) status = '주의';
-  else                  status = '경고';
+  if      (score >= 90) status = '최고';   // PERFECT — evaluator.js 기준 통일
+  else if (score >= 75) status = '활발';   // GOOD
+  else if (score >= 50) status = '보통';   // NORMAL
+  else if (score >= 30) status = '주의';   // POOR
+  else                  status = '경고';   // DANGER
 
   return {
     temp:  sst   != null ? `${sst}°C`                     : '-',

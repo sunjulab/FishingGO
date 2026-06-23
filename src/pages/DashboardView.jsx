@@ -137,7 +137,7 @@ export default function DashboardView({
                     const _sc = (_live?._serverScore && !_live?.sst)
                       ? _live._serverScore
                       : evaluateFishingCondition(_wd, p).score;
-                    const _label = _sc >= 90 ? '최고' : _sc >= 75 ? '활발' : _sc >= 50 ? '보통' : _sc >= 30 ? '저조' : '위험';
+                    const _label = _sc >= 90 ? '최고' : _sc >= 75 ? '활발' : _sc >= 50 ? '보통' : _sc >= 30 ? '주의' : '위험';
                     const _col   = _sc >= 90 ? '#00C48C' : _sc >= 75 ? '#1565C0' : _sc >= 50 ? '#FF9B26' : _sc >= 30 ? '#FF5A5F' : '#D32F2F';
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
@@ -468,7 +468,7 @@ export default function DashboardView({
             ) : PREMIUM_POINTS.map((point, rank) => {
               const liveScore = point._liveScore ?? 0;
               const scoreColor = liveScore >= 90 ? '#00C48C' : liveScore >= 75 ? '#1565C0' : liveScore >= 50 ? '#FF9B26' : '#FF5A5F';
-              const statusLabel = liveScore >= 90 ? '최고' : liveScore >= 75 ? '활발' : liveScore >= 50 ? '보통' : 'POOR';
+              const statusLabel = liveScore >= 90 ? '최고' : liveScore >= 75 ? '활발' : liveScore >= 50 ? '보통' : liveScore >= 30 ? '주의' : '위험';
               return (
                 <div key={point.id}
                   onClick={() => handlePremiumPointClick(point)}
