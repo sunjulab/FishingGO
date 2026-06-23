@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Zap, ShoppingBag, Search, SlidersHorizontal, X, Plus, ChevronDown } from 'lucide-react';
 import apiClient from '../api/index';
 import { useUserStore } from '../store/useUserStore';
