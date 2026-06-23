@@ -118,6 +118,7 @@ import PointLocationAdmin from './pages/PointLocationAdmin';
 import RealTimeAlert from './components/RealTimeAlert';
 import ErrorBoundary from './components/ErrorBoundary';
 import SubscriptionFailBanner from './components/SubscriptionFailBanner';
+import KakaoInAppBrowserBanner from './components/KakaoInAppBrowserBanner';
 import AnnouncementPopup from './components/AnnouncementPopup'; // ✅ POPUP: 앱 시작 시 공지 이미지 팝업
 import ForceUpdateChecker from './components/ForceUpdateChecker'; // ✅ 강제 업데이트 체커
 import AppBanner from './components/AppBanner'; // ✅ 스마트 앱 배너 (Android 브라우저 전용)
@@ -566,6 +567,8 @@ export default function App() {
     // 이전 구조: <ErrorBoundary><BrowserRouter>... → useNavigate가 Router 바깥에서 호출돼 앱 전체 크래시
     <BrowserRouter>
       <ErrorBoundary>
+        {/* ✅ KAKAO-INAPP: 카카오톡 내부 브라우저 감지 → Safari/Chrome 외부열기 유도 배너 */}
+        <KakaoInAppBrowserBanner />
         <AppBanner />           {/* ✅ Android 브라우저에서 앱 설치/실행 유도 배너 */}
         <ForceUpdateChecker />
         <WebCacheBuster />
