@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Zap, ShoppingBag, Search, SlidersHorizontal, X, Plus, ChevronDown } from 'lucide-react';
 import apiClient from '../api/index';
 import { useUserStore } from '../store/useUserStore';
@@ -34,7 +34,7 @@ function ProductImage({ src, alt, source }) {
     return (
       <div style={{
         width: '100%', aspectRatio: '1/1', backgroundColor: '#E8F4FE',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(32px * var(--fs, 1))`,
       }}>
         {CAT_EMOJI[source] || CAT_EMOJI.default}
       </div>
@@ -323,16 +323,16 @@ export default function Shop() {
       <div style={{ backgroundColor: '#fff', padding: '10px 16px 8px', position: 'sticky', top: 'var(--header-height)', zIndex: 100, borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <ShoppingBag size={16} color="#0056D2" />
-          <h1 style={{ fontSize: `15px`, fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.03em', margin: 0 }}>낚시 장비 쇼핑</h1>
+          <h1 style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e', letterSpacing: '-0.03em', margin: 0 }}>낚시 장비 쇼핑</h1>
           {isAdmin ? (
             <button
               onClick={() => setShowRegForm(true)}
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '10px', background: 'linear-gradient(135deg,#FF9B26,#FF6B00)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: `11px`, fontWeight: '900', flexShrink: 0 }}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '10px', background: 'linear-gradient(135deg,#FF9B26,#FF6B00)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', flexShrink: 0 }}
             >
               <Plus size={13} strokeWidth={3} /> 상품 등록
             </button>
           ) : (
-            <span style={{ fontSize: `10px`, fontWeight: '700', color: '#8E8E93', marginLeft: 'auto' }}>
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#8E8E93', marginLeft: 'auto' }}>
               🎣
             </span>
           )}
@@ -341,7 +341,7 @@ export default function Shop() {
           <input
             type="text" placeholder="낚시 장비 검색" value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '10px 40px 10px 40px', backgroundColor: '#F2F2F7', border: `1.5px solid ${searchQuery ? '#0056D2' : 'transparent'}`, borderRadius: '14px', fontSize: `13px`, fontWeight: '700', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+            style={{ width: '100%', padding: '10px 40px 10px 40px', backgroundColor: '#F2F2F7', border: `1.5px solid ${searchQuery ? '#0056D2' : 'transparent'}`, borderRadius: '14px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
           />
           <Search size={16} color="#8E8E93" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           {(search || searchQuery) && (
@@ -350,14 +350,14 @@ export default function Shop() {
             </button>
           )}
         </form>
-        {searchQuery && <div style={{ marginTop: '6px', fontSize: `11px`, color: '#0056D2', fontWeight: '800', paddingLeft: '4px' }}>🔍 검색 중</div>}
+        {searchQuery && <div style={{ marginTop: '6px', fontSize: `calc(11px * var(--fs, 1))`, color: '#0056D2', fontWeight: '800', paddingLeft: '4px' }}>🔍 검색 중</div>}
       </div>
 
       {/* ── 카테고리 탭 ── */}
       <div style={{ backgroundColor: '#fff', padding: '6px 16px 8px', borderBottom: '1px solid #F0F0F0' }}>
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
           {CATEGORIES.map((c) => (
-            <div key={c.name} onClick={() => handleCatClick(c)} style={{ padding: '6px 12px', backgroundColor: activeCat === c.name ? '#1c1c1e' : '#F2F2F7', borderRadius: '10px', color: activeCat === c.name ? '#fff' : '#8E8E93', fontSize: `12px`, fontWeight: '850', whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}>
+            <div key={c.name} onClick={() => handleCatClick(c)} style={{ padding: '6px 12px', backgroundColor: activeCat === c.name ? '#1c1c1e' : '#F2F2F7', borderRadius: '10px', color: activeCat === c.name ? '#fff' : '#8E8E93', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '850', whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}>
               {c.name}
             </div>
           ))}
@@ -369,7 +369,7 @@ export default function Shop() {
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <Zap size={15} color="#FF6900" fill="#FF6900" />
-            <span style={{ fontSize: `13px`, fontWeight: '900', color: '#1c1c1e' }}>낚시GO 오늘 특가 🔥</span>
+            <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>낚시GO 오늘 특가 🔥</span>
           </div>
           <div style={{ display: 'grid', gridTemplateRows: 'repeat(3, auto)', gridAutoFlow: 'column', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', margin: '0 -12px', padding: '0 12px 12px' }}>
             {promoLoading
@@ -380,18 +380,18 @@ export default function Shop() {
                       <ProductImage src={p.img} alt={p.name} source="ali" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: `9px`, fontWeight: '900', marginBottom: '2px',
+                      <div style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', marginBottom: '2px',
                         color: p.badge?.includes('역대') ? '#7B2FF7' : p.badge?.includes('초특가') ? '#0056D2' : '#FF6900' }}>
                         {p.badge}
                       </div>
-                      <div style={{ fontSize: `10px`, fontWeight: '800', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                           {p.discount && p.discount !== '0%' && (
-                            <span style={{ fontSize: `11px`, fontWeight: '950', color: '#fff', background: 'linear-gradient(135deg,#FF5A5F,#FF6900)', borderRadius: '5px', padding: '1px 5px' }}>
+                            <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', color: '#fff', background: 'linear-gradient(135deg,#FF5A5F,#FF6900)', borderRadius: '5px', padding: '1px 5px' }}>
                               {p.discount} 할인
                             </span>
                           )}
-                          <span style={{ fontSize: `9px`, fontWeight: '900', color: '#FF6900' }}>최저가 확인 →</span>
+                          <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', color: '#FF6900' }}>최저가 확인 →</span>
                         </div>
                     </div>
                   </div>
@@ -404,12 +404,12 @@ export default function Shop() {
       {isManualCat && (
         <div style={{ padding: '12px 12px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '16px' }}>⭐</span>
-            <span style={{ fontSize: '14px', fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
-            <span style={{ fontSize: '11px', color: '#8E8E93', fontWeight: '700' }}>({manualItems.length}개)</span>
+            <span style={{ fontSize: `calc(16px * var(--fs, 1))` }}>⭐</span>
+            <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>추천 낚시 상품</span>
+            <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>({manualItems.length}개)</span>
           </div>
           {manualItems.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#C7C7CC', fontSize: '13px', fontWeight: '700' }}>등록된 추천 상품이 없습니다</div>
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#C7C7CC', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>등록된 추천 상품이 없습니다</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {manualItems.map(item => (
@@ -420,7 +420,7 @@ export default function Shop() {
                         <ProductImage src={item.imageUrl} alt={item.productName} source="ali" />
                         <div style={{ padding: '8px 10px 10px' }}>
 
-                          {item.productName && <div style={{ fontSize: '11px', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.35', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>}
+                          {item.productName && <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', lineHeight: '1.35', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>}
                         </div>
                       </>
                     ) : (
@@ -444,12 +444,12 @@ export default function Shop() {
         <div style={{ padding: '12px 12px 0' }}>
           {/* 헤더 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', paddingLeft: '4px' }}>
-            <h3 style={{ fontSize: `14px`, fontWeight: '900', color: '#1c1c1e', margin: 0 }}>{gridTitle}</h3>
+            <h3 style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e', margin: 0 }}>{gridTitle}</h3>
             <SlidersHorizontal size={15} color="#8E8E93" />
           </div>
 
           {/* 파트너스 공시 (최소화) */}
-          <p style={{ margin: '0 0 10px 4px', fontSize: `9px`, color: '#C7C7CC', fontWeight: '600', lineHeight: 1.4 }}>
+          <p style={{ margin: '0 0 10px 4px', fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '600', lineHeight: 1.4 }}>
             쿠팡 파트너스 · AliExpress 발생하는 소정의 수수료는 낚시GO 서비스 운영에 사용됩니다 🎣
           </p>
 
@@ -457,8 +457,8 @@ export default function Shop() {
           {filteredManualItems.length > 0 && (
             <div style={{ marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px' }}>⭐</span>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: '#1c1c1e' }}>관련 등록 상품</span>
+                <span style={{ fontSize: `calc(14px * var(--fs, 1))` }}>⭐</span>
+                <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>관련 등록 상품</span>
               </div>
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
                 {filteredManualItems.map(item => (
@@ -469,7 +469,7 @@ export default function Shop() {
                           <ProductImage src={item.imageUrl} alt={item.productName} source="ali" />
 
                         </div>
-                        {item.productName && <div style={{ padding: '5px 6px', fontSize: '10px', fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>}
+                        {item.productName && <div style={{ padding: '5px 6px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productName}</div>}
                       </a>
                     ) : (
                       <a href={item.shortUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #F0F0F0', background: '#fff', textDecoration: 'none' }}>
@@ -496,9 +496,9 @@ export default function Shop() {
               : products.length === 0
               ? (
                   <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: '#8E8E93' }}>
-                    <div style={{ fontSize: `36px`, marginBottom: '8px' }}>🎣</div>
-                    <div style={{ fontSize: `14px`, fontWeight: '800', color: '#1c1c1e', marginBottom: '4px' }}>상품을 불러오지 못했습니다</div>
-                    <div style={{ fontSize: `12px` }}>잠시 후 다시 시도해주세요</div>
+                    <div style={{ fontSize: `calc(36px * var(--fs, 1))`, marginBottom: '8px' }}>🎣</div>
+                    <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e', marginBottom: '4px' }}>상품을 불러오지 못했습니다</div>
+                    <div style={{ fontSize: `calc(12px * var(--fs, 1))` }}>잠시 후 다시 시도해주세요</div>
                   </div>
                 )
               : products.map(p => {
@@ -514,12 +514,12 @@ export default function Shop() {
                       style={{ backgroundColor: '#fff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #F2F2F7', cursor: 'pointer', position: 'relative' }}
                     >
                       {/* 플랫폼 라벨 */}
-                      <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: srcStyle.bg, color: srcStyle.text, padding: '2px 5px', borderRadius: '5px', fontSize: `8px`, fontWeight: '900', zIndex: 2 }}>
+                      <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: srcStyle.bg, color: srcStyle.text, padding: '2px 5px', borderRadius: '5px', fontSize: `calc(8px * var(--fs, 1))`, fontWeight: '900', zIndex: 2 }}>
                         {srcStyle.label}
                       </div>
                       {/* 할인율 배지 — freshPrices 우선 반영 */}
                       {displayDiscount && displayDiscount !== '0%' && (
-                        <div style={{ position: 'absolute', top: '6px', left: '6px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '6px', fontSize: `10px`, fontWeight: '900', zIndex: 2 }}>
+                        <div style={{ position: 'absolute', top: '6px', left: '6px', background: '#FF5A5F', color: '#fff', padding: '2px 6px', borderRadius: '6px', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', zIndex: 2 }}>
                           {displayDiscount}
                         </div>
                       )}
@@ -529,8 +529,8 @@ export default function Shop() {
                       </div>
                       {/* 정보 */}
                       <div style={{ padding: '8px' }}>
-                        <div style={{ fontSize: `9px`, color: srcStyle.bg, fontWeight: '900', marginBottom: '2px' }}>{p.badge}</div>
-                        <h3 style={{ fontSize: `11px`, fontWeight: '850', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', margin: '0 0 4px' }}>
+                        <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: srcStyle.bg, fontWeight: '900', marginBottom: '2px' }}>{p.badge}</div>
+                        <h3 style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '850', color: '#1c1c1e', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', margin: '0 0 4px' }}>
                           {p.name}
                         </h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
@@ -538,11 +538,11 @@ export default function Shop() {
                             // 알리: freshPrices 최신 할인율 우선 + 최저가 CTA
                             <>
                               {displayDiscount && displayDiscount !== '0%' && (
-                                <span style={{ fontSize: `11px`, fontWeight: '950', color: '#fff', background: 'linear-gradient(135deg,#FF5A5F,#FF6900)', borderRadius: '5px', padding: '1px 6px' }}>
+                                <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', color: '#fff', background: 'linear-gradient(135deg,#FF5A5F,#FF6900)', borderRadius: '5px', padding: '1px 6px' }}>
                                   {displayDiscount} 할인
                                 </span>
                               )}
-                              <span style={{ fontSize: `10px`, fontWeight: '900', color: '#FF6900', background: '#FFF3EC', borderRadius: '6px', padding: '2px 7px', border: '1px solid #FFD4B0' }}>
+                              <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#FF6900', background: '#FFF3EC', borderRadius: '6px', padding: '2px 7px', border: '1px solid #FFD4B0' }}>
                                 최저가 확인 →
                               </span>
                             </>
@@ -550,15 +550,15 @@ export default function Shop() {
                             // 쿠팡: 기존 가격 표시 (freshPrices.priceConfirm 우선)
                             (!displayPriceConfirm && p.price && p.price !== '0')
                               ? (<>
-                                  <span style={{ fontSize: `13px`, fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
-                                  <span style={{ fontSize: `10px`, fontWeight: '800', color: '#1c1c1e' }}>원</span>
+                                  <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#FF5A5F' }}>{p.price}</span>
+                                  <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#1c1c1e' }}>원</span>
                                 </>)
-                              : (<span style={{ fontSize: `10px`, fontWeight: '900', color: '#0056D2', background: '#EEF3FF', borderRadius: '6px', padding: '2px 7px', border: '1px solid #C8D9FF' }}>가격 확인하기 →</span>)
+                              : (<span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#0056D2', background: '#EEF3FF', borderRadius: '6px', padding: '2px 7px', border: '1px solid #C8D9FF' }}>가격 확인하기 →</span>)
                           )}
                         </div>
                         {/* 수수료율: 마스터 로그인 시에만 표시 */}
                         {isAdmin && p.source === 'ali' && p.commission && (
-                          <div style={{ fontSize: `8px`, color: '#FF6900', fontWeight: '800', marginTop: '2px', background: '#FFF3EC', borderRadius: '4px', padding: '1px 4px', display: 'inline-block' }}>
+                          <div style={{ fontSize: `calc(8px * var(--fs, 1))`, color: '#FF6900', fontWeight: '800', marginTop: '2px', background: '#FFF3EC', borderRadius: '4px', padding: '1px 4px', display: 'inline-block' }}>
                             수수료 {p.commission}
                           </div>
                         )}
@@ -579,7 +579,7 @@ export default function Shop() {
           {hasMore && !loadingMore && (
             <button
               onClick={loadMore}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', margin: '16px 0', padding: '12px', borderRadius: '14px', background: '#F2F2F7', border: 'none', cursor: 'pointer', fontSize: `13px`, fontWeight: '900', color: '#1c1c1e' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', margin: '16px 0', padding: '12px', borderRadius: '14px', background: '#F2F2F7', border: 'none', cursor: 'pointer', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}
             >
               <ChevronDown size={16} /> 더 보기
             </button>
@@ -593,7 +593,7 @@ export default function Shop() {
       {/* 파트너스 공시 */}
       <div style={{ padding: '24px 24px 0', textAlign: 'center' }}>
         <div style={{ width: '100%', height: '1px', backgroundColor: '#F0F0F0', marginBottom: '16px' }} />
-        <p style={{ fontSize: `10px`, color: '#bbb', lineHeight: 1.7, fontWeight: '600' }}>
+        <p style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#bbb', lineHeight: 1.7, fontWeight: '600' }}>
           이 포스팅은 쿠팡 파트너스 및 알리익스프레스 어필리에이트 활동의 일환으로,<br />
           이에 따른 일정액의 수수료를 제공받을 수 있습니다.
         </p>
@@ -606,9 +606,9 @@ export default function Shop() {
         <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: '#fff', borderRadius: '20px 20px 0 0', padding: '20px 16px 40px', maxHeight: '85vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px' }}>🛒</span>
-              <span style={{ fontSize: '16px', fontWeight: '900', color: '#1c1c1e' }}>상품 등록</span>
-              <span style={{ fontSize: '10px', background: 'linear-gradient(135deg,#FF9B26,#FF6B00)', color: '#fff', padding: '2px 7px', borderRadius: '6px', fontWeight: '900' }}>MASTER</span>
+              <span style={{ fontSize: `calc(18px * var(--fs, 1))` }}>🛒</span>
+              <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', color: '#1c1c1e' }}>상품 등록</span>
+              <span style={{ fontSize: `calc(10px * var(--fs, 1))`, background: 'linear-gradient(135deg,#FF9B26,#FF6B00)', color: '#fff', padding: '2px 7px', borderRadius: '6px', fontWeight: '900' }}>MASTER</span>
             </div>
             <button onClick={() => setShowRegForm(false)} style={{ background: '#F2F2F7', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={16} color="#1c1c1e" />
@@ -616,7 +616,7 @@ export default function Shop() {
           </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
             {['coupang','ali'].map(s => (
-              <button key={s} onClick={() => setRegSrc(s)} style={{ flex: 1, padding: '10px', borderRadius: '12px', border: `2px solid ${regSrc===s?(s==='coupang'?'#0056D2':'#FF6900'):'#F2F2F7'}`, background: regSrc===s?(s==='coupang'?'#EFF5FF':'#FFF3EC'):'#F2F2F7', fontWeight: '900', fontSize: '13px', cursor: 'pointer', color: regSrc===s?(s==='coupang'?'#0056D2':'#FF6900'):'#8E8E93' }}>
+              <button key={s} onClick={() => setRegSrc(s)} style={{ flex: 1, padding: '10px', borderRadius: '12px', border: `2px solid ${regSrc===s?(s==='coupang'?'#0056D2':'#FF6900'):'#F2F2F7'}`, background: regSrc===s?(s==='coupang'?'#EFF5FF':'#FFF3EC'):'#F2F2F7', fontWeight: '900', fontSize: `calc(13px * var(--fs, 1))`, cursor: 'pointer', color: regSrc===s?(s==='coupang'?'#0056D2':'#FF6900'):'#8E8E93' }}>
                 {s==='coupang'?'🛒 쿠팡':'💰 알리'}
               </button>
             ))}
@@ -624,26 +624,26 @@ export default function Shop() {
           {/* 쿠팡일 때만 단축 URL 필드 표시 (알리는 위 자동조회 박스에 통합) */}
           {regSrc === 'coupang' && (
             <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>단축 URL *</div>
-              <input value={regShortUrl} onChange={e=>setRegShortUrl(e.target.value)} placeholder="https://link.coupang.com/a/xxxx" style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '13px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>단축 URL *</div>
+              <input value={regShortUrl} onChange={e=>setRegShortUrl(e.target.value)} placeholder="https://link.coupang.com/a/xxxx" style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
             </div>
           )}
           {regSrc==='coupang' && (
             <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>iframe 코드 *</div>
-              <textarea value={regIframeCode} onChange={e=>setRegIframeCode(e.target.value)} placeholder='<iframe src="https://coupa.ng/xxxx" ...></iframe>' rows={3} style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'monospace' }} />
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '6px' }}>iframe 코드 *</div>
+              <textarea value={regIframeCode} onChange={e=>setRegIframeCode(e.target.value)} placeholder='<iframe src="https://coupa.ng/xxxx" ...></iframe>' rows={3} style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #E5E5EA', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'monospace' }} />
             </div>
           )}
           {regSrc==='ali' && (<>
             {/* 🔄 자동 조회 버튼 */}
             <div style={{ marginBottom: '14px', background: 'linear-gradient(135deg,#FFF3EC,#FFF8F5)', border: '1.5px solid #FFD0B0', borderRadius: '14px', padding: '12px 14px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '900', color: '#FF6900', marginBottom: '8px' }}>⚡ 트래킹 링크 자동 조회</div>
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#FF6900', marginBottom: '8px' }}>⚡ 트래킹 링크 자동 조회</div>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   value={regShortUrl}
                   onChange={e => setRegShortUrl(e.target.value)}
                   placeholder="https://s.click.aliexpress.com/e/_xxx"
-                  style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #FFB080', fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #FFB080', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
                 />
                 <button
                   type="button"
@@ -674,58 +674,58 @@ export default function Shop() {
                     } catch(e) { setRegMsg(`❌ 오류: ${e.message}`); }
                     finally { setRegResolving(false); }
                   }}
-                  style={{ padding: '10px 14px', borderRadius: '10px', background: regResolving ? '#C7C7CC' : 'linear-gradient(135deg,#FF9B26,#FF6900)', border: 'none', color: '#fff', fontSize: '12px', fontWeight: '900', cursor: regResolving ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                  style={{ padding: '10px 14px', borderRadius: '10px', background: regResolving ? '#C7C7CC' : 'linear-gradient(135deg,#FF9B26,#FF6900)', border: 'none', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: regResolving ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   {regResolving ? '⏳' : '🔍 자동조회'}
                 </button>
               </div>
-              <div style={{ fontSize: '11px', color: '#FF8040', fontWeight: '700', marginTop: '6px' }}>포털 Product Link (s.click.aliexpress.com/e/...)를 붙여넣으세요</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#FF8040', fontWeight: '700', marginTop: '6px' }}>포털 Product Link (s.click.aliexpress.com/e/...)를 붙여넣으세요</div>
             </div>
             {/* 미리보기 */}
             {regImageUrl && (
               <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center', background: '#F9F9F9', borderRadius: '12px', padding: '10px' }}>
                 <img src={regImageUrl} alt="미리보기" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E5E5EA' }} onError={e => e.target.style.display='none'} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '11px', fontWeight: '900', color: '#FF6900', marginBottom: '2px' }}>상품 미리보기</div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#1c1c1e', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{regProductName || '상품명 없음'}</div>
+                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#FF6900', marginBottom: '2px' }}>상품 미리보기</div>
+                  <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', color: '#1c1c1e', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{regProductName || '상품명 없음'}</div>
                 </div>
               </div>
             )}
             {/* 수동 입력 (자동조회 실패 시 또는 이미지 없을 때 자동 표시) */}
             <details open={regNeedManual} style={{ marginBottom: '10px' }}>
-              <summary style={{ fontSize: '12px', fontWeight: '800', color: regNeedManual ? '#FF6900' : '#8E8E93', cursor: 'pointer', padding: '4px 0' }}>
+              <summary style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: regNeedManual ? '#FF6900' : '#8E8E93', cursor: 'pointer', padding: '4px 0' }}>
                 {regNeedManual ? '⚠️ 이미지/제목 직접 입력 필요' : '✏️ 직접 입력 (자동조회 실패 시)'}
               </summary>
               {regNeedManual && (
-                <div style={{ background: '#FFF3EC', border: '1px solid #FFD0B0', borderRadius: '10px', padding: '8px 10px', marginTop: '6px', marginBottom: '8px', fontSize: '11px', color: '#FF6900', fontWeight: '700', lineHeight: 1.6 }}>
+                <div style={{ background: '#FFF3EC', border: '1px solid #FFD0B0', borderRadius: '10px', padding: '8px 10px', marginTop: '6px', marginBottom: '8px', fontSize: `calc(11px * var(--fs, 1))`, color: '#FF6900', fontWeight: '700', lineHeight: 1.6 }}>
                   💡 서버 IP 문제로 이미지를 자동 추출하지 못합니다.<br/>
                   AliExpress 상품 페이지 → 이미지 우클릭 → "이미지 주소 복사" 후 아래 입력
                 </div>
               )}
               <div style={{ marginTop: '8px' }}>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>이미지 URL</div>
-                <input value={regImageUrl} onChange={e=>setRegImageUrl(e.target.value)} placeholder="https://ae01.alicdn.com/..." style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${regNeedManual && !regImageUrl ? '#FF6900' : '#E5E5EA'}`, fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
-                <div style={{ fontSize: '11px', fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>상품명</div>
-                <input value={regProductName} onChange={e=>setRegProductName(e.target.value)} placeholder="낚시 루어 세트 10개입" style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${regNeedManual && !regProductName ? '#FF6900' : '#E5E5EA'}`, fontSize: '12px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>이미지 URL</div>
+                <input value={regImageUrl} onChange={e=>setRegImageUrl(e.target.value)} placeholder="https://ae01.alicdn.com/..." style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${regNeedManual && !regImageUrl ? '#FF6900' : '#E5E5EA'}`, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>상품명</div>
+                <input value={regProductName} onChange={e=>setRegProductName(e.target.value)} placeholder="낚시 루어 세트 10개입" style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: `1.5px solid ${regNeedManual && !regProductName ? '#FF6900' : '#E5E5EA'}`, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             </details>
           </>)}
           <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#8E8E93', marginBottom: '8px' }}>카테고리</div>
+            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '8px' }}>카테고리</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {SHOP_TAGS.map(t => (
-                <button key={t} onClick={() => setRegTag(t)} style={{ padding: '7px 12px', borderRadius: '10px', border: 'none', background: regTag===t?'#1c1c1e':'#F2F2F7', color: regTag===t?'#fff':'#8E8E93', fontSize: '12px', fontWeight: '850', cursor: 'pointer' }}>{t}</button>
+                <button key={t} onClick={() => setRegTag(t)} style={{ padding: '7px 12px', borderRadius: '10px', border: 'none', background: regTag===t?'#1c1c1e':'#F2F2F7', color: regTag===t?'#fff':'#8E8E93', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '850', cursor: 'pointer' }}>{t}</button>
               ))}
             </div>
           </div>
-          {regMsg && <div style={{ textAlign: 'center', fontSize: '13px', fontWeight: '800', color: regMsg.startsWith('✅')?'#00C48C':regMsg.startsWith('⏳')?'#FF9B26':'#FF3B30', marginBottom: '12px' }}>{regMsg}</div>}
+          {regMsg && <div style={{ textAlign: 'center', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: regMsg.startsWith('✅')?'#00C48C':regMsg.startsWith('⏳')?'#FF9B26':'#FF3B30', marginBottom: '12px' }}>{regMsg}</div>}
           {/* ✅ FIX-REGRESOLVED: 알리 자동조회 미완료 시 등록버튼 비활성 — 기존엔 regResolved가 dead state였음 */}
           <button
             onClick={handleRegSubmit}
             disabled={regLoading || (regSrc === 'ali' && !regResolved && !regNeedManual)}
             style={{ width: '100%', padding: '15px', borderRadius: '14px', border: 'none',
               background: (regLoading || (regSrc === 'ali' && !regResolved && !regNeedManual)) ? '#C7C7CC' : 'linear-gradient(135deg,#0056D2,#003899)',
-              color: '#fff', fontSize: '15px', fontWeight: '900',
+              color: '#fff', fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900',
               cursor: (regLoading || (regSrc === 'ali' && !regResolved && !regNeedManual)) ? 'not-allowed' : 'pointer' }}
           >
             {regLoading ? '⏳ 등록 중...' : (regSrc === 'ali' && !regResolved && !regNeedManual) ? '🔍 자동조회 후 등록 가능' : '+ 쇼핑탭에 등록'}
