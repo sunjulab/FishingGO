@@ -148,26 +148,69 @@ export async function requestCameraPermission() {
 }
 
 // ─── 4. 네트워크 상태 모니터링 ─────────────────────────────────────────────────
+// ✅ FIX: 화면 가리기/복교 때 마다 알림 업보끼 방지
+//   - 뷀운스(3초): 연속 이벤트를 1당 1회로 제한
+//   - 마운트 초기 2초: online 이벤트 무시 (앞 구동 시 오허 발화 방지)
+//   - 실제 스테이터스 변경시에만 토스트 (offline→online 수서 보장)
 export async function initNetworkMonitor(onOffline, onOnline) {
+  let offlineTimer = null;
+  let onlineTimer = null;
+  let isCurrentlyOnline = navigator.onLine !== false; // 현재 실제 상태 추적
+  const MOUNT_GUARD_MS = 2000; // 마운트 후 2초동안 online 이벤트 무시
+  const DEBOUNCE_MS = 3000;    // 같은 종류의 이벤트는 3초 내 1번만
+  const mountedAt = Date.now();
+
+  const handleOffline = () => {
+    if (onlineTimer) { clearTimeout(onlineTimer); onlineTimer = null; }
+    if (offlineTimer) return; // 이미 대기 중 릴레이슱 🛃
+    offlineTimer = setTimeout(() => {
+      offlineTimer = null;
+      if (isCurrentlyOnline) { // 실제로 오프라인이 된 경우만
+        isCurrentlyOnline = false;
+        onOffline?.();
+      }
+    }, DEBOUNCE_MS);
+  };
+
+  const handleOnline = () => {
+    if (offlineTimer) { clearTimeout(offlineTimer); offlineTimer = null; }
+    if (Date.now() - mountedAt < MOUNT_GUARD_MS) return; // 마운트 직후 무시
+    if (onlineTimer) return; // 이미 대기 중
+    onlineTimer = setTimeout(() => {
+      onlineTimer = null;
+      if (!isCurrentlyOnline) { // 실제 오프라인 중이었을 때만
+        isCurrentlyOnline = true;
+        onOnline?.();
+      }
+    }, DEBOUNCE_MS);
+  };
+
   if (!Capacitor.isNativePlatform()) {
     // 웹 fallback
-    window.addEventListener('offline', onOffline);
-    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
     return () => {
-      window.removeEventListener('offline', onOffline);
-      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+      if (offlineTimer) clearTimeout(offlineTimer);
+      if (onlineTimer) clearTimeout(onlineTimer);
     };
   }
   try {
     const { Network } = await import('@capacitor/network');
     const status = await Network.getStatus();
-    if (!status.connected) onOffline?.();
+    isCurrentlyOnline = status.connected;
+    if (!status.connected) onOffline?.(); // 시작시 오프라인이면 즉시 토스트
 
     const listener = await Network.addListener('networkStatusChange', (s) => {
-      if (s.connected) onOnline?.();
-      else onOffline?.();
+      if (s.connected) handleOnline();
+      else handleOffline();
     });
-    return () => listener.remove();
+    return () => {
+      listener.remove();
+      if (offlineTimer) clearTimeout(offlineTimer);
+      if (onlineTimer) clearTimeout(onlineTimer);
+    };
   } catch (e) {
     console.warn('[NET] 네트워크 모니터 실패:', e.message);
     return () => {};
