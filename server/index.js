@@ -2219,33 +2219,35 @@ async function getMarineWeather(sid) {
   if (!buoyNum) return null;
   try {
     const now  = new Date(Date.now() + 9 * 3600 * 1000);
-    const prev = new Date(now.getTime() - 70 * 60 * 1000); // 70분 전 (API 지연 보상)
     const pad  = (n) => String(n).padStart(2, '0');
+    // ✅ sea_obs.php: tm2 단일 파라미터 (승인된 엔드포인트, kma_buoy2는 403)
     const tm2  = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}00`;
-    const tm1  = `${prev.getUTCFullYear()}${pad(prev.getUTCMonth()+1)}${pad(prev.getUTCDate())}${pad(prev.getUTCHours())}00`;
-    // ✅ tm1/tm2 파라미터 사용 (tm 단일 아님)
-    const url  = `https://apihub.kma.go.kr/api/typ01/url/kma_buoy2.php?tm1=${tm1}&tm2=${tm2}&stn=${buoyNum}&help=1&authKey=${KMA_KEY}`;
+    const url  = `https://apihub.kma.go.kr/api/typ01/url/sea_obs.php?tm2=${tm2}&stn=${buoyNum}&help=0&authKey=${KMA_KEY}`;
     const res  = await axios.get(url, { timeout: 8000 });
     const text = typeof res.data === 'string' ? res.data : '';
     if (!text || !text.includes('START7777')) return null;
-    // ✅ 쉽표(,) 구분자로 파싱
-    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#') && !l.startsWith(' #') && l.includes(buoyNum));
-    if (!lines.length) return null;
-    const cols = lines[lines.length - 1].trim().split(',').map(s => s.trim());
-    // ✅ 컴럼: [0]TM [1]STN [2]WD1 [3]WS1 [4]WS1_GST [5]WD2 [6]WS2 ... [12]WH_MAX [13]WH_SIG [14]WH_AVE
-    const ws   = parseFloat(cols[3]);  // WS1 풍속 (m/s)
-    const wdDeg= parseFloat(cols[2]);  // WD1 풍향 (도)
-    const wh   = parseFloat(cols[13]); // WH_SIG 유효파고 (m)
+    // sea_obs 컬럼: [0]TP [1]TM [2]STN_ID [3]STN_KO [4]LON [5]LAT [6]WH [7]WD [8]WS [9]WS_GST [10]TW [11]TA [12]PA [13]HM
+    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#') && l.startsWith('B,'));
+    // 해당 부이 번호 포함된 행 필터
+    const matched = lines.filter(l => l.includes(buoyNum));
+    const targetLine = matched.length ? matched[matched.length - 1] : lines[lines.length - 1];
+    if (!targetLine) return null;
+    const cols = targetLine.trim().split(',').map(s => s.trim());
+    const wh    = parseFloat(cols[6]);  // WH 유효파고 (m)
+    const wdDeg = parseFloat(cols[7]);  // WD 풍향 (degree)
+    const ws    = parseFloat(cols[8]);  // WS 풍속 (m/s)
     if (isNaN(ws) || ws <= -90 || isNaN(wh) || wh <= -90) return null;
     // 풍향 도 → 방위 변환
     const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
     const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
+    logger.info(`[Marine] ${sid}(${buoyNum}) 풍속:${ws}m/s 파고:${wh}m 풍향:${wd}`);
     return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: Math.max(0, wh) } };
   } catch (e) {
     logger.warn(`[Marine] 부이 API 실패 (${sid}/${BUOY_MAP[sid]}): ${e.message}`);
     return null;
   }
 }
+
 
 // ✅ REAL-TIDE: KHOA 조석예보 — 실제 물때·고조·간조
 function getLunarDay() {
