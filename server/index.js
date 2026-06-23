@@ -465,7 +465,8 @@ app.get('/api/health', (req, res) => {
 
 // ✅ BEACH-PUSH: 한국 IP PC에서 KMA 해수욕장 데이터를 서버로 푸시
 // PC 스케줄러(beach-push.ps1)가 1시간마다 호출 → kmaBeachCache 직접 갱신
-app.post('/api/internal/beach-push', (req, res) => {
+// ✅ express.json() 인라인 적용 (전역 미들웨어가 라인988에 있어 이 라우트보다 늦게 등록됨 → req.body undefined 버그 수정)
+app.post('/api/internal/beach-push', express.json({ limit: '10mb' }), (req, res) => {
   const pushKey = process.env.BEACH_PUSH_KEY || 'fishinggo-beach-2024';
   if (req.headers['x-push-key'] !== pushKey) return res.status(403).json({ ok: false });
   const items = req.body?.items;
