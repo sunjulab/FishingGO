@@ -184,6 +184,7 @@ export const getPointSpecificData = (point) => {
   const tidePhase = phaseMap[tideNum] || `${tideNum}물`;
 
   const stationOffset = (pointSeed * 37) % 360;
+  const diffDays = Math.floor(diffFromAnchor); // ✅ FIX: diffDays 누락 선언 — ReferenceError 수정
   const dailyShift = (diffDays * 49) % 720;
   const baseHighMin = (stationOffset + dailyShift) % 720;
   const baseLowMin  = (baseHighMin + 375) % 1440;
