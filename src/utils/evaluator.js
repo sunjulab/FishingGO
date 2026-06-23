@@ -251,15 +251,16 @@ export const calculateFishingScore = (data, point = {}) => {
   // 모든 날씨가 완벽해야 GOOD(75+) 도달, PERFECT(90+)는 극히 드물어야 함
   let score = 45 + (seed % 10) + microVar; // 45~55 범위에서 시작
 
-  // [3] 풍속 보정 — 4m/s 이상부터 페널티, 한국 봄 평균 4~6m/s
+  // [3] 풍속 보정 — 5m/s 이상부터 페널티 (기존 4m/s → 현실화: 4m/s는 낚시 지장 없는 약한 바람)
   const wind = (data.wind?.speed !== undefined && !isNaN(parseFloat(data.wind.speed))) ? parseFloat(data.wind.speed) : 5.0;
   if      (wind > 14)  score -= 65;
   else if (wind > 10)  score -= 40;
   else if (wind >  8)  score -= 28;
   else if (wind >  6)  score -= 18; // 6m/s 이상: 일반인 낚시 불편
-  else if (wind >  4)  score -= 8;  // 4~6m/s: 약간 불편
+  else if (wind >  5)  score -= 8;  // 5~6m/s: 약간 불편 (기존 4m/s → 5m/s로 상향)
   else if (wind <  2)  score += 12; // 무풍: 드문 최적 조건
   else if (wind <  3)  score += 7;  // 미풍
+  else if (wind <  4)  score += 3;  // 3~4m/s: 소폭 보너스 추가
 
   // [4] 파고 보정 — 한국 봄 연안 평균 0.5~1.0m
   const wave = (data.wave?.coastal !== undefined && !isNaN(parseFloat(data.wave.coastal))) ? parseFloat(data.wave.coastal) : 0.8;
@@ -271,16 +272,16 @@ export const calculateFishingScore = (data, point = {}) => {
   else if (wave < 0.3) score += 8;
   else if (wave < 0.5) score += 4;
 
-  // [5] 수온 보정 — 4월 한국 실제 수온: 동해 11-14°C / 서해 9-12°C / 남해 13-17°C
+  // [5] 수온 보정
   const sst = (data.sst !== undefined && !isNaN(parseFloat(data.sst))) ? parseFloat(data.sst) : 13;
   if      (sst < 8)               score -= 40; // 극저수온: 물고기 동면 수준
   else if (sst < 11)              score -= 25; // 저수온: 입질 거의 없음
-  else if (sst < 14)              score -= 12; // 4월 동해: 아직 차가움
+  else if (sst < 14)              score -= 12; // 동해 봄: 아직 차가움
   else if (sst < 17)              score -= 3;  // 봄 남해: 회복 중
   else if (sst >= 17 && sst < 20) score += 10; // 최적 수온대
-  else if (sst >= 20 && sst < 24) score += 6;  // 좋은 수온
-  else if (sst >= 24 && sst < 27) score -= 5;  // 고수온 시작, 어종 따라 다름
-  else if (sst >= 27)             score -= 25; // 고수온 쇼크
+  else if (sst >= 20 && sst < 26) score += 6;  // 여름 낚시 최적 (24~26도도 OK)
+  else if (sst >= 26 && sst < 29) score -= 5;  // 고수온 시작: 26도로 상향
+  else if (sst >= 29)             score -= 25; // 극고수온 쇼크
 
   // [6] 계절 보정
   score += getSeasonalBonus(sst);

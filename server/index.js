@@ -7027,9 +7027,10 @@ function calcFishingScoreForStation(sid) {
   else if (wind > 10) score -= 40;
   else if (wind >  8) score -= 28;
   else if (wind >  6) score -= 18;
-  else if (wind >  4) score -= 8;
+  else if (wind >  5) score -= 8;  // 5m/s 이상부터 페널티 (기존 4m/s → 현실화)
   else if (wind <  2) score += 12;
   else if (wind <  3) score += 7;
+  else if (wind <  4) score += 3;  // 3~4m/s: 미풍 소폭 보너스 추가
 
   if      (wave > 2.5) score -= 60;
   else if (wave > 2.0) score -= 45;
@@ -7044,9 +7045,9 @@ function calcFishingScoreForStation(sid) {
   else if (sst < 14)             score -= 12;
   else if (sst < 17)             score -= 3;
   else if (sst >= 17 && sst < 20) score += 10;
-  else if (sst >= 20 && sst < 24) score += 6;
-  else if (sst >= 24 && sst < 27) score -= 5;
-  else if (sst >= 27)             score -= 25;
+  else if (sst >= 20 && sst < 26) score += 6;  // 24~26도도 여름 낚시 최적 → +6점 유지
+  else if (sst >= 26 && sst < 29) score -= 5;  // 고수온 시작 기준 26도로 상향
+  else if (sst >= 29)             score -= 25; // 29도 이상 극고수온 쇼크
 
   const seasons = [
     { min:10, max:18, months:[3,4,5] },
