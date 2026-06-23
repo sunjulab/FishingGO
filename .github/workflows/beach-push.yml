@@ -2,67 +2,75 @@ name: 🌊 해수욕장 수온 자동 푸시
 
 on:
   schedule:
-    - cron: '5 * * * *'  # 매 시간 5분에 실행 (KMA 데이터 갱신 후)
-  workflow_dispatch:      # 수동 실행 버튼
+    - cron: '5 * * * *'  # 매 시간 5분에 실행
+  workflow_dispatch:
 
 jobs:
   beach-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8   # 5 → 8분으로 증가
 
     steps:
       - name: 🌊 KMA 해수욕장 수온 수집 → Render 서버 푸시
         run: |
-          echo "=== $(date '+%Y-%m-%d %H:%M:%S KST') beach-push 시작 ==="
+          echo "=== $(date '+%Y-%m-%d %H:%M:%S') beach-push 시작 ==="
 
-          # ── STEP 0: Render 서버 웜업 ──────────────────────────────────────
-          curl -s --max-time 60 "https://fishing-go-backend.onrender.com/api/health" > /dev/null || true
-          echo "✅ Render 웜업 완료"
+          # ── STEP 0: Render 웜업 (백그라운드) ─────────────────────────────
+          curl -s --max-time 30 "https://fishing-go-backend.onrender.com/api/health" > /dev/null &
+          WARMUP_PID=$!
 
-          # ── STEP 1: KMA getTwBuoyBeach API — beach_num 1~200 수온 수집 ───
-          # 파라미터: beach_num (해변코드), searchTime (YYYYMMDDhhmm)
+          # ── STEP 1: KMA getTwBuoyBeach — 병렬 4개씩 수집 ────────────────
           SEARCH_TIME=$(TZ='Asia/Seoul' date '+%Y%m%d%H%M')
-          echo "📡 searchTime: $SEARCH_TIME"
+          KEY="${{ secrets.KMA_SERVICE_KEY }}"
+          echo "📡 searchTime=$SEARCH_TIME"
 
+          # 임시 결과 디렉토리
+          mkdir -p /tmp/beach
+
+          # beach_num 1~120 병렬 4개씩 처리 (120번까지 유효 데이터 확인됨)
+          for START in $(seq 1 4 120); do
+            for OFFSET in 0 1 2 3; do
+              NUM=$((START + OFFSET))
+              [ $NUM -gt 120 ] && continue
+              (
+                R=$(curl -s --max-time 4 \
+                  "https://apis.data.go.kr/1360000/BeachInfoservice/getTwBuoyBeach?serviceKey=${KEY}&dataType=JSON&numOfRows=1&pageNo=1&beach_num=${NUM}&searchTime=${SEARCH_TIME}")
+                RC=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['response']['header']['resultCode'])" 2>/dev/null || echo "ERR")
+                if [ "$RC" = "00" ]; then
+                  TW=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin); it=d['response']['body']['items']['item']; print(it[0]['tw'] if it else '')" 2>/dev/null || echo "")
+                  TM=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin); it=d['response']['body']['items']['item']; print(it[0]['tm'] if it else '')" 2>/dev/null || echo "")
+                  [ -n "$TW" ] && echo "{\"beachNum\":\"${NUM}\",\"tw\":\"${TW}\",\"tm\":\"${TM}\"}" > /tmp/beach/${NUM}.json
+                fi
+              ) &
+            done
+            wait  # 4개 묶음 완료 후 다음으로
+          done
+
+          # 결과 합치기
           ITEMS="["
           FIRST=1
           SUCCESS=0
-
-          for NUM in $(seq 1 200); do
-            RESP=$(curl -s --max-time 5 \
-              "https://apis.data.go.kr/1360000/BeachInfoservice/getTwBuoyBeach?serviceKey=${{ secrets.KMA_SERVICE_KEY }}&dataType=JSON&numOfRows=1&pageNo=1&beach_num=${NUM}&searchTime=${SEARCH_TIME}")
-
-            RC=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['response']['header']['resultCode'])" 2>/dev/null || echo "ERR")
-
-            if [ "$RC" = "00" ]; then
-              TW=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); items=d['response']['body']['items']['item']; print(items[0]['tw'] if items else '')" 2>/dev/null || echo "")
-              TM=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); items=d['response']['body']['items']['item']; print(items[0]['tm'] if items else '')" 2>/dev/null || echo "")
-
-              if [ -n "$TW" ]; then
-                if [ "$FIRST" = "1" ]; then
-                  FIRST=0
-                else
-                  ITEMS="${ITEMS},"
-                fi
-                ITEMS="${ITEMS}{\"beachNum\":\"${NUM}\",\"wTemp\":\"${TW}\",\"tm\":\"${TM}\"}"
-                SUCCESS=$((SUCCESS+1))
-              fi
-            fi
+          for f in $(ls /tmp/beach/*.json 2>/dev/null | sort -t/ -k4 -n); do
+            [ "$FIRST" = "0" ] && ITEMS="${ITEMS},"
+            ITEMS="${ITEMS}$(cat $f)"
+            FIRST=0
+            SUCCESS=$((SUCCESS+1))
           done
-
           ITEMS="${ITEMS}]"
-          echo "✅ 수온 데이터 수집: ${SUCCESS}개 해변"
+          echo "✅ 수온 수집: ${SUCCESS}개 해변"
 
           if [ "$SUCCESS" = "0" ]; then
             echo "❌ 수온 데이터 없음 — KMA_SERVICE_KEY 또는 API 상태 확인"
             exit 1
           fi
 
-          # ── STEP 2: Render 서버 푸시 ─────────────────────────────────────
+          # ── STEP 2: Render 웜업 완료 대기 ────────────────────────────────
+          wait $WARMUP_PID 2>/dev/null || true
+          echo "✅ Render 웜업 완료"
+
+          # ── STEP 3: Render 서버 푸시 (최대 3회) ──────────────────────────
           PUSH_KEY="${{ secrets.BEACH_PUSH_KEY }}"
-          if [ -z "$PUSH_KEY" ]; then
-            PUSH_KEY="fishinggo-beach-2024"
-          fi
+          [ -z "$PUSH_KEY" ] && PUSH_KEY="fishinggo-beach-2024"
 
           BODY="{\"items\": $ITEMS}"
           OK="false"
@@ -78,10 +86,10 @@ jobs:
             PATCHED=$(echo "$PUSH_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('patched',0))" 2>/dev/null || echo "0")
 
             if [ "$OK" = "True" ]; then
-              echo "✅ 서버 푸시 성공: ${SUCCESS}개 수온 → weatherCache 즉시 패치: ${PATCHED}개"
+              echo "✅ 서버 푸시 성공: ${SUCCESS}개 수온 → weatherCache 패치: ${PATCHED}개"
               break
             else
-              echo "⚠️ 서버 연결 오류 (시도 $i/3): $PUSH_RESP"
+              echo "⚠️ 서버 오류 (시도 $i/3): $PUSH_RESP"
               sleep 15
             fi
           done
