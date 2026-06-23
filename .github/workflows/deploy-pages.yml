@@ -24,10 +24,11 @@ jobs:
       # ✅ AUTO-UPDATE: 배포마다 고유 version.json 생성 → 클라이언트 자동 감지용
       - name: Generate version.json
         run: |
+          mkdir -p dist
           VERSION=$(date +%s)
           BUILT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "{\"version\":\"${VERSION}\",\"built\":\"${BUILT}\"}" > dist/version.json
-          echo "✅ version.json 생성: version=${VERSION} built=${BUILT}"
+          printf '{"version":"%s","built":"%s"}\n' "$VERSION" "$BUILT" > dist/version.json
+          echo "✅ version.json 생성됨:"
           cat dist/version.json
 
       - name: Deploy dist/ to gh-pages branch
