@@ -21,6 +21,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ AUTO-UPDATE: 배포마다 고유 version.json 생성 → 클라이언트 자동 감지용
+      - name: Generate version.json
+        run: |
+          VERSION=$(date +%s)
+          BUILT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "{\"version\":\"${VERSION}\",\"built\":\"${BUILT}\"}" > dist/version.json
+          echo "✅ version.json 생성: version=${VERSION} built=${BUILT}"
+          cat dist/version.json
+
       - name: Deploy dist/ to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -55,3 +64,4 @@ jobs:
               -d '{"source":{"branch":"gh-pages","path":"/"}}'
           fi
           echo "Done."
+
