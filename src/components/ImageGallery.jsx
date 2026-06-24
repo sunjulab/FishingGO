@@ -6,6 +6,7 @@
  */
 import React, { useState, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import FeedVideo from './FeedVideo';
 
 const isVideoUrl = (s) => typeof s === 'string' && (s.match(/\.(mp4|mov|webm)$/i) || s.includes('video/upload'));
 
@@ -73,7 +74,7 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
       >
         {/* 현재 미디어 */}
         {isVideoUrl(list[idx]) ? (
-          <video
+          <FeedVideo
             src={list[idx]}
             style={{
               position: 'absolute',
@@ -84,11 +85,6 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
               display: 'block',
               transition: 'opacity 0.2s',
             }}
-            autoPlay
-            muted
-            loop
-            playsInline
-            controls
             onError={e => { e.currentTarget.parentElement.style.display = 'none'; }}
           />
         ) : (
@@ -207,7 +203,7 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
               }}
             >
               {isVideoUrl(src) ? (
-                <video src={src} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} muted playsInline />
+                <FeedVideo src={src} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} hideToggle={true} />
               ) : (
                 <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               )}
@@ -241,12 +237,12 @@ export default function ImageGallery({ images, image, maxHeight = 300, borderRad
           </button>
 
           {isVideoUrl(list[idx]) ? (
-            <video
-              src={list[idx]}
-              onClick={e => e.stopPropagation()}
-              style={{ maxWidth: '95vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px' }}
-              controls autoPlay loop playsInline
-            />
+            <div onClick={e => e.stopPropagation()} style={{ width: '95vw', height: '85vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <FeedVideo
+                src={list[idx]}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
+              />
+            </div>
           ) : (
             <img
               src={list[idx]}

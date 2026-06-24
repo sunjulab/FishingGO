@@ -13,6 +13,7 @@ import { AdSenseDisplay, AdSenseInFeed } from '../components/ads/AdSenseAd';
 // NativeAdService 제거됨 (네이티브 광고 기능 삭제)
 import ImageGallery from '../components/ImageGallery';
 import StorySlider from '../components/StorySlider';
+import FeedVideo from '../components/FeedVideo';
 import { io } from 'socket.io-client';
 import { shareExternal } from '../utils/shareUtils';
 
@@ -1090,7 +1091,7 @@ export default function CommunityTab() {
                     >
                       {imgSrc ? (
                         isVideoUrl(imgSrc) ? (
-                          <video src={imgSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted loop playsInline controls />
+                          <FeedVideo src={imgSrc} />
                         ) : (
                           <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         )
@@ -1268,7 +1269,7 @@ export default function CommunityTab() {
                               }}
                             >
                               {isVideoUrl(imgSrc) ? (
-                                <video
+                                <FeedVideo
                                   src={imgSrc}
                                   style={{
                                     position: 'absolute',
@@ -1276,13 +1277,8 @@ export default function CommunityTab() {
                                     width: '100%',
                                     height: '100%',
                                     objectFit: 'cover',
-                                    display: 'block',
-                                    pointerEvents: 'none',
+                                    display: 'block'
                                   }}
-                                  autoPlay
-                                  muted
-                                  loop
-                                  playsInline
                                 />
                               ) : (
                                 <img
@@ -2167,7 +2163,7 @@ export default function CommunityTab() {
             <div style={{ background: '#F8F9FA', borderRadius: '14px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center', border: '1px solid #E5E5EA' }}>
               {(shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover) && (
                 isVideoUrl(shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover) ? (
-                  <video src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} muted playsInline />
+                  <FeedVideo src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} style={{ width: '52px', height: '52px', borderRadius: '10px', flexShrink: 0 }} hideToggle={true} />
                 ) : (
                   <img src={shareModal.post.images?.[0] || shareModal.post.image || shareModal.post.cover} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
                 )
