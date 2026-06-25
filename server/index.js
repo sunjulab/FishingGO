@@ -2449,11 +2449,17 @@ async function updateAllStationsCache() {
         temp: `${parseFloat(finalTemp).toFixed(1)}\u00b0C`,
         wind: { speed: parseFloat(parseFloat(finalWind).toFixed(1)), dir: windDir },
         wave: { coastal: parseFloat(parseFloat(finalWave).toFixed(1)) },
-        layers: {
-          upper:  parseFloat(finalTemp).toFixed(1),
-          middle: (nifsData && nifsData.middle) ? parseFloat(nifsData.middle).toFixed(1) : null,
-          lower:  (nifsData && nifsData.lower)  ? parseFloat(nifsData.lower).toFixed(1)  : null,
-        },
+        layers: (() => {
+          let m = (nifsData && nifsData.middle) ? parseFloat(nifsData.middle).toFixed(1) : null;
+          let l = (nifsData && nifsData.lower)  ? parseFloat(nifsData.lower).toFixed(1)  : null;
+          if (nifsData && nifsData.upper && !isNaN(parseFloat(finalTemp))) {
+             const dM = nifsData.middle ? parseFloat(nifsData.upper) - parseFloat(nifsData.middle) : null;
+             const dL = nifsData.lower ? parseFloat(nifsData.upper) - parseFloat(nifsData.lower) : null;
+             if (dM !== null) m = (parseFloat(finalTemp) - dM).toFixed(1);
+             if (dL !== null) l = (parseFloat(finalTemp) - dL).toFixed(1);
+          }
+          return { upper: parseFloat(finalTemp).toFixed(1), middle: m, lower: l };
+        })(),
         tide: { phase: tidePhase, high: tideHigh, low: tideLow, current_level: `${tideLevel}cm` },
         _sources: {
           sst:  nifsSst ? 'NIFS_API' : (khoaSst ? 'KHOA_API' : (beachSst ? 'KMA_BEACH' : 'fallback')),
