@@ -10,7 +10,7 @@ const SEA_FISHING_POINTS = [
   { id: 5, name: '울진 후포항 방파제', type: '방파제', region: '경북', lat: 36.6785, lng: 129.4589, fish: '벵에돔, 감성돔', score: 94, status: '피딩중', obsCode: 'DT_0002' }, // ✅ 20TH-C2: '뱅에돔' → '벵에돔' 오타 수정
   { id: 6, name: '영덕 강구항 방파제', type: '방파제', region: '경북', lat: 36.3612, lng: 129.3874, fish: '삼치, 전어', score: 88, status: '보통', obsCode: 'DT_0002' },
   { id: 7, name: '포항 영일만 신항방파제', type: '방파제', region: '경북', lat: 36.1154, lng: 129.4325, fish: '방어, 잿방어', score: 96, status: '최고', obsCode: 'DT_0036' },
-  { id: 26, name: '고성 거진항 방파제', type: '방파제', region: '강원', lat: 38.4412, lng: 128.4612, fish: '이면수, 도다리', score: 89, status: '보통', obsCode: 'DT_0021' },
+  { id: 26, name: '고성 거진항 방파제', type: '방파제', region: '강원', lat: 38.4412, lng: 128.4612, fish: '이면수, 도다리', score: 89, status: '보통', obsCode: 'DT_0099' },
   { id: 27, name: '삼척 임원항 방파제', type: '방파제', region: '강원', lat: 37.2312, lng: 129.3512, fish: '감성돔, 학꽁치', score: 91, status: '활발', obsCode: 'DT_0003' },
   { id: 28, name: '경주 읍천항 방파제', type: '방파제', region: '경북', lat: 35.6812, lng: 129.4712, fish: '농어, 무늬오징어', score: 93, status: '피딩중', obsCode: 'DT_0036' },
   { id: 41, name: '속초 영금정 갯바위', type: '갯바위', region: '강원', lat: 38.2121, lng: 128.5954, fish: '감성돔, 돌참돔', score: 92, status: '활발', obsCode: 'DT_0021' },
