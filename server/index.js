@@ -2139,11 +2139,12 @@ async function getNifsWaterTemp(sid) {
 
   if (!staCde) return null;
   const item = map[staCde];
-  if (!item || !item.upper) return null; // 표층 데이터가 없으면 무효 처리
+  if (!item) return null; 
+  // 상층이 없더라도 중/저층이 있을 수 있으므로 무효 처리하지 않고 그대로 반환 (상층은 KHOA가 커버함)
   return {
-    upper: item.upper,
-    middle: item.middle,
-    lower: item.lower
+    upper: item.upper || null,
+    middle: item.middle || null,
+    lower: item.lower || null
   };
 }
 
@@ -2403,12 +2404,13 @@ async function updateAllStationsCache() {
     const seed    = parseInt(sid.replace(/\D/g, '')) || 1;
     const lcg     = (n) => ((seed * 9301 + 49297 * n) % 233280) / 233280;
 
-    // ① 수온 (NIFS 우선 → KHOA → 기상청 해수욕장 → 계절 fallback)
-    const nifsData = await getNifsWaterTemp(sid);
+    // ① 수온 (표층 온도 KHOA 최우선: NIFS는 인접 관측소 매핑이 많아 표층 온도가 안 맞을 수 있음)
+    const khoaSst  = await getWaterTemp(sid); // KHOA(해양조사원) 표층 최우선
+    const nifsData = await getNifsWaterTemp(sid); // NIFS(수산과학원) 데이터 동시 호출
     const nifsSst  = nifsData?.upper || null;
-    const khoaSst  = nifsSst  ? null : await getWaterTemp(sid);
-    const beachSst = (nifsSst || khoaSst) ? null : await getKmaBeachWaterTemp(sid);
-    let realSst  = nifsSst || khoaSst || beachSst;
+    const beachSst = (!khoaSst && !nifsSst) ? await getKmaBeachWaterTemp(sid) : null;
+    
+    let realSst  = khoaSst || nifsSst || beachSst;
     if (realSst && parseFloat(realSst) <= 0.1) realSst = null; // 0.0℃ API 오류 데이터 폐기 및 fallback 유도
     // ② 풍속·파고 (기상청 해양부이)
     const marine  = await getMarineWeather(sid);

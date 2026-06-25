@@ -958,15 +958,15 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             {/* ✅ 민물 포인트: 층별 수온 없음 표기 */}
             {selectedPoint?.type === '민물' || !selectedPoint?.obsCode ? (
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>층별 수온 정보 (상/중/저)</span>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>층별 수온 정보 (표/중/저)</span>
                 <div style={{ textAlign: 'center', color: '#8E8E93', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, padding: '8px 0' }}>민물 포인트로 해수 수온 정보 없음</div>
               </div>
             ) : (
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
-                <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>층별 수온 정보 (상/중/저)</span>
+                <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>층별 수온 정보 (표/중/저)</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[
-                    { label: '상층', val: marineData.layers?.upper || marineData.sst || marineData.waterTemp || '-', color: '#64B5F6' },
+                    { label: '표층', val: marineData.layers?.upper || marineData.sst || marineData.waterTemp || '-', color: '#64B5F6' },
                     { label: '중층', val: marineData.layers?.middle ? marineData.layers.middle : '반영중', color: '#42A5F5' },
                     { label: '저층', val: marineData.layers?.lower ? marineData.layers.lower : '반영중', color: '#1E88E5' },
                   ].map(l => (

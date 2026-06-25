@@ -220,7 +220,7 @@ export default function DashboardView({
               </div>
               <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
                 {[
-                  { label: '상층', val: tideData.layers?.upper ? `${tideData.layers.upper}°` : (tideData.sst ? `${parseFloat(tideData.sst).toFixed(1)}°` : '-'), color: '#64B5F6' },
+                  { label: '표층', val: tideData.layers?.upper ? `${tideData.layers.upper}°` : (tideData.sst ? `${parseFloat(tideData.sst).toFixed(1)}°` : '-'), color: '#64B5F6' },
                   { label: '중층', val: tideData.layers?.middle ? `${tideData.layers.middle}°` : '반영중', color: '#42A5F5' },
                   { label: '저층', val: tideData.layers?.lower  ? `${tideData.layers.lower}°`  : '반영중', color: '#1E88E5' },
                 ].map(l => (
