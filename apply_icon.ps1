@@ -1,7 +1,7 @@
 Add-Type -AssemblyName System.Drawing
 
-# Source icon path — USER ORIGINAL IMAGE (do not modify)
-$src = "C:\Users\palin\.gemini\antigravity\brain\d88533c3-7b95-44f1-be6f-49b55e00aead\.tempmediaStorage\media_d88533c3-7b95-44f1-be6f-49b55e00aead_1778385014368.jpg"
+# Source icon path
+$src = Join-Path $PSScriptRoot "icon_source.png"
 
 # Build res path using byte array to avoid Korean encoding issues
 $resBase = $PSScriptRoot + "\android\app\src\main\res"
