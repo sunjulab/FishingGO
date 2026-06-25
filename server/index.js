@@ -2043,13 +2043,33 @@ async function getNifsAllStations() {
       if (res.data?.header?.resultCode !== '00') return nifsCache;
       const items = res.data?.body?.item;
       if (!items || !Array.isArray(items)) return nifsCache;
-      // obs_lay=1(표층) 필터: 문자열'1' 및 숫자 1 양쪽 대응
-      const surface = items.filter(i => String(i.obs_lay) === '1' && String(i.rpr_yn) === 'N');
+      // 표층, 중층, 저층 모두 수집 (rpr_yn === 'N'만)
+      const validItems = items.filter(i => String(i.rpr_yn) === 'N');
       const map = {};
-      for (const item of surface) {
+      for (const item of validItems) {
         const key = item.sta_cde;
-        if (!map[key] || item.obs_dat + item.obs_tim > map[key].obs_dat + map[key].obs_tim) {
-          map[key] = item;
+        if (!map[key]) {
+          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, upper: null, middle: null, lower: null };
+        }
+        
+        const currentDateTime = map[key].obs_dat + map[key].obs_tim;
+        const itemDateTime = item.obs_dat + item.obs_tim;
+        
+        // 새로운 관측시간 데이터면 초기화
+        if (itemDateTime > currentDateTime) {
+          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, upper: null, middle: null, lower: null };
+        }
+        
+        // 최신 데이터면 층별 온도 기록
+        if (itemDateTime >= currentDateTime) {
+          const lay = String(item.obs_lay);
+          const tmp = item.wtr_tmp;
+          const isValidTmp = tmp && tmp !== '-' && !isNaN(parseFloat(tmp));
+          const val = isValidTmp ? String(parseFloat(tmp).toFixed(1)) : null;
+          
+          if (lay === '1' && val) map[key].upper = val;
+          else if (lay === '2' && val) map[key].middle = val;
+          else if (lay === '3' && val) map[key].lower = val;
         }
       }
       nifsCache = map;
@@ -2072,10 +2092,12 @@ async function getNifsWaterTemp(sid) {
   const map = await getNifsAllStations();
   if (!map) return null;
   const item = map[staCde];
-  if (!item) return null;
-  const sst = item.wtr_tmp;
-  if (sst && sst !== '-' && !isNaN(parseFloat(sst))) return String(parseFloat(sst).toFixed(1));
-  return null;
+  if (!item || !item.upper) return null; // 표층 데이터가 없으면 무효 처리
+  return {
+    upper: item.upper,
+    middle: item.middle,
+    lower: item.lower
+  };
 }
 
 // ✅ KMA-BEACH-MAP: 기상청 해수욕장 수온 API 매핑 (서해·제주 커버)
@@ -2317,7 +2339,8 @@ async function updateAllStationsCache() {
     const lcg     = (n) => ((seed * 9301 + 49297 * n) % 233280) / 233280;
 
     // ① 수온 (NIFS 우선 → KHOA → 기상청 해수욕장 → 계절 fallback)
-    const nifsSst  = await getNifsWaterTemp(sid);
+    const nifsData = await getNifsWaterTemp(sid);
+    const nifsSst  = nifsData?.upper || null;
     const khoaSst  = nifsSst  ? null : await getWaterTemp(sid);
     const beachSst = (nifsSst || khoaSst) ? null : await getKmaBeachWaterTemp(sid);
     let realSst  = nifsSst || khoaSst || beachSst;
@@ -2360,8 +2383,8 @@ async function updateAllStationsCache() {
         wave: { coastal: parseFloat(parseFloat(finalWave).toFixed(1)) },
         layers: {
           upper:  parseFloat(finalTemp),
-          middle: (parseFloat(finalTemp) - 1.2).toFixed(1),
-          lower:  (parseFloat(finalTemp) - 3.4).toFixed(1),
+          middle: (nifsData && nifsData.middle) ? parseFloat(nifsData.middle).toFixed(1) : (parseFloat(finalTemp) - 1.2).toFixed(1),
+          lower:  (nifsData && nifsData.lower)  ? parseFloat(nifsData.lower).toFixed(1)  : (parseFloat(finalTemp) - 3.4).toFixed(1),
         },
         tide: { phase: tidePhase, high: tideHigh, low: tideLow, current_level: `${tideLevel}cm` },
         _sources: {
