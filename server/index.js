@@ -7046,12 +7046,21 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     }
 
     const noise = (Math.random() * 0.4 - 0.2).toFixed(1);
+    const noiseVal = parseFloat(noise);
     const baseSst = parseFloat(d.sst) || 15.2;
-    d.sst = (baseSst + parseFloat(noise)).toFixed(1);
+    d.sst = (baseSst + noiseVal).toFixed(1);
     d.temp = `${d.sst}°C`;
-    d.layers = d.layers || {};
-    d.layers.upper = d.sst;
-    // middle, lower 는 NIFS 캐시 원본(d.layers.middle 등)을 그대로 유지
+    
+    // 원본 캐시 오염 방지를 위해 layers 깊은 복사 및 모든 층에 동일한 노이즈 적용하여 수온 역전 방지
+    if (d.layers) {
+      d.layers = { ...d.layers };
+      if (d.layers.upper) d.layers.upper = (parseFloat(d.layers.upper) + noiseVal).toFixed(1);
+      if (d.layers.middle) d.layers.middle = (parseFloat(d.layers.middle) + noiseVal).toFixed(1);
+      if (d.layers.lower) d.layers.lower = (parseFloat(d.layers.lower) + noiseVal).toFixed(1);
+    } else {
+      d.layers = { upper: d.sst };
+    }
+
     return res.json(d);
   }
 
@@ -7107,8 +7116,8 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     wave: { coastal: profile.wave || 0.6 },
     layers: {
       upper: mockSst,
-      middle: null,
-      lower: null
+      middle: mockSst ? (parseFloat(mockSst) - 1.2).toFixed(1) : null,
+      lower: mockSst ? (parseFloat(mockSst) - 3.4).toFixed(1) : null
     },
     tide: { phase: tidePhase, high: highTime, low: lowTime },
     tide_predictions: [
