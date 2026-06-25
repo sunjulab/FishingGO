@@ -2058,7 +2058,7 @@ let nifsCacheTime = 0;
 let nifsFetchPromise = null; // ✅ singleton: 동시 호출 시 1번만 API 요청
 
 async function getNifsAllStations() {
-  const NIFS_KEY = process.env.NIFS_KEY;
+  const NIFS_KEY = process.env.NIFS_KEY || 'qPwOeIrU-2606-NCSXWE-1656';
   if (!NIFS_KEY) return null;
   const now = Date.now();
   if (nifsCache && (now - nifsCacheTime) < 28 * 60 * 1000) return nifsCache;
