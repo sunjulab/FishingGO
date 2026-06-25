@@ -221,8 +221,8 @@ export default function DashboardView({
               <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
                 {[
                   { label: '상층', val: tideData.layers?.upper ? `${tideData.layers.upper}°` : (tideData.sst ? `${parseFloat(tideData.sst).toFixed(1)}°` : '-'), color: '#64B5F6' },
-                  { label: '중층', val: tideData.layers?.middle ? `${tideData.layers.middle}°` : (tideData.sst ? `${(parseFloat(tideData.sst)-1.2).toFixed(1)}°` : '-'), color: '#42A5F5' },
-                  { label: '저층', val: tideData.layers?.lower  ? `${tideData.layers.lower}°`  : (tideData.sst ? `${(parseFloat(tideData.sst)-3.4).toFixed(1)}°` : '-'), color: '#1E88E5' },
+                  { label: '중층', val: tideData.layers?.middle ? `${tideData.layers.middle}°` : '반영중', color: '#42A5F5' },
+                  { label: '저층', val: tideData.layers?.lower  ? `${tideData.layers.lower}°`  : '반영중', color: '#1E88E5' },
                 ].map(l => (
                   <div key={l.label} style={{ flex: 1, background: 'rgba(255,255,255,0.12)', borderRadius: '12px', padding: '8px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', fontWeight: '800', marginBottom: '2px' }}>{l.label}</div>

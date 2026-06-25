@@ -460,7 +460,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             stationId: sid,
             sst: finalSst,
             temp: `${finalSst}°C`,
-            layers: { upper: finalSst, middle: (finalSst - 1.2).toFixed(1), lower: (finalSst - 3.4).toFixed(1) },
+            layers: { upper: finalSst, middle: null, lower: null },
             tide: { phase: '분석 중', high: '15:20', low: '08:42' },
             tide_predictions: [{ time: '14:20', type: '고조', level: 180 }]
           }));
@@ -966,13 +966,13 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                 <span style={{ fontWeight: '900', display: 'block', marginBottom: '12px', color: '#333' }}>층별 수온 정보 (상/중/저)</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[
-                    { label: '상층', val: marineData.sst || marineData.waterTemp || '-', color: '#64B5F6' },
-                    { label: '중층', val: marineData.sst ? (parseFloat(marineData.sst) - 1.2).toFixed(1) : '-', color: '#42A5F5' },
-                    { label: '저층', val: marineData.sst ? (parseFloat(marineData.sst) - 3.4).toFixed(1) : '-', color: '#1E88E5' },
+                    { label: '상층', val: marineData.layers?.upper || marineData.sst || marineData.waterTemp || '-', color: '#64B5F6' },
+                    { label: '중층', val: marineData.layers?.middle ? marineData.layers.middle : '반영중', color: '#42A5F5' },
+                    { label: '저층', val: marineData.layers?.lower ? marineData.layers.lower : '반영중', color: '#1E88E5' },
                   ].map(l => (
                     <div key={l.label} style={{ flex: 1, backgroundColor: '#fff', padding: '10px 6px', borderRadius: '10px', textAlign: 'center', border: '1.5px solid #F0F2F7' }}>
                       <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#8E8E93', marginBottom: '4px' }}>{l.label}</div>
-                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: l.color }}>{l.val !== '-' ? `${l.val}°C` : '-'}</div>
+                      <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: l.color }}>{l.val !== '-' && l.val !== '반영중' ? `${l.val}°C` : l.val}</div>
                     </div>
                   ))}
                 </div>

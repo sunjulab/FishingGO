@@ -1,0 +1,1930 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+   
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="author" content="e-연구바다">
+<meta name="keywords" content="e-연구바다, 국립수산과학원">
+<meta name="copyright" content="Copyright © THE SEA OF RESEARCH. All rights reserved.">
+<meta name="description" content="e-연구바다">
+<meta name="subject" content="e-연구바다">
+<!--오픈그래프-->
+<meta property="og:type" content="website">
+<meta property="og:title" content="e-연구바다">
+<meta property="og:description" content="국립수산과학원 e-연구바다">
+<meta property="og:site_name" content="e-연구바다">
+<meta property="og:image" content="https://www.nifs.go.kr/portal/cmmn/images/openGraph.jpg" />
+<meta property="og:url" content="https://www.nifs.go.kr/portal/">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+
+
+
+
+
+
+
+<title>실시간 해양수산환경 관측시스템</title>
+<link rel="icon" type="image/png" href="/risa/cmmn/images/favicon.png">
+
+<link href="/risa/cmmn/css/common.css?ver=" type="text/css" rel="stylesheet">
+<link href="/risa/cmmn/css/default.css?ver=" type="text/css" rel="stylesheet">
+<link href="/risa/cmmn/css/jquery-ui.min.css" type="text/css" rel="stylesheet"><!-- css -->
+<link href="/risa/cmmn/css/bootstrap-clockpicker.css" type="text/css" rel="stylesheet">
+<link href="/risa/cmmn/css/chosen.css" type="text/css" rel="stylesheet">
+<link href="/risa/cmmn/grid/css/AUIGrid_style.css?ver=" type="text/css" rel="stylesheet">
+<link href="/risa/cmmn/css/style.css?ver=" type="text/css" rel="stylesheet">
+<link href="/risa/cmmn/css/developer_style.css?ver=" type="text/css" rel="stylesheet"> <!-- 디자인 소스 안겹치기위해서 사용함-->
+
+<style>
+   /*첨부터 안보이거나 보이게 처리 위함*/
+   .authEdt{
+    
+      display:none !important;
+    
+    }
+   .authOptr{
+    
+      display:none !important;
+    
+    }
+
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- JSTL 변수 인식 엔터 정보 설정 -->
+
+
+
+
+<link href="/risa/cmmn/css/main.css?ver=" type="text/css" rel="stylesheet">
+
+ 
+    <link rel="stylesheet" type="text/css" href="/risa/cmmn/css/slick.css" />
+    <link rel="stylesheet" type="text/css" href="/risa/cmmn/css/slick-theme.css" />
+    <link rel="stylesheet" type="text/css" href="/risa/cmmn/css/swiper.min.css" />
+    <style>
+    .dpKey{display:none;}
+    .m-popup {
+    display: none;
+	}
+    </style>
+    <script>
+    //팝업 쿠키
+    function notice_getCookie(name){
+        var nameOfCookie = name +"=";
+        var x = 0;
+        while(x <= document.cookie.length){
+            var y = (x+nameOfCookie.length);
+            if(document.cookie.substring(x,y)==nameOfCookie){
+                if((endOfCookie=document.cookie.indexOf(";",y))== -1){
+                    endOfCookie = document.cookie.length;
+                }
+                return unescape(document.cookie.substring(y,endOfCookie));
+            }
+            x = document.cookie.indexOf(" ",x)+1;
+            if(x==0){
+                break;
+            }
+        }
+        return "";
+    }
+
+    //임시 팝업
+    function pop() {
+        /*var url = "pop_20210915";
+
+        if(notice_getCookie("pop_20210915") != "done"){
+            window.open("pop_20210915.jsp?url="+url,"pop_20210915","width=580, height=300, top=0, left=0, resizable=no");
+        }*/
+
+        /*var url = "pop_20220915";
+
+        if(notice_getCookie("pop_20220915_risa") != "done"){
+            window.open("pop_20220915.jsp?url="+url,"pop_20220915","width=501, height=605, top=0, left=0, resizable=no");
+        }*/
+
+    }
+    //쿠키설정
+    function setCookie( name, value, expiredays ) {
+        var todayDate = new Date();
+        todayDate.setDate( todayDate.getDate() + expiredays );
+        document.cookie = name + '=' + escape( value ) + '; path=/; expires=' + todayDate.toGMTString() + ';'
+    }
+
+    //쿠키 불러오기
+    function getCookie(name)
+    {
+        var obj = name + "=";
+        var x = 0;
+        while ( x <= document.cookie.length )
+        {
+            var y = (x+obj.length);
+            if ( document.cookie.substring( x, y ) == obj )
+            {
+                if ((endOfCookie=document.cookie.indexOf( ";", y )) == -1 )
+                    endOfCookie = document.cookie.length;
+                return unescape( document.cookie.substring( y, endOfCookie ) );
+            }
+            x = document.cookie.indexOf( " ", x ) + 1;
+
+            if ( x == 0 ) break;
+        }
+        return "";
+    }
+
+
+    function popClose(val){
+
+        if($("#id-check").prop("checked")) {
+            setCookie('pop'+val, 'Y', 7);
+        }
+
+        $(".m-popup").css("display", "none");
+    }
+
+    </script>
+</head>
+
+<body>
+    <!-- wrap -->
+    <div id="wrap" class="ver_main">
+       <!-- header -->
+        
+
+
+
+
+
+
+
+
+       <!-- sitemap -->
+        <div id="sitemap" class="modal">
+            <div class="sitemap-wrap">
+                
+                
+                <section>
+                    <h2>시스템소개</h2>
+                    
+                    <div class="menu"		>
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/pcon0000413/systA/actionConts.do"
+								     class="lvl2-link">
+								     사업 개요
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/pcon0000414/systA/actionConts.do"
+								     class="lvl2-link">
+								     연혁
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/pcon0000415/systA/actionConts.do"
+								     class="lvl2-link">
+								     사업방향 및 QC
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                    </div>
+                </section>
+                
+                
+                
+                <section>
+                    <h2>관측데이터</h2>
+                    
+                    <div class="menu"		>
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/risa/risaA/actionRisaInfo.do"
+								     class="lvl2-link">
+								     실시간 관측정보 검색
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/risa/risaB/actionRisaStats.do"
+								     class="lvl2-link">
+								     관측정보 통계
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/risa/risaC/actionRisaStation.do"
+								     class="lvl2-link">
+								     관측소 검색
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/risa/risaD/actionRisaPastDown.do"
+								     class="lvl2-link">
+								     과거 관측정보 다운로드
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                    </div>
+                </section>
+                
+                
+                
+                <section>
+                    <h2>지도서비스</h2>
+                    
+                    <div class="menu"		>
+                       
+                          
+                          
+                           <!-- 팝업 -->
+                          <article class="full">
+                          <h3><a href="/risa/risa/risaE/actionRisaMap.do" target="_black" title="새창열기" class="window">
+							    지도서비스</a>
+						  </h3>
+                          </article>
+                           
+                       
+                    </div>
+                </section>
+                
+                
+                
+                <section>
+                    <h2>알림톡(문자)서비스</h2>
+                    
+                    <div class="menu"		>
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/risa/risaF/actionRisaApply.do"
+								     class="lvl2-link">
+								     신청/수정
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                          
+                          
+                          <article>
+								<h3>
+								  <a href="/risa/risa/risaG/actionRisaCancle.do"
+								     class="lvl2-link">
+								     해지
+								  </a>
+								</h3>
+                              <ul>
+                                  
+                              </ul>
+                          </article>
+                          
+                          
+                       
+                    </div>
+                </section>
+                
+                
+                
+                
+                    <section>
+                    <h2>즐겨찾기</h2>
+				        <div class="menu">
+				        <article class="full">
+				            <a href="/risa/risa/risaZ/actionRisaBookMark.do">
+							<h3>즐겨찾기</h3>
+							</a>
+				            </article>
+				        </div>
+				    </section>
+            </div>
+            <a href="javascript:;" class="close" >
+                <span class="hidden">닫기</span>
+            </a>
+        </div>
+        <!-- //sitemap -->
+
+      <div class="nav-background"></div>
+        <div class="skip">
+            <dl>
+                <dt class="skipH">바로가기 메뉴</dt>
+                <dd>
+                    <a class="skipNavi" href="#gnb">주메뉴 바로가기</a>
+                </dd>
+                <dd>
+                    <a class="skipNavi" href="#contents">본문 바로가기</a>
+                </dd>
+                <dd>
+                    <a class="skipNavi" href="#footer">하단 바로가기</a>
+                </dd>
+            </dl>
+        </div>
+        <div class="header_wrap">
+            <header id="header">
+                <h1 class="logo" onclick="location.href='/risa/main.do'"><span class="hide">국립수산과학원 실시간해양수산환경 관측시스템</span></h1>
+                <div id="gnb">
+                    <div id="nav" class="menu">
+                        <div class="nav-head">
+                            <h2>사이트맵</h2>
+                            <a href="javascript:;" class="menu-close">
+                                <span class="hide">닫기</span>
+                            </a>
+                        </div>
+                        <ul class="nav-tabs">
+                            
+                              
+                              <li ><a href="#navtab1">시스템소개</a></li>
+                            
+                              
+                              <li ><a href="#navtab2">관측데이터</a></li>
+                            
+                              
+                              <li ><a href="#navtab3">지도서비스</a></li>
+                            
+                              
+                              <li ><a href="#navtab4">알림톡(문자)서비스</a></li>
+                            
+                              
+                              <li ><a href="#navtab5">나의 즐겨찾기</a></li>
+                            
+                        </ul>
+                        <ul class="nav-menu">
+                            
+                            
+                            
+                            
+						<li id="navtab1"
+						    class="wrap"
+						    >
+                           
+                           
+                            <a href="javascript:;" class="item">시스템소개</a>
+                           
+                                <div class="submenu emt1">
+                                    <div class="submenu-area">
+                                        <div class="submenu-title">
+                                            시스템소개
+                                            <span>
+                                                
+												    
+												    	국립수산과학원에서 운영하는<br>해양수산환경 관측 시스템에<br>대해 알려드립니다.
+												    
+												    
+												    
+												    
+												    
+												    
+												    
+												    
+												
+                                            </span>
+                                        </div>
+                                         <!-- 2단계 -->
+                                        <ul class="submenu-wrap">
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/pcon0000413/systA/actionConts.do" >사업 개요</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/pcon0000414/systA/actionConts.do" >연혁</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/pcon0000415/systA/actionConts.do" >사업방향 및 QC</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                        </ul>
+                                        
+                                    </div>
+                                </div>
+                            </li>
+                            
+                            
+                            
+                            
+                            
+						<li id="navtab2"
+						    class="wrap"
+						    >
+                           
+                           
+                            <a href="javascript:;" class="item">관측데이터</a>
+                           
+                                <div class="submenu emt2">
+                                    <div class="submenu-area">
+                                        <div class="submenu-title">
+                                            관측데이터
+                                            <span>
+                                                
+												    
+												    
+												    	국립수산과학원이 제공하는<br>다양한 관측정보를 검색하고<br>다운받을 수 있습니다.
+												    
+												    
+												    
+												    
+												    
+												    
+												    
+												
+                                            </span>
+                                        </div>
+                                         <!-- 2단계 -->
+                                        <ul class="submenu-wrap">
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/risa/risaA/actionRisaInfo.do" >실시간 관측정보 검색</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/risa/risaB/actionRisaStats.do" >관측정보 통계</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/risa/risaC/actionRisaStation.do" >관측소 검색</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/risa/risaD/actionRisaPastDown.do" >과거 관측정보 다운로드</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                        </ul>
+                                        
+                                    </div>
+                                </div>
+                            </li>
+                            
+                            
+                            
+                            
+                            
+						<li id="navtab3"
+						    class="wrap"
+						    >
+                           
+                           
+                            <a href="javascript:;" class="item">지도서비스</a>
+                           
+                                <div class="submenu emt3">
+                                    <div class="submenu-area">
+                                        <div class="submenu-title">
+                                            지도서비스
+                                            <span>
+                                                
+												    
+												    
+												    
+												    	국립수산과학원이 관리하는<br>지역별 관측소와 실시간 관측정보를<br>지도로 확인하실 수 있습니다.
+												    
+												    
+												    
+												    
+												    
+												    
+												
+                                            </span>
+                                        </div>
+                                         <!-- 2단계 -->
+                                        <ul class="submenu-wrap">
+                                            
+                                            
+                                            
+                                            
+                                            <li class="wrap">
+												<div class="st">
+                                                	<a href="/risa/risa/risaE/actionRisaMap.do
+                                                	" onclick="window.open(this.href,
+                                                	'_blank ',
+                                                	''); return false;"
+                                                	title="새창열기" class="window" 
+                                                	>
+                                                	지도서비스</a>
+                                                </div>
+                                            </li>
+                                            
+                                            
+                                        </ul>
+                                        
+                                    </div>
+                                </div>
+                            </li>
+                            
+                            
+                            
+                            
+                            
+						<li id="navtab4"
+						    class="wrap"
+						    >
+                           
+                           
+                            <a href="javascript:;" class="item">알림톡(문자)서비스</a>
+                           
+                                <div class="submenu emt4">
+                                    <div class="submenu-area">
+                                        <div class="submenu-title">
+                                            알림톡(문자)서비스
+                                            <span>
+                                                
+												    
+												    
+												    
+												    
+												    	알림톡 서비스 신청을 통하여<br>실시간 해양수산환경 관측<br>최신 정보를 받아보세요.
+												    
+												    
+												    
+												    
+												    
+												
+                                            </span>
+                                        </div>
+                                         <!-- 2단계 -->
+                                        <ul class="submenu-wrap">
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/risa/risaF/actionRisaApply.do" >신청/수정</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                            
+                                            
+											<li class="wrap ">
+                                                <div class="st"><a href="/risa/risa/risaG/actionRisaCancle.do" >해지</a></div>
+                                                
+                                            </li>
+                                            
+                                            
+                                            
+                                        </ul>
+                                        
+                                    </div>
+                                </div>
+                            </li>
+                            
+                            
+                            
+                            
+                        </ul>
+                    </div>
+                </div>
+               <div class="util">
+                    <a href="/risa/risa/risaZ/actionRisaBookMark.do" class="set-btn"><span class="hidden">즐겨찾기</span></a>
+                    
+                    
+                    <!-- <a href="/risa/login.do" title="로그인" class="navlog"><span class="hide">로그인</span></a>-->
+                    
+                    <button class="m-sel" type="button"><span class="hide">사이트맵</span></button>
+                    <button class="navbtn" type="button"><span class="hide">사이트맵</span></button>
+                </div>
+                <div class="navsch_box">
+                    <div class="navsch_in">
+                        <label for="surfWord2" class="hide">검색어를 입력해 보세요.</label>
+                        <input type="text" id="surfWord2" name="surfWord2" placeholder="검색어를 입력해 보세요." onkeypress="if(event.keyCode == 13) {fnIntegratedSearch('N');}">
+                        <button type="submit" title="검색" onclick="javscript:fnIntegratedSearch('N');"><span class="hide">검색</span></button>
+                    </div>
+                </div>
+            </header>
+            
+        </div>
+
+
+<script>
+//문자서비스
+function openKmcis()
+{
+     let param = {};
+     let plusInfo = {};
+     plusInfo.retUrl = '/risa/terms.do';
+     plusInfo.retTarget = "opener";
+
+     param.plusInfo = encodeURIComponent(JSON.stringify(plusInfo));
+     window.open('/risa/kmcis/actionKmcisRequest.do?plusInfo='+encodeURIComponent(JSON.stringify(plusInfo)), 'kmcis',  'width=425, height=550, resizable=0, scrollbars=no, status=0, titlebar=0, toolbar=0, left=435, top=250');
+     return false;
+}
+
+function closeKmcis()
+{
+     let param = {};
+     let plusInfo = {};
+     plusInfo.retUrl = '/risa/smsServicestop.do';
+     plusInfo.retTarget = "opener";
+
+     param.plusInfo = encodeURIComponent(JSON.stringify(plusInfo));
+     window.open('/risa/kmcis/actionKmcisRequest.do?plusInfo='+encodeURIComponent(JSON.stringify(plusInfo)), 'kmcis',  'width=425, height=550, resizable=0, scrollbars=no, status=0, titlebar=0, toolbar=0, left=435, top=250');
+     return false;
+}
+document.addEventListener("DOMContentLoaded", function() {
+
+    // 1) 신청 링크 대체
+    document.querySelectorAll("a[href$='risa/risaF/actionRisaApply.do']").forEach(function(a){
+        a.addEventListener('click', function(e){
+            e.preventDefault(); // 원래 링크 이동 막기
+            if (typeof openKmcis === 'function') {
+                openKmcis();
+            } else {
+                alert("openKmcis 함수를 찾을 수 없습니다.");
+            }
+        });
+        a.href = "javascript:void(0);"; // 혹시 모를 href 실행 방지
+    });
+
+    // 2) 해지 링크 대체
+    document.querySelectorAll("a[href$='risa/risaG/actionRisaCancle.do']").forEach(function(a){
+        a.addEventListener('click', function(e){
+            e.preventDefault();
+            if (typeof closeKmcis === 'function') {
+                closeKmcis();
+            } else {
+                alert("closeKmcis 함수를 찾을 수 없습니다.");
+            }
+        });
+        a.href = "javascript:void(0);";
+    });
+});
+</script>
+
+        <!-- sub_content-->
+
+        <!-- popup -->
+        <div class="m-popup" style="width:450px; left: 160px; top: 170px; display:none;">
+            <div class="tit">
+                팝업 알림 존
+                <a href="javascript:popClose(1);" class="close"><span class="hidden">닫기</span></a>
+            </div>
+            <div class="area">
+			<section class="popup-swiper">
+				<ul class="swiper-wrapper">
+					<!--<li class="swiper-slide">
+						<img src="cmmn/images/popup_20240313.png" alt="팝업내용">
+					</li>-->
+					<li class="swiper-slide">
+						<img src="cmmn/images/popup_20250818.png" alt="팝업내용">
+					</li>
+				<ul>
+				<div class="swiper-button-next" style="display:none;"></div>
+				<div class="swiper-button-prev" style="display:none;"></div>
+			</section>
+            </div>
+            <div class="bar">
+                <fieldset class="ckdbox">
+                    <input type="checkbox" name="" id="id-check">
+                    <label for="id-check">&nbsp;일주일 동안 열지않음</label>
+                </fieldset>
+            </div>
+        </div>
+        <!-- //popup -->
+
+           <div id="container">
+				<div id="content">
+					<div class="main-content">
+						<div class="gis-wrap">
+							<div class="title">
+								<h2 style="float: left;">
+									<a href="javascript:popupMap();">이상수온특보</a>
+								</h2>
+	                            <section class="notice-swiper" style="width: 70%; height: 10px; padding-left:20px;">
+	                                <ul class="swiper-wrapper">
+	                               
+	                                    
+										 
+	                                </ul>
+	                            </section>								 
+							</div>
+							<iframe src="/risa/actionMainMiniMap.do" style="width: 100%; height: 100%; border: 0;" title="risa_new" scrolling="no"></iframe>
+							<div class="img"></div>
+							<div class="box">
+								<span> 기상청 부이자료는 얕은 수심(0.5~1m)에서 관측되어 수산과학원 수온과는 차이가 있을 수 있습니다. 관측지점을 클릭하시면 관측소 정보가 나타납니다. </span>
+							</div>
+						</div>
+						<div class="info-cont">
+							<section>
+								<!-- 오늘의 최신수온 정보  -->
+								<h2>
+									<strong>오늘의</strong> 최신수온
+								</h2>
+								<div class="tem-box" id="tem-box">
+									<div class="head">
+	                                    <div class="tit navBox">
+	                                        <label class="hidden" for="stationInfo">지역명</label>
+	                                        <select id="stationInfo" onchange="javascript:navSelect(this.value);"></select>
+											 <div class="swiper-button">
+												<a href="javascript:navPrev();" class="swiper-button-prev"><span class="hidden">이전</span></a>
+												<a href="javascript:navNext();" class="swiper-button-next"><span class="hidden">다음</span></a>
+												<div class="swiper-button-pause" id="navPause">
+												  <button aria-pressed="true" aria-label="자동재생 일시정지" onclick="javascript:autoNavPause();"><span class="hidden">정지</span></button>
+												</div>
+											 </div>
+	                                    </div>
+	                                    <span id="bookmark" class="bookmark" onclick="javascript:setBM(this);">
+	                                    <em class="hidden">즐겨찾기</em></span>
+	                                </div>
+	                                <div class="cont">
+	                                    <span class="realtime" id="realtime">
+	                                    </span>
+	                                    	<ul id="value" class="value">
+                                                <li style="display:flex; align-items:center;">
+                                                  <div style="margin-left:40px;">
+                                                    <span>표층수온 <a id="sfclyrDpwt">m</a></span>
+                                                    <strong id="wtem"></strong>
+                                                  </div>
+                                                    <span style="font-size:15px; color:gray; margin-top:45px;"> (°C)</span>
+                                                 </li>
+                                            </ul>
+	                                    <div class="location">
+	                                        <ul class="latlong">
+	                                            <li id="lat" style="font-size:18px;"><span>위도</span>°N</li>
+	                                            <li id="lot" style="font-size:18px;"><span>경도</span>°E</li>
+	                                        </ul>
+	                                    </div>
+	                                </div>
+	                                <input type="hidden" id="curPageNo" value="1"/>
+									<input type="hidden" id="maxPageNo" value=""/>
+								</div>
+								<!-- //오늘의 최신수온 정보  -->
+								<!-- 실시간 지역별 표층수온 정보 -->
+								<div class="tem-table">
+									<table>
+		                                <caption>지역별 표층수온정보</caption>
+		                                <thead>
+		                                    <tr>
+		                                        <th scope="col">지 역</th>
+		                                        <th scope="col">표 층</th>
+		                                    </tr>
+		                                </thead>
+		                                <tbody id="tem-table">
+                                        </tbody>
+                            		</table>
+								</div>
+								<!-- //실시간 지역별 표층수온 정보 -->
+								<div class="short-menu">
+									<ul>
+										<li>
+											<a href="risa/risaA/actionRisaInfo.do">실시간<br>관측정보
+											</a>
+										</li>
+										<li>
+											<a href="https://nifs.go.kr/board/actionBoard0023List.do" target="_blank">이상수온<br>특보상황
+											</a>
+										</li>
+										<li class="qr">
+											<a href="https://www.nifs.go.kr/nts/" target="_blank">모바일<br>수온서비스
+											</a>
+										</li>
+										<li>
+											<div class="sms">
+												<a href="javascript:openKmcis();">신청</a>
+												<a href="javascript:closeKmcis();">해지</a>
+											</div>
+											<span style="line-height: 23px;">알림톡(문자)<br/>서비스</span>
+										</li>
+									</ul>
+								</div>
+							</section>
+							<section>
+								<h2>관측소별 수온 현황 및 일별 예측</h2>
+								<div class="graph-box">
+									<form id="schFrm">
+									<div class="head">
+										<div class="sel chartBox">
+											<input type="hidden" id="chartMaxPage" name="chartMaxPage" value="" /> <input type="hidden" id="chtObsvtrCd" name="chtObsvtrCd" value="" />
+											<div class="selbox">
+												<label for="obsvtrCd" class="hidden">지역명</label>
+												<select id="obsvtrCd" class="m3_select" onchange="javascript:selectSta(this)" ></select>
+											</div>
+											<div class="swiper-button">
+												<a href="javascript:fnMovePrev();" id="prev" class="swiper-button-prev"><span class="hidden">이전</span></a>
+												<a href="javascript:fnMoveNext();" id="next" class="swiper-button-next"><span class="hidden">다음</span></a>
+												<div class="swiper-button-pause" id="chartPause">
+								                  <button type="button" aria-pressed="true" aria-label="자동재생 일시정지" onclick="javascript:autoChartPause();"><span class="hidden">정지</span></button>
+								                </div>
+
+											</div>
+											<input type="text" data-type="date" id="obsrvnDt" class="sch_form cal" value="2026-06-25" style="width:120px;" onchange="javascript:selectDt(this)">&nbsp;기준
+										</div>
+										<div class="remarks">
+											<span class="cir blc">올해</span> <span class="cir sky">작년</span> <span class="cir org">재작년</span>
+										</div>
+									</div>
+									<div class="graph">
+									<div class="chart pc" id="mainRisaChart" style="width:100%; min-width:320px; height: 253px; background-color: #FFFFFF; margin: 0 0 0 1px;"></div>
+									<div class="head head2">
+										<div class="remarks">
+											<span class="cir sky">관측</span> <span class="cir org">예측</span>
+										</div>
+									</div>
+									<div class="graph">
+										<div class="chart pc" id="mainPreImg" style="width: 100%; height: 253px; background-color: #FFFFFF; margin: 0 0 0 1px;"></div>
+										<!-- 그래프 영역
+
+// 											if (platform == "PC") {
+
+										<div class="chart pc" id="mainPreImg" style="width: 100%; height: 253px; background-color: #FFFFFF; margin: 0 0 0 1px;"></div>
+
+// 											} else if (platform == "MOBILE") {
+
+										<div class="chart m_pad" id="mainPreImg" style="width: 100%; height: 170px; background-color: #FFFFFF;"></div>
+
+
+// 											}
+
+										--->
+									</div>
+									</form>
+								</div>
+							</section>
+						</div>
+					</div>
+					<div class="service-menu">
+						<section class="swiper2">
+							<h2>
+								<strong>국립수산과학원 서비스</strong><span>바로가기</span>
+							</h2>
+							<ul class="swiper-wrapper">
+								<li class="swiper-slide">
+									<a href="http://www.nifs.go.kr/nts/" target="_blank">수온정보서비스</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="http://www.nifs.go.kr/kodc/observe/line/overview" target="_blank">정선해양조사</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="http://www.nifs.go.kr/portal/pcon0000024/systA/actionConts.do" target="_blank">위성해양정보</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="https://www.nifs.go.kr/board/actionBoard0023List.do" target="_blank">이상해황정보</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="https://www.nifs.go.kr/board/actionBoard0014List.do" target="_blank">해어황정보</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="http://www.nifs.go.kr/risa/rocps/index.do" target="_blank">동해냉수대 예측</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="https://www.nifs.go.kr/board/actionBoard0021List.do" target="_blank">패류독소정보</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="https://www.nifs.go.kr/board/actionBoard0022List.do" target="_blank">해파리속보</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="http://www.nifs.go.kr/portal/pcon0000071/systA/actionConts.do" target="_blank">어장환경 모니터링</a>
+								</li>
+								<li class="swiper-slide">
+									<a href="http://www.nifs.go.kr/kodc/" target="_blank">KODC</a>
+								</li>
+							</ul>
+							<div class="swiper-button-next"></div>
+							<div class="swiper-button-prev"></div>
+						</section>
+					</div>
+				</div>
+				<!--//content-->
+			</div>
+
+        <!-- //sub_content-->
+        
+
+
+
+
+
+
+
+<footer id="footer">
+	<!-- <a href="javascript:;" id="scroll-top">TOP</a> -->
+    <div class="footer-in">
+        <div class="footer-left">
+            <ul class="copy-util">
+                <li><a href="https://nifs.go.kr/contents/actionContentsCons0117.do" title="새창열기" target="_blank" class="txt_blue">개인정보처리방침</a></li>
+                <li><a href="https://nifs.go.kr/contents/actionContentsCons0001.do" title="새창열기" target="_blank">저작권 정책</a></li>
+            </ul>
+            <div class="copy1">(46083) 부산광역시 기장군 기장읍 기장해안로 216 국립수산과학원  ｜  대표전화 : 051-720-2114</div>
+            <div class="copy2">Copyright Ⓒ THE SEA OF RESEARCH, All rights reserved.</div>
+        </div>
+        <div class="footer-right">
+            <img src="/risa/cmmn/images/copy_logo.png" alt="국립수산과학원로고" />
+        </div>
+    </div>
+</footer>
+
+
+
+	</div>
+	<!-- wrap -->
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- js -->
+<script src="/risa/cmmn/js/jquery-3.6.0.min.js"></script>
+<!-- local -->
+<script src="/risa/cmmn/css/jquery-ui/jquery-ui.js"></script>
+<!-- prod -->
+
+<script src="/risa/cmmn/js/jquery.form.min.js"></script>
+<script src="/risa/cmmn/js/jquery.validate.min.js"></script>
+<script src="/risa/cmmn/js/jquery-clockpicker.min.js"></script>
+<script src="/risa/cmmn/js/jquery.mtz.monthpicker.js"></script>
+<script src="/risa/cmmn/js/jquery.fileDownload.js"></script>
+<script src="/risa/cmmn/js/chosen.jquery.js"></script>
+<script src="/risa/cmmn/js/xlsx.bundle.js"></script>
+<script src="/risa/cmmn/js/common.js"></script>
+
+
+
+<script src='/risa/cmmn/grid/prod/AUIGridLicense.js'></script>
+<script src='/risa/cmmn/grid/prod/AUIGrid.js'></script>
+<script src='/risa/cmmn/grid/FileSaver.min.js'></script>
+
+<!-- 초기스크립트 -->
+<script src="/risa/cmmn/js/lpAuiGrid.js?ver="></script>
+<script src="/risa/cmmn/js/lpCom.js?ver="></script>
+
+<script>
+lpCom.contextPath = "/risa";
+$(function(){
+    am4core.addLicense("CH125366347");
+    // 편집,메뉴관리 권한 버튼 자동 숨김,표현 처리
+    
+        $(".authEdt").remove();
+    
+    
+        $(".authOptr").remove();
+    
+
+   $(".modal .close").click(function() {
+     $(".modal").fadeOut(100);
+   });
+
+   //팝업창 닫기 이벤트 자동설정
+    $("#popupClose").click(function(e) {
+        window.close();
+    });
+
+    //모달창 닫기 이벤트 자동설정
+    $(".close,#modalClose").click(function(e) {
+       $(".modal,.md_comm").addClass("hidden");
+    });
+
+
+    // 페이지 이동시 검색 파라미터 값 자동 저장
+    $('[data-setparam]').on('click', function(e){
+         localStorage.clear();
+         const reg = new RegExp(/[^/]+(?=\.do)/, "g");
+         let pathname = location.pathname.match(reg).join("")
+         localStorage.setItem(pathname, JSON.stringify($("#schFrm").srializeJsonById()));
+    });
+
+    //목록 이전 파라메터 설정
+    if($("#listBtn").length !=0){
+       let listHref = $("#listBtn").attr("href");
+       const reg = new RegExp(/[^/]+(?=\.do)/, "g");
+       let pathname = listHref.match(reg).join("")
+       if(localStorage.getItem(pathname) != null){
+           let preParamMap = JSON.parse(localStorage.getItem(pathname));
+           if(listHref.indexOf("?") > -1){
+               listHref += "&"+lpCom.serializeByJsonData(preParamMap);
+           }else{
+               listHref += "?"+lpCom.serializeByJsonData(preParamMap);
+           }
+           $("#listBtn").attr("href",listHref);
+       }
+    }
+
+    //타사이트 연결시 접속 이력
+    $(document).on('click', '[data-other_site]', function(e) {
+       let otherInit = {isSuccesMsg:false}; //초기화 옵션
+       let paramMap = {menuId:$(this).attr("data-other_site")}
+       lpCom.Ajax("insertSiteCntnHstry", "/insertSiteCntnHstry.do", paramMap, null, otherInit);
+    });
+    
+    //만족도조사 등록
+	$("#dgstfnScrSave").on('click', function () {
+	   let otherInit = {}; //초기화 옵션
+	   let paramMap = {menuId:"",wholMenuNm:""
+			   			,opnn:$('#opnn').val(),dgstfnScr:$("input[name='dgstfnScr']:checked").val()};
+	   lpCom.Ajax("insertDgstfnExmn", "/insertDgstfnExmn.do", paramMap, null, otherInit);
+	   //location.reload();
+	});
+
+    
+
+
+});
+
+
+</script>
+
+
+<script src="/risa/cmmn/js/jquery.mask.min.js"></script>
+<script src="/risa/cmmn/js/jquery.bpopup.min.js"></script>
+
+<!-- amchart -->
+<script src="/risa/cmmn/amcharts4/core.js"></script>
+<script src="/risa/cmmn/amcharts4/charts.js"></script>
+<script src="/risa/cmmn/amcharts4/themes/animated.js"></script>
+
+
+<script>
+
+</script>
+
+														   
+<script src="/risa/cmmn/js/swiper.min.js"></script>
+<script src="/risa/cmmn/js/common.js"></script>
+<script src="/risa/cmmn/js/slick.min.js"></script>
+<script>
+
+$(document).ready(function(){
+    //팝업창 열기
+    if (getCookie('pop1') !== 'Y') {
+        //$(".m-popup").show();   // 쿠키 없으면 표시
+    }
+	fnSelectTodayObsvtrList();
+	fnSelectChartObsvtrList();
+	syncBookmarkUI();
+});
+
+var i = 0;
+
+//modal
+$(function() {
+    $(".m-sel").click(function() {
+        $(".modal").fadeIn(100);
+    });
+
+    $(".modal .close").click(function() {
+        $(".modal").fadeOut(100);
+    });
+});
+
+
+
+/**
+ * 콜백 함수
+ */
+let calBackFunc = function (pSid, pData) {
+    switch (pSid) {
+        case "todaySearch":
+
+        	//오늘의 최신 수온 정보 리스트
+        	fnSetTodayList(pData.todayObsvtrList);
+
+			//오늘의 최신 수온 정보
+            var vHtml = "";
+            for(var i = 0; i < pData.todayObsvtrList.length; i++){
+            	vHtml += "<option value='"+pData.todayObsvtrList[i].obsvtrCd+"'>"+pData.todayObsvtrList[i].obsvtrKornNm+"</option>";
+            }
+            $("#stationInfo").html(vHtml);
+            navDisplay(pData.todayObsvtrList[0].obsvtrCd);
+
+            break;
+
+        case "chartSearch":
+        	//관측소별 수온 현황 및 일별 예측
+            vHtml = "";
+            for(var i = 0; i < pData.obsvtrList.length; i++){
+            	vHtml += "<option value='"+pData.obsvtrList[i].obsvtrCd+"'>"+pData.obsvtrList[i].obsvtrKornNm+"("+pData.obsvtrList[i].obsvtrCd+")</option>";
+            }
+
+            $("#obsvtrCd").html(vHtml);
+            chartNext(pData.obsvtrList.length);
+															  
+        	break;
+
+        case "chartDisplay":
+         	if(!pData.chartList || pData.chartList.length === 0){
+        		var msgHtml = '<div style="width:100%; height:253px; display:flex; align-items:center; justify-content:center; background:#f9f9f9; color:#666; font-size:large; font-weight:blod; border:1px solid #ddd;">'+
+        		              '현재 해당관측소는 점검중으로 데이터는 검색이 되지않음을 양해부탁드립니다.' +
+        		              '</div>';
+        		              $("#mainRisaChart").html(msgHtml);
+							  $("#mainPreImg").html(msgHtml);
+        	}else{ 
+            	fnMakeChart(pData.chartList);
+         	} 
+        	break;
+
+        case "todayObsvtrInfo":
+        	fnSetTodayObsvtrInfo(pData.todayInfo);
+        	break;
+
+    }
+};
+
+//이상해황 이미지 클릭 시
+function popupMap(){
+    var url = "https://nifs.go.kr/board/actionBoard0023List.do";
+    window.open(url);
+}
+
+//팝업 미리보기(문서뷰)
+function fnPopupPrevew(pBbsId) {
+    window.open("https://www.nifs.go.kr/board/actionBoard0023PopupPrevew.do?BBS_ID="+pBbsId, "boardPrevew", "width=1000,height=900");
+}
+
+var idx = 0;
+var todayIdx = 0;
+//오늘의 최신 수온 정보 관측소 목록 조회
+function fnSelectTodayObsvtrList(){
+	let otherInit = {}; //초기화 옵션
+	otherInit.isSuccesMsg = false;
+	otherInit.isShowLoding = false;
+	let paramMap = {
+			obsvtrCd : $("#obsvtrCd").val(),
+			bookObsvtrCd : localStorage.getItem("bookObsvtrCd"),
+	    	pageNo : 1,
+	    	playState : $("#autoPlayState").val()
+	};
+
+    lpCom.Ajax("todaySearch","./selectTodayObsvtrList.do", paramMap, calBackFunc, otherInit);
+}
+
+//오늘의 최신 수온 정보 관측소 목록 조회
+function fnSelectChartObsvtrList(){
+	let otherInit = {}; //초기화 옵션
+	otherInit.isSuccesMsg = false;
+	otherInit.isShowLoding = false;
+	let paramMap = {
+			obsvtrCd : $("#obsvtrCd").val(),
+			bookObsvtrCd : localStorage.getItem("bookObsvtrCd"),
+	    	pageNo : 1,
+	    	playState : $("#autoPlayState").val()
+	};
+
+    lpCom.Ajax("chartSearch","./selectChartObsvtrList.do", paramMap, calBackFunc, otherInit);
+}
+
+//오늘의 수온변화 관측소 자동 이동(변경).
+function chartNext(){
+
+	var total = $("#obsvtrCd").find("option").length;  // option 개수
+
+    $("#obsvtrCd").prop("selectedIndex", idx).change();
+
+    if(idx != 0){
+             idx++;
+    }
+    if (idx >= total) {
+    	idx = 0;
+    }
+
+    chartDisplay($("#obsvtrCd option:selected").val());
+}
+
+//오늘의 수온변화 좌측버튼
+function fnMovePrev(){
+    idx--;
+
+    if(idx < 0){
+    	idx = $("#obsvtrCd option").length-1;
+    }
+    $("#obsvtrCd option:eq("+idx+")").prop("selected","selected");
+    chartDisplay($("#obsvtrCd option:eq("+idx+")").val());
+}
+
+//오늘의 수온변화 우측버튼
+function fnMoveNext(){
+    idx++;
+
+    if(idx > $("#obsvtrCd option").length-1){
+    	idx = 0;
+    }
+    $("#obsvtrCd option:eq("+idx+")").prop("selected", true);
+    chartDisplay($("#obsvtrCd option:eq("+idx+")").val());
+}
+
+//오늘의 수온변화 자동
+function chartAutoNext(){
+    idx++;
+
+    if(idx > $("#obsvtrCd option").length-1){
+    	idx = 0;
+    }
+    $("#obsvtrCd option:eq("+idx+")").prop("selected", true);
+    chartDisplay($("#obsvtrCd option:eq("+idx+")").val());
+}
+
+//오늘의 수온변화 selectBox 선택 시
+function selectSta(cde){
+	idx = $("#obsvtrCd option:selected").index();
+    chartDisplay(cde.value);
+}
+
+//오늘의 수온변화 selectBox 선택 시
+function selectDt(cde){
+	idx = $("#obsvtrCd option:selected").index();
+	const sta = document.getElementById('obsvtrCd');
+    chartDisplay(sta.value);
+}
+
+
+//오늘의 수온변화 차트
+function chartDisplay(obsvtrCd){
+
+	let otherInit = {}; //초기화 옵션
+	otherInit.isSuccesMsg = false;
+	otherInit.isShowLoding = false;
+    let paramMap = $("#schFrm").srializeJsonById();
+    paramMap.obsvtrCd = obsvtrCd;
+    paramMap.bookObsvtrCd = localStorage.getItem("bookObsvtrCd");
+
+    lpCom.Ajax("chartDisplay","./selectChartDataList.do", paramMap, calBackFunc, otherInit);
+}
+
+        function autoNavPause(){
+        	var autoPlayState = $("#navPause > button").attr('aria-pressed');
+
+            if (autoPlayState === 'false') {
+            	$("#navPause > button").attr('aria-pressed', 'true');
+
+            	clearInterval(rollingNav);
+            } else if (autoPlayState === 'true') {
+            	$("#navPause > button").attr('aria-pressed', 'false');
+
+            	autoNav();
+            };
+        }
+
+        function autoChartPause(){
+        	var autoPlayState = $("#chartPause > button").attr('aria-pressed');
+
+            if (autoPlayState === 'false') {
+            	$("#chartPause > button").attr('aria-pressed', 'true');
+
+            	clearInterval(rollingChart);
+            } else if (autoPlayState === 'true') {
+            	$("#chartPause > button").attr('aria-pressed', 'false');
+
+            	autoChart();
+            };
+        }
+
+        function autoNav(){
+            // 10초마다 start() 호출
+            rollingNav = setInterval(function(){
+            	navAutoNext();
+            }, 8000);
+        }
+
+        function autoChart(){
+            // 10초마다 start() 호출
+            rollingChart = setInterval(function(){
+            	chartAutoNext();
+            }, 8000);
+        }
+
+        
+function fnMakeChart(data){
+	
+	am4core.useTheme(am4themes_animated);
+    am4core.options.autoDispose = true;
+    
+    var obsvtrCd = data[0].obsvtrCd;
+    var chart = am4core.create("mainRisaChart", am4charts.XYChart);
+    chart.data = data;
+    
+    // 👉 핵심 옵션
+    chart.responsive.enabled = true;
+
+    chart.dateFormatter.inputDateFormat = "HH24:MI";
+
+    // 차트 테두리
+	chart.plotContainer.stroke = "#000000";
+
+    var categoryAxis = chart.xAxes.push(new am4charts.CategoryAxis());
+    categoryAxis.dataFields.category = "dt";
+    categoryAxis.renderer.minGridDistance = 40;
+
+    var valueAxis = chart.yAxes.push(new am4charts.ValueAxis());
+    valueAxis.title.text = "수온(℃)";
+
+    var maxTemp = data.map(function(v) {
+        return v.temp;
+    });
+    var maxTemp1y = data.map(function(v) {
+        return v.temp1y;
+    });
+    var maxTemp2y = data.map(function(v) {
+        return v.temp2y;
+    });
+
+    // undefined 값을 필터링하고 최대값 계산
+    var maxTemp = maxTemp.filter((value) => {return value !== undefined;
+    });
+    var maxTemp1y = maxTemp1y.filter((value) => {return value !== undefined;
+    });
+    var maxTemp2y = maxTemp2y.filter((value) => {return value !== undefined;
+    });
+
+    maxTemp = Math.max.apply(null, maxTemp);
+    maxTemp1y = Math.max.apply(null, maxTemp1y);
+    maxTemp2y = Math.max.apply(null, maxTemp2y);
+
+    var minTemp = data.map(function(v) {
+        return v.temp;
+    });
+    var minTemp1y = data.map(function(v) {
+        return v.temp1y;
+    });
+    var minTemp2y = data.map(function(v) {
+        return v.temp2y;
+    });
+
+    // 공백인 값을 필터링하고 최대값 계산
+    var minTemp = minTemp.filter((value) => {return value !== "";});
+    var minTemp1y = minTemp1y.filter((value) => {return value !== "";});
+    var minTemp2y = minTemp2y.filter((value) => {return value !== "";});
+
+    minTemp = Math.min.apply(null,minTemp);
+    minTemp1y = Math.min.apply(null, minTemp1y);
+    minTemp2y = Math.min.apply(null, minTemp2y);
+
+    if((Math.max(maxTemp, maxTemp1y, maxTemp2y)%1)==0){
+    	valueAxis.max = Math.max(maxTemp, maxTemp1y, maxTemp2y) +1;
+    } else{
+    	valueAxis.max = Math.ceil(Math.max(maxTemp, maxTemp1y, maxTemp2y)); // 올림
+    }
+    if((Math.min(minTemp, minTemp1y, minTemp2y)%1)==0){
+    	valueAxis.min = Math.min(minTemp, minTemp1y, minTemp2y) -1;
+    } else {
+    	valueAxis.min = Math.floor(Math.min(minTemp, minTemp1y, minTemp2y)) ; // 내림 -1
+    }
+
+    // Create series
+    var series3 = chart.series.push(new am4charts.LineSeries());
+    series3.dataFields.valueY = "temp2y";
+    series3.dataFields.categoryX = "dt";
+    series3.tooltipText = "재작년 : {temp2y}℃";
+    series3.strokeWidth = 2;
+    series3.minBulletDistance = 15;
+    // 데이터 2시간 단위 체크
+    //			통영 욕지 			  통영 함박 			통영 모상			  통영 해란				통영 곤리			통영 삼덕3			   통영 삼덕2			  통영 저림				통영 동좌			  남해 설천
+    if(obsvtrCd == "ftyp7" || obsvtrCd == "fthp7" || obsvtrCd == "ftmp7" || obsvtrCd == "ftrp7" || obsvtrCd == "ftgp7" || obsvtrCd == "ftsp7" || obsvtrCd == "fttp7" || obsvtrCd == "ftjp7" || obsvtrCd == "ftdp7" || obsvtrCd == "fnsp7"){
+    	series3.connect = true;
+    }else{
+    	series3.connect = false;
+    }
+    series3.tensionX = 0.8;
+    series3.stroke = am4core.color("#F69679"); //라인 컬러
+    series3.fill = am4core.color("#F69679"); //툴팁 컬러
+
+    var series2 = chart.series.push(new am4charts.LineSeries());
+    series2.dataFields.valueY = "temp1y";
+    series2.dataFields.categoryX = "dt";
+    series2.tooltipText = "작년 : {temp1y}℃";
+    series2.strokeWidth = 2;
+    series2.minBulletDistance = 15;
+    // 데이터 2시간 단위 체크
+        //			통영 욕지 			  통영 함박 			통영 모상			  통영 해란				통영 곤리			통영 삼덕3			   통영 삼덕2			  통영 저림				통영 동좌			  남해 설천
+    if(obsvtrCd == "ftyp7" || obsvtrCd == "fthp7" || obsvtrCd == "ftmp7" || obsvtrCd == "ftrp7" || obsvtrCd == "ftgp7" || obsvtrCd == "ftsp7" || obsvtrCd == "fttp7" || obsvtrCd == "ftjp7" || obsvtrCd == "ftdp7" || obsvtrCd == "fnsp7"){
+    	series2.connect = true;
+    }else{
+    	series2.connect = false;
+    }
+        series2.tensionX = 0.8;
+        series2.stroke = am4core.color("#1EA2E7"); //라인 컬러
+        series2.fill = am4core.color("#1EA2E7"); //툴팁 컬러
+
+        var series = chart.series.push(new am4charts.LineSeries());
+        series.dataFields.valueY = "temp";
+        series.dataFields.categoryX = "dt";
+        series.tooltipText = "올해 : {temp}℃";
+        series.strokeWidth = 2;
+        series.minBulletDistance = 15;
+    // 데이터 2시간 단위 체크
+        //			통영 욕지 			  통영 함박 			통영 모상			  통영 해란				통영 곤리			통영 삼덕3			   통영 삼덕2			  통영 저림				통영 동좌			  남해 설천
+    if(obsvtrCd == "ftyp7" || obsvtrCd == "fthp7" || obsvtrCd == "ftmp7" || obsvtrCd == "ftrp7" || obsvtrCd == "ftgp7" || obsvtrCd == "ftsp7" || obsvtrCd == "fttp7" || obsvtrCd == "ftjp7" || obsvtrCd == "ftdp7" || obsvtrCd == "fnsp7"){
+	series.connect = true;
+    }else{
+    	series.connect = false;
+    }
+    series.tensionX = 0.8;
+    series.stroke = am4core.color("#000000"); //라인 컬러
+    series.fill = am4core.color("#000000"); //툴팁 컬러
+
+
+    var imageUrl = './cmmn/preRisa/'+obsvtrCd+'.png'
+
+   /*  var imageUrl = 'https://www.nifs.go.kr/kodc/rocps/risa/'+obsvtrCd+'.png' */
+   var msgHtml = '';
+   $("#mainPreImg").html(msgHtml);
+
+    // 예측 이미지 삽입
+    $("#mainPreImg").css({
+    	'background-size': 'contain',
+        'background-position': 'center',
+    	'background-repeat': 'no-repeat',
+		'background-image': 'url('+imageUrl+')'
+    });
+        
+	$("#mainPreImg").off("click").on("click", function(){
+	
+	var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+	if(isMobile){
+	window.open(imageUrl, '_blank');
+		}
+	});
+
+}
+
+//오늘의 최신수온 정보 셀렉트박스 선택
+function navSelect(obsvtrCd){
+	todayIdx = $("#stationInfo option:selected").index();
+    navDisplay(obsvtrCd);
+}
+
+//오늘의 최신수온 정보 우측 화살표
+function navNext(){
+	todayIdx++;
+
+    if(todayIdx > $("#stationInfo option").length-1){
+    	todayIdx = 0;
+    }
+    $("#stationInfo option:eq("+todayIdx+")").prop("selected", true);
+    navDisplay($("#stationInfo option:eq("+todayIdx+")").val());
+}
+
+//오늘의 최신수온 정보 좌측 화살표
+function navPrev(){
+	todayIdx--;
+
+    if(todayIdx < 0){
+    	todayIdx = $("#stationInfo option").length-1;
+    }
+    $("#stationInfo option:eq("+todayIdx+")").prop("selected","selected");
+    navDisplay($("#stationInfo option:eq("+todayIdx+")").val());
+}
+
+//오늘의 최신수온 정보 자동
+function navAutoNext(){
+	todayIdx++;
+
+    if(todayIdx > $("#stationInfo option").length-1){
+    	todayIdx = 0;
+    }
+    $("#stationInfo option:eq("+todayIdx+")").prop("selected", true);
+    navDisplay($("#stationInfo option:eq("+todayIdx+")").val());
+}
+
+//오늘의 최신수온 정보
+function navDisplay(obsvtrCd){
+	let otherInit = {}; //초기화 옵션
+	otherInit.isSuccesMsg = false;
+	otherInit.isShowLoding = false;
+    let paramMap = $("#schFrm").srializeJsonById();
+    paramMap.obsvtrCd = obsvtrCd;
+    paramMap.bookObsvtrCd = localStorage.getItem("bookObsvtrCd");
+
+    lpCom.Ajax("todayObsvtrInfo","./selectTodayObsvtrMap.do", paramMap, calBackFunc, otherInit);
+};
+
+function fnSetTodayObsvtrInfo(data){
+	$("#realtime").text(data.obsrvnDt);
+    $("#sfclyrDpwt").text(data.sfclyrDpwt+"m");
+    $("#wtem").text(data.wtem);
+    $("#lat").html("<span>위도</span>"+data.lat+"°N");
+    $("#lot").html("<span>경도</span>"+data.lot+"°E");
+
+    var wtem = data.wtem;
+
+    if(wtem == "점검 중"){
+    	$("#value").attr("class", "value");
+    }else{
+    	if (wtem >= 28.0) { //고수온
+    		$("#value").attr("class", "value high");
+    	} else if (wtem <= 4.0) { //저수온
+    		$("#value").attr("class", "value low");
+    	} else {
+    		$("#value").attr("class", "value");
+    	}
+    }
+
+    var bookObsvtrCd = localStorage.getItem("bookObsvtrCd") || "";
+    if (bookObsvtrCd.indexOf(data.obsvtrCd) !== -1) {
+        $("#bookmark").attr("class", "bookmark on");
+    } else {
+        $("#bookmark").attr("class", "bookmark");
+    }
+};
+
+function fnRefreshTodayInfo(obsvtrCd){
+    let otherInit = {};
+    otherInit.isSuccesMsg = false;
+    otherInit.isShowLoding = false;
+
+    let paramMap = {
+        obsvtrCd : obsvtrCd,
+        bookObsvtrCd : localStorage.getItem("bookObsvtrCd")
+    };
+
+    lpCom.Ajax("todayObsvtrInfo", "./selectTodayObsvtrMap.do", paramMap, calBackFunc, otherInit);
+}
+/* -------------------------------------------------------
+📌 즐겨찾기 데이터 저장 / 삭제 (로컬스토리지)
+------------------------------------------------------- */
+
+//저장
+function setBookCode(obsvtrCd) {
+ let val = localStorage.getItem("bookObsvtrCd") || "";
+ val = val ? val.split(",") : [];
+
+ if (!val.includes(obsvtrCd)) {
+     val.push(obsvtrCd);
+     localStorage.setItem("bookObsvtrCd", val.join(","));
+ }
+}
+
+//삭제
+function delBookCode(obsvtrCd) {
+ let val = localStorage.getItem("bookObsvtrCd") || "";
+ val = val ? val.split(",") : [];
+
+ val = val.filter(cd => cd !== obsvtrCd);
+ localStorage.setItem("bookObsvtrCd", val.join(","));
+}
+
+
+/* -------------------------------------------------------
+📌 부모 페이지 UI 업데이트
+(data-value 속성을 가진 모든 북마크를 갱신)
+------------------------------------------------------- */
+
+function syncBookmarkUI() {
+ let saved = (localStorage.getItem("bookObsvtrCd") || "").split(",");
+
+ $("[data-value]").each(function () {
+     let cd = $(this).attr("data-value");
+
+     if (saved.includes(cd)) {
+         $(this).addClass("on");
+     } else {
+         $(this).removeClass("on");
+     }
+ });
+
+ // 오늘의 최신수온 정보 상세북마크 (id="bookmark")
+ let cur = $("#stationInfo").val();
+ if (saved.includes(cur)) {
+     $("#bookmark").addClass("on");
+ } else {
+     $("#bookmark").removeClass("on");
+ }
+}
+
+
+/* -------------------------------------------------------
+📌 부모 페이지 북마크 클릭 시
+------------------------------------------------------- */
+
+function setBM(el) {
+ // 1) 현재 클릭한 북마크의 코드 결정
+ let obsvtrCd = $(el).attr("data-value") || $("#stationInfo").val();
+ let saved = (localStorage.getItem("bookObsvtrCd") || "").split(",");
+
+ // 2) 저장 / 삭제
+ if (saved.includes(obsvtrCd)) {
+     delBookCode(obsvtrCd);
+ } else {
+     setBookCode(obsvtrCd);
+ }
+
+ // 3) UI 전체 갱신
+ syncBookmarkUI();
+
+ // 4) iframe 에도 북마크 변경 알림 전달
+ let iframe = document.querySelector("iframe");
+ if (iframe) {
+     iframe.contentWindow.postMessage({
+         type: "bookmarkUpdated",
+         obsvtrCd: obsvtrCd
+     }, "*");
+ }
+}
+
+
+/* -------------------------------------------------------
+📌 iframe이 부모에게 북마크 변경 사실 전달할 때 처리
+------------------------------------------------------- */
+
+window.addEventListener("message", function (e) {
+
+ if (e.data?.type === "bookmarkUpdated") {
+
+     // 1) 부모 UI 전체 갱신
+     syncBookmarkUI();
+
+     // 2) 현재 보고 있는 관측소의 상세정보도 갱신
+     let cur = $("#stationInfo").val();
+     if (cur) {
+         fnRefreshTodayInfo(cur);
+     }
+ }
+});
+
+
+/* -------------------------------------------------------
+📌 페이지 로드시 북마크 UI 초기화
+------------------------------------------------------- */
+
+
+//오늘의 최신 수온 정보 리스트
+function fnSetTodayList(data) {
+	var vHtml = "";
+
+	for(var i = 0; i < data.length; i++){
+
+		var bookObsvtrCd = localStorage.getItem("bookObsvtrCd") || "";
+
+		vHtml += "<tr>";
+        vHtml += "<td style='text-align: left;'>&nbsp;";
+	    if (bookObsvtrCd.indexOf(data[i].obsvtrCd) !== -1) {
+	        vHtml += "<span class='bookmark on' onclick='javascript:setBM(this);' data-value='"+data[i].obsvtrCd+"'>";
+	    } else {
+	        vHtml += "<span class='bookmark' onclick='javascript:setBM(this);' data-value='"+data[i].obsvtrCd+"'>";
+	    }
+        vHtml += "<em class='hidden'>즐겨찾기</em></span>&nbsp;"+data[i].obsvtrKornNm+"</td>";
+
+
+		var wtem = data[i].wtem + "";
+		if (wtem === "점검 중" || Number(wtem) < -5 || Number(wtem) > 35) {
+            vHtml += "<td class='maintenance'><img src='/risa/cmmn/images/mt_icon.png' alt='점검중아이콘'>&nbsp;"+data[i].wtem+"&nbsp;&nbsp;&nbsp;&nbsp;</td>";
+		} else {
+		    var temp = Number(wtem);
+
+		    if (temp >= 28.0) {  // 고수온
+				vHtml += "<td style='text-align: right; color:red; font-weight: 600; '><img src='/risa/cmmn/images/siren_icon.png' class='siren' alt='경광등아이콘'>&nbsp;"+data[i].wtem+" ℃&nbsp;&nbsp;&nbsp;&nbsp;</td>";
+		    } else if (temp <= 4.0) { // 저수온
+		    	vHtml += "<td style='text-align: right; color:blue; font-weight: 600;'><img src='/risa/cmmn/images/siren_icon_low.png' class='siren' alt='경광등아이콘'>&nbsp;"+data[i].wtem+" ℃&nbsp;&nbsp;&nbsp;&nbsp;</td>";
+		    } else { // 정상 범위
+		    	vHtml += "<td style='text-align: right;'>"+data[i].wtem+" ℃&nbsp;&nbsp;&nbsp;&nbsp;</td>";
+		    }
+		}
+        vHtml += "</tr>";
+	}
+
+	$("#tem-table").html(vHtml);
+};
+
+//swiper2
+var ww = $(window).width();
+var mySwiper = undefined;
+
+function initSwiper() {
+    if (ww < 640 && mySwiper == undefined) {
+        mySwiper = new Swiper(".swiper2", {
+            slidesPerView: 3,
+            spaceBetween: 30,
+            pagination: {
+                el: ".swiper-pagination",
+                clickable: true,
+            },
+            navigation: {
+                nextEl: ".swiper-button-next",
+                prevEl: ".swiper-button-prev",
+            },
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+        });
+    }
+	
+    if (ww < 1199 && mySwiper == undefined) {
+        mySwiper = new Swiper(".swiper2", {
+            slidesPerView: 6,
+            spaceBetween: 30,
+            pagination: {
+                el: ".swiper-pagination",
+                clickable: true,
+            },
+            navigation: {
+                nextEl: ".swiper-button-next",
+                prevEl: ".swiper-button-prev",
+            },
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
+        });
+    } else if (ww >= 1199 && mySwiper != undefined) {
+        mySwiper.destroy();
+        mySwiper = undefined;
+    }
+}
+
+
+function initSwiper2() {
+    noticeSwiper = new Swiper(".notice-swiper", {
+                 slidesPerView: 1,
+                 spaceBetween: 30,
+                 direction: 'vertical',
+                 speed: 2000,
+                 autoplay: {
+                     delay: 5000,
+                     disableOnInteraction: false,
+                 },
+    });
+ }
+
+function initSwiper3() {
+
+	mySwiper = new Swiper(".popup-swiper", {
+                 slidesPerView: 1,
+                 spaceBetween: 30,
+                 pagination: {
+                        el: ".swiper-pagination",
+                        clickable: true,
+                 },
+           navigation: {
+                 nextEl: ".swiper-button-next",
+                 prevEl: ".swiper-button-prev",
+           },
+           autoplay: {
+                 delay: 6000,
+                 disableOnInteraction: true,
+                },
+    });
+} 
+
+$(document).ready(function() {
+    ww = $(window).width();
+    initSwiper();
+    initSwiper2();
+	initSwiper3();
+});
+
+
+$(window).on('resize', function() {
+    ww = $(window).width();
+    initSwiper();
+    initSwiper2();
+    initSwiper3();     
+});
+
+</script>
+
+</body>
+</html>

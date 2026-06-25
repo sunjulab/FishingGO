@@ -2049,7 +2049,7 @@ async function getNifsAllStations() {
       for (const item of validItems) {
         const key = item.sta_cde;
         if (!map[key]) {
-          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, upper: null, middle: null, lower: null };
+          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, name: item.sta_nam_kor, upper: null, middle: null, lower: null };
         }
         
         const currentDateTime = map[key].obs_dat + map[key].obs_tim;
@@ -2057,11 +2057,12 @@ async function getNifsAllStations() {
         
         // 새로운 관측시간 데이터면 초기화
         if (itemDateTime > currentDateTime) {
-          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, upper: null, middle: null, lower: null };
+          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, name: item.sta_nam_kor, upper: null, middle: null, lower: null };
         }
         
         // 최신 데이터면 층별 온도 기록
         if (itemDateTime >= currentDateTime) {
+          map[key].name = item.sta_nam_kor;
           const lay = String(item.obs_lay);
           const tmp = item.wtr_tmp;
           const isValidTmp = tmp && tmp !== '-' && !isNaN(parseFloat(tmp));
@@ -2087,10 +2088,26 @@ async function getNifsAllStations() {
 }
 
 async function getNifsWaterTemp(sid) {
-  const staCde = NIFS_STA_MAP[sid];
-  if (!staCde) return null;
+  let staCde = NIFS_STA_MAP[sid];
   const map = await getNifsAllStations();
   if (!map) return null;
+
+  // 자동 동적 매칭 (수동 매핑이 없는 경우)
+  if (!staCde && observationData[sid]) {
+    const obsName = observationData[sid].name || '';
+    const regionKeyword = obsName.split(' ')[0]; // 예: "강릉 안목항" -> "강릉"
+    
+    for (const [key, item] of Object.entries(map)) {
+      if (item.name && regionKeyword && item.name.includes(regionKeyword)) {
+        staCde = key;
+        NIFS_STA_MAP[sid] = key; // 한 번 찾으면 캐싱
+        logger.info(`[NIFS-AUTO-MATCH] ${sid}(${obsName}) -> ${key}(${item.name}) 매칭 완료`);
+        break;
+      }
+    }
+  }
+
+  if (!staCde) return null;
   const item = map[staCde];
   if (!item || !item.upper) return null; // 표층 데이터가 없으면 무효 처리
   return {
@@ -2383,8 +2400,8 @@ async function updateAllStationsCache() {
         wave: { coastal: parseFloat(parseFloat(finalWave).toFixed(1)) },
         layers: {
           upper:  parseFloat(finalTemp),
-          middle: (nifsData && nifsData.middle) ? parseFloat(nifsData.middle).toFixed(1) : (parseFloat(finalTemp) - 1.2).toFixed(1),
-          lower:  (nifsData && nifsData.lower)  ? parseFloat(nifsData.lower).toFixed(1)  : (parseFloat(finalTemp) - 3.4).toFixed(1),
+          middle: (nifsData && nifsData.middle) ? parseFloat(nifsData.middle).toFixed(1) : null,
+          lower:  (nifsData && nifsData.lower)  ? parseFloat(nifsData.lower).toFixed(1)  : null,
         },
         tide: { phase: tidePhase, high: tideHigh, low: tideLow, current_level: `${tideLevel}cm` },
         _sources: {
@@ -6966,8 +6983,8 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     d.temp = `${d.sst}°C`;
     d.layers = {
       upper: d.sst,
-      middle: (parseFloat(d.sst) - 1.2).toFixed(1),
-      lower: (parseFloat(d.sst) - 3.4).toFixed(1)
+      middle: null,
+      lower: null
     };
     return res.json(d);
   }
@@ -7024,8 +7041,8 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     wave: { coastal: profile.wave || 0.6 },
     layers: {
       upper: mockSst,
-      middle: (parseFloat(mockSst) - 1.2).toFixed(1),
-      lower: (parseFloat(mockSst) - 3.4).toFixed(1)
+      middle: null,
+      lower: null
     },
     tide: { phase: tidePhase, high: highTime, low: lowTime },
     tide_predictions: [
