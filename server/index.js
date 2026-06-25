@@ -2078,16 +2078,16 @@ async function getNifsAllStations() {
           map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, name: item.sta_nam_kor, upper: null, middle: null, lower: null };
         }
         
-        const currentDateTime = map[key].obs_dat + map[key].obs_tim;
-        const itemDateTime = item.obs_dat + item.obs_tim;
+        const currentDateTime = parseInt((map[key].obs_dat + map[key].obs_tim).replace(/\D/g, ''), 10);
+        const itemDateTime = parseInt((item.obs_dat + item.obs_tim).replace(/\D/g, ''), 10);
         
         // 새로운 관측시간 데이터면 초기화
-        if (parseInt(itemDateTime, 10) > parseInt(currentDateTime, 10)) {
+        if (itemDateTime > currentDateTime) {
           map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, name: item.sta_nam_kor, upper: null, middle: null, lower: null };
         }
         
         // 최신 데이터면 층별 온도 기록
-        if (parseInt(itemDateTime, 10) >= parseInt(currentDateTime, 10)) {
+        if (itemDateTime >= currentDateTime) {
           map[key].name = item.sta_nam_kor;
           const lay = String(item.obs_lay);
           const tmp = item.wtr_tmp;
