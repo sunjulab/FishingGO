@@ -1887,9 +1887,18 @@ io.on('connection', (socket) => {
   });
 });
 
+// --- API Request Deduping Cache ---
+const apiPromiseCache = new Map();
+async function dedupApi(key, fetchFn) {
+  if (apiPromiseCache.has(key)) return apiPromiseCache.get(key);
+  const promise = fetchFn().finally(() => apiPromiseCache.delete(key));
+  apiPromiseCache.set(key, promise);
+  return promise;
+}
+
 // --- KHOA/KMA Real-world API Bridges with 1-hour Caching ---
 const ALL_STATIONS = [
-  'DT_0001', 'DT_0002', 'DT_0003', 'DT_0033', 'DT_0036', 'DT_0021', // 동해
+  'DT_0099', 'DT_0001', 'DT_0002', 'DT_0003', 'DT_0033', 'DT_0036', 'DT_0021', // 동해 (고성 추가)
   'DT_0004', 'DT_0005', 'DT_0006', 'DT_0014', 'DT_0016', 'DT_0018', 'DT_0034', // 남해
   'DT_0007', 'DT_0008', 'DT_0009', 'DT_0030', // 서해
   'DT_0010', 'DT_0011', 'DT_0045' // 제주
@@ -1907,6 +1916,7 @@ const REGIONAL_PROFILES = {
 
 const observationData = {
   // 동해
+  'DT_0099': { name: '고성 가진항', region: '동해', baseTemp: 13.0, baseWind: 5.0 },
   'DT_0001': { name: '강릉 안목항', region: '동해', baseTemp: 14.2, baseWind: 4.2 },
   'DT_0021': { name: '속초 영금정', region: '동해', baseTemp: 13.5, baseWind: 5.5 },
   'DT_0002': { name: '울진 후포', region: '동해', baseTemp: 14.8, baseWind: 3.8 },
@@ -1935,6 +1945,7 @@ const observationData = {
 
 // ✅ AUTO-STATION: 관측소별 실제 좌표 (Haversine 자동 매핑용)
 const STATION_COORDS = {
+  'DT_0099': { lat: 38.3740, lng: 128.5120 },  // 고성 가진항
   'DT_0001': { lat: 37.7734, lng: 128.9406 },  // 강릉 안목항
   'DT_0021': { lat: 38.2048, lng: 128.5925 },  // 속초 영금정
   'DT_0002': { lat: 36.6764, lng: 129.4627 },  // 울진 후포
@@ -1996,6 +2007,7 @@ function findNearestStation(lat, lng) {
 //   DT_0013(울릉도) DT_0020(포항북) DT_0061(남해서부) DT_0062(마산) DT_0063(거제)
 //   DT_0067(태안) DT_0091(포항) DT_0094(제주서)
 const WATER_TEMP_OBS_MAP = {
+  'DT_0099': 'DT_0012',  // 고성 가진항 → 속초 38.20°N (최근접)
   'DT_0001': 'DT_0006',  // 강릉 안목항 → 묵호 37.55°N/129.11°E (최근접 22km)
   'DT_0021': 'DT_0012',  // 속초 영금정 → 속초 38.20°N/128.59°E ✅ 정확
   'DT_0033': 'DT_0006',  // 동해 묵호   → 묵호 37.55°N/129.11°E ✅ 정확
@@ -2056,12 +2068,12 @@ async function getNifsAllStations() {
         const itemDateTime = item.obs_dat + item.obs_tim;
         
         // 새로운 관측시간 데이터면 초기화
-        if (itemDateTime > currentDateTime) {
+        if (parseInt(itemDateTime, 10) > parseInt(currentDateTime, 10)) {
           map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, name: item.sta_nam_kor, upper: null, middle: null, lower: null };
         }
         
         // 최신 데이터면 층별 온도 기록
-        if (itemDateTime >= currentDateTime) {
+        if (parseInt(itemDateTime, 10) >= parseInt(currentDateTime, 10)) {
           map[key].name = item.sta_nam_kor;
           const lay = String(item.obs_lay);
           const tmp = item.wtr_tmp;
@@ -2095,7 +2107,10 @@ async function getNifsWaterTemp(sid) {
   // 자동 동적 매칭 (수동 매핑이 없는 경우)
   if (!staCde && observationData[sid]) {
     const obsName = observationData[sid].name || '';
-    const regionKeyword = obsName.split(' ')[0]; // 예: "강릉 안목항" -> "강릉"
+    // 예: "강릉 안목항" -> "강릉", "광양만 관측소" -> "광양만"
+    let regionKeyword = obsName.split(' ')[0].replace(/(항|항구|관측소)$/, ''); 
+    if (regionKeyword === '성산포') regionKeyword = '성산';
+    else if (regionKeyword === '서귀포') regionKeyword = '서귀';
     
     for (const [key, item] of Object.entries(map)) {
       if (item.name && regionKeyword && item.name.includes(regionKeyword)) {
@@ -2193,6 +2208,15 @@ const MONTHLY_BASE_TEMP = {
   '제주': [15.5,15.0,16.5,18.5,21.5,24.5,27.0,28.5,26.5,23.5,19.5,16.5],
 };
 
+// API 요청 중복 방지 (Thundering Herd 해결)
+const pendingRequests = {};
+function getDeduplicatedPromise(key, fetcher) {
+  if (pendingRequests[key]) return pendingRequests[key];
+  const promise = fetcher().finally(() => { delete pendingRequests[key]; });
+  pendingRequests[key] = promise;
+  return promise;
+}
+
 async function getWaterTemp(sid) {
   // ✅ SST-REMAP: 전수조사 결과 기반 올바른 obsCode로 변환 후 API 호출
   const KEY = process.env.KHOA_KEY; // 수온 API는 공공데이터포털 키만 사용
@@ -2202,10 +2226,11 @@ async function getWaterTemp(sid) {
   const apiObsCode = WATER_TEMP_OBS_MAP[sid];
   if (!apiObsCode) return null;
 
-  try {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const dateStr = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
-    const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${apiObsCode}&date=${dateStr}&type=json&numOfRows=10&pageNo=1`;
+  return getDeduplicatedPromise(`watertemp_${apiObsCode}`, async () => {
+    try {
+      const kst = new Date(Date.now() + 9 * 3600 * 1000 - 24 * 3600 * 1000); // KST 기준 어제
+      const dateStr = `${kst.getUTCFullYear()}${String(kst.getUTCMonth()+1).padStart(2,'0')}${String(kst.getUTCDate()).padStart(2,'0')}`;
+      const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${apiObsCode}&date=${dateStr}&type=json&numOfRows=10&pageNo=1`;
     const res = await axios.get(url, { timeout: 5000, headers: { Accept: 'application/json' } });
     const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
     if (text.trimStart().startsWith('<')) return null;
@@ -2226,6 +2251,7 @@ async function getWaterTemp(sid) {
 // 각 관측소 위치 기준 최근접 해양연안부이 ID
 const BUOY_MAP = {
   // 동해권
+  'DT_0099':'22102', // 고성 가진항 → 동해부이 22102
   'DT_0001':'22102', // 강릉 안목항 → 동해부이 22102
   'DT_0021':'22102', // 속초
   'DT_0033':'22102', // 동해묵호
@@ -2256,13 +2282,15 @@ async function getMarineWeather(sid) {
   if (!KMA_KEY) return null;
   const buoyNum = BUOY_MAP[sid];
   if (!buoyNum) return null;
-  try {
-    const now  = new Date(Date.now() + 9 * 3600 * 1000);
-    const pad  = (n) => String(n).padStart(2, '0');
-    // ✅ sea_obs.php: tm2 단일 파라미터 (승인된 엔드포인트, kma_buoy2는 403)
-    const tm2  = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}00`;
-    const url  = `https://apihub.kma.go.kr/api/typ01/url/sea_obs.php?tm2=${tm2}&stn=${buoyNum}&help=0&authKey=${KMA_KEY}`;
-    const res  = await axios.get(url, { timeout: 8000 });
+  
+  return getDeduplicatedPromise(`marine_${buoyNum}`, async () => {
+    try {
+      const now  = new Date(Date.now() + 9 * 3600 * 1000);
+      const pad  = (n) => String(n).padStart(2, '0');
+      // ✅ sea_obs.php: tm2 단일 파라미터 (승인된 엔드포인트, kma_buoy2는 403)
+      const tm2  = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}00`;
+      const url  = `https://apihub.kma.go.kr/api/typ01/url/sea_obs.php?tm2=${tm2}&stn=${buoyNum}&help=0&authKey=${KMA_KEY}`;
+      const res  = await axios.get(url, { timeout: 8000 });
     const text = typeof res.data === 'string' ? res.data : '';
     if (!text || !text.includes('START7777')) return null;
     // sea_obs 컬럼: [0]TP [1]TM [2]STN_ID [3]STN_KO [4]LON [5]LAT [6]WH [7]WD [8]WS [9]WS_GST [10]TW [11]TA [12]PA [13]HM
@@ -2279,12 +2307,13 @@ async function getMarineWeather(sid) {
     // 풍향 도 → 방위 변환
     const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
     const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
-    logger.info(`[Marine] ${sid}(${buoyNum}) 풍속:${ws}m/s 파고:${wh}m 풍향:${wd}`);
-    return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: Math.max(0, wh) } };
-  } catch (e) {
-    logger.warn(`[Marine] 부이 API 실패 (${sid}/${BUOY_MAP[sid]}): ${e.message}`);
-    return null;
-  }
+      logger.info(`[Marine] ${sid}(${buoyNum}) 풍속:${ws}m/s 파고:${wh}m 풍향:${wd}`);
+      return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: Math.max(0, wh) } };
+    } catch (e) {
+      logger.warn(`[Marine] 부이 API 실패 (${sid}/${BUOY_MAP[sid]}): ${e.message}`);
+      return null;
+    }
+  });
 }
 
 
@@ -2318,11 +2347,14 @@ function getTidePhase(lunarDay, region = '남해') {
 async function getRealTide(sid) {
   const KEY = process.env.KHOA_KEY;
   if (!KEY) return null;
-  try {
-    const d = new Date();
-    const today = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-    const url = `https://apis.data.go.kr/1192136/tideFcstHighLw/GetTideFcstHighLwApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${sid}&reqDate=${today}&type=json&numOfRows=20&pageNo=1`;
-    const res = await axios.get(url, { timeout: 6000, headers: { Accept: 'application/json' } });
+  const tideSid = sid === 'DT_0099' ? 'DT_0021' : sid; // 고성은 인접한 속초 데이터로 실시간 조석 조회
+  
+  return getDeduplicatedPromise(`tide_${tideSid}`, async () => {
+    try {
+      const kst = new Date(Date.now() + 9 * 3600 * 1000); // KST 기준 오늘
+      const today = `${kst.getUTCFullYear()}${String(kst.getUTCMonth()+1).padStart(2,'0')}${String(kst.getUTCDate()).padStart(2,'0')}`;
+      const url = `https://apis.data.go.kr/1192136/tideFcstHighLw/GetTideFcstHighLwApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${tideSid}&reqDate=${today}&type=json&numOfRows=20&pageNo=1`;
+      const res = await axios.get(url, { timeout: 6000, headers: { Accept: 'application/json' } });
     const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
     if (text.trimStart().startsWith('<')) return null;
     // ✅ 실제 응답 구조: body.items.item (response 래퍼 없음)
@@ -2336,12 +2368,13 @@ async function getRealTide(sid) {
     const lunarDay = getLunarDay();
     const station = observationData[sid] || { region: '남해' };
     const phase = getTidePhase(lunarDay, station.region);
-    return { phase, high: highTime, low: lowTime };
-  } catch (e) {
-    // 500 오류는 obsCode 미지원 관측소로 정상
-    if (!e.message?.includes('500')) logger.warn(`[Tide] 조석 API 실패 (${sid}): ${e.message}`);
-    return null;
-  }
+      return { phase, high: highTime, low: lowTime };
+    } catch (e) {
+      // 500 오류는 obsCode 미지원 관측소로 정상
+      if (!e.message?.includes('500')) logger.warn(`[Tide] 조석 API 실패 (${sid}): ${e.message}`);
+      return null;
+    }
+  });
 }
 
 let batchRunning = false; // ✅ race condition 방지 플래그
@@ -2399,7 +2432,7 @@ async function updateAllStationsCache() {
         wind: { speed: parseFloat(parseFloat(finalWind).toFixed(1)), dir: windDir },
         wave: { coastal: parseFloat(parseFloat(finalWave).toFixed(1)) },
         layers: {
-          upper:  parseFloat(finalTemp),
+          upper:  parseFloat(finalTemp).toFixed(1),
           middle: (nifsData && nifsData.middle) ? parseFloat(nifsData.middle).toFixed(1) : null,
           lower:  (nifsData && nifsData.lower)  ? parseFloat(nifsData.lower).toFixed(1)  : null,
         },
@@ -6954,15 +6987,27 @@ app.get('/terms', (req, res) => {
 
 app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   const { stationId } = req.query;
-  const sid = stationId || 'DT_0001';
+  let sid = stationId || 'DT_0001';
+
+  // 만약 숫자형 ID (앱 커스텀 포인트)라면 가장 가까운 관측소 DT_XXXX 로 매핑
+  if (!sid.startsWith('DT_')) {
+    const loc = spotLocationOverrides[sid];
+    if (loc && loc.lat && loc.lng) {
+      const nearest = findNearestStation(loc.lat, loc.lng);
+      if (nearest) {
+        sid = nearest.stationId;
+        (logger?.info || console.log)(`[Weather Precision] Point ${stationId}(${loc.name}) mapped to ${sid}(${nearest.name})`);
+      }
+    }
+  }
 
   if (weatherCache[sid]) {
     // 실시간성 체감을 위해 캐시 데이터에도 호출 시마다 미세 노이즈 추가
     const d = { ...weatherCache[sid].data };
 
     // ✅ BEACH-REALTIME: kmaBeachCache가 있으면 precision 요청 시 실시간 반영
-    // weatherCache 패치 race condition을 완전히 우회 (Fly.io ICN push → 즉시 적용)
-    if (kmaBeachCache && KMA_BEACH_MAP && KMA_BEACH_MAP[sid]) {
+    // (단, 이미 NIFS_API나 KHOA_API 등 더 정확한 실데이터가 있다면 덮어쓰지 않음)
+    if (d._sources?.sst === 'fallback' && kmaBeachCache && KMA_BEACH_MAP && KMA_BEACH_MAP[sid]) {
       const beachKeywords = KMA_BEACH_MAP[sid];
       for (const kw of beachKeywords) {
         const match = kmaBeachCache.find(i => i.beachNm && i.beachNm.includes(kw));
@@ -6981,11 +7026,9 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     const baseSst = parseFloat(d.sst) || 15.2;
     d.sst = (baseSst + parseFloat(noise)).toFixed(1);
     d.temp = `${d.sst}°C`;
-    d.layers = {
-      upper: d.sst,
-      middle: null,
-      lower: null
-    };
+    d.layers = d.layers || {};
+    d.layers.upper = d.sst;
+    // middle, lower 는 NIFS 캐시 원본(d.layers.middle 등)을 그대로 유지
     return res.json(d);
   }
 
