@@ -2260,6 +2260,7 @@ async function getWaterTemp(sid) {
     if (!e.message?.includes('404')) logger.warn(`[Weather] 수온 API 실패 (${sid}→${apiObsCode}): ${e.message}`);
   }
   return null;
+  });
 }
 
 // ✅ REAL-WIND-WAVE: 기상청 해양기상부이 실시간 파고·풍속 API
