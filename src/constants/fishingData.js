@@ -23,7 +23,7 @@ const SEA_FISHING_POINTS = [
   { id: 102, name: '양양 하조대항', type: '항구', region: '강원', lat: 38.0212, lng: 128.7112, fish: '고등어, 전갱이', score: 88, status: '활발', obsCode: 'DT_0001' },
   { id: 103, name: '강릉 남항진항', type: '항구', region: '강원', lat: 37.7612, lng: 128.9612, fish: '도다리, 우럭', score: 86, status: '보통', obsCode: 'DT_0001' },
   { id: 104, name: '동해 어달항', type: '항구', region: '강원', lat: 37.5612, lng: 129.1254, fish: '감성돔, 광어', score: 92, status: '활발', obsCode: 'DT_0033' },
-  { id: 105, name: '삼척 오분항', type: '항구', region: '강원', lat: 37.4212, lng: 129.1754, fish: '학꽁치, 우럭', score: 85, status: '보통', obsCode: 'DT_0033' },
+  { id: 105, name: '삼척 오분항', type: '항구', region: '강원', lat: 37.4212, lng: 129.1754, fish: '학꽁치, 우럭', score: 85, status: '보통', obsCode: 'DT_0003' },
   { id: 106, name: '울진 죽변항', type: '항구', region: '경북', lat: 37.0612, lng: 129.4254, fish: '벵에돔, 부시리, 전갱이', score: 94, status: '피딩중', obsCode: 'DT_0002' },
   { id: 107, name: '영덕 축산항', type: '항구', region: '경북', lat: 36.5112, lng: 129.4454, fish: '삼치, 농어', score: 91, status: '활발', obsCode: 'DT_0002' },
   { id: 108, name: '포항 구룡포항', type: '항구', region: '경북', lat: 35.9912, lng: 129.5654, fish: '대형 방어, 전갱이, 삼치', score: 93, status: '피딩중', obsCode: 'DT_0036' },
