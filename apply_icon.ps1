@@ -84,21 +84,9 @@ foreach ($d in $densities) {
     Save-IconSafe $srcImg $size $p
     Write-Host "  ic_launcher_round.png OK" -ForegroundColor Green
 
-    # ic_launcher_foreground.png (icon centered with 12% padding for adaptive safe zone)
-    $fgBmp = New-Object System.Drawing.Bitmap($size, $size)
-    $fgG = [System.Drawing.Graphics]::FromImage($fgBmp)
-    $fgG.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-    $fgG.Clear([System.Drawing.Color]::Transparent)
-    $pad  = [int]($size * 0.12)
-    $inner = $size - ($pad * 2)
-    $fgG.DrawImage($srcImg, $pad, $pad, $inner, $inner)
-    $fgG.Dispose()
-    $ms = New-Object System.IO.MemoryStream
-    $fgBmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
-    $fgBmp.Dispose()
+    # ic_launcher_foreground.png (padding removed to fill the adaptive icon area completely)
     $p = Join-Path $destDir "ic_launcher_foreground.png"
-    [System.IO.File]::WriteAllBytes($p, $ms.ToArray())
-    $ms.Dispose()
+    Save-IconSafe $srcImg $size $p
     Write-Host "  ic_launcher_foreground.png OK" -ForegroundColor Green
 
     # ic_launcher_background.png (solid navy #0B1F3A)
