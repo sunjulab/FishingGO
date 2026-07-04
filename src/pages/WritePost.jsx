@@ -56,7 +56,7 @@ export default function WritePost() {
   const isAdmin = useUserStore((s) =>
     s.user?.id === ADMIN_ID ||
     s.user?.email === ADMIN_EMAIL ||
-    s.user?.email === ADMIN_ID ||
+    s.user?.email === 'sunjulab.k@gmail.com' ||
     s.userTier === 'MASTER'
   );
   const isNoticeType = postType === 'notice';
