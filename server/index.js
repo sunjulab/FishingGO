@@ -5395,7 +5395,7 @@ app.put('/api/community/posts/:id', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
-    const { content, category, image, images } = req.body;
+    const { content, category, image, images, author } = req.body;
     // ✅ BUG-FIX: email은 JWT에서만 추출 (보안 취약점 수정)
     const jwtEmail = tp.email || tp.id;
     const isAdmin = isAdminToken(tp);
@@ -5408,6 +5408,13 @@ app.put('/api/community/posts/:id', async (req, res) => {
         return res.status(403).json({ error: '권한 없음' });
       if (content !== undefined) post.content = content;
       if (category !== undefined) post.category = category;
+      // ✅ MASTER-AUTHOR-EDIT: 마스터 전용 작성자 닉네임 수정 (author_email은 절대 변경 금지)
+      if (author !== undefined && isAdmin) {
+        const trimmedAuthor = String(author).trim();
+        if (trimmedAuthor.length >= 2 && trimmedAuthor.length <= 12) {
+          post.author = trimmedAuthor;
+        }
+      }
       // ✅ MULTI-IMG: images 배열 우선, 없으면 단일 image fallback
       if (images !== undefined) {
         // ✅ IMG-SIZE-FIX: PUT(수정)도 4MB 기준 통일
@@ -5419,7 +5426,7 @@ app.put('/api/community/posts/:id', async (req, res) => {
       await post.save();
       const idx = memPosts.findIndex(p => p._id === req.params.id || p.id === req.params.id);
       if (idx !== -1) {
-        memPosts[idx] = { ...memPosts[idx], content: post.content, category: post.category, image: post.image, images: post.images || [] };
+        memPosts[idx] = { ...memPosts[idx], content: post.content, category: post.category, image: post.image, images: post.images || [], author: post.author };
         saveMemPosts();
       }
       return res.json(post);
@@ -5430,6 +5437,13 @@ app.put('/api/community/posts/:id', async (req, res) => {
       return res.status(403).json({ error: '권한 없음' });
     if (content !== undefined) mem.content = content;
     if (category !== undefined) mem.category = category;
+    // ✅ MASTER-AUTHOR-EDIT: 인메모리 fallback에서도 마스터 전용 닉네임 수정
+    if (author !== undefined && isAdmin) {
+      const trimmedAuthor = String(author).trim();
+      if (trimmedAuthor.length >= 2 && trimmedAuthor.length <= 12) {
+        mem.author = trimmedAuthor;
+      }
+    }
     // ✅ FIX-MULTI-IMG: 인메모리 fallback에서도 images 배열 업데이트
     if (images !== undefined) {
       // ✅ IMG-SIZE-FIX: 인메모리 fallback도 4MB 기준 통일
@@ -7344,7 +7358,18 @@ async function loadSpotOverridesFromDB() {
   if (!dbReady || !SpotLocationOverrideModel) return;
   try {
     const docs = await SpotLocationOverrideModel.find().lean();
-    docs.forEach(d => { spotLocationOverrides[d.id] = { lat: d.lat, lng: d.lng, name: d.name, updatedAt: d.updatedAt }; });
+    docs.forEach(d => {
+      // ✅ BUG-FIX: type, targets, isDeleted 필드 누락 수정 (기존에는 lat/lng/name/updatedAt만 복원)
+      spotLocationOverrides[d.id] = {
+        lat:       d.lat,
+        lng:       d.lng,
+        name:      d.name      || null,
+        type:      d.type      || null,
+        targets:   d.targets   || [],
+        isDeleted: d.isDeleted || false,
+        updatedAt: d.updatedAt,
+      };
+    });
     logger.info(`[SpotOverride] DB에서 ${docs.length}개 포인트 좌표 복원 완료`);
     if (docs.length > 0) saveSpotLocationOverrides();
   } catch (e) { logger.error('[SpotOverride] DB 로드 실패:', e.message); }
@@ -7390,6 +7415,67 @@ async function loadAppConfigFromDB() {
 
 setTimeout(loadCustomPointsFromDB, 4800);
 setTimeout(loadAppConfigFromDB, 5000);
+
+// ✅ MONGO-MIGRATE: JSON → MongoDB 부트스트랩 이전 (Render 재배포 후 JSON 파일 초기화 방지)
+// 서버 시작 시 JSON 파일에 있는 데이터를 MongoDB에 upsert — 중복 실행 시에도 무해함
+async function migrateJsonToMongoDB() {
+  if (!dbReady) return;
+  try {
+    // ─ 1. customPoints.json → MongoDB ─────────────────────────────────────
+    if (CustomPointModel) {
+      const cpEntries = Object.values(customPoints);
+      if (cpEntries.length > 0) {
+        let cpCount = 0;
+        for (const pt of cpEntries) {
+          if (!pt.id || !pt.name || !pt.type || pt.lat == null || pt.lng == null) continue;
+          await CustomPointModel.findOneAndUpdate(
+            { id: pt.id },
+            { $set: {
+              id: pt.id, name: pt.name, type: pt.type,
+              region: pt.region || '미지정',
+              lat: parseFloat(pt.lat), lng: parseFloat(pt.lng),
+              fish: pt.fish || '미확인', score: pt.score || 80,
+              status: pt.status || '보통', obsCode: pt.obsCode || null,
+              aiDescription: pt.aiDescription || null,
+              season: pt.season || null, recommend: pt.recommend || null,
+              isCustom: true,
+            }},
+            { upsert: true, new: true }
+          ).catch(e => logger.error(`[Migrate] CustomPoint upsert 실패 (${pt.id}): ${e.message}`));
+          cpCount++;
+        }
+        logger.info(`[Migrate] customPoints JSON→MongoDB 이전 완료: ${cpCount}건`);
+      }
+    }
+    // ─ 2. spotLocationOverrides.json → MongoDB ─────────────────────────────
+    if (SpotLocationOverrideModel) {
+      const spEntries = Object.entries(spotLocationOverrides);
+      if (spEntries.length > 0) {
+        let spCount = 0;
+        for (const [id, data] of spEntries) {
+          if (!id) continue;
+          await SpotLocationOverrideModel.findOneAndUpdate(
+            { id: String(id) },
+            { $set: {
+              id: String(id),
+              lat: data.lat != null ? parseFloat(data.lat) : 0,
+              lng: data.lng != null ? parseFloat(data.lng) : 0,
+              name: data.name || null, type: data.type || null,
+              targets: data.targets || [], isDeleted: data.isDeleted || false,
+            }},
+            { upsert: true, new: true }
+          ).catch(e => logger.error(`[Migrate] SpotOverride upsert 실패 (${id}): ${e.message}`));
+          spCount++;
+        }
+        logger.info(`[Migrate] spotLocationOverrides JSON→MongoDB 이전 완료: ${spCount}건`);
+      }
+    }
+  } catch (e) {
+    logger.error('[Migrate] JSON→MongoDB 이전 중 오류:', e.message);
+  }
+}
+// DB 연결 완료 후 6초 뒤 실행 (loadCustomPointsFromDB/loadSpotOverridesFromDB 이후)
+setTimeout(migrateJsonToMongoDB, 6000);
 
 
 
@@ -9310,7 +9396,8 @@ app.get('/api/shop/products', async (req, res) => {
       hasMore = false;
 
     } else if (source === 'ali') {
-      const result = await ali.getAliProducts(category, page, limit);
+      const aliKeyword = _mapToAliKeyword(category);
+      const result = await ali.getAliProducts(aliKeyword, page, limit);
       const rawItems = Array.isArray(result) ? result : (result.items || []);
       items = rawItems.map(p => ({
         id:           `ali_${p.productId}`,
@@ -10156,12 +10243,12 @@ function _mapToAliKeyword(category) {
     '바다낚시':    'sea fishing tackle saltwater lure',
     '계류낚시':    'stream trout fishing ultralight rod lure',
     '캠핑의자':    'fishing camping chair folding portable',
-    '낚시릴낚싯대': 'spinning fishing reel rod combo',
+    // '낚시릴낚싯대'는 aliService.js의 특수 병렬 처리 로직을 타야 하므로 매핑 생략
     '지그':        'fishing metal jig lure',
     '소모품':      'fishing accessories swivel snap float',
     '낚시액세서리': 'fishing gear accessories kit',
   };
-  return map[category] || `${category} fishing tackle`;
+  return map[category] || category;
 }
 
 // 시즌별 자동 추천 키워드

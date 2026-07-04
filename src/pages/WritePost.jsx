@@ -31,6 +31,8 @@ export default function WritePost() {
   const [locDraft, setLocDraft] = useState('');
   const locInputRef = useRef(null);
   const isMountedRef = useRef(true); // ✅ BUG-WP01 FIX: Geolocation/AI 콜백 언마운트 보호
+  // ✅ MASTER-AUTHOR-EDIT: 마스터 전용 작성자 닉네임 수정 state
+  const [editAuthor, setEditAuthor] = useState('');
 
   // ✅ BUG-WP01: 언마운트 cleanup
   useEffect(() => {
@@ -74,6 +76,8 @@ export default function WritePost() {
         setContent(res.data.content || '');
         setTitle(res.data.title || '');
         setCategory(res.data.category || '전체');
+        // ✅ MASTER-AUTHOR-EDIT: 수정 모드에서 현재 author 복원
+        setEditAuthor(res.data.author || '');
         // ✅ MULTI-IMG: 수정 모드에서 기존 이미지 배열 복원 (하위호환: image 단일 필드도 지원)
         const existingImages = Array.isArray(res.data.images) && res.data.images.length > 0
           ? res.data.images
@@ -170,7 +174,11 @@ export default function WritePost() {
         const method = isEditMode ? 'put' : 'post';
         const url = isEditMode ? `/api/community/posts/${editId}` : `/api/community/posts`;
         const body = isEditMode
-          ? { content, category, email: storedUser.email, images: safeImages, image: safeImage }
+          ? {
+              content, category, email: storedUser.email, images: safeImages, image: safeImage,
+              // ✅ MASTER-AUTHOR-EDIT: 마스터일 때만 author 포함 (일반 사용자는 전송 안 함)
+              ...(isAdmin && editAuthor.trim() ? { author: editAuthor.trim() } : {}),
+            }
           : { author: storedUser.name, author_email: storedUser.email, category, content, images: safeImages, image: safeImage, location: location || null };
         await apiClient[method](url, body);
         if (!isEditMode) { try { localStorage.removeItem(DRAFT_KEY); } catch { /* StorageError 무시 */ } }
@@ -293,6 +301,30 @@ export default function WritePost() {
           <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: '#0056D2' }}>{category}</span>
           <ChevronDown size={14} color="#0056D2" />
         </div>
+
+        {/* ✅ MASTER-AUTHOR-EDIT: 마스터 전용 작성자 닉네임 수정 필드 */}
+        {isAdmin && isEditMode && (
+          <div style={{ marginBottom: '16px', padding: '10px 14px', backgroundColor: '#FFF3CD', borderRadius: '10px', border: '1.5px solid #FFC107' }}>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#856404', fontWeight: '900', marginBottom: '6px' }}>
+              🔑 MASTER 전용 — 작성자 닉네임 수정
+            </div>
+            <input
+              type="text"
+              value={editAuthor}
+              onChange={(e) => setEditAuthor(e.target.value.slice(0, 12))}
+              placeholder="변경할 닉네임 (2~12자)"
+              maxLength={12}
+              style={{
+                width: '100%', padding: '8px 12px', borderRadius: '8px',
+                border: '1px solid #FFC107', fontSize: `calc(14px * var(--fs, 1))`,
+                fontWeight: '700', backgroundColor: '#fff', boxSizing: 'border-box', outline: 'none',
+              }}
+            />
+            <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#856404', marginTop: '4px' }}>
+              ⚠️ author_email(인증정보)은 변경되지 않습니다. 표시 닉네임만 변경됩니다.
+            </div>
+          </div>
+        )}
 
         {/* ✅ PHOTO-UX: 사진 업로드를 스크롤 본문에 배치 — fixed 툴바 실록 제거 */}
         {/* 사진이 늘어나도 textarea가 키보드에 가려지지 않음 */}
