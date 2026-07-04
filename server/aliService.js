@@ -489,7 +489,7 @@ async function getAliProducts(category = '소모품', page = 1, limit = 9) {
     };
   }
   // ─── 일반 카테고리 ──────────────────────────────────────────────────────────
-  const keyword = ALI_KEYWORD_MAP[category] || `${category} fishing`;
+  const keyword = ALI_KEYWORD_MAP[category] || category;
   return searchAliExpress(keyword, limit, page);
 }
 
