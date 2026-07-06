@@ -179,7 +179,7 @@ export default function WritePost() {
               // ✅ MASTER-AUTHOR-EDIT: 마스터일 때만 author 포함 (일반 사용자는 전송 안 함)
               ...(isAdmin && editAuthor.trim() ? { author: editAuthor.trim() } : {}),
             }
-          : { author: storedUser.name, author_email: storedUser.email, category, content, images: safeImages, image: safeImage, location: location || null };
+          : { author: (isAdmin && editAuthor.trim()) ? editAuthor.trim() : storedUser.name, author_email: storedUser.email, category, content, images: safeImages, image: safeImage, location: location || null };
         await apiClient[method](url, body);
         if (!isEditMode) { try { localStorage.removeItem(DRAFT_KEY); } catch { /* StorageError 무시 */ } }
         if (!isEditMode) {
@@ -302,11 +302,11 @@ export default function WritePost() {
           <ChevronDown size={14} color="#0056D2" />
         </div>
 
-        {/* ✅ MASTER-AUTHOR-EDIT: 마스터 전용 작성자 닉네임 수정 필드 */}
-        {isAdmin && isEditMode && (
+        {/* ✅ MASTER-AUTHOR-EDIT: 마스터 전용 작성자 닉네임 설정/수정 필드 */}
+        {isAdmin && (
           <div style={{ marginBottom: '16px', padding: '10px 14px', backgroundColor: '#FFF3CD', borderRadius: '10px', border: '1.5px solid #FFC107' }}>
             <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#856404', fontWeight: '900', marginBottom: '6px' }}>
-              🔑 MASTER 전용 — 작성자 닉네임 수정
+              🔑 MASTER 전용 — 작성자 닉네임 {isEditMode ? '수정' : '설정'}
             </div>
             <input
               type="text"
