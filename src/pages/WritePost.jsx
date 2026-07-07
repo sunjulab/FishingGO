@@ -232,7 +232,7 @@ export default function WritePost() {
         </button>
       </div>
 
-      <div style={{ padding: '20px' }}>
+      <div style={{ padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }}>
         {/* 구독 혜택 배너 — 비즈니스라이트 미구독자에게만 표시 */}
         {!isBusinessLite && (
           <div
