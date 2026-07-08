@@ -346,7 +346,7 @@ export const evaluateFishingCondition = (data, point = {}) => {
       else if (_wave > 1.5) parts.push(`파고 ${_wave}m — 채비가 흔들립니다. 고부력 채비를 사용하세요.`);
       else if (_phase.includes('조금') || _phase.includes('무시'))
         parts.push(`조금 물때로 ${_fish || '어류'} 입질이 뜸합니다. 인내심이 관건.`);
-      else if (_fish) parts.push(`${_fish}이 입을 약간 닫은 상태입니다. 유인력 강한 미끼로 승부하세요.`);
+      else if (_fish) parts.push(`${_fish} 입질이 다소 예민한 상태입니다. 유인력 강한 미끼로 승부하세요.`);
       else parts.push('입질이 간헐적입니다. 기대치를 조금 낮추세요.');
     } else if (score >= 30) {
       if (_sst < 11)   parts.push(`수온 ${_sst.toFixed(1)}°C 저수온 — ${_fish || '어류'} 활동 급감. 꽝 확률 높습니다.`);
