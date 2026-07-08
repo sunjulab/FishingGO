@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Preferences } from '@capacitor/preferences';
 
 // ── 구독 티어 설정 ──────────────────────────────────────────────
 export const TIER_CONFIG = {
@@ -126,11 +127,17 @@ function safeGetTier(parsedUser) {
   } catch { return 'FREE'; }
 }
 
-// ✅ FIX-STORAGE: 안전한 localStorage 유틸 — Safari 개인보호 모드 StorageError 방어
+// ✅ FIX-STORAGE: 안전한 localStorage 유틸 — Safari 개인보호 모드 StorageError 방어 + 모바일 스토리지 증발 방지용 Preferences 동시 저장
 // setItem/removeItem 실패 시 무시하고 Zustand 상태 업데이트는 정상 진행
 const _ls = {
-  set:    (key, val) => { try { localStorage.setItem(key, val); } catch { /* StorageError 무시 */ } },
-  remove: (key)     => { try { localStorage.removeItem(key); }   catch { /* StorageError 무시 */ } },
+  set: (key, val) => {
+    try { localStorage.setItem(key, val); } catch { /* StorageError 무시 */ }
+    Preferences.set({ key, value: String(val) }).catch(() => {});
+  },
+  remove: (key) => {
+    try { localStorage.removeItem(key); } catch { /* StorageError 무시 */ }
+    Preferences.remove({ key }).catch(() => {});
+  },
 };
 
 // ✅ 3RD-C3: safeParseUser() 2회 호출 → 단일 변수 공유
@@ -142,6 +149,26 @@ export const useUserStore = create((set, get) => ({
 
   // 구독 티어 — user.tier와 항상 일치하도록 초기화
   userTier: safeGetTier(_initialUser),
+
+  // 모바일 환경에서 localStorage가 증발했을 때 Preferences에서 복구하는 함수
+  hydrateFromPreferences: async () => {
+    try {
+      const { value: pUserStr } = await Preferences.get({ key: 'user' });
+      const { value: pTier } = await Preferences.get({ key: 'userTier' });
+      if (pUserStr) {
+        const pUser = JSON.parse(pUserStr);
+        set((state) => {
+          // 이미 메모리에 더 최신 데이터가 있거나 로드되었을 수 있으므로 병합
+          if (!state.user || state.user.id === 'GUEST') {
+            try { localStorage.setItem('user', pUserStr); } catch {}
+            if (pTier) { try { localStorage.setItem('userTier', pTier); } catch {} }
+            return { user: pUser, userTier: pTier || pUser.tier || 'FREE' };
+          }
+          return state;
+        });
+      }
+    } catch { /* 무시 */ }
+  },
 
 
   // ── 기본 유저 업데이트 ──

@@ -431,6 +431,15 @@ function UserSyncChecker() {
   return null;
 }
 
+// ✅ 스토리지 증발 복구: 앱 마운트 시 Capacitor Preferences에서 토큰/유저 복구
+function StoreHydrator() {
+  const hydrateFromPreferences = useUserStore((s) => s.hydrateFromPreferences);
+  useEffect(() => {
+    hydrateFromPreferences();
+  }, [hydrateFromPreferences]);
+  return null;
+}
+
 // ENH4-A1: auth_expired 이벤트 수신 → navigate로 /login 이동 (window.location.href 풀 리로드 방지)
 function AuthExpiredChecker() {
   const navigate = useNavigate();
@@ -580,6 +589,7 @@ export default function App() {
         <SubscriptionFailBanner />
         <RealTimeAlert />
         <SubscriptionExpiryChecker />
+        <StoreHydrator />
         <UserSyncChecker />
         {/* ENH4-A1: auth_expired 커스텀 이벤트 처리 컴포넌트 */}
         <AuthExpiredChecker />

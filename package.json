@@ -1,7 +1,7 @@
 {
   "name": "fishing-go",
   "private": true,
-  "version": "1.0.54",
+  "version": "1.0.55",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -28,6 +28,7 @@
     "@capacitor/device": "^8.0.2",
     "@capacitor/geolocation": "^8.2.0",
     "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/share": "^8.0.1",
     "@capawesome/capacitor-app-update": "^8.0.3",

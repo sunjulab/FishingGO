@@ -4,6 +4,7 @@ import { Anchor, ShieldCheck, Eye, EyeOff, CheckCircle, XCircle, User, Phone, Se
 import { useUserStore, LEVEL_CONFIG } from '../store/useUserStore';
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
+import { Preferences } from '@capacitor/preferences';
 
 const GUEST_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23E8F2FF'/%3E%3Ccircle cx='50' cy='36' r='19' fill='%230056D2' opacity='.75'/%3E%3Cellipse cx='50' cy='88' rx='30' ry='22' fill='%230056D2' opacity='.55'/%3E%3C/svg%3E";
 
@@ -281,9 +282,13 @@ export default function LoginPage() {
     const accessToken = data.accessToken || data.token;
     if (accessToken) {
       try { localStorage.setItem('access_token', accessToken); } catch { /* StorageError 무시 */ }
+      Preferences.set({ key: 'access_token', value: accessToken }).catch(() => {});
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     }
-    if (data.refreshToken) { try { localStorage.setItem('refresh_token', data.refreshToken); } catch { /* ignore */ } }
+    if (data.refreshToken) {
+      try { localStorage.setItem('refresh_token', data.refreshToken); } catch { /* ignore */ }
+      Preferences.set({ key: 'refresh_token', value: data.refreshToken }).catch(() => {});
+    }
     try {
       const savedAvatar = email ? localStorage.getItem(`avatar_${email}`) : null;
       const serverAvatar = data.user?.avatar || '';

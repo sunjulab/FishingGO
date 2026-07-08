@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Preferences } from '@capacitor/preferences';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://fishing-go-backend.onrender.com';
 // ✅ 14TH-C2: PROD 가드 추가 — 프로덕션 콘솔에 환경변수 경고 미노출
@@ -15,11 +16,20 @@ const apiClient = axios.create({
 
 // ─── Request Interceptor: 토큰 자동 첨부 ────────────────────────────────────
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // ✅ FIX-STORAGE: localStorage.getItem try/catch — SafarI 개인보호 모드 등에서 getItem이 StorageError 든질 수 있음
     // 무방비 시 모든 API 요청 실패 — 토큰 없이 요청으로 폴백
     let token = null;
     try { token = localStorage.getItem('access_token'); } catch { /* StorageError: 토큰 없이 진행 */ }
+    
+    // 모바일 환경 스토리지 증발 복구
+    if (!token) {
+      try {
+        const { value } = await Preferences.get({ key: 'access_token' });
+        token = value;
+      } catch { /* 무시 */ }
+    }
+
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -79,6 +89,13 @@ apiClient.interceptors.response.use(
       let refreshToken = null;
       try { refreshToken = localStorage.getItem('refresh_token'); } catch { /* ok */ }
 
+      if (!refreshToken) {
+        try {
+          const { value } = await Preferences.get({ key: 'refresh_token' });
+          refreshToken = value;
+        } catch { /* ok */ }
+      }
+
       // Refresh Token 없으면 로그인 페이지로 (현재 로그인 페이지가 아닐 때만)
       if (!refreshToken) {
         if (!import.meta.env.PROD) console.warn('[Auth] Refresh Token 없음 → 로그인 필요');
@@ -131,7 +148,11 @@ apiClient.interceptors.response.use(
 
         // 새 토큰 저장 (Refresh Token Rotation 지원)
         try { localStorage.setItem('access_token', newAccessToken); } catch { /* StorageError 무시 */ }
-        if (newRefreshToken) { try { localStorage.setItem('refresh_token', newRefreshToken); } catch { /* StorageError 무시 */ } }
+        Preferences.set({ key: 'access_token', value: newAccessToken }).catch(() => {});
+        if (newRefreshToken) {
+          try { localStorage.setItem('refresh_token', newRefreshToken); } catch { /* StorageError 무시 */ }
+          Preferences.set({ key: 'refresh_token', value: newRefreshToken }).catch(() => {});
+        }
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 
         // 대기 중이던 요청들 재시도
@@ -150,6 +171,8 @@ apiClient.interceptors.response.use(
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');
+          Preferences.remove({ key: 'access_token' }).catch(() => {});
+          Preferences.remove({ key: 'refresh_token' }).catch(() => {});
         }
         // ENH4-A1: Refresh Token 만료 시에도 커스텀 이벤트로 교체 — 상태 유지 리다이렉트
         if (!import.meta.env.PROD) console.warn('[Auth] Refresh Token 만료 → 자동 로그아웃');

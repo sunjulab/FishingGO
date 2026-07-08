@@ -4306,7 +4306,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const userTier = user.tier || 'FREE';
     const accessToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier }, JWT_SECRET, { expiresIn: '1h' });
-    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '365d' });
     res.setHeader('Cache-Control', 'no-store'); // ✅ FIX-CACHE-NO-STORE-LOGIN
     res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
   } catch (err) { logger.error('[login] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
@@ -4347,7 +4347,7 @@ app.post('/api/auth/refresh', async (req, res) => {
     const newRefreshToken = jwt.sign(
       { id: decoded.id, email: decoded.email, name: decoded.name || '', tier: freshTier, type: 'refresh' },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '365d' }
     );
     res.setHeader('Cache-Control', 'no-store'); // ✅ FIX-REFRESH-CACHE-NO-STORE
   res.json({ accessToken, refreshToken: newRefreshToken }); // ✅ BUG-FIX: Refresh Token Rotation 구현
@@ -4433,7 +4433,7 @@ app.post('/api/auth/google', async (req, res) => {
     // ✅ AUTH-FIX-7: 구글 로그인 JWT에도 tier 포함 (기존 누락)
     const userTier = user.tier || 'FREE';
     const accessToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier }, JWT_SECRET, { expiresIn: '1h' });
-    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '365d' });
     res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp });
   } catch (err) { logger.error('[google-auth] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
