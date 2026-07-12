@@ -314,6 +314,9 @@ export default function DashboardView({
         </div>
         )}
 
+        {/* 알리익스프레스 배너 */}
+        <KakaoAdBanner type="ali" />
+
         {/* 퀵메뉴 */}
         <div style={{ padding: '16px 16px 4px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
@@ -408,8 +411,6 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* 알리익스프레스 배너 */}
-        <KakaoAdBanner type="ali" />
 
         {/* 프리미엄 멤버십 */}
         <div style={{ padding: '8px 16px 12px' }}>
