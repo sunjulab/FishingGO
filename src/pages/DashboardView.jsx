@@ -8,6 +8,7 @@ import apiClient from '../api/index';
 import CsInquirySection from '../components/CsInquirySection';
 import { RewardGateModal } from '../components/AdUnit';
 import { AdSenseDisplay } from '../components/ads/AdSenseAd';
+import KakaoAdBanner from '../components/KakaoAdBanner';
 
 export default function DashboardView({
   viewMode,
@@ -267,6 +268,9 @@ export default function DashboardView({
 
 
 
+        {/* 쿠팡 상단 배너 */}
+        <KakaoAdBanner type="coupang" />
+
         {/* AI 낚시 적합도 게이지 — 민물 포인트 제외 */}
         {selectedPoint?.type !== '민물' && (
         <div style={{ padding: '12px 16px 0' }}>
@@ -403,6 +407,9 @@ export default function DashboardView({
             })()}
           </div>
         </div>
+
+        {/* 알리익스프레스 배너 */}
+        <KakaoAdBanner type="ali" />
 
         {/* 프리미엄 멤버십 */}
         <div style={{ padding: '8px 16px 12px' }}>
