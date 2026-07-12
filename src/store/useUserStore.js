@@ -150,6 +150,11 @@ export const useUserStore = create((set, get) => ({
   // 구독 티어 — user.tier와 항상 일치하도록 초기화
   userTier: safeGetTier(_initialUser),
 
+  // ── 쿨타임 기반 전면 광고 카운터 ──
+  pointAdCount: 0,
+  incrementPointAdCount: () => set((state) => ({ pointAdCount: state.pointAdCount + 1 })),
+  resetPointAdCount: () => set({ pointAdCount: 0 }),
+
   // 모바일 환경에서 localStorage가 증발했을 때 Preferences에서 복구하는 함수
   hydrateFromPreferences: async () => {
     try {

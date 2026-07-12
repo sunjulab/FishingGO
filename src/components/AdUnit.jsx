@@ -177,7 +177,9 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     crew:  { title: '🏕️ 크루 방 무료 개설', action: '크루 개설 완료!' },
     point: { title: '📍 낚시 포인트 확인', action: '포인트 확인 완료!' },
     secret: { title: '⭐ 비밀 포인트 확인', action: '비밀 포인트 오픈!' },
-    cctv:  { title: '📺 실시간 현장 영상', action: '영상 재생 준비 완료!' }
+    cctv:  { title: '📺 실시간 현장 영상', action: '영상 재생 준비 완료!' },
+    map_enter: { title: '🗺️ 포인트 지도 탐색', action: '지도 탐색 시작!' },
+    point_cooldown: { title: '📍 포인트 상세 정보', action: '포인트 확인 완료!' }
   };
   const ctx = CONTEXT_TEXT[context] || CONTEXT_TEXT.post;
 
@@ -502,13 +504,20 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
             <div>
               <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.85, fontWeight: '700', marginBottom: '4px' }}>⭐ LITE 이상</div>
               <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '900', marginBottom: '4px' }}>
-                {context === 'cctv' ? '광고 없이 1초 만에 바다 보기' : '광고 없이 무제한 등록'}
+                {context === 'cctv' ? '광고 없이 1초 만에 바다 보기' : 
+                 context === 'map_enter' ? '광고 없이 무제한 지도 탐색' :
+                 context === 'point_cooldown' ? '광고 없이 모든 포인트 확인' :
+                 '광고 없이 무제한 등록'}
               </div>
               <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.9 }}>
                 {context === 'cctv' && cctvAdCount >= 3 
                   ? '☕ 오늘만 3번째! 커피 한 잔 값이면 평생 광고 제거'
                   : context === 'cctv'
                   ? '광고 없이 모든 포인트 CCTV 무제한 쾌속 시청'
+                  : context === 'map_enter'
+                  ? '광고 없이 모든 지도 뷰 및 포인트 조회 기능 개방'
+                  : context === 'point_cooldown'
+                  ? '더 이상 포인트 클릭 시 광고 팝업이 뜨지 않습니다'
                   : '광고 없이 무제한 등록 · 무료 게시글 작성 횟수 제한 없음'}
               </div>
             </div>

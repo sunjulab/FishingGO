@@ -53,39 +53,18 @@ export default function DashboardView({
   getPointSpecificData,
   setCctvData,
   setShowCCTV,
+  // Props from MapHome for AdGate
+  setShowPointAdGate,
+  setPointAdContext,
+  setPendingPoint,
+  pointAdCount
 }) {
   const navigate = useNavigate();
-
   // ── 포인트 확인 광고 게이트 ──────────────────────────────────────────
-  // 이번 세션에서 광고로 잠금 해제된 포인트 ID Set
-  const [unlockedPoints, setUnlockedPoints] = useState(() => new Set());
-
-  // 포인트 카드 클릭 핸들러 (비프리미엄: 광고 게이트)
+  // 포인트 카드 클릭 핸들러 (대시보드 목록에서 클릭)
   const handlePremiumPointClick = (point) => {
-    if (canAccessPremium || unlockedPoints.has(point.id)) {
-      setViewMode('map');
-      handlePointClick(point);
-      return;
-    }
-    setPendingPoint(point);
-    setPointAdContext('point');
-    setShowPointAdGate(true);
-  };
-
-  // 보상 광고 완료 후 포인트 언락
-  const handlePointAdComplete = () => {
-    if (!pendingPoint) return;
-    setUnlockedPoints(prev => new Set([...prev, pendingPoint.id]));
-    addToast(`📍 ${pendingPoint.name} 포인트가 해제됐습니다! 🎉`, 'success');
-    if (pointAdContext === 'secret') {
-      setViewMode('map');
-      setShowSecretPoints(true);
-      addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');
-    } else {
-      setViewMode('map');
-      handlePointClick(pendingPoint);
-    }
-    setPendingPoint(null);
+    setViewMode('map');
+    handlePointClick(point);
   };
   // ──────────────────────────────────────────────────────────────────
 
@@ -321,7 +300,18 @@ export default function DashboardView({
         <div style={{ padding: '16px 16px 4px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
             {[
-              { Icon: Map,       label: '포인트',   color: '#1565C0', bg: '#EBF2FF',  action: () => setViewMode('map'),     locked: false },
+              { 
+                Icon: Map, label: '포인트', color: '#1565C0', bg: '#EBF2FF', locked: false,
+                action: () => {
+                  if (!canAccessPremium) {
+                    setPendingPoint({ id: 'dashboard_enter', name: '포인트 지도' });
+                    setPointAdContext('map_enter');
+                    setShowPointAdGate(true);
+                  } else {
+                    setViewMode('map');
+                  }
+                }
+              },
               { Icon: BarChart2, label: '날씨',     color: '#2E7D32', bg: '#EDF7EE',  action: () => navigate('/weather'),   locked: false },
               { Icon: Ship,      label: '선상/크루', color: '#BF360C', bg: '#FFF3EE', action: () => navigate('/community'), locked: false },
               { Icon: Crown,     label: '클럽',     color: '#6A1B9A', bg: '#F5EEFF',  action: () => navigate('/community'), locked: false },

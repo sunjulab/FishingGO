@@ -137,6 +137,14 @@ export default function MapHome() {
   const [addModalPos, setAddModalPos]     = useState(null);
   const [showPointManager, setShowPointManager] = useState(false);
 
+  // ✅ 쿨타임 기반 보상형 전면광고 모달 상태
+  const [showPointAdGate, setShowPointAdGate] = useState(false);
+  const [pointAdContext, setPointAdContext]   = useState('');
+  const [pendingPoint, setPendingPoint]       = useState(null);
+  const pointAdCount = useUserStore(s => s.pointAdCount);
+  const incrementPointAdCount = useUserStore(s => s.incrementPointAdCount);
+  const resetPointAdCount = useUserStore(s => s.resetPointAdCount);
+
   /* ── 마운트 시 기본 포인트 AI 컨디션 전체 패치 (세로고침 대응) ── */
   useEffect(() => {
     let cancelled = false; // ✅ BUG-MAP01 FIX: 언마운트 후 setState 방지
@@ -546,13 +554,20 @@ export default function MapHome() {
   }, []);
 
   /* ── 포인트 클릭 ── */
-  // ✅ 5TH-B1: useCallback — 마커 useEffect 업데이트 시 매 렌더마다 새 함수 생성 방지
-  // ✅ FIX-TDZ: 마커 렌더링 useEffect보다 먼저 선언해야 TDZ(Cannot access before initialization) 방지
-  // ✅ REWARD-GATE: 무료 유저 → 보상형 광고 시청 후 입장 (전면 개편: 광고 제거하고 즉시 입장)
   const handlePointClick = useCallback(async (point, fromDashboard = false) => {
+    // 무료 유저일 경우 쿨타임 광고 적용
+    if (!canAccessPremium && point.type !== '민물') {
+      if (pointAdCount >= 2) {
+        setPendingPoint(point);
+        setPointAdContext('point_cooldown');
+        setShowPointAdGate(true);
+        return; // 광고 시청 후 _enterPoint 호출
+      }
+      incrementPointAdCount();
+    }
     await _enterPoint(point, fromDashboard);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_enterPoint]);
+  }, [_enterPoint, canAccessPremium, pointAdCount, incrementPointAdCount]);
 
   /* ── 마커 렌더링 (일반 + 커스텀 포인트 병합) ── */
   useEffect(() => {
@@ -1348,6 +1363,10 @@ export default function MapHome() {
           user={user}
           isAdmin={isAdmin}
           currentTier={currentTier}
+          setShowPointAdGate={setShowPointAdGate}
+          setPointAdContext={setPointAdContext}
+          setPendingPoint={setPendingPoint}
+          pointAdCount={pointAdCount}
           filter={filter}
           setFilter={setFilter}
           searchRef={searchRef}
@@ -1522,6 +1541,29 @@ export default function MapHome() {
             onSuccess={(newPt) => {
               setCustomPoints(prev => [...prev, newPt]);
             }}
+          />
+        )}
+
+        {/* ── 쿨타임 기반 포인트 진입 광고 게이트 모달 ── */}
+        {showPointAdGate && (
+          <RewardGateModal 
+            onClose={() => { setShowPointAdGate(false); setPendingPoint(null); }}
+            onComplete={() => {
+              setShowPointAdGate(false);
+              resetPointAdCount(); // 광고 시청 시 쿨타임 리셋
+              if (pointAdContext === 'map_enter') {
+                setViewMode('map');
+                addToast('지도로 진입합니다.', 'success');
+              } else if (pointAdContext === 'secret') {
+                setViewMode('map');
+                setShowSecretPoints(true);
+                addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');
+              } else if (pendingPoint) {
+                _enterPoint(pendingPoint, true);
+              }
+              setPendingPoint(null);
+            }}
+            context={pointAdContext === 'secret' ? 'secret' : (pointAdContext === 'map_enter' ? 'map_enter' : 'point')}
           />
         )}
 
