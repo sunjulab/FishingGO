@@ -610,6 +610,9 @@ function ForceTierPanel({ addToast }) {
   const [suspectNote, setSuspectNote] = useState('');
   const [resettingId, setResettingId] = useState(null); // 클릭된 계정 row
 
+  const [captains, setCaptains] = useState([]);
+  const [captainLoading, setCaptainLoading] = useState(false);
+
   const loadSuspects = async () => {
     setSuspectLoading(true);
     try {
@@ -621,8 +624,18 @@ function ForceTierPanel({ addToast }) {
     } finally { setSuspectLoading(false); }
   };
 
+  const loadCaptains = async () => {
+    setCaptainLoading(true);
+    try {
+      const res = await apiClient.get('/api/admin/captains');
+      setCaptains(res.data.captains || []);
+    } catch (err) {
+      addToast(err.response?.data?.error || '목록 로드 실패', 'error');
+    } finally { setCaptainLoading(false); }
+  };
+
   // 마운트 시 자동 로드
-  useEffect(() => { loadSuspects(); }, []);
+  useEffect(() => { loadSuspects(); loadCaptains(); }, []);
 
   const handleForce = async (targetEmail, targetTier = tier) => {
     const t = (targetEmail || target).trim();
@@ -641,6 +654,54 @@ function ForceTierPanel({ addToast }) {
   };
 
   return (
+    <>
+    <div style={{ marginTop: '24px', background: 'rgba(0,196,140,0.06)', border: '1px solid rgba(0,196,140,0.2)', borderRadius: '18px', overflow: 'hidden' }}>
+      <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(0,196,140,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '18px' }}>👑</span>
+          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#00C48C' }}>특별 권한(CAPTAIN) 계정 목록</span>
+          {captains.length > 0 && (
+            <span style={{ background: '#00C48C', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', padding: '2px 8px', borderRadius: '10px' }}>{captains.length}명</span>
+          )}
+        </div>
+        <button onClick={loadCaptains} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <RefreshCw size={12} className={captainLoading ? 'spin' : ''} />새로고침
+        </button>
+      </div>
+      <div style={{ padding: '16px 18px' }}>
+        {captainLoading ? (
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: `calc(12px * var(--fs, 1))` }}>조회 중...</div>
+        ) : captains.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', color: '#00C48C', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700' }}>
+            👑 현재 캡틴 권한이 부여된 계정이 없습니다.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {captains.map((u, i) => (
+              <div key={u.id || u.email} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{u.name || '이름없음'}</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#00C48C', fontWeight: '800' }}>{u.tier}</span>
+                  </div>
+                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)' }}>
+                    {u.id !== u.email ? `${u.email} · ` : ''}{u.id} · 부여일: {u.createdAt ? new Date(u.createdAt).toLocaleDateString('ko-KR') : '알 수 없음'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleForce(u.email || u.id, 'FREE')}
+                  disabled={resettingId === (u.email || u.id)}
+                  style={{ background: '#FF5A5F', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer' }}
+                >
+                  {resettingId === (u.email || u.id) ? '회수 중...' : '권한 회수 (FREE)'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+
     <div style={{ marginTop: '24px', background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.2)', borderRadius: '18px', overflow: 'hidden' }}>
       {/* 헤더 */}
       <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,59,48,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -756,5 +817,6 @@ function ForceTierPanel({ addToast }) {
         </button>
       </div>
     </div>
+    </>
   );
 }

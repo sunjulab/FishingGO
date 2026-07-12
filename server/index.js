@@ -3781,6 +3781,27 @@ app.post('/api/admin/force-tier', async (req, res) => {
   }
 });
 
+// GET /api/admin/captains
+app.get('/api/admin/captains', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
+
+  try {
+    let captains = [];
+    if (dbReady && User) {
+      captains = await User.find({ tier: 'CAPTAIN' }, { email: 1, id: 1, name: 1, tier: 1, createdAt: 1 }).lean();
+    } else {
+      captains = memUsers.filter(u => u.tier === 'CAPTAIN').map(u => ({ email: u.email, id: u.id, name: u.name, tier: u.tier }));
+    }
+    return res.json({ captains, total: captains.length });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 // ✅ SECURITY: 미결제 유료 tier 탐지 API — 어드민 전용
 // GET /api/admin/suspicious-tiers
 app.get('/api/admin/suspicious-tiers', async (req, res) => {
