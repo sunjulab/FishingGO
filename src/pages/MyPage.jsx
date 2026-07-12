@@ -1356,12 +1356,22 @@ export default function MyPage() {
                   },
                   {
                     tier: 'BUSINESS_LITE',
-                    name: 'PRO 멤버십',
+                    name: 'LITE 멤버십',
                     price: '₩3,300/월',
-                    badge: 'PRO',
+                    badge: 'LITE',
                     badgeColor: '#fff',
                     badgeBg: 'linear-gradient(135deg, #0056D2, #003fa3)',
-                    features: ['앱 내 모든 광고 영구 제거', 'AI 컨디션 심층 리포트 개방', '커뮤니티 PRO 전용 금장 배지', '비밀 낚시 포인트 25곳', '실시간 해양 히트맵'],
+                    features: ['앱 내 모든 광고 영구 제거', 'CCTV 및 해양 히트맵 확인', '기본 낚시 컨디션 리포트'],
+                    highlight: false,
+                  },
+                  {
+                    tier: 'PRO',
+                    name: 'PRO 멤버십',
+                    price: '₩9,900/월',
+                    badge: 'PRO',
+                    badgeColor: '#fff',
+                    badgeBg: 'linear-gradient(135deg, #00C48C, #008f66)',
+                    features: ['LITE 멤버십 모든 혜택', '비밀 낚시 포인트 25곳', '커뮤니티 PRO 전용 금장 배지', 'AI 심층 분석 리포트'],
                     highlight: true,
                   }
                 ];
