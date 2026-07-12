@@ -185,3 +185,55 @@ export async function showRewardedAd(onRewarded, onFailed) {
   if (!import.meta.env.PROD) console.log('[AdMob] AdMob 미초기화 → fallback');
   return { simulated: true };
 }
+
+// ─── 보상형 전면광고 (포인트 진입 시 3회마다) ─────────────────────
+/**
+ * 보상형 전면광고 표시
+ * - 3번 확인마다 보여주는 전면 + 보상형 하이브리드 광고
+ */
+export async function showRewardedInterstitialAd(onRewarded, onFailed) {
+  if (isNative() && AdMob) {
+    try {
+      const options = {
+        adId: ADMOB_CONFIG.REWARDED_INTERSTITIAL_ID,
+        isTesting: IS_ADMOB_TESTING,
+      };
+
+      await AdMob.prepareRewardInterstitialAd(options);
+
+      let rewarded = false;
+
+      const rewardListener = await AdMob.addListener(
+        'onRewardedInterstitialAdReward',
+        (reward) => {
+          if (!import.meta.env.PROD) console.log('[AdMob] 보상형 전면광고 보상:', reward);
+          rewarded = true;
+          rewardListener.remove();
+          onRewarded?.(reward);
+        }
+      );
+
+      const closeListener = await AdMob.addListener(
+        'onRewardedInterstitialAdDismissed',
+        () => {
+          closeListener.remove();
+          if (!rewarded) {
+            rewardListener?.remove();
+            onFailed?.();
+          }
+        }
+      );
+
+      await AdMob.showRewardInterstitialAd();
+      return { simulated: false };
+    } catch (e) {
+      if (!import.meta.env.PROD) console.error('[AdMob] 보상형 전면광고 오류:', e);
+      onFailed?.(e);
+      return { simulated: false };
+    }
+  }
+
+  // 웹 브라우저 등 네이티브 아닐 때는 그냥 넘어감 (전면 광고이므로 fallback 보상은 생략)
+  onRewarded?.();
+  return { simulated: false };
+}

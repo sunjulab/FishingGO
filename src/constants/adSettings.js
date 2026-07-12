@@ -19,6 +19,10 @@ export const ADMOB_CONFIG = {
   INTERSTITIAL_ID: import.meta.env.PROD
     ? 'ca-app-pub-9774243773523817/1020026097'  // 보상형과 동일 단위 사용 (전면용 별도 단위 없을 때)
     : 'ca-app-pub-3940256099942544/1033173712', // 구글 공식 테스트 전면광고 ID
+  // 보상형 전면 광고 — 포인트 진입 및 3회마다
+  REWARDED_INTERSTITIAL_ID: import.meta.env.PROD
+    ? 'ca-app-pub-9774243773523817/9339731137'
+    : 'ca-app-pub-3940256099942544/5354046379', // 구글 공식 테스트 보상형전면광고 ID
 };
 
 export const AD_CONFIG = {

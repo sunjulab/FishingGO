@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
-import { showRewardedAd } from '../services/AdMobService';
+import { showRewardedAd, showRewardedInterstitialAd } from '../services/AdMobService';
 // NativeAdService 제거 (네이티브 광고 기능 삭제)
 
 // NativeAdPlugin 런타임 참조 — scroll 자가갱신용
@@ -296,10 +296,17 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     // ─ 1. 네이티브 앱 → AdMob SDK ─
     if (isNativeApp) {
       setAdWatching(true);
-      showRewardedAd(
-        () => { setAdWatching(false); setAdDone(true); },
-        () => { setAdWatching(false); }
-      );
+      if (context === 'point' || context === 'secret' || context === 'map_enter') {
+        showRewardedInterstitialAd(
+          () => { setAdWatching(false); setAdDone(true); },
+          () => { setAdWatching(false); }
+        );
+      } else {
+        showRewardedAd(
+          () => { setAdWatching(false); setAdDone(true); },
+          () => { setAdWatching(false); }
+        );
+      }
       return;
     }
 
