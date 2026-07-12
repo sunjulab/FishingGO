@@ -524,7 +524,9 @@ function CsAdminPanel({ addToast }) {
                     <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: cfg.bg, color: cfg.color, padding: '2px 7px', borderRadius: '6px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '3px' }}>
                       {item.status === 'pending' ? <Clock size={9}/> : <CheckCircle size={9}/>}{cfg.label}
                     </span>
-                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>{item.nickname || item.authorEmail}</span>
+                    <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
+                      {item.nickname ? `${item.nickname} (${item.authorEmail})` : item.authorEmail}
+                    </span>
                     {item.phone && <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#FFD700', fontWeight: '700' }}>📞 {item.phone}</span>}
                   </div>
                   <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{item.title}</div>
