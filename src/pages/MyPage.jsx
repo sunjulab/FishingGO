@@ -1374,7 +1374,7 @@ export default function MyPage() {
                   {
                     tier: 'CAPTAIN',
                     name: '제휴 선장 신청',
-                    price: '1:1 문의',
+                    price: '무료 등록',
                     badge: '선장 전용',
                     badgeColor: '#5C3A00',
                     badgeBg: 'linear-gradient(135deg, #FFD700, #FF9B26)',

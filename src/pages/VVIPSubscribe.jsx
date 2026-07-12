@@ -69,7 +69,7 @@ const PLANS = [
   {
     key: 'CAPTAIN',
     label: '제휴 선장 신청',
-    price: '1:1 문의',
+    price: '무료 등록',
     period: '',
     color: '#FFD700',
     border: 'rgba(255,215,0,0.4)',
@@ -523,9 +523,9 @@ export default function VVIPSubscribe() {
                 ) : plan.key === 'VVIP' ? null : (
                   <button
                     onClick={() => handlePlanClick(plan.key)}
-                    disabled={owned || isLoading || !iapReady}
+                    disabled={owned || isLoading || (plan.key !== 'CAPTAIN' && !iapReady)}
                     style={{
-                      width: '100%', padding: isNative && !iapReady ? '10px 14px 10px' : '14px', borderRadius: '14px', border: 'none',
+                      width: '100%', padding: isNative && !iapReady && plan.key !== 'CAPTAIN' ? '10px 14px 10px' : '14px', borderRadius: '14px', border: 'none',
                       background: isLoading
                         ? `rgba(${plan.color === '#C8D400' ? '200,212,0' : plan.color === '#64B5F6' ? '100,181,246' : '255,215,0'},0.3)`
                         : plan.key === 'VVIP'
@@ -535,14 +535,14 @@ export default function VVIPSubscribe() {
                             : 'linear-gradient(135deg,#C8D400,#a8b200)',
                       color: plan.key === 'VVIP' ? '#1A1A2E' : plan.key === 'BASIC' ? '#0A1628' : '#fff',
                       fontSize: `calc(14px * var(--fs,1))`, fontWeight: '950',
-                      cursor: isLoading ? 'not-allowed' : 'pointer',
+                      cursor: (owned || isLoading || (plan.key !== 'CAPTAIN' && !iapReady)) ? 'not-allowed' : 'pointer',
                       overflow: 'hidden', position: 'relative',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
                       boxShadow: `0 4px 16px ${plan.color}33`,
                     }}
                   >
                     {/* ✅ IAP 켈로딩 진행률 표시 */}
-                    {isNative && !iapReady && !isLoading && (
+                    {isNative && !iapReady && !isLoading && plan.key !== 'CAPTAIN' && (
                       <>
                         <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:`calc(13px * var(--fs,1))` }}>
                           <RefreshCw size={14} style={{ animation:'spin 1s linear infinite' }} />
@@ -555,7 +555,9 @@ export default function VVIPSubscribe() {
                       </>
                     )}
                     {isLoading ? (
-                      <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> 결제 진행 중...</>
+                      <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> 진행 중...</>
+                    ) : plan.key === 'CAPTAIN' ? (
+                      <>1:1 문의로 신청하기</>
                     ) : !isNative ? (
                       <><Smartphone size={16} /> 앱에서만 구독 가능</>
                     ) : iapReady && storeReady ? (
