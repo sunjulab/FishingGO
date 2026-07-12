@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Tv, Search, X, ShoppingBag as BagIcon, Maximize2, Clock, User2, Loader2 } from 'lucide-react';
+import { Play, Tv, Search, X, ShoppingBag as BagIcon, Maximize2, Clock, User2, Loader2, ChevronRight } from 'lucide-react';
+
 
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
