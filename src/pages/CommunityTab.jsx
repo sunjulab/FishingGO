@@ -202,12 +202,12 @@ export default function CommunityTab() {
   // ✅ FIX-TDZ: userTier/user는 L125에서 이미 선언됨 — 여기서 중복 선언 제거
   const canAccessPremium = useMemo(() => {
     if (user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL || user?.email === ADMIN_ID) return true;
-    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
+    return ['CAPTAIN', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
   }, [userTier, user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
-  // canAccessBusinessPromo: PRO 또는 BUSINESS_VIP만 허용
+  // canAccessBusinessPromo: CAPTAIN, PRO 또는 BUSINESS_VIP만 허용
   const canAccessBusinessPromo = useMemo(() => {
     if (user?.id === ADMIN_ID || user?.email === ADMIN_EMAIL || user?.email === ADMIN_ID) return true;
-    return ['PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
+    return ['CAPTAIN', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
   }, [userTier, user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
   // ✅ FIX-ADMIN: isAdmin 4중 보장 — id/email(gmail)/email(ID)/MASTER tier
   const isAdmin = useUserStore(s =>
@@ -370,7 +370,7 @@ export default function CommunityTab() {
       navigate('/create-crew');
     } else if (activeTab === 'business') {
       if (!canAccessBusinessPromo) {
-        addToast('선상 홍보글은 PRO 또는 항구 독점 VVIP 보유자만 작성 가능합니다. 구독 페이지로 이동합니다.', 'error');
+        addToast('선상 홍보글은 제휴 선장(CAPTAIN), PRO 또는 항구 독점 VVIP 보유자만 작성 가능합니다. 구독 페이지로 이동합니다.', 'error');
         // ✅ 3RD-A5: setTimeout navigate race condition 제거 — 즉시 이동으로 대체
         navigate('/vvip-subscribe');
       } else {

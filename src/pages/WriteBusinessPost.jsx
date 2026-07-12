@@ -68,11 +68,12 @@ export default function WriteBusinessPost() {
     s.user?.email === 'sunjulab.k@gmail.com' || // Gmail OAuth
     s.userTier === 'MASTER'
   );
+  const isCaptain = userTier === 'CAPTAIN';
   const isPRO = userTier === 'PRO';
   const isVVIP = userTier === 'BUSINESS_VIP';
 
   // ✅ 7TH-C5: canWrite 접근 제어 확인 — 마스터+PRO+VIP만 등록가능, handlePostClick(L112)\uc5d0서 실제 가드 적용
-  const canWrite = isAdmin || isPRO || isVVIP;
+  const canWrite = isAdmin || isCaptain || isPRO || isVVIP;
 
   const [shipName, setShipName] = useState('');
   const [region, setRegion] = useState('');
@@ -269,8 +270,8 @@ export default function WriteBusinessPost() {
         <div style={{ margin: '12px 12px 0', background: 'linear-gradient(135deg,#FF5A5F,#FF3B30)', borderRadius: '14px', padding: '14px 16px', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ fontSize: `calc(22px * var(--fs, 1))` }}>🔒</div>
           <div>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', marginBottom: '2px' }}>PRO · VIP · 마스터 전용</div>
-            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, opacity: 0.85 }}>선상 홍보글 등록은 PRO 이상 플랜만 가능합니다.</div>
+            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', marginBottom: '2px' }}>CAPTAIN · PRO · VIP 전용</div>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, opacity: 0.85 }}>선상 홍보글 등록은 제휴 선장 또는 PRO 이상만 가능합니다.</div>
           </div>
         </div>
       )}

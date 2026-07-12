@@ -48,7 +48,7 @@ export default function WritePost() {
   const canAccessPremium = useMemo(() => {
     const u = storeUser;
     if (u?.id === ADMIN_ID || u?.email === ADMIN_EMAIL) return true;
-    return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
+    return ['CAPTAIN', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
   }, [userTier, storeUser?.id, storeUser?.email]); // eslint-disable-line react-hooks/exhaustive-deps
   
   const isCaptain = useMemo(() => {
