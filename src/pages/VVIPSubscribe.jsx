@@ -65,6 +65,22 @@ const PLANS = [
       { icon: '📡', text: 'CCTV 및 해양 히트맵 확인' },
       { icon: '🤖', text: '기본 낚시 컨디션 리포트' },
     ],
+  },
+  {
+    key: 'CAPTAIN',
+    label: '제휴 선장 신청',
+    price: '1:1 문의',
+    period: '',
+    color: '#FFD700',
+    border: 'rgba(255,215,0,0.4)',
+    bg: 'rgba(255,215,0,0.08)',
+    tier: 'CAPTAIN',
+    badge: '선장 전용',
+    features: [
+      { icon: '👑', text: '낚시그램 선장 전용 황금 배지' },
+      { icon: '🌟', text: '조황 게시글 상단 우선 노출 보장' },
+      { icon: '📞', text: '전담 관리자 1:1 지원' },
+    ],
   }
 ];
 
@@ -287,6 +303,11 @@ export default function VVIPSubscribe() {
 
   /* ── 결제 버튼 클릭 ──────────────────────────────────────── */
   const handlePlanClick = useCallback((planKey) => {
+    if (planKey === 'CAPTAIN') {
+      window.location.href = '/?applyCaptain=true';
+      return;
+    }
+
     if (!user) return addToast('로그인이 필요합니다.', 'error');
     if (!isNative) return addToast('앱에서만 구독 가능합니다.', 'info');
     // ✅ storeReady state로 체크 (모듈 변수 isStoreReady() 대신)
