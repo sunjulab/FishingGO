@@ -915,10 +915,10 @@ function ForceTierPanel({ addToast }) {
           placeholder="이메일/ID/닉네임"
           style={{ padding: '11px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: '12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
         />
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'].map(t => (
-            <button key={t} onClick={() => setTier(t)} style={{ flex: 1, padding: '7px 4px', borderRadius: '10px', border: 'none', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', background: tier === t ? (t === 'FREE' ? '#FF5A5F' : '#00C48C') : 'rgba(255,255,255,0.08)', color: '#fff', transition: 'all 0.15s' }}>
-              {t === 'FREE' ? 'FREE' : t === 'BUSINESS_LITE' ? 'LITE' : t === 'PRO' ? 'PRO' : 'VIP'}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'CAPTAIN'].map(t => (
+            <button key={t} onClick={() => setTier(t)} style={{ flex: 1, padding: '7px 2px', borderRadius: '10px', border: 'none', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', background: tier === t ? (t === 'FREE' ? '#FF5A5F' : '#00C48C') : 'rgba(255,255,255,0.08)', color: '#fff', transition: 'all 0.15s' }}>
+              {t === 'FREE' ? 'FREE' : t === 'BUSINESS_LITE' ? 'LITE' : t === 'PRO' ? 'PRO' : t === 'BUSINESS_VIP' ? 'VIP' : 'CAPTAIN'}
             </button>
           ))}
         </div>
