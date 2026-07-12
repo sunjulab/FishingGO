@@ -49,13 +49,17 @@ const AD_DATA = {
 export default function KakaoAdBanner({ type = 'coupang', style = {} }) {
   const ad = AD_DATA[type];
   const images = ad.imageUrls || [ad.imageUrl];
-  // useMemo ensures the image doesn't change on re-renders, but is random on mount
-  const displayImg = React.useMemo(() => images[Math.floor(Math.random() * images.length)], []);
+  
+  // useMemo ensures the image doesn't change on re-renders, but recalculates when type changes
+  const { displayImg, targetLink } = React.useMemo(() => {
+    const img = images[Math.floor(Math.random() * images.length)];
+    const lnk = ad.links ? ad.links[Math.floor(Math.random() * ad.links.length)] : ad.link;
+    return { displayImg: img, targetLink: lnk };
+  }, [type, images, ad]);
 
   return (
     <div 
       onClick={() => {
-        const targetLink = ad.links ? ad.links[Math.floor(Math.random() * ad.links.length)] : ad.link;
         window.open(targetLink, '_blank');
       }}
       style={{ 
