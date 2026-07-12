@@ -513,7 +513,7 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
-              <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900' }}>₩9,900</div>
+              <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900' }}>₩3,300</div>
               <div style={{ fontSize: `calc(11px * var(--fs, 1))`, opacity: 0.85 }}>/월 구독</div>
             </div>
           </div>
