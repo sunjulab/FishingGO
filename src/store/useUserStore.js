@@ -4,6 +4,7 @@ import { Preferences } from '@capacitor/preferences';
 // ── 구독 티어 설정 ──────────────────────────────────────────────
 export const TIER_CONFIG = {
   FREE:           { label: null,       color: null,      bg: null,       price: 0        },
+  CAPTAIN:        { label: '선장',      color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FF9B26)', price: 0 },
   BUSINESS_LITE:  { label: 'LITE',     color: '#1A1A2E', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)', price: 9900   },
   PRO:            { label: 'PRO',      color: '#fff',    bg: 'linear-gradient(135deg, #0056D2, #003fa3)', price: 110000 },
   BUSINESS_VIP:   { label: '👑 VVIP', color: '#5C3A00', bg: 'linear-gradient(135deg, #FFD700, #FF9B26)', price: 550000 },
