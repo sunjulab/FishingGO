@@ -2316,15 +2316,44 @@ async function getMarineWeather(sid) {
     const targetLine = matched.length ? matched[matched.length - 1] : lines[lines.length - 1];
     if (!targetLine) return null;
     const cols = targetLine.trim().split(',').map(s => s.trim());
-    const wh    = parseFloat(cols[6]);  // WH 유효파고 (m)
+    let wh    = parseFloat(cols[6]);  // WH 유효파고 (m)
     const wdDeg = parseFloat(cols[7]);  // WD 풍향 (degree)
     const ws    = parseFloat(cols[8]);  // WS 풍속 (m/s)
     if (isNaN(ws) || ws <= -90 || isNaN(wh) || wh <= -90) return null;
+    
     // 풍향 도 → 방위 변환
     const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
     const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
-      logger.info(`[Marine] ${sid}(${buoyNum}) 풍속:${ws}m/s 파고:${wh}m 풍향:${wd}`);
-      return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: Math.max(0, wh) } };
+
+    // ✅ [고도화] 연안 파고 변환 엔진 (Coastal Wave Transformation)
+    // 지형적 방위와 풍향(육풍/해풍)을 계산하여 먼바다 파고를 육지 근접 파고로 정밀하게 변환합니다.
+    let reductionFactor = 0.35; // 기본 마찰 및 지형 감쇠율 (방파제/갯바위 근접 기준)
+
+    // 해안선 방향에 따른 해풍/육풍 판별
+    // 동해권 -> 바다가 동쪽에 있음 (서풍=육풍, 동풍=해풍)
+    const isEastCoast = ['DT_0001','DT_0002','DT_0003','DT_0021','DT_0033','DT_0036','DT_0099'].includes(sid);
+    // 서해권 -> 바다가 서쪽에 있음 (동풍=육풍, 서풍=해풍)
+    const isWestCoast = ['DT_0007','DT_0008','DT_0009','DT_0030'].includes(sid);
+    // 남해/제주권 -> 바다가 남쪽에 있음 (북풍=육풍, 남풍=해풍)
+    const isSouthCoast = !isEastCoast && !isWestCoast;
+
+    if (isEastCoast) {
+      if (wd.includes('W')) reductionFactor *= 0.3; // 육풍(서풍 계열): 연안 파도 상쇄 (매우 잔잔함)
+      else if (wd.includes('E')) reductionFactor *= 1.5; // 해풍(동풍 계열): 연안 파도 증폭
+    } else if (isWestCoast) {
+      if (wd.includes('E')) reductionFactor *= 0.3; // 육풍(동풍 계열): 상쇄
+      else if (wd.includes('W')) reductionFactor *= 1.5; // 해풍(서풍 계열): 증폭
+    } else if (isSouthCoast) {
+      if (wd.includes('N')) reductionFactor *= 0.3; // 육풍(북풍 계열): 상쇄
+      else if (wd.includes('S')) reductionFactor *= 1.5; // 해풍(남풍 계열): 증폭
+    }
+
+    let coastalWh = wh * reductionFactor;
+    coastalWh = Math.max(0.1, coastalWh);
+    coastalWh = parseFloat(coastalWh.toFixed(1));
+
+    logger.info(`[Marine] ${sid}(${buoyNum}) 먼바다:${wh}m -> [고도화]연안:${coastalWh}m (풍속:${ws}m/s, 풍향:${wd})`);
+    return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: coastalWh } };
     } catch (e) {
       logger.warn(`[Marine] 부이 API 실패 (${sid}/${BUOY_MAP[sid]}): ${e.message}`);
       return null;
@@ -3065,7 +3094,7 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
       subDoc = memProSubs[userId] || null;
     }
 
-    const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+    const PAID_TIERS = ['CAPTAIN', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
     const tier = user.tier || 'FREE';
     const isPaid = PAID_TIERS.includes(tier);
 
@@ -3644,7 +3673,7 @@ app.put('/api/cs/inquiry/:id/reply', async (req, res) => {
 
 // PUT /api/user/tier — 다운그레이드 방지 포함
 // 유료 구독 중인 사용자는 하위 플랜으로 변경 불가 (결제 내역 보호)
-const TIER_RANK = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
+const TIER_RANK = { FREE: 0, CAPTAIN: 0.5, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
 // 다운그레이드 불가 티어 (BUSINESS_VIP, PRO는 명시적 해지 API 없이 변경 불가)
 const PROTECTED_TIERS = ['PRO', 'BUSINESS_VIP', 'MASTER'];
 
@@ -3761,7 +3790,7 @@ app.get('/api/admin/suspicious-tiers', async (req, res) => {
   try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
 
-  const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'];
+  const PAID_TIERS = ['CAPTAIN', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'];
 
   try {
     if (!dbReady || !User || !PaymentHistory) {
@@ -3828,7 +3857,7 @@ app.post('/api/user/point-visit-check', async (req, res) => {
     }
 
     const todayKst = getKstDateString();
-    const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+    const PAID_TIERS = ['CAPTAIN', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
 
     // ─── DB 모드 ─────────────────────────────────────────────────────
     if (dbReady && User) {
@@ -5252,18 +5281,22 @@ app.get('/api/community/posts', async (req, res) => {
         Post.find(filter).sort(sortBy).skip(skip).limit(limit),
         Post.countDocuments(filter),
       ]);
-      // ✅ INSTA-P2: author_avatar 배치 enriching (N+1 방지)
+      // ✅ INSTA-P2: author_avatar 및 author_tier 배치 enriching (N+1 방지)
       const emails = [...new Set(posts.map(p => p.author_email).filter(Boolean))];
       let avatarMap = {};
+      let tierMap = {};
       if (emails.length > 0 && User) {
         try {
-          const users = await User.find({ email: { $in: emails } }, 'email avatar picture').lean();
-          users.forEach(u => { avatarMap[u.email] = u.avatar || u.picture || null; });
+          const users = await User.find({ email: { $in: emails } }, 'email avatar picture tier').lean();
+          users.forEach(u => { 
+            avatarMap[u.email] = u.avatar || u.picture || null;
+            tierMap[u.email] = u.tier || 'FREE';
+          });
         } catch (_) { /* avatar enriching 실패 무시 */ }
       }
       const enriched = posts.map(p => {
         const obj = p.toObject ? p.toObject() : p;
-        return { ...obj, author_avatar: avatarMap[obj.author_email] || null };
+        return { ...obj, author_avatar: avatarMap[obj.author_email] || null, author_tier: tierMap[obj.author_email] || 'FREE' };
       });
       return res.json({ posts: enriched, total, page, totalPages: Math.ceil(total / limit) });
     }
@@ -5291,7 +5324,16 @@ app.get('/api/community/posts/:id', async (req, res) => {
     if (dbReady && Post) {
       let post = null;
       try { post = await Post.findById(pid); } catch (castErr) { }
-      if (post) return res.json(post);
+      if (post) {
+        let obj = post.toObject ? post.toObject() : post;
+        if (User && obj.author_email) {
+          try {
+            const u = await User.findOne({ email: obj.author_email }, 'tier').lean();
+            if (u) obj.author_tier = u.tier || 'FREE';
+          } catch (_) {}
+        }
+        return res.json(obj);
+      }
     }
     const mem = memPosts.find(p => p._id === pid || p.id === pid);
     if (mem) return res.json(mem);

@@ -238,81 +238,91 @@ const calcPointSeed = (point, data) => {
  * @param {Object} data - 날씨 데이터 (sst, wind, wave, tide 등)
  * @param {Object} point - 지점 정보 (id, name, type, fish 등)
  */
-export const calculateFishingScore = (data, point = {}) => {
-  if (!data) return 45; // 데이터 없음 = 불확실 → 보수적으로
+export const calculateScoreDetails = (data, point = {}) => {
+  const details = [];
+  if (!data) return { score: 45, details: [{ factor: '데이터', text: '기상 정보 부족', score: 0 }] };
 
-  // [1] 지점 고유 시드 (포인트마다 다른 특성)
-  // ✅ 2ND-C5: calcPointSeed 유틸 사용 — evaluateFishingCondition과 공유
   const seed = calcPointSeed(point, data);
-  const microVar = ((seed % 14) - 7) / 10; // -0.7 ~ +0.7 (미세 변동 축소)
+  const microVar = ((seed % 14) - 7) / 10;
+  let score = 45 + (seed % 10) + microVar;
+  details.push({ factor: '기본환경', text: '지역 및 포인트 특성', score: Math.round(score) });
 
-
-  // [2] 베이스 점수: 45 (중립 = NORMAL 하단)
-  // 모든 날씨가 완벽해야 GOOD(75+) 도달, PERFECT(90+)는 극히 드물어야 함
-  let score = 45 + (seed % 10) + microVar; // 45~55 범위에서 시작
-
-  // [3] 풍속 보정 — 5m/s 이상부터 페널티 (기존 4m/s → 현실화: 4m/s는 낚시 지장 없는 약한 바람)
   const wind = (data.wind?.speed !== undefined && !isNaN(parseFloat(data.wind.speed))) ? parseFloat(data.wind.speed) : 5.0;
-  if      (wind > 14)  score -= 65;
-  else if (wind > 10)  score -= 40;
-  else if (wind >  8)  score -= 28;
-  else if (wind >  6)  score -= 18; // 6m/s 이상: 일반인 낚시 불편
-  else if (wind >  5)  score -= 8;  // 5~6m/s: 약간 불편 (기존 4m/s → 5m/s로 상향)
-  else if (wind <  2)  score += 12; // 무풍: 드문 최적 조건
-  else if (wind <  3)  score += 7;  // 미풍
-  else if (wind <  4)  score += 3;  // 3~4m/s: 소폭 보너스 추가
+  let wScore = 0;
+  if      (wind > 14)  wScore = -65;
+  else if (wind > 10)  wScore = -40;
+  else if (wind >  8)  wScore = -28;
+  else if (wind >  6)  wScore = -18;
+  else if (wind >  5)  wScore = -8;
+  else if (wind <  2)  wScore = +12;
+  else if (wind <  3)  wScore = +7;
+  else if (wind <  4)  wScore = +3;
+  if (wScore !== 0) details.push({ factor: '풍속', text: `${wind}m/s`, score: wScore });
+  score += wScore;
 
-  // [4] 파고 보정 — 한국 봄 연안 평균 0.5~1.0m
   const wave = (data.wave?.coastal !== undefined && !isNaN(parseFloat(data.wave.coastal))) ? parseFloat(data.wave.coastal) : 0.8;
-  if      (wave > 2.5) score -= 60;
-  else if (wave > 2.0) score -= 45;
-  else if (wave > 1.5) score -= 30;
-  else if (wave > 1.2) score -= 20;
-  else if (wave > 0.8) score -= 10; // 0.8~1.2m: 낚시 가능하나 불편
-  else if (wave < 0.3) score += 8;
-  else if (wave < 0.5) score += 4;
+  let wvScore = 0;
+  if      (wave > 2.5) wvScore = -60;
+  else if (wave > 2.0) wvScore = -45;
+  else if (wave > 1.5) wvScore = -30;
+  else if (wave > 1.2) wvScore = -20;
+  else if (wave > 0.8) wvScore = -10;
+  else if (wave < 0.3) wvScore = +8;
+  else if (wave < 0.5) wvScore = +4;
+  if (wvScore !== 0) details.push({ factor: '파고', text: `${wave}m`, score: wvScore });
+  score += wvScore;
 
-  // [5] 수온 보정
   const sst = (data.sst !== undefined && !isNaN(parseFloat(data.sst))) ? parseFloat(data.sst) : 13;
-  if      (sst < 8)               score -= 40; // 극저수온: 물고기 동면 수준
-  else if (sst < 11)              score -= 25; // 저수온: 입질 거의 없음
-  else if (sst < 14)              score -= 12; // 동해 봄: 아직 차가움
-  else if (sst < 17)              score -= 3;  // 봄 남해: 회복 중
-  else if (sst >= 17 && sst < 20) score += 10; // 최적 수온대
-  else if (sst >= 20 && sst < 26) score += 6;  // 여름 낚시 최적 (24~26도도 OK)
-  else if (sst >= 26 && sst < 29) score -= 5;  // 고수온 시작: 26도로 상향
-  else if (sst >= 29)             score -= 25; // 극고수온 쇼크
+  let sScore = 0;
+  if      (sst < 8)               sScore = -40;
+  else if (sst < 11)              sScore = -25;
+  else if (sst < 14)              sScore = -12;
+  else if (sst < 17)              sScore = -3;
+  else if (sst >= 17 && sst < 20) sScore = +10;
+  else if (sst >= 20 && sst < 26) sScore = +6;
+  else if (sst >= 26 && sst < 29) sScore = -5;
+  else if (sst >= 29)             sScore = -25;
+  if (sScore !== 0) details.push({ factor: '수온', text: `${sst}℃`, score: sScore });
+  score += sScore;
 
-  // [6] 계절 보정
-  score += getSeasonalBonus(sst);
+  const seaBonus = getSeasonalBonus(sst);
+  if (seaBonus !== 0) details.push({ factor: '계절수온', text: '시즌 적합도', score: seaBonus });
+  score += seaBonus;
 
-  // [7] 물때 보정
   const tidePhase = data.tide?.phase || '';
-  // ✅ 2ND-B7: 정규식 기반 물때 매핑 — replace 체인 취약점 보완 ('7물(사리)' → '7물' 추출)
   const tideMatch = tidePhase.match(/(\d+물)/);
   const tideKey = tideMatch ? tideMatch[1] : tidePhase;
-  score += TIDE_BONUS[tidePhase] || TIDE_BONUS[tideKey] || 0;
+  const tScore = TIDE_BONUS[tidePhase] || TIDE_BONUS[tideKey] || 0;
+  if (tScore !== 0) details.push({ factor: '물때', text: tidePhase || tideKey || '보통', score: tScore });
+  score += tScore;
 
+  const nScore = getNightBonus(point);
+  if (nScore !== 0) details.push({ factor: '시간대', text: '야간 낚시', score: nScore });
+  score += nScore;
 
-  // [8] 야간 보정
-  score += getNightBonus(point);
+  const typeScore = getTypeBonus(point.type, wind);
+  if (typeScore !== 0) details.push({ factor: '지형', text: point.type || '알수없음', score: typeScore });
+  score += typeScore;
 
-  // [9] 지점 유형 보정
-  score += getTypeBonus(point.type, wind);
+  return { score: Math.min(100, Math.max(5, Math.round(score))), details };
+};
 
-  return Math.min(100, Math.max(5, Math.round(score)));
+export const calculateFishingScore = (data, point = {}) => {
+  return calculateScoreDetails(data, point).score;
 };
 
 /**
  * 낚시 조건 종합 평가
  */
 export const evaluateFishingCondition = (data, point = {}) => {
-  const score = calculateFishingScore(data, point);
+  const resultObj = calculateScoreDetails(data, point);
+  const score = resultObj.score;
+  const details = resultObj.details;
   // ✅ 2ND-C5: calcPointSeed 유틸 사용 — calculateFishingScore와 seed 공유
   const seed = calcPointSeed(point, data);
 
 
-  let result = { score, color: '#8e8e93', status: 'NORMAL', advice: '', tags: [], gear: '', fishAlert: null };
+  let result = { score, details, color: '#8e8e93', status: 'NORMAL', advice: '', tags: [], gear: '', fishAlert: null };
 
   // ── 동적 멘트 생성 (수온·파고·풍속·물때·어종·시간·계절 반영) ──
   // [v2.1] 계절 어종 우선 → point.fish → data.fish 순서로 결정

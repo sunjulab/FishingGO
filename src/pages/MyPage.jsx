@@ -36,7 +36,7 @@ const safeLS = {
 const DEFAULT_NOTI = { score: true, comm: true, chat: true, nightMode: true };
 
 // ✅ TIER-PROTECT: 티어 우선순위 맵 (0=무료, 4=마스터) — 컨포넌트 외부 상수
-const TIER_RANK_CLIENT = { FREE: 0, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
+const TIER_RANK_CLIENT = { FREE: 0, CAPTAIN: 0.5, BUSINESS_LITE: 1, PRO: 2, BUSINESS_VIP: 3, MASTER: 4 };
 const PROTECTED_TIERS_CLIENT = ['PRO', 'BUSINESS_VIP', 'MASTER'];
 
 
@@ -1336,10 +1336,11 @@ export default function MyPage() {
 
               {showModal === 'premium' && (() => {
                 const planNames = {
-                  FREE: '무료',
-                  BUSINESS_LITE: 'Business Lite',
-                  PRO: 'PRO',
-                  BUSINESS_VIP: 'Business VIP',
+                  FREE: '무료 (비회원/일반)',
+                  CAPTAIN: '제휴 선장',
+                  BUSINESS_LITE: 'PRO',
+                  PRO: 'PRO (기존)',
+                  BUSINESS_VIP: 'VVIP (기존)',
                 };
                 const isFree = userTier === 'FREE';
                 const PLANS = [
@@ -1355,35 +1356,14 @@ export default function MyPage() {
                   },
                   {
                     tier: 'BUSINESS_LITE',
-                    name: 'Business Lite',
-                    price: '₩9,900/월',
-                    badge: 'LITE',
-                    badgeColor: '#1A1A2E',
-                    badgeBg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)',
-                    features: ['무료 기능 전체 포함', '게시글·크루 등록 시 광고 없음', 'CCTV · 히트맵 · 비밀 포인트 열람', '비즈니스 파트너 센터 이용'],
-                    highlight: false,
-                  },
-                  {
-                    tier: 'PRO',
-                    name: 'PRO',
-                    price: '₩110,000/월',
+                    name: 'PRO 멤버십',
+                    price: '₩3,300/월',
                     badge: 'PRO',
                     badgeColor: '#fff',
                     badgeBg: 'linear-gradient(135deg, #0056D2, #003fa3)',
-                    features: ['Lite 기능 전체 포함', '선상 홍보글 작성 가능', '조과 갤러리 우선 노출', '전담 PRO 고객지원'],
+                    features: ['앱 내 모든 광고 영구 제거', 'AI 컨디션 심층 리포트 개방', '커뮤니티 PRO 전용 금장 배지', '비밀 낚시 포인트 25곳', '실시간 해양 히트맵'],
                     highlight: true,
-                  },
-                  {
-                    tier: 'BUSINESS_VIP',
-                    name: 'Business VIP',
-                    price: '₩550,000/월',
-                    badge: '👑 VVIP',
-                    badgeColor: '#5C3A00',
-                    badgeBg: 'linear-gradient(135deg, #FFD700, #FF9B26)',
-                    features: ['PRO 기능 전체 포함', '항구 독점 상단 고정 광고', 'VIP 전용 1:1 운영자 채널', '월별 정산 리포트 제공'],
-                    highlight: false,
-                    exclusive: true,
-                  },
+                  }
                 ];
                 return (
                   <>

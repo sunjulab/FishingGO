@@ -50,6 +50,13 @@ export default function WritePost() {
     if (u?.id === ADMIN_ID || u?.email === ADMIN_EMAIL) return true;
     return ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'].includes(userTier);
   }, [userTier, storeUser?.id, storeUser?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  const isCaptain = useMemo(() => {
+    const u = storeUser;
+    if (u?.id === ADMIN_ID || u?.email === ADMIN_EMAIL || userTier === 'MASTER') return true;
+    return userTier === 'CAPTAIN';
+  }, [userTier, storeUser?.id, storeUser?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ✅ 16TH-B1: user 전체 구독 제거 — user 객체를 별도 셀렉터로 분리
   const user = useUserStore((state) => state.user);
   // ✅ FIX-ADMIN: isAdmin 4중 보장 (id/email-gmail/email-id/tier)
@@ -62,6 +69,14 @@ export default function WritePost() {
   const isNoticeType = postType === 'notice';
   const isBusinessLite = canAccessPremium;
   const isEditMode = !!editId;
+
+  // 권한 없는 선상 배 홍보글 작성 시도 차단
+  useEffect(() => {
+    if (postType === 'business' && !isCaptain) {
+      addToast('선장 권한이 필요한 기능입니다. 낚시GO 관리자에게 입점 문의를 해주세요.', 'error');
+      navigate('/community', { replace: true });
+    }
+  }, [postType, isCaptain, navigate, addToast]);
 
   // 수정 모드: 기존 데이터 불러오기
   useEffect(() => {
@@ -233,8 +248,8 @@ export default function WritePost() {
       </div>
 
       <div style={{ padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }}>
-        {/* 구독 혜택 배너 — 비즈니스라이트 미구독자에게만 표시 */}
-        {!isBusinessLite && (
+        {/* 구독 혜택 배너 — 비결제자에게만 표시 */}
+        {!isBusinessLite && postType !== 'business' && (
           <div
             onClick={handleSubscribe}
             style={{
@@ -245,10 +260,10 @@ export default function WritePost() {
               boxShadow: '0 4px 12px rgba(0,86,210,0.2)'
             }}
           >
-            <div style={{ fontSize: `calc(24px * var(--fs, 1))` }}>👑</div>
+            <div style={{ fontSize: `calc(24px * var(--fs, 1))` }}>💎</div>
             <div>
-              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>비즈니스 라이트 — 월 ₩9,900</div>
-              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.85)' }}>광고 없이 무제한 등록 (홍보글 제외)</div>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>PRO 멤버십 — 월 ₩3,300</div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.85)' }}>광고 영구 제거 및 심층 낚시 분석 리포트 열람</div>
             </div>
             <div style={{ marginLeft: 'auto', fontSize: `calc(18px * var(--fs, 1))` }}>›</div>
           </div>

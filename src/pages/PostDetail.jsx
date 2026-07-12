@@ -382,6 +382,12 @@ export default function PostDetail() {
                   onClick={() => navigate(`/user/${encodeURIComponent(post.author)}`)}
                   style={{ fontWeight: '950', fontSize: `calc(15px * var(--fs, 1))`, color: '#1A1A2E', cursor: 'pointer' }}
                 >{post.author}</span>
+                {post.author_tier === 'CAPTAIN' && (
+                  <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#B8860B', background: '#FFF8DC', padding: '2px 6px', borderRadius: '4px', border: '1px solid #DAA520' }}>선장</span>
+                )}
+                {(post.author_tier === 'BUSINESS_LITE' || post.author_tier === 'PRO' || post.author_tier === 'BUSINESS_VIP') && (
+                  <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#fff', background: 'linear-gradient(135deg, #0056D2, #003fa3)', padding: '2px 6px', borderRadius: '4px' }}>PRO</span>
+                )}
                 <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '2px 8px', borderRadius: '6px', background: `${categoryColor}18`, color: categoryColor }}>{post.category}</span>
               </div>
               <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#AAB0BE', fontWeight: '700', marginTop: '2px' }}>{timeAgo(post.createdAt)}</div>

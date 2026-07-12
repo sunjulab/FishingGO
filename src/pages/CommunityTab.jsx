@@ -1197,6 +1197,12 @@ export default function CommunityTab() {
                             <span style={{ fontSize: `calc(11px * var(--fs, 1))`, backgroundColor: 'rgba(0,86,210,0.08)', color: '#0056D2', padding: '2px 7px', borderRadius: '6px', fontWeight: '800' }}>{post.category}</span>
                             <strong onClick={(e) => { e.stopPropagation(); navigate(`/user/${encodeURIComponent(post.author)}`); }}
                               style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#1c1c1e', cursor: 'pointer' }}>{post.author}</strong>
+                            {post.author_tier === 'CAPTAIN' && (
+                              <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#B8860B', background: '#FFF8DC', padding: '2px 6px', borderRadius: '4px', border: '1px solid #DAA520' }}>선장</span>
+                            )}
+                            {(post.author_tier === 'BUSINESS_LITE' || post.author_tier === 'PRO' || post.author_tier === 'BUSINESS_VIP') && (
+                              <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#fff', background: 'linear-gradient(135deg, #0056D2, #003fa3)', padding: '2px 6px', borderRadius: '4px' }}>PRO</span>
+                            )}
                           </div>
                           {post.location?.address && (
                             <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '1px' }}>

@@ -898,6 +898,37 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                     </div>
                   </div>
 
+                  {/* AI 컨디션 심층 리포트 (PRO 전용) */}
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${cond.color}20` }}>
+                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: cond.color, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🧠 AI 심층 분석 리포트
+                    </div>
+                    {canAccessPremium ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        {cond.details && cond.details.map((detail, i) => (
+                          <div key={i} style={{ background: '#F8F9FC', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800' }}>{detail.factor}</span>
+                              <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: detail.score > 0 ? '#00C48C' : detail.score < 0 ? '#FF3B30' : '#8E8E93' }}>
+                                {detail.score > 0 ? `+${detail.score}` : detail.score}점
+                              </span>
+                            </div>
+                            <div style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', color: '#1A1A2E' }}>{detail.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ background: 'linear-gradient(135deg, rgba(0,86,210,0.05), rgba(0,150,255,0.05))', borderRadius: '12px', padding: '20px', textAlign: 'center', border: '1px solid rgba(0,86,210,0.1)' }}>
+                        <div style={{ fontSize: `calc(24px * var(--fs, 1))`, marginBottom: '8px' }}>🔒</div>
+                        <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginBottom: '4px' }}>심층 분석은 PRO 멤버십 전용입니다</div>
+                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700', marginBottom: '12px' }}>풍속, 파고, 수온에 따른 정확한 점수 증감 원인을 확인하세요.</div>
+                        <button onClick={() => navigate('/subscribe')} style={{ background: 'linear-gradient(135deg, #0056D2, #003fa3)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}>
+                          PRO 알아보기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* 쇼핑 아이템 추천 영역 */}
                   {Array.isArray(shoppingItems) && shoppingItems.length > 0 && (
                     <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed rgba(0,0,0,0.06)' }}>
