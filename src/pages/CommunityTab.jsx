@@ -355,7 +355,7 @@ export default function CommunityTab() {
   }, [crews, crewSearch]);
 
   // 2. 글쓰기/방만들기 권한 로직 (보상형 광고 및 방장 등급 체크)
-  const handleFabClick = () => {
+  const handleFabClick = async () => {
     if (user?.id === 'GUEST') {
       addToast("로그인이 필요한 기능입니다. 마이페이지에서 로그인해주세요.", "error");
       return;
@@ -371,10 +371,22 @@ export default function CommunityTab() {
     } else if (activeTab === 'business') {
       if (!canAccessBusinessPromo) {
         addToast('선상 홍보글은 제휴 선장(CAPTAIN), PRO 또는 항구 독점 VVIP 보유자만 작성 가능합니다. 구독 페이지로 이동합니다.', 'error');
-        // ✅ 3RD-A5: setTimeout navigate race condition 제거 — 즉시 이동으로 대체
         navigate('/vvip-subscribe');
       } else {
-        addToast('선장님 환영합니다! 및 비즈니스 홍보글을 작성합니다.', 'success');
+        // ✅ CAPTAIN 스마트 라우팅: 기존 홍보글 있으면 수정 페이지로, 없으면 신규 작성으로
+        if (userTier === 'CAPTAIN') {
+          try {
+            const res = await apiClient.get('/api/business/my-posts');
+            const myPosts = res.data || [];
+            if (myPosts.length > 0) {
+              const existingId = myPosts[0]._id || myPosts[0].id;
+              addToast('기존 홍보글을 수정합니다. (선장은 1개 글만 운영 가능)', 'info');
+              navigate(`/write-business?editId=${existingId}`);
+              return;
+            }
+          } catch { /* 조회 실패 시 신규 작성으로 진입 */ }
+        }
+        addToast('선장님 환영합니다! 선상 홍보글을 작성합니다.', 'success');
         navigate('/write-business');
       }
     } else if (activeTab === 'notice') {

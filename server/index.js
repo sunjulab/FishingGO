@@ -6542,19 +6542,21 @@ app.post('/api/community/business', async (req, res) => {
       const isIapExpired = dbUser?.iapExpiresAt && new Date(dbUser.iapExpiresAt) < new Date();
       const effectiveTier = isIapExpired ? 'FREE' : actualTier;
 
-      if (!['PRO', 'BUSINESS_VIP'].includes(effectiveTier)) {
+      // ✅ CAPTAIN 등급 추가: 제휴 선장도 선상홍보글 작성 가능
+      const ALLOWED_WRITE_TIERS = ['CAPTAIN', 'PRO', 'BUSINESS_VIP'];
+      if (!ALLOWED_WRITE_TIERS.includes(effectiveTier)) {
         return res.status(403).json({
-          error: 'PRO 또는 VVIP 구독자만 선상홍보글을 작성할 수 있습니다.',
+          error: '제휴 선장(CAPTAIN), PRO, 또는 VVIP 구독자만 선상홍보글을 작성할 수 있습니다.',
           code: 'SUBSCRIPTION_REQUIRED',
         });
       }
 
-      // 1인 1게시글 제한
+      // ✅ 1인 1게시글 제한 — CAPTAIN 포함 모든 등급 적용
       if (dbReady && BusinessPost) {
         const existing = await BusinessPost.findOne({ author_email }).catch(() => null);
         if (existing) {
           return res.status(409).json({
-            error: '이미 등록된 홍보글이 있습니다. 수정 기능을 이용해주세요.',
+            error: '이미 등록된 홍보글이 있습니다. 기존 글을 수정해주세요.',
             code: 'DUPLICATE_BUSINESS_POST',
             existingId: existing._id.toString(),
           });
@@ -6563,18 +6565,20 @@ app.post('/api/community/business', async (req, res) => {
         const existing = memBusinessPosts.find(p => p.author_email === author_email);
         if (existing) {
           return res.status(409).json({
-            error: '이미 등록된 홍보글이 있습니다. 수정 기능을 이용해주세요.',
+            error: '이미 등록된 홍보글이 있습니다. 기존 글을 수정해주세요.',
             code: 'DUPLICATE_BUSINESS_POST',
             existingId: existing.id || existing._id,
           });
         }
       }
 
-      // ✅ VVIP 지역 제한 검증 (기존 로직 — dbUser 재사용)
-      const vvipHarborId = (effectiveTier === 'BUSINESS_VIP' && dbUser?.vvipHarborId) ? dbUser.vvipHarborId : null;
+      // ✅ 전국 지역은 마스터 전용 (CAPTAIN 포함 모든 일반 등급 제한)
       if (region === '전국 (전체)') {
         return res.status(403).json({ error: "'전국 (전체)' 지역은 마스터 전용입니다.", code: 'GLOBAL_REGION_FORBIDDEN' });
       }
+
+      // ✅ VVIP 지역 제한 검증 (CAPTAIN은 지역 제한 없음, VVIP만 적용)
+      const vvipHarborId = (effectiveTier === 'BUSINESS_VIP' && dbUser?.vvipHarborId) ? dbUser.vvipHarborId : null;
       if (vvipHarborId) {
         const harborKey = HARBOR_KEY_MAP[vvipHarborId];
         if (harborKey && region && region !== '전국 (전체)' && !region.startsWith(harborKey)) {

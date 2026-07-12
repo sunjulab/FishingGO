@@ -94,6 +94,24 @@ export default function WriteBusinessPost() {
   const generateTimerRef = useRef(null); // ✅ 19TH-B2: AI 생성 타이머 ref — 언마운트 후 setState 방지
   const isMountedRef = useRef(true); // ✅ BUG-8 FIX: 언마운트 후 setState 방지
 
+  // ✅ CAPTAIN: 신규 글쓰기 진입 시 이미 등록된 홍보글 있으면 수정 모드로 자동 리다이렉트
+  useEffect(() => {
+    if (isEditMode || !isCaptain) return; // 수정모드이거나 CAPTAIN 아니면 무시
+    let cancelled = false;
+    apiClient.get('/api/business/my-posts')
+      .then(res => {
+        if (cancelled || !isMountedRef.current) return;
+        const posts = res.data || [];
+        if (posts.length > 0) {
+          const existingId = posts[0]._id || posts[0].id;
+          addToast('기존 홍보글이 있습니다. 수정 페이지로 이동합니다.', 'info');
+          navigate(`/write-business?editId=${existingId}`, { replace: true });
+        }
+      })
+      .catch(() => {}); // 실패해도 무시 (언제나 새로 작성 가능)
+    return () => { cancelled = true; };
+  }, [isCaptain, isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ✅ BUG-FIX: isReady phone 최소 9자리 → 8자리로 완화 (1588-XXXX 등 8자리 대표번호 허용, handlePostClick과 일치)
   const isReady = shipName.trim() && region && boatType && targetFish.trim() && price.trim() && schedule.trim()
     && String(capacity).trim() !== ''
@@ -178,8 +196,7 @@ export default function WriteBusinessPost() {
 
   const handlePostClick = () => {
     if (!canWrite) {
-      addToast('⚠️ 선상 홍보글은 PRO · VIP · 마스터만 등록 가능합니다.', 'error');
-      // ENH6-C4: 불필요한 setTimeout(1500) 제거 — toast 후 즉시 navigate
+      addToast('⚠️ 선상 홍보글은 제휴 선장(CAPTAIN), PRO, VVIP만 등록 가능합니다.', 'error');
       navigate('/community');
       return;
     }
