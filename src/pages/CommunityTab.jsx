@@ -1568,7 +1568,7 @@ export default function CommunityTab() {
                   
                   {/* ✅ INSTA-AD: 게시글 1개마다 쿠팡/알리 배너 번갈아 노출 (100점짜리 수익화 전략) */}
                   <div style={{ marginBottom: '12px' }}>
-                    <KakaoAdBanner type={index % 2 === 0 ? 'coupang' : 'ali'} />
+                    <KakaoAdBanner type={index % 2 === 0 ? 'coupang' : 'ali'} style={{ margin: 0 }} />
                   </div>
                   
                   {/* ✅ ADSENSE 대체: 5번째마다 자체 선상배 홍보글 삽입 */}

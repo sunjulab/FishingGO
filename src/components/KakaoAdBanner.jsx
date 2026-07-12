@@ -6,7 +6,7 @@ const AD_DATA = {
     title: '로켓배송 오늘주문 내일도착',
     badge: 'AD',
     provider: 'Appier',
-    imageUrl: '/shop-images/reel.png',
+    imageUrls: ['/shop-images/reel.png', '/shop-images/rod.png', '/shop-images/line.png', '/shop-images/tackle.png', '/shop-images/hooks.png'],
     links: [
       'https://link.coupang.com/a/fj9wDlMOE8',
       'https://link.coupang.com/a/fj9zrP7SLc',
@@ -39,15 +39,18 @@ const AD_DATA = {
     title: '글로벌 낚시용품 직구\n최대 80% 할인',
     badge: 'AD',
     provider: 'Appier',
-    imageUrl: '/shop-images/lures.png', // Typical ali item img
+    imageUrls: ['/shop-images/lures.png', '/shop-images/hooks.png', '/shop-images/line.png'],
     link: 'https://s.click.aliexpress.com/e/_Dk12345', // Replace with real affiliate link
     brandColor: '#FFF0ED',
     textColor: '#FF4747'
   }
 };
 
-export default function KakaoAdBanner({ type = 'coupang' }) {
+export default function KakaoAdBanner({ type = 'coupang', style = {} }) {
   const ad = AD_DATA[type];
+  const images = ad.imageUrls || [ad.imageUrl];
+  // useMemo ensures the image doesn't change on re-renders, but is random on mount
+  const displayImg = React.useMemo(() => images[Math.floor(Math.random() * images.length)], []);
 
   return (
     <div 
@@ -67,7 +70,8 @@ export default function KakaoAdBanner({ type = 'coupang' }) {
         justifyContent: 'space-between',
         position: 'relative',
         overflow: 'hidden',
-        margin: '12px 16px 0' // Default margin matching DashboardView padding
+        margin: '12px 16px 0', // Default margin matching DashboardView padding
+        ...style // Override margin if passed
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 2 }}>
@@ -92,7 +96,7 @@ export default function KakaoAdBanner({ type = 'coupang' }) {
       {/* Right-side image covering the right edge like Kakao */}
       <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '135px', zIndex: 1 }}>
         <img 
-          src={ad.imageUrl} 
+          src={displayImg} 
           alt="광고상품" 
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
         />
