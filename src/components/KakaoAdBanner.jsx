@@ -3,7 +3,7 @@ import React from 'react';
 const AD_DATA = {
   coupang: {
     iconText: '쿠팡 앱에서 구매하기 >',
-    title: '선상/갯바위 낚시 필수템!\n특가 득템 찬스',
+    title: '로켓배송 오늘주문 내일도착',
     badge: 'AD',
     provider: 'Appier',
     imageUrl: 'https://images.unsplash.com/photo-1544281679-052a514d88e6?q=80&w=400&auto=format&fit=crop',
