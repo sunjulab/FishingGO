@@ -61,9 +61,10 @@ const PLANS = [
     tier: 'BUSINESS_LITE',
     badge: '인기',
     features: [
-      { icon: '🚫', text: '앱 내 모든 광고 영구 제거' },
+      { icon: '🚫', text: '보상형 광고 제거' },
+      { icon: '👑', text: 'PRO 닉네임 뱃지 제공' },
       { icon: '📡', text: 'CCTV 및 해양 히트맵 확인' },
-      { icon: '🤖', text: '기본 낚시 컨디션 리포트' },
+      { icon: '🤖', text: 'AI 낚시 컨디션 심층 리포트' },
     ],
   },
   {

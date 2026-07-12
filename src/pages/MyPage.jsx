@@ -1368,7 +1368,7 @@ export default function MyPage() {
                     badge: 'PRO',
                     badgeColor: '#fff',
                     badgeBg: 'linear-gradient(135deg, #0056D2, #003fa3)',
-                    features: ['앱 내 모든 광고 영구 제거', 'CCTV 및 해양 히트맵 확인', '기본 낚시 컨디션 리포트'],
+                    features: ['보상형 광고 제거', 'PRO 닉네임 뱃지 제공', 'CCTV 및 해양 히트맵 확인', 'AI 낚시 컨디션 심층 리포트'],
                     highlight: true,
                   },
                   {
