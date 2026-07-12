@@ -5,7 +5,7 @@ const AD_DATA = {
     iconText: '쿠팡 앱에서 구매하기 >',
     title: '선상/갯바위 낚시 필수템!\n특가 득템 찬스',
     badge: 'AD',
-    provider: '쿠팡 파트너스',
+    provider: 'Appier',
     imageUrl: 'https://image9.coupangcdn.com/image/retail/images/2020/09/24/11/1/32be2476-79ba-47f6-9dd1-e4f8d6728cba.jpg',
     link: 'https://coupa.ng/cDqBvN', // Replace with real affiliate link
     brandColor: '#EBF2FF',
@@ -15,7 +15,7 @@ const AD_DATA = {
     iconText: 'AliExpress 특가 보기 >',
     title: '글로벌 낚시용품 직구\n최대 80% 할인',
     badge: 'AD',
-    provider: 'AliExpress',
+    provider: 'Appier',
     imageUrl: 'https://ae01.alicdn.com/kf/S1b0f5cd5a19842a2b0287ffdbb3086eb1/2-1.png', // Typical ali item img
     link: 'https://s.click.aliexpress.com/e/_Dk12345', // Replace with real affiliate link
     brandColor: '#FFF0ED',
