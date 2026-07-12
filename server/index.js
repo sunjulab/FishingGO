@@ -1036,7 +1036,7 @@ const runIapExpiryCheck = async () => {
     const now = new Date();
     // 만료된 유료 구독자 조회 (FREE가 아닌 + 만료일 지남)
     const expiredUsers = await User.find({
-      tier: { $nin: ['FREE', 'MASTER'] },
+      tier: { $nin: ['FREE', 'MASTER', 'CAPTAIN'] },
       $or: [
         { iapExpiresAt: { $ne: null, $lt: now } },
         { subscriptionExpiresAt: { $ne: null, $lt: now }, iapExpiresAt: null },
@@ -3098,8 +3098,8 @@ app.get('/api/payment/subscription/:userId', async (req, res) => {
     const tier = user.tier || 'FREE';
     const isPaid = PAID_TIERS.includes(tier);
 
-    // 만료일 체크
-    if (isPaid && user.subscriptionExpiresAt) {
+    // 만료일 체크 (CAPTAIN, MASTER는 자동 만료 대상 아님)
+    if (isPaid && user.subscriptionExpiresAt && !['CAPTAIN', 'MASTER'].includes(tier)) {
       const expiry = new Date(user.subscriptionExpiresAt);
       if (expiry < new Date()) {
         if (dbReady && User) {
@@ -3790,7 +3790,7 @@ app.get('/api/admin/suspicious-tiers', async (req, res) => {
   try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
   if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
 
-  const PAID_TIERS = ['CAPTAIN', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP'];
+  const PAID_TIERS = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP']; // CAPTAIN은 수동 권한이므로 의심 목록에서 제외
 
   try {
     if (!dbReady || !User || !PaymentHistory) {
@@ -7622,7 +7622,7 @@ app.get('/api/pro/status', (req, res) => {
     delete proSubscriptions[userId];
     saveProSubs();
     // ✅ FIX-MEDIUM: User DB tier FREE 초기화 (서버 재시작 시 만료 유저 tier 복원 방지)
-    if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }] }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
+    if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }], tier: { $nin: ['CAPTAIN', 'MASTER'] } }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
     return res.json({
       tier: 'FREE', isActive: false,
       reason: 'expired',
@@ -7653,7 +7653,7 @@ app.delete('/api/pro/cancel', (req, res) => {
     delete proSubscriptions[userId];
     saveProSubs();
     // ✅ FIX-MEDIUM: 관리자 강제 해지 시 User DB tier FREE 초기화
-    if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }] }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
+    if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: userId }, { id: userId }], tier: { $nin: ['CAPTAIN', 'MASTER'] } }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
     res.json({ success: true, message: `${userId} PRO 구독 해지 완료` });
   } else {
     res.status(404).json({ error: '해당 유저의 PRO 구독이 없습니다.' });
@@ -7671,7 +7671,7 @@ setInterval(() => {
       const _cleanedUserId = userId; // ✅ FIX-LOW: PRO cron User DB 초기화용
       delete proSubscriptions[userId];
       cleaned++;
-      if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: _cleanedUserId }, { id: _cleanedUserId }] }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
+      if (dbReady && User) { User.findOneAndUpdate({ $or: [{ email: _cleanedUserId }, { id: _cleanedUserId }], tier: { $nin: ['CAPTAIN', 'MASTER'] } }, { $set: { tier: 'FREE', subscriptionExpiresAt: null } }).catch(() => {}); }
     }
   });
   if (cleaned > 0) { saveProSubs(); logger.info(`[PRO 클린업] ${cleaned}개 만료 구독 제거`); } // ✅ 22TH-B1
@@ -8666,7 +8666,7 @@ async function processSubscription(sub) {
       // 3회 실패 시 유저 tier FREE로 강등
       if (newStatus === 'failed') {
         await User?.findOneAndUpdate(
-          { $or: [{ email: sub.userId }, { id: sub.userId }] },
+          { $or: [{ email: sub.userId }, { id: sub.userId }], tier: { $nin: ['CAPTAIN', 'MASTER'] } },
           { tier: 'FREE', subscriptionExpiresAt: null }
         ).catch(() => { });
       }
@@ -8895,7 +8895,7 @@ app.delete('/api/payment/subscription/:userId', async (req, res) => {
       );
       // 유저 tier FREE로 강등
       await User?.findOneAndUpdate(
-        { $or: [{ email: userId }, { id: userId }] },
+        { $or: [{ email: userId }, { id: userId }], tier: { $nin: ['CAPTAIN', 'MASTER'] } },
         { tier: 'FREE', subscriptionExpiresAt: null }
       ).catch(() => { });
     } else {
@@ -8982,15 +8982,17 @@ async function checkSubscriptionValid(req, res, next) {
 
     // DB에서 만료 여부 확인
     let expiredAt = null;
+    let tier = 'FREE';
     if (dbReady && User) {
       const u = await User.findOne({ $or: [{ email: userId }, { id: userId }] }, 'subscriptionExpiresAt tier').lean().catch(() => null);
       if (u?.subscriptionExpiresAt) expiredAt = new Date(u.subscriptionExpiresAt);
+      if (u?.tier) tier = u.tier;
     }
-    if (expiredAt && expiredAt < new Date()) {
+    if (expiredAt && expiredAt < new Date() && !['CAPTAIN', 'MASTER'].includes(tier)) {
       // 만료 → tier 강등
       if (dbReady && User) {
         await User.findOneAndUpdate(
-          { $or: [{ email: userId }, { id: userId }] },
+          { $or: [{ email: userId }, { id: userId }], tier: { $nin: ['CAPTAIN', 'MASTER'] } },
           { tier: 'FREE', subscriptionExpiresAt: null }
         ).catch(() => { });
       }
