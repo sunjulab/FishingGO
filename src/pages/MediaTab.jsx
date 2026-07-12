@@ -244,18 +244,18 @@ export default function MediaTab() {
 
       {/* 전체화면 모달 */}
       {selectedVideo && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10001, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 9999, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10001, background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)', pointerEvents: 'none' }}>
             <div style={{ color: '#fff', flex: 1, paddingRight: '12px' }}>
               <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', color: '#60a5fa', marginBottom: '4px' }}>{selectedVideo.channelTitle}</div>
               <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900' }}>{selectedVideo.title}</div>
             </div>
-            <button onClick={() => setSelectedVideo(null)} style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}>
+            <button onClick={() => setSelectedVideo(null)} style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', pointerEvents: 'auto' }}>
               <X size={22} />
             </button>
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <iframe style={{ width: '100vw', height: '56.25vw', maxHeight: '85vh', border: 'none' }}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '80px', minHeight: '100vh' }}>
+            <iframe style={{ width: '100vw', height: '56.25vw', maxHeight: '75vh', border: 'none' }}
               src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
             <button onClick={() => window.open(`https://www.youtube.com/watch?v=${selectedVideo.youtubeId}`, '_blank')}
