@@ -6,7 +6,7 @@ const AD_DATA = {
     title: '로켓배송 오늘주문 내일도착',
     badge: 'AD',
     provider: 'Appier',
-    imageUrl: 'https://images.unsplash.com/photo-1544281679-052a514d88e6?q=80&w=400&auto=format&fit=crop',
+    imageUrl: '/shop-images/reel.png',
     links: [
       'https://link.coupang.com/a/fj9wDlMOE8',
       'https://link.coupang.com/a/fj9zrP7SLc',
@@ -39,7 +39,7 @@ const AD_DATA = {
     title: '글로벌 낚시용품 직구\n최대 80% 할인',
     badge: 'AD',
     provider: 'Appier',
-    imageUrl: 'https://images.unsplash.com/photo-1551327178-5c4dbba196a6?q=80&w=400&auto=format&fit=crop', // Typical ali item img
+    imageUrl: '/shop-images/lures.png', // Typical ali item img
     link: 'https://s.click.aliexpress.com/e/_Dk12345', // Replace with real affiliate link
     brandColor: '#FFF0ED',
     textColor: '#FF4747'
