@@ -1547,8 +1547,9 @@ export default function MapHome() {
         {/* ── 쿨타임 기반 포인트 진입 광고 게이트 모달 ── */}
         {showPointAdGate && (
           <RewardGateModal 
+            isOpen={showPointAdGate}
             onClose={() => { setShowPointAdGate(false); setPendingPoint(null); }}
-            onComplete={() => {
+            onRewardComplete={() => {
               setShowPointAdGate(false);
               resetPointAdCount(); // 광고 시청 시 쿨타임 리셋
               if (pointAdContext === 'map_enter') {
