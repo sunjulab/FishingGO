@@ -10,6 +10,7 @@ import apiClient from '../api/index';
 import SkeletonCard from '../components/SkeletonCard';
 import { NativeAd } from '../components/AdUnit';
 import { AdSenseDisplay, AdSenseInFeed } from '../components/ads/AdSenseAd';
+import KakaoAdBanner from '../components/KakaoAdBanner';
 // NativeAdService 제거됨 (네이티브 광고 기능 삭제)
 import ImageGallery from '../components/ImageGallery';
 import StorySlider from '../components/StorySlider';
@@ -1565,6 +1566,10 @@ export default function CommunityTab() {
                     )}
                   </div>
                   
+                  {/* ✅ INSTA-AD: 게시글 1개마다 쿠팡/알리 배너 번갈아 노출 (100점짜리 수익화 전략) */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <KakaoAdBanner type={index % 2 === 0 ? 'coupang' : 'ali'} />
+                  </div>
                   
                   {/* ✅ ADSENSE 대체: 5번째마다 자체 선상배 홍보글 삽입 */}
                   {businessPosts.length > 0 && (index + 1) % 5 === 0 && (
