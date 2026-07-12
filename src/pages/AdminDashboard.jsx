@@ -218,6 +218,7 @@ export default function AdminDashboard() {
                   ['PRO',           '프로',           '#00C48C'],
                   ['BUSINESS_VIP',  'VIP',            '#FFD700'],
                   ['MASTER',        '마스터',         '#FF9B26'],
+                  ['CAPTAIN',       '캡틴',           '#00C48C'],
                 ].map(([tier, label, color]) => {
                   const cnt = userStats.tierBreakdown[tier] || 0;
                   const pct = userStats.totalUsers > 0 ? Math.round(cnt / userStats.totalUsers * 100) : 0;
@@ -235,11 +236,11 @@ export default function AdminDashboard() {
                   );
                 })}
                 {/* DB 원시 티어 디버그 — 예상 밖의 티어명 발견 시 표시 */}
-                {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r)) && (
+                {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r)) && (
                   <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                     <div style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ DB 원시 티어 (정규화 필요)</div>
                     {Object.entries(userStats.rawTiers)
-                      .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER'].includes(r))
+                      .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r))
                       .map(([raw, cnt]) => (
                         <div key={raw} style={{ fontSize: `calc(9px * var(--fs, 1))`, color: 'rgba(255,100,100,0.7)', fontWeight: '700' }}>{raw}: {cnt}명</div>
                       ))

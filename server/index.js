@@ -827,9 +827,10 @@ app.get('/api/admin/user-stats', async (req, res) => {
       'PRO': 'PRO', 'pro': 'PRO',
       'VIP': 'BUSINESS_VIP', 'vip': 'BUSINESS_VIP', 'VVIP': 'BUSINESS_VIP',
       'BUSINESS_VIP': 'BUSINESS_VIP', 'VVIP_VIP': 'BUSINESS_VIP',
+      'CAPTAIN': 'CAPTAIN', 'captain': 'CAPTAIN',
       'MASTER': 'MASTER', 'master': 'MASTER', 'ADMIN': 'MASTER',
     };
-    const STANDARD_TIERS = ['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+    const STANDARD_TIERS = ['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'CAPTAIN', 'MASTER'];
 
     const now = new Date();
     const online5m  = new Date(now - 5 * 60 * 1000);
@@ -838,7 +839,7 @@ app.get('/api/admin/user-stats', async (req, res) => {
 
     let s = {
       totalUsers: 0, onlineNow: 0, onlineToday: 0, offlineUsers: 0, newUsers7d: 0,
-      tierBreakdown: { FREE: 0, BUSINESS_LITE: 0, PRO: 0, BUSINESS_VIP: 0, MASTER: 0 },
+      tierBreakdown: { FREE: 0, BUSINESS_LITE: 0, PRO: 0, BUSINESS_VIP: 0, CAPTAIN: 0, MASTER: 0 },
       rawTiers: {}, // DB에 실제 저장된 티어 원시값 (디버그용)
     };
 
