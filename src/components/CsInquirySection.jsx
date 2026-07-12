@@ -50,16 +50,22 @@ export default function CsInquirySection({ user, isAdmin }) {
     };
   });
 
+  const containerRef = useRef(null);
+
   // URL로 진입 시 탭 열기
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('applyCaptain') === 'true') {
       setOpen(true);
       setTab('write');
-      // Scroll to this component
+      // Scroll to this component with a more robust method
       setTimeout(() => {
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-      }, 500);
+        if (containerRef.current) {
+          containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+      }, 800);
     }
   }, []);
 
@@ -129,7 +135,7 @@ export default function CsInquirySection({ user, isAdmin }) {
   const inp = (field) => ({ value: form[field], onChange: e => setForm(f => ({ ...f, [field]: e.target.value })) });
 
   return (
-    <div style={{ padding: '4px 16px 20px' }}>
+    <div ref={containerRef} style={{ padding: '4px 16px 20px' }}>
       {/* 헤더 토글 */}
       <div
         onClick={() => setOpen(o => !o)}
