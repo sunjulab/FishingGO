@@ -986,10 +986,12 @@ export default function CommunityTab() {
           <div style={{ padding: '16px' }}><SkeletonCard count={5} /></div>
         ) : activeTab === 'ranking' ? (
           <Suspense fallback={<div style={{padding:'32px',textAlign:'center'}}>로딩 중...</div>}>
+            <KakaoAdBanner type="ali" style={{ margin: '16px 16px 0 16px' }} />
             <CatchRankingPage embedded />
           </Suspense>
         ) : activeTab === 'notice' ? (
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <KakaoAdBanner type="coupang" style={{ margin: '0 0 4px 0' }} />
             {noticePosts.map(notice => {
               // ✅ 미리보기 정제: 이모지·구분선·빈줄 제거 후 첫 2줄만 표시
               const cleanPreview = (notice.content || '')
@@ -1606,6 +1608,7 @@ export default function CommunityTab() {
         ) : activeTab === 'crew' ? (
           // [프라이빗 크루 뷰]
           <div className="fade-in">
+            <KakaoAdBanner type="ali" style={{ margin: '0 0 12px 0' }} />
             {/* 크루 검색창 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff', borderRadius: '14px', padding: '10px 16px', marginBottom: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #F0F0F0' }}>
               <span style={{ fontSize: `calc(16px * var(--fs, 1))`, flexShrink: 0 }}>🔍</span>
@@ -1720,6 +1723,7 @@ export default function CommunityTab() {
         ) : (
           // [비즈니스: 선상 배 홍보 뷰]
           <div className="fade-in">
+            <KakaoAdBanner type="coupang" style={{ margin: '0 0 16px 0' }} />
             <div style={{ padding: '16px', background: 'linear-gradient(135deg, #0A192F, #1A365D)', borderRadius: '16px', marginBottom: '20px', color: '#fff', boxShadow: '0 8px 24px rgba(10,25,47,0.2)', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.1 }}><Award size={100} /></div>
               <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#FFD700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
