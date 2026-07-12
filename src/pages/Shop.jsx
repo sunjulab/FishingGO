@@ -450,7 +450,7 @@ export default function Shop() {
 
           {/* 파트너스 공시 (최소화) */}
           <p style={{ margin: '0 0 10px 4px', fontSize: `calc(9px * var(--fs, 1))`, color: '#C7C7CC', fontWeight: '600', lineHeight: 1.4 }}>
-            쿠팡 파트너스 · AliExpress 발생하는 소정의 수수료는 낚시GO 서비스 운영에 사용됩니다 🎣
+            Appier 광고입니다
           </p>
 
           {/* 수동 등록 관련 상품 (횡스크롤) */}
@@ -594,8 +594,7 @@ export default function Shop() {
       <div style={{ padding: '24px 24px 0', textAlign: 'center' }}>
         <div style={{ width: '100%', height: '1px', backgroundColor: '#F0F0F0', marginBottom: '16px' }} />
         <p style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#bbb', lineHeight: 1.7, fontWeight: '600' }}>
-          이 포스팅은 쿠팡 파트너스 및 알리익스프레스 어필리에이트 활동의 일환으로,<br />
-          이에 따른 일정액의 수수료를 제공받을 수 있습니다.
+          Appier 광고입니다
         </p>
       </div>
     </div>

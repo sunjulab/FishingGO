@@ -536,7 +536,7 @@ export default function PostDetail() {
               ))}
             </div>
             <p style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AEAEB2', fontWeight: '600', textAlign: 'right', marginTop: '8px', margin: '8px 0 0' }}>
-              이 포스팅은 쿠팡 파트너스 활동의 일환으로 수수료를 받을 수 있습니다
+              Appier 광고입니다
             </p>
           </div>
         )}
