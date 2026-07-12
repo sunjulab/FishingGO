@@ -243,6 +243,13 @@ export default function MyPage() {
   // ✅ TIER-PROTECT: TIER_RANK_CLIENT / PROTECTED_TIERS_CLIENT는 파일 상단 외부 상수 사용 (중복 선언 제거)
 
   const handleTierChange = async (tier, name) => {
+    // 선장 등급 신청은 1:1 문의로 이동
+    if (tier === 'CAPTAIN') {
+      setShowModal(null);
+      navigate('/?applyCaptain=true');
+      return;
+    }
+
     // VIP 플랜은 항구 선택 페이지로 이동
     if (tier === 'BUSINESS_VIP') {
       setShowModal(null);
@@ -1362,17 +1369,17 @@ export default function MyPage() {
                     badgeColor: '#fff',
                     badgeBg: 'linear-gradient(135deg, #0056D2, #003fa3)',
                     features: ['앱 내 모든 광고 영구 제거', 'CCTV 및 해양 히트맵 확인', '기본 낚시 컨디션 리포트'],
-                    highlight: false,
+                    highlight: true,
                   },
                   {
-                    tier: 'PRO',
-                    name: 'PRO 멤버십',
-                    price: '₩9,900/월',
-                    badge: 'PRO',
-                    badgeColor: '#fff',
-                    badgeBg: 'linear-gradient(135deg, #00C48C, #008f66)',
-                    features: ['LITE 멤버십 모든 혜택', '비밀 낚시 포인트 25곳', '커뮤니티 PRO 전용 금장 배지', 'AI 심층 분석 리포트'],
-                    highlight: true,
+                    tier: 'CAPTAIN',
+                    name: '제휴 선장 신청',
+                    price: '1:1 문의',
+                    badge: '선장 전용',
+                    badgeColor: '#5C3A00',
+                    badgeBg: 'linear-gradient(135deg, #FFD700, #FF9B26)',
+                    features: ['낚시그램 선장 전용 황금 배지', '조황 게시글 상단 우선 노출 보장', '선상배 예약 우선 배정', '전담 관리자 1:1 지원'],
+                    highlight: false,
                   }
                 ];
                 return (

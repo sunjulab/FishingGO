@@ -36,14 +36,32 @@ export default function CsInquirySection({ user, isAdmin }) {
   const [replyInput, setReplyInput] = useState('');
   const [replyingId, setReplyingId] = useState(null);
 
-  const [form, setForm] = useState({
-    realName: user?.realName || '',
-    nickname: user?.name || '',
-    phone: user?.phone || '',
-    category: '일반 문의',
-    title: '',
-    content: TEMPLATE,
+  const [form, setForm] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isCaptainApp = params.get('applyCaptain') === 'true';
+
+    return {
+      realName: user?.realName || '',
+      nickname: user?.name || '',
+      phone: user?.phone || '',
+      category: isCaptainApp ? '계정 문의' : '일반 문의',
+      title: isCaptainApp ? '[선장 등급 신청] CAPTAIN 권한을 요청합니다.' : '',
+      content: isCaptainApp ? `[선장 등급 신청]\n\n• 활동하시는 항구 (예: 여수항): \n• 선박명: \n• 선장 성함: \n• 선장 연락처: \n\n위 내용으로 선장(CAPTAIN) 등급을 신청합니다.` : TEMPLATE,
+    };
   });
+
+  // URL로 진입 시 탭 열기
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('applyCaptain') === 'true') {
+      setOpen(true);
+      setTab('write');
+      // Scroll to this component
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 500);
+    }
+  }, []);
 
   // 사용자 정보 자동 반영
   useEffect(() => {
