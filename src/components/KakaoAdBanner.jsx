@@ -7,7 +7,30 @@ const AD_DATA = {
     badge: 'AD',
     provider: 'Appier',
     imageUrl: 'https://images.unsplash.com/photo-1544281679-052a514d88e6?q=80&w=400&auto=format&fit=crop',
-    link: 'https://coupa.ng/cDqBvN', // Replace with real affiliate link
+    links: [
+      'https://link.coupang.com/a/fj9wDlMOE8',
+      'https://link.coupang.com/a/fj9zrP7SLc',
+      'https://link.coupang.com/a/fj9AYN5hRs',
+      'https://link.coupang.com/a/fj9CJoRBTg',
+      'https://link.coupang.com/a/fj9DqyOfCK',
+      'https://link.coupang.com/a/fj9EBJ79iM',
+      'https://link.coupang.com/a/fj9FbS4zoy',
+      'https://link.coupang.com/a/fj9F0Z0nwO',
+      'https://link.coupang.com/a/fj9Hj42o7o',
+      'https://link.coupang.com/a/fj9JpybAho',
+      'https://link.coupang.com/a/fj9Kdmo7R6',
+      'https://link.coupang.com/a/fj9LqlC3kO',
+      'https://link.coupang.com/a/fj9MdF1ySq',
+      'https://link.coupang.com/a/fj9MXF6Xjo',
+      'https://link.coupang.com/a/fj9NMkiBtA',
+      'https://link.coupang.com/a/fj9OxlBLG0',
+      'https://link.coupang.com/a/fj9PfJyPKu',
+      'https://link.coupang.com/a/fj9P5bIt6i',
+      'https://link.coupang.com/a/fj9Q7q1spE',
+      'https://link.coupang.com/a/fj9RJMMxcy',
+      'https://link.coupang.com/a/fj9SrsJL52',
+      'https://link.coupang.com/a/fj9SWJr4uG'
+    ],
     brandColor: '#EBF2FF',
     textColor: '#8E8E93'
   },
@@ -28,7 +51,10 @@ export default function KakaoAdBanner({ type = 'coupang' }) {
 
   return (
     <div 
-      onClick={() => window.open(ad.link, '_blank')}
+      onClick={() => {
+        const targetLink = ad.links ? ad.links[Math.floor(Math.random() * ad.links.length)] : ad.link;
+        window.open(targetLink, '_blank');
+      }}
       style={{ 
         display: 'flex', 
         background: '#fff', 
