@@ -87,7 +87,9 @@ function VideoCard({ video, onSelect, onNavigate, T }) {
                     {item.discount && <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#FF5A5F', backgroundColor: 'rgba(255,90,95,0.1)', padding: '2px 5px', borderRadius: '5px' }}>{item.discount} ↓</span>}
                   </div>
                 </div>
-                <button onClick={() => onNavigate('/shop')} style={{ padding: '9px 14px', borderRadius: '12px', backgroundColor: '#0056D2', color: '#fff', border: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}>구매</button>
+                <button onClick={() => window.open(item.link || item.productUrl, '_blank')} style={{ padding: '9px 14px', borderRadius: '12px', backgroundColor: item.source === 'ali' ? '#FF6900' : '#0056D2', color: '#fff', border: 'none', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer' }}>
+                  {item.source === 'ali' ? 'AliExpress' : 'Coupang'}
+                </button>
               </div>
             ))}
           </div>
@@ -138,12 +140,16 @@ export default function MediaTab() {
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
 
-  // 쿠팡 연동
+  // 상점 연동 (Coupang + Ali 통합)
   useEffect(() => {
     if (!selectedVideo) return;
     const kw = ((selectedVideo.title || '낚시').split(' ')[0].replace(/[^가-힣a-zA-Z0-9]/g, '') || '낚시') + ' 낚시';
-    apiClient.get(`/api/commerce/coupang/search?keyword=${encodeURIComponent(kw)}${COUPANG_PID ? `&partnersId=${COUPANG_PID}` : ''}`)
-      .then(res => { if (res.data.products?.length) setSelectedVideo(p => ({ ...p, products: res.data.products })); })
+    apiClient.get(`/api/shop/products?category=${encodeURIComponent(kw)}&source=all&limit=5`)
+      .then(res => { 
+        const data = res.data;
+        const items = Array.isArray(data) ? data : (data.items || []);
+        if (items.length) setSelectedVideo(p => ({ ...p, products: items })); 
+      })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVideo?.youtubeId || selectedVideo?.id]); // ✅ FIX: YouTube API 결과는 youtubeId, 정적 TUTORIAL은 id — 둘 다 체크
@@ -256,14 +262,41 @@ export default function MediaTab() {
               <Play size={14} fill="#fff" /> YouTube에서 보기
             </button>
           </div>
-          <div style={{ padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)', background: 'linear-gradient(to top, rgba(0,0,0,1), transparent)', display: 'flex', alignItems: 'center', gap: '16px', color: '#fff' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, opacity: 0.7 }}>이 기술에 필요한 장비</div>
-              <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '900' }}>{selectedVideo.products?.[0]?.name || '관련 장비'} 외</div>
+          <div style={{ padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)', background: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 50%, transparent 100%)', display: 'flex', flexDirection: 'column', gap: '14px', color: '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <BagIcon size={14} color="#00C48C" /> 이 영상에 필요한 추천 장비
+              </div>
+              <button onClick={() => navigate('/shop')} style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', padding: '6px 12px', borderRadius: '14px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                쇼핑하기 <ChevronRight size={14} />
+              </button>
             </div>
-            <button onClick={() => navigate('/shop')} style={{ backgroundColor: '#0056D2', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '14px', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', whiteSpace: 'nowrap' }}>
-              쇼핑하기
-            </button>
+            
+            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
+              {(selectedVideo.products || []).length > 0 ? selectedVideo.products.slice(0, 5).map((item, idx) => (
+                <div key={idx} onClick={() => window.open(item.link || item.productUrl, '_blank')}
+                  style={{ width: '130px', flexShrink: 0, backgroundColor: '#1C1C1E', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ width: '100%', height: '130px', backgroundColor: '#fff', position: 'relative' }}>
+                    <img src={item.img || item.image || item.imageUrl} alt={item.name || item.title || '장비'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', top: 6, left: 6, backgroundColor: item.source === 'ali' ? '#FF6900' : '#0056D2', color: '#fff', fontSize: '9px', fontWeight: '900', padding: '3px 6px', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                      {item.source === 'ali' ? 'AliExpress' : 'Coupang'}
+                    </div>
+                  </div>
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '700', color: '#E5E5EA', marginBottom: '6px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, height: '2.6em' }}>
+                      {item.name || item.title}
+                    </div>
+                    <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>
+                      {item.price ? (typeof item.price === 'number' ? `₩${item.price.toLocaleString()}` : item.price) : '가격 확인'}
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div style={{ width: '100%', textAlign: 'center', padding: '24px 0', fontSize: `calc(13px * var(--fs, 1))`, color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>
+                  관련 장비 검색 중... 🎣
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
