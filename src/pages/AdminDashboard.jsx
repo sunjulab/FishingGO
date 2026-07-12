@@ -48,85 +48,7 @@ export default function AdminDashboard() {
     pushEmail: '', pushTitle: '', pushMsg: '',
   });
 
-  // ✅ 수동 쇼핑 상품 관리
-  const SHOP_CATS = ['낚시용품','루어/채비','릴/로드','라인/원줄','낚시복','가방/케이스','액세서리','기타'];
-  const [manualItems,   setManualItems]   = useState([]);
-  const [shopForm,      setShopForm]      = useState({ source: 'coupang', shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: '낚시용품' });
-  const [shopLoading,   setShopLoading]   = useState(false);
-  const [shopMsg,       setShopMsg]       = useState('');
-
-  const fetchManualItems = useCallback(async () => {
-    try {
-      const res = await apiClient.get('/api/shop/manual');
-      setManualItems(res.data || []);
-    } catch { /* 무시 */ }
-  }, []);
-
-  const handleShopAdd = async () => {
-    if (!shopForm.shortUrl.trim()) { setShopMsg('단축 URL을 입력하세요.'); return; }
-    if (shopForm.source === 'coupang' && !shopForm.iframeCode.trim()) { setShopMsg('쿠팡 iframe 코드를 입력하세요.'); return; }
-    if (shopForm.source === 'ali' && !shopForm.imageUrl.trim()) { setShopMsg('알리 상품 이미지 URL을 입력하세요.'); return; }
-    setShopLoading(true);
-
-    const API   = 'https://fishing-go-backend.onrender.com';
-    const token = (() => { try { return localStorage.getItem('access_token') || ''; } catch { return ''; } })();
-
-    // window.open + postMessage 방식 — Chrome 확장도 차단 불가 (새 탭 네비게이션)
-    const iframeSrc = (shopForm.iframeCode || '').match(/src=["']([^"']+)["']/i)?.[1] || '';
-    const params = new URLSearchParams({
-      t:           token,
-      source:      shopForm.source,
-      shortUrl:    shopForm.shortUrl,
-      iframeSrc:   iframeSrc,
-      imageUrl:    shopForm.imageUrl   || '',
-      productName: shopForm.productName || '',
-      tag:         shopForm.tag,
-    });
-    const tabUrl = `${API}/api/shop/manual/add-tab?${params.toString()}`;
-
-    const doRegisterTab = (timeoutMs) => new Promise((resolve) => {
-      let msgListener;
-      const tId = setTimeout(() => {
-        window.removeEventListener('message', msgListener);
-        resolve({ ok: false, _timeout: true, data: { error: '서버 응답 없음 (timeout)' } });
-      }, timeoutMs);
-
-      msgListener = (e) => {
-        // Render 서버에서 오는 메시지만 처리 (ok 또는 error 키가 있는)
-        if (e.data && ('ok' in e.data || 'error' in e.data)) {
-          clearTimeout(tId);
-          window.removeEventListener('message', msgListener);
-          resolve({ ok: e.data.ok === true, data: e.data });
-        }
-      };
-      window.addEventListener('message', msgListener);
-      window.open(tabUrl, '_blank', 'width=300,height=200,noopener=no');
-    });
-
-    try {
-      setShopMsg('⏳ 등록 중... (새 탭이 열립니다 — 서버가 응답하면 자동 닫힘)');
-      const r1 = await doRegisterTab(120000); // 120초: 콜드스타트 완전 커버
-      if (r1.ok) {
-        setShopForm({ source: shopForm.source, shortUrl: '', iframeCode: '', imageUrl: '', productName: '', tag: shopForm.tag });
-        setShopMsg('✅ 등록 완료!');
-        await fetchManualItems();
-        return;
-      }
-      setShopMsg(`❌ ${r1.data?.error || '서버 응답 없음 (120초 초과)'}`);
-
-    } catch (e) {
-      setShopMsg(`❌ [NET] ${e.message}`);
-    } finally { setShopLoading(false); }
-  };
-
-
-  const handleShopDelete = async (id) => {
-    if (!window.confirm('삭제하시겠습니까?')) return;
-    try {
-      await apiClient.delete(`/api/shop/manual/${id}`);
-      await fetchManualItems();
-    } catch { alert('삭제 실패'); }
-  };
+  // 쇼핑 상품 수동 등록 관련 로직 삭제 (Shop 탭으로 통합)
 
   const { tab: alertTab, sending: alertSending, msg: alertMsg, location: alertLocation,
     pushEmail, pushTitle, pushMsg } = alertState;
@@ -146,7 +68,6 @@ export default function AdminDashboard() {
       if (!isAdmin) { navigate('/'); return; }
       setAuthChecked(true);
       fetchStats();
-      fetchManualItems();
     }, 0);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -459,104 +380,6 @@ export default function AdminDashboard() {
 
         {/* ══ 불법 tier 강제 복원 패널 ══ */}
         <ForceTierPanel addToast={addToast} />
-
-        {/* ✅ 쇼핑 수동 상품 등록 */}
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '20px', marginTop: '16px' }}>
-          <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '14px' }}>🛒 쇼핑 상품 수동 등록</div>
-
-          {/* 소스 선택 토글 */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-            {[['coupang','🏪 쿠팡','#FF5A5F'],['ali','🌐 알리익스프레스','#FF6900']].map(([val, label, color]) => (
-              <button key={val} onClick={() => setShopForm(s => ({ ...s, source: val, iframeCode: '', imageUrl: '', productName: '' }))}
-                style={{ flex: 1, padding: '9px', borderRadius: '10px', border: 'none', fontWeight: '900', fontSize: `calc(12px * var(--fs, 1))`, cursor: 'pointer', transition: 'all 0.15s',
-                  background: shopForm.source === val ? color : 'rgba(255,255,255,0.07)',
-                  color: shopForm.source === val ? '#fff' : 'rgba(255,255,255,0.4)' }}>
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* 입력 폼 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
-            {/* 단축 URL */}
-            <input
-              placeholder={shopForm.source === 'coupang' ? '단축 URL (예: https://link.coupang.com/a/ecF5Q)' : '알리 제휴 링크 (예: https://s.click.aliexpress.com/e/_...)'}
-              value={shopForm.shortUrl}
-              onChange={e => setShopForm(s => ({ ...s, shortUrl: e.target.value }))}
-              style={{ padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
-            />
-            {/* 쿠팡: iframe 코드 / 알리: 이미지URL + 상품명 */}
-            {shopForm.source === 'coupang' ? (
-              <textarea
-                placeholder={`iframe 코드 전체 붙여넣기\n예: <iframe src="https://coupa.ng/cna2eE" width="120" height="240" ...></iframe>`}
-                value={shopForm.iframeCode}
-                onChange={e => setShopForm(s => ({ ...s, iframeCode: e.target.value }))}
-                rows={3}
-                style={{ padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '600', outline: 'none', resize: 'vertical', fontFamily: 'monospace' }}
-              />
-            ) : (
-              <>
-                <input
-                  placeholder="상품 이미지 URL (예: https://ae01.alicdn.com/.../image.jpg)"
-                  value={shopForm.imageUrl}
-                  onChange={e => setShopForm(s => ({ ...s, imageUrl: e.target.value }))}
-                  style={{ padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,100,0,0.3)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
-                />
-                <input
-                  placeholder="상품명 (예: 낚시 카본 루어 세트)"
-                  value={shopForm.productName}
-                  onChange={e => setShopForm(s => ({ ...s, productName: e.target.value }))}
-                  style={{ padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,100,0,0.3)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700', outline: 'none' }}
-                />
-              </>
-            )}
-            {/* 카테고리 선택 버튼 그리드 */}
-            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginBottom: '4px' }}>카테고리 선택</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {SHOP_CATS.map(cat => (
-                <button key={cat} onClick={() => setShopForm(s => ({ ...s, tag: cat }))}
-                  style={{ padding: '6px 12px', borderRadius: '20px', border: 'none', fontWeight: '800', fontSize: `calc(11px * var(--fs, 1))`, cursor: 'pointer', transition: 'all 0.15s',
-                    background: shopForm.tag === cat ? 'linear-gradient(135deg,#0056D2,#0098FF)' : 'rgba(255,255,255,0.08)',
-                    color: shopForm.tag === cat ? '#fff' : 'rgba(255,255,255,0.5)' }}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={handleShopAdd}
-              disabled={shopLoading}
-              style={{ padding: '13px', borderRadius: '12px', border: 'none', background: shopLoading ? 'rgba(255,255,255,0.08)' : (shopForm.source === 'ali' ? 'linear-gradient(135deg,#FF6900,#FF9500)' : 'linear-gradient(135deg,#0056D2,#0098FF)'), color: '#fff', fontWeight: '950', fontSize: `calc(13px * var(--fs, 1))`, cursor: shopLoading ? 'not-allowed' : 'pointer' }}
-            >
-              {shopLoading ? '등록 중...' : `➕ 쇼핑탭에 등록 (${shopForm.source === 'ali' ? '알리' : '쿠팡'})`}
-            </button>
-            {shopMsg && <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: shopMsg.startsWith('✅') ? '#00C48C' : '#FF6B6B', fontWeight: '700' }}>{shopMsg}</div>}
-          </div>
-
-          {/* 등록된 상품 목록 */}
-          {manualItems.length > 0 && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px' }}>
-              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginBottom: '10px' }}>등록된 상품 {manualItems.length}개</div>
-              {manualItems.map(item => (
-                <div key={item._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '10px 12px' }}>
-                  {item.source === 'ali' ? (
-                    <img src={item.imageUrl} alt={item.productName || 'ali'} width={60} height={60} style={{ borderRadius: '8px', flexShrink: 0, objectFit: 'cover' }} />
-                  ) : (
-                    <iframe src={item.iframeSrc} width={60} height={90} frameBorder={0} scrolling="no" referrerPolicy="unsafe-url" style={{ borderRadius: '6px', flexShrink: 0 }} title="product" />
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-                      <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', padding: '2px 5px', borderRadius: '4px', background: item.source === 'ali' ? 'rgba(255,105,0,0.2)' : 'rgba(255,90,95,0.2)', color: item.source === 'ali' ? '#FF6900' : '#FF5A5F' }}>{item.source === 'ali' ? '알리' : '쿠팡'}</span>
-                      <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>#{item.tag}</span>
-                    </div>
-                    {item.productName && <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.7)', fontWeight: '700', marginBottom: '2px' }}>{item.productName}</div>}
-                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', wordBreak: 'break-all' }}>{item.shortUrl}</div>
-                  </div>
-                  <button onClick={() => handleShopDelete(item._id)} style={{ background: 'rgba(255,80,80,0.15)', border: 'none', borderRadius: '8px', color: '#FF6B6B', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', padding: '6px 10px', cursor: 'pointer', flexShrink: 0 }}>삭제</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
       </div>
     </div>
