@@ -31,6 +31,7 @@ export default function WritePost() {
   const [locDraft, setLocDraft] = useState('');
   const locInputRef = useRef(null);
   const isMountedRef = useRef(true); // ✅ BUG-WP01 FIX: Geolocation/AI 콜백 언마운트 보호
+  const textareaRef = useRef(null);
   // ✅ MASTER-AUTHOR-EDIT: 마스터 전용 작성자 닉네임 수정 state
   const [editAuthor, setEditAuthor] = useState('');
 
@@ -123,6 +124,11 @@ export default function WritePost() {
 
   // ✅ DRAFT-2: 내용 변경 시 자동 저장 (500ms debounce)
   useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+    
     if (isEditMode || isNoticeType) return;
     const timer = setTimeout(() => {
       if (content.trim().length > 0) {
@@ -154,7 +160,7 @@ export default function WritePost() {
     }
     const trimmedContent = content.trim();
     if (!trimmedContent) return addToast('내용을 입력해주세요.', 'error');
-    if (trimmedContent.length > 2000) return addToast('게시글은 2,000자 이하로 작성해주세요.', 'error');
+    if (!isNoticeType && trimmedContent.length > 2000) return addToast('게시글은 2,000자 이하로 작성해주세요.', 'error');
     if (isNoticeType && !title.trim()) { addToast('제목을 입력해주세요.', 'error'); return; }
     // if (isBusinessLite) { doPost(); } else { setShowAdGate(true); }
     doPost(); // ✅ TWEAK: 임시로 광고 게이트 해제 (무료 유저도 즉시 등록)
@@ -400,11 +406,16 @@ export default function WritePost() {
           </>
         )}
 
-        {/* 텍스트 입력 영역 */}
+        {/* 텍스트 입력 영역 (자동 높이 조절) */}
         <textarea
+          ref={textareaRef}
           placeholder={isNoticeType ? '공지 내용을 입력하세요.' : '현장 상황이나 조과를 자유롭게 공유해보세요. (예: 현재 강릉항 파고가 높습니다!)'}
-          style={{ width: '100%', minHeight: '160px', border: 'none', fontSize: `calc(16px * var(--fs, 1))`, lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box', marginTop: '12px' }}
-          onChange={(e) => setContent(e.target.value)}
+          style={{ width: '100%', minHeight: '160px', border: 'none', fontSize: `calc(16px * var(--fs, 1))`, lineHeight: '1.6', outline: 'none', resize: 'none', boxSizing: 'border-box', marginTop: '12px', overflow: 'hidden' }}
+          onChange={(e) => {
+            setContent(e.target.value);
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+          }}
           value={content}
         />
 
