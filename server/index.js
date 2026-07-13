@@ -2326,9 +2326,10 @@ async function getMarineWeather(sid) {
     const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
     const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
 
-    // ✅ [고도화] 연안 파고 변환 엔진 (Coastal Wave Transformation)
-    // 지형적 방위와 풍향(육풍/해풍)을 계산하여 먼바다 파고를 육지 근접 파고로 정밀하게 변환합니다.
-    let reductionFactor = 0.35; // 기본 마찰 및 지형 감쇠율 (방파제/갯바위 근접 기준)
+    // ✅ [고도화] 연안 파고 및 풍속 변환 엔진 (Coastal Wave & Wind Transformation)
+    // 지형적 방위와 풍향(육풍/해풍)을 계산하여 먼바다 데이터를 육지 근접 수치로 정밀하게 변환합니다.
+    let reductionFactor = 0.35; // 기본 마찰 및 지형 감쇠율 (방파제/갯바위 근접 기준 파고)
+    let windReductionFactor = 0.85; // 연안 기본 풍속 감쇠 (해상 부이 대비 지표 마찰로 약 15% 감소)
 
     // 해안선 방향에 따른 해풍/육풍 판별
     // 동해권 -> 바다가 동쪽에 있음 (서풍=육풍, 동풍=해풍)
@@ -2339,22 +2340,24 @@ async function getMarineWeather(sid) {
     const isSouthCoast = !isEastCoast && !isWestCoast;
 
     if (isEastCoast) {
-      if (wd.includes('W')) reductionFactor *= 0.1; // 육풍(서풍 계열): 연안 파도 강력 상쇄 (거의 안 침)
-      else if (wd.includes('E')) reductionFactor *= 1.5; // 해풍(동풍 계열): 연안 파도 증폭
+      if (wd.includes('W')) { reductionFactor *= 0.1; windReductionFactor *= 0.6; } // 육풍: 지형 장애물로 풍속 크게 감소
+      else if (wd.includes('E')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; } // 해풍
     } else if (isWestCoast) {
-      if (wd.includes('E')) reductionFactor *= 0.1; // 육풍(동풍 계열): 강력 상쇄
-      else if (wd.includes('W')) reductionFactor *= 1.5; // 해풍(서풍 계열): 증폭
+      if (wd.includes('E')) { reductionFactor *= 0.1; windReductionFactor *= 0.6; }
+      else if (wd.includes('W')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; }
     } else if (isSouthCoast) {
-      if (wd.includes('N')) reductionFactor *= 0.1; // 육풍(북풍 계열): 강력 상쇄
-      else if (wd.includes('S')) reductionFactor *= 1.5; // 해풍(남풍 계열): 증폭
+      if (wd.includes('N')) { reductionFactor *= 0.1; windReductionFactor *= 0.6; }
+      else if (wd.includes('S')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; }
     }
 
-    let coastalWh = wh * reductionFactor;
-    coastalWh = Math.max(0.1, coastalWh);
+    let coastalWh = Math.max(0.1, wh * reductionFactor);
     coastalWh = parseFloat(coastalWh.toFixed(1));
 
-    logger.info(`[Marine] ${sid}(${buoyNum}) 먼바다:${wh}m -> [고도화]연안:${coastalWh}m (풍속:${ws}m/s, 풍향:${wd})`);
-    return { wind: { speed: Math.max(0, ws), dir: wd }, wave: { coastal: coastalWh } };
+    let coastalWs = Math.max(0, ws * windReductionFactor);
+    coastalWs = parseFloat(coastalWs.toFixed(1));
+
+    logger.info(`[Marine] ${sid}(${buoyNum}) 먼바다 파고:${wh}m/풍속:${ws}m/s -> [연안] 파고:${coastalWh}m/풍속:${coastalWs}m/s (풍향:${wd})`);
+    return { wind: { speed: coastalWs, dir: wd }, wave: { coastal: coastalWh } };
     } catch (e) {
       logger.warn(`[Marine] 부이 API 실패 (${sid}/${BUOY_MAP[sid]}): ${e.message}`);
       return null;
