@@ -2329,7 +2329,7 @@ async function getMarineWeather(sid) {
     // ✅ [고도화] 연안 파고 및 풍속 변환 엔진 (Coastal Wave & Wind Transformation)
     // 지형적 방위와 풍향(육풍/해풍)을 계산하여 먼바다 데이터를 육지 근접 수치로 정밀하게 변환합니다.
     let reductionFactor = 0.35; // 기본 마찰 및 지형 감쇠율 (방파제/갯바위 근접 기준 파고)
-    let windReductionFactor = 0.85; // 연안 기본 풍속 감쇠 (해상 부이 대비 지표 마찰로 약 15% 감소)
+    let windReductionFactor = 0.75; // 연안 기본 풍속 감쇠 (해상 부이 대비 지표 마찰로 약 25% 감소)
 
     // 해안선 방향에 따른 해풍/육풍 판별
     // 동해권 -> 바다가 동쪽에 있음 (서풍=육풍, 동풍=해풍)
@@ -2340,13 +2340,13 @@ async function getMarineWeather(sid) {
     const isSouthCoast = !isEastCoast && !isWestCoast;
 
     if (isEastCoast) {
-      if (wd.includes('W')) { reductionFactor *= 0.1; windReductionFactor *= 0.6; } // 육풍: 지형 장애물로 풍속 크게 감소
+      if (wd.includes('W')) { reductionFactor *= 0.1; windReductionFactor *= 0.5; } // 육풍: 지형 장애물로 풍속 크게 감소
       else if (wd.includes('E')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; } // 해풍
     } else if (isWestCoast) {
-      if (wd.includes('E')) { reductionFactor *= 0.1; windReductionFactor *= 0.6; }
+      if (wd.includes('E')) { reductionFactor *= 0.1; windReductionFactor *= 0.5; }
       else if (wd.includes('W')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; }
     } else if (isSouthCoast) {
-      if (wd.includes('N')) { reductionFactor *= 0.1; windReductionFactor *= 0.6; }
+      if (wd.includes('N')) { reductionFactor *= 0.1; windReductionFactor *= 0.5; }
       else if (wd.includes('S')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; }
     }
 
