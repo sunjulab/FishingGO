@@ -3,11 +3,11 @@ import apiClient from '../api/index';
 
 const AD_DATA = {
   coupang: {
-    iconText: '쿠팡 앱에서 구매하기 >',
-    title: '로켓배송 오늘주문 내일도착',
+    iconText: '쿠팡 낚시용품 특가전 >',
+    title: '선상/갯바위 낚시\n인기 필수템 모음',
     badge: 'AD',
     provider: 'Coupang Partners',
-    imageUrls: ['/shop-images/reel.png', '/shop-images/rod.png', '/shop-images/line.png', '/shop-images/tackle.png', '/shop-images/hooks.png'],
+    imageUrls: ['/shop-images/reel.png', '/shop-images/rod.png', '/shop-images/line.png', '/shop-images/tackle.png', '/shop-images/hooks.png', '/shop-images/lures.png'],
     links: [
       'https://link.coupang.com/a/fj9wDlMOE8',
       'https://link.coupang.com/a/fj9zrP7SLc',
@@ -113,9 +113,10 @@ export default function KakaoAdBanner({ type = 'coupang', style = {} }) {
     }
     const images = ad.imageUrls || [];
     const links  = ad.links  || [];
-    // 이미지↔링크 인덱스 매칭 (같은 idx로 고정)
-    const idx = Math.floor(Math.random() * Math.min(images.length, links.length));
-    return { displayImg: images[idx] || images[0], targetLink: links[idx] || links[0] };
+    // ✅ 쿠팡 기획전: 링크 22개와 이미지 6개를 완전히 무작위로 독립 렌덤 매칭
+    const imgIdx = Math.floor(Math.random() * images.length);
+    const linkIdx = Math.floor(Math.random() * links.length);
+    return { displayImg: images[imgIdx] || images[0], targetLink: links[linkIdx] || links[0] };
   }, [type, ad]);
 
   // 최종 표시값: ali는 API 로드 성공 시 덮어쓰기
