@@ -52,11 +52,14 @@ function AppInstallBanner({ postId }) {
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 60) return '방금 전';
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
-  return `${Math.floor(diff / 86400)}일 전`;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const yy = String(d.getFullYear()).slice(-2);
+  const MM = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const HH = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${yy}.${MM}.${dd} ${HH}:${mm}`;
 }
 
 const CATEGORY_COLORS = {

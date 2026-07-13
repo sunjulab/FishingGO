@@ -103,6 +103,18 @@ function useDebounce(value, delay = 300) {
   }, [value, delay]);
   return debounced;
 }
+function formatDateStr(dateStr, defaultTime) {
+  if (!dateStr) return defaultTime || '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return defaultTime || '';
+  const yy = String(d.getFullYear()).slice(-2);
+  const MM = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const HH = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${yy}.${MM}.${dd} ${HH}:${mm}`;
+}
+
 export default function CommunityTab() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1227,7 +1239,7 @@ export default function CommunityTab() {
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#bbb' }}>{post.time}</span>
+                        <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#bbb' }}>{formatDateStr(post.createdAt, post.time)}</span>
                         {(isAdmin || post.author_email === user?.email) && (
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button onClick={(e) => { e.stopPropagation(); navigate(`/write?editId=${postId}`); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0056D2' }}><Edit2 size={15} /></button>
