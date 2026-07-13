@@ -2328,7 +2328,7 @@ async function getMarineWeather(sid) {
 
     // ✅ [고도화] 연안 파고 변환 엔진 (Coastal Wave Transformation)
     // 지형적 방위와 풍향(육풍/해풍)을 계산하여 먼바다 파고를 육지 근접 파고로 정밀하게 변환합니다.
-    let reductionFactor = 0.35; // 기본 마찰 및 지형 감쇠율 (방파제/갯바위 근접 기준)
+    let reductionFactor = 0.25; // 기본 마찰 및 지형 감쇠율 (방파제/갯바위 내항 근접 기준)
 
     // 해안선 방향에 따른 해풍/육풍 판별
     // 동해권 -> 바다가 동쪽에 있음 (서풍=육풍, 동풍=해풍)
@@ -2339,13 +2339,13 @@ async function getMarineWeather(sid) {
     const isSouthCoast = !isEastCoast && !isWestCoast;
 
     if (isEastCoast) {
-      if (wd.includes('W')) reductionFactor *= 0.3; // 육풍(서풍 계열): 연안 파도 상쇄 (매우 잔잔함)
+      if (wd.includes('W')) reductionFactor *= 0.1; // 육풍(서풍 계열): 연안 파도 극상쇄 (매우 잔잔함)
       else if (wd.includes('E')) reductionFactor *= 1.5; // 해풍(동풍 계열): 연안 파도 증폭
     } else if (isWestCoast) {
-      if (wd.includes('E')) reductionFactor *= 0.3; // 육풍(동풍 계열): 상쇄
+      if (wd.includes('E')) reductionFactor *= 0.1; // 육풍(동풍 계열): 극상쇄
       else if (wd.includes('W')) reductionFactor *= 1.5; // 해풍(서풍 계열): 증폭
     } else if (isSouthCoast) {
-      if (wd.includes('N')) reductionFactor *= 0.3; // 육풍(북풍 계열): 상쇄
+      if (wd.includes('N')) reductionFactor *= 0.1; // 육풍(북풍 계열): 극상쇄
       else if (wd.includes('S')) reductionFactor *= 1.5; // 해풍(남풍 계열): 증폭
     }
 
