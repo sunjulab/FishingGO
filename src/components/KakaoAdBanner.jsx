@@ -6,7 +6,7 @@ const AD_DATA = {
     iconText: '쿠팡 낚시용품 특가전 >',
     title: '선상/갯바위 낚시\n인기 필수템 모음',
     badge: 'AD',
-    provider: 'Coupang Partners',
+    provider: 'Appier',
     imageUrls: ['/shop-images/reel.png', '/shop-images/rod.png', '/shop-images/line.png', '/shop-images/tackle.png', '/shop-images/hooks.png', '/shop-images/lures.png'],
     links: [
       'https://link.coupang.com/a/fj9wDlMOE8',
@@ -39,7 +39,7 @@ const AD_DATA = {
     iconText: 'AliExpress 특가 보기 >',
     title: '글로벌 낚시용품 직구\n최대 80% 할인',
     badge: 'AD',
-    provider: 'AliExpress Affiliate',
+    provider: 'Appier',
     // 실제 API 로드 전 fallback 이미지 (로컬)
     imageUrls: ['/shop-images/lures.png', '/shop-images/hooks.png', '/shop-images/line.png'],
     link: 'https://s.click.aliexpress.com/e/_oBn3bJh', // fallback
