@@ -148,11 +148,18 @@ export default function KakaoAdBanner({ type = 'coupang', style = {} }) {
             {ad.iconText}
           </span>
         </div>
-        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginTop: '4px', lineHeight: 1.3, whiteSpace: 'pre-line' }}>
+        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginTop: '4px', lineHeight: 1.3, whiteSpace: 'pre-line', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
           {/* 알리: API로 로드한 실제 상품명 표시 */}
           {(type === 'ali' && aliProduct?.name)
             ? aliProduct.name.slice(0, 30) + (aliProduct.name.length > 30 ? '…' : '')
-            : ad.title}
+            : (
+              type === 'coupang' ? (
+                <>
+                  <img src="/shop-images/rocket.png" alt="로켓배송" style={{ height: '16px', objectFit: 'contain', marginTop: '-2px' }} />
+                  <span>오늘주문 내일도착</span>
+                </>
+              ) : ad.title
+            )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginTop: '8px' }}>
           <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: '#F2F2F7', color: '#8E8E93', padding: '2px 5px', borderRadius: '4px', fontWeight: '900' }}>
