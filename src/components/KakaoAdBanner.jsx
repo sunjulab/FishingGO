@@ -156,7 +156,7 @@ export default function KakaoAdBanner({ type = 'coupang', style = {} }) {
               type === 'coupang' ? (
                 <>
                   <img src="/shop-images/rocket.png" alt="로켓배송" style={{ height: '16px', objectFit: 'contain', marginTop: '-2px' }} />
-                  <span>오늘주문 내일도착</span>
+                  <span>지금 사면 내일도착</span>
                 </>
               ) : ad.title
             )}

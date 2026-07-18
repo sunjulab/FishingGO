@@ -182,9 +182,18 @@ export default function DashboardView({
                     {alertAdvice && (<><br /><span style={{ color: '#FF8080', fontWeight: '900', fontSize: `calc(10px * var(--fs, 1))` }}>⚠ 특보 </span><span style={{ color: 'rgba(255,200,200,0.95)', fontWeight: '700', fontSize: `calc(10px * var(--fs, 1))` }}>{alertAdvice}</span></>)}
                   </div>
                   {dynamicAlert && dynamicAlert !== alertAdvice && (
-                    <div style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '5px', marginTop: '6px', background: 'rgba(255,80,80,0.22)', border: '1px solid rgba(255,80,80,0.5)', borderRadius: '8px', padding: '5px 9px', lineHeight: 1.45 }}>
-                      <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: '#FF8080', flexShrink: 0, paddingTop: '1px' }}>🚨 기상</span>
-                      <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,200,200,0.95)', fontWeight: '700' }}>{dynamicAlert}</span>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'flex-start', gap: '5px', marginTop: '6px',
+                      background: score >= 75 ? 'rgba(0,196,140,0.15)' : 'rgba(255,80,80,0.22)',
+                      border: `1px solid ${score >= 75 ? 'rgba(0,196,140,0.4)' : 'rgba(255,80,80,0.5)'}`,
+                      borderRadius: '8px', padding: '5px 9px', lineHeight: 1.45
+                    }}>
+                      <span style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color: score >= 75 ? '#00E5A8' : '#FF8080', flexShrink: 0, paddingTop: '1px' }}>
+                        {score >= 75 ? '✨ 기상' : '🚨 기상'}
+                      </span>
+                      <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: score >= 75 ? '#E6FFF7' : 'rgba(255,200,200,0.95)', fontWeight: '700' }}>
+                        {dynamicAlert}
+                      </span>
                     </div>
                   )}
                 </div>
