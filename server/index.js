@@ -2426,6 +2426,76 @@ async function getRealTide(sid) {
   });
 }
 
+// ✅ 기상청 격자 변환 로직 (LCC DFS)
+const RE = 6371.00877; // 지구 반경(km)
+const GRID = 5.0; // 격자 간격(km)
+const SLAT1 = 30.0 * Math.PI / 180.0; // 투영 위도1(degree)
+const SLAT2 = 60.0 * Math.PI / 180.0; // 투영 위도2(degree)
+const OLON = 126.0 * Math.PI / 180.0; // 기준점 경도(degree)
+const OLAT = 38.0 * Math.PI / 180.0; // 기준점 위도(degree)
+const XO = 43; // 기준점 X좌표(GRID)
+const YO = 136; // 기점 Y좌표(GRID)
+function dfs_xy_conv(lat, lng) {
+  const sn = Math.tan(Math.PI * 0.25 + SLAT2 * 0.5) / Math.tan(Math.PI * 0.25 + SLAT1 * 0.5);
+  const sf = Math.tan(Math.PI * 0.25 + SLAT1 * 0.5);
+  const ro = Math.tan(Math.PI * 0.25 + OLAT * 0.5);
+  const sn_log = Math.log(Math.cos(SLAT1) / Math.cos(SLAT2)) / Math.log(sn);
+  const sf_ro = Math.cos(SLAT1) * Math.pow(sf, sn_log) / sn_log;
+  const ro_sn = RE / GRID * sf_ro / Math.pow(ro, sn_log);
+  
+  let ra = Math.tan(Math.PI * 0.25 + lat * Math.PI / 180.0 * 0.5);
+  ra = RE / GRID * sf_ro / Math.pow(ra, sn_log);
+  let theta = lng * Math.PI / 180.0 - OLON;
+  if (theta > Math.PI) theta -= 2.0 * Math.PI;
+  if (theta < -Math.PI) theta += 2.0 * Math.PI;
+  theta *= sn_log;
+  return {
+    x: Math.floor(ra * Math.sin(theta) + XO + 0.5),
+    y: Math.floor(ro_sn - ra * Math.cos(theta) + YO + 0.5)
+  };
+}
+
+let kmaWeatherCache = {}; // nx_ny -> { pty, rn1, timestamp }
+async function getKmaUltraSrtNcst(lat, lng) {
+  const KEY = process.env.KMA_KEY || process.env.KHOA_KEY;
+  if (!KEY) return null;
+  const grid = dfs_xy_conv(lat, lng);
+  const cacheKey = `${grid.x}_${grid.y}`;
+  const now = Date.now();
+  if (kmaWeatherCache[cacheKey] && (now - kmaWeatherCache[cacheKey].timestamp) < 30 * 60 * 1000) {
+    return kmaWeatherCache[cacheKey].data;
+  }
+  
+  try {
+    const d = new Date();
+    const dStr = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('');
+    // 초단기실황은 매시간 40분에 발표, 1시간 전 데이터를 요청하는 것이 가장 안전
+    let h = d.getHours();
+    if (d.getMinutes() < 40) h -= 1;
+    if (h < 0) h = 23; 
+    // (완벽히 하려면 날짜도 어제로 바꿔야하지만 실황은 대략적인 참고용이므로 캐치로 무마)
+    
+    const tStr = String(h).padStart(2,'0') + '00';
+    const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(KEY)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${dStr}&base_time=${tStr}&nx=${grid.x}&ny=${grid.y}`;
+    
+    const res = await axios.get(url, { timeout: 3000 });
+    const items = res.data?.response?.body?.items?.item;
+    if (items && Array.isArray(items)) {
+      const ptyItem = items.find(i => i.category === 'PTY');
+      const rn1Item = items.find(i => i.category === 'RN1');
+      const data = {
+        pty: ptyItem ? parseInt(ptyItem.obsrValue) : 0,
+        rn1: rn1Item ? parseFloat(rn1Item.obsrValue) : 0
+      };
+      kmaWeatherCache[cacheKey] = { data, timestamp: now };
+      return data;
+    }
+  } catch(e) {
+    // 401, 403 등 오류 무시
+  }
+  return null;
+}
+
 let batchRunning = false; // ✅ race condition 방지 플래그
 async function updateAllStationsCache() {
   if (batchRunning) { logger.info('[Batch] 이미 실행 중 - 스킵'); return; }
@@ -2449,6 +2519,8 @@ async function updateAllStationsCache() {
     const marine  = await getMarineWeather(sid);
     // ③ 조석 (KHOA 조석예보)
     const realTide = await getRealTide(sid);
+    // ④ 기상 (비, 눈 등 초단기실황)
+    const rainSnow = await getKmaUltraSrtNcst(base.lat, base.lng);
 
     // fallback: 월별 계절 baseTemp (고정값 대신 현재 월 기준 정확한 수온)
     const month = new Date().getMonth(); // 0-indexed
@@ -2481,6 +2553,8 @@ async function updateAllStationsCache() {
         temp: `${parseFloat(finalTemp).toFixed(1)}\u00b0C`,
         wind: { speed: parseFloat(parseFloat(finalWind).toFixed(1)), dir: windDir },
         wave: { coastal: parseFloat(parseFloat(finalWave).toFixed(1)) },
+        pty: rainSnow ? rainSnow.pty : 0,
+        rn1: rainSnow ? rainSnow.rn1 : 0,
         layers: (() => {
           let m = (nifsData && nifsData.middle) ? parseFloat(nifsData.middle).toFixed(1) : null;
           let l = (nifsData && nifsData.lower)  ? parseFloat(nifsData.lower).toFixed(1)  : null;

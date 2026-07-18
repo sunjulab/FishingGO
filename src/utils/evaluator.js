@@ -300,6 +300,25 @@ export const calculateScoreDetails = (data, point = {}) => {
   if (nScore !== 0) details.push({ factor: '시간대', text: '야간 낚시', score: nScore });
   score += nScore;
 
+  if (data.pty !== undefined && data.pty > 0) {
+    let ptyScore = 0;
+    let ptyText = '강수량 있음';
+    if (data.pty === 1 || data.pty === 4) { // 비 또는 소나기
+      ptyScore = -15;
+      ptyText = data.pty === 1 ? '비 내림' : '소나기';
+    } else if (data.pty === 2) { // 비/눈 섞임
+      ptyScore = -25;
+      ptyText = '진눈깨비';
+    } else if (data.pty === 3) { // 눈
+      ptyScore = -30;
+      ptyText = '눈 내림';
+    }
+    if (ptyScore !== 0) {
+      details.push({ factor: '기상', text: ptyText, score: ptyScore });
+      score += ptyScore;
+    }
+  }
+
   const typeScore = getTypeBonus(point.type, wind);
   if (typeScore !== 0) details.push({ factor: '지형', text: point.type || '알수없음', score: typeScore });
   score += typeScore;
