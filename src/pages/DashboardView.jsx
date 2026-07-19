@@ -57,7 +57,8 @@ export default function DashboardView({
   setShowPointAdGate,
   setPointAdContext,
   setPendingPoint,
-  pointAdCount
+  pointAdCount,
+  setShowUpgradeModal,
 }) {
   const navigate = useNavigate();
   // ── 포인트 확인 광고 게이트 ──────────────────────────────────────────
@@ -329,9 +330,7 @@ export default function DashboardView({
                 locked: !canAccessPremium,
                 action: () => {
                   if (!canAccessPremium) {
-                    setPendingPoint({ id: 'secret', name: '비밀 포인트' });
-                    setPointAdContext('secret');
-                    setShowPointAdGate(true);
+                    setShowUpgradeModal(true);
                     return;
                   }
                   setViewMode('map'); setShowSecretPoints(true); addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');

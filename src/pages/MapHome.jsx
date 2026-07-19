@@ -1555,16 +1555,12 @@ export default function MapHome() {
               if (pointAdContext === 'map_enter') {
                 setViewMode('map');
                 addToast('지도로 진입합니다.', 'success');
-              } else if (pointAdContext === 'secret') {
-                setViewMode('map');
-                setShowSecretPoints(true);
-                addToast('⭐ 비밀 포인트 25곳이 지도에 표시됩니다!', 'success');
               } else if (pendingPoint) {
                 _enterPoint(pendingPoint, true);
               }
               setPendingPoint(null);
             }}
-            context={pointAdContext === 'secret' ? 'secret' : (pointAdContext === 'map_enter' ? 'map_enter' : 'point')}
+            context={pointAdContext === 'map_enter' ? 'map_enter' : 'point'}
           />
         )}
 
