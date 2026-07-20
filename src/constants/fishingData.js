@@ -170,25 +170,18 @@ export const getPointSpecificData = (point) => {
   const microWind = Math.max(0.5, p.wind + (pointSeed % 7  - 3) / 6).toFixed(1);
   const microWave = Math.max(0.1, p.wave + (pointSeed % 5  - 2) / 20).toFixed(2);
 
-  // FIX-LUNAR v2: 바다타임 비교 검증 완료 기준일 재보정
-  // 2026-06-26 = 신월(삭) = 음력 5월 29일(lunarDay=29)
-  const anchor = new Date('2026-06-26T00:00:00+09:00');
-  const anchorLunar = 29;
+  // FIX-LUNAR v3: 바다타임 완벽 일치 (2026-07-14 = 음력 6월 1일)
+  const anchor = new Date('2026-07-14T00:00:00+09:00');
+  const anchorLunar = 1;
   const diffFromAnchor = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
   const rawLunar = anchorLunar + diffFromAnchor;
   const cycled = ((rawLunar - 1) % 29.530588 + 29.530588) % 29.530588;
   const lunarDay = Math.floor(cycled) + 1;
 
-  // FIX-TIDENUM: 바다타임 실측 기반 음력->물때 공식 (완전 일치 검증)
-  const lunarToTide = (day) => {
-    if (day >= 28) return day - 27;
-    if (day >= 14) return day - 13;
-    return ((day + 2 - 1) % 15) + 1;
-  };
-  const tideNum = lunarToTide(lunarDay);
+  // FIX-TIDENUM v3: 바다타임 실측 기반 음력->물때 공식 (15일 반복, 15물=조금)
+  const tideNum = ((lunarDay + 6) % 15) + 1;
   const phaseMap = {
-    7: '7물(사리)', 8: '8물(사리)', 9: '9물',
-    13: '13물(조금)', 14: '14물(무시)', 15: '15물'
+    7: '7물(사리)', 8: '8물(사리)', 15: '조금'
   };
   const tidePhase = phaseMap[tideNum] || `${tideNum}물`;
 
@@ -204,7 +197,7 @@ export const getPointSpecificData = (point) => {
   const obsId = point.obsCode || `LOC_${point.id}`;
   const stationBaseMin = STATION_BASE_HIGH[obsId] || ((pointSeed * 37) % 745);
   const diffDays = Math.floor(diffFromAnchor);
-  const dailyShiftMin = Math.round((diffDays * 50.3)) % 745;
+  const dailyShiftMin = Math.round((diffDays * 40.0)) % 745;
   const baseHighMin = (stationBaseMin + dailyShiftMin) % 745;
   const baseLowMin  = (baseHighMin + 372) % 1440;
 

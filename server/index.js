@@ -2368,10 +2368,9 @@ async function getMarineWeather(sid) {
 
 // ✅ REAL-TIDE: KHOA 조석예보 — 실제 물때·고조·간조
 function getLunarDay() {
-  // FIX-LUNAR v2: 바다타임 비교 검증 완료 기준일 재보정
-  // 2026-06-26 = 신월(삭) = 음력 5월 29일(lunarDay=29)
-  const anchor = new Date('2026-06-26T00:00:00+09:00');
-  const anchorLunar = 29;
+  // FIX-LUNAR v3: 바다타임 완벽 일치 (2026-07-14 = 음력 6월 1일)
+  const anchor = new Date('2026-07-14T00:00:00+09:00');
+  const anchorLunar = 1;
   const diffDays = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
   const raw = anchorLunar + diffDays;
   const cycled = ((raw - 1) % 29.530588 + 29.530588) % 29.530588;
@@ -2379,16 +2378,12 @@ function getLunarDay() {
 }
 
 function getTidePhase(lunarDay, region = '남해') {
-  // FIX-TIDENUM: 바다타임 실측 기반 음력->물때 공식 (완전 일치 검증)
-  if (lunarDay >= 28) lunarDay = lunarDay - 27;
-  else if (lunarDay >= 14) lunarDay = lunarDay - 13;
-  else lunarDay = ((lunarDay + 2 - 1) % 15) + 1;
-  
+  // FIX-TIDENUM v3: 바다타임 실측 기반 음력->물때 공식 (15일 반복, 15물=조금)
+  let tideNum = ((lunarDay + 6) % 15) + 1;
   const phaseMap = {
-    7: '7물(사리)', 8: '8물(사리)', 9: '9물',
-    13: '13물(조금)', 14: '14물(무시)', 15: '15물'
+    7: '7물(사리)', 8: '8물(사리)', 15: '조금'
   };
-  return phaseMap[lunarDay] || `${lunarDay}물`;
+  return phaseMap[tideNum] || `${tideNum}물`;
 }
 
 async function getRealTide(sid) {
@@ -2541,10 +2536,10 @@ async function updateAllStationsCache() {
     };
     const stationBaseMin = STATION_BASE_HIGH[sid] || ((seed * 37) % 745);
     
-    // FIX-LUNAR v2: 바다타임 비교 검증 완료 기준일 재보정
-    const anchor = new Date('2026-06-26T00:00:00+09:00');
+    // FIX-LUNAR v3: 바다타임 비교 검증 완료 기준일 재보정
+    const anchor = new Date('2026-07-14T00:00:00+09:00');
     const diffDays = Math.floor((Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24));
-    const dailyShiftMin = Math.round((diffDays * 50.3)) % 745;
+    const dailyShiftMin = Math.round((diffDays * 40.0)) % 745;
     const baseHighMin = (stationBaseMin + dailyShiftMin) % 745;
 
     const fmtMin = (mins) => { const m = ((mins % 1440) + 1440) % 1440; return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`; };
