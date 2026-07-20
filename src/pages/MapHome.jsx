@@ -178,14 +178,25 @@ export default function MapHome() {
           const preds = tideItems.value.map(t => ({
             time: t.hl_time || '', type: t.hl_code === 'H' ? '고조' : '간조', level: t.hl_level || ''
           }));
+          // ✅ FIX-TIDE: 무조건 첫 번째 배열을 가져오던 로직에서, 현재 시간과 가장 가까운 물때를 가져오도록 수정
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+          const parseMin = (t) => { const [h,m] = t.split(':'); return Number(h)*60 + Number(m); };
+          
+          const getClosest = (type) => {
+            const filtered = preds.filter(p => p.type === type);
+            if (!filtered.length) return '-';
+            return filtered.sort((a, b) => Math.abs(parseMin(a.time) - nowMin) - Math.abs(parseMin(b.time) - nowMin))[0].time;
+          };
+
           base = {
             ...base,
             tide_predictions: preds,
             tide: {
               ...(base.tide || {}),
               phase: base.tide?.phase || '조석 데이터',
-              high: preds.find(p => p.type === '고조')?.time || base.tide?.high || '-',
-              low:  preds.find(p => p.type === '간조')?.time || base.tide?.low  || '-',
+              high: getClosest('고조') || base.tide?.high || '-',
+              low:  getClosest('간조') || base.tide?.low  || '-',
             },
           };
           if (!cancelled) setWeatherCache(prev => ({
@@ -723,6 +734,16 @@ export default function MapHome() {
           const preds = tideItems.map(t => ({
             time: t.hl_time || '', type: t.hl_code === 'H' ? '고조' : '간조', level: t.hl_level || ''
           }));
+          // ✅ FIX-TIDE: 홈 화면 대표 포인트도 현재 시간 기준 가장 가까운 물때 적용
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+          const parseMin = (t) => { const [h,m] = t.split(':'); return Number(h)*60 + Number(m); };
+          const getClosest = (type) => {
+            const filtered = preds.filter(p => p.type === type);
+            if (!filtered.length) return '-';
+            return filtered.sort((a, b) => Math.abs(parseMin(a.time) - nowMin) - Math.abs(parseMin(b.time) - nowMin))[0].time;
+          };
+
           setWeatherCache(prev => ({
             ...prev,
             [defaultSt.id]: {
@@ -731,8 +752,8 @@ export default function MapHome() {
               tide: {
                 ...(prev[defaultSt.id]?.tide || {}),
                 phase: prev[defaultSt.id]?.tide?.phase || '조석 데이터',
-                high: preds.find(p => p.type === '고조')?.time || '-',
-                low:  preds.find(p => p.type === '간조')?.time  || '-',
+                high: getClosest('고조') || '-',
+                low:  getClosest('간조')  || '-',
               },
             }
           }));
