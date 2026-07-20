@@ -383,7 +383,7 @@ export default function DashboardView({
               const lowMin  = parseTime(tideData.tide?.low);
               const goldenMin = highMin ?? 870;
               const lowMinVal = lowMin ?? 360;
-              const nextLowMin = (lowMinVal + 720) % 1440;
+              const nextLowMin = parseTime(tideData.tide?.next_low) ?? ((lowMinVal + 720) % 1440);
               const fmt = (mn) => { const hh = Math.floor(((mn % 1440) + 1440) % 1440 / 60); const mm = ((mn % 1440) + 1440) % 1440 % 60; return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
               const isInWindow = (centerMin, windowMin = 40) => Math.abs(nowMin - centerMin) <= windowMin || Math.abs(nowMin - centerMin + 1440) <= windowMin || Math.abs(nowMin - centerMin - 1440) <= windowMin;
               const slots = [

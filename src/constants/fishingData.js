@@ -223,7 +223,8 @@ export const getPointSpecificData = (point) => {
     tide: {
       phase: tidePhase,
       high:  formatTime(baseHighMin),
-      low:   formatTime(baseLowMin),
+      low:   formatTime(baseHighMin + 412),
+      next_low: formatTime(baseHighMin - 386),
       current_level: `${(pointSeed * 3) % 200 + 40}cm`
     },
     fish: point.fish
