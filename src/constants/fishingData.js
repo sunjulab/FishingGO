@@ -223,8 +223,8 @@ export const getPointSpecificData = (point) => {
     tide: {
       phase: tidePhase,
       high:  formatTime(baseHighMin),
-      low:   formatTime(baseHighMin + 412),
-      next_low: formatTime(baseHighMin - 386),
+      low:   formatTime(baseHighMin + (['강원', '경북', '동해', '울산'].includes(reg) ? 412 : 372)),
+      next_low: formatTime(baseHighMin - (['강원', '경북', '동해', '울산'].includes(reg) ? 386 : 372)),
       current_level: `${(pointSeed * 3) % 200 + 40}cm`
     },
     fish: point.fish

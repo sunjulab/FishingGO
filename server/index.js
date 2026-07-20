@@ -2546,7 +2546,8 @@ async function updateAllStationsCache() {
     
     const tidePhase = realTide?.phase || mockPhase;
     const tideHigh  = realTide?.high  || fmtMin(baseHighMin);
-    const tideLow   = realTide?.low   || fmtMin(baseHighMin + 372);
+    const tideLow   = realTide?.low   || fmtMin(baseHighMin + (['강원', '경북', '동해', '울산'].includes(base.region) ? 412 : 372));
+    const tideNextLow = realTide?.next_low || fmtMin(baseHighMin - (['강원', '경북', '동해', '울산'].includes(base.region) ? 386 : 372));
     const tideLevel = 10 + (seed * 7 + new Date(Date.now() + 9 * 3600 * 1000).getUTCHours() * 13) % 250;
 
     weatherCache[sid] = {
@@ -2570,7 +2571,7 @@ async function updateAllStationsCache() {
           }
           return { upper: parseFloat(finalTemp).toFixed(1), middle: m, lower: l };
         })(),
-        tide: { phase: tidePhase, high: tideHigh, low: tideLow, current_level: `${tideLevel}cm` },
+        tide: { phase: tidePhase, high: tideHigh, low: tideLow, next_low: tideNextLow, current_level: `${tideLevel}cm` },
         _sources: {
           sst:  nifsSst ? 'NIFS_API' : (khoaSst ? 'KHOA_API' : (beachSst ? 'KMA_BEACH' : 'fallback')),
           wind: marine   ? 'KMA_BUOY' : 'fallback',
