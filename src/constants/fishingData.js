@@ -187,17 +187,17 @@ export const getPointSpecificData = (point) => {
 
   // FIX-FALLBACK-TIDE: 실제 조석 주기(745분) 기반 만조/간조 시간
   const STATION_BASE_HIGH = {
-    'DT_0099': 245, 'DT_0021': 255, 'DT_0001': 465, 'DT_0033': 470,
-    'DT_0003': 475, 'DT_0002': 480, 'DT_0036': 490,
-    'DT_0004': 340, 'DT_0034': 345, 'DT_0016': 350,
-    'DT_0005': 355, 'DT_0014': 360, 'DT_0018': 370, 'DT_0006': 375,
-    'DT_0007': 130, 'DT_0030': 135, 'DT_0008': 140, 'DT_0009': 145,
-    'DT_0010': 300, 'DT_0011': 305, 'DT_0045': 310,
+    'DT_0099': 159, 'DT_0021': 159, 'DT_0001': 149, 'DT_0033': 128,
+    'DT_0003': 130, 'DT_0002': 135, 'DT_0036': 145,
+    'DT_0004': 153, 'DT_0034': 160, 'DT_0016': 178,
+    'DT_0005': 198, 'DT_0014': 200, 'DT_0018': 220, 'DT_0006': 518,
+    'DT_0007': 520, 'DT_0030': 530, 'DT_0008': 540, 'DT_0009': 548,
+    'DT_0010': 260, 'DT_0011': 268, 'DT_0045': 275,
   };
   const obsId = point.obsCode || `LOC_${point.id}`;
   const stationBaseMin = STATION_BASE_HIGH[obsId] || ((pointSeed * 37) % 745);
   const diffDays = Math.floor(diffFromAnchor);
-  const dailyShiftMin = Math.round((diffDays * 40.0)) % 745;
+  const dailyShiftMin = Math.round((diffDays * 50.3)) % 745;
   const baseHighMin = (stationBaseMin + dailyShiftMin) % 745;
   const baseLowMin  = (baseHighMin + 372) % 1440;
 
