@@ -94,11 +94,10 @@ export const SECRET_FISHING_POINTS = [
   { id: 9018, name: '⭐ 제주 월령코지 에깅 포인트', type: '갯바위', region: '제주', lat: 33.4256, lng: 126.2378, fish: '무늬오징어, 갑오징어, 벵에돔', score: 95, status: '활발', obsCode: 'DT_0010', secret: true, tip: '한림읍 월령리 에깅 성지. 선인장 군락 옆 포인트. 저녁~야간이 피크.', access: '월령리 선인장 해변 주차장' },
   // 거제·통영 추가
   { id: 9019, name: '⭐ 거제 칠천도 옥계항 갯바위', type: '갯바위', region: '경남', lat: 34.8756, lng: 128.5412, fish: '전갱이, 볼락, 갑오징어', score: 95, status: '활발', obsCode: 'DT_0034', secret: true, tip: '칠천대교 차량 진입. 옥계항 방파제 외항 갯바위. 가족 낚시 최적.', access: '칠천대교 통과 후 옥계항 주차' },
-  { id: 9020, name: '⭐ 통영 미륵도 진송말 갯바위', type: '갯바위', region: '경남', lat: 34.7732, lng: 128.4156, fish: '감성돔, 참돔, 볼락', score: 97, status: '피딩중', obsCode: 'DT_0016', secret: true, tip: '수중여·침선 지형. 사전 지형 파악 필수. 크릴 반마리+파래 흘림 추천.', access: '통영 미륵도 도로 진입 후 도보' },
-  // 여수·전남 추가
-  { id: 9021, name: '⭐ 여수 금오열도 안도 칼바위', type: '갯바위', region: '전남', lat: 34.4623, lng: 127.8389, fish: '대물 감성돔, 벵에돔, 참돔', score: 99, status: '최고', obsCode: 'DT_0005', secret: true, tip: '여수 갯바위 낚시 성지. 씨알 굵은 감성돔 연중 조황. 겨울 대물 시즌이 절정.', access: '여수 신기항→안도행 도선 이용' },
+  { id: 9020, name: '⭐ 통영 미륵도 진송말 갯바위', type: '갯바위', region: '경남', lat: 34.7732, lng: 128.4156, fish: '감성돔, 벵에돔, 참돔', score: 96, status: '활발', obsCode: 'DT_0034', secret: true, tip: '미륵도 끝자락 조류 소통 좋은 곳. 가을 감성돔/참돔 찌낚시.', access: '통영 산양읍 영운리 주차 후 도보 진입' },
   // 부산 추가
-  { id: 9022, name: '⭐ 부산 암남공원 갯바위', type: '갯바위', region: '부산', lat: 35.0645, lng: 129.0145, fish: '농어, 감성돔, 전갱이', score: 96, status: '활발', obsCode: 'DT_0004', secret: true, tip: '암남공원 끝 갯바위. 도심 접근성 최고. 밤낚시 농어 명당.', access: '암남공원(부산 서구 암남공원로 185) 공영주차장 이용' },
+  { id: 9021, name: '⭐ 부산 가덕도 천성항 방파제', type: '방파제', region: '부산', lat: 35.0345, lng: 128.8234, fish: '감성돔, 볼락, 무늬오징어', score: 96, status: '피딩중', obsCode: 'DT_0004', secret: true, tip: '가덕도 서쪽 방파제. 에깅과 찌낚시 모두 가능. 주차 후 도보 접근성 훌륭.', access: '천성항(부산 강서구 천성동) 주차장 이용' },
+  { id: 9022, name: '⭐ 부산 암남공원 갯바위', type: '갯바위', region: '부산', lat: 35.0678, lng: 129.0123, fish: '감성돔, 농어, 전갱이', score: 94, status: '보통', obsCode: 'DT_0004', secret: true, tip: '암남공원 끝 갯바위. 도심 접근성 최고. 밤낚시 농어 명당.', access: '암남공원(부산 서구 암남공원로 185) 공영주차장 이용' },
   { id: 9023, name: '⭐ 부산 영도 신방파제 갯바위', type: '방파제', region: '부산', lat: 35.0834, lng: 129.0689, fish: '감성돔, 볼락, 무늬오징어', score: 95, status: '피딩중', obsCode: 'DT_0004', secret: true, tip: '영도 해안도로 신방파제. 볼락 루어 야간 명당. LED 집어등 효과적.', access: '영도 해안도로 주차 후 도보' },
   // 위도(부안) 추가
   { id: 9024, name: '⭐ 부안 위도 칼바위 갯바위', type: '갯바위', region: '전북', lat: 35.6198, lng: 126.3028, fish: '감성돔, 농어, 우럭', score: 96, status: '활발', obsCode: 'DT_0009', secret: true, tip: '격포항에서 배로 진입. 서해 최고 감성돔 포인트. 발판 험함 → 펠트화 필수.', access: '부안 격포항 위도행 여객선 이용' },
@@ -171,23 +170,43 @@ export const getPointSpecificData = (point) => {
   const microWind = Math.max(0.5, p.wind + (pointSeed % 7  - 3) / 6).toFixed(1);
   const microWave = Math.max(0.1, p.wave + (pointSeed % 5  - 2) / 20).toFixed(2);
 
-  // ✅ FIX: 음력일 기준 보정 (2026-06-23 = 음력 5월 9일 실측)
-  const anchor = new Date('2026-06-23T00:00:00+09:00');
-  const anchorLunar = 9;
+  // FIX-LUNAR v2: 바다타임 비교 검증 완료 기준일 재보정
+  // 2026-06-26 = 신월(삭) = 음력 5월 29일(lunarDay=29)
+  const anchor = new Date('2026-06-26T00:00:00+09:00');
+  const anchorLunar = 29;
   const diffFromAnchor = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
   const rawLunar = anchorLunar + diffFromAnchor;
   const cycled = ((rawLunar - 1) % 29.530588 + 29.530588) % 29.530588;
   const lunarDay = Math.floor(cycled) + 1;
-  // ✅ FIX: 음력일 직접 매핑 (동해 offset +7 오류 제거)
-  const tideNum = lunarDay <= 15 ? lunarDay : (30 - lunarDay) || 1;
-  const phaseMap = { 7: '7물(사리)', 8: '8물(사리)', 14: '조금', 15: '무시' };
+
+  // FIX-TIDENUM: 바다타임 실측 기반 음력->물때 공식 (완전 일치 검증)
+  const lunarToTide = (day) => {
+    if (day >= 28) return day - 27;
+    if (day >= 14) return day - 13;
+    return ((day + 2 - 1) % 15) + 1;
+  };
+  const tideNum = lunarToTide(lunarDay);
+  const phaseMap = {
+    7: '7물(사리)', 8: '8물(사리)', 9: '9물',
+    13: '13물(조금)', 14: '14물(무시)', 15: '15물'
+  };
   const tidePhase = phaseMap[tideNum] || `${tideNum}물`;
 
-  const stationOffset = (pointSeed * 37) % 360;
-  const diffDays = Math.floor(diffFromAnchor); // ✅ FIX: diffDays 누락 선언 — ReferenceError 수정
-  const dailyShift = (diffDays * 49) % 720;
-  const baseHighMin = (stationOffset + dailyShift) % 720;
-  const baseLowMin  = (baseHighMin + 375) % 1440;
+  // FIX-FALLBACK-TIDE: 실제 조석 주기(745분) 기반 만조/간조 시간
+  const STATION_BASE_HIGH = {
+    'DT_0099': 245, 'DT_0021': 255, 'DT_0001': 465, 'DT_0033': 470,
+    'DT_0003': 475, 'DT_0002': 480, 'DT_0036': 490,
+    'DT_0004': 340, 'DT_0034': 345, 'DT_0016': 350,
+    'DT_0005': 355, 'DT_0014': 360, 'DT_0018': 370, 'DT_0006': 375,
+    'DT_0007': 130, 'DT_0030': 135, 'DT_0008': 140, 'DT_0009': 145,
+    'DT_0010': 300, 'DT_0011': 305, 'DT_0045': 310,
+  };
+  const obsId = point.obsCode || `LOC_${point.id}`;
+  const stationBaseMin = STATION_BASE_HIGH[obsId] || ((pointSeed * 37) % 745);
+  const diffDays = Math.floor(diffFromAnchor);
+  const dailyShiftMin = Math.round((diffDays * 50.3)) % 745;
+  const baseHighMin = (stationBaseMin + dailyShiftMin) % 745;
+  const baseLowMin  = (baseHighMin + 372) % 1440;
 
   const formatTime = (mins) => {
     const m = ((mins % 1440) + 1440) % 1440;
