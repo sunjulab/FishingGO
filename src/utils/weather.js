@@ -94,11 +94,21 @@ export function calculateFishingIndex(wind, wave, pressureTrend) {
  * 15물때(Tide Cycle) 계산기 (Simple Mock)
  */
 export function getTidePhase(date) {
-  const phases = ['1물', '2물', '3물', '4물', '5물', '6물', '7물(사리)', '8물', '9물', '10물', '11물', '12물', '13물(조금)', '14물(무시)', '15물'];
-  // ✅ BUG-FIX: getDate() 1~31 반환 → (getDate()-1)%15로 index 0~14 정확히 순환
-  // 기존 getDate()%15: 1일=index1, 15일=index0 비연속 문제 해결
-  const day = (new Date(date).getDate() - 1) % 15;
-  return phases[day];
+  // ✅ FIX-LUNAR v2: 바다타임 비교 검증 완료 기준일 재보정 (2026-06-26 = 신월)
+  const anchor = new Date('2026-06-26T00:00:00+09:00');
+  const anchorLunar = 29;
+  const diffFromAnchor = (new Date(date).getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24);
+  const rawLunar = anchorLunar + diffFromAnchor;
+  const cycled = ((rawLunar - 1) % 29.530588 + 29.530588) % 29.530588;
+  const lunarDay = Math.floor(cycled) + 1;
+  const lunarToTide = (day) => {
+    if (day >= 28) return day - 27;
+    if (day >= 14) return day - 13;
+    return ((day + 2 - 1) % 15) + 1;
+  };
+  const tideNum = lunarToTide(lunarDay);
+  const phaseMap = { 7: '7물(사리)', 8: '8물(사리)', 9: '9물', 13: '13물(조금)', 14: '14물(무시)', 15: '15물' };
+  return phaseMap[tideNum] || `${tideNum}물`;
 }
 
 /**

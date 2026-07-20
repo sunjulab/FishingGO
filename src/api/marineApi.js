@@ -9,8 +9,8 @@ if (!API_KEY && !import.meta.env.PROD) {
   console.warn('[marineApi] VITE_TIDE_API_KEY 미설정 — 해양 API 비활성화됨');
 }
 
-// Vite 프록시: /data-go-api → https://apis.data.go.kr
-const PROXY = '/data-go-api';
+// Vite 프록시: 로컬은 /data-go-api, 프로덕션(웹)은 실제 도메인 직접 호출 (CORS 허용됨)
+const PROXY = import.meta.env.PROD ? 'https://apis.data.go.kr' : '/data-go-api';
 
 // ────────────────────────────────────────────
 // 공통 fetch 헬퍼 — 10초 타임아웃 + 공공데이터포털 응답 파싱
