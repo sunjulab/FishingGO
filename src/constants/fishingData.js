@@ -1,5 +1,6 @@
 // ✅ 4TH-C6: id는 이력 상 비연속 (1~28, 38~110) — 향후 id 직접 조회 대신 obsCode를 primary key로 사용 권장
 import { FRESHWATER_FISHING_POINTS } from './freshwaterData.js';
+import { TIDE_CALENDAR } from './tideCalendarData.js';
 
 const SEA_FISHING_POINTS = [
   // ── 동해권 (Gangwon/Gyeongbuk) ──
@@ -197,6 +198,42 @@ export const getPointSpecificData = (point) => {
   const obsId = point.obsCode || `LOC_${point.id}`;
   const diffDays = Math.floor(diffFromAnchor);
   
+  // ✅ 실측 물때 달력(TIDE_CALENDAR) 우선 적용 (KHOA API 대체용 캐시)
+  if (TIDE_CALENDAR[obsId] && TIDE_CALENDAR[obsId][diffDays]) {
+    const realTide = TIDE_CALENDAR[obsId][diffDays];
+    return {
+      stationId: obsId,
+      pointName: point.name,
+      sst: microSst,
+      temp: `${microSst}°C`,
+      wind: { speed: parseFloat(microWind), dir: pointSeed % 2 === 0 ? 'NE' : 'SW' },
+      wave: { coastal: parseFloat(microWave) },
+      layers: {
+        upper: parseFloat(microSst),
+        middle: (parseFloat(microSst) - 1.5).toFixed(1),
+        lower: (parseFloat(microSst) - 3.8).toFixed(1)
+      },
+      tide: {
+        isReal: true, // ✅ 마스터 데이터 플래그
+        phase: realTide.phase,
+        high: realTide.high,
+        high2: realTide.high2,
+        low: realTide.low,
+        low2: realTide.low2,
+        next_low: realTide.low, // fallback
+        current_level: `${(pointSeed * 3) % 200 + 40}cm`,
+        flow: (() => {
+          const flowMap = { '조금': 5, '무시': 8, '1물': 10, '2물': 18, '3물': 28, '4물': 38, '5물': 50,
+            '6물': 65, '7물(사리)': 85, '7물': 85, '8물(사리)': 100, '8물': 100,
+            '9물': 88, '10물': 75, '11물': 62, '12물': 48, '13물': 35, '14물': 22, '15물': 12 };
+          for (const key of Object.keys(flowMap)) { if (realTide.phase.includes(key)) return flowMap[key]; }
+          return 50;
+        })()
+      },
+      fish: point.fish
+    };
+  }
+
   // 데이터가 없을 경우 수학적 공식을 이용한 Fallback
   const stationBaseMin = STATION_BASE_HIGH[obsId] || ((pointSeed * 37) % 745);
   

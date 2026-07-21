@@ -559,7 +559,7 @@ export default function MapHome() {
       // ✅ TIDE-SYNC: API 응답의 tide 우선 → 없으면 weatherCache tide → 없으면 정적 fallback
       const staticTide = getPointSpecificData(point).tide;
       let bestTide = { ...staticTide };
-      if (res.data.tide) {
+      if (res.data.tide && !staticTide.isReal) {
         bestTide = { ...staticTide, ...res.data.tide };
         // 백엔드에서 온 데이터에 2차 만/간조가 없다면, 프론트엔드의 가짜(수식) 2차 데이터를 섞지 않고 제거
         if (!res.data.tide.high2) delete bestTide.high2;
@@ -1018,8 +1018,9 @@ export default function MapHome() {
     || (_cachedLive ? {
         ..._cachedLive,
         stationId: _nearestSt?.id,
-        // ✅ BUG-2 FIX: weatherCache의 실시간 조석 우선, 없으면 정적 fallback (병합으로 누락필드 방지)
+        // ✅ BUG-2 FIX: 실측 데이터가 있으면 무조건 우선, 없으면 weatherCache의 실시간 조석 병합
         tide: (() => {
+          if (_staticData?.tide?.isReal) return _staticData.tide;
           let t = { ..._staticData?.tide, ...(_cachedLive.tide || {}) };
           if (_cachedLive.tide && !_cachedLive.tide.high2) delete t.high2;
           if (_cachedLive.tide && !_cachedLive.tide.low2) delete t.low2;
