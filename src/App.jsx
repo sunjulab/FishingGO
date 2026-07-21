@@ -86,7 +86,7 @@ function KakaoSdkInit() {
 const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
 
 // ✅ 3RD-B2: hideNav/hideHeader 경로 배열 통합 — 한 곳에서 관리 (✅ 3RD-B1: /media 제거 — MediaTab 네비게이션 정상 노출)
-const HIDE_OVERLAY_PATHS = ['/write', '/write-business', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin', '/payment-history', '/vvip-subscribe', '/admin-dashboard', '/weather', '/user/'];
+const HIDE_OVERLAY_PATHS = ['/write', '/write-business', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin', '/payment-history', '/vvip-subscribe', '/admin-dashboard', '/weather', '/user/', '/tide-calendar'];
 
 // ✅ STATIC IMPORTS: esbuild 단일 번들에서 lazy() + 동적 import() → 404 에러
 // splitting: false 환경에서 동적 chunk 파일이 없으므로 정적 import로 통일
@@ -110,6 +110,7 @@ import SecretPointAdmin from './pages/SecretPointAdmin';
 import PaymentHistory from './pages/PaymentHistory';
 import AdminDashboard from './pages/AdminDashboard';
 import UserProfile from './pages/UserProfile';
+import TideCalendar from './pages/TideCalendar';
 import CatchUploadPage from './pages/CatchUploadPage';
 import CatchRankingPage from './pages/CatchRankingPage';
 import ContestPage from './pages/ContestPage';
@@ -619,6 +620,7 @@ export default function App() {
               <Route path="/crew/:id/chat" element={<CrewChat />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/weather" element={<WeatherDashboard />} />
+              <Route path="/tide-calendar" element={<TideCalendar />} />
               <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
               <Route path="/write-business" element={<WriteBusinessPost />} />
               {/* ENH3-C1: AdminRoute 컴포넌트로 분리 — App() 리렌더 수 절감 */}

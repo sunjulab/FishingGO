@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Map, BarChart2, Ship, Crown, Zap, Search, Clock,
-  Waves, Wind, Tv, AlertCircle, X, MapPin, Lock, Play,
+  Waves, Wind, Tv, AlertCircle, X, MapPin, Lock, Play, ChevronRight,
 } from 'lucide-react';
 import apiClient from '../api/index';
 import CsInquirySection from '../components/CsInquirySection';
@@ -438,6 +438,35 @@ export default function DashboardView({
           </div>
         </div>
 
+
+        {/* 전국 물때 & 낚시 지수 달력 배너 */}
+        <div style={{ padding: '0px 16px 12px' }}>
+          <div 
+            onClick={() => navigate('/tide-calendar')}
+            style={{ 
+              position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%)', 
+              borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              boxShadow: '0 8px 24px rgba(44, 83, 100, 0.3)', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)'
+            }}
+          >
+            {/* 배경 파도 효과 */}
+            <div style={{ position: 'absolute', top: '-50%', right: '-20%', width: '150px', height: '150px', background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <span style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '900', color: '#42A5F5', background: 'rgba(66, 165, 245, 0.15)', padding: '2px 6px', borderRadius: '8px' }}>NEW</span>
+                <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: '#fff', letterSpacing: '-0.5px' }}>전국 물때 & 낚시 지수 달력 📅</span>
+              </div>
+              <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
+                어종별 낚시 지수와 물때표 한눈에 보기
+              </div>
+            </div>
+            
+            <div style={{ position: 'relative', zIndex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+              <ChevronRight size={20} color="#fff" />
+            </div>
+          </div>
+        </div>
 
         {/* 프리미엄 멤버십 */}
         <div style={{ padding: '8px 16px 12px' }}>
