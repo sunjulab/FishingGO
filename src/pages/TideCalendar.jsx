@@ -109,10 +109,9 @@ export default function TideCalendar() {
                 fishingIdx = match.fishing_idx || fishingIdx;
               }
             } else {
-              // fallback to mathematical evaluator
-              const cond = evaluateFishingCondition(null, null, null);
-              fishingGrade = cond.fishingGrade;
-              fishingIdx = cond.fishingIdx;
+              // fallback if API fails
+              fishingGrade = '보통';
+              fishingIdx = 3;
             }
             
             // 바다갈라짐 매핑

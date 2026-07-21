@@ -35,15 +35,16 @@ async function fetchDataGo(endpoint, params) {
       signal: controller.signal,
       headers: { Accept: 'application/json' },  // JSON 명시 요청
     });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
+      clearTimeout(timeoutId);
       if (!import.meta.env.PROD) console.warn(`[marineApi] ${endpoint} HTTP ${response.status}`);
       return null;
     }
 
     // ── 응답 텍스트 먼저 읽기 (XML 에러 처리용) ──────────────
     const text = await response.text();
+    clearTimeout(timeoutId);
 
     // XML 에러 응답 감지 (data.go.kr 서비스 오류 시 XML 반환)
     if (text.trimStart().startsWith('<')) {
