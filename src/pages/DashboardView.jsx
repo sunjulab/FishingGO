@@ -288,8 +288,8 @@ export default function DashboardView({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
               {[
                 { label: '수온', val: `${parseFloat(tideData.sst || 14).toFixed(1)}°C`, ok: parseFloat(tideData.sst || 14) >= 12 && parseFloat(tideData.sst || 14) <= 22, statusText: parseFloat(tideData.sst || 14) < 12 ? '✗ 저수온' : (parseFloat(tideData.sst || 14) > 22 ? '✗ 고수온' : '✓ 양호') },
-                { label: '파고', val: `${tideData.wave?.coastal || '0.4'}m`, ok: parseFloat(tideData.wave?.coastal || 0.4) <= 1.0, statusText: parseFloat(tideData.wave?.coastal || 0.4) > 1.0 ? '✗ 높은파고' : '✓ 양호' },
-                { label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s`, ok: parseFloat(tideData.wind?.speed || 2.1) <= 5, statusText: parseFloat(tideData.wind?.speed || 2.1) > 5 ? '✗ 강풍경보' : '✓ 양호' },
+                { label: '파고', val: `${tideData.wave?.coastal || '0.4'}m`, ok: parseFloat(tideData.wave?.coastal || 0.4) <= 1.0 },
+                { label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s`, ok: parseFloat(tideData.wind?.speed || 2.1) <= 5 },
                 { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물'), statusText: (!phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물')) ? '✓ 양호' : '✗ 조류약함' },
               ].map(item => (
                 <div key={item.label} style={{ background: item.ok ? 'rgba(0,196,140,0.08)' : 'rgba(255,90,95,0.08)', border: `1px solid ${item.ok ? 'rgba(0,196,140,0.25)' : 'rgba(255,90,95,0.25)'}`, borderRadius: '10px', padding: '7px 4px', textAlign: 'center' }}>
