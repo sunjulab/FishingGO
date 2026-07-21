@@ -736,21 +736,19 @@ export default function MapHome() {
       try {
         const defaultPt = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
         const defaultSt = findNearestStation(defaultPt.lat, defaultPt.lng);
-        const todayStr  = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        // KST 기준 날짜
+        const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
         const tideItems = await fetchTideForecast(defaultSt.id, todayStr);
         if (tideItems?.length) {
-          const preds = tideItems.map(t => ({
-            time: t.hl_time || '', type: t.hl_code === 'H' ? '고조' : '간조', level: t.hl_level || ''
-          }));
-          // ✅ FIX-TIDE: 홈 화면 대표 포인트도 현재 시간 기준 가장 가까운 물때 적용
-          const now = new Date();
-          const nowMin = now.getHours() * 60 + now.getMinutes();
-          const parseMin = (t) => { const [h,m] = t.split(':'); return Number(h)*60 + Number(m); };
-          const getClosest = (type) => {
-            const filtered = preds.filter(p => p.type === type);
-            if (!filtered.length) return '-';
-            return filtered.sort((a, b) => Math.abs(parseMin(a.time) - nowMin) - Math.abs(parseMin(b.time) - nowMin))[0].time;
-          };
+          const preds = tideItems.map(t => {
+            const timeStr = t.predcDt ? t.predcDt.split(' ')[1] : (t.hl_time || '');
+            const typeStr = (t.extrSe === '1' || t.extrSe === '3' || t.hl_code === 'H') ? '고조' : '간조';
+            const levelVal = t.predcTdlvVl || t.hl_level || '';
+            return { time: timeStr, type: typeStr, level: levelVal };
+          });
+          const highs = preds.filter(p => p.type === '고조').map(p => p.time).sort();
+          const lows = preds.filter(p => p.type === '간조').map(p => p.time).sort();
 
           setWeatherCache(prev => ({
             ...prev,
@@ -760,8 +758,10 @@ export default function MapHome() {
               tide: {
                 ...(prev[defaultSt.id]?.tide || {}),
                 phase: prev[defaultSt.id]?.tide?.phase || '조석 데이터',
-                high: getClosest('고조') || '-',
-                low:  getClosest('간조')  || '-',
+                high: highs[0] || '-',
+                high2: highs[1] || '-',
+                low:  lows[0] || '-',
+                low2:  lows[1] || '-',
               },
             }
           }));
