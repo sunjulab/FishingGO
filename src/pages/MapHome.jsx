@@ -1021,10 +1021,8 @@ export default function MapHome() {
         // ✅ BUG-2 FIX: 실측 데이터가 있으면 무조건 우선, 없으면 weatherCache의 실시간 조석 병합
         tide: (() => {
           if (_staticData?.tide?.isReal) return _staticData.tide;
-          let t = { ..._staticData?.tide, ...(_cachedLive.tide || {}) };
-          if (_cachedLive.tide && !_cachedLive.tide.high2) delete t.high2;
-          if (_cachedLive.tide && !_cachedLive.tide.low2) delete t.low2;
-          return t;
+          if (_cachedLive?.tide) return _cachedLive.tide;
+          return _staticData?.tide;
         })(),
         pointName: _selectedPt.name,
       } : null)
