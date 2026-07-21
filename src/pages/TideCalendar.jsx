@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Calendar as CalIcon, MapPin, Loader2, Info } from 'lucide-react';
 import { fetchTideForecast, fetchFishingIndex, fetchSeaSplitIndex } from '../api/marineApi';
 import { evaluateFishingCondition } from '../utils/evaluator';
+import { Lunar } from 'lunar-javascript';
 
 const REGIONS = {
   west: {
@@ -84,19 +85,54 @@ export default function TideCalendar() {
         ]);
 
         if (isMounted) {
-          const processed = dates.map(d => {
-            const dStr = d.toISOString().slice(0, 10).replace(/-/g, '');
-            const tideObj = tidesArray.find(t => t.date === dStr);
-            let preds = [];
-            if (tideObj && tideObj.tides) {
-              preds = tideObj.tides.map(t => {
-                const timeStr = t.predcDt ? t.predcDt.split(' ')[1] : (t.hl_time || '');
-                const typeStr = (t.extrSe === '1' || t.extrSe === '3' || t.hl_code === 'H') ? '고조' : '간조';
-                return { time: timeStr, type: typeStr };
+          // 1. Flatten all tides chronologically to compute differences
+          const allTides = [];
+          tidesArray.forEach(day => {
+            if (day.tides) {
+              day.tides.forEach(t => {
+                 allTides.push({
+                   dateStr: day.date,
+                   time: t.predcDt ? t.predcDt.split(' ')[1] : (t.hl_time || ''),
+                   level: parseInt(t.predcTdlvVl || t.hl_level || 0, 10),
+                   type: (t.extrSe === '1' || t.extrSe === '3' || t.hl_code === 'H') ? '고조' : '간조',
+                   dt: t.predcDt || `${day.date} ${t.hl_time || ''}`
+                 });
               });
             }
-            const highs = preds.filter(p => p.type === '고조').map(p => p.time).sort();
-            const lows = preds.filter(p => p.type === '간조').map(p => p.time).sort();
+          });
+          allTides.sort((a, b) => a.dt.localeCompare(b.dt));
+
+          // 2. Compute differences
+          for (let i = 0; i < allTides.length; i++) {
+             if (i === 0) {
+               allTides[i].diffStr = '';
+             } else {
+               const diff = allTides[i].level - allTides[i-1].level;
+               allTides[i].diffStr = diff > 0 ? `▲+${diff}` : `▼${diff}`;
+             }
+          }
+
+          const processed = dates.map(d => {
+            const dStr = d.toISOString().slice(0, 10).replace(/-/g, '');
+            const dayTides = allTides.filter(t => t.dateStr === dStr);
+            
+            // Lunar Phase (물때명)
+            let tidePhaseName = '';
+            const phaseMap = {
+               1: '7물', 2: '8물', 3: '9물', 4: '10물', 5: '11물', 6: '12물', 7: '13물',
+               8: '조금', 9: '무시', 10: '1물', 11: '2물', 12: '3물', 13: '4물', 14: '5물', 15: '6물(사리)',
+               16: '7물', 17: '8물', 18: '9물', 19: '10물', 20: '11물', 21: '12물', 22: '13물',
+               23: '조금', 24: '무시', 25: '1물', 26: '2물', 27: '3물', 28: '4물', 29: '5물', 30: '6물(사리)'
+            };
+            try {
+              const lunarD = Lunar.fromDate(d);
+              tidePhaseName = phaseMap[lunarD.getDay()] || '';
+            } catch(e) {
+              // fallback
+            }
+
+            const highs = dayTides.filter(p => p.type === '고조');
+            const lows = dayTides.filter(p => p.type === '간조');
 
             // 낚시지수 매핑
             let fishingGrade = '보통';
@@ -128,8 +164,9 @@ export default function TideCalendar() {
             return {
               dateObj: d,
               dateStr: dStr,
-              highs: [highs[0] || '--:--', highs[1] || '--:--'],
-              lows: [lows[0] || '--:--', lows[1] || '--:--'],
+              tidePhaseName,
+              highs,
+              lows,
               fishingGrade,
               fishingIdx,
               seaSplit
@@ -235,6 +272,7 @@ export default function TideCalendar() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: isToday ? '#1565C0' : '#1A1A2E' }}>
                         {dateText} ({dayName})
+                        {day.tidePhaseName && <span style={{ marginLeft: '6px', color: '#8E8E93' }}>[{day.tidePhaseName}]</span>}
                       </span>
                       {isToday && <span style={{ background: '#E53935', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, padding: '2px 6px', borderRadius: '8px', fontWeight: '900' }}>오늘</span>}
                     </div>
@@ -245,21 +283,38 @@ export default function TideCalendar() {
                     </div>
                   </div>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div style={{ background: '#FFF5F5', padding: '10px', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#E53935', fontWeight: '900', marginBottom: '4px' }}>만조 ▲</span>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#1A1A2E', fontWeight: '900' }}>{day.highs[0]}</span>
-                        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800' }}>{day.highs[1]}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: '#F8F9FC', padding: '12px', borderRadius: '10px' }}>
+                    
+                    {/* 만조 (High Tides) */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#E53935', fontWeight: '900', width: '50px', flexShrink: 0 }}>만조 ▲</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {day.highs.length > 0 ? day.highs.map((h, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(14px * var(--fs, 1))` }}>
+                            <span style={{ fontWeight: '900', color: '#1A1A2E' }}>{h.time}</span>
+                            <span style={{ color: '#4B5563' }}>({h.level})</span>
+                            <span style={{ color: '#E53935', fontWeight: '800', fontSize: `calc(12px * var(--fs, 1))` }}>{h.diffStr}</span>
+                          </div>
+                        )) : <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93' }}>없음</span>}
                       </div>
                     </div>
-                    <div style={{ background: '#F0F8FF', padding: '10px', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#1565C0', fontWeight: '900', marginBottom: '4px' }}>간조 ▼</span>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#1A1A2E', fontWeight: '900' }}>{day.lows[0]}</span>
-                        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800' }}>{day.lows[1]}</span>
+
+                    <div style={{ height: '1px', background: '#E5E7EB', margin: '4px 0' }}></div>
+
+                    {/* 간조 (Low Tides) */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#1565C0', fontWeight: '900', width: '50px', flexShrink: 0 }}>간조 ▼</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {day.lows.length > 0 ? day.lows.map((l, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(14px * var(--fs, 1))` }}>
+                            <span style={{ fontWeight: '900', color: '#1A1A2E' }}>{l.time}</span>
+                            <span style={{ color: '#4B5563' }}>({l.level})</span>
+                            <span style={{ color: '#1565C0', fontWeight: '800', fontSize: `calc(12px * var(--fs, 1))` }}>{l.diffStr}</span>
+                          </div>
+                        )) : <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#8E8E93' }}>없음</span>}
                       </div>
                     </div>
+
                   </div>
                   {day.seaSplit && (
                     <div style={{ marginTop: '8px', background: '#E0F2F1', padding: '10px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
