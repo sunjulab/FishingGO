@@ -6,8 +6,8 @@ const SEA_FISHING_POINTS = [
   // ── 동해권 (Gangwon/Gyeongbuk) ──
   { id: 1, name: '묵호항 방파제', type: '방파제', region: '강원', lat: 37.5489, lng: 129.1170, fish: '감성돔, 우럭', score: 98, status: '피딩중', obsCode: 'DT_0033' },
   { id: 2, name: '속초항 방파제', type: '방파제', region: '강원', lat: 38.2134, lng: 128.6010, fish: '가자미, 우럭', score: 95, status: '최고', obsCode: 'DT_0021' },
-  { id: 3, name: '강릉 안목항 방파제', type: '방파제', region: '강원', lat: 37.7725, lng: 128.9472, fish: '고등어, 오징어', score: 85, status: '보통', obsCode: 'DT_0001' },
-  { id: 4, name: '주문진항 방파제', type: '방파제', region: '강원', lat: 37.8912, lng: 128.8475, fish: '도다리, 학꽁치', score: 92, status: '활발', obsCode: 'DT_0001' },
+  { id: 3, name: '강릉 안목항 방파제', type: '방파제', region: '강원', lat: 37.7725, lng: 128.9472, fish: '고등어, 오징어', score: 85, status: '보통', obsCode: 'DT_0099' },
+  { id: 4, name: '주문진항 방파제', type: '방파제', region: '강원', lat: 37.8912, lng: 128.8475, fish: '도다리, 학꽁치', score: 92, status: '활발', obsCode: 'DT_0099' },
   { id: 5, name: '울진 후포항 방파제', type: '방파제', region: '경북', lat: 36.6785, lng: 129.4589, fish: '벵에돔, 감성돔', score: 94, status: '피딩중', obsCode: 'DT_0002' }, // ✅ 20TH-C2: '뱅에돔' → '벵에돔' 오타 수정
   { id: 6, name: '영덕 강구항 방파제', type: '방파제', region: '경북', lat: 36.3612, lng: 129.3874, fish: '삼치, 전어', score: 88, status: '보통', obsCode: 'DT_0002' },
   { id: 7, name: '포항 영일만 신항방파제', type: '방파제', region: '경북', lat: 36.1154, lng: 129.4325, fish: '방어, 잿방어', score: 96, status: '최고', obsCode: 'DT_0036' },
@@ -15,14 +15,14 @@ const SEA_FISHING_POINTS = [
   { id: 27, name: '삼척 임원항 방파제', type: '방파제', region: '강원', lat: 37.2312, lng: 129.3512, fish: '감성돔, 학꽁치', score: 91, status: '활발', obsCode: 'DT_0003' },
   { id: 28, name: '경주 읍천항 방파제', type: '방파제', region: '경북', lat: 35.6812, lng: 129.4712, fish: '농어, 무늬오징어', score: 93, status: '피딩중', obsCode: 'DT_0036' },
   { id: 41, name: '속초 영금정 갯바위', type: '갯바위', region: '강원', lat: 38.2121, lng: 128.5954, fish: '감성돔, 돌참돔', score: 92, status: '활발', obsCode: 'DT_0021' },
-  { id: 42, name: '양양 수산항 갯바위', type: '갯바위', region: '강원', lat: 38.0812, lng: 128.6712, fish: '학꽁치, 감성돔', score: 88, status: '보통', obsCode: 'DT_0001' },
-  { id: 43, name: '강릉 사천진 갯바위', type: '갯바위', region: '강원', lat: 37.8312, lng: 128.8812, fish: '도다리, 놀래기', score: 86, status: '보통', obsCode: 'DT_0001' },
+  { id: 42, name: '양양 수산항 갯바위', type: '갯바위', region: '강원', lat: 38.0812, lng: 128.6712, fish: '학꽁치, 감성돔', score: 88, status: '보통', obsCode: 'DT_0099' },
+  { id: 43, name: '강릉 사천진 갯바위', type: '갯바위', region: '강원', lat: 37.8312, lng: 128.8812, fish: '도다리, 놀래기', score: 86, status: '보통', obsCode: 'DT_0099' },
   { id: 44, name: '동해 추암 촛대바위', type: '갯바위', region: '강원', lat: 37.4712, lng: 129.1612, fish: '대물 감성돔, 우럭', score: 94, status: '최고', obsCode: 'DT_0033' },
   { id: 45, name: '삼척 장호항 갯바위', type: '갯바위', region: '강원', lat: 37.2812, lng: 129.3212, fish: '참돔, 부시리', score: 95, status: '피딩중', obsCode: 'DT_0003' },
   { id: 46, name: '울진 죽변 등대갯바위', type: '갯바위', region: '경북', lat: 37.0512, lng: 129.4212, fish: '벵에돔, 감성돔', score: 93, status: '활발', obsCode: 'DT_0002' }, // ✅ 4TH-A2: '뱅에돔, 벵에' 오타 수정
   { id: 101, name: '속초 동명항', type: '항구', region: '강원', lat: 38.2144, lng: 128.5984, fish: '이면수, 가자미, 학꽁치', score: 90, status: '보통', obsCode: 'DT_0021' },
-  { id: 102, name: '양양 하조대항', type: '항구', region: '강원', lat: 38.0212, lng: 128.7112, fish: '고등어, 전갱이', score: 88, status: '활발', obsCode: 'DT_0001' },
-  { id: 103, name: '강릉 남항진항', type: '항구', region: '강원', lat: 37.7612, lng: 128.9612, fish: '도다리, 우럭', score: 86, status: '보통', obsCode: 'DT_0001' },
+  { id: 102, name: '양양 하조대항', type: '항구', region: '강원', lat: 38.0212, lng: 128.7112, fish: '고등어, 전갱이', score: 88, status: '활발', obsCode: 'DT_0099' },
+  { id: 103, name: '강릉 남항진항', type: '항구', region: '강원', lat: 37.7612, lng: 128.9612, fish: '도다리, 우럭', score: 86, status: '보통', obsCode: 'DT_0099' },
   { id: 104, name: '동해 어달항', type: '항구', region: '강원', lat: 37.5612, lng: 129.1254, fish: '감성돔, 광어', score: 92, status: '활발', obsCode: 'DT_0033' },
   { id: 105, name: '삼척 오분항', type: '항구', region: '강원', lat: 37.4212, lng: 129.1754, fish: '학꽁치, 우럭', score: 85, status: '보통', obsCode: 'DT_0003' },
   { id: 106, name: '울진 죽변항', type: '항구', region: '경북', lat: 37.0612, lng: 129.4254, fish: '벵에돔, 부시리, 전갱이', score: 94, status: '피딩중', obsCode: 'DT_0002' },
@@ -214,6 +214,7 @@ export const getPointSpecificData = (point) => {
         lower: (parseFloat(microSst) - 3.8).toFixed(1)
       },
       tide: {
+        isReal: true, // ✅ 마스터 데이터 플래그
         phase: realTide.phase,
         high: realTide.high,
         high2: realTide.high2,
