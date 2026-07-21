@@ -419,8 +419,8 @@ export default function DashboardView({
                   {/* 간조▼ */}
                   <div>
                     <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#1565C0', marginBottom: '5px', textAlign: 'center' }}>🔵 간조 ▼</div>
-                    <TideRow time={fmt(l1)} active={isNow(l1, 35)} />
-                    <TideRow time={fmt(l2)} active={isNow(l2, 35)} />
+                    <TideRow time={fmt(lows[0])} active={isNow(lows[0], 35)} />
+                    <TideRow time={fmt(lows[1])} active={isNow(lows[1], 35)} />
                   </div>
                   {/* 물흐름 % */}
                   <div>
