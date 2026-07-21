@@ -118,7 +118,7 @@ export default function KakaoAdBanner({ type = 'coupang', style = {} }) {
 
   return (
     <div
-      onClick={() => { window.open(finalLink, '_blank', 'noopener,noreferrer'); }}
+      onClick={() => { window.open(finalLink, '_blank'); }}
       style={{
         display: 'flex',
         background: '#fff',
