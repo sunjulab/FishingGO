@@ -3,16 +3,52 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Calendar as CalIcon, MapPin, Loader2, Info } from 'lucide-react';
 import { fetchTideForecast, fetchFishingIndex } from '../api/marineApi';
 
-// 대표 관측소 매핑 (동해, 서해, 남해)
-const REGION_STATIONS = {
-  east: { id: 'DT_0006', name: '묵호(동해)', label: '동해' },
-  west: { id: 'DT_0025', name: '보령(서해)', label: '서해' },
-  south: { id: 'DT_0016', name: '여수(남해)', label: '남해' },
+const REGIONS = {
+  west: {
+    label: '서해',
+    stations: [
+      { id: 'DT_0001', name: '인천 인근' },
+      { id: 'DT_0002', name: '평택 인근' },
+      { id: 'DT_0025', name: '보령 인근' },
+      { id: 'DT_0018', name: '군산 인근' },
+      { id: 'DT_0007', name: '목포 인근' },
+    ]
+  },
+  south: {
+    label: '남해',
+    stations: [
+      { id: 'DT_0005', name: '부산 인근' },
+      { id: 'DT_0014', name: '통영 인근' },
+      { id: 'DT_0016', name: '여수 인근' },
+      { id: 'DT_0028', name: '거문도 인근' },
+      { id: 'DT_0027', name: '완도 인근' },
+    ]
+  },
+  east: {
+    label: '동해',
+    stations: [
+      { id: 'DT_0012', name: '속초 인근' },
+      { id: 'DT_0006', name: '묵호 인근' },
+      { id: 'DT_0036', name: '울릉도 인근' },
+      { id: 'DT_0013', name: '후포 인근' },
+      { id: 'DT_0020', name: '울산 인근' },
+    ]
+  },
+  jeju: {
+    label: '제주',
+    stations: [
+      { id: 'DT_0011', name: '성산포 인근' },
+      { id: 'DT_0010', name: '서귀포 인근' },
+      { id: 'DT_0004', name: '제주 인근' },
+      { id: 'DT_0009', name: '모슬포 인근' },
+    ]
+  }
 };
 
 export default function TideCalendar() {
   const navigate = useNavigate();
   const [region, setRegion] = useState('west');
+  const [activeStation, setActiveStation] = useState(REGIONS.west.stations[2]); // 보령 기본
   const [loading, setLoading] = useState(true);
   const [calendarData, setCalendarData] = useState([]);
 
@@ -21,7 +57,7 @@ export default function TideCalendar() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const station = REGION_STATIONS[region];
+        const station = activeStation;
         // 앞으로 7일치 날짜 생성
         const dates = Array.from({ length: 7 }, (_, i) => {
           const d = new Date(Date.now() + 9 * 60 * 60 * 1000); // KST Base
@@ -89,7 +125,7 @@ export default function TideCalendar() {
     
     loadData();
     return () => { isMounted = false; };
-  }, [region]);
+  }, [activeStation]);
 
   const getGradeColor = (idx) => {
     switch(String(idx)) {
@@ -117,10 +153,10 @@ export default function TideCalendar() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', background: '#fff', padding: '10px 16px', gap: '8px', borderBottom: '1px solid #F0F2F7' }}>
-        {Object.entries(REGION_STATIONS).map(([key, st]) => (
+        {Object.entries(REGIONS).map(([key, st]) => (
           <div 
             key={key}
-            onClick={() => setRegion(key)}
+            onClick={() => { setRegion(key); setActiveStation(st.stations[0]); }}
             style={{ 
               flex: 1, textAlign: 'center', padding: '12px 0', borderRadius: '12px', cursor: 'pointer',
               background: region === key ? '#1A1A2E' : '#F0F2F7',
@@ -133,13 +169,32 @@ export default function TideCalendar() {
         ))}
       </div>
 
-      <div style={{ padding: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px', background: '#E3F2FD', padding: '12px 16px', borderRadius: '12px' }}>
-          <MapPin size={16} color="#1565C0" />
-          <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#1565C0', fontWeight: '800' }}>
-            기준 관측소: <strong>{REGION_STATIONS[region].name}</strong>
-          </span>
+      {/* Sub-region selector */}
+      <div style={{ background: '#fff', padding: '12px 16px', borderBottom: '1px solid #F0F2F7' }}>
+        <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '950', color: '#1A1A2E', marginBottom: '10px' }}>
+          | {REGIONS[region].label} 지역 물때검색 |
         </div>
+        <div style={{ display: 'flex', overflowX: 'auto', gap: '8px', paddingBottom: '4px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+          {REGIONS[region].stations.map(st => (
+            <div 
+              key={st.id}
+              onClick={() => setActiveStation(st)}
+              style={{
+                flexShrink: 0, padding: '8px 14px', borderRadius: '20px', cursor: 'pointer',
+                background: activeStation.id === st.id ? '#42A5F5' : '#F8F9FC',
+                color: activeStation.id === st.id ? '#fff' : '#4B5563',
+                border: activeStation.id === st.id ? 'none' : '1px solid #E5E7EB',
+                fontWeight: activeStation.id === st.id ? '900' : '700',
+                fontSize: `calc(13px * var(--fs, 1))`
+              }}
+            >
+              {st.name}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '16px' }}>
 
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
