@@ -187,7 +187,7 @@ export const getPointSpecificData = (point) => {
 
   // FIX-FALLBACK-TIDE: 실제 조석 주기(745분) 기반 만조/간조 시간
   const STATION_BASE_HIGH = {
-    'DT_0099': 159, 'DT_0021': 159, 'DT_0001': 149, 'DT_0033': 128,
+    'DT_0099': 151, 'DT_0021': 159, 'DT_0001': 149, 'DT_0033': 128,
     'DT_0003': 130, 'DT_0002': 189, 'DT_0036': 145,
     'DT_0004': 153, 'DT_0034': 160, 'DT_0016': 178,
     'DT_0005': 198, 'DT_0014': 200, 'DT_0018': 220, 'DT_0006': 518,
@@ -197,12 +197,25 @@ export const getPointSpecificData = (point) => {
   const obsId = point.obsCode || `LOC_${point.id}`;
   const stationBaseMin = STATION_BASE_HIGH[obsId] || ((pointSeed * 37) % 745);
   const diffDays = Math.floor(diffFromAnchor);
-  const dailyShiftMin = Math.round((diffDays * 50.3)) % 745;
-  const baseHighMin = (stationBaseMin + dailyShiftMin) % 745;
-  const baseLowMin  = (baseHighMin + 372) % 1440;
+  
+  // ✅ 00시 기준 절대 시간(Absolute Time) 윈도우 필터링
+  const todayStart = diffDays * 1440;
+  const todayEnd = todayStart + 1440;
+  const highs = [], lows = [];
+  const N_start = Math.floor((todayStart - stationBaseMin) / 745) - 1;
+  const lowOffset = ['강원', '경북', '동해', '울산'].includes(reg) ? 412 : 372;
+  
+  for (let n = N_start; n <= N_start + 3; n++) {
+    const hAbs = stationBaseMin + n * 745;
+    const lAbs = hAbs + lowOffset;
+    if (hAbs >= todayStart && hAbs < todayEnd) highs.push(hAbs - todayStart);
+    if (lAbs >= todayStart && lAbs < todayEnd) lows.push(lAbs - todayStart);
+  }
+  highs.sort((a, b) => a - b);
+  lows.sort((a, b) => a - b);
 
-  const formatTime = (mins) => {
-    const m = ((mins % 1440) + 1440) % 1440;
+  const formatTime = (m) => {
+    if (m == null) return null;
     const hh = Math.floor(m / 60).toString().padStart(2, '0');
     const mm = (m % 60).toString().padStart(2, '0');
     return `${hh}:${mm}`;
@@ -222,11 +235,11 @@ export const getPointSpecificData = (point) => {
     },
     tide: {
       phase: tidePhase,
-      high:     formatTime(baseHighMin),
-      low:      formatTime(baseHighMin + (['강원', '경북', '동해', '울산'].includes(reg) ? 412 : 372)),
-      high2:    formatTime(baseHighMin + 745), // ✅ 2차 만조 (조석 주기 745분)
-      low2:     formatTime(baseHighMin + (['강원', '경북', '동해', '울산'].includes(reg) ? 412 : 372) + 745), // ✅ 2차 간조
-      next_low: formatTime(baseHighMin - (['강원', '경북', '동해', '울산'].includes(reg) ? 386 : 372)),
+      high:     formatTime(highs[0]),
+      high2:    formatTime(highs[1]),
+      low:      formatTime(lows[0]),
+      low2:     formatTime(lows[1]),
+      next_low: formatTime(lows[0]),
       current_level: `${(pointSeed * 3) % 200 + 40}cm`,
       // ✅ 물흐름 % (물때 단계 기반 계산)
       flow: (() => {
