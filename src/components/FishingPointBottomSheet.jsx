@@ -27,10 +27,11 @@ function extractYoutubeId(str) {
 function CatchRecordModal({ point, user, onClose, onSuccess }) {
   const addToast = useToastStore(s => s.addToast);
   const fileRef = useRef(null);
+  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const [form, setForm] = useState({
     fish: (point?.fish || '').split(',')[0].trim(),
     size: '', weight: '', bait: '', weather: '', wind: '', wave: '', memo: '', image: null,
-    date: new Date().toISOString().split('T')[0],
+    date: nowKst.toISOString().split('T')[0],
     shareToBoard: false, // ✅ SHARE-OPT: 오픈게시판 동시 공유 옵션
   });
   const [submitting, setSubmitting] = useState(false);
@@ -348,10 +349,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     // ── 날씨 전용 silent 갱신 (CCTV·쇼핑 제외 — 불필요한 API 호출 방지) ──
     const silentRefresh = async () => {
       const sid = selectedPoint.obsCode || 'DT_0001';
-      const todayStr = (() => {
-        const d = new Date();
-        return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-      })();
+      const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const todayStr = nowKst.toISOString().split('T')[0].replace(/-/g, '');
       try {
         const [marine, tideItems, temp, fishIdx] = await Promise.allSettled([
           apiClient.get(`/api/weather/precision?stationId=${sid}`),
@@ -378,13 +377,17 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               level: levelVal,
             };
           });
+          const highs = predictions.filter(p => p.hl_code === '고조').map(p => p.tph_time).sort();
+          const lows = predictions.filter(p => p.hl_code === '간조').map(p => p.tph_time).sort();
           setMarineData(prev => ({
             ...prev,
             tide_predictions: predictions,
             tide: {
               ...(prev.tide || {}),
-              high: predictions.find(p => p.hl_code === '고조')?.tph_time || prev.tide?.high || '-',
-              low:  predictions.find(p => p.hl_code === '간조')?.tph_time || prev.tide?.low  || '-',
+              high: highs[0] || '-',
+              high2: highs[1] || '-',
+              low: lows[0] || '-',
+              low2: lows[1] || '-',
             },
           }));
         }
@@ -422,13 +425,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       setCctvLoading(true);
       const sid = selectedPoint.obsCode || 'DT_0001';
 
-      const todayStr = (() => {
-        const d = new Date();
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}${m}${day}`;
-      })();
+      const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const todayStr = nowKst.toISOString().split('T')[0].replace(/-/g, '');
 
       const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}&pointId=point_${selectedPoint.id || ''}`)
         .then(res => { if (!cancelled) setCctvData(res.data); }) // ✅ BUG-01 FIX
@@ -488,14 +486,18 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               level: levelVal,
             };
           });
+          const highs = predictions.filter(p => p.hl_code === '고조').map(p => p.tph_time).sort();
+          const lows = predictions.filter(p => p.hl_code === '간조').map(p => p.tph_time).sort();
           if (!cancelled) setMarineData(prev => ({ // ✅ BUG-01 FIX
             ...prev,
             tide_predictions: predictions,
             tide: {
               ...(prev.tide || {}),
               phase: prev.tide?.phase || '조석 데이터',
-              high: predictions.find(p => p.hl_code === '고조')?.tph_time || prev.tide?.high || '-',
-              low: predictions.find(p => p.hl_code === '간조')?.tph_time || prev.tide?.low || '-',
+              high: highs[0] || '-',
+              high2: highs[1] || '-',
+              low: lows[0] || '-',
+              low2: lows[1] || '-',
             },
           }));
           if (!import.meta.env.PROD) console.info(`[BottomSheet] 조석예보 ${predictions.length}건 로드 완료`);

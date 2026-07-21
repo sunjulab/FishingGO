@@ -3,35 +3,7 @@
  * Handles coordinate conversion, nearest station matching, and fishing index calculation.
  */
 
-// 1. 전국 주요 관측소 데이터 — cctvMapping.js와 동기화된 16개 관측소
-// ✅ WARN-WX1: 기존 동해 4개 → 전국 16개로 확장 (서해/남해/제주 정밀도 대폭 향상)
-const OBSERVATION_STATIONS = [
-  // 동해권
-  { id: 'DT_0099', name: '고성 가진항 관측소', lat: 38.3740, lng: 128.5120 },
-  { id: 'DT_0021', name: '속초 영금정 관측소', lat: 38.2048, lng: 128.5925 },
-  { id: 'DT_0001', name: '강릉 안목항 관측소', lat: 37.7734, lng: 128.9406 },
-  { id: 'DT_0033', name: '동해 묵호 관측소',   lat: 37.5484, lng: 129.1128 },
-  { id: 'DT_0003', name: '삼척항 관측소',     lat: 37.4432, lng: 129.1639 },
-  { id: 'DT_0002', name: '울진 후포 관측소',   lat: 36.6764, lng: 129.4627 },
-  { id: 'DT_0036', name: '경주 감포 관측소',   lat: 35.8188, lng: 129.5012 },
-  // 남해권
-  { id: 'DT_0004', name: '부산 해운대 관측소', lat: 35.1586, lng: 129.1603 },
-  { id: 'DT_0034', name: '거제 지세포 관측소', lat: 34.8101, lng: 128.7021 },
-  { id: 'DT_0016', name: '통영 도남 관측소',   lat: 34.8512, lng: 128.4342 },
-  { id: 'DT_0005', name: '여수 국동항 관측소', lat: 34.7462, lng: 127.7516 },
-  { id: 'DT_0014', name: '광양만 관측소',      lat: 34.9123, lng: 127.7268 },
-  { id: 'DT_0018', name: '완도항 관측소',      lat: 34.3108, lng: 126.7575 },
-  { id: 'DT_0006', name: '목포항 관측소',      lat: 34.7891, lng: 126.3776 },
-  // 서해권
-  { id: 'DT_0007', name: '인천 연안부두 관측소', lat: 37.4643, lng: 126.6188 },
-  { id: 'DT_0030', name: '태안 마도 관측소',   lat: 36.7265, lng: 126.1474 },
-  { id: 'DT_0008', name: '보령 대천항 관측소', lat: 36.3523, lng: 126.5078 },
-  { id: 'DT_0009', name: '군산 비응항 관측소', lat: 35.9697, lng: 126.5621 },
-  // 제주권
-  { id: 'DT_0010', name: '제주 한림 관측소',   lat: 33.4139, lng: 126.2636 },
-  { id: 'DT_0011', name: '서귀포 외돌개 관측소', lat: 33.2460, lng: 126.5623 },
-  { id: 'DT_0045', name: '성산포항 관측소',    lat: 33.4714, lng: 126.9248 },
-];
+import { KHOA_OBSERVATORIES } from '../constants/fishingData';
 
 // ✅ 3RD-B9: 변환 상수 캐싱 — geo.js _DEGRAD 패턴과 동일, 4회 반복 계산 제거
 const RAD = Math.PI / 180;
@@ -56,7 +28,7 @@ export function getDistance(lat1, lon1, lat2, lon2) {
  */
 export function findNearestStation(userLat, userLng) {
   // ENH5-B7: Array.reduce() 1-pass 리팩토링 — forEach + 외부 변수 패턴 제거
-  const nearest = OBSERVATION_STATIONS.reduce((best, station) => {
+  const nearest = KHOA_OBSERVATORIES.reduce((best, station) => {
     const dist = getDistance(userLat, userLng, station.lat, station.lng);
     return dist < best.distance ? { ...station, distance: dist } : best;
   }, { distance: Infinity });
