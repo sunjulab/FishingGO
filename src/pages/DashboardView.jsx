@@ -370,7 +370,9 @@ export default function DashboardView({
           <div style={{ background: '#fff', borderRadius: '16px', padding: '12px 14px', border: '1.5px solid #F0F2F7' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
               <Zap size={13} color="#FFB300" fill="#FFB300" />
-              <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginLeft: '5px' }}>피딩 타임</span>
+              <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginLeft: '5px' }}>
+                피딩 타임 <span style={{ fontSize: `calc(9.5px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginLeft: '4px' }}>(📍 {tideData?.pointName || tideData?.name || '기준 포인트'})</span>
+              </span>
               <span style={{ marginLeft: 'auto', fontSize: `calc(10px * var(--fs, 1))`, color: isGolden ? '#E65100' : '#8E8E93', fontWeight: '800' }}>
                 {isGolden ? '🌟 황금물때' : phase.split('(')[0]}
               </span>

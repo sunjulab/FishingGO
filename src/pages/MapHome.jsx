@@ -109,6 +109,7 @@ export default function MapHome() {
   const [showHeatmap, setShowHeatmap]       = useState(false);
   const [viewMode, setViewMode]             = useState('dashboard'); // 'dashboard' | 'map'
   const [searchQuery, setSearchQuery]       = useState('');
+  const [userLoc, setUserLoc]                 = useState(null); // ✅ GPS 위치 상태 추가
   const [searchResults, setSearchResults]   = useState([]);
   const [showSearch, setShowSearch]         = useState(false);
   const [recentPosts, setRecentPosts]       = useState([]);
@@ -421,6 +422,7 @@ export default function MapHome() {
             (pos) => {
               if (!mapRef.current) return;
               const cp = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+              setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }); // ✅ GPS 획득 시 상태 저장
               mapRef.current.panTo(cp);
               new window.kakao.maps.CustomOverlay({
                 position: cp, map: mapRef.current,
@@ -988,7 +990,20 @@ export default function MapHome() {
   // weatherCache:  앱 시작 2초 후 배치 패치된 실시간 날씨 (10분마다 갱신)
   // 정적 fallback: weatherCache 로드 전 임시 표시
   // ✅ DEFAULT-POINT: 홈화면 표시명(강릉 안목항 방파제)와 데이터 소스를 동일 포인트로 통일
-  const DEFAULT_POINT = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
+  // ✅ FIX-DEFAULT-POINT: 사용자 위치 기반 가장 가까운 바다 포인트 탐색 (민물 제외)
+  const DEFAULT_POINT = useMemo(() => {
+    if (userLoc) {
+      let nearest = null;
+      let minDist = Infinity;
+      ALL_FISHING_POINTS.forEach(p => {
+        if (p.type === '민물') return; // 민물 낚시터 배제
+        const d = getDistance(userLoc.lat, userLoc.lng, p.lat, p.lng);
+        if (d < minDist) { minDist = d; nearest = p; }
+      });
+      if (nearest) return nearest;
+    }
+    return ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
+  }, [userLoc]);
   const _selectedPt   = selectedPoint || DEFAULT_POINT;
   const _nearestSt    = findNearestStation(_selectedPt.lat, _selectedPt.lng);
   const _cachedLive   = weatherCache[_nearestSt?.id];
