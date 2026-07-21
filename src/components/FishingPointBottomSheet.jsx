@@ -365,14 +365,19 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         }
         // 조석예보
         if (tideItems.status === 'fulfilled' && tideItems.value?.length) {
-          const predictions = tideItems.value.map(item => ({
-            tph_time: item.hl_time || item.tph_time || '',
-            hl_code: item.hl_code === 'H' ? '고조' : '간조',
-            tph_level: item.hl_level || item.tph_level || '',
-            time: item.hl_time || '',
-            type: item.hl_code === 'H' ? '고조' : '간조',
-            level: item.hl_level || '',
-          }));
+          const predictions = tideItems.value.map(item => {
+            const timeStr = item.predcDt ? item.predcDt.split(' ')[1] : (item.hl_time || item.tph_time || '');
+            const typeStr = (item.extrSe === '1' || item.extrSe === '3' || item.hl_code === 'H') ? '고조' : '간조';
+            const levelVal = item.predcTdlvVl || item.hl_level || item.tph_level || '';
+            return {
+              tph_time: timeStr,
+              hl_code: typeStr,
+              tph_level: levelVal,
+              time: timeStr,
+              type: typeStr,
+              level: levelVal,
+            };
+          });
           setMarineData(prev => ({
             ...prev,
             tide_predictions: predictions,
@@ -470,14 +475,19 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       const tidePromise = fetchTideForecast(sid, todayStr)
         .then(items => {
           if (!items || items.length === 0 || cancelled) return;
-          const predictions = items.map(item => ({
-            tph_time: item.hl_time || item.tph_time || '',
-            hl_code: item.hl_code === 'H' ? '고조' : '간조',
-            tph_level: item.hl_level || item.tph_level || '',
-            time: item.hl_time || '',
-            type: item.hl_code === 'H' ? '고조' : '간조',
-            level: item.hl_level || '',
-          }));
+          const predictions = items.map(item => {
+            const timeStr = item.predcDt ? item.predcDt.split(' ')[1] : (item.hl_time || item.tph_time || '');
+            const typeStr = (item.extrSe === '1' || item.extrSe === '3' || item.hl_code === 'H') ? '고조' : '간조';
+            const levelVal = item.predcTdlvVl || item.hl_level || item.tph_level || '';
+            return {
+              tph_time: timeStr,
+              hl_code: typeStr,
+              tph_level: levelVal,
+              time: timeStr,
+              type: typeStr,
+              level: levelVal,
+            };
+          });
           if (!cancelled) setMarineData(prev => ({ // ✅ BUG-01 FIX
             ...prev,
             tide_predictions: predictions,
