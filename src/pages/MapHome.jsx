@@ -558,7 +558,7 @@ export default function MapHome() {
       }));
       // ✅ TIDE-SYNC: API 응답의 tide 우선 → 없으면 weatherCache tide → 없으면 정적 fallback
       const staticTide = getPointSpecificData(point).tide;
-      const bestTide = res.data.tide || staticTide;
+      const bestTide = { ...staticTide, ...(res.data.tide || {}) }; // ✅ FIX: 병합하여 high2, low2, flow 보존
       setPrecisionData({ ...res.data, pointName: point.name, tide: bestTide, stationId: nearest.id });
     } catch {
       setPrecisionData(getPointSpecificData(point));
@@ -1012,8 +1012,8 @@ export default function MapHome() {
     || (_cachedLive ? {
         ..._cachedLive,
         stationId: _nearestSt?.id,
-        // ✅ BUG-2 FIX: weatherCache의 실시간 조석 우선, 없으면 정적 fallback
-        tide: _cachedLive.tide || _staticData?.tide,
+        // ✅ BUG-2 FIX: weatherCache의 실시간 조석 우선, 없으면 정적 fallback (병합으로 누락필드 방지)
+        tide: { ..._staticData?.tide, ...(_cachedLive.tide || {}) },
         pointName: _selectedPt.name,
       } : null)
     || _staticData;
