@@ -222,10 +222,20 @@ export const getPointSpecificData = (point) => {
     },
     tide: {
       phase: tidePhase,
-      high:  formatTime(baseHighMin),
-      low:   formatTime(baseHighMin + (['강원', '경북', '동해', '울산'].includes(reg) ? 412 : 372)),
+      high:     formatTime(baseHighMin),
+      low:      formatTime(baseHighMin + (['강원', '경북', '동해', '울산'].includes(reg) ? 412 : 372)),
+      high2:    formatTime(baseHighMin + 745), // ✅ 2차 만조 (조석 주기 745분)
+      low2:     formatTime(baseHighMin + (['강원', '경북', '동해', '울산'].includes(reg) ? 412 : 372) + 745), // ✅ 2차 간조
       next_low: formatTime(baseHighMin - (['강원', '경북', '동해', '울산'].includes(reg) ? 386 : 372)),
-      current_level: `${(pointSeed * 3) % 200 + 40}cm`
+      current_level: `${(pointSeed * 3) % 200 + 40}cm`,
+      // ✅ 물흐름 % (물때 단계 기반 계산)
+      flow: (() => {
+        const flowMap = { '조금': 5, '무시': 8, '1물': 10, '2물': 18, '3물': 28, '4물': 38, '5물': 50,
+          '6물': 65, '7물(\uc0ac\ub9ac)': 85, '7물': 85, '8물(\uc0ac\ub9ac)': 100, '8물': 100,
+          '9물': 88, '10물': 75, '11물': 62, '12물': 48, '13물': 35, '14물': 22, '15물': 12 };
+        for (const key of Object.keys(flowMap)) { if (tidePhase.includes(key)) return flowMap[key]; }
+        return 50;
+      })()
     },
     fish: point.fish
   };

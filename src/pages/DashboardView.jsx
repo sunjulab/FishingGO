@@ -381,30 +381,53 @@ export default function DashboardView({
               const now = new Date();
               const nowMin = now.getHours() * 60 + now.getMinutes();
               const parseTime = (str) => { if (!str) return null; const [h, m] = String(str).split(':').map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
-              const highMin = parseTime(tideData.tide?.high);
-              const lowMin  = parseTime(tideData.tide?.low);
-              const goldenMin = highMin ?? 870;
-              const lowMinVal = lowMin ?? 360;
-              const nextLowMin = parseTime(tideData.tide?.next_low) ?? ((lowMinVal + 720) % 1440);
-              const fmt = (mn) => { const hh = Math.floor(((mn % 1440) + 1440) % 1440 / 60); const mm = ((mn % 1440) + 1440) % 1440 % 60; return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
-              const isInWindow = (centerMin, windowMin = 40) => Math.abs(nowMin - centerMin) <= windowMin || Math.abs(nowMin - centerMin + 1440) <= windowMin || Math.abs(nowMin - centerMin - 1440) <= windowMin;
-              const slots = [
-                { label: '간조 물때', time: fmt(lowMinVal), active: isInWindow(lowMinVal, 35), val: lowMinVal },
-                { label: '만조 (황금)✨', time: fmt(goldenMin), active: isInWindow(goldenMin, 40), val: goldenMin },
-                { label: '다음 물때', time: fmt(nextLowMin), active: isInWindow(nextLowMin, 35), val: nextLowMin },
-              ];
-              slots.sort((a, b) => a.val - b.val);
-              const hasActive = slots.some(s => s.active);
-              if (!hasActive) { const diffs = slots.map((s, i) => ({ i, diff: ((s.val - nowMin) + 1440) % 1440 })); diffs.sort((a, b) => a.diff - b.diff); slots[diffs[0].i].next = true; }
+              const fmt = (mn) => { if (mn == null) return '--:--'; const hh = Math.floor(((mn % 1440) + 1440) % 1440 / 60); const mm = ((mn % 1440) + 1440) % 1440 % 60; return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+              const isNow = (mn, w = 40) => mn != null && (Math.abs(nowMin - mn) <= w || Math.abs(nowMin - mn + 1440) <= w || Math.abs(nowMin - mn - 1440) <= w);
+
+              // ✅ 만조 1차/2차
+              const h1 = parseTime(tideData.tide?.high);
+              const h2 = parseTime(tideData.tide?.high2);
+              // ✅ 간조 1차/2차
+              const l1 = parseTime(tideData.tide?.low);
+              const l2 = parseTime(tideData.tide?.low2) ?? parseTime(tideData.tide?.next_low);
+              // ✅ 물흐름 %
+              const flow = tideData.tide?.flow ?? 50;
+
+              const TideRow = ({ time, active }) => (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  background: active ? 'linear-gradient(135deg,#FFD700,#FFA000)' : '#F8F9FC',
+                  border: active ? 'none' : '1px solid #F0F2F7',
+                  borderRadius: '10px', padding: '6px 4px', marginBottom: '5px' }}>
+                  <span style={{ fontSize: `calc(11px * var(--fs,1))`, fontWeight: '950',
+                    color: active ? '#1A1A00' : '#8E8E93' }}>{time}</span>
+                  {active && <span style={{ fontSize: `calc(7px * var(--fs,1))`, color: '#5C3A00', fontWeight: '900' }}>🔥</span>}
+                </div>
+              );
+
               return (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {slots.map((ft, i) => (
-                    <div key={i} style={{ flex: 1, padding: '8px 2px', borderRadius: '12px', textAlign: 'center', background: ft.active ? 'linear-gradient(135deg, #FFD700, #FFA000)' : ft.next ? 'linear-gradient(135deg, #E8F4FF, #D0E8FF)' : '#F8F9FC', border: ft.active ? 'none' : ft.next ? '1px solid #90CAF9' : '1px solid #F0F2F7' }}>
-                      <div style={{ fontSize: `calc(8px * var(--fs, 1))`, fontWeight: '900', color: ft.active ? '#5C3A00' : ft.next ? '#1565C0' : '#AAB0BE', marginBottom: '2px' }}>{ft.label}{ft.next ? ' (다음)' : ''}</div>
-                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', color: ft.active ? '#1A1A00' : ft.next ? '#1565C0' : '#8E8E93' }}>{ft.time}</div>
-                      {ft.active && <div style={{ fontSize: `calc(7px * var(--fs, 1))`, color: '#5C3A00', fontWeight: '900', marginTop: '1px' }}>🔥 지금!</div>}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                  {/* 만조▲ */}
+                  <div>
+                    <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#E53935', marginBottom: '5px', textAlign: 'center' }}>🔴 만조 ▲</div>
+                    <TideRow time={fmt(h1)} active={isNow(h1, 40)} />
+                    <TideRow time={fmt(h2)} active={isNow(h2, 40)} />
+                  </div>
+                  {/* 간조▼ */}
+                  <div>
+                    <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#1565C0', marginBottom: '5px', textAlign: 'center' }}>🔵 간조 ▼</div>
+                    <TideRow time={fmt(l1)} active={isNow(l1, 35)} />
+                    <TideRow time={fmt(l2)} active={isNow(l2, 35)} />
+                  </div>
+                  {/* 물흐름 % */}
+                  <div>
+                    <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#5C6BC0', marginBottom: '5px', textAlign: 'center' }}>💧 물흐름</div>
+                    <div style={{ background: '#F8F9FC', border: '1px solid #F0F2F7', borderRadius: '10px', padding: '6px 4px', marginBottom: '5px', textAlign: 'center' }}>
+                      <div style={{ fontSize: `calc(11px * var(--fs,1))`, fontWeight: '950', color: flow >= 80 ? '#E53935' : flow >= 50 ? '#1565C0' : '#8E8E93' }}>{flow}%</div>
                     </div>
-                  ))}
+                    <div style={{ background: '#F0F2F7', borderRadius: '6px', height: '8px', overflow: 'hidden', marginTop: '2px' }}>
+                      <div style={{ height: '100%', width: `${flow}%`, background: flow >= 80 ? 'linear-gradient(90deg,#E53935,#FF5722)' : flow >= 50 ? 'linear-gradient(90deg,#1565C0,#42A5F5)' : 'linear-gradient(90deg,#90CAF9,#64B5F6)', borderRadius: '6px', transition: 'width 0.8s ease' }} />
+                    </div>
+                  </div>
                 </div>
               );
             })()}
