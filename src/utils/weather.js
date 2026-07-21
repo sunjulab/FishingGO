@@ -3,7 +3,10 @@
  * Handles coordinate conversion, nearest station matching, and fishing index calculation.
  */
 
+// 1. 전국 주요 관측소 데이터 (fishingData.js의 마스터 데이터 참조)
 import { KHOA_OBSERVATORIES } from '../constants/fishingData';
+
+// ✅ TIDE-API: 해양수산부 API와 완벽 연동을 위해 fishingData.js의 마스터 데이터를 사용합니다.
 
 // ✅ 3RD-B9: 변환 상수 캐싱 — geo.js _DEGRAD 패턴과 동일, 4회 반복 계산 제거
 const RAD = Math.PI / 180;

@@ -27,11 +27,10 @@ function extractYoutubeId(str) {
 function CatchRecordModal({ point, user, onClose, onSuccess }) {
   const addToast = useToastStore(s => s.addToast);
   const fileRef = useRef(null);
-  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const [form, setForm] = useState({
     fish: (point?.fish || '').split(',')[0].trim(),
     size: '', weight: '', bait: '', weather: '', wind: '', wave: '', memo: '', image: null,
-    date: nowKst.toISOString().split('T')[0],
+    date: (() => { const d = new Date(Date.now() + 9 * 60 * 60 * 1000); return d.toISOString().split('T')[0]; })(),
     shareToBoard: false, // ✅ SHARE-OPT: 오픈게시판 동시 공유 옵션
   });
   const [submitting, setSubmitting] = useState(false);
@@ -349,8 +348,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     // ── 날씨 전용 silent 갱신 (CCTV·쇼핑 제외 — 불필요한 API 호출 방지) ──
     const silentRefresh = async () => {
       const sid = selectedPoint.obsCode || 'DT_0001';
-      const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-      const todayStr = nowKst.toISOString().split('T')[0].replace(/-/g, '');
+      const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
       try {
         const [marine, tideItems, temp, fishIdx] = await Promise.allSettled([
           apiClient.get(`/api/weather/precision?stationId=${sid}`),
@@ -377,8 +376,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               level: levelVal,
             };
           });
-          const highs = predictions.filter(p => p.hl_code === '고조').map(p => p.tph_time).sort();
-          const lows = predictions.filter(p => p.hl_code === '간조').map(p => p.tph_time).sort();
+          const highs = predictions.filter(p => p.type === '고조').map(p => p.time).sort();
+          const lows = predictions.filter(p => p.type === '간조').map(p => p.time).sort();
           setMarineData(prev => ({
             ...prev,
             tide_predictions: predictions,
@@ -425,8 +424,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       setCctvLoading(true);
       const sid = selectedPoint.obsCode || 'DT_0001';
 
-      const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-      const todayStr = nowKst.toISOString().split('T')[0].replace(/-/g, '');
+      const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
 
       const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}&pointId=point_${selectedPoint.id || ''}`)
         .then(res => { if (!cancelled) setCctvData(res.data); }) // ✅ BUG-01 FIX
@@ -486,8 +485,9 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
               level: levelVal,
             };
           });
-          const highs = predictions.filter(p => p.hl_code === '고조').map(p => p.tph_time).sort();
-          const lows = predictions.filter(p => p.hl_code === '간조').map(p => p.tph_time).sort();
+          const highs = predictions.filter(p => p.type === '고조').map(p => p.time).sort();
+          const lows = predictions.filter(p => p.type === '간조').map(p => p.time).sort();
+
           if (!cancelled) setMarineData(prev => ({ // ✅ BUG-01 FIX
             ...prev,
             tide_predictions: predictions,

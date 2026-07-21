@@ -152,8 +152,9 @@ export default function MapHome() {
     const defaultPt = ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
     const nearest   = findNearestStation(defaultPt.lat, defaultPt.lng);
     const sid       = nearest.id;
-    const nowKst    = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const todayStr  = nowKst.toISOString().split('T')[0].replace(/-/g, '');
+    // KST(UTC+9) 기준으로 날짜 생성
+    const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
 
     (async () => {
       try {
@@ -183,7 +184,7 @@ export default function MapHome() {
             const levelVal = t.predcTdlvVl || t.hl_level || '';
             return { time: timeStr, type: typeStr, level: levelVal };
           });
-          // ✅ FIX-TIDE: 무조건 첫 번째 배열을 가져오던 로직에서, 현재 시간과 가장 가까운 물때를 가져오도록 수정
+          // ✅ FIX-TIDE: 무조건 첫 번째 배열을 가져오던 로직에서, 전체 만조/간조를 순서대로 매핑하도록 수정
           const highs = preds.filter(p => p.type === '고조').map(p => p.time).sort();
           const lows = preds.filter(p => p.type === '간조').map(p => p.time).sort();
 
@@ -195,8 +196,8 @@ export default function MapHome() {
               phase: base.tide?.phase || '조석 데이터',
               high: highs[0] || '-',
               high2: highs[1] || '-',
-              low: lows[0] || '-',
-              low2: lows[1] || '-',
+              low:  lows[0] || '-',
+              low2:  lows[1] || '-',
             },
           };
           if (!cancelled) setWeatherCache(prev => ({
