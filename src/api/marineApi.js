@@ -103,7 +103,7 @@ async function fetchDataGo(endpoint, params) {
  *   item: { obsCode, obsName, hl_code: 'H'|'L', hl_time: 'HH:mm', hl_level: '116' }
  */
 export const fetchTideForecast = (obsCode, date) =>
-  fetchDataGo('1192136/tideFcstHghLw/GetTideFcstHghLwApiService', { obsCode, date });
+  fetchDataGo('1192136/tideFcstHghLw/GetTideFcstHghLwApiService', { obsCode, reqDate: date });
 
 // ────────────────────────────────────────────
 // 2. 조위관측소 실측 수온
@@ -129,12 +129,11 @@ export const fetchWaterTemp = async (obsCode, date) => {
 // ────────────────────────────────────────────
 // 3. 바다낚시지수 (7일 예측, 5단계 지수)
 // ────────────────────────────────────────────
-/**
- * @param {string} obsCode - 관측소 코드 (예: 'DT_0004')
- * @returns {Array|null}   - 낚시지수 배열 (7일치)
- *   item: { obsCode, obsName, fcst_time, wt, wh, current_spd,
- *            fishing_idx,  // 1~5 (1=매우좋음 ~ 5=매우나쁨)  ← 가이드 확인 필요
- *            fishing_grade }
- */
 export const fetchFishingIndex = (obsCode) =>
-  fetchDataGo('1192136/fcstFishingv2/GetFcstFishingApiServicev2', { obsCode });
+  fetchDataGo('1192136/fcstFishingv2/GetFcstFishingApiServicev2', { obsCode }).catch(() => null);
+
+// ────────────────────────────────────────────
+// 4. 바다갈라짐 체험지수
+// ────────────────────────────────────────────
+export const fetchSeaSplitIndex = (obsCode, date) =>
+  fetchDataGo('1192136/fcstSeaSplitv2/GetFcstSeaSplitApiServicev2', { obsCode, reqDate: date });

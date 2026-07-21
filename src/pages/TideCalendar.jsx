@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Calendar as CalIcon, MapPin, Loader2, Info } from 'lucide-react';
-import { fetchTideForecast, fetchFishingIndex } from '../api/marineApi';
+import { fetchTideForecast, fetchFishingIndex, fetchSeaSplitIndex } from '../api/marineApi';
+import { evaluateFishingCondition } from '../utils/evaluator';
 
 const REGIONS = {
   west: {
@@ -73,9 +74,13 @@ export default function TideCalendar() {
         // 낚시지수 API
         const fishPromise = fetchFishingIndex(station.id).catch(() => null);
 
-        const [tidesArray, fishRes] = await Promise.all([
+        // 바다갈라짐 API (관측소가 섬이나 특수 지역인 경우 제공됨)
+        const splitPromise = fetchSeaSplitIndex(station.id, dates[0].toISOString().slice(0, 10).replace(/-/g, '')).catch(() => null);
+
+        const [tidesArray, fishRes, splitRes] = await Promise.all([
           Promise.all(tidePromises),
-          fishPromise
+          fishPromise,
+          splitPromise
         ]);
 
         if (isMounted) {
@@ -103,6 +108,22 @@ export default function TideCalendar() {
                 fishingGrade = match.fishing_grade || fishingGrade;
                 fishingIdx = match.fishing_idx || fishingIdx;
               }
+            } else {
+              // fallback to mathematical evaluator
+              const cond = evaluateFishingCondition(null, null, null);
+              fishingGrade = cond.fishingGrade;
+              fishingIdx = cond.fishingIdx;
+            }
+            
+            // 바다갈라짐 매핑
+            let seaSplit = null;
+            if (splitRes && Array.isArray(splitRes)) {
+              // predcYmd ex: 2026-07-22
+              const dStrHyphen = d.toISOString().slice(0,10);
+              const match = splitRes.find(s => s.predcYmd === dStrHyphen);
+              if (match && match.splocBgngDt && match.splocEndDt) {
+                seaSplit = `${match.splocBgngDt} ~ ${match.splocEndDt}`;
+              }
             }
 
             return {
@@ -111,7 +132,8 @@ export default function TideCalendar() {
               highs: [highs[0] || '--:--', highs[1] || '--:--'],
               lows: [lows[0] || '--:--', lows[1] || '--:--'],
               fishingGrade,
-              fishingIdx
+              fishingIdx,
+              seaSplit
             };
           });
           setCalendarData(processed);
@@ -240,6 +262,12 @@ export default function TideCalendar() {
                       </div>
                     </div>
                   </div>
+                  {day.seaSplit && (
+                    <div style={{ marginTop: '8px', background: '#E0F2F1', padding: '10px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#00695C', fontWeight: '900' }}>🌊 바다갈라짐 예보</span>
+                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, color: '#004D40', fontWeight: '900' }}>{day.seaSplit}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
