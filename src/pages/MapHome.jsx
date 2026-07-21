@@ -176,9 +176,12 @@ export default function MapHome() {
         }
         // 조석 예보 병합
         if (tideItems.status === 'fulfilled' && tideItems.value?.length) {
-          const preds = tideItems.value.map(t => ({
-            time: t.hl_time || '', type: t.hl_code === 'H' ? '고조' : '간조', level: t.hl_level || ''
-          }));
+          const preds = tideItems.value.map(t => {
+            const timeStr = t.predcDt ? t.predcDt.split(' ')[1] : (t.hl_time || '');
+            const typeStr = (t.extrSe === '1' || t.extrSe === '3' || t.hl_code === 'H') ? '고조' : '간조';
+            const levelVal = t.predcTdlvVl || t.hl_level || '';
+            return { time: timeStr, type: typeStr, level: levelVal };
+          });
           // ✅ FIX-TIDE: 무조건 첫 번째 배열을 가져오던 로직에서, 현재 시간과 가장 가까운 물때를 가져오도록 수정
           const now = new Date();
           const nowMin = now.getHours() * 60 + now.getMinutes();

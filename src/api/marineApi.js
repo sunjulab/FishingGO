@@ -66,15 +66,18 @@ async function fetchDataGo(endpoint, params) {
       return null;
     }
 
-    // 공공데이터포털 공통 응답 헤더 체크
-    const resultCode = data?.response?.header?.resultCode;
+    // 공공데이터포털 공통 응답 헤더 체크 (KHOA API는 response 래퍼 없이 header/body가 직결되는 경우가 있음)
+    const header = data?.response?.header || data?.header;
+    const resultCode = header?.resultCode;
+    
     if (resultCode !== '00') {
       if (!import.meta.env.PROD)
-        console.warn(`[marineApi] ${endpoint} 오류 [${resultCode}]:`, data?.response?.header?.resultMsg);
+        console.warn(`[marineApi] ${endpoint} 오류 [${resultCode}]:`, header?.resultMsg);
       return null;
     }
 
-    const items = data?.response?.body?.items?.item;
+    const body = data?.response?.body || data?.body;
+    const items = body?.items?.item;
     if (!items) return null;
 
     // item이 단일 객체로 올 수 있음 (공공데이터포털 XML→JSON 변환 특성)
