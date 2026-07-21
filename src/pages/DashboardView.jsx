@@ -390,6 +390,10 @@ export default function DashboardView({
               // ✅ 간조 1차/2차
               const l1 = parseTime(tideData.tide?.low);
               const l2 = parseTime(tideData.tide?.low2) ?? parseTime(tideData.tide?.next_low);
+              const highs = [h1, h2].filter(v => v !== null).sort((a, b) => a - b);
+              const lows = [l1, l2].filter(v => v !== null).sort((a, b) => a - b);
+              while(highs.length < 2) highs.push(null);
+              while(lows.length < 2) lows.push(null);
               // ✅ 물흐름 %
               const flow = tideData.tide?.flow ?? 50;
 
@@ -409,8 +413,8 @@ export default function DashboardView({
                   {/* 만조▲ */}
                   <div>
                     <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#E53935', marginBottom: '5px', textAlign: 'center' }}>🔴 만조 ▲</div>
-                    <TideRow time={fmt(h1)} active={isNow(h1, 40)} />
-                    <TideRow time={fmt(h2)} active={isNow(h2, 40)} />
+                    <TideRow time={fmt(highs[0])} active={isNow(highs[0], 40)} />
+                    <TideRow time={fmt(highs[1])} active={isNow(highs[1], 40)} />
                   </div>
                   {/* 간조▼ */}
                   <div>
