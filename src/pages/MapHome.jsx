@@ -558,7 +558,13 @@ export default function MapHome() {
       }));
       // ✅ TIDE-SYNC: API 응답의 tide 우선 → 없으면 weatherCache tide → 없으면 정적 fallback
       const staticTide = getPointSpecificData(point).tide;
-      const bestTide = staticTide?.isReal ? staticTide : { ...staticTide, ...(res.data.tide || {}) }; // ✅ FIX: 실측 데이터면 덮어쓰지 않음
+      let bestTide = { ...staticTide };
+      if (res.data.tide) {
+        bestTide = { ...staticTide, ...res.data.tide };
+        // 백엔드에서 온 데이터에 2차 만/간조가 없다면, 프론트엔드의 가짜(수식) 2차 데이터를 섞지 않고 제거
+        if (!res.data.tide.high2) delete bestTide.high2;
+        if (!res.data.tide.low2) delete bestTide.low2;
+      }
       setPrecisionData({ ...res.data, pointName: point.name, tide: bestTide, stationId: nearest.id });
     } catch {
       setPrecisionData(getPointSpecificData(point));
@@ -1013,7 +1019,12 @@ export default function MapHome() {
         ..._cachedLive,
         stationId: _nearestSt?.id,
         // ✅ BUG-2 FIX: weatherCache의 실시간 조석 우선, 없으면 정적 fallback (병합으로 누락필드 방지)
-        tide: _staticData?.tide?.isReal ? _staticData.tide : { ..._staticData?.tide, ...(_cachedLive.tide || {}) },
+        tide: (() => {
+          let t = { ..._staticData?.tide, ...(_cachedLive.tide || {}) };
+          if (_cachedLive.tide && !_cachedLive.tide.high2) delete t.high2;
+          if (_cachedLive.tide && !_cachedLive.tide.low2) delete t.low2;
+          return t;
+        })(),
         pointName: _selectedPt.name,
       } : null)
     || _staticData;
