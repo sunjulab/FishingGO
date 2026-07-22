@@ -394,7 +394,7 @@ export default function DashboardView({
         {/* 물때 달력 연동 상세 위젯 (이전 피딩타임 대체) */}
         <DashboardTideWidget
           pointName={tideData?.pointName || tideData?.name}
-          obsCode={findNearestStation(selectedPoint?.lat || tideData?.lat, selectedPoint?.lng || tideData?.lng)?.id}
+          obsCode={tideData?.stationId}
           isGolden={isGolden}
           phase={phase}
         />
