@@ -397,6 +397,7 @@ export default function DashboardView({
           obsCode={tideData?.stationId}
           isGolden={isGolden}
           phase={phase}
+          flow={tideData?.tide?.flow ?? 50}
         />
 
 

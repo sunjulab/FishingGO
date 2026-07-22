@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Zap } from 'lucide-react';
 import { fetchTideForecast } from '../api/marineApi';
 
-export default function DashboardTideWidget({ pointName, obsCode, isGolden, phase }) {
+export default function DashboardTideWidget({ pointName, obsCode, isGolden, phase, flow }) {
   const [tides, setTides] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -77,9 +77,26 @@ export default function DashboardTideWidget({ pointName, obsCode, isGolden, phas
           <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginLeft: '5px' }}>
             오늘의 물때 & 피딩타임 <span style={{ fontSize: `calc(9.5px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginLeft: '4px' }}>(📍 {pointName || '기준 포인트'})</span>
           </span>
-          <span style={{ marginLeft: 'auto', fontSize: `calc(10px * var(--fs, 1))`, color: isGolden ? '#E65100' : '#8E8E93', fontWeight: '800' }}>
-            {isGolden ? '🌟 황금물때' : phase?.split('(')[0] || ''}
-          </span>
+          
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* 💧 물흐름 게이지바 */}
+            {flow !== undefined && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800' }}>💧 물흐름</span>
+                <div style={{ width: '32px', height: '6px', background: '#F0F2F7', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    height: '100%', width: `${flow}%`, 
+                    background: flow >= 80 ? 'linear-gradient(90deg,#E53935,#FF5722)' : flow >= 50 ? 'linear-gradient(90deg,#1565C0,#42A5F5)' : 'linear-gradient(90deg,#90CAF9,#64B5F6)',
+                    borderRadius: '4px', transition: 'width 0.8s ease'
+                  }} />
+                </div>
+              </div>
+            )}
+            {/* 물때명 / 황금물때 */}
+            <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: isGolden ? '#E65100' : '#8E8E93', fontWeight: '800' }}>
+              {isGolden ? '🌟 황금물때' : phase?.split('(')[0] || ''}
+            </span>
+          </div>
         </div>
         
         {loading || !tides ? (
