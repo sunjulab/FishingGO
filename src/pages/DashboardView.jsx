@@ -61,6 +61,31 @@ export default function DashboardView({
   setShowUpgradeModal,
 }) {
   const navigate = useNavigate();
+  const [showCalendarAdModal, setShowCalendarAdModal] = useState(false);
+
+  const handleCalendarClick = () => {
+    // 프리미엄 구독자는 광고 없이 즉시 입장
+    if (canAccessPremium) {
+      navigate('/tide-calendar');
+      return;
+    }
+
+    // 일반 유저: 1시간 이용 패스 체크
+    const unlockedUntil = localStorage.getItem('TIDE_CALENDAR_UNLOCKED_UNTIL');
+    if (unlockedUntil && Date.now() < parseInt(unlockedUntil, 10)) {
+      navigate('/tide-calendar');
+    } else {
+      setShowCalendarAdModal(true);
+    }
+  };
+
+  const onCalendarAdSuccess = () => {
+    // 1시간 (3600 * 1000 ms) 패스 발급
+    localStorage.setItem('TIDE_CALENDAR_UNLOCKED_UNTIL', (Date.now() + 60 * 60 * 1000).toString());
+    setShowCalendarAdModal(false);
+    navigate('/tide-calendar');
+  };
+
   // ── 포인트 확인 광고 게이트 ──────────────────────────────────────────
   // 포인트 카드 클릭 핸들러 (대시보드 목록에서 클릭)
   const handlePremiumPointClick = (point) => {
@@ -442,7 +467,7 @@ export default function DashboardView({
         {/* 전국 물때 & 낚시 지수 달력 배너 */}
         <div style={{ padding: '0px 16px 12px' }}>
           <div 
-            onClick={() => navigate('/tide-calendar')}
+            onClick={handleCalendarClick}
             style={{ 
               position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%)', 
               borderRadius: '16px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -618,6 +643,20 @@ export default function DashboardView({
 
         {/* 1:1 고객센터 */}
         <CsInquirySection user={user} isAdmin={isAdmin} />
+
+        {/* 물때 달력 1시간 이용권 광고 팝업 */}
+        {showCalendarAdModal && (
+          <RewardGateModal
+            isOpen={showCalendarAdModal}
+            onClose={() => setShowCalendarAdModal(false)}
+            onRewardComplete={onCalendarAdSuccess}
+            onSubscribe={() => {
+              setShowCalendarAdModal(false);
+              setShowUpgradeModal(true);
+            }}
+            context="calendar"
+          />
+        )}
 
       </div>
     </div>

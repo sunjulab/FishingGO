@@ -179,7 +179,8 @@ export function RewardGateModal({ isOpen, onClose, onRewardComplete, onSubscribe
     secret: { title: '⭐ 비밀 포인트 확인', action: '비밀 포인트 오픈!' },
     cctv:  { title: '📺 실시간 현장 영상', action: '영상 재생 준비 완료!' },
     map_enter: { title: '🗺️ 포인트 지도 탐색', action: '지도 탐색 시작!' },
-    point_cooldown: { title: '📍 포인트 상세 정보', action: '포인트 확인 완료!' }
+    point_cooldown: { title: '📍 포인트 상세 정보', action: '포인트 확인 완료!' },
+    calendar: { title: '📅 물때 달력 오픈 패스', action: '달력 오픈 완료!' }
   };
   const ctx = CONTEXT_TEXT[context] || CONTEXT_TEXT.post;
 
