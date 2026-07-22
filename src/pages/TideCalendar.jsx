@@ -66,23 +66,28 @@ export default function TideCalendar() {
           d.setDate(d.getDate() + i);
           return d;
         });
-
-        const tidePromises = dates.map(d => {
-          const dStr = d.toISOString().slice(0, 10).replace(/-/g, '');
-          return fetchTideForecast(station.id, dStr).then(res => ({ date: dStr, tides: res })).catch(() => ({ date: dStr, tides: [] }));
-        });
         
         // 낚시지수 API
         const fishPromise = fetchFishingIndex(station.id).catch(() => null);
 
-        // 바다갈라짐 API (관측소가 섬이나 특수 지역인 경우 제공됨)
+        // 바다갈라짐 API
         const splitPromise = fetchSeaSplitIndex(station.id, dates[0].toISOString().slice(0, 10).replace(/-/g, '')).catch(() => null);
 
-        const [tidesArray, fishRes, splitRes] = await Promise.all([
-          Promise.all(tidePromises),
-          fishPromise,
-          splitPromise
-        ]);
+        // ── 공공데이터 API Rate Limit 방지를 위해 2개씩 순차(배치) 요청 ──
+        const tidesArray = [];
+        for (let i = 0; i < dates.length; i += 2) {
+          const batchDates = dates.slice(i, i + 2);
+          const batchPromises = batchDates.map(d => {
+            const dStr = d.toISOString().slice(0, 10).replace(/-/g, '');
+            return fetchTideForecast(station.id, dStr)
+              .then(res => ({ date: dStr, tides: res }))
+              .catch(() => ({ date: dStr, tides: [] }));
+          });
+          const batchRes = await Promise.all(batchPromises);
+          tidesArray.push(...batchRes);
+        }
+
+        const [fishRes, splitRes] = await Promise.all([fishPromise, splitPromise]);
 
         if (isMounted) {
           // 1. Flatten all tides chronologically to compute differences
