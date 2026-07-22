@@ -9,6 +9,7 @@ import CsInquirySection from '../components/CsInquirySection';
 import { RewardGateModal } from '../components/AdUnit';
 import { AdSenseDisplay } from '../components/ads/AdSenseAd';
 import KakaoAdBanner from '../components/KakaoAdBanner';
+import DashboardTideWidget from '../components/DashboardTideWidget';
 
 export default function DashboardView({
   viewMode,
@@ -390,78 +391,13 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* 피딩 타임 */}
-        <div style={{ padding: '10px 16px 6px' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '12px 14px', border: '1.5px solid #F0F2F7' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <Zap size={13} color="#FFB300" fill="#FFB300" />
-              <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E', marginLeft: '5px' }}>
-                피딩 타임 <span style={{ fontSize: `calc(9.5px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '800', marginLeft: '4px' }}>(📍 {tideData?.pointName || tideData?.name || '기준 포인트'})</span>
-              </span>
-              <span style={{ marginLeft: 'auto', fontSize: `calc(10px * var(--fs, 1))`, color: isGolden ? '#E65100' : '#8E8E93', fontWeight: '800' }}>
-                {isGolden ? '🌟 황금물때' : phase.split('(')[0]}
-              </span>
-            </div>
-            {(() => {
-              const now = new Date();
-              const nowMin = now.getHours() * 60 + now.getMinutes();
-              const parseTime = (str) => { if (!str) return null; const [h, m] = String(str).split(':').map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
-              const fmt = (mn) => { if (mn == null) return '--:--'; const hh = Math.floor(((mn % 1440) + 1440) % 1440 / 60); const mm = ((mn % 1440) + 1440) % 1440 % 60; return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
-              const isNow = (mn, w = 40) => mn != null && (Math.abs(nowMin - mn) <= w || Math.abs(nowMin - mn + 1440) <= w || Math.abs(nowMin - mn - 1440) <= w);
-
-              // ✅ 만조 1차/2차
-              const h1 = parseTime(tideData.tide?.high);
-              const h2 = parseTime(tideData.tide?.high2);
-              // ✅ 간조 1차/2차
-              const l1 = parseTime(tideData.tide?.low);
-              const l2 = parseTime(tideData.tide?.low2) ?? parseTime(tideData.tide?.next_low);
-              const highs = [h1, h2].filter(v => v !== null).sort((a, b) => a - b);
-              const lows = [l1, l2].filter(v => v !== null).sort((a, b) => a - b);
-              while(highs.length < 2) highs.push(null);
-              while(lows.length < 2) lows.push(null);
-              // ✅ 물흐름 %
-              const flow = tideData.tide?.flow ?? 50;
-
-              const TideRow = ({ time, active }) => (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                  background: active ? 'linear-gradient(135deg,#FFD700,#FFA000)' : '#F8F9FC',
-                  border: active ? 'none' : '1px solid #F0F2F7',
-                  borderRadius: '10px', padding: '6px 4px', marginBottom: '5px' }}>
-                  <span style={{ fontSize: `calc(11px * var(--fs,1))`, fontWeight: '950',
-                    color: active ? '#1A1A00' : '#8E8E93' }}>{time}</span>
-                  {active && <span style={{ fontSize: `calc(7px * var(--fs,1))`, color: '#5C3A00', fontWeight: '900' }}>🔥</span>}
-                </div>
-              );
-
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-                  {/* 만조▲ */}
-                  <div>
-                    <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#E53935', marginBottom: '5px', textAlign: 'center' }}>🔴 만조 ▲</div>
-                    <TideRow time={fmt(highs[0])} active={isNow(highs[0], 40)} />
-                    <TideRow time={fmt(highs[1])} active={isNow(highs[1], 40)} />
-                  </div>
-                  {/* 간조▼ */}
-                  <div>
-                    <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#1565C0', marginBottom: '5px', textAlign: 'center' }}>🔵 간조 ▼</div>
-                    <TideRow time={fmt(lows[0])} active={isNow(lows[0], 35)} />
-                    <TideRow time={fmt(lows[1])} active={isNow(lows[1], 35)} />
-                  </div>
-                  {/* 물흐름 % */}
-                  <div>
-                    <div style={{ fontSize: `calc(8px * var(--fs,1))`, fontWeight: '900', color: '#5C6BC0', marginBottom: '5px', textAlign: 'center' }}>💧 물흐름</div>
-                    <div style={{ background: '#F8F9FC', border: '1px solid #F0F2F7', borderRadius: '10px', padding: '6px 4px', marginBottom: '5px', textAlign: 'center' }}>
-                      <div style={{ fontSize: `calc(11px * var(--fs,1))`, fontWeight: '950', color: flow >= 80 ? '#E53935' : flow >= 50 ? '#1565C0' : '#8E8E93' }}>{flow}%</div>
-                    </div>
-                    <div style={{ background: '#F0F2F7', borderRadius: '6px', height: '8px', overflow: 'hidden', marginTop: '2px' }}>
-                      <div style={{ height: '100%', width: `${flow}%`, background: flow >= 80 ? 'linear-gradient(90deg,#E53935,#FF5722)' : flow >= 50 ? 'linear-gradient(90deg,#1565C0,#42A5F5)' : 'linear-gradient(90deg,#90CAF9,#64B5F6)', borderRadius: '6px', transition: 'width 0.8s ease' }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
+        {/* 물때 달력 연동 상세 위젯 (이전 피딩타임 대체) */}
+        <DashboardTideWidget
+          pointName={tideData?.pointName || tideData?.name}
+          obsCode={findNearestStation(selectedPoint?.lat || tideData?.lat, selectedPoint?.lng || tideData?.lng)?.id}
+          isGolden={isGolden}
+          phase={phase}
+        />
 
 
         {/* 전국 물때 & 낚시 지수 달력 배너 */}
