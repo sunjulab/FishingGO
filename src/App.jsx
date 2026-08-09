@@ -575,7 +575,7 @@ export default function App() {
     // ✅ FIX-BLANK: BrowserRouter를 ErrorBoundary 바깥(최상위)으로 이동
     // ErrorBoundary 내부에서 useNavigate()를 사용하므로 반드시 Router context 안에 있어야 함
     // 이전 구조: <ErrorBoundary><BrowserRouter>... → useNavigate가 Router 바깥에서 호출돼 앱 전체 크래시
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy_client_id'}>
       <BrowserRouter>
       <ErrorBoundary>
         {/* ✅ KAKAO-INAPP: 카카오톡 내부 브라우저 감지 → Safari/Chrome 외부열기 유도 배너 */}

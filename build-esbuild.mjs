@@ -58,6 +58,8 @@ const portoneKey       = e.VITE_PORTONE_CHANNEL_KEY    || envProd.VITE_PORTONE_C
 const adsenseDisplay   = e.VITE_ADSENSE_SLOT_DISPLAY   || envProd.VITE_ADSENSE_SLOT_DISPLAY   || envLocal.VITE_ADSENSE_SLOT_DISPLAY   || envBase.VITE_ADSENSE_SLOT_DISPLAY   || '';
 const adsenseInfeed    = e.VITE_ADSENSE_SLOT_INFEED    || envProd.VITE_ADSENSE_SLOT_INFEED    || envLocal.VITE_ADSENSE_SLOT_INFEED    || envBase.VITE_ADSENSE_SLOT_INFEED    || '';
 const coupangPartnersId = e.VITE_COUPANG_PARTNERS_ID   || envProd.VITE_COUPANG_PARTNERS_ID    || envLocal.VITE_COUPANG_PARTNERS_ID    || envBase.VITE_COUPANG_PARTNERS_ID    || '';
+const googleClientId   = e.VITE_GOOGLE_CLIENT_ID       || envProd.VITE_GOOGLE_CLIENT_ID       || envLocal.VITE_GOOGLE_CLIENT_ID       || envBase.VITE_GOOGLE_CLIENT_ID       || '';
+const naverClientId    = e.VITE_NAVER_CLIENT_ID        || envProd.VITE_NAVER_CLIENT_ID        || envLocal.VITE_NAVER_CLIENT_ID        || envBase.VITE_NAVER_CLIENT_ID        || '';
 
 // ✅ AUTO-VERSION
 const appVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
@@ -104,6 +106,8 @@ await esbuild.build({
       VITE_ADSENSE_SLOT_DISPLAY:  adsenseDisplay,
       VITE_ADSENSE_SLOT_INFEED:   adsenseInfeed,
       VITE_COUPANG_PARTNERS_ID:   coupangPartnersId,
+      VITE_GOOGLE_CLIENT_ID:      googleClientId,
+      VITE_NAVER_CLIENT_ID:       naverClientId,
       VITE_DISABLE_PWA:           'true',
     }),
     '__APP_VERSION__': JSON.stringify(appVersion),
