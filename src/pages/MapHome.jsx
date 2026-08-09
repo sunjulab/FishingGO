@@ -534,6 +534,8 @@ export default function MapHome() {
   /* ── 포인트 실제 진입 (광고 완료 or 프리미엄 유저) ── */
   const _enterPoint = useCallback(async (point, fromDashboard = false) => {
     setSelectedPoint(point);
+    // ✅ LAST-POINT: 마지막으로 선택한 포인트 id를 localStorage에 저장 (재실행 시 복원)
+    try { localStorage.setItem('fishing_go_last_point_id', String(point.id)); } catch { /* 무시 */ }
     setPrecisionData(null);
     setLoading(true);
     if (!fromDashboard) {
@@ -998,18 +1000,28 @@ export default function MapHome() {
   // ✅ DEFAULT-POINT: 홈화면 표시명(강릉 안목항 방파제)와 데이터 소스를 동일 포인트로 통일
   // ✅ FIX-DEFAULT-POINT: 사용자 위치 기반 가장 가까운 바다 포인트 탐색 (민물 제외)
   const DEFAULT_POINT = useMemo(() => {
+    // [1순위] 마지막으로 선택했던 포인트 (localStorage 복원)
+    try {
+      const lastId = localStorage.getItem('fishing_go_last_point_id');
+      if (lastId) {
+        const found = [...ALL_FISHING_POINTS, ...effectiveAllPoints].find(p => String(p.id) === lastId && p.type !== '민물');
+        if (found) return found;
+      }
+    } catch { /* 무시 */ }
+    // [2순위] 실시간 GPS 근처 바다 포인트
     if (userLoc) {
       let nearest = null;
       let minDist = Infinity;
       ALL_FISHING_POINTS.forEach(p => {
-        if (p.type === '민물') return; // 민물 낚시터 배제
+        if (p.type === '민물') return;
         const d = getDistance(userLoc.lat, userLoc.lng, p.lat, p.lng);
         if (d < minDist) { minDist = d; nearest = p; }
       });
       if (nearest) return nearest;
     }
+    // [3순위] 기본값 강릉 안목항 방파제
     return ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
-  }, [userLoc]);
+  }, [userLoc, effectiveAllPoints]);
   const _selectedPt   = selectedPoint || DEFAULT_POINT;
   const _nearestSt    = findNearestStation(_selectedPt.lat, _selectedPt.lng);
   const _cachedLive   = weatherCache[_nearestSt?.id];
