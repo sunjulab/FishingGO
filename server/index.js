@@ -2264,6 +2264,83 @@ async function getWaterTemp(sid) {
 }
 
 // ✅ REAL-WIND-WAVE: 기상청 해양기상부이 실시간 파고·풍속 API
+// ✅ [FALLBACK-v2] 3단계 폴백 캐시 스토리지
+// { [sid]: { data: {wind, wave}, fetchedAt: timestamp, source: 'KMA'|'OPENMETEO' } }
+const marineWeatherCache = {};
+const MARINE_CACHE_TTL   = 3 * 60 * 60 * 1000; // 3시간 (ms)
+
+// ✅ [FALLBACK-v2] 관측소 위경도 맵 (OpenMeteo 호출용)
+const OBS_COORDS = {
+  'DT_0099': { lat: 38.3740, lng: 128.5120 },
+  'DT_0001': { lat: 37.7734, lng: 128.9406 },
+  'DT_0021': { lat: 38.2048, lng: 128.5925 },
+  'DT_0033': { lat: 37.5484, lng: 129.1128 },
+  'DT_0003': { lat: 37.4432, lng: 129.1639 },
+  'DT_0002': { lat: 36.6764, lng: 129.4627 },
+  'DT_0036': { lat: 35.8188, lng: 129.5012 },
+  'DT_0004': { lat: 35.1586, lng: 129.1603 },
+  'DT_0034': { lat: 34.8101, lng: 128.7021 },
+  'DT_0016': { lat: 34.8512, lng: 128.4342 },
+  'DT_0005': { lat: 34.7462, lng: 127.7516 },
+  'DT_0014': { lat: 34.9123, lng: 127.7268 },
+  'DT_0018': { lat: 34.3108, lng: 126.7575 },
+  'DT_0006': { lat: 34.7891, lng: 126.3776 },
+  'DT_0007': { lat: 37.4643, lng: 126.6188 },
+  'DT_0030': { lat: 36.7265, lng: 126.1474 },
+  'DT_0008': { lat: 36.3523, lng: 126.5078 },
+  'DT_0009': { lat: 35.9697, lng: 126.5621 },
+  'DT_0010': { lat: 33.4890, lng: 126.4280 },
+  'DT_0011': { lat: 33.2527, lng: 126.5600 },
+  'DT_0045': { lat: 33.4746, lng: 126.9196 },
+};
+
+// ✅ [FALLBACK-v2] 연안 변환 공통 헬퍼 (육풍/해풍 감쇄 로직)
+function applyCoastalTransform(sid, wh, ws, wdDeg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
+  let reductionFactor    = 1.0;
+  let windReductionFactor = 0.75;
+  const isEastCoast  = ['DT_0001','DT_0002','DT_0003','DT_0021','DT_0033','DT_0036','DT_0099'].includes(sid);
+  const isWestCoast  = ['DT_0007','DT_0008','DT_0009','DT_0030'].includes(sid);
+  const isSouthCoast = !isEastCoast && !isWestCoast;
+  if (isEastCoast)       { if (wd.includes('W')) { reductionFactor = 0.8; windReductionFactor *= 0.5; } }
+  else if (isWestCoast)  { if (wd.includes('E')) { reductionFactor = 0.3; windReductionFactor *= 0.5; } }
+  else if (isSouthCoast) { if (wd.includes('N')) { reductionFactor = 0.5; windReductionFactor *= 0.5; } }
+  return {
+    wind: { speed: parseFloat(Math.max(0, ws * windReductionFactor).toFixed(1)), dir: wd },
+    wave: { coastal: parseFloat(Math.max(0.1, wh * reductionFactor).toFixed(1)) },
+  };
+}
+
+// ✅ [FALLBACK-v2] OpenMeteo 서브 파이프라인 (기상청 3시간 이상 장애 시 자동 전환)
+async function getMarineWeatherOpenMeteo(sid) {
+  const coords = OBS_COORDS[sid];
+  if (!coords) return null;
+  try {
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lng}` +
+      `&hourly=wave_height,wave_direction&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+    const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}` +
+      `&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+    const [mRes, wRes] = await Promise.all([
+      axios.get(url,  { timeout: 8000 }),
+      axios.get(wurl, { timeout: 8000 }),
+    ]);
+    // 현재 시간 인덱스
+    const nowHr = new Date().getHours();
+    const wh  = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
+    const wdDeg = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
+    const ws  = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
+    const windDeg = parseFloat(wRes.data?.hourly?.wind_direction_10m?.[nowHr]);
+    if (isNaN(wh) || isNaN(ws)) return null;
+    const result = applyCoastalTransform(sid, wh, ws, windDeg);
+    logger.info(`[Marine/OpenMeteo] ${sid} 파고:${wh}m/풍속:${ws}m/s → 연안 파고:${result.wave.coastal}m (풍향:${result.wind.dir})`);
+    return result;
+  } catch (e) {
+    logger.warn(`[Marine/OpenMeteo] ${sid} 호출 실패: ${e.message}`);
+    return null;
+  }
+}
+
 // ✅ KMA 실제 부이 STN 번호 (5자리) 매핑
 // 각 관측소 위치 기준 최근접 해양연안부이 ID
 const BUOY_MAP = {
@@ -2296,73 +2373,69 @@ const BUOY_MAP = {
 
 async function getMarineWeather(sid) {
   const KMA_KEY = process.env.KMA_KEY;
-  if (!KMA_KEY) return null;
   const buoyNum = BUOY_MAP[sid];
-  if (!buoyNum) return null;
-  
-  return getDeduplicatedPromise(`marine_${buoyNum}`, async () => {
-    try {
-      const now  = new Date(Date.now() + 9 * 3600 * 1000);
-      const pad  = (n) => String(n).padStart(2, '0');
-      // ✅ sea_obs.php: tm2 단일 파라미터 (승인된 엔드포인트, kma_buoy2는 403)
-      const tm2  = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}00`;
-      const url  = `https://apihub.kma.go.kr/api/typ01/url/sea_obs.php?tm2=${tm2}&stn=${buoyNum}&help=0&authKey=${KMA_KEY}`;
-      const res  = await axios.get(url, { timeout: 8000 });
-    const text = typeof res.data === 'string' ? res.data : '';
-    if (!text || !text.includes('START7777')) return null;
-    // sea_obs 컬럼: [0]TP [1]TM [2]STN_ID [3]STN_KO [4]LON [5]LAT [6]WH [7]WD [8]WS [9]WS_GST [10]TW [11]TA [12]PA [13]HM
-    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#') && l.startsWith('B,'));
-    // 해당 부이 번호 포함된 행 필터
-    const matched = lines.filter(l => l.includes(buoyNum));
-    const targetLine = matched.length ? matched[matched.length - 1] : lines[lines.length - 1];
-    if (!targetLine) return null;
-    const cols = targetLine.trim().split(',').map(s => s.trim());
-    let wh    = parseFloat(cols[6]);  // WH 유효파고 (m)
-    const wdDeg = parseFloat(cols[7]);  // WD 풍향 (degree)
-    const ws    = parseFloat(cols[8]);  // WS 풍속 (m/s)
-    if (isNaN(ws) || ws <= -90 || isNaN(wh) || wh <= -90) return null;
-    
-    // 풍향 도 → 방위 변환
-    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
 
-    // ✅ [고도화] 연안 파고 및 풍속 변환 엔진 (Coastal Wave & Wind Transformation)
-    // 지형적 방위와 풍향(육풍/해풍)을 계산하여 먼바다 데이터를 육지 근접 수치로 정밀하게 변환합니다.
-    let reductionFactor = 0.35; // 기본 마찰 및 지형 감쇠율 (방파제/갯바위 근접 기준 파고)
-    let windReductionFactor = 0.75; // 연안 기본 풍속 감쇠 (해상 부이 대비 지표 마찰로 약 25% 감소)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [1순위] 기상청(KMA) 해양부이 API
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (KMA_KEY && buoyNum) {
+    const kmaResult = await getDeduplicatedPromise(`marine_${buoyNum}`, async () => {
+      try {
+        const now = new Date(Date.now() + 9 * 3600 * 1000);
+        const pad = (n) => String(n).padStart(2, '0');
+        const tm2 = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}00`;
+        const url = `https://apihub.kma.go.kr/api/typ01/url/sea_obs.php?tm2=${tm2}&stn=${buoyNum}&help=0&authKey=${KMA_KEY}`;
+        const res = await axios.get(url, { timeout: 8000 });
+        const text = typeof res.data === 'string' ? res.data : '';
+        if (!text || !text.includes('START7777')) return null;
+        // sea_obs 컬럼: [0]TP [1]TM [2]STN_ID [3]STN_KO [4]LON [5]LAT [6]WH [7]WD [8]WS
+        const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#') && l.startsWith('B,'));
+        const matched = lines.filter(l => l.includes(buoyNum));
+        const targetLine = matched.length ? matched[matched.length - 1] : lines[lines.length - 1];
+        if (!targetLine) return null;
+        const cols  = targetLine.trim().split(',').map(s => s.trim());
+        const wh    = parseFloat(cols[6]);
+        const wdDeg = parseFloat(cols[7]);
+        const ws    = parseFloat(cols[8]);
+        if (isNaN(ws) || ws <= -90 || isNaN(wh) || wh <= -90) return null;
+        const result = applyCoastalTransform(sid, wh, ws, wdDeg);
+        logger.info(`[Marine/KMA] ${sid}(${buoyNum}) 파고:${wh}m/풍속:${ws}m/s → 연안 파고:${result.wave.coastal}m (풍향:${result.wind.dir})`);
+        return result;
+      } catch (e) {
+        logger.warn(`[Marine/KMA] 부이 API 실패 (${sid}/${buoyNum}): ${e.message}`);
+        return null;
+      }
+    });
 
-    // 해안선 방향에 따른 해풍/육풍 판별
-    // 동해권 -> 바다가 동쪽에 있음 (서풍=육풍, 동풍=해풍)
-    const isEastCoast = ['DT_0001','DT_0002','DT_0003','DT_0021','DT_0033','DT_0036','DT_0099'].includes(sid);
-    // 서해권 -> 바다가 서쪽에 있음 (동풍=육풍, 서풍=해풍)
-    const isWestCoast = ['DT_0007','DT_0008','DT_0009','DT_0030'].includes(sid);
-    // 남해/제주권 -> 바다가 남쪽에 있음 (북풍=육풍, 남풍=해풍)
-    const isSouthCoast = !isEastCoast && !isWestCoast;
-
-    if (isEastCoast) {
-      if (wd.includes('W')) { reductionFactor *= 0.1; windReductionFactor *= 0.5; } // 육풍: 지형 장애물로 풍속 크게 감소
-      else if (wd.includes('E')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; } // 해풍
-    } else if (isWestCoast) {
-      if (wd.includes('E')) { reductionFactor *= 0.1; windReductionFactor *= 0.5; }
-      else if (wd.includes('W')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; }
-    } else if (isSouthCoast) {
-      if (wd.includes('N')) { reductionFactor *= 0.1; windReductionFactor *= 0.5; }
-      else if (wd.includes('S')) { reductionFactor *= 1.5; windReductionFactor *= 1.0; }
+    if (kmaResult) {
+      // KMA 성공 → 캐시 갱신 후 반환
+      marineWeatherCache[sid] = { data: kmaResult, fetchedAt: Date.now(), source: 'KMA' };
+      return kmaResult;
     }
+  }
 
-    let coastalWh = Math.max(0.1, wh * reductionFactor);
-    coastalWh = parseFloat(coastalWh.toFixed(1));
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [2순위] 3시간 이내 캐시 데이터 재사용
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const cached = marineWeatherCache[sid];
+  if (cached && (Date.now() - cached.fetchedAt) < MARINE_CACHE_TTL) {
+    const ageMin = Math.floor((Date.now() - cached.fetchedAt) / 60000);
+    logger.info(`[Marine/Cache] ${sid} ${ageMin}분 전 데이터 재사용 (source: ${cached.source})`);
+    return cached.data;
+  }
 
-    let coastalWs = Math.max(0, ws * windReductionFactor);
-    coastalWs = parseFloat(coastalWs.toFixed(1));
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [3순위] OpenMeteo 서브 파이프라인 (캐시 만료 or 캐시 없음)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  logger.warn(`[Marine/OpenMeteo] ${sid} KMA 장애 + 캐시 만료 → OpenMeteo 서브 파이프라인 전환`);
+  const omResult = await getMarineWeatherOpenMeteo(sid);
+  if (omResult) {
+    marineWeatherCache[sid] = { data: omResult, fetchedAt: Date.now(), source: 'OPENMETEO' };
+    return omResult;
+  }
 
-    logger.info(`[Marine] ${sid}(${buoyNum}) 먼바다 파고:${wh}m/풍속:${ws}m/s -> [연안] 파고:${coastalWh}m/풍속:${coastalWs}m/s (풍향:${wd})`);
-    return { wind: { speed: coastalWs, dir: wd }, wave: { coastal: coastalWh } };
-    } catch (e) {
-      logger.warn(`[Marine] 부이 API 실패 (${sid}/${BUOY_MAP[sid]}): ${e.message}`);
-      return null;
-    }
-  });
+  // 모두 실패 → null (기존 mock 로직이 처리)
+  return null;
 }
 
 
