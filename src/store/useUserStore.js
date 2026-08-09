@@ -161,6 +161,13 @@ export const useUserStore = create((set, get) => ({
     try {
       const { value: pUserStr } = await Preferences.get({ key: 'user' });
       const { value: pTier } = await Preferences.get({ key: 'userTier' });
+      const { value: pAccessToken } = await Preferences.get({ key: 'access_token' });
+      const { value: pRefreshToken } = await Preferences.get({ key: 'refresh_token' });
+
+      // ✅ FIX-AUTO-LOGIN: localStorage 토큰 복구 (스토리지 증발 방어)
+      if (pAccessToken) try { localStorage.setItem('access_token', pAccessToken); } catch {}
+      if (pRefreshToken) try { localStorage.setItem('refresh_token', pRefreshToken); } catch {}
+
       if (pUserStr) {
         const pUser = JSON.parse(pUserStr);
         set((state) => {

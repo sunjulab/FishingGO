@@ -4518,10 +4518,15 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { logger.error('[login] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
-// ✅ FIX-REFRESH-BLACKLIST-INIT: refreshToken blacklist (replay attack 방어)
-const usedRefreshTokens = new Set();
-// 24시간마다 정리 (메모리 보호)
-setInterval(() => { usedRefreshTokens.clear(); }, 24 * 3600_000);
+// ✅ FIX-REFRESH-BLACKLIST-INIT: refreshToken blacklist (replay attack 방어 및 다중 탭 동시 갱신 지원)
+const usedRefreshTokens = new Map(); // refreshToken -> { newAccessToken, newRefreshToken, timestamp }
+// 10분마다 60초 경과된 토큰 정리 (메모리 보호)
+setInterval(() => { 
+  const now = Date.now();
+  for (const [key, val] of usedRefreshTokens.entries()) {
+    if (now - val.timestamp > 60000) usedRefreshTokens.delete(key);
+  }
+}, 600000);
 
 // --- 토큰 갱신 (Refresh Token) ---
 // ✅ AUTH-FIX-4: tier 복원 — 기존 코드는 tier 누락으로 갱신 후 항상 FREE 처리
@@ -4531,9 +4536,16 @@ app.post('/api/auth/refresh', async (req, res) => {
   if (!refreshToken) return res.status(401).json({ error: 'Refresh Token이 없습니다.' });
   try {
     const decoded = jwt.verify(refreshToken, JWT_SECRET, { algorithms: ['HS256'] });
-    // ✅ FIX-REFRESH-BLACKLIST-CHECK: 이미 사용된 refreshToken 차단 (replay attack 방어)
-    if (usedRefreshTokens.has(refreshToken)) return res.status(401).json({ error: '만료된 Refresh Token입니다. 다시 로그인해주세요.' }); // FIX-REFRESH-BLACKLIST-CHECK
-    usedRefreshTokens.add(refreshToken); // 현재 토큰 사용 처리
+    // ✅ FIX-REFRESH-BLACKLIST-CHECK: 이미 사용된 refreshToken 차단 및 다중 탭 동시 갱신(Grace Period) 지원
+    if (usedRefreshTokens.has(refreshToken)) {
+      const cached = usedRefreshTokens.get(refreshToken);
+      if (Date.now() - cached.timestamp < 60000) {
+        // 60초 이내 중복 갱신 요청은 동일한 새 토큰을 반환 (다중 탭 로그아웃 방지)
+        return res.json({ accessToken: cached.newAccessToken, refreshToken: cached.newRefreshToken });
+      } else {
+        return res.status(401).json({ error: '만료된 Refresh Token입니다. 다시 로그인해주세요.' });
+      }
+    }
     if (decoded.type !== 'refresh') return res.status(401).json({ error: '유효하지 않은 Refresh Token입니다.' });
 
     // tier를 최신 DB 값으로 동기화 (구독 만료/업그레이드 반영)
@@ -4556,7 +4568,11 @@ app.post('/api/auth/refresh', async (req, res) => {
       { expiresIn: '365d' }
     );
     res.setHeader('Cache-Control', 'no-store'); // ✅ FIX-REFRESH-CACHE-NO-STORE
-  res.json({ accessToken, refreshToken: newRefreshToken }); // ✅ BUG-FIX: Refresh Token Rotation 구현
+    
+    // 중복 갱신 대응을 위해 60초간 새 토큰 쌍 캐싱
+    usedRefreshTokens.set(refreshToken, { newAccessToken: accessToken, newRefreshToken, timestamp: Date.now() });
+
+    res.json({ accessToken, refreshToken: newRefreshToken }); // ✅ BUG-FIX: Refresh Token Rotation 구현
   } catch (err) {
     return res.status(401).json({ error: 'Refresh Token이 만료되었습니다. 다시 로그인해주세요.' });
   }
