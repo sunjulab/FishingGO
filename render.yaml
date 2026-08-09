@@ -27,6 +27,11 @@ services:
       # https://developers.kakao.com → 내 애플리케이션 → 앱 키 → JavaScript 키
       - key: VITE_KAKAO_APP_KEY
         sync: false
+      # ── 소셜 로그인 (Google, Naver) ───────────────────────────
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+      - key: VITE_NAVER_CLIENT_ID
+        sync: false
       # ── 쿠팡 파트너스 ─────────────────────────────────────────
       # ✅ BUG-59: 하드코딩 제거 후 환경변수 필수화됨
       # https://partners.coupang.com → 마이페이지 → 파트너스 ID 확인

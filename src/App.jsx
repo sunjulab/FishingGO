@@ -9,7 +9,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, 
 // ✅ DEEPLINK: Play Store 내부 테스트 URL (앱 미설치 시 유도)
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
 
-// import { GoogleOAuthProvider } from '@react-oauth/google'; // 추후 구글 로그인 연동 시 활성화
+import { GoogleOAuthProvider } from '@react-oauth/google'; // 구글 로그인 연동
 import { Home, Tv, Users, ShoppingBag, User, Anchor, Camera, Trophy, Bot } from 'lucide-react';
 import Toast from './components/Toast';
 import { useToastStore } from './store/useToastStore';
@@ -575,7 +575,8 @@ export default function App() {
     // ✅ FIX-BLANK: BrowserRouter를 ErrorBoundary 바깥(최상위)으로 이동
     // ErrorBoundary 내부에서 useNavigate()를 사용하므로 반드시 Router context 안에 있어야 함
     // 이전 구조: <ErrorBoundary><BrowserRouter>... → useNavigate가 Router 바깥에서 호출돼 앱 전체 크래시
-    <BrowserRouter>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+      <BrowserRouter>
       <ErrorBoundary>
         {/* ✅ KAKAO-INAPP: 카카오톡 내부 브라우저 감지 → Safari/Chrome 외부열기 유도 배너 */}
         <KakaoInAppBrowserBanner />
@@ -636,6 +637,7 @@ export default function App() {
         </div>
         <BottomNav />
       </ErrorBoundary>
-    </BrowserRouter>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }

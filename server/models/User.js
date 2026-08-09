@@ -2,7 +2,14 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   email: { type: String, lowercase: true, trim: true, maxlength: 100, required: true, unique: true },
-  password: { type: String, maxlength: 200, select: false, required: true },
+  password: { 
+    type: String, 
+    maxlength: 200, 
+    select: false, 
+    required: function() { return this.provider === 'local'; } 
+  },
+  provider: { type: String, default: 'local' }, // 'local', 'google', 'kakao', 'naver'
+  providerId: { type: String, default: null },
   name: { type: String, trim: true, maxlength: 30, required: true, unique: true }, // 닉네임 (중복불가)
   realName:       { type: String, default: '' },                  // ✅ 실명 (회원가입 시 수집)
   phone:          { type: String, default: '' },                   // 휴대폰 번호 (SMS 발송용)

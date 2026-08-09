@@ -4518,6 +4518,101 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { logger.error('[login] 서버 오류:', err.message); res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
 });
 
+// ─── 소셜 로그인 (구글, 카카오, 네이버) ────────────────────────────────────────────────
+async function handleSocialLogin(req, res, provider, profile) {
+  try {
+    const { email, name, providerId } = profile;
+    if (!email) return res.status(400).json({ error: '이메일 정보가 없습니다. (권한 동의 필요)' });
+
+    const dbAvailable = await waitForDb(8000);
+    let user;
+    if (dbAvailable && User) {
+      user = await User.findOne({ $or: [{ email }, { providerId }] });
+    } else {
+      user = memUsers.find(u => u.email === email || u.providerId === providerId);
+    }
+
+    if (!user) {
+      const safeName = (name || email.split('@')[0]).replace(/[^a-zA-Z0-9가-힣]/g, '').slice(0, 15);
+      const uniqueName = `${safeName}_${Math.floor(Math.random() * 1000)}`;
+      if (dbAvailable && User) {
+        user = new User({ email, name: uniqueName, provider, providerId });
+        await user.save();
+      } else {
+        user = {
+          id: Date.now().toString(), email, name: uniqueName, provider, providerId, password: '',
+          level: 1, exp: 0, tier: 'FREE', avatar: null, followers: [], following: [], lastAttendance: null, totalAttendance: 0, totalExp: 0,
+        };
+        memUsers.push(user);
+        saveMemUsers();
+      }
+    } else {
+      if (!user.provider || user.provider === 'local') {
+        user.provider = provider;
+        user.providerId = providerId;
+        if (dbAvailable && User && user.save) {
+          await user.save();
+        } else {
+          saveMemUsers();
+        }
+      }
+    }
+
+    const { justAttended, leveledUp, expGained, streak } = applyAttendance(user);
+    if (dbAvailable && User && user.save) await user.save();
+
+    const userTier = user.tier || 'FREE';
+    const accessToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier }, JWT_SECRET, { expiresIn: '1h' });
+    const refreshToken = jwt.sign({ id: user._id || user.id, email: user.email, name: user.name, tier: userTier, type: 'refresh' }, JWT_SECRET, { expiresIn: '365d' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ token: accessToken, accessToken, refreshToken, user: buildUserResponse(user), justAttended, leveledUp, expGained, streak });
+  } catch (err) {
+    logger.error(`[${provider} login] 서버 오류:`, err.message);
+    res.status(500).json({ error: '소셜 로그인 처리 중 서버 오류가 발생했습니다.' });
+  }
+}
+
+app.post('/api/auth/google', async (req, res) => {
+  const { access_token } = req.body;
+  if (!access_token) return res.status(400).json({ error: '토큰이 제공되지 않았습니다.' });
+  try {
+    const { data } = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    await handleSocialLogin(req, res, 'google', { email: data.email, name: data.name, providerId: data.sub });
+  } catch (err) {
+    logger.warn('[google] token 검증 실패:', err.message);
+    res.status(401).json({ error: '유효하지 않은 구글 토큰입니다.' });
+  }
+});
+
+app.post('/api/auth/kakao', async (req, res) => {
+  const { access_token } = req.body;
+  if (!access_token) return res.status(400).json({ error: '토큰이 제공되지 않았습니다.' });
+  try {
+    const { data } = await axios.get('https://kapi.kakao.com/v2/user/me', { headers: { Authorization: `Bearer ${access_token}` } });
+    const email = data.kakao_account?.email;
+    const name = data.kakao_account?.profile?.nickname;
+    await handleSocialLogin(req, res, 'kakao', { email, name, providerId: String(data.id) });
+  } catch (err) {
+    logger.warn('[kakao] token 검증 실패:', err.message);
+    res.status(401).json({ error: '유효하지 않은 카카오 토큰입니다.' });
+  }
+});
+
+app.post('/api/auth/naver', async (req, res) => {
+  const { access_token } = req.body;
+  if (!access_token) return res.status(400).json({ error: '토큰이 제공되지 않았습니다.' });
+  try {
+    const { data } = await axios.get('https://openapi.naver.com/v1/nid/me', { headers: { Authorization: `Bearer ${access_token}` } });
+    if (data.resultcode !== '00') throw new Error(data.message);
+    const { email, name, id } = data.response;
+    await handleSocialLogin(req, res, 'naver', { email, name, providerId: id });
+  } catch (err) {
+    logger.warn('[naver] token 검증 실패:', err.message);
+    res.status(401).json({ error: '유효하지 않은 네이버 토큰입니다.' });
+  }
+});
 // ✅ FIX-REFRESH-BLACKLIST-INIT: refreshToken blacklist (replay attack 방어 및 다중 탭 동시 갱신 지원)
 const usedRefreshTokens = new Map(); // refreshToken -> { newAccessToken, newRefreshToken, timestamp }
 // 10분마다 60초 경과된 토큰 정리 (메모리 보호)
