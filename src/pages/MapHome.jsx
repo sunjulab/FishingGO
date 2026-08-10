@@ -83,14 +83,6 @@ function HeaderClock() {
   return clockStr;
 }
 
-// ✅ BREAKWATER-FIX: 방파제/항구 타입은 구조적으로 파도를 막아주므로 연안 파고 0.9 추가 감쇄 (해풍 등 적용 시)
-function applyWaveReduction(weather, pointType) {
-  if (!weather || !weather.wave || weather.wave.coastal === undefined) return weather;
-  if (pointType !== '방파제' && pointType !== '항구') return weather;
-  const reduced = parseFloat((parseFloat(weather.wave.coastal) * 0.9).toFixed(1));
-  return { ...weather, wave: { ...weather.wave, coastal: reduced } };
-}
-
 export default function MapHome() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
@@ -562,11 +554,7 @@ export default function MapHome() {
     }
     try {
       const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
-      // ✅ SCORE-SYNC: weatherCache도 동시 갱신 → 검색결과점수와 홈화면점수가 같은 데이터 기반으로 통일
-      setWeatherCache(prev => ({
-        ...prev,
-        [nearest.id]: { _serverScore: prev[nearest.id]?._serverScore, ...res.data, stationId: nearest.id },
-      }));
+      // ✅ SCORE-SYNC: precisionData의 수온 노이즈가 weatherCache를 오염시키지 않도록 setWeatherCache 동기화 삭제
       // ✅ TIDE-SYNC: API 응답의 tide 우선 → 없으면 weatherCache tide → 없으면 정적 fallback
       const staticTide = getPointSpecificData(point).tide;
       let bestTide = { ...staticTide };
@@ -802,7 +790,7 @@ export default function MapHome() {
       const staticData = getPointSpecificData(point);
       // 실시간 캐시 우선 사용, 없으면 정적 fallback
       const liveData = weatherCache[st.id];
-      const weatherData = applyWaveReduction(liveData
+      const weatherData = liveData
         ? {
             ...liveData,
             stationId: st.id,
@@ -810,7 +798,7 @@ export default function MapHome() {
             tide: liveData.tide || staticData?.tide,
             pointName: point.name,
           }
-        : staticData, point.type);
+        : staticData;
       const sst = parseFloat(weatherData?.sst || 13);
       const condition = evaluateFishingCondition(weatherData, point);
       return { point, sst, score: condition.score, isFreshwater: false, fishList: [] };
@@ -1035,7 +1023,7 @@ export default function MapHome() {
   const _nearestSt    = findNearestStation(_selectedPt.lat, _selectedPt.lng);
   const _cachedLive   = weatherCache[_nearestSt?.id];
   const _staticData   = getPointSpecificData(_selectedPt);
-  const _rawCurrentData = precisionData
+  const currentData = precisionData
     || (_cachedLive ? {
         ..._cachedLive,
         stationId: _nearestSt?.id,
@@ -1048,7 +1036,6 @@ export default function MapHome() {
         pointName: _selectedPt.name,
       } : null)
     || _staticData;
-  const currentData = applyWaveReduction(_rawCurrentData, _selectedPt?.type);
   // ✅ REALTIME-SCORE-FIX: score는 항상 currentData로 직접 계산 (실시간 반영)
   // 이전: sharedCond 우선 → weatherCache 바뀌어도 앱 시작 시 stale 점수 유지
   // 수정: evaluateFishingCondition(currentData) 직접 → weatherCache 변경 즉시 점수 갱신
@@ -1085,9 +1072,9 @@ export default function MapHome() {
         const staticData = getPointSpecificData(p);
         // ✅ FIX-SCORE-ALL: weatherCache 우선 → 히트맵·대시보드 점수 전체 동기화
         const liveData = weatherCache[st.id];
-        const weatherData = applyWaveReduction(liveData
+        const weatherData = liveData
           ? { ...liveData, stationId: st.id, tide: liveData.tide || staticData?.tide, pointName: p.name }
-          : staticData, p.type);
+          : staticData;
         // ✅ _serverScore 활용: sst가 없어도 서버가 계산한 점수를 즉시 표시
         const liveScore = (liveData?._serverScore && !liveData?.sst)
           ? liveData._serverScore

@@ -2294,21 +2294,13 @@ const OBS_COORDS = {
   'DT_0045': { lat: 33.4746, lng: 126.9196 },
 };
 
-// ✅ [FALLBACK-v2] 연안 변환 공통 헬퍼 (육풍/해풍 감쇄 로직)
+// ✅ [FALLBACK-v2] 연안 변환 공통 헬퍼 (육풍/해풍 감쇄 로직 - 사용자 요청으로 감쇄 로직 제거)
 function applyCoastalTransform(sid, wh, ws, wdDeg) {
   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
-  let reductionFactor    = 1.0;
-  let windReductionFactor = 0.75;
-  const isEastCoast  = ['DT_0001','DT_0002','DT_0003','DT_0021','DT_0033','DT_0036','DT_0099'].includes(sid);
-  const isWestCoast  = ['DT_0007','DT_0008','DT_0009','DT_0030'].includes(sid);
-  const isSouthCoast = !isEastCoast && !isWestCoast;
-  if (isEastCoast)       { if (wd.includes('W')) { reductionFactor = 0.8; windReductionFactor *= 0.5; } }
-  else if (isWestCoast)  { if (wd.includes('E')) { reductionFactor = 0.3; windReductionFactor *= 0.5; } }
-  else if (isSouthCoast) { if (wd.includes('N')) { reductionFactor = 0.5; windReductionFactor *= 0.5; } }
   return {
-    wind: { speed: parseFloat(Math.max(0, ws * windReductionFactor).toFixed(1)), dir: wd },
-    wave: { coastal: parseFloat(Math.max(0.1, wh * reductionFactor).toFixed(1)) },
+    wind: { speed: parseFloat(Math.max(0, ws).toFixed(1)), dir: wd },
+    wave: { coastal: parseFloat(Math.max(0.1, wh).toFixed(1)) },
   };
 }
 
@@ -7431,7 +7423,9 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
     }
   }
   if (!mockSst) {
-    mockSst = (station.baseTemp || profile.temp || 15.2).toFixed(1);
+    const month = new Date().getMonth();
+    const monthlyBase = MONTHLY_BASE_TEMP[station.region]?.[month] ?? station.baseTemp;
+    mockSst = (monthlyBase || profile.temp || 15.2).toFixed(1);
     sstSourceFb = 'fallback';
   }
 
