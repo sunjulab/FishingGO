@@ -83,6 +83,14 @@ function HeaderClock() {
   return clockStr;
 }
 
+// ✅ BREAKWATER-FIX: 방파제/항구 타입은 구조적으로 파도를 막아주므로 연안 파고 0.9 추가 감쇄 (해풍 등 적용 시)
+function applyWaveReduction(weather, pointType) {
+  if (!weather || !weather.wave || weather.wave.coastal === undefined) return weather;
+  if (pointType !== '방파제' && pointType !== '항구') return weather;
+  const reduced = parseFloat((parseFloat(weather.wave.coastal) * 0.9).toFixed(1));
+  return { ...weather, wave: { ...weather.wave, coastal: reduced } };
+}
+
 export default function MapHome() {
   const navigate = useNavigate();
   const addToast = useToastStore((state) => state.addToast);
@@ -794,7 +802,7 @@ export default function MapHome() {
       const staticData = getPointSpecificData(point);
       // 실시간 캐시 우선 사용, 없으면 정적 fallback
       const liveData = weatherCache[st.id];
-      const weatherData = liveData
+      const weatherData = applyWaveReduction(liveData
         ? {
             ...liveData,
             stationId: st.id,
@@ -802,7 +810,7 @@ export default function MapHome() {
             tide: liveData.tide || staticData?.tide,
             pointName: point.name,
           }
-        : staticData;
+        : staticData, point.type);
       const sst = parseFloat(weatherData?.sst || 13);
       const condition = evaluateFishingCondition(weatherData, point);
       return { point, sst, score: condition.score, isFreshwater: false, fishList: [] };
@@ -911,7 +919,7 @@ export default function MapHome() {
           'border:1.5px solid ', fill, ';pointer-events:none;',
           'box-shadow: 0 4px 12px ', fill, '40;transform: translateY(-8px);">',
           '<div style="display:flex;align-items:center;gap:4px;">',
-            '<span style="color:', fill, ';font-size:14px">', mainValue, '</span>',
+            '<span style="font-size:13px;color:', fill, '">', mainValue, '</span>',
             '<span style="font-size:10px;color:#eee">', text, '</span>',
           '</div>',
           '<div style="color:#aaa;font-size:9.5px;margin-top:2px;">', mainFish || point.name.slice(0,5), ' 포인트</div>',
@@ -1027,7 +1035,7 @@ export default function MapHome() {
   const _nearestSt    = findNearestStation(_selectedPt.lat, _selectedPt.lng);
   const _cachedLive   = weatherCache[_nearestSt?.id];
   const _staticData   = getPointSpecificData(_selectedPt);
-  const currentData   = precisionData
+  const _rawCurrentData = precisionData
     || (_cachedLive ? {
         ..._cachedLive,
         stationId: _nearestSt?.id,
@@ -1040,6 +1048,7 @@ export default function MapHome() {
         pointName: _selectedPt.name,
       } : null)
     || _staticData;
+  const currentData = applyWaveReduction(_rawCurrentData, _selectedPt?.type);
   // ✅ REALTIME-SCORE-FIX: score는 항상 currentData로 직접 계산 (실시간 반영)
   // 이전: sharedCond 우선 → weatherCache 바뀌어도 앱 시작 시 stale 점수 유지
   // 수정: evaluateFishingCondition(currentData) 직접 → weatherCache 변경 즉시 점수 갱신
@@ -1076,9 +1085,9 @@ export default function MapHome() {
         const staticData = getPointSpecificData(p);
         // ✅ FIX-SCORE-ALL: weatherCache 우선 → 히트맵·대시보드 점수 전체 동기화
         const liveData = weatherCache[st.id];
-        const weatherData = liveData
+        const weatherData = applyWaveReduction(liveData
           ? { ...liveData, stationId: st.id, tide: liveData.tide || staticData?.tide, pointName: p.name }
-          : staticData;
+          : staticData, p.type);
         // ✅ _serverScore 활용: sst가 없어도 서버가 계산한 점수를 즉시 표시
         const liveScore = (liveData?._serverScore && !liveData?.sst)
           ? liveData._serverScore
