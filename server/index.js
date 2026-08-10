@@ -7349,18 +7349,29 @@ app.get('/terms', (req, res) => {
 
 
 app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
-  const { stationId } = req.query;
+  const { stationId, lat, lng } = req.query;
   let sid = stationId || 'DT_0001';
 
   // 만약 숫자형 ID (앱 커스텀 포인트)라면 가장 가까운 관측소 DT_XXXX 로 매핑
   if (!sid.startsWith('DT_')) {
-    const loc = spotLocationOverrides[sid];
-    if (loc && loc.lat && loc.lng) {
-      const nearest = findNearestStation(loc.lat, loc.lng);
-      if (nearest) {
-        sid = nearest.stationId;
-        (logger?.info || console.log)(`[Weather Precision] Point ${stationId}(${loc.name}) mapped to ${sid}(${nearest.name})`);
+    let nearest = null;
+    
+    // 1순위: 클라이언트에서 넘겨준 실제 위경도 기반 동적 매핑
+    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+      nearest = findNearestStation(parseFloat(lat), parseFloat(lng));
+    }
+    
+    // 2순위: 하드코딩된 spotLocationOverrides (구버전 호환)
+    if (!nearest) {
+      const loc = spotLocationOverrides[sid];
+      if (loc && loc.lat && loc.lng) {
+        nearest = findNearestStation(loc.lat, loc.lng);
       }
+    }
+
+    if (nearest) {
+      sid = nearest.stationId;
+      (logger?.info || console.log)(`[Weather Precision] Point ${stationId} dynamically mapped to ${sid}(${nearest.name})`);
     }
   }
 
