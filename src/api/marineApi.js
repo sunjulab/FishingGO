@@ -94,6 +94,49 @@ async function fetchDataGo(endpoint, params) {
   }
 }
 
+// 실제 KHOA(해양수산부) 조위관측소 마스터 데이터 (프론트엔드 매핑용)
+const REAL_KHOA_STATIONS = [
+  { id: 'DT_0001', name: '인천', lat: 37.4519, lng: 126.5922 },
+  { id: 'DT_0002', name: '평택', lat: 36.9567, lng: 126.8206 },
+  { id: 'DT_0004', name: '제주', lat: 33.5272, lng: 126.5431 },
+  { id: 'DT_0005', name: '부산', lat: 35.0964, lng: 129.0353 },
+  { id: 'DT_0006', name: '묵호', lat: 37.5489, lng: 129.1170 },
+  { id: 'DT_0007', name: '목포', lat: 34.7797, lng: 126.3756 },
+  { id: 'DT_0010', name: '서귀포', lat: 33.2400, lng: 126.5611 },
+  { id: 'DT_0012', name: '속초', lat: 38.2134, lng: 128.6010 },
+  { id: 'DT_0014', name: '통영', lat: 34.8281, lng: 128.4336 },
+  { id: 'DT_0016', name: '여수', lat: 34.7456, lng: 127.7444 },
+  { id: 'DT_0018', name: '군산', lat: 35.9756, lng: 126.5631 },
+  { id: 'DT_0020', name: '울산', lat: 35.5028, lng: 129.3872 },
+  { id: 'DT_0025', name: '보령', lat: 36.3217, lng: 126.4950 },
+  { id: 'DT_0027', name: '완도', lat: 34.3164, lng: 126.7583 },
+  { id: 'DT_0029', name: '거제도', lat: 34.7933, lng: 128.6253 }
+];
+
+import { KHOA_OBSERVATORIES } from '../constants/fishingData';
+
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 프론트엔드 컴포넌트에서 넘기는 obsCode는 실제로는 KMA(기상청) 코드이므로 KHOA 코드로 변환
+function getKhoaObsCode(kmaCode) {
+  const kmaStation = KHOA_OBSERVATORIES.find(s => s.id === kmaCode);
+  if (!kmaStation) return kmaCode;
+  
+  let nearest = REAL_KHOA_STATIONS[0];
+  let minDist = Infinity;
+  for (const st of REAL_KHOA_STATIONS) {
+    const d = getDistanceKm(kmaStation.lat, kmaStation.lng, st.lat, st.lng);
+    if (d < minDist) { minDist = d; nearest = st; }
+  }
+  return nearest.id;
+}
+
 // ────────────────────────────────────────────
 // 1. 조석예보 (고·저조)
 // ────────────────────────────────────────────
@@ -104,7 +147,7 @@ async function fetchDataGo(endpoint, params) {
  *   item: { obsCode, obsName, hl_code: 'H'|'L', hl_time: 'HH:mm', hl_level: '116' }
  */
 export const fetchTideForecast = (obsCode, date) =>
-  fetchDataGo('1192136/tideFcstHghLw/GetTideFcstHghLwApiService', { obsCode, reqDate: date });
+  fetchDataGo('1192136/tideFcstHghLw/GetTideFcstHghLwApiService', { obsCode: getKhoaObsCode(obsCode), reqDate: date });
 
 // ────────────────────────────────────────────
 // 2. 조위관측소 실측 수온
@@ -117,7 +160,7 @@ export const fetchTideForecast = (obsCode, date) =>
  */
 export const fetchWaterTemp = async (obsCode, date) => {
   const data = await fetchDataGo('1192136/surveyWaterTemp/GetSurveyWaterTempApiService', {
-    obsCode,
+    obsCode: getKhoaObsCode(obsCode),
     date,
   });
   if (!data) return '-';
@@ -131,10 +174,10 @@ export const fetchWaterTemp = async (obsCode, date) => {
 // 3. 바다낚시지수 (7일 예측, 5단계 지수)
 // ────────────────────────────────────────────
 export const fetchFishingIndex = (obsCode) =>
-  fetchDataGo('1192136/fcstFishingv2/GetFcstFishingApiServicev2', { obsCode }).catch(() => null);
+  fetchDataGo('1192136/fcstFishingv2/GetFcstFishingApiServicev2', { obsCode: getKhoaObsCode(obsCode) }).catch(() => null);
 
 // ────────────────────────────────────────────
 // 4. 바다갈라짐 체험지수
 // ────────────────────────────────────────────
 export const fetchSeaSplitIndex = (obsCode, date) =>
-  fetchDataGo('1192136/fcstSeaSplitv2/GetFcstSeaSplitApiServicev2', { obsCode, reqDate: date });
+  fetchDataGo('1192136/fcstSeaSplitv2/GetFcstSeaSplitApiServicev2', { obsCode: getKhoaObsCode(obsCode), reqDate: date });
