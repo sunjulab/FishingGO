@@ -89,9 +89,11 @@ export default function DashboardView({
 
   // ── 포인트 확인 광고 게이트 ──────────────────────────────────────────
   // 포인트 카드 클릭 핸들러 (대시보드 목록에서 클릭)
+  // ✅ BUG-DASH-FIX: setViewMode('map') 제거 — 대시보드에서 누를 때 viewMode 전환 불필요
+  // 이전 코드가 setViewMode('map')을 먼저 호출해 카카오맵 초기화 useEffect가 트리거되면서
+  // 앱이 새로고침되어 홈(대시보드)으로 돌아오는 버그가 있었음
   const handlePremiumPointClick = (point) => {
-    setViewMode('map');
-    handlePointClick(point);
+    handlePointClick(point, true); // fromDashboard=true: 바텀시트만 띄우고 지도 전환 없음
   };
   // ──────────────────────────────────────────────────────────────────
 

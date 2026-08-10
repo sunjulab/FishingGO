@@ -538,12 +538,13 @@ export default function MapHome() {
     try { localStorage.setItem('fishing_go_last_point_id', String(point.id)); } catch { /* 무시 */ }
     setPrecisionData(null);
     setLoading(true);
-    if (!fromDashboard) {
-      setSheetVisible(true);
-      // ✅ BUG-MAP03 FIX: window.kakao?.maps 널 체크 추가 (컨조 SDK 미로드 시 TypeError 크래시 방지)
-      if (mapRef.current && window.kakao?.maps) {
-        mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
-      }
+    // ✅ BUG-DASH-FIX: fromDashboard 여부와 무관하게 항상 바텔시트 표시
+    // (이전: fromDashboard=false 일 때만 setSheetVisible(true) 호출 → 대시보드에서 누르면 바텔시트 가 안듸)
+    setSheetVisible(true);
+    // ✅ BUG-MAP03 FIX: window.kakao?.maps 널 체크 추가 (컨조 SDK 미로드 시 TypeError 크래시 방지)
+    // map 뷰일 때만 panTo (대시보드에서는 지도 찾는 시도 불필요)
+    if (!fromDashboard && mapRef.current && window.kakao?.maps) {
+      mapRef.current.panTo(new window.kakao.maps.LatLng(point.lat, point.lng));
     }
     const nearest = findNearestStation(point.lat, point.lng);
     if (point.type === '민물') {
