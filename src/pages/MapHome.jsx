@@ -83,14 +83,12 @@ function HeaderClock() {
   return clockStr;
 }
 
-// ✅ TIERED WAVE REDUCTION: 포인트 지형별 파고 차등 감쇄 (외해 파고 → 연안 실체감 파고 변환)
+// ✅ WAVE REDUCTION: 모든 포인트 동일 감쇄율 적용 (사용자 요청: 평균 15% 일괄 감쇄)
 function applyWaveReduction(weather, pointType) {
   if (!weather || !weather.wave || weather.wave.coastal === undefined) return weather;
   
-  let factor = 0.90; // 기본(기타) 10% 감쇄
-  if (pointType === '갯바위' || pointType === '선상') factor = 0.95; // 5% 감쇄 (외해 노출)
-  else if (pointType === '해수욕장' || pointType === '갯벌') factor = 0.85; // 15% 감쇄 (완만한 지형)
-  else if (pointType === '방파제' || pointType === '항구') factor = 0.80; // 20% 감쇄 (구조물 차폐)
+  // 기존 지형별 차등 로직(갯바위, 항구 등) 완전 제거 및 0.85 단일 밸런스 값 적용
+  const factor = 0.85; 
 
   const reduced = parseFloat((parseFloat(weather.wave.coastal) * factor).toFixed(1));
   return { ...weather, wave: { ...weather.wave, coastal: reduced } };
