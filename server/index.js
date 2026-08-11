@@ -2304,33 +2304,44 @@ function applyCoastalTransform(sid, wh, ws, wdDeg) {
   };
 }
 
-// ✅ [FALLBACK-v2] OpenMeteo 서브 파이프라인 (기상청 3시간 이상 장애 시 자동 전환)
-async function getMarineWeatherOpenMeteo(sid) {
-  const coords = OBS_COORDS[sid];
-  if (!coords) return null;
+// ✅ [FALLBACK-v2] OpenMeteo 좌표 기반 동적 패치 (모든 포인트 100% 정밀도)
+const openMeteoCache = {};
+async function getMarineWeatherOpenMeteoPoint(lat, lng) {
+  // 소수점 1자리(약 11km)로 묶어 캐시 (동일 권역 API 중복 방지)
+  const key = `${parseFloat(lat).toFixed(1)},${parseFloat(lng).toFixed(1)}`;
+  const cached = openMeteoCache[key];
+  if (cached && (Date.now() - cached.fetchedAt) < MARINE_CACHE_TTL) return cached.data;
+  
   try {
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lng}` +
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}` +
       `&hourly=wave_height,wave_direction&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
-    const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}` +
+    const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
       `&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
     const [mRes, wRes] = await Promise.all([
       axios.get(url,  { timeout: 8000 }),
       axios.get(wurl, { timeout: 8000 }),
     ]);
-    // 현재 시간 인덱스
     const nowHr = new Date().getHours();
     const wh  = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
     const wdDeg = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
     const ws  = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
     const windDeg = parseFloat(wRes.data?.hourly?.wind_direction_10m?.[nowHr]);
     if (isNaN(wh) || isNaN(ws)) return null;
-    const result = applyCoastalTransform(sid, wh, ws, windDeg);
-    logger.info(`[Marine/OpenMeteo] ${sid} 파고:${wh}m/풍속:${ws}m/s → 연안 파고:${result.wave.coastal}m (풍향:${result.wind.dir})`);
+    const result = applyCoastalTransform(`OM_${key}`, wh, ws, windDeg);
+    openMeteoCache[key] = { data: result, fetchedAt: Date.now() };
+    logger.info(`[Marine/OpenMeteo/Point] ${key} 파고:${wh}m/풍속:${ws}m/s → 연안 파고:${result.wave.coastal}m`);
     return result;
   } catch (e) {
-    logger.warn(`[Marine/OpenMeteo] ${sid} 호출 실패: ${e.message}`);
+    logger.warn(`[Marine/OpenMeteo/Point] ${key} 호출 실패: ${e.message}`);
     return null;
   }
+}
+
+// ✅ [FALLBACK-v2] OpenMeteo 서브 파이프라인 (기상청 3시간 이상 장애 시 자동 전환)
+async function getMarineWeatherOpenMeteo(sid) {
+  const coords = OBS_COORDS[sid];
+  if (!coords) return null;
+  return await getMarineWeatherOpenMeteoPoint(coords.lat, coords.lng);
 }
 
 // ✅ KMA 실제 부이 STN 번호 (5자리) 매핑
@@ -2368,9 +2379,9 @@ async function getMarineWeather(sid) {
   const buoyNum = BUOY_MAP[sid];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // [1순위] 기상청(KMA) 해양부이 API
+  // [1순위] 기상청(KMA) 해양부이 API (비활성화 - 핀포인트 OpenMeteo 고도화로 대체)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (KMA_KEY && buoyNum) {
+  if (false && KMA_KEY && buoyNum) {
     const kmaResult = await getDeduplicatedPromise(`marine_${buoyNum}`, async () => {
       try {
         const now = new Date(Date.now() + 9 * 3600 * 1000);
@@ -7384,7 +7395,7 @@ app.get('/terms', (req, res) => {
 });
 
 
-app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
+app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
   const { stationId, lat, lng } = req.query;
   let sid = stationId || 'DT_0001';
 
@@ -7448,6 +7459,17 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
       d.layers = { upper: d.sst };
     }
 
+    if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+      const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng);
+      if (ptWeather) {
+        d.wind = ptWeather.wind;
+        d.wave = ptWeather.wave;
+        if (!d._sources) d._sources = {};
+        d._sources.wind = 'OPENMETEO_POINT';
+        d._sources.wave = 'OPENMETEO_POINT';
+      }
+    }
+
     return res.json(d);
   }
 
@@ -7496,7 +7518,7 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
   const highTime = fmt(baseHighMin);
   const lowTime = fmt(baseLowMin);
 
-  res.json({
+  const fbData = {
     stationId: sid,
     name: station.name || '실시간 포인트',
     sst: mockSst,
@@ -7514,7 +7536,19 @@ app.get('/api/weather/precision', checkSubscriptionValid, (req, res) => {
       { time: highTime, type: '고조', level: 185 }
     ],
     _sources: { sst: sstSourceFb }
-  });
+  };
+
+  if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+    const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng);
+    if (ptWeather) {
+      fbData.wind = ptWeather.wind;
+      fbData.wave = ptWeather.wave;
+      fbData._sources.wind = 'OPENMETEO_POINT';
+      fbData._sources.wave = 'OPENMETEO_POINT';
+    }
+  }
+
+  res.json(fbData);
 });
 
 // ✅ 낚시 점수 계산 헬퍼 함수

@@ -352,7 +352,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
       try {
         const [marine, tideItems, temp, fishIdx] = await Promise.allSettled([
-          apiClient.get(`/api/weather/precision?stationId=${sid}`),
+          apiClient.get(`/api/weather/precision?stationId=${sid}&lat=${selectedPoint.lat || ''}&lng=${selectedPoint.lng || ''}`),
           fetchTideForecast(sid, todayStr),
           fetchWaterTemp(sid, todayStr),
           fetchFishingIndex(sid),
@@ -446,7 +446,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         if (items.length > 0 && !cancelled) setShoppingItems(items); // ✅ BUG-01 FIX
       }).catch(err => { if (!import.meta.env.PROD) console.error('Shop Load Error:', err); });
 
-      const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}`)
+      const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}&lat=${selectedPoint.lat || ''}&lng=${selectedPoint.lng || ''}`)
         .then(resp => {
           if (!cancelled) {
             const data = resp.data;
