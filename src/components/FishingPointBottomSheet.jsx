@@ -359,7 +359,11 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         ]);
         // 기상 데이터
         if (marine.status === 'fulfilled') {
-          setMarineData(prev => ({ ...prev, ...marine.value.data, stationId: sid }));
+          const data = marine.value.data;
+          if (data?.wave?.coastal != null && !isNaN(parseFloat(data.wave.coastal))) {
+            data.wave.coastal = parseFloat((parseFloat(data.wave.coastal) * 0.85).toFixed(1));
+          }
+          setMarineData(prev => ({ ...prev, ...data, stationId: sid }));
         }
         // 조석예보
         if (tideItems.status === 'fulfilled' && tideItems.value?.length) {
@@ -404,7 +408,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             fishingIndex: {
               등급: grade,
               수온: today?.wt ? `${today.wt}°C` : '-',
-              파고: today?.wh ? `${today.wh}m` : '-',
+              파고: today?.wh ? `${parseFloat((parseFloat(today.wh) * 0.85).toFixed(1))}m` : '-',
               조류: today?.current_spd ? `${today.current_spd}m/s` : '-',
             },
           }));
@@ -444,7 +448,13 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
       const marinePromise = apiClient.get(`/api/weather/precision?stationId=${sid}`)
         .then(resp => {
-          if (!cancelled) setMarineData(prev => ({ ...prev, ...resp.data, stationId: sid })); // ✅ BUG-01 FIX
+          if (!cancelled) {
+            const data = resp.data;
+            if (data?.wave?.coastal != null && !isNaN(parseFloat(data.wave.coastal))) {
+              data.wave.coastal = parseFloat((parseFloat(data.wave.coastal) * 0.85).toFixed(1));
+            }
+            setMarineData(prev => ({ ...prev, ...data, stationId: sid })); // ✅ BUG-01 FIX
+          }
         })
         .catch(err => {
           if (!import.meta.env.PROD) console.error('Data Load Error:', err);
@@ -525,7 +535,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             fishingIndex: {
               등급: grade,
               수온: today?.wt ? `${today.wt}°C` : '-',
-              파고: today?.wh ? `${today.wh}m` : '-',
+              파고: today?.wh ? `${parseFloat((parseFloat(today.wh) * 0.85).toFixed(1))}m` : '-',
               조류: today?.current_spd ? `${today.current_spd}m/s` : '-',
             },
           }));
