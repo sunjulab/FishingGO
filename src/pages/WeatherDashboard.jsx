@@ -18,11 +18,18 @@ const REGION_STATION = {
   '제주': 'DT_0010',
 };
 
+// ✅ WAVE-REDUCTION: MapHome과 동일한 15% 감쇄 적용 (모든 화면 일관성 보장)
+const WAVE_REDUCTION_FACTOR = 0.85;
+function applyWaveReduction(wave) {
+  if (wave == null || isNaN(parseFloat(wave))) return wave;
+  return parseFloat((parseFloat(wave) * WAVE_REDUCTION_FACTOR).toFixed(1));
+}
+
 // API 응답 → 표시용 객체 변환
 function buildMarineDisplay(data) {
   if (!data) return null;
   const sst    = data.sst ?? data.layers?.upper;
-  const wave   = data.wave?.coastal ?? data.wave;
+  const wave   = applyWaveReduction(data.wave?.coastal ?? data.wave);
   const speed  = data.wind?.speed ?? data.wind;
   const dir    = data.wind?.dir ?? '';
   const phase  = data.tide?.phase ?? data.tide;
@@ -67,9 +74,10 @@ function buildMarineDisplay(data) {
 function buildLocalFallback(point) {
   const pData = getPointSpecificData(point);
   const cond  = evaluateFishingCondition(pData, point);
+  const reducedWave = applyWaveReduction(pData.wave?.coastal);
   return {
     temp:  pData.sst           ? `${pData.sst}°C`           : '-',
-    wave:  pData.wave?.coastal ? `${pData.wave.coastal}m`   : '-',
+    wave:  reducedWave != null ? `${reducedWave}m`           : '-',
     wind:  pData.wind?.speed   ? `${pData.wind.speed}m/s`  : '-',
     tide:  pData.tide?.phase   ?? '-',
     status: cond.status,
