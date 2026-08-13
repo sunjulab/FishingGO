@@ -370,20 +370,20 @@ export const evaluateFishingCondition = (data, point = {}) => {
       else       parts.push('좋은 컨디션. 집중하면 손맛 볼 수 있습니다.');
     } else if (score >= 50) {
       if (_sst < 12)   parts.push(`저수온 영향으로 ${_fish || '어류'} 입질이 간헐적입니다. 밑밥으로 유인하세요.`);
-      else if (_wave > 2.7) parts.push(`파고 ${_wave}m — 채비가 흔들립니다. 고부력 채비를 사용하세요.`);
+      else if (_wave > 2.7) parts.push(`파고 ${_wave}m — 너울이 강해 갯바위 낚시가 불가능합니다.`);
       else if (_phase.includes('조금') || _phase.includes('무시'))
         parts.push(`조금 물때로 ${_fish || '어류'} 입질이 뜸합니다. 인내심이 관건.`);
       else if (_fish) parts.push(`${_fish} 입질이 다소 예민한 상태입니다. 유인력 강한 미끼로 승부하세요.`);
       else parts.push('입질이 간헐적입니다. 기대치를 조금 낮추세요.');
     } else if (score >= 30) {
       if (_sst < 11)   parts.push(`수온 ${_sst.toFixed(1)}°C 저수온 — ${_fish || '어류'} 활동 급감. 꽝 확률 높습니다.`);
-      else if (_wind > 8) parts.push(`풍속 ${_wind.toFixed(1)}m/s 강풍 — 채비 운용이 어렵습니다. 출조를 재고하세요.`);
+      else if (_wind > 6) parts.push(`풍속 ${_wind.toFixed(1)}m/s 강풍 — 원줄 관리가 불가능합니다. 출조를 재고하세요.`);
       else if (_phase.includes('조금') || _phase.includes('무시'))
         parts.push('조금·무시 물때 — 조류가 거의 없어 입질이 매우 드뭅니다.');
       else parts.push('전반적으로 낚시 조건이 나쁩니다. 기대치를 크게 낮추세요.');
     } else {
-      if (_wave > 3.6)   parts.push(`파고 ${_wave}m 너울 위험 — 즉시 철수! 절대 출조 금지.`);
-      else if (_wind > 12) parts.push(`풍속 ${_wind.toFixed(1)}m/s 강풍 — 사람이 날아갈 수 있습니다. 출조 금지.`);
+      if (_wave > 3.6)   parts.push(`파고 ${_wave}m 너울 위험 — 방파제 접근 시 생명 위험! 즉시 철수!`);
+      else if (_wind > 8) parts.push(`풍속 ${_wind.toFixed(1)}m/s 초강풍 — 낚싯대가 부러집니다. 출조 절대 금지.`);
       else parts.push('출조 비권고. 기상 악화로 낚시가 불가능한 상황입니다.');
     }
 
