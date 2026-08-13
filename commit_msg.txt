@@ -1,13 +1,5 @@
-fix: 31 bugs fixed across 5 files
+fix(deploy): render.yaml 인코딩 완전 복구로 Blueprint Sync 정상화
 
-CT-05 CRITICAL: blockedUsersRef TDZ fix (initialized before user declaration)
-CT-04: likeTimerRef cleanup on unmount added
-PD-01 CRITICAL: fetchPost cancelled flag was dead code - moved to useEffect
-PD-02: canAccessPremium now uses store userTier + admin bypass
-WP-01: WritePost Geolocation callback unmount guard added
-WP-02: Kakao maps.load null guard added
-WP-03: AI analysis handler unmount guard added
-WP-04: Edit mode location field restore added
-MY-02: handleOpenFollowModal isMountedRef guard added
-MY-03: handleOpenBizPhone/Posts isMountedRef guards added
-MY-04: handleToggleNoti catch rollback unmount guard added
+- 이전 커밋에서 BOM을 제거했음에도 Blueprint Sync가 계속 실패하는 문제를 해결
+- 기존 render.yaml 내의 한글 주석이 깨진 인코딩(ANSI->UTF8 손상) 상태로 잔존해 있어, Render의 엄격한 YAML 파서가 이를 파싱하지 못하고 오류("yaml: line 1: found character that cannot start any token" 등)를 일으킴
+- 마지막 성공 커밋(50ef989)을 기준으로 완전히 깨끗한 UTF-8 파일로 재생성하고 필요한 설정만 추가하여 인코딩 관련 모든 오류 요소를 원천 차단함

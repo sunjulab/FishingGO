@@ -18,11 +18,9 @@ const REGION_STATION = {
   '제주': 'DT_0010',
 };
 
-// ✅ WAVE-REDUCTION: MapHome과 동일한 15% 감쇄 적용 (모든 화면 일관성 보장)
-const WAVE_REDUCTION_FACTOR = 0.85;
+// ✅ WAVE-REDUCTION: 서버가 1.8배 곱한 최대파고를 내리므로 클라이언트 감쇄 완전 폐지
 function applyWaveReduction(wave) {
-  if (wave == null || isNaN(parseFloat(wave))) return wave;
-  return parseFloat((parseFloat(wave) * WAVE_REDUCTION_FACTOR).toFixed(1));
+  return wave;
 }
 
 // API 응답 → 표시용 객체 변환

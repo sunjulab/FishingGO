@@ -1,4 +1,4 @@
-const fs = require('fs');
+nmnmpmnconst fs = require('fs');
 const http = require('http');
 
 async function checkAll() {

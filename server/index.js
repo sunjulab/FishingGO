@@ -2294,13 +2294,17 @@ const OBS_COORDS = {
   'DT_0045': { lat: 33.4746, lng: 126.9196 },
 };
 
-// ✅ [FALLBACK-v2] 연안 변환 공통 헬퍼 (육풍/해풍 감쇄 로직 - 사용자 요청으로 감쇄 로직 제거)
+// ✅ [FALLBACK-v2] 연안 변환 공통 헬퍼 (기상 모델의 유의파고(Significant Wave)를 낚시인 체감용 최대파고(Max Wave)로 변환)
 function applyCoastalTransform(sid, wh, ws, wdDeg) {
   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
+  
+  // 통상적으로 최대파고(Maximum Wave)는 유의파고(Significant Wave)의 약 1.8배 (안전 기준)
+  const maxWave = parseFloat((wh * 1.8).toFixed(1));
+
   return {
     wind: { speed: parseFloat(Math.max(0, ws).toFixed(1)), dir: wd },
-    wave: { coastal: parseFloat(Math.max(0.1, wh).toFixed(1)) },
+    wave: { coastal: parseFloat(Math.max(0.1, maxWave).toFixed(1)) },
   };
 }
 

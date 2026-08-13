@@ -361,7 +361,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
         if (marine.status === 'fulfilled') {
           const data = marine.value.data;
           if (data?.wave?.coastal != null && !isNaN(parseFloat(data.wave.coastal))) {
-            data.wave.coastal = parseFloat((parseFloat(data.wave.coastal) * 0.85).toFixed(1));
+            // 서버에서 최대파고(1.8배)로 이미 변환되어 오므로 프론트엔드 감쇄 제거
           }
           setMarineData(prev => ({ ...prev, ...data, stationId: sid }));
         }
@@ -451,7 +451,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           if (!cancelled) {
             const data = resp.data;
             if (data?.wave?.coastal != null && !isNaN(parseFloat(data.wave.coastal))) {
-              data.wave.coastal = parseFloat((parseFloat(data.wave.coastal) * 0.85).toFixed(1));
+              // 서버에서 최대파고(1.8배)로 이미 변환되어 오므로 프론트엔드 감쇄 제거
             }
             setMarineData(prev => ({ ...prev, ...data, stationId: sid })); // ✅ BUG-01 FIX
           }

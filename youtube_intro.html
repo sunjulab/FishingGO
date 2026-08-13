@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>바다가는 개발자 성재유 — INTRO</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:#000;font-family:'Segoe UI',sans-serif}
+  canvas{position:absolute;top:0;left:0}
+  #ui{position:absolute;top:0;left:0;width:1920px;height:1080px;pointer-events:none;z-index:10}
+
+  /* ── 채널명 ── */
+  #title-block{
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-54%);
+    text-align:center;
+  }
+  #tag-dev{
+    font-size:22px;letter-spacing:14px;color:#00ffaa;
+    text-transform:uppercase;opacity:0;
+    text-shadow:0 0 30px #00ffaa,0 0 60px #00ffaa88;
+    font-family:'Courier New',monospace;
+    margin-bottom:16px;
+    animation:fadeUp 0.9s 3.2s cubic-bezier(.22,1,.36,1) forwards;
+  }
+  #tag-dev::before{content:'<';color:#00ff6633;margin-right:8px}
+  #tag-dev::after{content:'/>';color:#00ff6633;margin-left:8px}
+
+  #channel-name{
+    font-size:130px;font-weight:900;
+    background:linear-gradient(135deg,#fff 0%,#a8edff 30%,#ffd700 70%,#fff 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    opacity:0;letter-spacing:-3px;line-height:1;
+    filter:drop-shadow(0 0 40px #00d4ff88);
+    animation:titleReveal 1.1s 3.7s cubic-bezier(.34,1.56,.64,1) forwards;
+    white-space:nowrap;
+  }
+  #name-sub{
+    font-size:48px;letter-spacing:16px;
+    color:#ffd700;opacity:0;margin-top:18px;
+    text-shadow:0 0 20px #ffd70088,0 0 60px #ffd70044;
+    animation:fadeUp 0.8s 4.5s cubic-bezier(.22,1,.36,1) forwards;
+    font-family:'Courier New',monospace;
+  }
+
+  /* ── 하단 액티비티 ── */
+  #activity-bar{
+    position:absolute;bottom:200px;left:50%;
+    transform:translateX(-50%);
+    display:flex;gap:55px;align-items:center;
+    opacity:0;
+    animation:fadeUp 1s 5.0s cubic-bezier(.22,1,.36,1) forwards;
+  }
+  .act{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .act-icon{
+    width:64px;height:64px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:1.5px solid rgba(0,212,255,0.4);
+    background:rgba(0,212,255,0.06);
+    backdrop-filter:blur(4px);
+    animation:iconPulse 3s ease-in-out infinite alternate;
+    transition:all .3s;
+  }
+  .act-icon svg{filter:drop-shadow(0 0 8px currentColor)}
+  .act span{font-size:13px;letter-spacing:4px;color:rgba(255,255,255,0.7);font-family:'Courier New',monospace}
+
+  /* ── 구분선 ── */
+  #divider{
+    position:absolute;bottom:180px;left:50%;transform:translateX(-50%);
+    height:1px;width:0;
+    background:linear-gradient(90deg,transparent,#00d4ff,#ffd700,transparent);
+    box-shadow:0 0 8px #00d4ff66;
+    animation:lineExpand 1s 5.5s ease forwards;
+  }
+
+  /* ── 하단 코드라인 ── */
+  #code-line{
+    position:absolute;bottom:148px;left:50%;transform:translateX(-50%);
+    color:#00ffaa;font-family:'Courier New',monospace;font-size:15px;
+    letter-spacing:2px;opacity:0;white-space:nowrap;
+    text-shadow:0 0 10px #00ffaa88;
+    animation:fadeUp 0.8s 6.0s ease forwards;
+  }
+
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(24px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  @keyframes titleReveal{
+    from{opacity:0;transform:scale(.75) translateY(40px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+  }
+  @keyframes lineExpand{to{width:760px}}
+  @keyframes iconPulse{to{border-color:rgba(0,212,255,0.9);box-shadow:0 0 20px rgba(0,212,255,.3);background:rgba(0,212,255,0.12)}}
+</style>
+</head>
+<body>
+
+<!-- 레이어 순서: bg → ocean → particles → fx → ui -->
+<canvas id="c-bg"    style="z-index:1"></canvas>
+<canvas id="c-ocean" style="z-index:2"></canvas>
+<canvas id="c-part"  style="z-index:3"></canvas>
+<canvas id="c-fx"    style="z-index:4"></canvas>
+
+<div id="ui">
+  <div id="title-block">
+    <div id="tag-dev">developer</div>
+    <div id="channel-name">바다가는 개발자</div>
+    <div id="name-sub">✦ 성 재 유 ✦</div>
+  </div>
+
+  <div id="activity-bar">
+    <div class="act">
+      <div class="act-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <line x1="8" y1="6" x2="26" y2="4" stroke="#00d4ff" stroke-width="2" stroke-linecap="round"/>
+          <line x1="26" y1="4" x2="29" y2="22" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <circle cx="29" cy="24" r="3" fill="#ff4444" stroke="#fff" stroke-width="1"/>
+          <path d="M16,22 C13,26 10,28 13,30 C16,32 20,28 16,22Z" fill="#00d4ff"/>
+        </svg>
+      </div>
+      <span>FISHING</span>
+    </div>
+    <div class="act">
+      <div class="act-icon" style="animation-delay:.4s">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="24" rx="12" ry="4" fill="#ff6b00" opacity=".85"/>
+          <circle cx="16" cy="10" r="4" fill="#ffd700"/>
+          <line x1="16" y1="14" x2="16" y2="20" stroke="#ffd700" stroke-width="2"/>
+          <line x1="8" y1="16" x2="24" y2="18" stroke="#ffd700" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <span>SURFING</span>
+    </div>
+    <div class="act">
+      <div class="act-icon" style="animation-delay:.2s;border-color:rgba(0,255,136,.4);width:80px;height:80px">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+          <rect x="6" y="10" width="32" height="24" rx="3" fill="rgba(0,10,20,.9)" stroke="#00ff88" stroke-width="1.5"/>
+          <circle cx="22" cy="36" r="3" fill="#00ff88" opacity=".6"/>
+          <line x1="16" y1="38" x2="28" y2="38" stroke="#00ff88" stroke-width="1.5"/>
+          <text x="9" y="22" font-family="Courier New" font-size="6" fill="#00ff88">&lt;code&gt;</text>
+          <text x="11" y="27" font-family="Courier New" font-size="5.5" fill="#00d4ff">낚시GO</text>
+          <text x="9" y="30" font-family="Courier New" font-size="6" fill="#00ff88">&lt;/code&gt;</text>
+        </svg>
+      </div>
+      <span>DEVELOPER</span>
+    </div>
+    <div class="act">
+      <div class="act-icon" style="animation-delay:.6s">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="10" r="4" fill="#00d4ff"/>
+          <path d="M6,17 C9,13 12,20 15,17 C18,13 21,20 24,17 C26,15 27,17 27,17" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M16,14 C12,16 7,20 5,22" stroke="#ffd700" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span>SWIMMING</span>
+    </div>
+    <div class="act">
+      <div class="act-icon" style="animation-delay:.8s">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="13" r="7" fill="none" stroke="#ffd700" stroke-width="1.8"/>
+          <line x1="16" y1="6" x2="16" y2="3" stroke="#ffd700" stroke-width="1.8"/>
+          <line x1="23" y1="13" x2="26" y2="13" stroke="#ffd700" stroke-width="1.8"/>
+          <line x1="9" y1="13" x2="6" y2="13" stroke="#ffd700" stroke-width="1.8"/>
+          <line x1="21" y1="8" x2="23" y2="6" stroke="#ffd700" stroke-width="1.5"/>
+          <line x1="11" y1="8" x2="9" y2="6" stroke="#ffd700" stroke-width="1.5"/>
+          <path d="M5,24 C8,21 11,27 14,24 C17,21 20,27 23,24 C25,22 26,24 27,24" stroke="#00d4ff" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <span>OCEAN LIFE</span>
+    </div>
+  </div>
+
+  <div id="divider"></div>
+  <div id="code-line">$ fishing-go v1.0.107 &nbsp;|&nbsp; 오늘도 바다 갑니다 🌊 &nbsp;|&nbsp; git push origin main ✓</div>
+</div>
+
+<script>
+const W = 1920, H = 1080;
+['c-bg','c-ocean','c-part','c-fx'].forEach(id=>{
+  const c=document.getElementById(id);
+  c.width=W;c.height=H;
+});
+const BG   = document.getElementById('c-bg').getContext('2d');
+const OCN  = document.getElementById('c-ocean').getContext('2d');
+const PAR  = document.getElementById('c-part').getContext('2d');
+const FX   = document.getElementById('c-fx').getContext('2d');
+
+let T = 0;
+const START = performance.now();
+
+// ───────────────────────────────────────────────
+// 1. 파티클 시스템
+// ───────────────────────────────────────────────
+class Particle {
+  constructor(type='star'){
+    this.type = type;
+    this.reset();
+  }
+  reset(){
+    if(this.type==='star'){
+      this.x=Math.random()*W; this.y=Math.random()*H*0.65;
+      this.r=Math.random()*1.8+0.3;
+      this.a=Math.random(); this.da=Math.random()*0.02-0.01;
+      this.color='#ffffff';
+    } else if(this.type==='code'){
+      this.x=Math.random()*W; this.y=Math.random()*H*0.5-100;
+      this.vy=1.5+Math.random()*3;
+      this.char=CHARS[Math.floor(Math.random()*CHARS.length)];
+      this.a=Math.random()*0.7+0.1;
+      this.size=11+Math.floor(Math.random()*6);
+      this.color=Math.random()>0.85?'#00d4ff':'#00ff88';
+      this.life=0; this.maxLife=60+Math.random()*120;
+    } else if(this.type==='foam'){
+      this.x=Math.random()*W;
+      this.y=H-280+Math.random()*60;
+      this.r=Math.random()*4+1;
+      this.vx=(Math.random()-0.5)*1.2;
+      this.vy=-Math.random()*0.8;
+      this.a=Math.random()*0.6+0.2;
+      this.life=0; this.maxLife=40+Math.random()*80;
+    } else if(this.type==='spray'){
+      this.reset_spray();
+    } else if(this.type==='glow'){
+      this.x=Math.random()*W; this.y=H*0.2+Math.random()*H*0.4;
+      this.r=80+Math.random()*120;
+      this.a=0; this.targetA=Math.random()*0.04;
+      this.color=Math.random()>0.5?'#00d4ff':'#0056ff';
+      this.vx=(Math.random()-0.5)*0.3;
+      this.vy=(Math.random()-0.5)*0.2;
+    }
+  }
+  reset_spray(){
+    this.x=Math.random()*W; this.y=H-300;
+    this.vx=(Math.random()-0.5)*4;
+    this.vy=-(3+Math.random()*5);
+    this.r=Math.random()*2+0.5;
+    this.a=0.9; this.life=0; this.maxLife=25+Math.random()*30;
+  }
+  update(){
+    if(this.type==='star'){
+      this.a+=this.da;
+      if(this.a>1||this.a<0.1) this.da*=-1;
+    } else if(this.type==='code'){
+      this.y+=this.vy; this.life++;
+      this.a = this.life<10?this.life/10:this.life>this.maxLife-10?(this.maxLife-this.life)/10:0.8;
+      if(this.life>this.maxLife){this.reset();}
+    } else if(this.type==='foam'){
+      this.x+=this.vx; this.y+=this.vy; this.life++;
+      this.a = this.life<8?this.life/8:this.life>this.maxLife-8?(this.maxLife-this.life)/8:0.4;
+      if(this.life>this.maxLife)this.reset();
+    } else if(this.type==='spray'){
+      this.vy+=0.18; this.x+=this.vx; this.y+=this.vy;
+      this.life++; this.a=1-this.life/this.maxLife;
+      if(this.life>this.maxLife)this.reset_spray();
+    } else if(this.type==='glow'){
+      this.x+=this.vx; this.y+=this.vy;
+      this.a+=(this.targetA-this.a)*0.02;
+      if(this.x<-200||this.x>W+200||this.y<-200||this.y>H+200)this.reset();
+    }
+  }
+  draw(ctx){
+    if(this.type==='star'){
+      ctx.save();ctx.globalAlpha=this.a;
+      ctx.fillStyle=this.color;
+      ctx.shadowBlur=6;ctx.shadowColor='#fff';
+      ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    } else if(this.type==='code'){
+      ctx.save();ctx.globalAlpha=Math.max(0,this.a);
+      ctx.font=`${this.size}px Courier New`;
+      ctx.fillStyle=this.color;
+      ctx.shadowBlur=12;ctx.shadowColor=this.color;
+      ctx.fillText(this.char,this.x,this.y);
+      ctx.restore();
+    } else if(this.type==='foam'||this.type==='spray'){
+      ctx.save();ctx.globalAlpha=Math.max(0,this.a);
+      ctx.fillStyle='rgba(180,235,255,0.9)';
+      ctx.shadowBlur=4;ctx.shadowColor='#fff';
+      ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    } else if(this.type==='glow'){
+      ctx.save();ctx.globalAlpha=Math.max(0,this.a);
+      const g=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r);
+      g.addColorStop(0,this.color);g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;
+      ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+const CHARS='낚시GO바다개발자코드피쉬FISHGO0123456789</>{}=>';
+const stars  = Array.from({length:180},()=>new Particle('star'));
+const codes  = Array.from({length:90},()=>{const p=new Particle('code');p.life=Math.random()*p.maxLife;return p;});
+const foams  = Array.from({length:120},()=>new Particle('foam'));
+const sprays = Array.from({length:80},()=>new Particle('spray'));
+const glows  = Array.from({length:12},()=>new Particle('glow'));
+
+// ───────────────────────────────────────────────
+// 2. 물고기 데이터
+// ───────────────────────────────────────────────
+const FISH_COLORS=['#00d4ff','#ffd700','#ff9500','#00ff88','#ff6b9d','#a78bfa'];
+const fishes = Array.from({length:10},(_,i)=>{
+  const dir = i%2===0?1:-1;
+  return {
+    x: dir>0?-120:W+120, y:H-260+Math.random()*180,
+    vx: dir*(0.8+Math.random()*1.2),
+    size:22+Math.random()*22,
+    color:FISH_COLORS[i%FISH_COLORS.length],
+    phase:Math.random()*Math.PI*2,
+    delay: 2+i*0.9
+  };
+});
+
+// ───────────────────────────────────────────────
+// 3. 배경 그리기
+// ───────────────────────────────────────────────
+function drawBackground(t){
+  BG.clearRect(0,0,W,H);
+  // 심우주 그라데이션
+  const sky=BG.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#000308');
+  sky.addColorStop(0.35,'#00091e');
+  sky.addColorStop(0.6,'#001535');
+  sky.addColorStop(0.8,'#002660');
+  sky.addColorStop(1,'#001a45');
+  BG.fillStyle=sky;
+  BG.fillRect(0,0,W,H);
+
+  // 태양 (1.5초부터 등장)
+  const sunAlpha=Math.max(0,Math.min(1,(t-1.5)/1.2));
+  if(sunAlpha>0){
+    const sx=W/2, sy=H*0.24;
+    // 외부 corona
+    for(let r=280;r>0;r-=20){
+      const g=BG.createRadialGradient(sx,sy,0,sx,sy,r);
+      g.addColorStop(0,`rgba(255,180,0,${sunAlpha*0.015})`);
+      g.addColorStop(1,'transparent');
+      BG.fillStyle=g;BG.beginPath();BG.arc(sx,sy,r,0,Math.PI*2);BG.fill();
+    }
+    // 태양 본체
+    const sun=BG.createRadialGradient(sx,sy-6,4,sx,sy,62);
+    sun.addColorStop(0,`rgba(255,255,220,${sunAlpha})`);
+    sun.addColorStop(0.4,`rgba(255,210,0,${sunAlpha})`);
+    sun.addColorStop(0.8,`rgba(255,120,0,${sunAlpha*0.9})`);
+    sun.addColorStop(1,`rgba(255,60,0,0)`);
+    BG.fillStyle=sun;BG.beginPath();BG.arc(sx,sy,62,0,Math.PI*2);BG.fill();
+
+    // 수평 광선
+    BG.save();BG.globalAlpha=sunAlpha*0.18;
+    const rays=BG.createLinearGradient(0,sy,W,sy);
+    rays.addColorStop(0,'transparent');
+    rays.addColorStop(0.45,`rgba(255,200,0,.6)`);
+    rays.addColorStop(0.5,'rgba(255,220,0,1)');
+    rays.addColorStop(0.55,`rgba(255,200,0,.6)`);
+    rays.addColorStop(1,'transparent');
+    BG.fillStyle=rays;BG.fillRect(0,sy-40,W,80);
+    BG.restore();
+
+    // 광선 방사
+    BG.save();BG.globalAlpha=sunAlpha*0.08;
+    for(let i=0;i<16;i++){
+      const a=((i/16)*Math.PI*2)+t*0.04;
+      BG.save();BG.translate(sx,sy);BG.rotate(a);
+      const rg=BG.createLinearGradient(0,0,0,220);
+      rg.addColorStop(0,'rgba(255,220,0,.8)');rg.addColorStop(1,'transparent');
+      BG.fillStyle=rg;
+      BG.fillRect(-3,20,6,220);
+      BG.restore();
+    }
+    BG.restore();
+
+    // 반영 (수면 글리터)
+    if(sunAlpha>0.3){
+      BG.save();BG.globalAlpha=sunAlpha*0.25;
+      const ref=BG.createLinearGradient(sx-120,H-300,sx+120,H-240);
+      ref.addColorStop(0,'transparent');
+      ref.addColorStop(0.5,'rgba(255,200,0,.7)');
+      ref.addColorStop(1,'transparent');
+      BG.fillStyle=ref;BG.fillRect(sx-180,H-310,360,50);
+      BG.restore();
+    }
+  }
+
+  // 수평선 글로우
+  BG.save();BG.globalAlpha=0.4;
+  const hz=BG.createLinearGradient(0,H*0.58,0,H*0.68);
+  hz.addColorStop(0,'transparent');
+  hz.addColorStop(0.5,'rgba(0,212,255,0.15)');
+  hz.addColorStop(1,'transparent');
+  BG.fillStyle=hz;BG.fillRect(0,H*0.58,W,H*0.1);
+  BG.restore();
+}
+
+// ───────────────────────────────────────────────
+// 4. 파도 그리기
+// ───────────────────────────────────────────────
+function waveY(x,t,amp,freq,spd){
+  return Math.sin(x*freq+t*spd)*amp+Math.sin(x*freq*1.7+t*spd*0.8)*amp*0.4;
+}
+
+function drawOcean(t){
+  OCN.clearRect(0,0,W,H);
+  const oceanAlpha=Math.max(0,Math.min(1,(t-1.2)/1.4));
+  if(oceanAlpha<=0)return;
+
+  const BASE=H-280;
+
+  OCN.save();OCN.globalAlpha=oceanAlpha;
+
+  // 레이어 3 (가장 뒤, 어두움)
+  OCN.beginPath();OCN.moveTo(0,H);
+  for(let x=0;x<=W;x+=4){
+    const y=BASE+waveY(x,t,22,0.0018,0.7)+40;
+    x===0?OCN.moveTo(x,y):OCN.lineTo(x,y);
+  }
+  OCN.lineTo(W,H);OCN.lineTo(0,H);OCN.closePath();
+  const g3=OCN.createLinearGradient(0,BASE,0,H);
+  g3.addColorStop(0,'rgba(0,40,100,.7)');g3.addColorStop(1,'rgba(0,10,40,1)');
+  OCN.fillStyle=g3;OCN.fill();
+
+  // 레이어 2 (중간)
+  OCN.beginPath();OCN.moveTo(0,H);
+  for(let x=0;x<=W;x+=4){
+    const y=BASE+waveY(x,t,28,0.0022,0.9)+15;
+    x===0?OCN.moveTo(x,y):OCN.lineTo(x,y);
+  }
+  OCN.lineTo(W,H);OCN.lineTo(0,H);OCN.closePath();
+  const g2=OCN.createLinearGradient(0,BASE-20,0,H);
+  g2.addColorStop(0,'rgba(0,80,180,.85)');g2.addColorStop(0.5,'rgba(0,60,140,1)');g2.addColorStop(1,'rgba(0,20,60,1)');
+  OCN.fillStyle=g2;OCN.fill();
+
+  // 레이어 1 (가장 앞, 밝음)
+  OCN.beginPath();OCN.moveTo(0,H);
+  for(let x=0;x<=W;x+=3){
+    const y=BASE+waveY(x,t,18,0.0028,1.1);
+    x===0?OCN.moveTo(x,y):OCN.lineTo(x,y);
+  }
+  OCN.lineTo(W,H);OCN.lineTo(0,H);OCN.closePath();
+  const g1=OCN.createLinearGradient(0,BASE-20,0,H);
+  g1.addColorStop(0,'rgba(0,180,255,.9)');g1.addColorStop(0.3,'rgba(0,100,220,1)');g1.addColorStop(1,'rgba(0,30,80,1)');
+  OCN.fillStyle=g1;OCN.fill();
+
+  // 파도 하이라이트 (흰거품선)
+  for(let layer=0;layer<3;layer++){
+    const offsets=[0,10,20];const alphas=[0.55,0.35,0.2];
+    OCN.beginPath();
+    for(let x=0;x<=W;x+=3){
+      const y=BASE+waveY(x,t,18,0.0028,1.1)+offsets[layer];
+      x===0?OCN.moveTo(x,y):OCN.lineTo(x,y);
+    }
+    OCN.strokeStyle=`rgba(180,240,255,${alphas[layer]})`;
+    OCN.lineWidth=layer===0?2.5:1.5;
+    OCN.shadowBlur=layer===0?12:0;OCN.shadowColor='rgba(120,220,255,.8)';
+    OCN.stroke();OCN.shadowBlur=0;
+  }
+
+  // 서퍼 실루엣
+  const sx1=W*0.22, sy1=BASE+waveY(W*0.22,t,18,0.0028,1.1)-2;
+  drawSurfer(OCN,sx1,sy1,t);
+
+  // 낚시꾼 실루엣
+  const fx1=W*0.76, fy1=BASE+waveY(W*0.76,t,18,0.0028,1.1)-2;
+  drawFisher(OCN,fx1,fy1,t);
+
+  OCN.restore();
+}
+
+function drawSurfer(ctx,x,y,t){
+  const bob=Math.sin(t*1.8)*4;
+  ctx.save();ctx.translate(x,y+bob);
+  // 보드
+  ctx.fillStyle='rgba(255,80,0,.9)';
+  ctx.beginPath();ctx.ellipse(0,5,42,7,0.08,0,Math.PI*2);ctx.fill();
+  // 몸
+  ctx.strokeStyle='rgba(255,220,0,.95)';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(0,-28,8,0,Math.PI*2);ctx.strokeStyle='rgba(255,220,0,.95)';ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,-4);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-14,-14);ctx.lineTo(14,-10);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-8,-4);ctx.lineTo(-13,14);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(8,-4);ctx.lineTo(13,14);ctx.stroke();
+  ctx.restore();
+}
+
+function drawFisher(ctx,x,y,t){
+  const bob=Math.sin(t*1.2+1)*3;
+  ctx.save();ctx.translate(x,y+bob);
+  ctx.strokeStyle='rgba(20,20,40,.95)';ctx.fillStyle='rgba(20,20,40,.95)';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(0,-38,9,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.moveTo(0,-29);ctx.lineTo(0,-8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-13,-20);ctx.lineTo(13,-16);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-8,-8);ctx.lineTo(-12,14);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(8,-8);ctx.lineTo(10,14);ctx.stroke();
+  // 낚싯대
+  ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(13,-20);ctx.lineTo(60,-68);ctx.stroke();
+  // 줄
+  ctx.setLineDash([3,3]);ctx.lineWidth=1.2;ctx.strokeStyle='rgba(20,20,40,.7)';
+  ctx.beginPath();ctx.moveTo(60,-68);ctx.lineTo(85,8);ctx.stroke();
+  ctx.setLineDash([]);
+  // 찌
+  ctx.fillStyle='#ff3333';ctx.beginPath();ctx.arc(85,10,5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+// ───────────────────────────────────────────────
+// 5. 파티클 업데이트/드로우
+// ───────────────────────────────────────────────
+function drawParticles(t){
+  PAR.clearRect(0,0,W,H);
+  const codeAlpha=Math.max(0,Math.min(1,t/1.5));
+  // 배경 glows
+  glows.forEach(p=>{p.update();p.draw(PAR);});
+  // 별
+  PAR.save();PAR.globalAlpha=Math.max(0,Math.min(1,(t-0.3)/1.5));
+  stars.forEach(p=>{p.update();p.draw(PAR);});
+  PAR.restore();
+  // 코드 매트릭스
+  PAR.save();PAR.globalAlpha=codeAlpha*0.5;
+  codes.forEach(p=>{if(p.y<H*0.58){p.update();p.draw(PAR);}});
+  PAR.restore();
+  // 폼+스프레이
+  const oceanAlpha=Math.max(0,Math.min(1,(t-1.2)/1.4));
+  if(oceanAlpha>0){
+    PAR.save();PAR.globalAlpha=oceanAlpha;
+    foams.forEach(p=>{p.update();p.draw(PAR);});
+    sprays.forEach(p=>{p.update();p.draw(PAR);});
+    // 물고기
+    fishes.forEach(fish=>{
+      if(t<fish.delay)return;
+      fish.x+=fish.vx;
+      const fishAlpha=Math.max(0,Math.min(1,(t-fish.delay)/0.8));
+      drawFish(PAR,fish,fishAlpha,t);
+      if(fish.x>W+150||fish.x<-150){
+        fish.x=fish.vx>0?-120:W+120;
+        fish.y=H-260+Math.random()*180;
+        fish.delay=t+5+Math.random()*5;
+      }
+    });
+    PAR.restore();
+  }
+}
+
+function drawFish(ctx,fish,alpha,t){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha*0.88;
+  ctx.translate(fish.x,fish.y+Math.sin(t*2+fish.phase)*6);
+  if(fish.vx<0)ctx.scale(-1,1);
+  const s=fish.size;
+  // 꼬리
+  ctx.fillStyle=fish.color+'bb';
+  ctx.beginPath();ctx.moveTo(s*1.1,0);ctx.lineTo(s*1.9,-s*0.55);ctx.lineTo(s*1.9,s*0.55);ctx.closePath();ctx.fill();
+  // 몸통
+  ctx.fillStyle=fish.color;ctx.shadowBlur=16;ctx.shadowColor=fish.color;
+  ctx.beginPath();ctx.ellipse(0,0,s,s*0.42,0,0,Math.PI*2);ctx.fill();
+  // 눈
+  ctx.shadowBlur=0;ctx.fillStyle='#111';
+  ctx.beginPath();ctx.arc(-s*0.55,-s*0.08,s*0.1,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-s*0.58,-s*0.1,s*0.04,0,Math.PI*2);ctx.fill();
+  // 비늘 라인
+  ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.ellipse(s*0.1,0,s*0.5,s*0.28,0,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+
+// ───────────────────────────────────────────────
+// 6. FX (렌즈플레어, 비네트, 크로마틱, 스캔라인)
+// ───────────────────────────────────────────────
+function drawFX(t){
+  FX.clearRect(0,0,W,H);
+
+  // 비네트
+  const vig=FX.createRadialGradient(W/2,H/2,H*0.28,W/2,H/2,H*0.85);
+  vig.addColorStop(0,'transparent');vig.addColorStop(1,'rgba(0,0,8,0.72)');
+  FX.fillStyle=vig;FX.fillRect(0,0,W,H);
+
+  // 렌즈플레어 (태양 방향)
+  const la=Math.max(0,Math.min(1,(t-2.2)/1));
+  if(la>0){
+    const lx=W/2, ly=H*0.24;
+    FX.save();FX.globalAlpha=la*0.55;
+    [[lx,ly,60,'rgba(255,255,255,.5)'],[lx+80,ly+35,20,'rgba(0,212,255,.6)'],
+     [lx+180,ly+80,12,'rgba(255,215,0,.5)'],[lx-60,ly+25,16,'rgba(255,120,0,.4)'],
+     [lx-200,ly+95,8,'rgba(0,212,255,.35)']].forEach(([fx,fy,fr,fc])=>{
+      const f=FX.createRadialGradient(fx,fy,0,fx,fy,fr);
+      f.addColorStop(0,fc);f.addColorStop(1,'transparent');
+      FX.fillStyle=f;FX.beginPath();FX.arc(fx,fy,fr,0,Math.PI*2);FX.fill();
+    });
+    FX.restore();
+  }
+
+  // 수평선 광채
+  FX.save();FX.globalAlpha=0.15;
+  const hl=FX.createLinearGradient(0,H*0.595,0,H*0.625);
+  hl.addColorStop(0,'transparent');hl.addColorStop(0.5,'rgba(0,212,255,0.6)');hl.addColorStop(1,'transparent');
+  FX.fillStyle=hl;FX.fillRect(0,H*0.595,W,H*0.03);
+  FX.restore();
+
+  // 스캔라인 (미묘)
+  FX.save();FX.globalAlpha=0.025;
+  for(let y=0;y<H;y+=3){
+    FX.fillStyle='#000';FX.fillRect(0,y,W,1);
+  }
+  FX.restore();
+
+  // 크로마틱 애버레이션 (타이틀 등장 직전 쇼크웨이브)
+  if(t>3.65&&t<3.9){
+    const p=(t-3.65)/0.25;
+    FX.save();FX.globalAlpha=0.18*(1-p);
+    FX.fillStyle='rgba(0,0,255,0.5)';FX.fillRect(-4,0,W,H);
+    FX.fillStyle='rgba(255,0,0,0.5)';FX.fillRect(4,0,W,H);
+    FX.restore();
+  }
+
+  // 플래시 (타이틀 등장)
+  if(t>3.68&&t<3.95){
+    const fp=1-((t-3.68)/0.27);
+    FX.save();FX.globalAlpha=fp*0.4;
+    FX.fillStyle='#fff';FX.fillRect(0,0,W,H);
+    FX.restore();
+  }
+}
+
+// ───────────────────────────────────────────────
+// 7. 메인 루프
+// ───────────────────────────────────────────────
+function loop(ts){
+  T=(ts-START)/1000;
+  drawBackground(T);
+  drawOcean(T);
+  drawParticles(T);
+  drawFX(T);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

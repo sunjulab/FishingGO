@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>바다로가는 성재유 — BGM Studio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  width:100vw;min-height:100vh;
+  background:radial-gradient(ellipse at 30% 20%, #001a3a 0%, #000810 60%, #000 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Courier New',monospace;color:#fff;gap:28px;overflow:hidden;
+}
+
+/* 배경 별 */
+.star-bg{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star-dot{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d) ease-in-out infinite alternate}
+@keyframes twinkle{to{opacity:.1;transform:scale(.4)}}
+
+.wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:24px}
+
+h1{
+  font-size:32px;font-weight:900;letter-spacing:6px;
+  background:linear-gradient(120deg,#fff 0%,#7fdfff 40%,#ffd700 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-align:center;line-height:1.3;
+}
+.sub{font-size:12px;letter-spacing:10px;color:rgba(0,212,255,.5);text-align:center}
+
+/* 비주얼라이저 */
+#vis{
+  width:680px;height:140px;border-radius:20px;
+  background:rgba(0,10,30,.7);
+  border:1px solid rgba(0,212,255,.15);
+  box-shadow:0 0 40px rgba(0,212,255,.08),inset 0 0 30px rgba(0,0,0,.5);
+}
+
+/* 타임라인 */
+.timeline{
+  width:680px;background:rgba(0,10,28,.6);
+  border:1px solid rgba(0,212,255,.12);border-radius:16px;padding:18px 22px;
+}
+.tl-head{font-size:11px;letter-spacing:5px;color:rgba(0,212,255,.6);margin-bottom:14px}
+.tl-row{display:flex;align-items:center;gap:12px;margin-bottom:9px}
+.tl-t{font-size:11px;color:#ffd700;width:42px;flex-shrink:0;font-weight:700}
+.tl-track{flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;position:relative}
+.tl-fill{height:100%;border-radius:4px;position:absolute;left:0;top:0;transition:width .05s linear}
+.tl-lbl{font-size:11px;color:rgba(255,255,255,.55);width:150px;text-align:right;flex-shrink:0}
+
+/* 프로그레스 */
+.prog-wrap{width:680px;position:relative}
+#prog-track{height:5px;background:rgba(255,255,255,.08);border-radius:3px}
+#prog-bar{
+  height:100%;width:0%;border-radius:3px;
+  background:linear-gradient(90deg,#0080ff,#00d4ff,#ffd700);
+  box-shadow:0 0 12px rgba(0,212,255,.6);
+  transition:width .08s linear;
+}
+#time-label{
+  position:absolute;right:0;top:-22px;
+  font-size:12px;color:rgba(0,212,255,.7);letter-spacing:2px;
+}
+
+/* 버튼 */
+.btn-row{display:flex;gap:14px}
+button{
+  padding:16px 36px;border:none;border-radius:14px;cursor:pointer;
+  font-size:15px;font-weight:900;letter-spacing:2px;font-family:'Courier New',monospace;
+  transition:all .18s;
+}
+#playBtn{
+  background:linear-gradient(135deg,#0056d2,#00b4ff);color:#fff;
+  box-shadow:0 6px 24px rgba(0,180,255,.35);
+}
+#playBtn:hover{transform:translateY(-3px);box-shadow:0 10px 32px rgba(0,180,255,.55)}
+#playBtn:active{transform:translateY(-1px)}
+#dlBtn{
+  background:rgba(255,215,0,.1);color:#ffd700;
+  border:1.5px solid rgba(255,215,0,.35);
+}
+#dlBtn:hover{background:rgba(255,215,0,.2);transform:translateY(-3px)}
+
+#status{
+  font-size:12px;letter-spacing:4px;height:18px;
+  color:#00ffaa;text-align:center;
+}
+
+/* 파형 표시기 */
+.meter-row{display:flex;gap:8px;align-items:flex-end;height:32px}
+.meter-bar{width:6px;border-radius:3px;background:linear-gradient(to top,#00d4ff,#00ff88);transition:height .06s ease}
+</style>
+</head>
+<body>
+
+<!-- 별 -->
+<div class="star-bg" id="starBg"></div>
+
+<div class="wrap">
+  <div>
+    <h1>바다로가는 개발자<br>성재유</h1>
+    <div class="sub" style="margin-top:8px">YOUTUBE INTRO BGM · 5 SEC · CINEMATIC</div>
+  </div>
+
+  <canvas id="vis" width="680" height="140"></canvas>
+
+  <div class="timeline">
+    <div class="tl-head">// TRACK STRUCTURE</div>
+    <div class="tl-row">
+      <span class="tl-t">0.0s</span>
+      <div class="tl-track"><div class="tl-fill" id="f0" style="width:0%;background:linear-gradient(90deg,#1a3a6a,#0080ff)"></div></div>
+      <span class="tl-lbl">🌊 Ocean Ambience</span>
+    </div>
+    <div class="tl-row">
+      <span class="tl-t">0.4s</span>
+      <div class="tl-track"><div class="tl-fill" id="f1" style="width:0%;background:linear-gradient(90deg,#003366,#00d4ff)"></div></div>
+      <span class="tl-lbl">🎹 String Pad</span>
+    </div>
+    <div class="tl-row">
+      <span class="tl-t">1.0s</span>
+      <div class="tl-track"><div class="tl-fill" id="f2" style="width:0%;background:linear-gradient(90deg,#004d22,#00ff88)"></div></div>
+      <span class="tl-lbl">✨ Sparkle Bell</span>
+    </div>
+    <div class="tl-row">
+      <span class="tl-t">1.5s</span>
+      <div class="tl-track"><div class="tl-fill" id="f3" style="width:0%;background:linear-gradient(90deg,#4d2200,#ff9500)"></div></div>
+      <span class="tl-lbl">🥁 Cinematic Drum</span>
+    </div>
+    <div class="tl-row">
+      <span class="tl-t">2.5s</span>
+      <div class="tl-track"><div class="tl-fill" id="f4" style="width:0%;background:linear-gradient(90deg,#3d1a00,#ffd700)"></div></div>
+      <span class="tl-lbl">🎸 Deep Bass</span>
+    </div>
+    <div class="tl-row">
+      <span class="tl-t">4.5s</span>
+      <div class="tl-track"><div class="tl-fill" id="f5" style="width:0%;background:linear-gradient(90deg,#4d0014,#ff3366)"></div></div>
+      <span class="tl-lbl">💥 Impact + Reverb</span>
+    </div>
+  </div>
+
+  <div class="prog-wrap">
+    <div id="time-label">0.0s / 5.5s</div>
+    <div id="prog-track"><div id="prog-bar"></div></div>
+  </div>
+
+  <div class="btn-row">
+    <button id="playBtn" onclick="play()">▶&nbsp; PLAY</button>
+    <button id="dlBtn" onclick="download()">⬇&nbsp; WAV 저장</button>
+  </div>
+  <div id="status">READY — 재생 버튼을 눌러주세요</div>
+</div>
+
+<script>
+// ── 별 생성
+const sb = document.getElementById('starBg');
+for(let i=0;i<160;i++){
+  const d=document.createElement('div');
+  d.className='star-dot';
+  const sz=Math.random()*2+0.5;
+  d.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;opacity:${Math.random()*.9+.1};--d:${1.5+Math.random()*4}s;animation-delay:${Math.random()*4}s`;
+  sb.appendChild(d);
+}
+
+// ── 시각화
+const vis  = document.getElementById('vis');
+const vc   = vis.getContext('2d');
+const VW=680, VH=140;
+let analyser=null, rafId=null;
+let prevBins=new Float32Array(64);
+
+function drawVis(){
+  rafId=requestAnimationFrame(drawVis);
+  if(!analyser){
+    vc.clearRect(0,0,VW,VH);
+    vc.fillStyle='rgba(0,10,30,.85)';vc.fillRect(0,0,VW,VH);
+    return;
+  }
+  const buf=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(buf);
+
+  // 잔상
+  vc.fillStyle='rgba(0,8,22,.35)';vc.fillRect(0,0,VW,VH);
+
+  const N=64;
+  const bw=VW/N;
+  for(let i=0;i<N;i++){
+    const v=buf[i*Math.floor(buf.length/N)]/255;
+    const smooth=prevBins[i]*0.55+v*0.45;
+    prevBins[i]=smooth;
+    const h=smooth*VH*0.88;
+    const hue=185+smooth*120;
+    const lum=45+smooth*35;
+    // 그라데이션 바
+    const grad=vc.createLinearGradient(0,VH,0,VH-h);
+    grad.addColorStop(0,`hsla(${hue},100%,${lum-10}%,.9)`);
+    grad.addColorStop(0.6,`hsla(${hue+30},100%,${lum+10}%,.8)`);
+    grad.addColorStop(1,`hsla(${hue+60},80%,90%,.95)`);
+    vc.fillStyle=grad;
+    vc.shadowBlur=smooth>0.4?smooth*22:0;
+    vc.shadowColor=`hsla(${hue},100%,70%,.7)`;
+    const x=i*bw+bw*0.12, w=bw*0.76;
+    // 라운드 바
+    vc.beginPath();
+    vc.roundRect(x,VH-h,w,h,4);
+    vc.fill();
+    // 꼭대기 하이라이트
+    if(h>6){
+      vc.fillStyle=`hsla(${hue+40},100%,95%,.95)`;
+      vc.beginPath();vc.roundRect(x,VH-h,w,3,2);vc.fill();
+    }
+  }
+  vc.shadowBlur=0;
+}
+drawVis();
+
+// ── 타임라인 애니
+const TOTAL_S=5.5;
+let startT=null;
+const fills=[
+  {el:document.getElementById('f0'),from:0,   to:5.5},
+  {el:document.getElementById('f1'),from:0.4, to:5.2},
+  {el:document.getElementById('f2'),from:1.0, to:5.0},
+  {el:document.getElementById('f3'),from:1.5, to:5.5},
+  {el:document.getElementById('f4'),from:2.5, to:5.5},
+  {el:document.getElementById('f5'),from:4.5, to:5.5},
+];
+
+function updateUI(elapsed){
+  const t=Math.min(elapsed/1000,TOTAL_S);
+  document.getElementById('prog-bar').style.width=(t/TOTAL_S*100)+'%';
+  document.getElementById('time-label').textContent=t.toFixed(1)+'s / '+TOTAL_S+'s';
+  fills.forEach(f=>{
+    const dur=f.to-f.from;
+    const pct=Math.max(0,Math.min(1,(t-f.from)/dur));
+    f.el.style.width=(pct*100)+'%';
+  });
+  if(t<TOTAL_S && startT!==null) requestAnimationFrame(()=>updateUI(performance.now()-startT));
+  else if(t>=TOTAL_S){ document.getElementById('status').textContent='✓ 완료 — DONE'; }
+}
+
+// ── 사운드 엔진 ──────────────────────────────────────────────
+
+// 신스 패드: 여러 오실레이터를 약간씩 디튠하여 현악기처럼
+function pad(ctx,dest,freq,start,dur,vol){
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0,start);
+  g.gain.linearRampToValueAtTime(vol, start+Math.min(dur*.4,1.8));
+  g.gain.setValueAtTime(vol, start+dur*.65);
+  g.gain.linearRampToValueAtTime(0, start+dur);
+  g.connect(dest);
+
+  // 4개 오실레이터 약간 디튠 (합창/현악 효과)
+  [-8,-3,3,8].forEach((cents,i)=>{
+    const osc=ctx.createOscillator();
+    osc.type='sine';
+    osc.frequency.value=freq*Math.pow(2,cents/1200);
+    // LFO 트레몰로 (물결감)
+    const lfo=ctx.createOscillator();
+    const lfoG=ctx.createGain();
+    lfo.frequency.value=0.25+i*0.07;
+    lfoG.gain.value=freq*0.003;
+    lfo.connect(lfoG);lfoG.connect(osc.frequency);
+    lfo.start(start);lfo.stop(start+dur+0.5);
+    const og=ctx.createGain();og.gain.value=0.25;
+    osc.connect(og);og.connect(g);
+    osc.start(start);osc.stop(start+dur+0.5);
+  });
+  // 5번째: 옥타브 위 소프트
+  const osc5=ctx.createOscillator();
+  osc5.type='sine';osc5.frequency.value=freq*2;
+  const og5=ctx.createGain();og5.gain.value=0.08;
+  osc5.connect(og5);og5.connect(g);osc5.start(start);osc5.stop(start+dur+0.3);
+}
+
+// 벨 (스파클 효과)
+function bell(ctx,dest,freq,start,vol){
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(vol,start);
+  g.gain.setValueAtTime(vol*.7,start+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,start+1.6);
+  g.connect(dest);
+  [1,2.756,5.404].forEach((ratio,i)=>{
+    const osc=ctx.createOscillator();
+    osc.type='sine';osc.frequency.value=freq*ratio;
+    const og=ctx.createGain();og.gain.value=1/(i+1);
+    osc.connect(og);og.connect(g);
+    osc.start(start);osc.stop(start+2.2);
+  });
+}
+
+// 파도 노이즈
+function ocean(ctx,dest,start,dur){
+  const buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*(dur+0.5)),ctx.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1);
+  const src=ctx.createBufferSource();src.buffer=buf;src.loop=true;
+
+  // LFO로 필터 주파수 흔들기 (파도 리듬)
+  const filt=ctx.createBiquadFilter();filt.type='bandpass';filt.frequency.value=380;filt.Q.value=0.5;
+  const lfo=ctx.createOscillator();const lfoG=ctx.createGain();
+  lfo.frequency.value=0.18;lfoG.gain.value=220;
+  lfo.connect(lfoG);lfoG.connect(filt.frequency);
+  lfo.start(start);lfo.stop(start+dur+1);
+
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(0,start);
+  g.gain.linearRampToValueAtTime(0.18,start+1.5);
+  g.gain.linearRampToValueAtTime(0.22,start+dur*.6);
+  g.gain.linearRampToValueAtTime(0,start+dur);
+
+  src.connect(filt);filt.connect(g);g.connect(dest);
+  src.start(start);src.stop(start+dur+0.5);
+}
+
+// 킥 드럼 (시네마틱)
+function kick(ctx,dest,start,vol=0.6){
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(vol,start);
+  g.gain.exponentialRampToValueAtTime(0.001,start+0.5);
+  g.connect(dest);
+  const osc=ctx.createOscillator();
+  osc.frequency.setValueAtTime(220,start);
+  osc.frequency.exponentialRampToValueAtTime(28,start+0.4);
+  osc.connect(g);osc.start(start);osc.stop(start+0.55);
+  // 펀치 클릭
+  const bufLen=Math.ceil(ctx.sampleRate*0.02);
+  const buf2=ctx.createBuffer(1,bufLen,ctx.sampleRate);
+  const d2=buf2.getChannelData(0);
+  for(let i=0;i<bufLen;i++)d2[i]=(Math.random()*2-1)*(1-i/bufLen);
+  const src2=ctx.createBufferSource();src2.buffer=buf2;
+  const g2=ctx.createGain();g2.gain.value=vol*0.5;
+  src2.connect(g2);g2.connect(dest);src2.start(start);
+}
+
+// 스네어 (부드럽게)
+function snare(ctx,dest,start,vol=0.28){
+  const bufLen=Math.ceil(ctx.sampleRate*0.22);
+  const buf=ctx.createBuffer(1,bufLen,ctx.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<bufLen;i++)d[i]=(Math.random()*2-1)*(1-i/bufLen)*0.85;
+  const src=ctx.createBufferSource();src.buffer=buf;
+  const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=3500;f.Q.value=0.8;
+  const g=ctx.createGain();
+  g.gain.setValueAtTime(vol,start);g.gain.exponentialRampToValueAtTime(0.001,start+0.2);
+  src.connect(f);f.connect(g);g.connect(dest);src.start(start);
+  // 스네어 몸체 톤
+  const osc=ctx.createOscillator();const og=ctx.createGain();
+  osc.frequency.value=195;og.gain.setValueAtTime(vol*.6,start);og.gain.exponentialRampToValueAtTime(0.001,start+0.08);
+  osc.connect(og);og.connect(dest);osc.start(start);osc.stop(start+0.12);
+}
+
+// 베이스 (부드러운 사인+서브)
+function bass(ctx,dest,freq,start,dur,vol=0.3){
+  const g=ctx.createGain();
+  const filt=ctx.createBiquadFilter();filt.type='lowpass';filt.frequency.value=280;filt.Q.value=0.7;
+  g.gain.setValueAtTime(0,start);
+  g.gain.linearRampToValueAtTime(vol,start+0.06);
+  g.gain.setValueAtTime(vol,start+dur-.12);
+  g.gain.linearRampToValueAtTime(0,start+dur);
+  g.connect(filt);filt.connect(dest);
+
+  [freq,freq*2].forEach((f,i)=>{
+    const osc=ctx.createOscillator();
+    osc.type=i===0?'sine':'sine';osc.frequency.value=f;
+    const og=ctx.createGain();og.gain.value=i===0?1:0.18;
+    osc.connect(og);og.connect(g);osc.start(start);osc.stop(start+dur+0.15);
+  });
+}
+
+// 임팩트 히트
+function impact(ctx,dest,start){
+  // 저음 붐
+  [40,60,90].forEach((f,i)=>{
+    const osc=ctx.createOscillator();const g=ctx.createGain();
+    osc.type='sine';osc.frequency.value=f;
+    g.gain.setValueAtTime(0.55-i*.12,start);
+    g.gain.exponentialRampToValueAtTime(0.001,start+1.0);
+    const filt=ctx.createBiquadFilter();filt.type='lowpass';filt.frequency.value=200;
+    osc.connect(filt);filt.connect(g);g.connect(dest);
+    osc.start(start);osc.stop(start+1.2);
+  });
+  // 크래시 (긴 리버브)
+  const bufLen=Math.ceil(ctx.sampleRate*1.4);
+  const buf=ctx.createBuffer(1,bufLen,ctx.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<bufLen;i++){
+    const env=Math.pow(1-i/bufLen,1.4);
+    d[i]=(Math.random()*2-1)*env;
+  }
+  const src=ctx.createBufferSource();src.buffer=buf;
+  const f=ctx.createBiquadFilter();f.type='highpass';f.frequency.value=4000;
+  const g=ctx.createGain();g.gain.value=0.45;
+  src.connect(f);f.connect(g);g.connect(dest);src.start(start);
+}
+
+// 합성 리버브 (임펄스 생성)
+function makeReverb(ctx, dest, seconds=2.2, decay=2.8){
+  const len=Math.ceil(ctx.sampleRate*seconds);
+  const buf=ctx.createBuffer(2,len,ctx.sampleRate);
+  for(let ch=0;ch<2;ch++){
+    const d=buf.getChannelData(ch);
+    for(let i=0;i<len;i++){
+      d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);
+    }
+  }
+  const conv=ctx.createConvolver();conv.buffer=buf;
+  const wet=ctx.createGain();wet.gain.value=0.32;
+  const dry=ctx.createGain();dry.gain.value=0.72;
+  // send → reverb → wet out / dry out → dest
+  const send=ctx.createGain();send.gain.value=1;
+  send.connect(conv);conv.connect(wet);wet.connect(dest);
+  send.connect(dry);dry.connect(dest);
+  return send; // connect source → send
+}
+
+// ── 마스터 컴프레서
+function makeChain(ctx){
+  const comp=ctx.createDynamicsCompressor();
+  comp.threshold.value=-18;comp.knee.value=10;
+  comp.ratio.value=4;comp.attack.value=0.005;comp.release.value=0.18;
+  const eq=ctx.createBiquadFilter();eq.type='highpass';eq.frequency.value=40;
+  const master=ctx.createGain();master.gain.value=0.88;
+
+  comp.connect(eq);eq.connect(master);master.connect(ctx.destination);
+
+  analyser=ctx.createAnalyser();analyser.fftSize=256;analyser.smoothingTimeConstant=0.78;
+  master.connect(analyser);
+
+  return comp; // connect everything → comp
+}
+
+// ── Chord 데이터 (Am 장조 시네마틱 진행)
+// Am → F → C → G/D → Impact
+const CHORDS=[
+  // Am: A2 C3 E3 A3 C4 E4
+  {notes:[110,130.8,164.8,220,261.6,329.6], start:0.4, dur:2.2, vol:0.11},
+  // F: F2 A2 C3 F3 A3 C4
+  {notes:[87.3,110,130.8,174.6,220,261.6],  start:1.6, dur:2.2, vol:0.12},
+  // C: C3 E3 G3 C4 E4 G4
+  {notes:[130.8,164.8,196,261.6,329.6,392], start:2.8, dur:1.8, vol:0.13},
+  // G: G2 B2 D3 G3 B3 D4
+  {notes:[98,123.5,146.8,196,246.9,293.7],  start:3.6, dur:1.4, vol:0.14},
+];
+
+const BELLS=[
+  {f:1046.5,t:1.0},{f:1174.7,t:1.3},{f:1318.5,t:1.6},
+  {f:1568,  t:2.2},{f:1760,  t:2.8},{f:2093,  t:3.4},
+  {f:1760,  t:3.9},{f:1568,  t:4.2},
+];
+
+const KICKS =[1.5,2.0,2.5,3.0,3.5,4.0,4.25,4.5];
+const SNARES=[1.75,2.25,2.75,3.25,3.75,4.12];
+
+const BASS_LINE=[
+  {f:55,  t:2.5, d:0.48},{f:43.6,t:3.0,d:0.48},
+  {f:65.4,t:3.5, d:0.48},{f:49.0,t:4.0,d:0.45},
+];
+
+async function buildBGM(ctx){
+  const dest=makeChain(ctx);
+  const reverb=makeReverb(ctx,dest,2.5,2.2);
+
+  ocean(ctx,reverb,0,5.8);
+
+  CHORDS.forEach(ch=>{
+    ch.notes.forEach(f=>pad(ctx,reverb,f,ch.start,ch.dur,ch.vol));
+  });
+
+  BELLS.forEach(b=>bell(ctx,reverb,b.f,b.t,0.18));
+
+  KICKS.forEach((t,i)=>kick(ctx,dest,t,i<6?0.55:0.7));
+  SNARES.forEach(t=>snare(ctx,dest,t,0.28));
+
+  BASS_LINE.forEach(b=>bass(ctx,reverb,b.f,b.t,b.d,0.35));
+
+  impact(ctx,dest,4.5);
+
+  // 마스터 페이드 인/아웃
+  // (done via individual gains above)
+}
+
+async function play(){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
+  await buildBGM(ctx);
+  startT=performance.now();
+  document.getElementById('status').textContent='▶  재생 중 — PLAYING';
+  updateUI(0);
+}
+
+async function download(){
+  document.getElementById('status').textContent='⏳ 렌더링 중... (2~3초)';
+  const offline=new OfflineAudioContext(2,Math.ceil(44100*5.8),44100);
+
+  // offline용 analyser 없이 구성
+  const comp=offline.createDynamicsCompressor();
+  comp.threshold.value=-18;comp.knee.value=10;comp.ratio.value=4;comp.attack.value=0.005;comp.release.value=0.18;
+  const eq=offline.createBiquadFilter();eq.type='highpass';eq.frequency.value=40;
+  const master=offline.createGain();master.gain.value=0.88;
+  comp.connect(eq);eq.connect(master);master.connect(offline.destination);
+
+  const len=Math.ceil(44100*2.5);
+  const ibuf=offline.createBuffer(2,len,44100);
+  for(let ch=0;ch<2;ch++){const d=ibuf.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2);}
+  const conv=offline.createConvolver();conv.buffer=ibuf;
+  const wet=offline.createGain();wet.gain.value=0.32;
+  const dry=offline.createGain();dry.gain.value=0.72;
+  const send=offline.createGain();send.gain.value=1;
+  send.connect(conv);conv.connect(wet);wet.connect(comp);
+  send.connect(dry);dry.connect(comp);
+
+  ocean(offline,send,0,5.8);
+  CHORDS.forEach(ch=>ch.notes.forEach(f=>pad(offline,send,f,ch.start,ch.dur,ch.vol)));
+  BELLS.forEach(b=>bell(offline,send,b.f,b.t,0.18));
+  KICKS.forEach((t,i)=>kick(offline,comp,t,i<6?0.55:0.7));
+  SNARES.forEach(t=>snare(offline,comp,t,0.28));
+  BASS_LINE.forEach(b=>bass(offline,send,b.f,b.t,b.d,0.35));
+  impact(offline,comp,4.5);
+
+  const rendered=await offline.startRendering();
+  const wav=toWav(rendered);
+  const blob=new Blob([wav],{type:'audio/wav'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='성재유_인트로_BGM.wav';a.click();
+  document.getElementById('status').textContent='✓ 다운로드 완료!';
+}
+
+function toWav(buf){
+  const nCh=buf.numberOfChannels, len=buf.length, sr=buf.sampleRate;
+  const ab=new ArrayBuffer(44+len*nCh*2);
+  const v=new DataView(ab);
+  const s=(o,str)=>{for(let i=0;i<str.length;i++)v.setUint8(o+i,str.charCodeAt(i));};
+  s(0,'RIFF');v.setUint32(4,36+len*nCh*2,true);s(8,'WAVE');
+  s(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,nCh,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*nCh*2,true);v.setUint16(32,nCh*2,true);v.setUint16(34,16,true);
+  s(36,'data');v.setUint32(40,len*nCh*2,true);
+  let off=44;
+  for(let i=0;i<len;i++) for(let c=0;c<nCh;c++){
+    const x=Math.max(-1,Math.min(1,buf.getChannelData(c)[i]));
+    v.setInt16(off,x<0?x*32768:x*32767,true);off+=2;
+  }
+  return ab;
+}
+</script>
+</body>
+</html>

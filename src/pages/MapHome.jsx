@@ -83,15 +83,9 @@ function HeaderClock() {
   return clockStr;
 }
 
-// ✅ WAVE REDUCTION: 모든 포인트 동일 감쇄율 적용 (사용자 요청: 평균 15% 일괄 감쇄)
+// ✅ WAVE REDUCTION: 모든 포인트 감쇄율 제거 (서버에서 1.8배 최대파고 변환 완료)
 function applyWaveReduction(weather, pointType) {
-  if (!weather || !weather.wave || weather.wave.coastal === undefined) return weather;
-  
-  // 기존 지형별 차등 로직(갯바위, 항구 등) 완전 제거 및 0.85 단일 밸런스 값 적용
-  const factor = 0.85; 
-
-  const reduced = parseFloat((parseFloat(weather.wave.coastal) * factor).toFixed(1));
-  return { ...weather, wave: { ...weather.wave, coastal: reduced } };
+  return weather; // 원본 유지
 }
 
 export default function MapHome() {
