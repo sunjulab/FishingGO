@@ -87,10 +87,10 @@ function buildLocalFallback(point) {
 
 // NEW-B7: API 실패 시 fallback — REGIONAL_PROFILES 기반 지역별 기본 기상 특성 반영
 const MARINE_FALLBACK = {
-  '동해': { temp: '13.5°C', wave: '0.8m', wind: '4.5m/s', tide: '-', status: '보통', risk: '보통' },
-  '서해': { temp: '12.2°C', wave: '1.1m', wind: '6.8m/s', tide: '-', status: '주의', risk: '높음' },
-  '남해': { temp: '16.8°C', wave: '0.5m', wind: '3.2m/s', tide: '-', status: '활발', risk: '낮음' },
-  '제주': { temp: '18.5°C', wave: '0.6m', wind: '3.5m/s', tide: '-', status: '보통', risk: '낮음' },
+  '동해': { temp: '13.5°C', wave: '1.4m', wind: '4.5m/s', tide: '-', status: '보통', risk: '보통' },
+  '서해': { temp: '12.2°C', wave: '2.0m', wind: '6.8m/s', tide: '-', status: '주의', risk: '높음' },
+  '남해': { temp: '16.8°C', wave: '0.9m', wind: '3.2m/s', tide: '-', status: '활발', risk: '낮음' },
+  '제주': { temp: '18.5°C', wave: '1.1m', wind: '3.5m/s', tide: '-', status: '보통', risk: '낮음' },
 };
 
 // ✅ 4TH-B1: calcSunrise 컴포넌트 외부 추출 — 순수함수, useMemo로 마운트 1회만 계산

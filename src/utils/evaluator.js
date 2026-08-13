@@ -479,7 +479,7 @@ export const getDynamicPointScore = (point, getPointSpecificDataFn = null) => {
   if (!getPointSpecificDataFn) {
     // fallback: 기본 데이터 구조 반환
     const fallbackData = {
-      sst: 14, wind: { speed: 4 }, wave: { coastal: 0.8 },
+      sst: 14, wind: { speed: 4 }, wave: { coastal: 1.4 },
       tide: { phase: '' }, stationId: 'DT_0001',
     };
     return calculateFishingScore(fallbackData, point);
