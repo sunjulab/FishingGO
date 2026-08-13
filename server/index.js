@@ -7528,7 +7528,7 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
     sst: mockSst,
     temp: `${mockSst}°C`,
     wind: { speed: profile.wind || 3.5, dir: 'NE' },
-    wave: { coastal: profile.wave || 0.6 },
+    wave: { coastal: parseFloat(((profile.wave || 0.6) * 1.8).toFixed(1)) },
     layers: {
       upper: mockSst,
       middle: mockSst ? (parseFloat(mockSst) - 1.2).toFixed(1) : null,
@@ -7565,7 +7565,7 @@ function calcFishingScoreForStation(sid) {
   const d = entry.data;
   const sst   = (d.sst !== undefined && !isNaN(parseFloat(d.sst))) ? parseFloat(d.sst) : 14;
   const wind  = (d.wind?.speed !== undefined && !isNaN(parseFloat(d.wind.speed))) ? parseFloat(d.wind.speed) : 3;
-  const wave  = (d.wave?.coastal !== undefined && !isNaN(parseFloat(d.wave.coastal))) ? parseFloat(d.wave.coastal) : 0.5;
+  const wave  = (d.wave?.coastal !== undefined && !isNaN(parseFloat(d.wave.coastal))) ? parseFloat(d.wave.coastal) : 0.9;
   const phase = d.tide?.phase               || '';
   const seed  = parseInt(sid.replace(/\D/g, '')) || 1;
 
@@ -7579,13 +7579,13 @@ function calcFishingScoreForStation(sid) {
   else if (wind <  3) score += 7;
   else if (wind <  4) score += 3;  // 3~4m/s: 미풍 소폭 보너스 추가
 
-  if      (wave > 2.5) score -= 60;
-  else if (wave > 2.0) score -= 45;
-  else if (wave > 1.5) score -= 30;
-  else if (wave > 1.2) score -= 20;
-  else if (wave > 0.8) score -= 10;
-  else if (wave < 0.3) score += 8;
-  else if (wave < 0.5) score += 4;
+  if      (wave > 4.5) score -= 60;
+  else if (wave > 3.6) score -= 45;
+  else if (wave > 2.7) score -= 30;
+  else if (wave > 2.1) score -= 20;
+  else if (wave > 1.4) score -= 10;
+  else if (wave < 0.5) score += 8;
+  else if (wave < 0.9) score += 4;
 
   if      (sst < 8)              score -= 40;
   else if (sst < 11)             score -= 25;
