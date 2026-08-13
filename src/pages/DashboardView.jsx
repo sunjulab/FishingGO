@@ -251,7 +251,7 @@ export default function DashboardView({
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '2px', flex: 1, alignItems: 'center' }}>
                   {[
-                    { Icon: Waves, label: '파고', val: `${tideData.wave?.coastal || '0.4'}m` },
+                    { Icon: Waves, label: '파고', val: `${tideData.wave?.coastal || '0.7'}m` },
                     { Icon: Wind,  label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s` },
                     { Icon: Clock, label: '만조', val: tideData.tide?.high || '15:20' },
                   ].map(chip => (
@@ -316,7 +316,7 @@ export default function DashboardView({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
               {[
                 { label: '수온', val: `${parseFloat(tideData.sst || 14).toFixed(1)}°C`, ok: parseFloat(tideData.sst || 14) >= 12 && parseFloat(tideData.sst || 14) <= 22, statusText: parseFloat(tideData.sst || 14) < 12 ? '✗ 저수온' : (parseFloat(tideData.sst || 14) > 22 ? '✗ 고수온' : '✓ 양호') },
-                { label: '파고', val: `${tideData.wave?.coastal || '0.4'}m`, ok: parseFloat(tideData.wave?.coastal || 0.4) <= 1.0 },
+                { label: '파고', val: `${tideData.wave?.coastal || '0.7'}m`, ok: parseFloat(tideData.wave?.coastal || 0.7) <= 1.8 },
                 { label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s`, ok: parseFloat(tideData.wind?.speed || 2.1) <= 5 },
                 { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물'), statusText: (!phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물')) ? '✓ 양호' : '✗ 조류약함' },
               ].map(item => (
