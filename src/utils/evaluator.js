@@ -212,9 +212,9 @@ const getNightBonus = (point) => {
 
 // ── 지점 유형 보정 ──────────────────────────────────────────────
 const getTypeBonus = (type, wind) => {
-  // 갯바위: 바람에 취약, 방파제: 약간 방어, 항구: 가장 안전
-  if (type === '갯바위' && wind > 5) return -8;
-  if (type === '항구' && wind > 6) return +5; // 항구는 바람막이 효과
+  // 갯바위: 바람에 극히 취약, 항구: 바람막이 혜택 (워킹 낚시 최적화 반영)
+  if (type === '갯바위' && wind > 4) return -15; // 갯바위는 4m/s부터 위험
+  if (type === '항구' && wind > 6) return +10; // 항구는 바람막이 효과
   return 0;
 };
 
