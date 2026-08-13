@@ -7610,8 +7610,13 @@ function calcFishingScoreForStation(sid) {
   const tideMatch = phase.match(/(\d+)물/);
   const tideNum = tideMatch ? parseInt(tideMatch[1]) : 0;
   const TIDE_BONUS = { 1:5,2:10,3:15,4:15,5:15,6:15,7:10,8:5,9:15,10:15,11:15,12:15,13:-15,14:-15,15:-5 };
-  score += TIDE_BONUS[tideNum] || 0;
-  if (phase.includes('조금') || phase.includes('무시')) score -= 15;
+  if (tideNum) {
+    score += TIDE_BONUS[tideNum] || 0;
+  } else if (phase.includes('조금') || phase.includes('무시')) {
+    score -= 15;
+  } else if (phase.includes('사리')) {
+    score += 10;
+  }
   if (isNight) score -= 2;
 
   return Math.min(100, Math.max(5, Math.round(score)));
