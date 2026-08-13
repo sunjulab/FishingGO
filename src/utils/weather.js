@@ -48,14 +48,16 @@ export function findNearestStation(userLat, userLng) {
 export function calculateFishingIndex(wind, wave, pressureTrend) {
   let score = 5;
   
-  // 풍속 페널티 (10m/s 이상 시 급격한 하락)
-  if (wind > 12) score -= 3;
-  else if (wind > 8) score -= 1.5;
-  else if (wind > 5) score -= 0.5;
+  // 풍속 페널티 (워킹 낚시 최적화: 6m/s 이상 시 급격한 하락)
+  if (wind > 8) score -= 4;
+  else if (wind > 6) score -= 2;
+  else if (wind > 4) score -= 1;
 
-  // 파고 페널티 (최대파고 기준 1.8배 상향)
-  if (wave > 3.6) score -= 2;
+  // 파고 페널티 (워킹 낚시 최적화: 월파 위험 및 장판 페널티)
+  if (wave > 3.6) score -= 4;
+  else if (wave > 2.7) score -= 2;
   else if (wave > 1.8) score -= 1;
+  else if (wave < 0.5) score -= 0.5; // 청물/장판 페널티
 
   // 기압 변화 (하강 시 활성도 저하)
   if (pressureTrend === 'down') score -= 1;
