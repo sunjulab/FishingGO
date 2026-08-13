@@ -314,18 +314,49 @@ export default function DashboardView({
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-              {[
-                { label: '수온', val: `${parseFloat(tideData.sst || 14).toFixed(1)}°C`, ok: parseFloat(tideData.sst || 14) >= 12 && parseFloat(tideData.sst || 14) <= 22, statusText: parseFloat(tideData.sst || 14) < 12 ? '✗ 저수온' : (parseFloat(tideData.sst || 14) > 22 ? '✗ 고수온' : '✓ 양호') },
-                { label: '파고', val: `${tideData.wave?.coastal || '0.7'}m`, ok: parseFloat(tideData.wave?.coastal || 0.7) <= 1.8 },
-                { label: '풍속', val: `${tideData.wind?.speed || '2.1'}m/s`, ok: parseFloat(tideData.wind?.speed || 2.1) <= 5 },
-                { label: '물때', val: phase.slice(0, 3), ok: !phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물'), statusText: (!phase.includes('조금') && !phase.includes('무시') && !phase.includes('13물') && !phase.includes('14물') && !phase.includes('15물')) ? '✓ 양호' : '✗ 조류약함' },
-              ].map(item => (
-                <div key={item.label} style={{ background: item.ok ? 'rgba(0,196,140,0.08)' : 'rgba(255,90,95,0.08)', border: `1px solid ${item.ok ? 'rgba(0,196,140,0.25)' : 'rgba(255,90,95,0.25)'}`, borderRadius: '10px', padding: '7px 4px', textAlign: 'center' }}>
-                  <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{item.label}</div>
-                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', color: item.ok ? '#00C48C' : '#FF5A5F', marginTop: '2px' }}>{item.val}</div>
-                  <div style={{ fontSize: `calc(8px * var(--fs, 1))`, color: item.ok ? '#00C48C' : '#FF5A5F', fontWeight: '800' }}>{item.statusText || (item.ok ? '✓ 양호' : '✗ 주의')}</div>
-                </div>
-              ))}
+              {(() => {
+                const sstV = parseFloat(tideData.sst || 14);
+                let sstStatus = 'good', sstText = '✓ 양호';
+                if (sstV < 11) { sstStatus = 'danger'; sstText = '✗ 낚시불가'; }
+                else if (sstV < 14) { sstStatus = 'warn'; sstText = '✗ 저수온'; }
+                else if (sstV > 22) { sstStatus = 'warn'; sstText = '✗ 고수온'; }
+
+                const waveV = parseFloat(tideData.wave?.coastal || 0.7);
+                let waveStatus = 'good', waveText = '✓ 양호';
+                if (waveV > 2.7) { waveStatus = 'danger'; waveText = '✗ 갯바위위험'; }
+                else if (waveV > 1.8) { waveStatus = 'warn'; waveText = '✗ 너울주의'; }
+                else if (waveV >= 1.2) { waveStatus = 'best'; waveText = '🔥 최적(포말)'; }
+                else if (waveV < 0.5) { waveStatus = 'good'; waveText = '✓ 장판'; }
+
+                const windV = parseFloat(tideData.wind?.speed || 2.1);
+                let windStatus = 'good', windText = '✓ 양호';
+                if (windV > 6) { windStatus = 'danger'; windText = '✗ 낚시불가'; }
+                else if (windV > 4) { windStatus = 'warn'; windText = '✗ 강풍주의'; }
+
+                let tideStatus = 'good', tideText = '✓ 양호';
+                if (phase.includes('조금') || phase.includes('무시') || phase.includes('13물') || phase.includes('14물')) { tideStatus = 'danger'; tideText = '✗ 조류약함'; }
+                else if (phase.includes('사리') || phase.match(/(3|4|5|6|9|10|11|12)물/)) { tideStatus = 'best'; tideText = '🔥 황금물때'; }
+
+                const getColors = (st) => {
+                  if (st === 'best') return { bg: 'rgba(21, 101, 192, 0.08)', border: 'rgba(21, 101, 192, 0.3)', text: '#1565C0' };
+                  if (st === 'warn') return { bg: 'rgba(255, 155, 38, 0.08)', border: 'rgba(255, 155, 38, 0.3)', text: '#FF9B26' };
+                  if (st === 'danger') return { bg: 'rgba(255, 90, 95, 0.08)', border: 'rgba(255, 90, 95, 0.25)', text: '#FF5A5F' };
+                  return { bg: 'rgba(0, 196, 140, 0.08)', border: 'rgba(0, 196, 140, 0.25)', text: '#00C48C' }; // good
+                };
+
+                return [
+                  { label: '수온', val: `${sstV.toFixed(1)}°C`, ...getColors(sstStatus), statusText: sstText },
+                  { label: '파고', val: `${waveV}m`, ...getColors(waveStatus), statusText: waveText },
+                  { label: '풍속', val: `${windV}m/s`, ...getColors(windStatus), statusText: windText },
+                  { label: '물때', val: phase.slice(0, 3), ...getColors(tideStatus), statusText: tideText },
+                ].map(item => (
+                  <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '10px', padding: '7px 4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{item.label}</div>
+                    <div style={{ fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '950', color: item.text, marginTop: '2px' }}>{item.val}</div>
+                    <div style={{ fontSize: `calc(8px * var(--fs, 1))`, color: item.text, fontWeight: '800' }}>{item.statusText}</div>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         </div>
