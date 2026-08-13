@@ -408,7 +408,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             fishingIndex: {
               등급: grade,
               수온: today?.wt ? `${today.wt}°C` : '-',
-              파고: today?.wh ? `${parseFloat((parseFloat(today.wh) * 0.85).toFixed(1))}m` : '-',
+              파고: today?.wh ? `${parseFloat((parseFloat(today.wh) * 1.8).toFixed(1))}m` : '-',
               조류: today?.current_spd ? `${today.current_spd}m/s` : '-',
             },
           }));
@@ -535,7 +535,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             fishingIndex: {
               등급: grade,
               수온: today?.wt ? `${today.wt}°C` : '-',
-              파고: today?.wh ? `${parseFloat((parseFloat(today.wh) * 0.85).toFixed(1))}m` : '-',
+              파고: today?.wh ? `${parseFloat((parseFloat(today.wh) * 1.8).toFixed(1))}m` : '-',
               조류: today?.current_spd ? `${today.current_spd}m/s` : '-',
             },
           }));
