@@ -2636,7 +2636,7 @@ async function updateAllStationsCache() {
     const monthlyBase = MONTHLY_BASE_TEMP[base.region]?.[month] ?? base.baseTemp;
     const finalTemp = realSst || (monthlyBase + (lcg(1) * 0.8 - 0.4)).toFixed(1);
     const finalWind = marine?.wind?.speed  ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 1.0 - 0.5));
-    const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.3 - 0.15));
+    const finalWave = marine?.wave?.coastal ?? Math.max(0.1, (profile.wave * 1.8) + (lcg(3) * 0.3 - 0.15));
     const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
 
     const lunarDay = getLunarDay();
