@@ -7570,22 +7570,19 @@ function calcFishingScoreForStation(sid) {
   const seed  = parseInt(sid.replace(/\D/g, '')) || 1;
 
   let score = 45 + (seed % 10) + ((seed % 14 - 7) / 10);
-  if      (wind > 14) score -= 65;
-  else if (wind > 10) score -= 40;
-  else if (wind >  8) score -= 28;
-  else if (wind >  6) score -= 18;
-  else if (wind >  5) score -= 8;  // 5m/s 이상부터 페널티 (기존 4m/s → 현실화)
-  else if (wind <  2) score += 12;
-  else if (wind <  3) score += 7;
-  else if (wind <  4) score += 3;  // 3~4m/s: 미풍 소폭 보너스 추가
+  if      (wind > 10) score -= 100;
+  else if (wind >  8) score -= 70;
+  else if (wind >  6) score -= 40;
+  else if (wind >  4) score -= 15;
+  else if (wind >  2) score += 5;
+  else                score += 15;
 
-  if      (wave > 4.5) score -= 60;
-  else if (wave > 3.6) score -= 45;
-  else if (wave > 2.7) score -= 30;
-  else if (wave > 2.1) score -= 20;
-  else if (wave > 1.4) score -= 10;
-  else if (wave < 0.5) score += 8;
-  else if (wave < 0.9) score += 4;
+  if      (wave > 3.6) score -= 70;
+  else if (wave > 2.7) score -= 40;
+  else if (wave > 1.8) score -= 15;
+  else if (wave >= 1.2) score += 5;
+  else if (wave >= 0.5) score += 0;
+  else                  score -= 5;
 
   if      (sst < 8)              score -= 40;
   else if (sst < 11)             score -= 25;
@@ -7612,9 +7609,9 @@ function calcFishingScoreForStation(sid) {
 
   const tideMatch = phase.match(/(\d+)물/);
   const tideNum = tideMatch ? parseInt(tideMatch[1]) : 0;
-  const TIDE_BONUS = { 1:3,2:5,3:7,4:9,5:10,6:10,7:8,8:6,9:4,10:2,11:-2,12:-4,13:-6,14:-8,15:-6 };
+  const TIDE_BONUS = { 1:5,2:10,3:15,4:15,5:15,6:15,7:10,8:5,9:15,10:15,11:15,12:15,13:-15,14:-15,15:-5 };
   score += TIDE_BONUS[tideNum] || 0;
-  if (phase.includes('조금') || phase.includes('무시')) score -= 7;
+  if (phase.includes('조금') || phase.includes('무시')) score -= 15;
   if (isNight) score -= 2;
 
   return Math.min(100, Math.max(5, Math.round(score)));

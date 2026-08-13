@@ -48,14 +48,14 @@ const FISH_ALERTS = {
   '벤자리':    { alert: '여름 남해 먼바다 벤자리 떼가 부상 중입니다. 밑밥 동조가 핵심입니다.',      gear: '찌낚시 전유동/반유동, 크릴 밑밥 동조' }
 };
 
-// 사리(6~8물)는 조류 강해서 고점, 조금(13~14물)은 조류 약해서 저점
+// 워킹 낚시 최적화: 사리 전후(조류 강함) 강력한 고점, 조금/무시(조류 없음) 강력한 저점
 const TIDE_BONUS = {
-  '1물': +3, '2물': +5, '3물': +7, '4물': +9, '5물': +10,
-  '6물': +10, '7물': +8, '8물': +6, '9물': +4, '10물': +2,
+  '1물': +5, '2물': +10, '3물': +15, '4물': +15, '5물': +15,
+  '6물': +15, '7물': +10, '8물': +5, '9물': +15, '10물': +15,
   // ✅ BUG-1 FIX: '7물' 키 추가 — 정규식 매핑(tideMatch[1])이 '7물(사리)' → '7물' 추출 시 정상 반영
-  '11물': -2, '12물': -4, '13물': -6, '14물': -8, '15물': -6,
+  '11물': +15, '12물': +15, '13물': -15, '14물': -15, '15물': -5,
   // 괄호 포함 전체 표기도 별도 키로 유지 (API에 따라 다른 포맷 대응)
-  '7물(사리)': +8, '8물(사리)': +6, '13물(조금)': -7, '14물(무시)': -9,
+  '7물(사리)': +10, '8물(사리)': +5, '13물(조금)': -15, '14물(무시)': -15,
 };
 
 // ── [v2.2] 계절별 실시간 어종 데이터 (월 × 권역) ────────────────────
@@ -249,27 +249,24 @@ export const calculateScoreDetails = (data, point = {}) => {
 
   const wind = (data.wind?.speed !== undefined && !isNaN(parseFloat(data.wind.speed))) ? parseFloat(data.wind.speed) : 5.0;
   let wScore = 0;
-  if      (wind > 14)  wScore = -65;
-  else if (wind > 10)  wScore = -40;
-  else if (wind >  8)  wScore = -28;
-  else if (wind >  6)  wScore = -18;
-  else if (wind >  5)  wScore = -8;
-  else if (wind <  2)  wScore = +12;
-  else if (wind <  3)  wScore = +7;
-  else if (wind <  4)  wScore = +3;
+  if      (wind > 10)  wScore = -100;
+  else if (wind >  8)  wScore = -70;
+  else if (wind >  6)  wScore = -40;
+  else if (wind >  4)  wScore = -15;
+  else if (wind >  2)  wScore = +5;
+  else                 wScore = +15;
   if (wScore !== 0) details.push({ factor: '풍속', text: `${wind}m/s`, score: wScore });
   score += wScore;
 
   const wave = (data.wave?.coastal !== undefined && !isNaN(parseFloat(data.wave.coastal))) ? parseFloat(data.wave.coastal) : 0.8;
   let wvScore = 0;
-  // 파고(Maximum Wave) 기준 점수 (기존 유의파고 기준치에서 1.8배 스케일업 반영)
-  if      (wave > 4.5) wvScore = -60;
-  else if (wave > 3.6) wvScore = -45;
-  else if (wave > 2.7) wvScore = -30;
-  else if (wave > 2.1) wvScore = -20;
-  else if (wave > 1.4) wvScore = -10;
-  else if (wave < 0.5) wvScore = +8;
-  else if (wave < 0.9) wvScore = +4;
+  // 파고(Maximum Wave) 기준 점수 (워킹 낚시 하드코어 최적화 반영)
+  if      (wave > 3.6) wvScore = -70;
+  else if (wave > 2.7) wvScore = -40;
+  else if (wave > 1.8) wvScore = -15;
+  else if (wave >= 1.2) wvScore = +5;
+  else if (wave >= 0.5) wvScore = 0;
+  else                  wvScore = -5;
   if (wvScore !== 0) details.push({ factor: '파고', text: `${wave}m`, score: wvScore });
   score += wvScore;
 
