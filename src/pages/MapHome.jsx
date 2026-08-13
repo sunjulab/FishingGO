@@ -1123,9 +1123,9 @@ export default function MapHome() {
     const month    = new Date().getMonth() + 1;
 
     // ① 위험 기상 최우선
-    if (wave > 2.5) return `파고 ${wave}m 너울 위험 — 갯바위·방파제 접근 금지! 즉시 대피하세요.`;
+    if (wave > 4.5) return `파고 ${wave}m 너울 위험 — 갯바위·방파제 접근 금지! 즉시 대피하세요.`;
     if (wind > 12)  return `풍속 ${wind.toFixed(1)}m/s 강풍 — 채비가 날아갑니다. 출조를 삼가세요.`;
-    if (wave > 1.5) return `파고 ${wave}m 구름파 — 외해 노출 포인트는 위험. 안전한 코스로 이동하세요.`;
+    if (wave > 2.7) return `파고 ${wave}m 높은 파도 — 외해 노출 포인트는 위험. 안전한 코스로 이동하세요.`;
 
     // ② 수온 특보
     if (sst < 9)  return `수온 ${sst.toFixed(1)}°C 극저수온 — ${mainFish || '어류'} 동면 수준. 꽝 확률 95% 이상.`;
@@ -1169,7 +1169,7 @@ export default function MapHome() {
     const wind     = parseFloat(tideData.wind?.speed ?? 0);
     const wave     = parseFloat(tideData.wave?.coastal ?? 0);
     const sst      = parseFloat(tideData.sst ?? 14);
-    const isStrong = wind > 5 || wave > 0.7;
+    const isStrong = wind > 5 || wave > 1.3;
     const isCold   = sst < 12;
     const isWarm   = sst >= 18;
     const fish     = (selectedPoint?.fish || '').split(',')[0].trim() || '';

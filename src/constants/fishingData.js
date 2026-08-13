@@ -138,21 +138,21 @@ export const getPointSpecificData = (point) => {
   const zoneKey = REGION_TO_ZONE[reg] || '남해';
   const sstArr  = MONTHLY_SST[reg]  || MONTHLY_SST[zoneKey]  || MONTHLY_SST['남해'];
   const windArr = MONTHLY_WIND[reg] || MONTHLY_WIND[zoneKey] || MONTHLY_WIND['남해'];
-  const WAVE_BY_ZONE = { '서해': 0.7, '동해': 0.6, '남해': 0.4, '제주': 0.5 };
+  const WAVE_BY_ZONE = { '서해': 1.3, '동해': 1.1, '남해': 0.7, '제주': 0.9 };
   const profile = {
-    '제주': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.5 },
-    '남해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.4 },
-    '동해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.6 },
-    '서해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.7 },
-    '강원': { sst: (MONTHLY_SST['동해']||MONTHLY_SST['남해'])[currentMonth], wind: 3.5, wave: 0.6 },
-    '경북': { sst: (MONTHLY_SST['동해']||MONTHLY_SST['남해'])[currentMonth], wind: 3.2, wave: 0.55 },
-    '경남': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.5, wave: 0.45 },
-    '전남': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.8, wave: 0.5 },
-    '전북': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.0, wave: 0.7 },
-    '충남': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.0, wave: 0.7 },
-    '인천': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.5, wave: 0.8 },
-    '부산': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.5, wave: 0.45 },
-    '울산': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 3.0, wave: 0.5 },
+    '제주': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.9 },
+    '남해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 0.7 },
+    '동해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 1.1 },
+    '서해': { sst: sstArr[currentMonth], wind: windArr[currentMonth], wave: 1.3 },
+    '강원': { sst: (MONTHLY_SST['동해']||MONTHLY_SST['남해'])[currentMonth], wind: 3.5, wave: 1.1 },
+    '경북': { sst: (MONTHLY_SST['동해']||MONTHLY_SST['남해'])[currentMonth], wind: 3.2, wave: 1.0 },
+    '경남': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.5, wave: 0.8 },
+    '전남': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.8, wave: 0.9 },
+    '전북': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.0, wave: 1.3 },
+    '충남': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.0, wave: 1.3 },
+    '인천': { sst: (MONTHLY_SST['서해'])[currentMonth], wind: 4.5, wave: 1.4 },
+    '부산': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 2.5, wave: 0.8 },
+    '울산': { sst: (MONTHLY_SST['남해'])[currentMonth], wind: 3.0, wave: 0.9 },
   };
 
   // ✅ 4TH-B4: REGION_TO_ZONE 매핑 사용 — 삼항 중첩 fallback 제거

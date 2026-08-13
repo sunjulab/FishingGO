@@ -53,9 +53,9 @@ export function calculateFishingIndex(wind, wave, pressureTrend) {
   else if (wind > 8) score -= 1.5;
   else if (wind > 5) score -= 0.5;
 
-  // 파고 페널티
-  if (wave > 2.0) score -= 2;
-  else if (wave > 1.0) score -= 1;
+  // 파고 페널티 (최대파고 기준 1.8배 상향)
+  if (wave > 3.6) score -= 2;
+  else if (wave > 1.8) score -= 1;
 
   // 기압 변화 (하강 시 활성도 저하)
   if (pressureTrend === 'down') score -= 1;
