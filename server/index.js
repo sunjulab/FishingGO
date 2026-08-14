@@ -2300,7 +2300,7 @@ function applyCoastalTransform(sid, wh, ws, wdDeg) {
   const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
   
   // 통상적으로 최대파고(Maximum Wave)는 유의파고(Significant Wave)의 약 1.8배 (안전 기준)
-  const maxWave = parseFloat((wh * 1.8).toFixed(1));
+  const maxWave = parseFloat((wh * 1.8 + 0.2).toFixed(1));
 
   return {
     wind: { speed: parseFloat(Math.max(0, ws).toFixed(1)), dir: wd },
@@ -2636,7 +2636,7 @@ async function updateAllStationsCache() {
     const monthlyBase = MONTHLY_BASE_TEMP[base.region]?.[month] ?? base.baseTemp;
     const finalTemp = realSst || (monthlyBase + (lcg(1) * 0.8 - 0.4)).toFixed(1);
     const finalWind = marine?.wind?.speed  ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 1.0 - 0.5));
-    const finalWave = marine?.wave?.coastal ?? Math.max(0.1, (profile.wave * 1.8) + (lcg(3) * 0.3 - 0.15));
+    const finalWave = marine?.wave?.coastal ?? Math.max(0.1, (profile.wave * 1.8 + 0.2) + (lcg(3) * 0.3 - 0.15));
     const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
 
     const lunarDay = getLunarDay();
@@ -7528,7 +7528,7 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
     sst: mockSst,
     temp: `${mockSst}°C`,
     wind: { speed: profile.wind || 3.5, dir: 'NE' },
-    wave: { coastal: parseFloat(((profile.wave || 0.6) * 1.8).toFixed(1)) },
+    wave: { coastal: parseFloat(((profile.wave || 0.6) * 1.8 + 0.2).toFixed(1)) },
     layers: {
       upper: mockSst,
       middle: mockSst ? (parseFloat(mockSst) - 1.2).toFixed(1) : null,
