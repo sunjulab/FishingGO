@@ -485,14 +485,19 @@ app.post('/api/internal/beach-push', express.json({ limit: '10mb' }), (req, res)
     if (!match) match = items.find(i => kws.some(kw => (i.beachNm||'').includes(kw)));
     const wTemp = match?.wTemp ? parseFloat(match.wTemp) : (match?.tw ? parseFloat(match.tw) : null);
     if (wTemp && !isNaN(wTemp) && wTemp > 0) {
-      // ✅ FIX: NIFS나 KHOA 등 고정밀 실측 데이터가 이미 있으면 해수욕장 데이터(낮은 신뢰도)로 덮어쓰지 않음
-      const currentSource = weatherCache[sid].data._sources?.sst;
-      if (currentSource === 'NIFS_API' || currentSource === 'KHOA_API') {
+      // ✅ FIX: 고도화된 신뢰도 티어 시스템 적용
+      const currentSource = weatherCache[sid].data._sources?.sst || 'fallback';
+      const currentPriority = SST_SOURCE_PRIORITY[currentSource] || 0;
+      const newPriority = SST_SOURCE_PRIORITY['KMA_BEACH'] || 0;
+      
+      // 기존 데이터가 더 신뢰도 높으면 무시
+      if (currentPriority > newPriority) {
         continue;
       }
       weatherCache[sid].data.sst = parseFloat(wTemp.toFixed(1));
       weatherCache[sid].data.temp = `${wTemp.toFixed(1)}\u00b0C`;
       weatherCache[sid].data.layers = { upper: wTemp, middle: parseFloat((wTemp-1.2).toFixed(1)), lower: parseFloat((wTemp-3.4).toFixed(1)) };
+      if (!weatherCache[sid].data._sources) weatherCache[sid].data._sources = {};
       weatherCache[sid].data._sources.sst = 'KMA_BEACH';
       patched++;
     }
@@ -1911,6 +1916,15 @@ const ALL_STATIONS = [
 ];
 
 let weatherCache = {};
+
+// ✅ 고도화: 데이터 소스 신뢰도 티어 시스템
+const SST_SOURCE_PRIORITY = {
+  'KHOA_API': 40,
+  'NIFS_API': 30,
+  'KMA_BUOY': 20,
+  'KMA_BEACH': 10,
+  'fallback': 0
+};
 
 // --- 권역별 기본 기상 프로파일 (Realism 강화) ---
 const REGIONAL_PROFILES = {

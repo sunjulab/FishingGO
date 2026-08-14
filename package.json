@@ -15,7 +15,16 @@
     "version:apply": "node update-version.cjs",
     "release:patch": "npm version patch --no-git-tag-version && node update-version.cjs --push",
     "release:minor": "npm version minor --no-git-tag-version && node update-version.cjs --push",
-    "release:major": "npm version major --no-git-tag-version && node update-version.cjs --push"
+    "release:major": "npm version major --no-git-tag-version && node update-version.cjs --push",
+    "lint": "eslint \"src/**/*.{js,jsx}\"",
+    "lint:fix": "eslint \"src/**/*.{js,jsx}\" --fix",
+    "prepare": "husky",
+    "deploy": "node scripts/deploy-all.mjs"
+  },
+  "lint-staged": {
+    "src/**/*.{js,jsx}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",
@@ -50,10 +59,19 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
+    "@eslint/js": "^10.0.1",
     "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^10.8.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.4",
+    "globals": "^17.11.0",
+    "husky": "^9.1.7",
     "iconv-lite": "^0.7.2",
     "jimp": "^1.6.1",
+    "lint-staged": "^17.3.0",
     "playwright": "^1.60.0",
+    "prettier": "^3.9.6",
     "vite": "^5.1.6"
   },
   "overrides": {
