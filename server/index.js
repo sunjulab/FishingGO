@@ -485,6 +485,11 @@ app.post('/api/internal/beach-push', express.json({ limit: '10mb' }), (req, res)
     if (!match) match = items.find(i => kws.some(kw => (i.beachNm||'').includes(kw)));
     const wTemp = match?.wTemp ? parseFloat(match.wTemp) : (match?.tw ? parseFloat(match.tw) : null);
     if (wTemp && !isNaN(wTemp) && wTemp > 0) {
+      // ✅ FIX: NIFS나 KHOA 등 고정밀 실측 데이터가 이미 있으면 해수욕장 데이터(낮은 신뢰도)로 덮어쓰지 않음
+      const currentSource = weatherCache[sid].data._sources?.sst;
+      if (currentSource === 'NIFS_API' || currentSource === 'KHOA_API') {
+        continue;
+      }
       weatherCache[sid].data.sst = parseFloat(wTemp.toFixed(1));
       weatherCache[sid].data.temp = `${wTemp.toFixed(1)}\u00b0C`;
       weatherCache[sid].data.layers = { upper: wTemp, middle: parseFloat((wTemp-1.2).toFixed(1)), lower: parseFloat((wTemp-3.4).toFixed(1)) };
@@ -2689,7 +2694,7 @@ async function updateAllStationsCache() {
         })(),
         tide: { phase: tidePhase, high: tideHigh, low: tideLow, next_low: tideNextLow, current_level: `${tideLevel}cm` },
         _sources: {
-          sst:  nifsSst ? 'NIFS_API' : (khoaSst ? 'KHOA_API' : (beachSst ? 'KMA_BEACH' : 'fallback')),
+          sst:  khoaSst ? 'KHOA_API' : (nifsSst ? 'NIFS_API' : (beachSst ? 'KMA_BEACH' : 'fallback')),
           wind: marine   ? 'KMA_BUOY' : 'fallback',
           tide: realTide ? 'KHOA_TIDE' : 'fallback',
         },
