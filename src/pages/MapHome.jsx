@@ -7,7 +7,7 @@ import {
   MapPin, Thermometer, Info, Fish, X, Tv, ArrowLeft, RefreshCw,
   AlertCircle, Star, Lock, Settings
 } from 'lucide-react';
-import { findNearestStation, calculateFishingIndex } from '../utils/weather';
+import { findNearestStation, calculateFishingIndex, getDistance } from '../utils/weather';
 import { evaluateFishingCondition } from '../utils/evaluator';
 import ReactPlayer from 'react-player';
 import FishingPointBottomSheet from '../components/FishingPointBottomSheet';
