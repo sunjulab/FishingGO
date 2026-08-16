@@ -6,7 +6,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:58.614Z"
+    "updatedAt": "2026-08-14T15:15:38.207Z"
   },
   "2": {
     "lat": 38.208628166005404,
@@ -15,7 +15,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:58.741Z"
+    "updatedAt": "2026-08-14T15:15:38.338Z"
   },
   "3": {
     "lat": 37.772907,
@@ -24,7 +24,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:58.867Z"
+    "updatedAt": "2026-08-14T15:15:38.517Z"
   },
   "4": {
     "lat": 37.892078,
@@ -35,7 +35,7 @@
       "고등어 가자미 광어"
     ],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:58.992Z"
+    "updatedAt": "2026-08-14T15:15:38.914Z"
   },
   "5": {
     "lat": 36.677116,
@@ -44,7 +44,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:59.118Z"
+    "updatedAt": "2026-08-14T15:15:39.044Z"
   },
   "6": {
     "lat": 36.358331,
@@ -53,7 +53,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:59.245Z"
+    "updatedAt": "2026-08-14T15:15:39.175Z"
   },
   "7": {
     "lat": 36.11334,
@@ -64,7 +64,7 @@
       "삼치"
     ],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:59.371Z"
+    "updatedAt": "2026-08-14T15:15:39.305Z"
   },
   "8": {
     "lat": 35.157667,
@@ -73,7 +73,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:59.497Z"
+    "updatedAt": "2026-08-14T15:15:39.435Z"
   },
   "9": {
     "lat": 35.097658,
@@ -82,7 +82,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:59.623Z"
+    "updatedAt": "2026-08-14T15:15:39.566Z"
   },
   "10": {
     "lat": 34.837252,
@@ -91,7 +91,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:59.749Z"
+    "updatedAt": "2026-08-14T15:15:39.696Z"
   },
   "11": {
     "lat": 34.818158,
@@ -100,7 +100,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:35:59.875Z"
+    "updatedAt": "2026-08-14T15:15:39.826Z"
   },
   "12": {
     "lat": 34.923937,
@@ -109,7 +109,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.003Z"
+    "updatedAt": "2026-08-14T15:15:39.969Z"
   },
   "13": {
     "lat": 34.7244,
@@ -118,7 +118,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.134Z"
+    "updatedAt": "2026-08-14T15:15:40.100Z"
   },
   "14": {
     "lat": 34.317019,
@@ -127,7 +127,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.261Z"
+    "updatedAt": "2026-08-14T15:15:40.232Z"
   },
   "15": {
     "lat": 34.805529,
@@ -136,7 +136,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.399Z"
+    "updatedAt": "2026-08-14T15:15:40.362Z"
   },
   "26": {
     "lat": 38.446645,
@@ -145,7 +145,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.530Z"
+    "updatedAt": "2026-08-14T15:15:40.492Z"
   },
   "27": {
     "lat": 37.228955,
@@ -154,7 +154,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.694Z"
+    "updatedAt": "2026-08-14T15:15:40.622Z"
   },
   "28": {
     "lat": 35.678604,
@@ -163,7 +163,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.820Z"
+    "updatedAt": "2026-08-14T15:15:40.753Z"
   },
   "41": {
     "lat": 38.214451,
@@ -172,7 +172,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:00.946Z"
+    "updatedAt": "2026-08-14T15:15:40.884Z"
   },
   "42": {
     "lat": 38.083811,
@@ -181,7 +181,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:01.071Z"
+    "updatedAt": "2026-08-14T15:15:41.014Z"
   },
   "43": {
     "lat": 37.814433,
@@ -192,7 +192,7 @@
       "광어"
     ],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:01.278Z"
+    "updatedAt": "2026-08-14T15:15:41.145Z"
   },
   "44": {
     "lat": 37.473349,
@@ -201,7 +201,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:01.589Z"
+    "updatedAt": "2026-08-14T15:15:41.278Z"
   },
   "45": {
     "lat": 37.286328,
@@ -210,7 +210,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:01.804Z"
+    "updatedAt": "2026-08-14T15:15:41.411Z"
   },
   "46": {
     "lat": 37.056758,
@@ -219,7 +219,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:01.929Z"
+    "updatedAt": "2026-08-14T15:15:41.541Z"
   },
   "51": {
     "lat": 35.059259,
@@ -228,7 +228,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:02.056Z"
+    "updatedAt": "2026-08-14T15:15:41.672Z"
   },
   "53": {
     "lat": 34.732946,
@@ -237,7 +237,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:02.182Z"
+    "updatedAt": "2026-08-14T15:15:41.803Z"
   },
   "56": {
     "lat": 34.724538,
@@ -246,7 +246,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:02.381Z"
+    "updatedAt": "2026-08-14T15:15:41.935Z"
   },
   "57": {
     "lat": 34.502644,
@@ -255,7 +255,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:02.677Z"
+    "updatedAt": "2026-08-14T15:15:42.066Z"
   },
   "58": {
     "lat": 34.160743,
@@ -264,7 +264,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:02.804Z"
+    "updatedAt": "2026-08-14T15:15:42.198Z"
   },
   "59": {
     "lat": 34.468699,
@@ -273,7 +273,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:02.931Z"
+    "updatedAt": "2026-08-14T15:15:42.329Z"
   },
   "60": {
     "lat": 34.595035,
@@ -282,7 +282,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.058Z"
+    "updatedAt": "2026-08-14T15:15:42.466Z"
   },
   "68": {
     "lat": 35.807174,
@@ -291,7 +291,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.185Z"
+    "updatedAt": "2026-08-14T15:15:42.597Z"
   },
   "69": {
     "lat": 36.124137,
@@ -300,7 +300,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.319Z"
+    "updatedAt": "2026-08-14T15:15:42.728Z"
   },
   "70": {
     "lat": 35.581064,
@@ -309,7 +309,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.445Z"
+    "updatedAt": "2026-08-14T15:15:42.860Z"
   },
   "101": {
     "lat": 38.210677,
@@ -318,7 +318,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.571Z"
+    "updatedAt": "2026-08-14T15:15:42.990Z"
   },
   "102": {
     "lat": 38.022548,
@@ -327,7 +327,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.697Z"
+    "updatedAt": "2026-08-14T15:15:43.121Z"
   },
   "103": {
     "lat": 37.767204,
@@ -336,7 +336,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.822Z"
+    "updatedAt": "2026-08-14T15:15:43.252Z"
   },
   "104": {
     "lat": 37.562017,
@@ -345,7 +345,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:03.948Z"
+    "updatedAt": "2026-08-14T15:15:43.382Z"
   },
   "105": {
     "lat": 37.435402,
@@ -354,7 +354,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:04.073Z"
+    "updatedAt": "2026-08-14T15:15:43.513Z"
   },
   "106": {
     "lat": 37.058242,
@@ -363,7 +363,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:04.198Z"
+    "updatedAt": "2026-08-14T15:15:43.643Z"
   },
   "107": {
     "lat": 36.511105,
@@ -372,7 +372,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:04.325Z"
+    "updatedAt": "2026-08-14T15:15:43.777Z"
   },
   "108": {
     "lat": 35.988113,
@@ -381,7 +381,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:04.451Z"
+    "updatedAt": "2026-08-14T15:15:43.908Z"
   },
   "109": {
     "lat": 35.804745,
@@ -390,7 +390,7 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:04.576Z"
+    "updatedAt": "2026-08-14T15:15:44.039Z"
   },
   "110": {
     "lat": 35.616733,
@@ -399,6 +399,6 @@
     "type": null,
     "targets": [],
     "isDeleted": false,
-    "updatedAt": "2026-08-10T08:36:04.702Z"
+    "updatedAt": "2026-08-14T15:15:44.171Z"
   }
 }

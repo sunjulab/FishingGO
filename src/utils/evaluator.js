@@ -261,11 +261,11 @@ export const calculateScoreDetails = (data, point = {}) => {
   const wave = (data.wave?.coastal !== undefined && !isNaN(parseFloat(data.wave.coastal))) ? parseFloat(data.wave.coastal) : 0.8;
   let wvScore = 0;
   // 파고(Maximum Wave) 기준 점수 (워킹 낚시 하드코어 최적화 반영)
-  if      (wave > 3.6) wvScore = -70;
-  else if (wave > 2.7) wvScore = -40;
-  else if (wave > 1.8) wvScore = -15;
-  else if (wave >= 1.2) wvScore = +5;
-  else if (wave >= 0.5) wvScore = 0;
+  if      (wave > 2.0) wvScore = -70;
+  else if (wave > 1.5) wvScore = -40;
+  else if (wave > 1.0) wvScore = -15;
+  else if (wave >= 0.6) wvScore = +5;
+  else if (wave >= 0.3) wvScore = 0;
   else                  wvScore = -5;
   if (wvScore !== 0) details.push({ factor: '파고', text: `${wave}m`, score: wvScore });
   score += wvScore;
@@ -370,7 +370,7 @@ export const evaluateFishingCondition = (data, point = {}) => {
       else       parts.push('좋은 컨디션. 집중하면 손맛 볼 수 있습니다.');
     } else if (score >= 50) {
       if (_sst < 12)   parts.push(`저수온 영향으로 ${_fish || '어류'} 입질이 간헐적입니다. 밑밥으로 유인하세요.`);
-      else if (_wave > 2.7) parts.push(`파고 ${_wave}m — 너울이 강해 갯바위 낚시가 불가능합니다.`);
+      else if (_wave > 1.5) parts.push(`파고 ${_wave}m — 너울이 강해 갯바위 낚시가 불가능합니다.`);
       else if (_phase.includes('조금') || _phase.includes('무시'))
         parts.push(`조금 물때로 ${_fish || '어류'} 입질이 뜸합니다. 인내심이 관건.`);
       else if (_fish) parts.push(`${_fish} 입질이 다소 예민한 상태입니다. 유인력 강한 미끼로 승부하세요.`);
@@ -382,7 +382,7 @@ export const evaluateFishingCondition = (data, point = {}) => {
         parts.push('조금·무시 물때 — 조류가 거의 없어 입질이 매우 드뭅니다.');
       else parts.push('전반적으로 낚시 조건이 나쁩니다. 기대치를 크게 낮추세요.');
     } else {
-      if (_wave > 3.6)   parts.push(`파고 ${_wave}m 너울 위험 — 방파제 접근 시 생명 위험! 즉시 철수!`);
+      if (_wave > 2.0)   parts.push(`파고 ${_wave}m 너울 위험 — 방파제 접근 시 생명 위험! 즉시 철수!`);
       else if (_wind > 8) parts.push(`풍속 ${_wind.toFixed(1)}m/s 초강풍 — 낚싯대가 부러집니다. 출조 절대 금지.`);
       else parts.push('출조 비권고. 기상 악화로 낚시가 불가능한 상황입니다.');
     }
