@@ -2470,7 +2470,8 @@ function getLunarDay() {
   // FIX-LUNAR v3: 바다타임 완벽 일치 (2026-07-14 = 음력 6월 1일)
   const anchor = new Date('2026-07-14T00:00:00+09:00');
   const anchorLunar = 1;
-  const diffDays = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
+  const diffFromAnchor = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
+  const diffDays = Math.floor(diffFromAnchor);
   const raw = anchorLunar + diffDays;
   const cycled = ((raw - 1) % 29.530588 + 29.530588) % 29.530588;
   return Math.floor(cycled) + 1; // 1~29
