@@ -175,7 +175,10 @@ export const getPointSpecificData = (point) => {
   const anchor = new Date('2026-07-14T00:00:00+09:00');
   const anchorLunar = 1;
   const diffFromAnchor = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
-  const rawLunar = anchorLunar + diffFromAnchor;
+  const diffDays = Math.floor(diffFromAnchor);
+  
+  // ✅ FIX: 시간을 제외한 순수 날짜 차이(diffDays)로 음력 계산하여 하루 중간에 물때가 바뀌는 버그 수정
+  const rawLunar = anchorLunar + diffDays;
   const cycled = ((rawLunar - 1) % 29.530588 + 29.530588) % 29.530588;
   const lunarDay = Math.floor(cycled) + 1;
 
@@ -196,7 +199,6 @@ export const getPointSpecificData = (point) => {
     'DT_0010': 260, 'DT_0011': 268, 'DT_0045': 275,
   };
   const obsId = point.obsCode || `LOC_${point.id}`;
-  const diffDays = Math.floor(diffFromAnchor);
   
   // ✅ 실측 물때 달력(TIDE_CALENDAR) 우선 적용 (KHOA API 대체용 캐시)
   if (TIDE_CALENDAR[obsId] && TIDE_CALENDAR[obsId][diffDays]) {
