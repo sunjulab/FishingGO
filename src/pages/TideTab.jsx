@@ -37,7 +37,7 @@ function fmtDate(d) {
   return d.getFullYear() + '년 ' + (d.getMonth()+1) + '월 ' + d.getDate() + '일(' + days[d.getDay()] + ')';
 }
 
-function TideGraph({ high, high2, low, low2, currentHour }) {
+function TideGraph({ high, high2, low, low2, currentHour, isToday }) {
   const W = 320, H = 130;
   const nowX = (currentHour / 24) * W;
   const timeToX = (t) => {
@@ -70,8 +70,8 @@ function TideGraph({ high, high2, low, low2, currentHour }) {
       {[0,6,12,18,24].map(h => (
         <text key={h} x={(h/24)*W} y={H+16} textAnchor='middle' fontSize='10' fill='#888'>{h}시</text>
       ))}
-      <line x1={nowX} y1={2} x2={nowX} y2={H} stroke='#ff5252' strokeWidth='1.5' strokeDasharray='4,3' />
-      <text x={nowX} y={-2} textAnchor='middle' fontSize='9' fill='#ff5252'>현재</text>
+      {isToday && <line x1={nowX} y1={2} x2={nowX} y2={H} stroke='#ff5252' strokeWidth='1.5' strokeDasharray='4,3' />}
+      {isToday && <text x={nowX} y={-2} textAnchor='middle' fontSize='9' fill='#ff5252'>현재</text>}
       {h1x != null && <circle cx={h1x} cy={13} r={5} fill='#e53935' />}
       {h2x != null && <circle cx={h2x} cy={13} r={5} fill='#e53935' />}
       {l1x != null && <circle cx={l1x} cy={H - 13} r={5} fill='#1565C0' />}
@@ -88,6 +88,7 @@ export default function TideTab() {
   const [marineData, setMarineData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dateOffset, setDateOffset] = useState(0);
+  const isToday = dateOffset === 0;
 
   useEffect(() => {
     try {
@@ -189,7 +190,7 @@ export default function TideTab() {
 
             {tideData && (
               <div style={card}>
-                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', color: '#1a1a2e' }}>📈 오늘 조석 그래프</div>
+                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', color: '#1a1a2e' }}>📈 {isToday ? '오늘' : ''} 조석 그래프</div>
                 <div style={{ padding: '8px 0 16px' }}>
                   <TideGraph
                     high={tideData.tide ? tideData.tide.high : null}
@@ -197,6 +198,7 @@ export default function TideTab() {
                     low={tideData.tide ? tideData.tide.low : null}
                     low2={tideData.tide ? tideData.tide.low2 : null}
                     currentHour={currentHour}
+                    isToday={isToday}
                   />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -219,7 +221,7 @@ export default function TideTab() {
 
             {fishingScore && (
               <div style={card}>
-                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px', color: '#1a1a2e' }}>⭐ 지금 낚시하면?</div>
+                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px', color: '#1a1a2e' }}>⭐ {isToday ? '지금' : '이 날'} 낚시하면?</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                   <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: scoreColor(fishingScore.score), display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#fff', flexShrink: 0 }}>
                     <div style={{ fontSize: '20px', fontWeight: '900', lineHeight: 1 }}>{fishingScore.score}</div>
@@ -247,14 +249,14 @@ export default function TideTab() {
 
             {tideData && (
               <div style={card}>
-                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px', color: '#1a1a2e' }}>📊 오늘 최적 낚시 타임</div>
+                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px', color: '#1a1a2e' }}>📊 {isToday ? '오늘' : ''} 최적 낚시 타임</div>
                 {[
                   { label: '새벽 04~06시', hour: 5, bonus: '간조 전 골든타임', base: 88 },
                   { label: '오전 10~12시', hour: 11, bonus: '만조 전후 활성화', base: 75 },
                   { label: '오후 16~18시', hour: 17, bonus: '간조 하강 구간', base: 82 },
                   { label: '야간 20~22시', hour: 21, bonus: '밤낚시 타임', base: 70 },
                 ].map(function(t, i) {
-                  var isNow = currentHour >= t.hour - 1 && currentHour <= t.hour + 1;
+                  var isNow = isToday && (currentHour >= t.hour - 1 && currentHour <= t.hour + 1);
                   var sc = Math.min(99, Math.max(50, t.base + (fishingScore ? fishingScore.score : 50) / 6));
                   return (
                     <div key={i} style={{ marginBottom: '8px' }}>
@@ -278,7 +280,7 @@ export default function TideTab() {
           <div>
             {loading && <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>🔄 날씨 정보 불러오는 중...</div>}
             <div style={Object.assign({}, card, { background: 'linear-gradient(135deg,#0B47A1,#1976D2)', color: '#fff' })}>
-              <div style={{ fontSize: '12px', opacity: 0.85 }}>{dateStr} {String(currentHour).padStart(2,'0')}:00 현재</div>
+              <div style={{ fontSize: '12px', opacity: 0.85 }}>{dateStr} {isToday ? String(currentHour).padStart(2,'0') + ':00 현재' : '예보'}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                 <div>
                   <div style={{ fontSize: '36px', fontWeight: '900' }}>{(weatherData && weatherData.currentTemp) ? weatherData.currentTemp : (tideData ? tideData.sst : '—')}°C</div>
@@ -340,7 +342,7 @@ export default function TideTab() {
               <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '6px' }}>📍 {selectedPoint ? selectedPoint.name : '—'}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
-                  <div style={{ fontSize: '13px', opacity: 0.8 }}>현재 조위</div>
+                  <div style={{ fontSize: '13px', opacity: 0.8 }}>{isToday ? '현재 조위' : '기준 조위'}</div>
                   <div style={{ fontSize: '32px', fontWeight: '900' }}>{tideData && tideData.tide ? tideData.tide.current_level : '—'}</div>
                 </div>
                 <div style={{ textAlign: 'right', fontSize: '12px', opacity: 0.85 }}>
@@ -358,7 +360,7 @@ export default function TideTab() {
 
             {tideData && (
               <div style={card}>
-                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px' }}>🕐 오늘 조석 상세</div>
+                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px' }}>🕐 {isToday ? '오늘' : '이 날의'} 조석 상세</div>
                 {[
                   { type: '만조', time: tideData.tide ? tideData.tide.high : null,  icon: '🔴', tc: '#b71c1c' },
                   { type: '간조', time: tideData.tide ? tideData.tide.low : null,   icon: '🔵', tc: '#0d47a1' },
