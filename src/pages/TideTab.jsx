@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Waves, Cloud, Wind, Anchor, Navigation, ChevronLeft, ChevronRight, MapPin, RefreshCw } from 'lucide-react';
+import { Waves, Cloud, Wind, Anchor, Navigation, ChevronLeft, ChevronRight, MapPin, RefreshCw, Search, X } from 'lucide-react';
 import { getPointSpecificData, ALL_FISHING_POINTS } from '../constants/fishingData';
 import { calculateScoreDetails } from '../utils/evaluator';
 import apiClient from '../api/index';
@@ -109,6 +109,9 @@ export default function TideTab() {
     setTimeout(() => { setLoading(false); }, 300);
   }, [selectedPoint]);
 
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+
   useEffect(() => {
     // 컴포넌트 첫 마운트 시에만 로딩 페이크
     const t = setTimeout(() => {}, 10);
@@ -134,8 +137,8 @@ export default function TideTab() {
     <div style={{ minHeight: '100vh', background: '#f5f7fa', paddingBottom: '80px' }}>
       <div style={{ background: 'linear-gradient(135deg,#0B47A1,#1565C0)', color: '#fff', padding: '12px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: '700' }}>
-            <MapPin size={16} /> {selectedPoint ? selectedPoint.name : '포인트 선택'}
+          <div onClick={() => setIsSearchOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}>
+            <MapPin size={16} /> {selectedPoint ? selectedPoint.name : '포인트 선택'} <Search size={14} style={{ opacity: 0.8, marginLeft: '4px' }} />
           </div>
           <button onClick={fetchWeather} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', padding: '6px 10px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
             <RefreshCw size={13} /> 새로고침
@@ -436,8 +439,32 @@ export default function TideTab() {
             })}
           </div>
         )}
-
       </div>
+
+      {/* 지역 검색 모달 */}
+      {isSearchOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#fff', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button onClick={() => setIsSearchOpen(false)} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer' }}><ChevronLeft size={24} color='#333' /></button>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <Search size={18} color='#888' style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input type='text' placeholder='항구, 방파제, 갯바위 검색' value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} style={{ width: '100%', padding: '10px 10px 10px 38px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', boxSizing: 'border-box' }} autoFocus />
+              {searchKeyword && <button onClick={() => setSearchKeyword('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', padding: 0 }}><X size={16} color='#bbb' /></button>}
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
+            {ALL_FISHING_POINTS.filter(p => p.name.includes(searchKeyword) || (p.region && p.region.includes(searchKeyword))).map((p, idx) => (
+              <div key={idx} onClick={() => { setSelectedPoint(p); localStorage.setItem('fishinggo_last_point', JSON.stringify(p)); setIsSearchOpen(false); setSearchKeyword(''); }} style={{ padding: '16px 0', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}>
+                <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e' }}>{p.name}</div>
+                <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>{p.region} · {p.type}</div>
+              </div>
+            ))}
+            {ALL_FISHING_POINTS.filter(p => p.name.includes(searchKeyword) || (p.region && p.region.includes(searchKeyword))).length === 0 && (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#888', fontSize: '14px' }}>검색 결과가 없습니다.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
