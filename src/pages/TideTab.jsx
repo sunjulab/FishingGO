@@ -102,19 +102,14 @@ export default function TideTab() {
     try { setTideData(getPointSpecificData(selectedPoint)); } catch(e) { console.error(e); }
   }, [selectedPoint]);
 
-  const fetchWeather = useCallback(async () => {
+  const fetchWeather = useCallback(() => {
+    // 실시간 날씨 API는 향후 VVIP 전용 또는 공공데이터포털 연동 시 확장 예정
+    // 현재는 getPointSpecificData()의 수학적 모델 기반 기상/해상 예측 데이터를 사용합니다.
     if (!selectedPoint) return;
     setLoading(true);
-    try {
-      const lat = selectedPoint.lat;
-      const lng = selectedPoint.lng;
-      const [wRes, mRes] = await Promise.allSettled([
-        apiClient.get('/api/weather?lat=' + lat + '&lng=' + lng),
-        apiClient.get('/api/marine?lat=' + lat + '&lng=' + lng),
-      ]);
-      if (wRes.status === 'fulfilled') setWeatherData(wRes.value?.data || null);
-      if (mRes.status === 'fulfilled') setMarineData(mRes.value?.data || null);
-    } catch(e) { console.error(e); } finally { setLoading(false); }
+    setTimeout(() => {
+       setLoading(false);
+    }, 300);
   }, [selectedPoint]);
 
   useEffect(() => { if (selectedPoint) fetchWeather(); }, [selectedPoint, fetchWeather]);
@@ -153,7 +148,7 @@ export default function TideTab() {
           var Icon = tab.icon;
           var isActive = activeTab === tab.id;
           return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: '0 0 auto', padding: '10px 16px', fontSize: '13px', fontWeight: isActive ? '800' : '500', color: isActive ? '#0B47A1' : '#666', borderBottom: isActive ? '2.5px solid #0B47A1' : '2.5px solid transparent', background: 'none', border: 'none', borderBottom: isActive ? '2.5px solid #0B47A1' : '2.5px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', marginBottom: '-2px' }}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: '0 0 auto', padding: '10px 16px', fontSize: '13px', fontWeight: isActive ? '800' : '500', color: isActive ? '#0B47A1' : '#666', borderBottom: isActive ? '2.5px solid #0B47A1' : '2.5px solid transparent', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', marginBottom: '-2px' }}>
               <Icon size={14} /> {tab.label}
             </button>
           );
