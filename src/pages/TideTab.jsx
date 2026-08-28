@@ -82,38 +82,38 @@ function TideGraph({ high, high2, low, low2, currentHour, isToday }) {
 
 export default function TideTab() {
   const [activeTab, setActiveTab] = useState('tide');
-  const [selectedPoint, setSelectedPoint] = useState(null);
-  const [tideData, setTideData] = useState(null);
-  const [weatherData, setWeatherData] = useState(null);
-  const [marineData, setMarineData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [dateOffset, setDateOffset] = useState(0);
-  const isToday = dateOffset === 0;
-
-  useEffect(() => {
+  const [selectedPoint, setSelectedPoint] = useState(function() {
     try {
       const saved = localStorage.getItem('fishinggo_last_point');
       const p = saved ? JSON.parse(saved) : null;
-      setSelectedPoint(p || ALL_FISHING_POINTS[0]);
-    } catch { setSelectedPoint(ALL_FISHING_POINTS[0]); }
-  }, []);
+      return p || ALL_FISHING_POINTS[0];
+    } catch { return ALL_FISHING_POINTS[0]; }
+  });
 
-  useEffect(() => {
-    if (!selectedPoint) return;
-    try { setTideData(getPointSpecificData(selectedPoint, dateOffset)); } catch(e) { console.error(e); }
+  const [dateOffset, setDateOffset] = useState(0);
+  const isToday = dateOffset === 0;
+
+  const tideData = useMemo(function() {
+    if (!selectedPoint) return null;
+    try { return getPointSpecificData(selectedPoint, dateOffset); } catch(e) { return null; }
   }, [selectedPoint, dateOffset]);
 
+  // JSX 렌더링 폴백(fallback)을 위해 변수 유지
+  const weatherData = null;
+  const marineData = null;
+  const [loading, setLoading] = useState(false);
+
   const fetchWeather = useCallback(() => {
-    // 실시간 날씨 API는 향후 VVIP 전용 또는 공공데이터포털 연동 시 확장 예정
-    // 현재는 getPointSpecificData()의 수학적 모델 기반 기상/해상 예측 데이터를 사용합니다.
     if (!selectedPoint) return;
     setLoading(true);
-    setTimeout(() => {
-       setLoading(false);
-    }, 300);
+    setTimeout(() => { setLoading(false); }, 300);
   }, [selectedPoint]);
 
-  useEffect(() => { if (selectedPoint) fetchWeather(); }, [selectedPoint, fetchWeather]);
+  useEffect(() => {
+    // 컴포넌트 첫 마운트 시에만 로딩 페이크
+    const t = setTimeout(() => {}, 10);
+    return () => clearTimeout(t);
+  }, []);
 
   const fishingScore = useMemo(() => {
     if (!tideData) return null;
