@@ -99,8 +99,8 @@ export default function TideTab() {
 
   useEffect(() => {
     if (!selectedPoint) return;
-    try { setTideData(getPointSpecificData(selectedPoint)); } catch(e) { console.error(e); }
-  }, [selectedPoint]);
+    try { setTideData(getPointSpecificData(selectedPoint, dateOffset)); } catch(e) { console.error(e); }
+  }, [selectedPoint, dateOffset]);
 
   const fetchWeather = useCallback(() => {
     // 실시간 날씨 API는 향후 VVIP 전용 또는 공공데이터포털 연동 시 확장 예정

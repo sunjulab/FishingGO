@@ -116,12 +116,14 @@ const REGION_TO_ZONE = {
 };
 
 
-export const getPointSpecificData = (point) => {
+export const getPointSpecificData = (point, dateOffset = 0) => {
   if (!point) return null;
   const reg = point.region || '남해';
 
+  const targetDate = new Date(Date.now() + dateOffset * 24 * 60 * 60 * 1000);
+
   // ✅ FIX: 4월 고정값 제거 → 현재 월 기준 계절 평균 수온/풍속 동적 적용
-  const currentMonth = new Date().getMonth(); // 0-indexed (0=1월, 5=6월)
+  const currentMonth = targetDate.getMonth(); // 0-indexed (0=1월, 5=6월)
   // 해역별 월별 평균 수온 (국립해양조사원 2020~2024 통계)
   const MONTHLY_SST = {
     '제주':  [15.5,15.0,16.5,18.5,21.5,24.5,27.0,28.5,26.5,23.5,19.5,16.5],
@@ -174,8 +176,9 @@ export const getPointSpecificData = (point) => {
   // FIX-LUNAR v3: 바다타임 완벽 일치 (2026-07-14 = 음력 6월 1일)
   const anchor = new Date('2026-07-14T00:00:00+09:00');
   const anchorLunar = 1;
-  const diffFromAnchor = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
+  const diffFromAnchor = (targetDate.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24);
   const diffDays = Math.floor(diffFromAnchor);
+
   
   // ✅ FIX: 시간을 제외한 순수 날짜 차이(diffDays)로 음력 계산하여 하루 중간에 물때가 바뀌는 버그 수정
   const rawLunar = anchorLunar + diffDays;
