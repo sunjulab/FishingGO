@@ -453,13 +453,13 @@ export default function TideTab() {
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
-            {ALL_FISHING_POINTS.filter(p => p.name.includes(searchKeyword) || (p.region && p.region.includes(searchKeyword))).map((p, idx) => (
+            {ALL_FISHING_POINTS.filter(p => { const kw = searchKeyword.replace(/\s+/g, '').toLowerCase(); return p.name.replace(/\s+/g, '').toLowerCase().includes(kw) || (p.region && p.region.replace(/\s+/g, '').toLowerCase().includes(kw)); }).map((p, idx) => (
               <div key={idx} onClick={() => { setSelectedPoint(p); localStorage.setItem('fishinggo_last_point', JSON.stringify(p)); setIsSearchOpen(false); setSearchKeyword(''); }} style={{ padding: '16px 0', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}>
                 <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a2e' }}>{p.name}</div>
                 <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>{p.region} · {p.type}</div>
               </div>
             ))}
-            {ALL_FISHING_POINTS.filter(p => p.name.includes(searchKeyword) || (p.region && p.region.includes(searchKeyword))).length === 0 && (
+            {ALL_FISHING_POINTS.filter(p => { const kw = searchKeyword.replace(/\s+/g, '').toLowerCase(); return p.name.replace(/\s+/g, '').toLowerCase().includes(kw) || (p.region && p.region.replace(/\s+/g, '').toLowerCase().includes(kw)); }).length === 0 && (
               <div style={{ padding: '40px 0', textAlign: 'center', color: '#888', fontSize: '14px' }}>검색 결과가 없습니다.</div>
             )}
           </div>
