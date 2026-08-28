@@ -10,7 +10,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
 
 import { GoogleOAuthProvider } from '@react-oauth/google'; // 구글 로그인 연동
-import { Home, Tv, Users, ShoppingBag, User, Anchor, Camera, Trophy, Bot } from 'lucide-react';
+import { Home, Tv, Users, Waves, User, Anchor, Camera, Trophy, Bot } from 'lucide-react';
+
 import Toast from './components/Toast';
 import { useToastStore } from './store/useToastStore';
 import { useUserStore, TIER_CONFIG, LEVEL_CONFIG, ADMIN_ID, ADMIN_EMAIL } from './store/useUserStore';
@@ -111,6 +112,8 @@ import PaymentHistory from './pages/PaymentHistory';
 import AdminDashboard from './pages/AdminDashboard';
 import UserProfile from './pages/UserProfile';
 import TideCalendar from './pages/TideCalendar';
+import TideTab from './pages/TideTab';
+
 import CatchUploadPage from './pages/CatchUploadPage';
 import CatchRankingPage from './pages/CatchRankingPage';
 import ContestPage from './pages/ContestPage';
@@ -174,7 +177,8 @@ function BackButtonHandler() {
   const location = useLocation();
 
   useEffect(() => {
-    const ROOT_PATHS = ['/', '/community', '/media', '/shop', '/mypage', '/catch-ranking', '/catch-upload', '/contest'];
+    const ROOT_PATHS = ['/', '/community', '/media', '/tide', '/shop', '/mypage', '/catch-ranking', '/catch-upload', '/contest'];
+
     const isRoot = ROOT_PATHS.includes(location.pathname);
 
     const handleBack = () => {
@@ -257,7 +261,8 @@ function BottomNav() {
     { path: '/',          name: '홈',      icon: Home },
     { path: '/media',     name: '낚시채널', icon: Tv },
     { path: '/community', name: '커뮤니티', icon: Users },
-    { path: '/shop',      name: '쇼핑',    icon: ShoppingBag },
+    { path: '/tide',      name: '물때',    icon: Waves },
+
     { path: '/mypage',    name: '마이',    icon: User },
   ];
 
@@ -610,7 +615,9 @@ export default function App() {
               <Route path="/" element={<MapHome />} />
               <Route path="/media" element={<MediaTab />} />
               <Route path="/community" element={<CommunityTab />} />
-              <Route path="/shop" element={<Shop />} />
+              <Route path="/tide" element={<TideTab />} />
+              <Route path="/shop" element={<TideTab />} />
+
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/write" element={<WritePost />} />
               <Route path="/create-crew" element={<CreateCrew />} />
