@@ -616,7 +616,8 @@ export default function App() {
               <Route path="/media" element={<MediaTab />} />
               <Route path="/community" element={<CommunityTab />} />
               <Route path="/tide" element={<TideTab />} />
-              <Route path="/shop" element={<TideTab />} />
+              <Route path="/shop" element={<Shop />} />
+
 
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/write" element={<WritePost />} />
