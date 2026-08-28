@@ -62,7 +62,7 @@ export default function TideCalendar() {
         const station = activeStation;
         // 앞으로 7일치 날짜 생성
         const dates = Array.from({ length: 7 }, (_, i) => {
-          const d = new Date(Date.now() + 9 * 60 * 60 * 1000); // KST Base
+          const d = new Date();
           d.setDate(d.getDate() + i);
           return d;
         });

@@ -50,7 +50,7 @@ function TideGraph({ high, high2, low, low2, currentHour, isToday }) {
     const arr = [];
     for (let i = 0; i <= 96; i++) {
       const x = (i / 96) * W;
-      const y = H / 2 - Math.sin((i / 96) * Math.PI * 2) * (H / 2 - 14);
+      const y = H / 2 - Math.sin((i / 96) * Math.PI * 4) * (H / 2 - 14);
       arr.push(x.toFixed(1) + ',' + y.toFixed(1));
     }
     return arr.join(' ');
@@ -388,7 +388,7 @@ export default function TideTab() {
                   {(tideData && tideData.tide && tideData.tide.phase && tideData.tide.phase.includes('사리'))
                     ? '사리 물때입니다. 조류가 강하게 흐르며 먹이활동이 매우 활발합니다. 무거운 채비로 조류를 버티며 공략하세요.'
                     : (tideData && tideData.tide && tideData.tide.phase && (tideData.tide.phase.includes('조금') || tideData.tide.phase.includes('무시')))
-                    ? '조금/무시 물때입니다. 조류가 약해 입질이 뜸할 수 있습니다. 가벌운 채비와 집어제로 유인 효과를 높이세요.'
+                    ? '조금/무시 물때입니다. 조류가 약해 입질이 뜸할 수 있습니다. 가벼운 채비와 집어제로 유인 효과를 높이세요.'
                     : (tideData && tideData.tide ? tideData.tide.phase : '현재') + ' 물때입니다. 간조 전후 2시간이 가장 입질이 활발한 골든 타임입니다.'}
                 </div>
               </div>
