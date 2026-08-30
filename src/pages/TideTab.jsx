@@ -3,6 +3,7 @@ import { Waves, Cloud, Wind, Anchor, Navigation, ChevronLeft, ChevronRight, MapP
 import { getPointSpecificData, ALL_FISHING_POINTS } from '../constants/fishingData';
 import { calculateScoreDetails } from '../utils/evaluator';
 import apiClient from '../api/index';
+import KakaoAdBanner from '../components/KakaoAdBanner';
 
 const SUB_TABS = [
   { id: 'tide',     label: '물때',      icon: Waves },
@@ -289,6 +290,8 @@ export default function TideTab() {
                 })}
               </div>
             )}
+            <KakaoAdBanner type='coupang' style={{ margin: '12px 0 0', borderRadius: '12px' }} />
+            <KakaoAdBanner type='ali' style={{ margin: '8px 0 4px', borderRadius: '12px' }} />
           </div>
         )}
 
@@ -325,6 +328,8 @@ export default function TideTab() {
                 </div>
               </div>
             )}
+            <KakaoAdBanner type='coupang' style={{ margin: '12px 0 0', borderRadius: '12px' }} />
+            <KakaoAdBanner type='ali' style={{ margin: '8px 0 4px', borderRadius: '12px' }} />
           </div>
         )}
 
@@ -362,6 +367,8 @@ export default function TideTab() {
                 </div>
               );
             })}
+            <KakaoAdBanner type='coupang' style={{ margin: '12px 0 0', borderRadius: '12px' }} />
+            <KakaoAdBanner type='ali' style={{ margin: '8px 0 4px', borderRadius: '12px' }} />
           </div>
         )}
 
@@ -426,6 +433,8 @@ export default function TideTab() {
                 <div style={{ fontSize: '12px', color: '#555', marginTop: '6px', lineHeight: 1.5 }}>간조 전후 30분은 갯바위 진출입 시 미끄럼 주의. 만조 시 갯바위 침수 가능성 확인 필수.</div>
               </div>
             </div>
+            <KakaoAdBanner type='coupang' style={{ margin: '12px 0 0', borderRadius: '12px' }} />
+            <KakaoAdBanner type='ali' style={{ margin: '8px 0 4px', borderRadius: '12px' }} />
           </div>
         )}
 
@@ -463,6 +472,8 @@ export default function TideTab() {
                 </div>
               );
             })}
+            <KakaoAdBanner type='coupang' style={{ margin: '12px 0 0', borderRadius: '12px' }} />
+            <KakaoAdBanner type='ali' style={{ margin: '8px 0 4px', borderRadius: '12px' }} />
           </div>
         )}
       </div>
