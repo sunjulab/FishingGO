@@ -7658,6 +7658,135 @@ app.get('/api/fishing-scores', (req, res) => {
   }
 });
 
+// ── 기상청 단기예보 시간대별 날씨 API ─────────────────────────────────────────
+// GET /api/weather/hourly?lat=37.5&lng=129.1
+// 반환: { hourly: [ { hour, temp, windSpeed, windDir, wave, sky, pty }, ... ] }
+const hourlyFcstCache = {}; // key: "nx_ny_date" -> { data, ts }
+
+app.get('/api/weather/hourly', async (req, res) => {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lng = parseFloat(req.query.lng);
+    if (!lat || !lng) return res.status(400).json({ error: 'lat, lng 필수' });
+
+    const KEY = process.env.KMA_KEY || process.env.KHOA_KEY;
+    const grid = dfs_xy_conv(lat, lng);
+    const kst = new Date(Date.now() + 9 * 3600 * 1000);
+    const dateStr = `${kst.getUTCFullYear()}${String(kst.getUTCMonth()+1).padStart(2,'0')}${String(kst.getUTCDate()).padStart(2,'0')}`;
+    const cacheKey = `${grid.x}_${grid.y}_${dateStr}`;
+
+    // 30분 캐시
+    if (hourlyFcstCache[cacheKey] && (Date.now() - hourlyFcstCache[cacheKey].ts) < 30 * 60 * 1000) {
+      return res.json(hourlyFcstCache[cacheKey].data);
+    }
+
+    // 기상청 단기예보 발표 시각 계산 (0200, 0500, 0800, 1100, 1400, 1700, 2000, 2300)
+    const FCST_HOURS = [2, 5, 8, 11, 14, 17, 20, 23];
+    const curHour = kst.getUTCHours();
+    let baseHour = FCST_HOURS.filter(h => h <= curHour).pop() ?? 23;
+    // 자정 이후 23시 발표 전에는 전날 23시 발표 사용
+    let baseDate = dateStr;
+    if (curHour < 2) {
+      baseHour = 23;
+      const yd = new Date(kst.getTime() - 24 * 3600 * 1000);
+      baseDate = `${yd.getUTCFullYear()}${String(yd.getUTCMonth()+1).padStart(2,'0')}${String(yd.getUTCDate()).padStart(2,'0')}`;
+    }
+    const baseTime = String(baseHour).padStart(2, '0') + '00';
+
+    // 수치 없을 때를 위한 fallback 생성 함수
+    function makeFallback(lat, lng) {
+      const zone = lng > 128.5 ? '동해' : lng > 126 ? '남해' : '서해';
+      const monthIdx = kst.getUTCMonth();
+      const sstTable = { '동해': [9,9,11,14,17,21,24,25,23,19,15,11], '남해': [11,11,13,16,19,23,26,27,25,21,17,12], '서해': [6,6,8,12,17,21,25,26,24,19,13,8] };
+      const waveTable = { '동해': 1.1, '남해': 0.7, '서해': 1.3 };
+      const baseTemp = sstTable[zone][monthIdx];
+      const baseWave = waveTable[zone];
+      return [0,3,6,9,12,15,18,21].map((h, i) => {
+        const cycle = Math.sin((h - 6) / 24 * Math.PI * 2);
+        const waveCycle = Math.sin((h - 9) / 24 * Math.PI * 2);
+        return {
+          hour: h,
+          temp: Math.max(5, +(baseTemp + cycle * 2.5).toFixed(1)),
+          windSpeed: Math.max(0.3, +(2.5 + cycle * 0.8).toFixed(1)),
+          windDir: ['N','NE','NE','E','SE','S','SW','W'][i],
+          wave: Math.max(0.1, +(baseWave + waveCycle * 0.2).toFixed(2)),
+          sky: 1, pty: 0,
+          isFallback: true
+        };
+      });
+    }
+
+    if (!KEY) {
+      const fallback = { hourly: makeFallback(lat, lng), source: 'fallback' };
+      hourlyFcstCache[cacheKey] = { data: fallback, ts: Date.now() };
+      return res.json(fallback);
+    }
+
+    try {
+      const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${encodeURIComponent(KEY)}&numOfRows=300&pageNo=1&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${grid.x}&ny=${grid.y}`;
+      const fcstRes = await axios.get(url, { timeout: 5000 });
+      const items = fcstRes.data?.response?.body?.items?.item;
+
+      if (!items || !Array.isArray(items)) throw new Error('API 응답 없음');
+
+      // 오늘 날짜 3시간 간격 데이터만 추출
+      const byHour = {};
+      for (const item of items) {
+        if (item.fcstDate !== dateStr) continue;
+        const h = parseInt(item.fcstTime.slice(0, 2));
+        if (![0,3,6,9,12,15,18,21].includes(h)) continue;
+        if (!byHour[h]) byHour[h] = {};
+        byHour[h][item.category] = item.fcstValue;
+      }
+
+      // 풍향 코드 → 문자열 변환
+      const degToDir = (deg) => {
+        const d = parseFloat(deg);
+        if (isNaN(d)) return 'N';
+        const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+        return dirs[Math.round(d / 22.5) % 16];
+      };
+
+      const hourly = [0,3,6,9,12,15,18,21].map(h => {
+        const d = byHour[h] || {};
+        return {
+          hour: h,
+          temp: d.TMP ? parseFloat(d.TMP) : null,
+          windSpeed: d.WSD ? parseFloat(d.WSD) : null,
+          windDir: d.VEC ? degToDir(d.VEC) : (d.VEC ? d.VEC : 'N'),
+          wave: d.WAV ? parseFloat(d.WAV) : null,
+          sky: d.SKY ? parseInt(d.SKY) : 1,
+          pty: d.PTY ? parseInt(d.PTY) : 0,
+          isFallback: false
+        };
+      });
+
+      // null 값은 인접 시간대 보간
+      ['temp','windSpeed','wave'].forEach(key => {
+        let lastVal = null;
+        hourly.forEach(h => { if (h[key] !== null) lastVal = h[key]; else if (lastVal !== null) h[key] = lastVal; });
+        lastVal = null;
+        for (let i = hourly.length - 1; i >= 0; i--) { if (hourly[i][key] !== null) lastVal = hourly[i][key]; else if (lastVal !== null) hourly[i][key] = lastVal; }
+        hourly.forEach(h => { if (h[key] === null) h[key] = 0; });
+      });
+
+      const result = { hourly, source: 'kma', baseDate, baseTime };
+      hourlyFcstCache[cacheKey] = { data: result, ts: Date.now() };
+      return res.json(result);
+
+    } catch(apiErr) {
+      logger.warn(`[WeatherHourly] KMA API 실패, fallback 사용: ${apiErr.message}`);
+      const fallback = { hourly: makeFallback(lat, lng), source: 'fallback' };
+      hourlyFcstCache[cacheKey] = { data: fallback, ts: Date.now() - 25 * 60 * 1000 }; // 5분 뒤 재시도
+      return res.json(fallback);
+    }
+
+  } catch(err) {
+    logger.error(`[WeatherHourly] 오류: ${err.message}`);
+    res.status(500).json({ error: '날씨 예보 조회 실패' });
+  }
+});
+
 // 제3자 이미지/MOF 스트리밍 프록시 (CORS/Mixed Content 우회)
 app.get('/api/weather/cctv/proxy', async (req, res) => {
   const { url } = req.query;

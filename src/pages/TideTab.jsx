@@ -98,25 +98,38 @@ export default function TideTab() {
     try { return getPointSpecificData(selectedPoint, dateOffset); } catch(e) { return null; }
   }, [selectedPoint, dateOffset]);
 
-  // JSX 렌더링 폴백(fallback)을 위해 변수 유지
   const weatherData = null;
   const marineData = null;
   const [loading, setLoading] = useState(false);
+  const [hourlyWeather, setHourlyWeather] = useState(null); // 기상청 시간대별 실측 예보
 
   const fetchWeather = useCallback(() => {
-    if (!selectedPoint) return;
+    if (!selectedPoint || !selectedPoint.lat || !selectedPoint.lng) return;
     setLoading(true);
-    setTimeout(() => { setLoading(false); }, 300);
+    const apiBase = 'https://fishing-go-backend.onrender.com';
+    fetch(`${apiBase}/api/weather/hourly?lat=${selectedPoint.lat}&lng=${selectedPoint.lng}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.hourly) setHourlyWeather(data.hourly);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [selectedPoint]);
+
+  useEffect(() => {
+    if (!selectedPoint) return;
+    const t = setTimeout(() => { fetchWeather(); }, 0);
+    return () => clearTimeout(t);
+  }, [selectedPoint, fetchWeather]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
 
   useEffect(() => {
-    // 컴포넌트 첫 마운트 시에만 로딩 페이크
     const t = setTimeout(() => {}, 10);
     return () => clearTimeout(t);
   }, []);
+
 
   const fishingScore = useMemo(() => {
     if (!tideData) return null;
@@ -317,20 +330,33 @@ export default function TideTab() {
 
         {activeTab === 'wind' && (
           <div>
-            <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '8px' }}>💨 {dateStr} 바람·파고</div>
+            <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '8px' }}>💨 {dateStr} 바람·파고
+              {loading && <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '8px' }}>불러오는 중...</span>}
+            </div>
             {[0,3,6,9,12,15,18,21].map(function(hour, i) {
+              var hw = hourlyWeather && hourlyWeather[i];
+              var windDir = hw ? hw.windDir : (tideData && tideData.wind ? tideData.wind.dir : 'NE');
+              var windSpd = hw ? hw.windSpeed : (tideData && tideData.wind ? tideData.wind.speed : '—');
+              var temp    = hw ? hw.temp      : (tideData ? tideData.sst : '—');
+              var wave    = hw ? hw.wave      : (tideData && tideData.wave ? tideData.wave.coastal : '—');
+              var skyIcon = hw ? (['☀️','🌤','⛅','🌥','☁️'][Math.min(4, Math.floor((hw.sky - 1) / 2))]) : '⛅';
+              if (hw && hw.pty === 1) skyIcon = '🌧';
+              if (hw && hw.pty === 3) skyIcon = '🌨';
+              if (hw && hw.pty === 2) skyIcon = '🌨';
+              var isFallback = hw && hw.isFallback;
               return (
                 <div key={i} style={Object.assign({}, card, { padding: '10px 12px', marginBottom: '6px' })}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 40px 40px 80px', gap: '6px', alignItems: 'center' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 40px 48px 80px', gap: '6px', alignItems: 'center' }}>
                     <span style={{ fontSize: '13px', fontWeight: '700', color: '#333' }}>{String(hour).padStart(2,'0')}시</span>
                     <div>
-                      <div style={{ fontSize: '12px', color: '#555' }}>{tideData && tideData.wind ? tideData.wind.dir : 'NE'}</div>
-                      <div style={{ fontSize: '13px', fontWeight: '700' }}>{tideData && tideData.wind ? tideData.wind.speed : '—'}m/s</div>
+                      <div style={{ fontSize: '12px', color: '#555' }}>{windDir}</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700' }}>{windSpd}m/s</div>
                     </div>
-                    <span style={{ fontSize: '20px' }}>⛅</span>
-                    <span style={{ fontSize: '13px', fontWeight: '700' }}>{tideData ? tideData.sst : '—'}°</span>
+                    <span style={{ fontSize: '20px' }}>{skyIcon}</span>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: temp >= 20 ? '#e53935' : '#1565C0' }}>{temp}°</span>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1565C0' }}>{tideData && tideData.wave ? tideData.wave.coastal : '—'}m</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1565C0' }}>{wave}m</div>
+                      {isFallback && <div style={{ fontSize: '9px', color: '#ccc' }}>추정</div>}
                     </div>
                   </div>
                 </div>
