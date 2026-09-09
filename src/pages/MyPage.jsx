@@ -106,24 +106,12 @@ export default function MyPage() {
     return () => { isMountedRef.current = false; };
   }, []);
 
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [newName, setNewName] = useState(user?.name || '');
-  const [error, setError] = useState('');
-
-  // 설정 대시보드 상태 — 안전한 기본값으로 초기화 후 user 로드 시 동기화
-  const [notiSetting, setNotiSetting] = useState(DEFAULT_NOTI);
-  // ✅ FONT-SCALE: 리렌더 트리거용 (CSS 변수 변경 후 활성 버튼 상태 즉시 반영)
-  const [fontScale, setFontScale] = useState(() => localStorage.getItem('fishinggo_fs') || '1');
-
   // ✅ LEGAL-EDIT: 사업자 법적고지 — localStorage 저장/불러오기 (마스터 수정 가능)
   const [legalInfo,    setLegalInfo]    = useState([]);
   const [legalLoading, setLegalLoading] = useState(true);
   const [editingLegal, setEditingLegal] = useState(false);
   const [legalDraft,   setLegalDraft]   = useState([]);
   const [legalSaving,  setLegalSaving]  = useState(false);
-
-  // NEW-B3: 카메라 오버레이 hover 상태 — DOM 직접 조작 anti-pattern 제거
 
   // ✅ LEGAL-FETCH: 마운트 시 법적고지 불러오기 (서버 → localStorage → 기본값 순서)
   useEffect(() => {
@@ -178,6 +166,19 @@ export default function MyPage() {
       .finally(() => { if (!cancelled) setLegalLoading(false); });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [newName, setNewName] = useState(user?.name || '');
+  const [error, setError] = useState('');
+
+  // 설정 대시보드 상태 — 안전한 기본값으로 초기화 후 user 로드 시 동기화
+  const [notiSetting, setNotiSetting] = useState(DEFAULT_NOTI);
+  // ✅ FONT-SCALE: 리렌더 트리거용 (CSS 변수 변경 후 활성 버튼 상태 즉시 반영)
+  const [fontScale, setFontScale] = useState(() => localStorage.getItem('fishinggo_fs') || '1');
+
+  // NEW-B3: 카메라 오버레이 hover 상태 — DOM 직접 조작 anti-pattern 제거
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
 
   // 보안 대시보드 상태
