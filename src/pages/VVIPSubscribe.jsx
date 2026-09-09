@@ -224,7 +224,7 @@ export default function VVIPSubscribe() {
   }, [iapReady]);
 
   /* ── VVIP 항구 데이터 (실시간 폴링) ──────────────────────────── */
-  const fetchHarborData = useCallback(async () => {
+  const fetchHarborData = useCallback(async function fetchHarborDataInner() {
     try {
       const res = await apiClient.get('/api/vvip/harbors');
       if (!isMountedRef.current) return; // ✅ BUG-V3 FIX: 응답 후 언마운트 체크
@@ -235,7 +235,7 @@ export default function VVIPSubscribe() {
       setTakenMap(map);
       // ✅ FIX-COLD-START: 서버 DB 로드 미완료(slotsReady:false) 시 2초 후 자동 재시도
       if (res.data.slotsReady === false) {
-        setTimeout(() => { if (isMountedRef.current) fetchHarborData(); }, 2000);
+        setTimeout(() => { if (isMountedRef.current) fetchHarborDataInner(); }, 2000);
       }
 
     } catch {} // ✅ 폴링 실패 시 old 데이터 유지 (네트워크 오류마다 깜빡임 방지)
@@ -376,7 +376,7 @@ export default function VVIPSubscribe() {
     } else {
       handleIAPPurchase(planKey);
     }
-  }, [user, isNative, addToast, storeReady, setUser]); // handleIAPPurchase는 클로저로 최신값 참조 (deps 불필요)
+  }, [user, isNative, addToast, storeReady, setUser, handleIAPPurchase]);
 
   /* ── IAP 결제 ─────────────────────────────────────────────── */
   const handleIAPPurchase = useCallback(async (planKey) => {
