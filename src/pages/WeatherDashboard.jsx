@@ -40,7 +40,7 @@ function buildMarineDisplay(data) {
     score = Number(data.fishingScore);
   } else if (rawFishingIndex != null) {
     // 공공 API 1~5 등급 → 0~100 역산: 1=95, 2=75, 3=55, 4=35, 5=15
-    const idxMap = { '1': 95, '2': 75, '3': 55, '4': 35, '5': 15, 1: 95, 2: 75, 3: 55, 4: 35, 5: 15 };
+    const idxMap = { '1': 95, '2': 75, '3': 55, '4': 35, '5': 15 };
     score = idxMap[rawFishingIndex] ?? 60;
   } else {
     score = 60; // 기본값
