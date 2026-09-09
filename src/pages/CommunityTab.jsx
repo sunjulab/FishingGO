@@ -22,7 +22,7 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ✅ CACHE-FIX: 모듈레벨 캐시 — 탭 재진입 시 스켈레톤 없이 즉시 이전 데이터 표시
 // 언마운트/재마운트(뒤로가기 후 재진입) 시 데이터가 이미 있으면 loading=false로 시작
-let _communityCache = { business: [], crews: [], notices: [], stories: [] };
+let _communityCache = { business: [], crews: [], notices: [], stories: [], posts: [], postsPage: 1 };
 
 const isVideoUrl = (s) => typeof s === 'string' && (s.match(/\.(mp4|mov|webm)$/i) || s.includes('video/upload'));
 
@@ -174,7 +174,7 @@ export default function CommunityTab() {
 
   // ✅ BUG-3 FIX: user 변경 시 커뮤니티 캐시 초기화 (로그아웃/다른 계정 로그인 시 데이터 오염 방지)
   useEffect(() => {
-    _communityCache = { business: [], crews: [], notices: [], stories: [] };
+    _communityCache = { business: [], crews: [], notices: [], stories: [], posts: [], postsPage: 1 };
   }, [user?.email]);
 
   // ✅ BUG-4 FIX: blockedUsersRef 동기화
@@ -232,7 +232,7 @@ export default function CommunityTab() {
 
   const addToast = useToastStore((state) => state.addToast);
 
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState(_communityCache.posts || []);
   const [likedPosts, setLikedPosts] = useState(() => {
     try { return JSON.parse(localStorage.getItem('community_liked_posts') || '{}'); } catch { return {}; }
   });
@@ -240,7 +240,7 @@ export default function CommunityTab() {
   const [openCategory, setOpenCategory] = useState('전체'); // 오픈게시판 카테고리 필터
   const [searchQuery, setSearchQuery] = useState('');    // 검색어 (입력값)
   const debouncedSearch = useDebounce(searchQuery, 350); // 실제 API 호출에 사용
-  const [page, setPage] = useState(1);                   // 현재 페이지
+  const [page, setPage] = useState(_communityCache.postsPage || 1);                   // 현재 페이지
   const [totalPages, setTotalPages] = useState(1);       // 전체 페이지 수
   const [loadingMore, setLoadingMore] = useState(false); // 더보기 로딩
   // ✅ INSTA-P1: 그리드/피드 전환 + 인기순 정렬
@@ -354,6 +354,7 @@ export default function CommunityTab() {
 
 
   const [noticePosts, setNoticePosts] = useState(_communityCache.notices);
+  const [loadingPosts, setLoadingPosts] = useState(_communityCache.posts.length === 0);
   const [loading, setLoading] = useState(_communityCache.business.length === 0 && _communityCache.crews.length === 0);
 
   // ✅ 크루 검색 필터 — 이름·오너명 부분일치 (대소문자 무시)
@@ -413,6 +414,7 @@ export default function CommunityTab() {
   // 게시글 로드 (페이지네이션 + 검색 지원)
   // ✅ 25TH-C2: React.useCallback → useCallback (7TH-B3 named import 패턴 통일)
   const fetchPosts = useCallback(async (pageNum = 1, append = false) => {
+    if (pageNum === 1 && !append) setLoadingPosts(true);
     try {
       const params = new URLSearchParams();
       params.set('page', pageNum);
@@ -429,9 +431,20 @@ export default function CommunityTab() {
       const blocked = blockedUsersRef.current; // ✅ BUG-4 FIX: ref에서 읽어 deps 순환 방지
       const filtered = Array.isArray(newPosts) ? newPosts.filter(p => !blocked.includes(p.author)) : [];
       if (append) {
-        setPosts(prev => [...prev, ...filtered]);
+        setPosts(prev => {
+          const np = [...prev, ...filtered];
+          if (openCategory === '전체' && !debouncedSearch.trim() && sortMode !== 'popular') {
+            _communityCache.posts = np;
+            _communityCache.postsPage = pageNum;
+          }
+          return np;
+        });
       } else {
         setPosts(filtered);
+        if (openCategory === '전체' && !debouncedSearch.trim() && sortMode !== 'popular') {
+          _communityCache.posts = filtered;
+          _communityCache.postsPage = pageNum;
+        }
       }
       setTotalPages(data.totalPages || 1);
       setPage(pageNum);
@@ -440,7 +453,7 @@ export default function CommunityTab() {
       if (!import.meta.env.PROD) console.error('Posts fetch error:', err);
     } finally {
       // 1페이지 로드 완료 시 초기 로딩 해제 (append=true인 무한스크롤은 제외)
-      if (pageNum === 1 && !append && isMountedRef.current) setLoading(false); // ✅ BUG-CT01 FIX
+      if (pageNum === 1 && !append && isMountedRef.current) { setLoading(false); setLoadingPosts(false); } // ✅ BUG-CT01 FIX
     }
   }, [openCategory, debouncedSearch, sortMode]); // ✅ BUG-4 FIX: user?.blockedUsers 제거 → blockedUsersRef.current 참조로 변경
 
@@ -1006,7 +1019,7 @@ export default function CommunityTab() {
 
       {/* 탭 내용 렌더링 영역 */}
       <div style={{ padding: activeTab === 'ranking' ? '0' : '16px' }}>
-        {loading && activeTab !== 'ranking' ? (
+        {(activeTab === 'open' ? loadingPosts : loading) && activeTab !== 'ranking' ? (
           <div style={{ padding: '16px' }}><SkeletonCard count={5} /></div>
         ) : activeTab === 'ranking' ? (
           <Suspense fallback={<div style={{padding:'32px',textAlign:'center'}}>로딩 중...</div>}>
@@ -1092,7 +1105,7 @@ export default function CommunityTab() {
             )}
 
 
-            {posts.length === 0 && !loading && (
+            {posts.length === 0 && !loadingPosts && (
               <div style={{ textAlign: 'center', padding: '48px 20px', color: '#AAB0BE' }}>
                 <div style={{ fontSize: `calc(40px * var(--fs, 1))`, marginBottom: '12px' }}>🎣</div>
                 <div style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '800', marginBottom: '6px', color: '#555' }}>아직 게시글이 없습니다</div>
