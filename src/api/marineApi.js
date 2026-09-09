@@ -200,7 +200,7 @@ export const fetchWaterTemp = async (obsCode, date) => {
   if (!data) return '-';
   // 가장 최근 관측값 (배열 마지막)
   const last = data[data.length - 1];
-  const temp = last?.water_temp ?? last?.waterTemp ?? null;
+  const temp = last?.wtem ?? last?.water_temp ?? last?.waterTemp ?? null;
   return temp !== null && temp !== undefined ? String(temp) : '-';
 };
 

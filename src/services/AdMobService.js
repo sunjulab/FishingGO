@@ -109,6 +109,8 @@ function showWebRewardedAd(onRewarded, onFailed, onNoAd) {
 export async function showRewardedAd(onRewarded, onFailed) {
   // ── 1. 네이티브 앱 (Android/iOS Capacitor) ──
   if (isNative() && AdMob) {
+    let rewardListener = null;
+    let closeListener = null;
     try {
       const options = {
         adId: ADMOB_CONFIG.REWARDED_ID,
@@ -121,21 +123,21 @@ export async function showRewardedAd(onRewarded, onFailed) {
       let rewarded = false;
 
       // 보상 수령 리스너
-      const rewardListener = await AdMob.addListener(
+      rewardListener = await AdMob.addListener(
         'onRewardedVideoAdReward',
         (reward) => {
           if (!import.meta.env.PROD) console.log('[AdMob] 보상 수령:', reward);
           rewarded = true;
-          rewardListener.remove();
+          rewardListener?.remove();
           onRewarded?.(reward);
         }
       );
 
       // 광고 종료(스킵/닫기) 리스너
-      const closeListener = await AdMob.addListener(
+      closeListener = await AdMob.addListener(
         'onRewardedVideoAdDismissed',
         () => {
-          closeListener.remove();
+          closeListener?.remove();
           // ✅ 닫힐 때 rewardListener도 안전하게 제거 (rewarded=true면 이미 제거됐으나 중복 호출 무해)
           if (!rewarded) {
             rewardListener?.remove();
