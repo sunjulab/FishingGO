@@ -9,40 +9,40 @@ const REGIONS = {
   west: {
     label: '서해',
     stations: [
-      { id: 'DT_0001', name: '인천 인근' },
-      { id: 'DT_0002', name: '평택 인근' },
-      { id: 'DT_0025', name: '보령 인근' },
-      { id: 'DT_0018', name: '군산 인근' },
-      { id: 'DT_0007', name: '목포 인근' },
+      { id: 'KHOA_DT_0001', name: '인천 인근' },
+      { id: 'KHOA_DT_0002', name: '평택 인근' },
+      { id: 'KHOA_DT_0025', name: '보령 인근' },
+      { id: 'KHOA_DT_0018', name: '군산 인근' },
+      { id: 'KHOA_DT_0007', name: '목포 인근' },
     ]
   },
   south: {
     label: '남해',
     stations: [
-      { id: 'DT_0005', name: '부산 인근' },
-      { id: 'DT_0014', name: '통영 인근' },
-      { id: 'DT_0016', name: '여수 인근' },
-      { id: 'DT_0028', name: '거문도 인근' },
-      { id: 'DT_0027', name: '완도 인근' },
+      { id: 'KHOA_DT_0005', name: '부산 인근' },
+      { id: 'KHOA_DT_0014', name: '통영 인근' },
+      { id: 'KHOA_DT_0016', name: '여수 인근' },
+      { id: 'KHOA_DT_0031', name: '거문도 인근' },
+      { id: 'KHOA_DT_0027', name: '완도 인근' },
     ]
   },
   east: {
     label: '동해',
     stations: [
-      { id: 'DT_0012', name: '속초 인근' },
-      { id: 'DT_0006', name: '묵호 인근' },
-      { id: 'DT_0036', name: '울릉도 인근' },
-      { id: 'DT_0013', name: '후포 인근' },
-      { id: 'DT_0020', name: '울산 인근' },
+      { id: 'KHOA_DT_0012', name: '속초 인근' },
+      { id: 'KHOA_DT_0006', name: '묵호 인근' },
+      { id: 'KHOA_DT_0013', name: '울릉도 인근' },
+      { id: 'KHOA_DT_0011', name: '후포 인근' },
+      { id: 'KHOA_DT_0020', name: '울산 인근' },
     ]
   },
   jeju: {
     label: '제주',
     stations: [
-      { id: 'DT_0011', name: '성산포 인근' },
-      { id: 'DT_0010', name: '서귀포 인근' },
-      { id: 'DT_0004', name: '제주 인근' },
-      { id: 'DT_0009', name: '모슬포 인근' },
+      { id: 'KHOA_DT_0022', name: '성산포 인근' },
+      { id: 'KHOA_DT_0010', name: '서귀포 인근' },
+      { id: 'KHOA_DT_0004', name: '제주 인근' },
+      { id: 'KHOA_DT_0023', name: '모슬포 인근' },
     ]
   }
 };

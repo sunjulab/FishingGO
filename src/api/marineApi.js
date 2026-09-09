@@ -154,6 +154,11 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
 
 // 프론트엔드 컴포넌트에서 넘기는 obsCode는 실제로는 KMA(기상청) 코드이므로 KHOA 코드로 변환
 function getKhoaObsCode(kmaCode) {
+  // ✅ 직접 KHOA 코드를 사용할 수 있도록 접두사(KHOA_) 지원
+  if (kmaCode && kmaCode.startsWith('KHOA_')) {
+    return kmaCode.replace('KHOA_', '');
+  }
+
   const kmaStation = KHOA_OBSERVATORIES.find(s => s.id === kmaCode);
   if (!kmaStation) return kmaCode;
   
