@@ -103,6 +103,7 @@ export default function TideTab() {
   const marineData = null;
   const [loading, setLoading] = useState(false);
   const [hourlyWeather, setHourlyWeather] = useState(null); // 기상청 시간대별 실측 예보
+  const [khoaTide, setKhoaTide] = useState(null); // KHOA 실측 조석 데이터
 
   const fetchWeather = useCallback(() => {
     if (!selectedPoint || !selectedPoint.lat || !selectedPoint.lng) return;
@@ -122,6 +123,22 @@ export default function TideTab() {
     const t = setTimeout(() => { fetchWeather(); }, 0);
     return () => clearTimeout(t);
   }, [selectedPoint, fetchWeather]);
+
+  // ✅ KHOA 조석예보 API: 실측 만조/간조 시간 (fallback: tideData.tide)
+  useEffect(() => {
+    if (!selectedPoint || !selectedPoint.obsCode) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setKhoaTide(null);
+    var d = new Date();
+    d.setDate(d.getDate() + dateOffset);
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth()+1).padStart(2,'0');
+    var dd = String(d.getDate()).padStart(2,'0');
+    var dateStr = yyyy + mm + dd;
+    apiClient.get('/api/tide/obs?obsCode=' + selectedPoint.obsCode + '&date=' + dateStr)
+      .then(function(res) { if (res.data && res.data.high) setKhoaTide(res.data); })
+      .catch(function() { /* fallback to tideData */ });
+  }, [selectedPoint, dateOffset]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -210,10 +227,10 @@ export default function TideTab() {
                 <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', color: '#1a1a2e' }}>📈 {isToday ? '오늘' : ''} 조석 그래프</div>
                 <div style={{ padding: '8px 0 16px' }}>
                   <TideGraph
-                    high={tideData.tide ? tideData.tide.high : null}
-                    high2={tideData.tide ? tideData.tide.high2 : null}
-                    low={tideData.tide ? tideData.tide.low : null}
-                    low2={tideData.tide ? tideData.tide.low2 : null}
+                    high={khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : null)}
+                    high2={khoaTide ? khoaTide.high2 : (tideData && tideData.tide ? tideData.tide.high2 : null)}
+                    low={khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : null)}
+                    low2={khoaTide ? khoaTide.low2 : (tideData && tideData.tide ? tideData.tide.low2 : null)}
                     currentHour={currentHour}
                     isToday={isToday}
                   />
