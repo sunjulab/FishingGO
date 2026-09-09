@@ -234,6 +234,8 @@ export default function MediaTab() {
 
   const handleChipClick = (chip) => { loadUnified(chip); };
 
+  useEffect(() => { loadUnified('전체'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // VideoCard, SectionHeader → 모듈 레벨 컴포넌트 (위로 이동됨 — 렌더마다 재생성 방지)
 
   return (
@@ -398,7 +400,3 @@ export default function MediaTab() {
     </div>
   );
 }
-
-  useEffect(() => { loadUnified('전체'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── 통합 피드 로드 ────────────────────────────────────────────────────

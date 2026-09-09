@@ -1022,7 +1022,7 @@ export default function CommunityTab() {
                 .replace(/[━─=\-]{3,}/g, '')           // ━━━ 등 구분선 제거
                 .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // 이모지 제거
                 .replace(/[\u2600-\u27BF]/gu, '')       // 기타 특수문자 제거
-                .replace(/[■□●○✅✔️❌⚠️📌📢📍]/g, '')   // 특수 마크 제거
+                .replace(/(?:■|□|●|○|✅|✔️|❌|⚠️|📌|📢|📍)/gu, '')   // 특수 마크 제거
                 .split('\n')
                 .map(l => l.trim())
                 .filter(l => l.length > 2)              // 2자 이하 짧은 줄 제거

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs */
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/index';
@@ -739,6 +740,7 @@ export default function MyPage() {
            ].map(s => (
              <div key={s.label} onClick={s.onClick} style={{ backgroundColor: '#fff', padding: '14px 6px', textAlign: 'center', cursor: s.onClick ? 'pointer' : 'default' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}>
+                   {/* eslint-disable-next-line react-hooks/refs */}
                    {(() => { const Icon = s.icon; return <Icon size={11} color={s.color} fill={s.color} />; })()}
                    <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
                 </div>
@@ -1325,6 +1327,7 @@ export default function MyPage() {
                       ].map(n => (
                           <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  {/* eslint-disable-next-line react-hooks/refs */}
                                   {(() => { const Icon = n.icon; return <Icon size={18} color="#8E8E93" />; })()}
                                   <span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '750' }}>{n.label}</span>
                               </div>

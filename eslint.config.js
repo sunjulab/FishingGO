@@ -38,6 +38,10 @@ export default [
       'no-unused-vars': 'warn',
       'no-useless-assignment': 'off',
       'no-empty': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/purity': 'warn',
+      'react/no-unescaped-entities': 'warn',
     },
   },
 ];

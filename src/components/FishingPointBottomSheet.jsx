@@ -1080,6 +1080,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             {/* 3. B2B 로컬 입점 매장 광고 (지도 위치 기반 노른자위 광고 지면) */}
             {/* ✅ 25TH-B3: /api/ads/local?stationId= 실 API 연동 전까지 더미 플레이스홀더 숨김 처리 (3RD-C8 TODO)
                            실제 제휴 API 연동 완료 후 아래 false → localAd 조건으로 교체 */}
+            {/* eslint-disable-next-line no-constant-condition */}
             {false ? (
               <div style={{ marginTop: '8px', backgroundColor: '#FFF4E5', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', border: '1px solid #FFE0B2', boxShadow: '0 4px 10px rgba(255, 152, 0, 0.1)' }}>
                 <div style={{ width: '48px', height: '48px', backgroundColor: '#FFB74D', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(24px * var(--fs, 1))`, flexShrink: 0 }}>

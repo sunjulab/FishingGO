@@ -299,23 +299,6 @@ export default function LoginPage() {
     }
     navigate('/');
   };
-  // Naver callback handler
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get('access_token');
-      if (accessToken) {
-        window.history.replaceState(null, '', window.location.pathname);
-        setLoading(true);
-        apiClient.post('/api/auth/naver', { access_token: accessToken })
-          .then(res => onLoginSuccess(res.data))
-          .catch(err => addToast(err.response?.data?.error || '네이버 로그인 실패', 'error'))
-          .finally(() => setLoading(false));
-      }
-    }
-  }, []);
-
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -375,6 +358,23 @@ export default function LoginPage() {
   const [nameChecked, setNameChecked] = useState(null);
   const [loading, setLoading]         = useState(false);
   const [findModal, setFindModal]     = useState(null); // null | 'findId' | 'findPw'
+  // Naver callback handler
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        window.history.replaceState(null, '', window.location.pathname);
+        setLoading(true);
+        apiClient.post('/api/auth/naver', { access_token: accessToken })
+          .then(res => onLoginSuccess(res.data))
+          .catch(err => addToast(err.response?.data?.error || '네이버 로그인 실패', 'error'))
+          .finally(() => setLoading(false));
+      }
+    }
+  }, []);
+
 
 
   const checkId = async () => {

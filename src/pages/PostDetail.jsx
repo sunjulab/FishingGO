@@ -204,7 +204,7 @@ export default function PostDetail() {
       .then(res => { if (!cancelled && res.data.products?.length) setCoupangProducts(res.data.products.slice(0, 5)); })
       .catch(() => {}); // 실패해도 UI에 영향 없음
     return () => { cancelled = true; }; // ✅ BUG-PD03 FIX
-  }, [String(post?._id)]); // eslint-disable-line react-hooks/exhaustive-deps // ✅ ID-FIX: ObjectId → string 비교
+  }, [String(post?._id)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLike = async () => {
     if (user?.id === 'GUEST') { addToast('로그인이 필요한 기능입니다.', 'error'); return; }
