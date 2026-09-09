@@ -1,4 +1,3 @@
-cordova.define("cordova-plugin-purchase.CdvPurchase", function(require, exports, module) { 
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -9288,4 +9287,3 @@ var CdvPurchase;
     }
     CdvPurchase.VerifiedReceipt = VerifiedReceipt;
 })(CdvPurchase || (CdvPurchase = {}));
-});
