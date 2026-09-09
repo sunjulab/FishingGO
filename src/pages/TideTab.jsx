@@ -127,7 +127,6 @@ export default function TideTab() {
   // ✅ KHOA 조석예보 API: 실측 만조/간조 시간 (fallback: tideData.tide)
   useEffect(() => {
     if (!selectedPoint || !selectedPoint.obsCode) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setKhoaTide(null);
     var d = new Date();
     d.setDate(d.getDate() + dateOffset);
@@ -237,10 +236,10 @@ export default function TideTab() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {[
-                    { label: '🔴 만조', time: tideData.tide ? tideData.tide.high : null,  bg: '#ffebee', tc: '#b71c1c' },
-                    { label: '🔵 간조', time: tideData.tide ? tideData.tide.low : null,   bg: '#e3f2fd', tc: '#0d47a1' },
-                    { label: '🔴 만조 2', time: tideData.tide ? tideData.tide.high2 : null, bg: '#ffebee', tc: '#b71c1c' },
-                    { label: '🔵 간조 2', time: tideData.tide ? tideData.tide.low2 : null,  bg: '#e3f2fd', tc: '#0d47a1' },
+                    { label: '🔴 만조', time: khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : null),  bg: '#ffebee', tc: '#b71c1c' },
+                    { label: '🔵 간조', time: khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : null),   bg: '#e3f2fd', tc: '#0d47a1' },
+                    { label: '🔴 만조 2', time: khoaTide ? khoaTide.high2 : (tideData && tideData.tide ? tideData.tide.high2 : null), bg: '#ffebee', tc: '#b71c1c' },
+                    { label: '🔵 간조 2', time: khoaTide ? khoaTide.low2 : (tideData && tideData.tide ? tideData.tide.low2 : null),  bg: '#e3f2fd', tc: '#0d47a1' },
                   ].filter(function(r){ return !!r.time; }).map(function(r, i) {
                     return (
                       <div key={i} style={{ background: r.bg, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
@@ -399,8 +398,8 @@ export default function TideTab() {
                   <div style={{ fontSize: '32px', fontWeight: '900' }}>{tideData && tideData.tide ? tideData.tide.current_level : '—'}</div>
                 </div>
                 <div style={{ textAlign: 'right', fontSize: '12px', opacity: 0.85 }}>
-                  <div>다음 만조: {tideData && tideData.tide ? tideData.tide.high : '—'}</div>
-                  <div>다음 간조: {tideData && tideData.tide ? tideData.tide.low : '—'}</div>
+                  <div>다음 만조: {khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : '—')}</div>
+                  <div>다음 간조: {khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : '—')}</div>
                 </div>
               </div>
               <div style={{ marginTop: '12px' }}>
@@ -415,10 +414,10 @@ export default function TideTab() {
               <div style={card}>
                 <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px' }}>🕐 {isToday ? '오늘' : '이 날의'} 조석 상세</div>
                 {[
-                  { type: '만조', time: tideData.tide ? tideData.tide.high : null,  icon: '🔴', tc: '#b71c1c' },
-                  { type: '간조', time: tideData.tide ? tideData.tide.low : null,   icon: '🔵', tc: '#0d47a1' },
-                  { type: '만조 2', time: tideData.tide ? tideData.tide.high2 : null, icon: '🔴', tc: '#b71c1c' },
-                  { type: '간조 2', time: tideData.tide ? tideData.tide.low2 : null,  icon: '🔵', tc: '#0d47a1' },
+                  { type: '만조', time: khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : null),  icon: '🔴', tc: '#b71c1c' },
+                  { type: '간조', time: khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : null),   icon: '🔵', tc: '#0d47a1' },
+                  { type: '만조 2', time: khoaTide ? khoaTide.high2 : (tideData && tideData.tide ? tideData.tide.high2 : null), icon: '🔴', tc: '#b71c1c' },
+                  { type: '간조 2', time: khoaTide ? khoaTide.low2 : (tideData && tideData.tide ? tideData.tide.low2 : null),  icon: '🔵', tc: '#0d47a1' },
                 ].filter(function(r){ return !!r.time; }).map(function(r, i) {
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
