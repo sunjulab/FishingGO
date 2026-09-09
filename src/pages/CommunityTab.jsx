@@ -243,8 +243,8 @@ export default function CommunityTab() {
   const [page, setPage] = useState(_communityCache.postsPage || 1);                   // 현재 페이지
   const [totalPages, setTotalPages] = useState(1);       // 전체 페이지 수
   const [loadingMore, setLoadingMore] = useState(false); // 더보기 로딩
-  // ✅ INSTA-P1: 그리드/피드 전환 + 인기순 정렬
-  const [viewMode, setViewMode] = useState('feed');
+  // ✅ INSTA-P1: 그리드/피드 뷰 토글 (기본값 그리드로 변경 + 유저 선호 저장)
+  const [viewMode, setViewMode] = useState(localStorage.getItem('fishingGramViewMode') || 'grid');
   const [sortMode, setSortMode] = useState('latest');
   const [expandedPostId, setExpandedPostId] = useState(null);
   const [slideIndexMap, setSlideIndexMap] = useState({});
@@ -1003,7 +1003,13 @@ export default function CommunityTab() {
             </div>
             {/* 뷰모드 전환 */}
             <button
-              onClick={() => setViewMode(v => v === 'feed' ? 'grid' : 'feed')}
+              onClick={() => {
+                setViewMode(v => {
+                  const next = v === 'feed' ? 'grid' : 'feed';
+                  localStorage.setItem('fishingGramViewMode', next);
+                  return next;
+                });
+              }}
               style={{
                 background: 'none', border: '1px solid #E5E5EA', borderRadius: '8px',
                 padding: '5px 10px', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer',
