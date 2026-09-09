@@ -580,8 +580,6 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
   }, [selectedPoint?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // ✅ 3RD-B8: addToast는 store 함수로 안정적 — selectedPoint?.id만으로 deps 제한 안전
 
-  if (!selectedPoint) return null;
-
   // ✅ 3RD-B7: AI 낚시 컨디션 연산 IIFE → useMemo — 매 렌더마다 재계산 방지
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fishingCondition = useMemo(
@@ -597,6 +595,8 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fishingCondition, selectedPoint?.id]);
+
+  if (!selectedPoint) return null;
 
   return (
     <div style={{ padding: '0', backgroundColor: '#fff', borderRadius: '24px 24px 0 0', height: '100%' }}>
@@ -1080,7 +1080,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             {/* 3. B2B 로컬 입점 매장 광고 (지도 위치 기반 노른자위 광고 지면) */}
             {/* ✅ 25TH-B3: /api/ads/local?stationId= 실 API 연동 전까지 더미 플레이스홀더 숨김 처리 (3RD-C8 TODO)
                            실제 제휴 API 연동 완료 후 아래 false → localAd 조건으로 교체 */}
-            {false && (
+            {false ? (
               <div style={{ marginTop: '8px', backgroundColor: '#FFF4E5', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', border: '1px solid #FFE0B2', boxShadow: '0 4px 10px rgba(255, 152, 0, 0.1)' }}>
                 <div style={{ width: '48px', height: '48px', backgroundColor: '#FFB74D', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `calc(24px * var(--fs, 1))`, flexShrink: 0 }}>
                   🏬
@@ -1091,7 +1091,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                   <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#F57C00', fontWeight: '800' }}>살아있는 미끼 및 각크릴 10% 단독할인 쿠폰!</div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* ── VIP 선상배 홍보 섹션 ── */}
             <div style={{ marginTop: '8px' }}>

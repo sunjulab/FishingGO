@@ -255,6 +255,6 @@ async function verifyReceiptOnServer(transaction) {
     return res.data;
   } catch (err) {
     const msg = err?.response?.data?.error || `서버 검증 실패 (HTTP ${err?.response?.status || '?'})`;
-    throw new Error(msg);
+    throw new Error(msg, { cause: err });
   }
 }
