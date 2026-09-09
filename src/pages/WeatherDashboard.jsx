@@ -160,7 +160,16 @@ export default function WeatherDashboard() {
   const [searchQuery, setSearchQuery]       = useState('');
   const [searchResults, setSearchResults]   = useState([]);
   const [showSearch, setShowSearch]         = useState(false);
-  const [selectedPoint, setSelectedPoint]   = useState(null);
+  const [selectedPoint, setSelectedPoint]   = useState(() => {
+    try {
+      const saved = localStorage.getItem('fishinggo_last_point');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.type !== '민물') return parsed;
+      }
+    } catch { /* 무시 */ }
+    return null;
+  });
   const [liveData, setLiveData]             = useState(null);
   const [apiLoading, setApiLoading]         = useState(false);
   const [lastUpdated, setLastUpdated]       = useState(null);
@@ -235,6 +244,7 @@ export default function WeatherDashboard() {
 
   const handleSelect = (p) => {
     setSelectedPoint(p);
+    try { localStorage.setItem('fishinggo_last_point', JSON.stringify(p)); } catch { /* 무시 */ }
     setShowSearch(false);
     setSearchQuery('');
     setSearchResults([]);
