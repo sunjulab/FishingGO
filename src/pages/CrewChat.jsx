@@ -451,6 +451,7 @@ export default function CrewChat() {
       >
         {messages.map((msg, idx) => {
           const isMe =
+            // eslint-disable-next-line react-hooks/refs
             (msg.socketId && msg.socketId === mySocketId.current) ||
             msg.sender === myName ||
             msg.sender === user?.email;

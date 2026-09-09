@@ -739,7 +739,7 @@ export default function MyPage() {
            ].map(s => (
              <div key={s.label} onClick={s.onClick} style={{ backgroundColor: '#fff', padding: '14px 6px', textAlign: 'center', cursor: s.onClick ? 'pointer' : 'default' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', marginBottom: '4px' }}>
-                   <s.icon size={11} color={s.color} fill={s.color} />
+                   {(() => { const Icon = s.icon; return <Icon size={11} color={s.color} fill={s.color} />; })()}
                    <span style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '950', color: '#1c1c1e' }}>{s.val}</span>
                 </div>
                 <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '700' }}>{s.label}</div>
@@ -1325,7 +1325,7 @@ export default function MyPage() {
                       ].map(n => (
                           <div key={n.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  <n.icon size={18} color="#8E8E93" />
+                                  {(() => { const Icon = n.icon; return <Icon size={18} color="#8E8E93" />; })()}
                                   <span style={{ fontSize: `calc(15px * var(--fs, 1))`, fontWeight: '750' }}>{n.label}</span>
                               </div>
                               <div onClick={() => handleToggleNoti(n.key)} style={{ cursor: 'pointer' }}>

@@ -155,9 +155,6 @@ export default function MediaTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVideo?.youtubeId || selectedVideo?.id]); // ✅ FIX: YouTube API 결과는 youtubeId, 정적 TUTORIAL은 id — 둘 다 체크
 
-  useEffect(() => { loadUnified('전체'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── 통합 피드 로드 ────────────────────────────────────────────────────
   const loadUnified = useCallback(async (chip) => {
     setActiveChip(chip);
     setSearchResults(null);
@@ -401,3 +398,7 @@ export default function MediaTab() {
     </div>
   );
 }
+
+  useEffect(() => { loadUnified('전체'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── 통합 피드 로드 ────────────────────────────────────────────────────

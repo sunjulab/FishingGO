@@ -61,18 +61,6 @@ export default function AdminDashboard() {
   const setPushTitle     = setAlertField('pushTitle');
   const setPushMsg       = setAlertField('pushMsg');
 
-  useEffect(() => {
-    // ✅ NEW-A5: setTimeout(0)으로 Zustand hydration 완료 대기
-    // 핵심: isAdmin이 false→true 로 업데이트될 때 cleanup이 기존 타이머 취소 후 재실행 → 통과
-    const t = setTimeout(() => {
-      if (!isAdmin) { navigate('/'); return; }
-      setAuthChecked(true);
-      fetchStats();
-    }, 0);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, navigate]);
-
   const fetchStats = async () => {
     setLoading(true); setError('');
     try {
@@ -89,6 +77,18 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    // ✅ NEW-A5: setTimeout(0)으로 Zustand hydration 완료 대기
+    // 핵심: isAdmin이 false→true 로 업데이트될 때 cleanup이 기존 타이머 취소 후 재실행 → 통과
+    const t = setTimeout(() => {
+      if (!isAdmin) { navigate('/'); return; }
+      setAuthChecked(true);
+      fetchStats();
+    }, 0);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, navigate]);
+
 
   const fetchUserStats = useCallback(async () => {
     setUserStatsLoading(true);

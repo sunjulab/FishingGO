@@ -258,6 +258,47 @@ export default function LoginPage() {
 
   const [isLogin, setIsLogin]         = useState(true);
 
+  const onLoginSuccess = async (data) => {
+    const email = data.user?.email;
+    let userToSet = data.user;
+    const accessToken = data.accessToken || data.token;
+    if (accessToken) {
+      try { localStorage.setItem('access_token', accessToken); } catch { /* StorageError 무시 */ }
+      Preferences.set({ key: 'access_token', value: accessToken }).catch(() => {});
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    }
+    if (data.refreshToken) {
+      try { localStorage.setItem('refresh_token', data.refreshToken); } catch { /* ignore */ }
+      Preferences.set({ key: 'refresh_token', value: data.refreshToken }).catch(() => {});
+    }
+    try {
+      const savedAvatar = email ? localStorage.getItem(`avatar_${email}`) : null;
+      const serverAvatar = data.user?.avatar || '';
+      const isServerDefault = !serverAvatar || serverAvatar.includes('pravatar.cc');
+      if (savedAvatar && savedAvatar.startsWith('data:image') && isServerDefault) {
+        userToSet = { ...data.user, avatar: savedAvatar, picture: savedAvatar };
+        apiClient.post('/api/user/avatar', { email, avatar: savedAvatar }).catch(() => {});
+      } else if (serverAvatar && !isServerDefault) {
+        if (email) localStorage.setItem(`avatar_${email}`, serverAvatar);
+      }
+    } catch { /* ignore */ }
+    setUser(userToSet);
+    addToast(`환영합니다, ${data.user.name}님! 🎣`, 'success');
+    if (data.justAttended) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => addToast(`🎉 오늘 출석 완료! +${data.expGained || 20} EXP 획득`, 'success'), 800);
+    }
+    if (data.leveledUp) {
+      const lvIdx = (data.user.level || 1) - 1;
+      const reward = LEVEL_CONFIG[lvIdx]?.reward || '소정의 찌(포인트)';
+      if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
+      levelTimerRef.current = setTimeout(() => {
+        addToast(`⭐ 레벨 ${data.user.level} 달성 기념 보상!`, 'success');
+        addToast(`🎁 보상: [${reward}] 지급 완료!`, 'info');
+      }, 1600);
+    }
+    navigate('/');
+  };
   // Naver callback handler
   useEffect(() => {
     const hash = window.location.hash;
@@ -335,47 +376,6 @@ export default function LoginPage() {
   const [loading, setLoading]         = useState(false);
   const [findModal, setFindModal]     = useState(null); // null | 'findId' | 'findPw'
 
-  const onLoginSuccess = async (data) => {
-    const email = data.user?.email;
-    let userToSet = data.user;
-    const accessToken = data.accessToken || data.token;
-    if (accessToken) {
-      try { localStorage.setItem('access_token', accessToken); } catch { /* StorageError 무시 */ }
-      Preferences.set({ key: 'access_token', value: accessToken }).catch(() => {});
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    }
-    if (data.refreshToken) {
-      try { localStorage.setItem('refresh_token', data.refreshToken); } catch { /* ignore */ }
-      Preferences.set({ key: 'refresh_token', value: data.refreshToken }).catch(() => {});
-    }
-    try {
-      const savedAvatar = email ? localStorage.getItem(`avatar_${email}`) : null;
-      const serverAvatar = data.user?.avatar || '';
-      const isServerDefault = !serverAvatar || serverAvatar.includes('pravatar.cc');
-      if (savedAvatar && savedAvatar.startsWith('data:image') && isServerDefault) {
-        userToSet = { ...data.user, avatar: savedAvatar, picture: savedAvatar };
-        apiClient.post('/api/user/avatar', { email, avatar: savedAvatar }).catch(() => {});
-      } else if (serverAvatar && !isServerDefault) {
-        if (email) localStorage.setItem(`avatar_${email}`, serverAvatar);
-      }
-    } catch { /* ignore */ }
-    setUser(userToSet);
-    addToast(`환영합니다, ${data.user.name}님! 🎣`, 'success');
-    if (data.justAttended) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => addToast(`🎉 오늘 출석 완료! +${data.expGained || 20} EXP 획득`, 'success'), 800);
-    }
-    if (data.leveledUp) {
-      const lvIdx = (data.user.level || 1) - 1;
-      const reward = LEVEL_CONFIG[lvIdx]?.reward || '소정의 찌(포인트)';
-      if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
-      levelTimerRef.current = setTimeout(() => {
-        addToast(`⭐ 레벨 ${data.user.level} 달성 기념 보상!`, 'success');
-        addToast(`🎁 보상: [${reward}] 지급 완료!`, 'info');
-      }, 1600);
-    }
-    navigate('/');
-  };
 
   const checkId = async () => {
     if (!userId.trim()) return addToast('아이디를 입력해주세요.', 'error');
