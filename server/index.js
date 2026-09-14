@@ -2329,15 +2329,16 @@ function applyCoastalTransform(sid, wh, ws, wdDeg) {
 
 // ✅ [FALLBACK-v2] OpenMeteo 좌표 기반 동적 패치 (모든 포인트 100% 정밀도)
 const openMeteoCache = {};
-async function getMarineWeatherOpenMeteoPoint(lat, lng) {
+async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
   // 소수점 1자리(약 11km)로 묶어 캐시 (동일 권역 API 중복 방지)
   const key = `${parseFloat(lat).toFixed(1)},${parseFloat(lng).toFixed(1)}`;
   const cached = openMeteoCache[key];
   if (cached && (Date.now() - cached.fetchedAt) < MARINE_CACHE_TTL) return cached.data;
   
   try {
+    // ✅ SWELL-FIX: wave_height + swell_wave_height 동시 요청 (너울 반영)
     const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}` +
-      `&hourly=wave_height,wave_direction&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+      `&hourly=wave_height,wave_direction,swell_wave_height,swell_wave_period&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
     const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
       `&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
     const [mRes, wRes] = await Promise.all([
@@ -2345,14 +2346,30 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng) {
       axios.get(wurl, { timeout: 8000 }),
     ]);
     const nowHr = new Date().getHours();
-    const wh  = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
-    const wdDeg = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
-    const ws  = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
+    const wh      = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
+    const swh     = parseFloat(mRes.data?.hourly?.swell_wave_height?.[nowHr]) || 0; // 너울 파고
+    const swp     = parseFloat(mRes.data?.hourly?.swell_wave_period?.[nowHr]) || 0; // 너울 주기(초)
+    const wdDeg   = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
+    const ws      = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
     const windDeg = parseFloat(wRes.data?.hourly?.wind_direction_10m?.[nowHr]);
     if (isNaN(wh) || isNaN(ws)) return null;
-    const result = applyCoastalTransform(`OM_${key}`, wh, ws, windDeg);
+
+    // ✅ SWELL-FIX: wave_height vs swell_wave_height 중 더 큰 값 사용
+    const rawWave = Math.max(wh, swh);
+
+    // ✅ COASTAL-AMP: 동해 연안은 외해 너울이 연안에서 1.3배 증폭 (얕은 수심 + 지형 집중)
+    // 너울 주기 5초 이상이면 추가 1.15배 위험 증폭 (장주기 너울 = 더 위험)
+    const isEastSea = (region === '동해') || (lng >= 128.5 && lat >= 34.5 && lat <= 38.8);
+    const swellBonus = (swp >= 5 && swh > 0.3) ? 1.15 : 1.0;
+    const coastalAmp = isEastSea ? 1.3 * swellBonus : 1.0;
+    const adjustedWave = parseFloat((rawWave * coastalAmp).toFixed(1));
+
+    const result = applyCoastalTransform(`OM_${key}`, adjustedWave, ws, windDeg);
+    // 너울 정보 보존
+    result.wave.swell = parseFloat(swh.toFixed(2));
+    result.wave.swellPeriod = parseFloat(swp.toFixed(1));
     openMeteoCache[key] = { data: result, fetchedAt: Date.now() };
-    logger.info(`[Marine/OpenMeteo/Point] ${key} 파고:${wh}m/풍속:${ws}m/s → 연안 파고:${result.wave.coastal}m`);
+    logger.info(`[Marine/OpenMeteo/Point] ${key} 외해파고:${wh}m 너울:${swh}m(${swp}s) 연안증폭(x${coastalAmp.toFixed(2)}) → 최종:${result.wave.coastal}m`);
     return result;
   } catch (e) {
     logger.warn(`[Marine/OpenMeteo/Point] ${key} 호출 실패: ${e.message}`);
@@ -2364,7 +2381,8 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng) {
 async function getMarineWeatherOpenMeteo(sid) {
   const coords = OBS_COORDS[sid];
   if (!coords) return null;
-  return await getMarineWeatherOpenMeteoPoint(coords.lat, coords.lng);
+  const region = observationData[sid]?.region || null;
+  return await getMarineWeatherOpenMeteoPoint(coords.lat, coords.lng, region);
 }
 
 // ✅ KMA 실제 부이 STN 번호 (5자리) 매핑
@@ -2402,9 +2420,9 @@ async function getMarineWeather(sid) {
   const buoyNum = BUOY_MAP[sid];
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // [1순위] 기상청(KMA) 해양부이 API (비활성화 - 핀포인트 OpenMeteo 고도화로 대체)
+  // [1순위] 기상청(KMA) 해양부이 API (재활성화 - 실측 파고 우선)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (false && KMA_KEY && buoyNum) {
+  if (KMA_KEY && buoyNum) {
     const kmaResult = await getDeduplicatedPromise(`marine_${buoyNum}`, async () => {
       try {
         const now = new Date(Date.now() + 9 * 3600 * 1000);
@@ -2458,6 +2476,43 @@ async function getMarineWeather(sid) {
   if (omResult) {
     marineWeatherCache[sid] = { data: omResult, fetchedAt: Date.now(), source: 'OPENMETEO' };
     return omResult;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [4순위] 인접 관측소 데이터 빌려오기 (nearest-station fallback)
+  // KMA + OpenMeteo 모두 실패 시 같은 권역의 가장 가까운 정상 관측소 데이터 사용
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const myCoords = OBS_COORDS[sid];
+  const myRegion = observationData[sid]?.region;
+  if (myCoords && myRegion) {
+    // 같은 권역의 다른 관측소 중 최근 캐시가 있는 것을 거리순 정렬
+    const sameRegionStations = ALL_STATIONS.filter(s =>
+      s !== sid &&
+      observationData[s]?.region === myRegion &&
+      marineWeatherCache[s] &&
+      (Date.now() - marineWeatherCache[s].fetchedAt) < MARINE_CACHE_TTL * 2 // 6시간 이내
+    );
+    if (sameRegionStations.length > 0) {
+      // Haversine 거리 계산 후 가장 가까운 관측소 선택
+      const haversineDist = (lat1, lng1, lat2, lng2) => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      };
+      const nearest = sameRegionStations
+        .map(s => ({ sid: s, dist: haversineDist(myCoords.lat, myCoords.lng, OBS_COORDS[s]?.lat || 0, OBS_COORDS[s]?.lng || 0) }))
+        .sort((a, b) => a.dist - b.dist)[0];
+      if (nearest && nearest.dist < 200) { // 200km 이내만 허용
+        const borrowed = marineWeatherCache[nearest.sid]?.data;
+        if (borrowed) {
+          logger.warn(`[Marine/NearestFallback] ${sid} → 인접 ${nearest.sid}(${nearest.dist.toFixed(0)}km) 데이터 차용`);
+          marineWeatherCache[sid] = { data: borrowed, fetchedAt: Date.now(), source: `NEAREST_${nearest.sid}` };
+          return borrowed;
+        }
+      }
+    }
   }
 
   // 모두 실패 → null (기존 mock 로직이 처리)
@@ -7484,7 +7539,8 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
     }
 
     if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
-      const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng);
+      const stationRegion = observationData[sid]?.region || null;
+      const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
       if (ptWeather) {
         d.wind = ptWeather.wind;
         d.wave = ptWeather.wave;
@@ -7563,7 +7619,8 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
   };
 
   if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
-    const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng);
+    const stationRegion = observationData[sid]?.region || null;
+    const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
     if (ptWeather) {
       fbData.wind = ptWeather.wind;
       fbData.wave = ptWeather.wave;
