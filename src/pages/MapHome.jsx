@@ -1205,7 +1205,7 @@ export default function MapHome() {
   const baitTip = getBaitTip();
 
   return (
-    <div style={{ backgroundColor: '#F4F6FA', height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+    <div style={{ backgroundColor: '#F4F6FA', height: '100dvh', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
       <div style={{
         width: '100%', maxWidth: '480px', backgroundColor: '#fff', height: '100%',
         display: 'flex', flexDirection: 'column', position: 'relative',
@@ -1214,7 +1214,7 @@ export default function MapHome() {
       }}>
 
         {/* ── 헤더 ── */}
-        <div style={{ backgroundColor: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F0F0F5', zIndex: 20, flexShrink: 0 }}>
+        <div style={{ backgroundColor: '#fff', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingBottom: '12px', paddingLeft: '20px', paddingRight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F0F0F5', zIndex: 20, flexShrink: 0 }}>
           {viewMode === 'map' ? (
             <>
               <button onClick={() => setViewMode('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', color: '#1565C0' }}>

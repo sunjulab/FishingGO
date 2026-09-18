@@ -10,6 +10,7 @@ import android.webkit.WebView;
 import com.google.android.gms.ads.MobileAds;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.core.view.WindowCompat;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
@@ -18,6 +19,10 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // ✅ EDGE-TO-EDGE: Android가 상태바/네비바 뒤까지 그리도록 설정
+        // → CSS env(safe-area-inset-top/bottom)이 실제 값으로 채워짐
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
         // ✅ NATIVE-AD: 인피드 네이티브 광고 플러그인 등록 (super.onCreate 전에 호출)
         registerPlugin(NativeAdPlugin.class);
         super.onCreate(savedInstanceState);
