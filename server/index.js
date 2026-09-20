@@ -9175,7 +9175,7 @@ setInterval(() => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 const BILLING_PLAN_MAP = {
-  LITE: { tier: 'BUSINESS_LITE', amount: 9900 },
+  LITE: { tier: 'BUSINESS_LITE', amount: 3300 },  // ✅ Google Play Console KRW 3,300 동기화
   PRO: { tier: 'PRO', amount: 110000 },
   VVIP: { tier: 'BUSINESS_VIP', amount: 550000 },
 };
