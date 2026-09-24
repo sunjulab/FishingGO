@@ -262,13 +262,18 @@ export default function DashboardView({
                     </div>
                   ))}
                 </div>
-                {selectedPoint?.type !== '민물' && (
+                {selectedPoint?.type !== '민물' && selectedPoint?.obsCode && (
                   <div
                     onClick={async () => {
-                      const sid = selectedPoint?.obsCode || 'DT_0001';
+                      const sid = selectedPoint.obsCode;
                       try {
                         const pointIdQuery = selectedPoint?.id ? `&pointId=point_${selectedPoint.id}` : '';
                         const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}${pointIdQuery}`);
+                        // ✅ FIX: no_cctv 타입이면 영상 없음 토스트 표시
+                        if (res.data?.type === 'no_cctv' || (!res.data?.url && !res.data?.fallbackImg)) {
+                          addToast('해당 포인트는 실시간 영상이 준비되지 않았습니다.', 'info');
+                          return;
+                        }
                         setCctvData(res.data); setShowCCTV(true);
                       } catch { addToast('영상 데이터를 불러오는 데 실패했습니다.', 'error'); }
                     }}

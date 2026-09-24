@@ -425,16 +425,31 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     let cancelled = false; // ✅ BUG-01 FIX: 포인트 전환 시 이전 요청 취소용 플래그
     const loadData = async () => {
       setLoading(true);
-      setCctvLoading(true);
-      const sid = selectedPoint.obsCode || 'DT_0001';
+      // ✅ FIX: obsCode 없으면 CCTV 로드 자체 스킵 (엉뚱한 DT_0001 방지)
+      const sid = selectedPoint.obsCode;
+      if (!sid) {
+        setCctvLoading(false);
+        setCctvData(null);
+      }
 
       const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
 
-      const cctvPromise = apiClient.get(`/api/weather/cctv?stationId=${sid}&pointId=point_${selectedPoint.id || ''}`)
-        .then(res => { if (!cancelled) setCctvData(res.data); }) // ✅ BUG-01 FIX
-        .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
-        .finally(() => { if (!cancelled) setCctvLoading(false); }); // ✅ BUG-01 FIX
+      const cctvPromise = sid
+        ? apiClient.get(`/api/weather/cctv?stationId=${sid}&pointId=point_${selectedPoint.id || ''}`)
+            .then(res => {
+              if (!cancelled) {
+                // ✅ FIX: no_cctv 타입이면 null 처리 (영상 없음)
+                if (res.data?.type === 'no_cctv' || (!res.data?.url && !res.data?.fallbackImg)) {
+                  setCctvData(null);
+                } else {
+                  setCctvData(res.data);
+                }
+              }
+            })
+            .catch(err => { if (!import.meta.env.PROD) console.error('CCTV Load Error:', err); })
+            .finally(() => { if (!cancelled) setCctvLoading(false); })
+        : Promise.resolve(); // obsCode 없으면 CCTV 요청 안 함
 
       const _fishStr = selectedPoint.fish || (selectedPoint.targets && selectedPoint.targets.length > 0 ? selectedPoint.targets.join(',') : '');
       const fish = _fishStr ? _fishStr.split(',')[0].trim() : '';

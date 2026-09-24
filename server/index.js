@@ -7907,9 +7907,12 @@ app.get('/api/weather/cctv', async (req, res) => {
   const { stationId, pointId } = req.query;
   try {
     const { getCctvInfo, CCTV_MAP } = require('./cctvMapping');
-    // pointId 기반 오버라이드가 있으면 최우선 적용, 없으면 기존 stationId 오버라이드 사용
+    // ✅ FIX: pointId 제공 시 pointId 오버라이드만 사용
+    // stationId fallback 제거 — 같은 obsCode 다른 포인트에 오염 방지
     const globalCctv = global.cctvOverrides || {};
-    const override = (pointId && globalCctv[pointId]) ? globalCctv[pointId] : globalCctv[stationId];
+    const override = pointId
+      ? (globalCctv[pointId] || null)   // pointId 있으면 pointId 오버라이드만 (없으면 null → CCTV_MAP 사용)
+      : (globalCctv[stationId] || null); // pointId 없으면 stationId 오버라이드 허용 (관리자 관측소 단위 설정)
     let info;
     if (override) {
       const base = CCTV_MAP[stationId] || {};
@@ -7927,23 +7930,22 @@ app.get('/api/weather/cctv', async (req, res) => {
         merged.embedUrl = merged.youtubeId;
       } else if (merged.type === 'mof_custom' && merged.youtubeId) {
         merged.type = 'mof';
-        const cleanUrl = merged.youtubeId.replace(/\?\d+$/, ''); // Remove timestamp query
+        const cleanUrl = merged.youtubeId.replace(/\?\d+$/, '');
         merged.fallbackImg = `/api/weather/cctv/proxy?url=${encodeURIComponent(cleanUrl)}`;
       }
 
-      // [BACKEND SAFETY NET] Prevent recursive iframe rendering for invalid URLs or keywords
+      // [BACKEND SAFETY NET] Prevent recursive iframe rendering for invalid URLs
       if (merged.type === 'iframe' && merged.embedUrl && !merged.embedUrl.startsWith('http') && !merged.embedUrl.startsWith('//')) {
         merged.type = 'fishinggo_placeholder';
         merged.embedUrl = undefined;
       }
-      
-      // Also catch explicit fishinggo_placeholder
+
       if (merged.type === 'fishinggo_placeholder') {
          merged.embedUrl = undefined;
       }
       info = merged;
     } else {
-      info = getCctvInfo(stationId || 'DT_0001');
+      info = getCctvInfo(stationId || '');
     }
 
     // -- MOF(해당수산부 연안침식) 하이브리드 대체 시스템 연동 --
