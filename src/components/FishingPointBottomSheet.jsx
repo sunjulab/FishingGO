@@ -426,7 +426,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     const loadData = async () => {
       setLoading(true);
       // ✅ FIX: obsCode 없으면 CCTV 로드 자체 스킵 (엉뚱한 DT_0001 방지)
-      const sid = selectedPoint.obsCode;
+      const sid = selectedPoint.obsCode || ''; // 빈 문자열 — marineAPI는 lat/lng로 동작, CCTV만 스킵
       if (!sid) {
         setCctvLoading(false);
         setCctvData(null);
@@ -853,9 +853,13 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
              ) : (
                 <div style={{ color: '#888', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>현재 송출 가능한 영상이 없습니다.</div>
              )
-          ) : (
-             <div style={{ color: '#888', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>시스템 오류 (데이터를 불러올 수 없습니다.)</div>
-          )}
+           ) : (
+             // ✅ FIX: cctvData null = obsCode 없거나 no_cctv → "준비 중" 메시지 (오류 아님)
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+               <div style={{ fontSize: `calc(36px * var(--fs, 1))` }}>🎣</div>
+               <div style={{ color: '#aaa', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700' }}>해당 포인트의 영상이 준비 중입니다</div>
+             </div>
+           )}
 
           {/* LIVE 배지 (고퀄리티) */}
           <div style={{ position: 'absolute', top: '14px', left: '14px', background: 'rgba(230,0,0,0.95)', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '950', padding: '5px 10px', borderRadius: '8px', zIndex: 5, display: 'flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(230,0,0,0.5)' }}>

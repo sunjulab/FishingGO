@@ -7949,10 +7949,10 @@ app.get('/api/weather/cctv', async (req, res) => {
     }
 
     // -- MOF(해당수산부 연안침식) 하이브리드 대체 시스템 연동 --
-    // 유튜브 오버라이드가 없을 경우 cctvMapping.js에서 정의한 mof 프록시 URL이 그대로 fallbackImg로 전달됩니다.
-    if (info.type !== 'youtube' && info.type !== 'mof') {
+    // ✅ FIX: no_cctv 타입은 safeFallbackImg 설정 안 함 (picsum 이미지 오노출 방지)
+    if (info.type !== 'youtube' && info.type !== 'mof' && info.type !== 'no_cctv') {
       // 이미지 등 기타 타입용 안전망
-      info.safeFallbackImg = 'https://picsum.photos/seed/seascape/800/600'; // ✅ 22TH-A2: Unsplash → picsum.photos
+      info.safeFallbackImg = 'https://picsum.photos/seed/seascape/800/600';
     }
 
     res.json({
@@ -7960,11 +7960,11 @@ app.get('/api/weather/cctv', async (req, res) => {
       areaName: info.areaName,
       region: info.region,
       label: info.label,
-      type: info.type,
+      type: info.type,        // 'no_cctv' 그대로 전달 → 프론트에서 영상없음 처리
       url: info.embedUrl,
       thumbnailUrl: info.thumbnailUrl,
       fallbackImg: info.fallbackImg,
-      safeFallbackImg: info.safeFallbackImg || info.fallbackImg,
+      safeFallbackImg: info.safeFallbackImg || info.fallbackImg || null,
       youtubeId: info.youtubeId || null,
       isOverride: !!override,
     });
