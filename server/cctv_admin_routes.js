@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CCTV 관리 어드민 API (56차 — OPT-1 MongoDB 영속화 완성)
  * JWT 인증 기반 — x-admin-id 평문 헤더 방식 완전 제거
  *
@@ -142,18 +142,13 @@ function verifyCctvAdmin(req, res) {
 
 // ── CCTV 기본 목록 ───────────────────────────────────────────────────────────
 
-const BASE_CCTV_MAP = [
-  { obsCode: 'KW001', areaName: '속초',     region: '강원', type: 'image', youtubeId: null, label: '속초 해수욕장' },
-  { obsCode: 'KW002', areaName: '강릉',     region: '강원', type: 'image', youtubeId: null, label: '강릉 경포대' },
-  { obsCode: 'KW003', areaName: '동해',     region: '강원', type: 'image', youtubeId: null, label: '동해 묵호항' },
-  { obsCode: 'BS001', areaName: '부산 기장', region: '부산', type: 'image', youtubeId: null, label: '기장 대변항' },
-  { obsCode: 'GN001', areaName: '거제',     region: '경남', type: 'image', youtubeId: null, label: '거제 구조라' },
-  { obsCode: 'GN002', areaName: '통영',     region: '경남', type: 'image', youtubeId: null, label: '통영 한려수도' },
-  { obsCode: 'JN001', areaName: '여수',     region: '전남', type: 'image', youtubeId: null, label: '여수 돌산' },
-  { obsCode: 'JN002', areaName: '완도',     region: '전남', type: 'image', youtubeId: null, label: '완도 청산도' },
-  { obsCode: 'JJ001', areaName: '제주',     region: '제주', type: 'image', youtubeId: null, label: '제주 한림항' },
-  { obsCode: 'JJ002', areaName: '서귀포',   region: '제주', type: 'image', youtubeId: null, label: '서귀포 마라도' },
-];
+const { CCTV_MAP } = require('./cctvMapping');
+
+const BASE_CCTV_MAP = Object.keys(CCTV_MAP).map(obsCode => ({
+  obsCode,
+  ...CCTV_MAP[obsCode],
+  youtubeId: null,
+}));
 
 // ── 라우트 등록 ───────────────────────────────────────────────────────────────
 
@@ -187,6 +182,12 @@ module.exports = function registerCctvAdminRoutes(app, { getDbReady = () => fals
       const ov = global.cctvOverrides[item.obsCode];
       return ov ? { ...item, ...ov, isOverride: true } : { ...item, isOverride: false };
     });
+    // Add point overrides that aren't in BASE_CCTV_MAP
+    for (const obsCode of Object.keys(global.cctvOverrides)) {
+      if (!list.find(i => i.obsCode === obsCode)) {
+        list.push({ obsCode, ...global.cctvOverrides[obsCode], isOverride: true });
+      }
+    }
     res.json({ list });
   });
 

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -7476,7 +7476,7 @@ app.get('/terms', (req, res) => {
 
 app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
   const { stationId, lat, lng } = req.query;
-  let sid = stationId || 'DT_0001';
+  let sid = stationId || '';
 
   // 만약 숫자형 ID (앱 커스텀 포인트)라면 가장 가까운 관측소 DT_XXXX 로 매핑
   if (!sid.startsWith('DT_')) {
