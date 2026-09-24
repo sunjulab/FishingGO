@@ -1,4 +1,4 @@
-// ✅ TIDE-API-REPLACE: 공공데이터포털 국립해양조사원 3종 API 통합
+﻿// ✅ TIDE-API-REPLACE: 공공데이터포털 국립해양조사원 3종 API 통합
 // 1. 조석예보(고·저조)  — https://apis.data.go.kr/1192136/tideFcstHghLw
 // 2. 바다낚시지수       — https://apis.data.go.kr/1192136/fcstFishingv2
 // 3. 조위관측소 실측 수온 — https://apis.data.go.kr/1192136/surveyWaterTemp
@@ -180,8 +180,10 @@ function getKhoaObsCode(kmaCode) {
  * @returns {Array|null}   - 고·저조 배열
  *   item: { obsCode, obsName, hl_code: 'H'|'L', hl_time: 'HH:mm', hl_level: '116' }
  */
-export const fetchTideForecast = (obsCode, date) =>
-  fetchDataGo('1192136/tideFcstHghLw/GetTideFcstHghLwApiService', { obsCode: getKhoaObsCode(obsCode), reqDate: date });
+export const fetchTideForecast = (obsCode, date) => {
+  if (!obsCode) return Promise.resolve([]);
+  return fetchDataGo('1192136/tideFcstHghLw/GetTideFcstHghLwApiService', { obsCode: getKhoaObsCode(obsCode), reqDate: date });
+};
 
 // ────────────────────────────────────────────
 // 2. 조위관측소 실측 수온
@@ -193,6 +195,7 @@ export const fetchTideForecast = (obsCode, date) =>
  *   item: { obsCode, obsName, obs_time, water_temp }
  */
 export const fetchWaterTemp = async (obsCode, date) => {
+  if (!obsCode) return '-';
   const data = await fetchDataGo('1192136/surveyWaterTemp/GetSurveyWaterTempApiService', {
     obsCode: getKhoaObsCode(obsCode),
     date,
@@ -207,11 +210,15 @@ export const fetchWaterTemp = async (obsCode, date) => {
 // ────────────────────────────────────────────
 // 3. 바다낚시지수 (7일 예측, 5단계 지수)
 // ────────────────────────────────────────────
-export const fetchFishingIndex = (obsCode) =>
-  fetchDataGo('1192136/fcstFishingv2/GetFcstFishingApiServicev2', { obsCode: getKhoaObsCode(obsCode) }).catch(() => null);
+export const fetchFishingIndex = (obsCode) => {
+  if (!obsCode) return Promise.resolve([]);
+  return fetchDataGo('1192136/fcstFishingv2/GetFcstFishingApiServicev2', { obsCode: getKhoaObsCode(obsCode) }).catch(() => null);
+};
 
 // ────────────────────────────────────────────
 // 4. 바다갈라짐 체험지수
 // ────────────────────────────────────────────
-export const fetchSeaSplitIndex = (obsCode, date) =>
-  fetchDataGo('1192136/fcstSeaSplitv2/GetFcstSeaSplitApiServicev2', { obsCode: getKhoaObsCode(obsCode), reqDate: date });
+export const fetchSeaSplitIndex = (obsCode, date) => {
+  if (!obsCode) return Promise.resolve([]);
+  return fetchDataGo('1192136/fcstSeaSplitv2/GetFcstSeaSplitApiServicev2', { obsCode: getKhoaObsCode(obsCode), reqDate: date });
+};
