@@ -105,6 +105,20 @@ export default function TideTab() {
   const [loading, setLoading] = useState(false);
   const [hourlyWeather, setHourlyWeather] = useState(null); // 기상청 시간대별 실측 예보
   const [khoaTide, setKhoaTide] = useState(null); // KHOA 실측 조석 데이터
+  const [livePrecision, setLivePrecision] = useState(null); // ✅ 실시간 해양기상 (홈과 동기화)
+
+  const fetchPrecision = useCallback(() => {
+    if (!selectedPoint) return;
+    // ✅ dateOffset > 0이면 미래 날씨는 실시간 불필요 → 정적 fallback 유지
+    if (dateOffset !== 0) { setLivePrecision(null); return; }
+    const sid = selectedPoint.obsCode || '';
+    const lat = selectedPoint.lat || '';
+    const lng = selectedPoint.lng || '';
+    apiClient
+      .get(`/api/weather/precision?stationId=${sid}&lat=${lat}&lng=${lng}`)
+      .then(res => { if (res.data) setLivePrecision(res.data); })
+      .catch(() => setLivePrecision(null)); // 실패 시 정적값 fallback
+  }, [selectedPoint, dateOffset]);
 
   const fetchWeather = useCallback(() => {
     if (!selectedPoint || !selectedPoint.lat || !selectedPoint.lng) return;
@@ -117,7 +131,9 @@ export default function TideTab() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [selectedPoint]);
+    // ✅ 새로고침 시 실시간 파고/풍속도 함께 갱신
+    fetchPrecision();
+  }, [selectedPoint, fetchPrecision]);
 
   useEffect(() => {
     if (!selectedPoint) return;
@@ -148,18 +164,34 @@ export default function TideTab() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
 
+  // ✅ 실시간 precision 호출: selectedPoint 또는 dateOffset 변경 시 갱신
+  useEffect(() => {
+    setLivePrecision(null); // 포인트/날짜 바뀌면 이전값 초기화
+    fetchPrecision();
+  }, [selectedPoint, dateOffset, fetchPrecision]);
+
   useEffect(() => {
     const t = setTimeout(() => {}, 10);
     return () => clearTimeout(t);
   }, []);
 
 
+  // ✅ 실시간 우선값 — 오늘(dateOffset=0)이면 API값, 내일 이후면 정적 fallback
+  const liveWave = livePrecision?.wave?.coastal ?? tideData?.wave?.coastal;
+  const liveWind = livePrecision?.wind?.speed   ?? tideData?.wind?.speed;
+  const liveWindDir = livePrecision?.wind?.dir  ?? tideData?.wind?.dir ?? '';
+  const liveSst  = livePrecision?.sst           ?? tideData?.sst;
+
   const fishingScore = useMemo(() => {
     if (!tideData) return null;
     try {
-      return calculateScoreDetails({ wave: tideData.wave, wind: tideData.wind, sst: parseFloat(tideData.sst), tide: tideData.tide }, selectedPoint);
+      // ✅ 실시간 파고/풍속/수온으로 점수 계산 (홈 화면과 동일 기준)
+      const wave = livePrecision?.wave ?? tideData.wave;
+      const wind = livePrecision?.wind ?? tideData.wind;
+      const sst  = parseFloat(livePrecision?.sst ?? tideData.sst);
+      return calculateScoreDetails({ wave, wind, sst, tide: tideData.tide }, selectedPoint);
     } catch(e) { return null; }
-  }, [tideData, selectedPoint]);
+  }, [tideData, livePrecision, selectedPoint]);
 
   const targetDate = new Date();
   targetDate.setDate(targetDate.getDate() + dateOffset);
@@ -168,6 +200,7 @@ export default function TideTab() {
 
   const card = { background: '#fff', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' };
   const tabBarStyle = { display: 'flex', overflowX: 'auto', borderBottom: '2px solid #e0e0e0', background: '#fff', position: 'sticky', top: 0, zIndex: 10, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' };
+
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f7fa', paddingBottom: '80px' }}>
@@ -268,7 +301,7 @@ export default function TideTab() {
                   </div>
                   <div>
                     <div style={{ fontSize: '18px', fontWeight: '900', color: scoreColor(fishingScore.score) }}>{scoreLabel(fishingScore.score)}</div>
-                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>물때 {tideData && tideData.tide ? tideData.tide.phase : '—'} · 파고 {tideData && tideData.wave ? tideData.wave.coastal : '—'}m · 풍속 {tideData && tideData.wind ? tideData.wind.speed : '—'}m/s</div>
+                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>물때 {tideData && tideData.tide ? tideData.tide.phase : '—'} · 파고 {liveWave != null ? liveWave : '—'}m · 풍속 {liveWind != null ? liveWind : '—'}m/s{livePrecision ? ' 🔴실시간' : ''}</div>
                     {selectedPoint && selectedPoint.fish && <div style={{ fontSize: '12px', color: '#0B47A1', fontWeight: '600', marginTop: '2px' }}>🎣 추천: {selectedPoint.fish.split(',')[0]}</div>}
                   </div>
                 </div>
@@ -324,20 +357,20 @@ export default function TideTab() {
               <div style={{ fontSize: '12px', opacity: 0.85 }}>{dateStr} {isToday ? String(currentHour).padStart(2,'0') + ':00 현재' : '예보'}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                 <div>
-                  <div style={{ fontSize: '36px', fontWeight: '900' }}>{(weatherData && weatherData.currentTemp) ? weatherData.currentTemp : (tideData ? tideData.sst : '—')}°C</div>
-                  <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>💨 {(weatherData && weatherData.windSpeed) ? weatherData.windSpeed : (tideData && tideData.wind ? tideData.wind.speed : '—')}m/s &nbsp;💧 {weatherData ? weatherData.humidity || '—' : '—'}%</div>
+                  <div style={{ fontSize: '36px', fontWeight: '900' }}>{liveSst != null ? liveSst : '—'}°C</div>
+                  <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>💨 {liveWind != null ? liveWind : '—'}m/s &nbsp;💧 {weatherData ? weatherData.humidity || '—' : '—'}%</div>
                 </div>
                 <div style={{ fontSize: '52px' }}>⛅</div>
               </div>
             </div>
             {tideData && (
               <div style={card}>
-                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px' }}>🌡️ 해양 현황</div>
+                <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px' }}>🌡️ 해양 현황{livePrecision ? <span style={{ fontSize: '10px', color: '#e53935', marginLeft: '6px', fontWeight: '600' }}>🔴 실시간</span> : <span style={{ fontSize: '10px', color: '#aaa', marginLeft: '6px' }}>추정값</span>}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                   {[
-                    { label: '수온', value: tideData.sst + '°C', icon: '🌡️' },
-                    { label: '파고', value: (tideData.wave ? tideData.wave.coastal : '—') + 'm', icon: '🌊' },
-                    { label: '풍속', value: (tideData.wind ? tideData.wind.speed : '—') + 'm/s', icon: '💨' },
+                    { label: '수온', value: (liveSst != null ? liveSst : '—') + '°C', icon: '🌡️' },
+                    { label: '파고', value: (liveWave != null ? liveWave : '—') + 'm', icon: '🌊' },
+                    { label: '풍속', value: (liveWind != null ? liveWind : '—') + 'm/s', icon: '💨' },
                   ].map(function(item, i) {
                     return (
                       <div key={i} style={{ background: '#f5f7fa', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
@@ -362,10 +395,10 @@ export default function TideTab() {
             </div>
             {[0,3,6,9,12,15,18,21].map(function(hour, i) {
               var hw = hourlyWeather && hourlyWeather[i];
-              var windDir = hw ? hw.windDir : (tideData && tideData.wind ? tideData.wind.dir : 'NE');
-              var windSpd = hw ? hw.windSpeed : (tideData && tideData.wind ? tideData.wind.speed : '—');
-              var temp    = hw ? hw.temp      : (tideData ? tideData.sst : '—');
-              var wave    = hw ? hw.wave      : (tideData && tideData.wave ? tideData.wave.coastal : '—');
+              var windDir = hw ? hw.windDir : (liveWindDir || (tideData && tideData.wind ? tideData.wind.dir : 'NE'));
+              var windSpd = hw ? hw.windSpeed : (liveWind != null ? liveWind : '—');
+              var temp    = hw ? hw.temp      : (liveSst != null ? liveSst : '—');
+              var wave    = hw ? hw.wave      : (liveWave != null ? liveWave : '—');
               var skyIcon = hw ? (['☀️','🌤','⛅','🌥','☁️'][Math.min(4, Math.floor((hw.sky - 1) / 2))]) : '⛅';
               if (hw && hw.pty === 1) skyIcon = '🌧';
               if (hw && hw.pty === 3) skyIcon = '🌨';
