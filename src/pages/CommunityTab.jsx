@@ -1036,7 +1036,7 @@ export default function CommunityTab() {
             {noticePosts.map(notice => {
               // ✅ 미리보기 정제: 이모지·구분선·빈줄 제거 후 첫 2줄만 표시
               const cleanPreview = (notice.content || '')
-                .replace(/[━─=\-]{3,}/g, '')           // ━━━ 등 구분선 제거
+                .replace(/[━─=-]{3,}/g, '')           // ━━━ 등 구분선 제거
                 .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // 이모지 제거
                 .replace(/[\u2600-\u27BF]/gu, '')       // 기타 특수문자 제거
                 .replace(/(?:■|□|●|○|✅|✔️|❌|⚠️|📌|📢|📍)/gu, '')   // 특수 마크 제거

@@ -108,7 +108,7 @@ export default function CatchDetail() {
     } finally {
       setDeleting(false);
     }
-  }, [id, user?.email, addToast, navigate]);
+  }, [id, user, addToast, navigate]);
 
   // 내 기록인지 확인
   const isMyRecord = record && user && (

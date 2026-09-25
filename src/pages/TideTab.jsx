@@ -141,24 +141,25 @@ export default function TideTab() {
     return () => clearTimeout(t);
   }, [selectedPoint, fetchWeather]);
 
-  // ✅ 공공데이터포털 조석예보 API 연동 (marineApi의 fetchTideForecast 사용, fallback: tideData.tide)
+  // ✅ KHOA 조석예보 API: 실측 만조/간조 시간 (fallback: tideData.tide)
   useEffect(() => {
     if (!selectedPoint || !selectedPoint.obsCode) return;
+    setKhoaTide(null);
     var d = new Date();
     d.setDate(d.getDate() + dateOffset);
     var yyyy = d.getFullYear();
     var mm = String(d.getMonth()+1).padStart(2,'0');
     var dd = String(d.getDate()).padStart(2,'0');
     var dateStr = yyyy + mm + dd;
-    fetchTideForecast(selectedPoint.obsCode, dateStr).then(function(preds) {
-      if (preds && preds.length > 0) {
-        const highs = preds.filter(p => p.extrSe === '1' || p.extrSe === '3' || p.hl_code === 'H').map(p => p.predcDt ? p.predcDt.split(' ')[1] : p.hl_time).sort();
-        const lows = preds.filter(p => p.extrSe === '2' || p.extrSe === '4' || p.hl_code === 'L').map(p => p.predcDt ? p.predcDt.split(' ')[1] : p.hl_time).sort();
-        setKhoaTide({ high: highs[0] || null, high2: highs[1] || null, low: lows[0] || null, low2: lows[1] || null });
-      } else {
-        setKhoaTide(null);
-      }
-    }).catch(function() { setKhoaTide(null); });
+    apiClient.get('/api/tide/obs?obsCode=' + selectedPoint.obsCode + '&date=' + dateStr)
+      .then(function(res) {
+        if (res.data && res.data.high) {
+          setKhoaTide(res.data);
+        } else {
+          setKhoaTide(null);
+        }
+      })
+      .catch(function() { setKhoaTide(null); });
   }, [selectedPoint, dateOffset]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
