@@ -66,7 +66,7 @@ export default function CctvModal({ cctvData, setCctvData, selectedPoint, onClos
       finalYoutubeId = trimmedInput;
     }
 
-    const sid = selectedPoint?.obsCode || 'DT_0001';
+    const sid = selectedPoint?.obsCode || '';
     const cctvOverrideId = selectedPoint?.id ? `point_${selectedPoint.id}` : sid;
     
     try {

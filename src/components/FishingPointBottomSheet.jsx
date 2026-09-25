@@ -309,7 +309,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       finalYoutubeId = 'placeholder';
     }
 
-    const sid = selectedPoint.obsCode || 'DT_0001';
+    const sid = selectedPoint.obsCode || '';
     const cctvOverrideId = selectedPoint.id ? `point_${selectedPoint.id}` : sid;
     try {
       setIsSavingCctv(true);
@@ -347,7 +347,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
     // ── 날씨 전용 silent 갱신 (CCTV·쇼핑 제외 — 불필요한 API 호출 방지) ──
     const silentRefresh = async () => {
-      const sid = selectedPoint.obsCode || 'DT_0001';
+      const sid = selectedPoint.obsCode || '';
       const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
       try {
