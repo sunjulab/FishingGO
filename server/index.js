@@ -11423,7 +11423,7 @@ app.get('/api/tide/obs', async (req, res) => {
       return res.status(502).json({ error: 'KHOA 데이터 없음', fallback: true });
     }
 
-    const result = { obsCode, date, high: highs[0] || null, high2: highs[1] || null, low: lows[0] || null, low2: lows[1] || null, source: 'khoa' };
+    const result = { obsCode, date, high: highs[0] || null, high2: highs[1] || null, low: lows[0] || null, low2: lows[1] || null, source: 'khoa', rawData };
     _tideCache.set(cacheKey, { data: result, ts: Date.now() });
     res.json(result);
   } catch (err) {

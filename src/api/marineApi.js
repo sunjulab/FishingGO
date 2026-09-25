@@ -1,4 +1,5 @@
-﻿// ✅ TIDE-API-REPLACE: 공공데이터포털 국립해양조사원 3종 API 통합
+import apiClient from './index';
+// ✅ TIDE-API-REPLACE: 공공데이터포털 국립해양조사원 3종 API 통합
 // 1. 조석예보(고·저조)  — https://apis.data.go.kr/1192136/tideFcstHghLw
 // 2. 바다낚시지수       — https://apis.data.go.kr/1192136/fcstFishingv2
 // 3. 조위관측소 실측 수온 — https://apis.data.go.kr/1192136/surveyWaterTemp
@@ -180,8 +181,23 @@ function getKhoaObsCode(kmaCode) {
  * @returns {Array|null}   - 고·저조 배열
  *   item: { obsCode, obsName, hl_code: 'H'|'L', hl_time: 'HH:mm', hl_level: '116' }
  */
-export const fetchTideForecast = (obsCode, date) => {
-  if (!obsCode) return Promise.resolve([]);
+export const fetchTideForecast = async (obsCode, date) => {
+  if (!obsCode) return [];
+  try {
+    const res = await apiClient.get(`/api/tide/obs?obsCode=${getKhoaObsCode(obsCode)}&date=${date}`);
+    if (res.data && res.data.rawData) {
+      return res.data.rawData.map(t => ({
+        hl_code: t.hl_code,
+        hl_time: t.tph_time ? t.tph_time.split(' ')[1].slice(0, 5) : '',
+        hl_level: t.tph_level,
+        extrSe: t.hl_code === 'H' ? '1' : '2',
+        predcTdlvVl: t.tph_level,
+        predcDt: t.tph_time
+      }));
+    }
+  } catch (e) {
+    console.error('KHOA Tide Proxy failed, falling back to data.go.kr', e);
+  }
   return fetchDataGo('1192136/tideFcstHghLw/GetTideFcstHghLwApiService', { obsCode: getKhoaObsCode(obsCode), reqDate: date });
 };
 
