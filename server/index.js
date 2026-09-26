@@ -24,6 +24,8 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sunjulab.k@gmail.com';
+const ADMIN_ID = process.env.ADMIN_ID || 'admin';
 const coupang = require('./coupangService');
 const ali     = require('./aliService');
 
@@ -2716,9 +2718,9 @@ async function updateAllStationsCache() {
     const month = new Date().getMonth(); // 0-indexed
     const monthlyBase = MONTHLY_BASE_TEMP[base.region]?.[month] ?? base.baseTemp;
     const finalTemp = realSst || (monthlyBase + (lcg(1) * 0.8 - 0.4)).toFixed(1);
-    const finalWind = marine?.wind?.speed  ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 1.0 - 0.5));
+    const finalWind = marine?.wind?.speed ?? rainSnow?.wsd ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 1.0 - 0.5));
     const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.3 - 0.15));
-    const windDir   = marine?.wind?.dir     ?? ['N','E','S','W','NE','SW'][seed % 6];
+    const windDir = marine?.wind?.dir ?? rainSnow?.vec ?? ['N','E','S','W','NE','SW'][seed % 6];
 
     const lunarDay = getLunarDay();
     const mockPhase = getTidePhase(lunarDay, base.region);
@@ -10508,7 +10510,7 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
     try {
       const tp = require('jsonwebtoken').verify(auth.slice(7), process.env.JWT_SECRET || 'fishinggo_jwt_secret_2024', { algorithms: ['HS256'] });
-      const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sunjulab@gmail.com';
+      
       const ADMIN_ID = process.env.ADMIN_ID || 'sunjulab';
       if (tp.email !== ADMIN_EMAIL && tp.id !== ADMIN_ID && tp.email !== 'sunjulab.k@gmail.com') {
         return res.status(403).json({ error: '관리자 권한 필요' });
