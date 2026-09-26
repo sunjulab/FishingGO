@@ -2641,7 +2641,7 @@ function dfs_xy_conv(lat, lng) {
 
 let kmaWeatherCache = {}; // nx_ny -> { pty, rn1, timestamp }
 async function getKmaUltraSrtNcst(lat, lng) {
-  const KEY = process.env.KMA_KEY || process.env.KHOA_KEY;
+  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
   if (!KEY) return null;
   const grid = dfs_xy_conv(lat, lng);
   const cacheKey = `${grid.x}_${grid.y}`;
@@ -2664,10 +2664,19 @@ async function getKmaUltraSrtNcst(lat, lng) {
     if (items && Array.isArray(items)) {
       const ptyItem = items.find(i => i.category === 'PTY');
       const rn1Item = items.find(i => i.category === 'RN1');
-      const data = {
-        pty: ptyItem ? parseInt(ptyItem.obsrValue) : 0,
-        rn1: rn1Item ? parseFloat(rn1Item.obsrValue) : 0
-      };
+      const wsdItem = items.find(i => i.category === 'WSD');
+const vecItem = items.find(i => i.category === 'VEC');
+let vecDir = 'N';
+if (vecItem) {
+   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+   vecDir = dirs[Math.round(parseFloat(vecItem.obsrValue) / 22.5) % 16];
+}
+const data = {
+  pty: ptyItem ? parseInt(ptyItem.obsrValue) : 0,
+  rn1: rn1Item ? parseFloat(rn1Item.obsrValue) : 0,
+  wsd: wsdItem ? parseFloat(wsdItem.obsrValue) : null,
+  vec: vecDir
+};
       kmaWeatherCache[cacheKey] = { data, timestamp: now };
       return data;
     }
@@ -7538,13 +7547,23 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
     if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
       const stationRegion = observationData[sid]?.region || null;
       const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
-      if (ptWeather) {
-        d.wind = ptWeather.wind;
-        d.wave = ptWeather.wave;
-        if (!d._sources) d._sources = {};
-        d._sources.wind = 'OPENMETEO_POINT';
-        d._sources.wave = 'OPENMETEO_POINT';
-      }
+if (ptWeather) {
+  d.wind = ptWeather.wind;
+  d.wave = ptWeather.wave;
+  if (!d._sources) d._sources = {};
+  d._sources.wind = 'OPENMETEO_POINT';
+  d._sources.wave = 'OPENMETEO_POINT';
+}
+try {
+   const kmaSrt = await getKmaUltraSrtNcst(lat, lng);
+   if (kmaSrt && kmaSrt.wsd !== null) {
+      d.wind = { speed: parseFloat(kmaSrt.wsd.toFixed(1)), dir: kmaSrt.vec };
+      d._sources.wind = 'KMA_ULTRASRT_PRECISION';
+      if (kmaSrt.pty !== undefined) d.pty = kmaSrt.pty;
+      if (kmaSrt.rn1 !== undefined) d.rn1 = kmaSrt.rn1;
+   }
+} catch (e) {}
+
     }
 
     return res.json(d);
@@ -11297,10 +11316,6 @@ server.headersTimeout = 66000;    // keepAlive보다 1초 더 길게
     logger.info(`✅ Render Keep-Alive 활성화 — 1분 간격 즉시시작 (${selfUrl})`);
   }
 });
-
-// ✅ BUG-FIX: flushAllData 함수 정의 — 종료 전 인메모리 데이터 파일 동기화 보장
-))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ✅ LEGAL-INFO: 사업자 법적고지 API (전자상거래법 제10조 — 마스터 수정 가능)
