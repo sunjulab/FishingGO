@@ -2712,15 +2712,15 @@ async function updateAllStationsCache() {
     // ③ 조석 (KHOA 조석예보)
     const realTide = await getRealTide(sid);
     // ④ 기상 (비, 눈 등 초단기실황)
-    const rainSnow = await getKmaUltraSrtNcst(base.lat, base.lng);
+    const rainSnow = OBS_COORDS[sid] ? await getKmaUltraSrtNcst(OBS_COORDS[sid].lat, OBS_COORDS[sid].lng) : null;
 
     // fallback: 월별 계절 baseTemp (고정값 대신 현재 월 기준 정확한 수온)
     const month = new Date().getMonth(); // 0-indexed
     const monthlyBase = MONTHLY_BASE_TEMP[base.region]?.[month] ?? base.baseTemp;
     const finalTemp = realSst || (monthlyBase + (lcg(1) * 0.8 - 0.4)).toFixed(1);
-    const finalWind = marine?.wind?.speed ?? rainSnow?.wsd ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 1.0 - 0.5));
+    const finalWind = rainSnow?.wsd ?? marine?.wind?.speed ?? Math.max(0.2, (base.baseWind || profile.wind) + (lcg(2) * 1.0 - 0.5));
     const finalWave = marine?.wave?.coastal ?? Math.max(0.1, profile.wave + (lcg(3) * 0.3 - 0.15));
-    const windDir = marine?.wind?.dir ?? rainSnow?.vec ?? ['N','E','S','W','NE','SW'][seed % 6];
+    const windDir = rainSnow?.vec ?? marine?.wind?.dir ?? ['N','E','S','W','NE','SW'][seed % 6];
 
     const lunarDay = getLunarDay();
     const mockPhase = getTidePhase(lunarDay, base.region);
@@ -2773,7 +2773,7 @@ async function updateAllStationsCache() {
         tide: { phase: tidePhase, high: tideHigh, low: tideLow, next_low: tideNextLow, current_level: `${tideLevel}cm` },
         _sources: {
           sst:  khoaSst ? 'KHOA_API' : (nifsSst ? 'NIFS_API' : (beachSst ? 'KMA_BEACH' : 'fallback')),
-          wind: marine   ? 'KMA_BUOY' : 'fallback',
+          wind: (rainSnow && rainSnow.wsd !== null) ? 'KMA_ULTRASRT_PRECISION' : (marine ? 'KMA_BUOY' : 'fallback'),
           tide: realTide ? 'KHOA_TIDE' : 'fallback',
         },
       },
