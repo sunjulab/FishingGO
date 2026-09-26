@@ -4,7 +4,16 @@
   "webDir": "dist",
   "server": {
     "hostname": "www.fishing-go.com",
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "url": "https://www.fishing-go.com",
+    "cleartext": true,
+    "allowNavigation": [
+      "www.fishing-go.com",
+      "*.fishing-go.com",
+      "fishing-go.com",
+      "fishing-go.vercel.app",
+      "*.vercel.app"
+    ]
   },
   "android": {
     "buildOptions": {}
