@@ -2345,7 +2345,7 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
       axios.get(url,  { timeout: 8000 }),
       axios.get(wurl, { timeout: 8000 }),
     ]);
-    const nowHr = new Date().getHours();
+    const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
     const wh      = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
     const swh     = parseFloat(mRes.data?.hourly?.swell_wave_height?.[nowHr]) || 0; // 너울 파고
     const swp     = parseFloat(mRes.data?.hourly?.swell_wave_period?.[nowHr]) || 0; // 너울 주기(초)
@@ -2651,14 +2651,11 @@ async function getKmaUltraSrtNcst(lat, lng) {
   }
   
   try {
-    const d = new Date();
-    const dStr = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('');
-    // 초단기실황은 매시간 40분에 발표, 1시간 전 데이터를 요청하는 것이 가장 안전
-    let h = d.getHours();
-    if (d.getMinutes() < 40) h -= 1;
-    if (h < 0) h = 23; 
-    // (완벽히 하려면 날짜도 어제로 바꿔야하지만 실황은 대략적인 참고용이므로 캐치로 무마)
-    
+    const d = new Date(Date.now() + 9 * 3600000);
+    let h = d.getUTCHours();
+    if (d.getUTCMinutes() < 40) d.setUTCHours(h - 1);
+    const dStr = [d.getUTCFullYear(), String(d.getUTCMonth()+1).padStart(2,'0'), String(d.getUTCDate()).padStart(2,'0')].join('');
+    h = d.getUTCHours();
     const tStr = String(h).padStart(2,'0') + '00';
     const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(KEY)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${dStr}&base_time=${tStr}&nx=${grid.x}&ny=${grid.y}`;
     
@@ -11302,19 +11299,7 @@ server.headersTimeout = 66000;    // keepAlive보다 1초 더 길게
 });
 
 // ✅ BUG-FIX: flushAllData 함수 정의 — 종료 전 인메모리 데이터 파일 동기화 보장
-function flushAllData() {
-  saveMemUsers();
-  saveMemPosts();
-  saveMemRecords();
-  saveMemCrews();
-  saveChatHistories();
-  saveMemNotices();
-  saveMemBusinessPosts();
-  saveSecretPointOverrides();
-
-  saveProSubs();
-  saveVvipSlots();
-  (logger?.info || (() => {}))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
+))('[FlushAllData] 인메모리 데이터 전체 파일 동기화 완료');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
