@@ -179,7 +179,7 @@ class ErrorBoundaryClass extends React.Component {
           </button>
 
           {/* ✅ 오류 상세 — MASTER 계정에만 표시 */}
-          {true && this.state.error && (
+          {isMaster && this.state.error && (
             <div style={{
               marginTop: '28px', width: '100%', maxWidth: '360px',
               background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)',

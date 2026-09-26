@@ -303,6 +303,34 @@ export default function VVIPSubscribe() {
   const availableCount = HARBORS_STATIC.length - takenCount; // ✅ 점유 해제 시 즉시 반영
 
   /* ── 결제 버튼 클릭 ──────────────────────────────────────── */
+  const handleIAPPurchase = useCallback(async (planKey) => {
+    setPayDialog(null);
+    // ✅ iapReady 차단 제거 — purchasePlan이 직접 에러 반환
+    setLoading(planKey);
+    try {
+      await purchasePlan(planKey);
+    } catch (err) {
+      if (err?.message !== 'NATIVE_ONLY') addToast(err?.message || '결제를 시작할 수 없습니다.', 'error');
+      setLoading(null);
+    }
+  }, [addToast]);
+
+  /* ── UCB 페이플 결제 ──────────────────────────────────────── */
+  const handlePayplePurchase = useCallback(async (planKey) => {
+    setPayDialog(null);
+    if (!UCB_ENABLED) return;
+    setLoading(planKey);
+    try {
+      await openPayplePayment(planKey, { email: user?.email, name: user?.name });
+      addToast('웹 브라우저에서 결제를 완료해 주세요.', 'info');
+    } catch (err) {
+      addToast(err?.message || '페이플 결제 오류', 'error');
+    } finally {
+      setLoading(null);
+    }
+  }, [user]);
+
+  /* ── 복원 ─────────────────────────────────────────────────── */
   const handlePlanClick = useCallback((planKey) => {
     if (planKey === 'CAPTAIN') {
       window.location.href = '/?applyCaptain=true';
@@ -379,34 +407,6 @@ export default function VVIPSubscribe() {
   }, [user, isNative, addToast, storeReady, setUser, handleIAPPurchase]);
 
   /* ── IAP 결제 ─────────────────────────────────────────────── */
-  const handleIAPPurchase = useCallback(async (planKey) => {
-    setPayDialog(null);
-    // ✅ iapReady 차단 제거 — purchasePlan이 직접 에러 반환
-    setLoading(planKey);
-    try {
-      await purchasePlan(planKey);
-    } catch (err) {
-      if (err?.message !== 'NATIVE_ONLY') addToast(err?.message || '결제를 시작할 수 없습니다.', 'error');
-      setLoading(null);
-    }
-  }, [addToast]);
-
-  /* ── UCB 페이플 결제 ──────────────────────────────────────── */
-  const handlePayplePurchase = useCallback(async (planKey) => {
-    setPayDialog(null);
-    if (!UCB_ENABLED) return;
-    setLoading(planKey);
-    try {
-      await openPayplePayment(planKey, { email: user?.email, name: user?.name });
-      addToast('웹 브라우저에서 결제를 완료해 주세요.', 'info');
-    } catch (err) {
-      addToast(err?.message || '페이플 결제 오류', 'error');
-    } finally {
-      setLoading(null);
-    }
-  }, [user]);
-
-  /* ── 복원 ─────────────────────────────────────────────────── */
   const handleRestore = useCallback(async () => {
     setRestoring(true);
     try {
