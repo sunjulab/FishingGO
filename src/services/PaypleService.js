@@ -11,7 +11,7 @@
  */
 
 /** UCB 활성화 여부 (환경변수 1개로 제어) */
-export const UCB_ENABLED = import.meta.env.VITE_UCB_ENABLED === 'true';
+export const UCB_ENABLED = false; // import.meta.env.VITE_UCB_ENABLED === 'true';
 
 /** 페이플 상품 정보 */
 export const PAYPLE_PRODUCTS = {
