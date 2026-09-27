@@ -181,12 +181,10 @@ export const getPointSpecificData = (point, dateOffset = 0) => {
 
   
   // ✅ FIX: 시간을 제외한 순수 날짜 차이(diffDays)로 음력 계산하여 하루 중간에 물때가 바뀌는 버그 수정
-  const rawLunar = anchorLunar + diffDays;
-  const cycled = ((rawLunar - 1) % 29.530588 + 29.530588) % 29.530588;
-  const lunarDay = Math.floor(cycled) + 1;
-
-  // FIX-TIDENUM v3: 바다타임 실측 기반 음력->물때 공식 (15일 반복, 15물=조금)
-  const tideNum = ((lunarDay + 6) % 15) + 1;
+  const lunarD = Lunar.fromDate(targetDate);
+    const lunarDay = lunarD.getDay();
+    // FIX-LUNAR v4: Use lunar-javascript for exact lunar day matching BadaTime
+    const tideNum = ((lunarDay + 6) % 15) + 1;
   const phaseMap = {
     7: '7물(사리)', 8: '8물(사리)', 15: '조금'
   };
@@ -220,7 +218,7 @@ export const getPointSpecificData = (point, dateOffset = 0) => {
       },
       tide: {
         isReal: true, // ✅ 마스터 데이터 플래그
-        phase: realTide.phase,
+        phase: tidePhase, // FIX: Ignore cached phase and calculate dynamically
         high: realTide.high,
         high2: realTide.high2,
         low: realTide.low,
