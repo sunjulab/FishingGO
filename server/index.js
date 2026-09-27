@@ -7928,9 +7928,12 @@ app.get('/api/weather/cctv', async (req, res) => {
     // ✅ FIX: pointId 제공 시 pointId 오버라이드만 사용
     // stationId fallback 제거 — 같은 obsCode 다른 포인트에 오염 방지
     const globalCctv = global.cctvOverrides || {};
-    const override = pointId
-      ? (globalCctv[pointId] || null)   // pointId 있으면 pointId 오버라이드만 (없으면 null → CCTV_MAP 사용)
-      : (globalCctv[stationId] || null); // pointId 없으면 stationId 오버라이드 허용 (관리자 관측소 단위 설정)
+    let override = null;
+    if (pointId && globalCctv[pointId]) {
+      override = globalCctv[pointId];
+    } else if (stationId && globalCctv[stationId]) {
+      override = globalCctv[stationId];
+    }
     let info;
     if (override) {
       const base = CCTV_MAP[stationId] || {};
@@ -11395,4 +11398,5 @@ app.put('/api/admin/legal-info', async (req, res) => {
 // ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
 // ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
 require('./graceful_shutdown')(server, mongoose, flushAllData);
+
 
