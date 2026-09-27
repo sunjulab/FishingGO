@@ -121,6 +121,13 @@ async function triggerRenderDeploy() {
 
 // ─── 메인 ─────────────────────────────────────────────────────────────────
 async function main() {
+  try {
+    console.log('🛡️ [Guardian] 배포 전 무결성 감찰 시작...');
+    execSync('node scripts/guardian-check.cjs', { stdio: 'inherit' });
+  } catch (err) {
+    console.error('🚫 [Guardian] 감찰 실패로 인해 배포(update-version)를 전면 차단합니다.');
+    process.exit(1);
+  }
   updateAppConfigFile();
   updateBuildGradle();
   if (PUSH_MODE) gitPush();
