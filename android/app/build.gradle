@@ -8,7 +8,7 @@ android {
         applicationId "kr.fishinggo.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 394
+        versionCode 395
         versionName "1.0.135"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
