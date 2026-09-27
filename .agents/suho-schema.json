@@ -1,0 +1,108 @@
+﻿{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FishingGO Ocean & Weather API for Suho Agent",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://fishing-go-backend.onrender.com"
+    }
+  ],
+  "paths": {
+    "/api/weather/precision": {
+      "get": {
+        "operationId": "getPrecisionWeather",
+        "summary": "정밀 기상 데이터 조회",
+        "description": "JWT 인증이 필요한 정밀 기상/해양 데이터입니다.",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "stationId",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/api/weather/hourly": {
+      "get": {
+        "operationId": "getHourlyWeather",
+        "summary": "시간별 날씨 조회",
+        "description": "인증이 불필요한 시간별 날씨 데이터입니다.",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "number" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/api/tide/obs": {
+      "get": {
+        "operationId": "getTideObservation",
+        "summary": "실측 물때(조석) 데이터 조회",
+        "description": "인증이 불필요한 관측소별 물때 데이터입니다.",
+        "parameters": [
+          {
+            "name": "obsCode",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "KHOA 관측소 코드 (예: DT_0011)"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "조회할 날짜 (YYYYMMDD 형식)"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
