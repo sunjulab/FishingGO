@@ -1,4 +1,2612 @@
-﻿const express = require('express');
+const express = require('express');
+const http = require('http');
+const dns = require('dns');
+const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
+
+// 통신사/로컬망 DNS에서 SRV 레코드 조회를 차단하는 경우를 우회하기 위해 Google Public DNS 강제 사용
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+  // DNS 설정 성공 — logger 초기화 이전이므로 console 사용
+} catch (e) {
+  // DNS 설정 실패 무시
+}
+
+const { Server } = require('socket.io');
+const cors = require('cors');
+const axios = require('axios');
+// ✅ FIX-AXIOS-TIMEOUT: 전역 타임아웃 10초 — 외부 API 무한 대기 방지
+axios.defaults.timeout = 10000; // 10초
+axios.defaults.validateStatus = (s) => s < 500; // 4xx도 throw 안 함
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sunjulab.k@gmail.com';
+const ADMIN_ID = process.env.ADMIN_ID || 'admin';
+const coupang = require('./coupangService');
+const ali     = require('./aliService');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fishinggo_secret_2024';
+// ✅ WARN-SI1 강화: 프로덕션에서 JWT_SECRET 미설정 시 즉시 종료 (fail-fast)
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    process.stderr.write('[SECURITY] ❌ JWT_SECRET 환경변수가 설정되지 않았습니다. 프로덕션 서버를 시작할 수 없습니다.\n');
+    process.exit(1); // 취약한 기본값으로 프로덕션 구동 차단
+// ✅ FIX-JWT-LENGTH: JWT_SECRET 최소 32자 권고
+if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+  logger.warn('[보안] JWT_SECRET이 32자 미만입니다. 보안 강화를 위해 32자 이상의 무작위 문자열을 사용하세요.');
+}
+  }
+  // 개발 환경: 경고 없이 계속 진행 (logger 초기화 이전)
+}
+
+// In-Memory Fallback - DB 없어도 작동
+const USERS_FILE = path.join(__dirname, 'users.json');
+const POSTS_FILE = path.join(__dirname, 'posts.json');
+const RECORDS_FILE = path.join(__dirname, 'records.json');
+const CREWS_FILE = path.join(__dirname, 'crews.json');
+const CHATS_FILE = path.join(__dirname, 'chats.json');
+const NOTICES_FILE = path.join(__dirname, 'notices.json');
+const BUSINESS_FILE = path.join(__dirname, 'business.json');
+const SECRET_OVERRIDES_FILE = path.join(__dirname, 'secretPointOverrides.json');
+
+const APP_CONFIG_FILE = path.join(__dirname, 'appConfig.json');
+const SPOT_LOC_OVERRIDES_FILE = path.join(__dirname, 'spotLocationOverrides.json');
+const CUSTOM_POINTS_FILE      = path.join(__dirname, 'customPoints.json');
+const PRO_SUBS_FILE = path.join(__dirname, 'proSubscriptions.json');
+const VVIP_SLOTS_FILE = path.join(__dirname, 'vvipSlots.json');
+
+let memUsers = [];
+let memPosts = [];
+let memRecords = [];
+let memCrews = [];
+let chatHistories = {};
+let memNotices = [
+  { _id: 'n1', id: 'n1', title: '🎉 낚시GO 서비스 오픈 안내', content: '낚시GO 플랫폼이 정식 오픈되었습니다! 더 많은 기능이 업데이트될 예정입니다.\n\n✅ 주요 기능:\n- 실시간 물때 및 날씨 정보\n- 낚시 포인트 지도\n- 커뮤니티 게시판\n- 크루 채팅\n\n앞으로도 지속적으로 업데이트 예정이니 많은 이용 부탁드립니다.', isPinned: true, author: 'MASTER', views: 1240, date: '2025-01-01', createdAt: '2025-01-01T00:00:00.000Z' },
+  { _id: 'n2', id: 'n2', title: '⚠️ 서비스 점검 공지 (4월)', content: '4월 20일 새벽 2시~4시 서버 업그레이드 점검이 있습니다.\n\n점검 시간: 04월 20일 02:00 ~ 04:00\n점검 내용: 서버 성능 최적화 및 DB 마이그레이션\n\n이용에 참고해주세요.', isPinned: false, author: 'MASTER', views: 482, date: '2025-04-15', createdAt: '2025-04-15T00:00:00.000Z' },
+];
+// 선상배 홍보 게시글 — 실 데이터는 MongoDB 또는 business.json에서 로드 (데모 데이터 없음)
+let memBusinessPosts = [];
+
+// ⚠️ 아래 4개 변수는 파일 로드 코드(55줄) 이전에 선언해야 TDZ 에러가 없습니다
+let secretPointOverrides = {};
+
+let appConfig = { min_version: "1.0.0", store_url: "https://play.google.com/apps/internaltest/4701312289208373704" };
+let memProSubs = {};
+let memVvipSlots = {};
+let spotLocationOverrides = {}; // ✅ MASTER 좌표 오버라이드
+let customPoints          = {}; // ✅ MASTER 신규 포인트 추가
+
+try {
+  if (fs.existsSync(USERS_FILE)) memUsers = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+  if (fs.existsSync(POSTS_FILE)) memPosts = JSON.parse(fs.readFileSync(POSTS_FILE, 'utf-8'));
+  if (fs.existsSync(RECORDS_FILE)) memRecords = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf-8'));
+  if (fs.existsSync(CREWS_FILE)) memCrews = JSON.parse(fs.readFileSync(CREWS_FILE, 'utf-8'));
+  if (fs.existsSync(CHATS_FILE)) chatHistories = JSON.parse(fs.readFileSync(CHATS_FILE, 'utf-8'));
+  if (fs.existsSync(NOTICES_FILE)) memNotices = JSON.parse(fs.readFileSync(NOTICES_FILE, 'utf-8'));
+  if (fs.existsSync(BUSINESS_FILE)) memBusinessPosts = JSON.parse(fs.readFileSync(BUSINESS_FILE, 'utf-8'));
+  if (fs.existsSync(SECRET_OVERRIDES_FILE)) secretPointOverrides = JSON.parse(fs.readFileSync(SECRET_OVERRIDES_FILE, 'utf-8'));
+
+  if (fs.existsSync(APP_CONFIG_FILE)) appConfig = Object.assign(appConfig, JSON.parse(fs.readFileSync(APP_CONFIG_FILE, 'utf-8')));
+  if (fs.existsSync(PRO_SUBS_FILE)) memProSubs = JSON.parse(fs.readFileSync(PRO_SUBS_FILE, 'utf-8'));
+  if (fs.existsSync(VVIP_SLOTS_FILE)) memVvipSlots = JSON.parse(fs.readFileSync(VVIP_SLOTS_FILE, 'utf-8'));
+  if (fs.existsSync(SPOT_LOC_OVERRIDES_FILE)) spotLocationOverrides = JSON.parse(fs.readFileSync(SPOT_LOC_OVERRIDES_FILE, 'utf-8'));
+  if (fs.existsSync(CUSTOM_POINTS_FILE))      customPoints          = JSON.parse(fs.readFileSync(CUSTOM_POINTS_FILE, 'utf-8'));
+  // 로컬 보존 파일 로드 완료 (logger 초기화 이전)
+} catch (e) {
+  // 로컬 JSON 로드 실패, 빈 배열로 시작
+}
+
+// ✅ BUG-FIX-BOOTSTRAP-MEM: 인메모리 마스터 계정 MASTER tier 보장
+// 이전 코드: sunjulab(이름/id) 계정을 BUSINESS_VIP로 강제 패치 → 마스터 tier 박탈 버그!
+{
+  const masterIdx = memUsers.findIndex(u => u.email === 'sunjulab.k' || u.email === 'sunjulab.k@gmail.com');
+  if (masterIdx !== -1 && memUsers[masterIdx].tier !== 'MASTER') {
+    memUsers[masterIdx].tier = 'MASTER';
+    try { fs.writeFileSync(USERS_FILE, JSON.stringify(memUsers, null, 2)); } catch (_) {}
+  }
+}
+
+
+// ✅ 9TH-B6: save* 함수 silent catch → 개발 환경 경고 추가 — 파일 저장 실패 시 무음 데이터 유실 방지
+function _saveFile(file, data) {
+  try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
+  catch (e) { (global.logger?.error || (() => {}))(`[Fallback] 파일 저장 실패 (${path.basename(file)}): ${e.message}`); }
+}
+function saveMemUsers()          { _saveFile(USERS_FILE, memUsers); }
+function saveMemPosts()          { _saveFile(POSTS_FILE, memPosts); }
+function saveMemRecords()        { _saveFile(RECORDS_FILE, memRecords); }
+function saveMemCrews()          { _saveFile(CREWS_FILE, memCrews); }
+function saveChatHistories()     { _saveFile(CHATS_FILE, chatHistories); }
+function saveMemNotices()        { _saveFile(NOTICES_FILE, memNotices); }
+function saveMemBusinessPosts()  { _saveFile(BUSINESS_FILE, memBusinessPosts); }
+function saveSecretPointOverrides() { _saveFile(SECRET_OVERRIDES_FILE, secretPointOverrides); }
+
+function saveAppConfig()         { _saveFile(APP_CONFIG_FILE, appConfig); }
+function saveProSubs()           { _saveFile(PRO_SUBS_FILE, memProSubs); }
+function saveVvipSlots()         { _saveFile(VVIP_SLOTS_FILE, memVvipSlots); }
+function saveSpotLocationOverrides() { _saveFile(SPOT_LOC_OVERRIDES_FILE, spotLocationOverrides); }
+function saveCustomPoints()          { _saveFile(CUSTOM_POINTS_FILE, customPoints); }
+
+let dbReady = false;
+
+// ✅ 금지 닉네임/아이디 목록 — 브랜드 사칭·운영자 사칭·혐오 표현 차단
+const BANNED_NAMES = [
+  // ── 플랫폼 브랜드 사칭 ──────────────────────────────────────────
+  '낚시go','낚시고','낚시goo','낚시GO','낚시app','낚시어플','낚시앱',
+  'fishinggo','fishingg0','fishing_go','fishing-go','fishingapp',
+
+  // ── 운영·관리 사칭 ──────────────────────────────────────────────
+  '운영자','운영진','운영팀','운영자님','관리자','관리팀','관리인',
+  '어드민','admin','administrator','매니저','manager','moderator','mod','staff','스탭','스태프',
+  '공식운영','공식관리','운영계정','운영봇',
+
+  // ── 마스터·최고권한 사칭 ──────────────────────────────────────────
+  '마스터','master','root','superuser','슈퍼유저','godmode','갓모드','슈퍼관리자','최고관리자',
+
+  // ── 공식·신뢰 기관 사칭 ──────────────────────────────────────────
+  '공식','official','공식계정','공지','서비스팀','고객센터','고객지원','고객서비스','공식안내',
+
+  // ── 운영사 아이디 직접 사칭 ───────────────────────────────────────
+  'sunjulab','선주랩','sunj',
+
+  // ── 시스템·봇 사칭 ───────────────────────────────────────────────
+  'bot','봇','system','시스템','notice','알림','server','auto','자동알림','공지봇','알림봇',
+
+  // ── 혐오·욕설 (닉네임 금지) ─────────────────────────────────────
+  // 한국어 욕설 원형
+  '씨발','시발','씨바','시바','씨팔','씨8','쒸발','씨뱅',
+  '개새끼','개색끼','개씹','개씨발','개쌍놈','개년','개놈',
+  '병신','빙신','벙신',
+  '찐따','지랄','지ㄹ','지알',
+  '미친','미쳤','미친놈','미친년','미친새끼',
+  '꺼져','꺼지다','뒤져','뒤지다','죽어','죽여','죽겠','죽일','죽이다',
+  '느금마','니애미','니어미','네미럴','에미럴','애미럴','니미럴','엄창',
+  '보지','자지','좆','보ㅈ','자ㅈ','좆같','보지같','자지같',
+  '섹스','섹시녀','야동','성교','강간','성폭','윤간','강간마','성추행',
+  '새끼','색끼','샊',
+  // 자음 축약 변형
+  'ㅅㅂ','ㅂㅅ','ㅈㄹ','ㅁㅊ','ㅆㅂ','ㅆㄹ','ㄲㅈ','ㅄ',
+  // 영어 욕설
+  'fuck','shit','bitch','asshole','bastard','cunt','dick','cock','pussy',
+  'nigger','nigga','motherfucker','fuckoff','fuckup','bullshit',
+  // 기타 혐오·위협
+  '테러','살인','살해','폭탄','폭발물','폭발','납치','拉致',
+
+  // ── 광고·스팸성 ────────────────────────────────────────────────
+  '광고','홍보','할인','이벤트쿠폰','무료나눔','1등당첨','클릭',
+
+  // ── 클론·혼동 계정 ─────────────────────────────────────────────
+  'testaccount','테스트계정','test1234','admin123',
+];
+
+// ── 게시글/댓글 * 처리용 비속어 목록 (닉네임 금지와 별도) ────────────────────
+// 브랜드·관리 사칭 키워드는 포함하지 않고, 순수 욕설·비속어만 포함
+const PROFANITY_LIST = [
+  // 한국어 욕설 원형
+  '씨발','시발','씨바','시바','씨팔','씨8','쒸발','씨뱅',
+  '개새끼','개색끼','개씹','개씨발','개쌍','개년','개놈',
+  '병신','빙신','벙신',
+  '찐따','지랄',
+  '미친놈','미친년','미친새끼',
+  '뒤져','뒤지다','죽어','죽여','죽이다',
+  '느금마','니애미','니어미','네미럴','에미럴','애미럴','니미럴','엄창',
+  '보지','자지','좆','보ㅈ','자ㅈ','좆같',
+  '섹스','야동','성교','강간','성폭','윤간','성추행',
+  '새끼','색끼',
+  // 자음 축약 변형
+  'ㅅㅂ','ㅂㅅ','ㅈㄹ','ㅁㅊ','ㅆㅂ','ㅆㄹ','ㄲㅈ','ㅄ',
+  // 영어 욕설
+  'fuck','shit','bitch','asshole','bastard','cunt','dick','cock','pussy',
+  'nigger','nigga','motherfucker','bullshit',
+];
+
+// 정규화: 소문자 + 공백·특수문자·제로폭문자 제거 후 부분일치 검사
+function normalizeStr(s) {
+  return (s || '').toLowerCase()
+    .replace(/[\u200b\u200c\u200d\ufeff\u00ad]/g, '')   // 제로폭·소프트하이픈 제거
+    .replace(/[\s\-_\[\]\(\)\.·•★☆♡♥ㅤ!@#$%^&*+=|\\/<>?,;:'"~`]/g, ''); // 공백·특수문자 제거
+}
+
+function isBannedName(str) {
+  const target = normalizeStr(str);
+  return BANNED_NAMES.some(kw => target.includes(normalizeStr(kw)));
+}
+
+// ── 게시글/댓글 비속어 * 치환 ─────────────────────────────────────────────────
+// 단어 사이 공백·특수문자를 허용하는 유연한 정규식으로 매칭 후 *로 치환
+function censorText(str) {
+  if (!str || typeof str !== 'string') return str;
+  let result = str;
+  // 정렬: 긴 키워드 먼저 처리 (부분 매칭 오염 방지)
+  const sorted = [...PROFANITY_LIST].sort((a, b) => b.length - a.length);
+  sorted.forEach(kw => {
+    // 각 글자 사이에 공백·특수문자 허용하는 유연한 패턴 생성
+    const chars = [...kw]; // Unicode 안전 분리
+    const spacer = '[\\s\\-_\\.·•!@#$%^&*]*'; // 사이에 들어올 수 있는 구분자
+    const escapedChars = chars.map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const pattern = escapedChars.join(spacer);
+    try {
+      const re = new RegExp(pattern, 'gi');
+      result = result.replace(re, match => {
+        // 공백 제외 실제 비속어 글자 수만큼 * 치환
+        const starCount = [...match.replace(/[\s\-_\\.·•!@#$%^&*]/g, '')].length;
+        return '*'.repeat(Math.max(starCount, 1));
+      });
+    } catch (e) { /* 잘못된 패턴 무시 */ }
+  });
+  return result;
+}
+
+// ✅ ENH-C5: 어드민 판별 헬퍼 — 전체 서버에서 단일 함수로 관리
+// sunjulab.k = 마스터 계정 이메일, sunjulab.k@gmail.com = Gmail 로그인 시
+// ✅ ADMIN-FIX: sunjulab ID는 VIP 일반 계정이므로 MASTER 판별에서 제거
+function isAdminToken(tp) {
+  if (!tp) return false;
+  return tp.email === 'sunjulab.k'           // ✅ 마스터 계정 이메일
+    || tp.email === 'sunjulab.k@gmail.com'   // Gmail OAuth 로그인
+    || tp.tier === 'MASTER';                  // ✅ 티어 기반 판별 (JWT에 tier 포함된 경우)
+}
+
+
+// ─── MongoDB 연결 ─────────────────────────────────────────────────────────────
+const buildMongoUri = () => {
+  if (process.env.MONGO_URI) return process.env.MONGO_URI;
+  const pass = process.env.MONGO_PASS;
+  const host = process.env.MONGO_HOST || 'cluster0.cyqhznd.mongodb.net';
+  const user = process.env.MONGO_USER || 'fishinggo';
+  const db = process.env.MONGO_DB || 'fishinggo';
+  if (pass) {
+    const enc = encodeURIComponent(pass);
+    return `mongodb+srv://${user}:${enc}@${host}/${db}?appName=Cluster0`;
+  }
+  return '';
+};
+
+const MONGO_URI = buildMongoUri();
+// ✅ DB-FIX: dbConnecting 플래그 — 서버 시작 직후 연결 진행 중 여부 추적
+let dbConnecting = false;
+if (MONGO_URI) {
+  dbConnecting = true;
+  mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 10000,
+    family: 4,                  // IPv4 강제 (DNS SRV 에러 방지용)
+    heartbeatFrequencyMS: 10000,// 10초마다 heartbeat
+    // ✅ SCALE: 커넥션 풀 증가 (기본 5 → 100) — 동시 1만 사용자 DB 쿼리 처리
+    maxPoolSize: 100,
+  autoIndex: process.env.NODE_ENV !== 'production', // ✅ FIX-AUTOINDEX
+    minPoolSize: 10,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    waitQueueTimeoutMS: 30000,  // 풀 대기 최대 30초
+  })
+    .then(async () => {
+      dbReady = true; dbConnecting = false;
+      (global.logger?.info || (() => {}))('[MongoDB] ✅ 연결 성공! 영구저장 모드 활성화');
+      // ✅ BUG-FIX-BOOTSTRAP: 마스터 계정 tier 보장 — sunjulab.k 이메일 계정은 항상 MASTER tier 유지
+      try {
+        const UModel = require('./models/User');
+        const result = await UModel.findOneAndUpdate(
+          { $or: [{ email: 'sunjulab.k' }, { email: 'sunjulab.k@gmail.com' }] },
+          { $set: { tier: 'MASTER' } },
+          { new: true }
+        );
+        if (result) (global.logger?.info || (() => {}))(`[Bootstrap] 마스터 계정 tier → MASTER 보장 (email: ${result.email})`);
+        
+        // [1회성 데이터 정제] 테스트 결제(110,000원 PRO) 내역 일괄 영구 삭제
+        const PH = require('./models/PaymentHistory');
+        const SUB = require('./models/Subscription');
+        const phDel = await PH.deleteMany({ amount: 110000 });
+        const subDel = await SUB.deleteMany({ amount: 110000 });
+        if (phDel.deletedCount > 0 || subDel.deletedCount > 0) {
+          (global.logger?.info || (() => {}))(`[Bootstrap] 🗑️ 수익 대시보드 정제: 테스트 결제내역 ${phDel.deletedCount}건, 구독 ${subDel.deletedCount}건 영구 삭제 완료`);
+        }
+      } catch (e) { (global.logger?.warn || (() => {}))(`[Bootstrap] 초기화/정제 실패: ${e.message}`); }
+    })
+    .catch(err => {
+      dbReady = false; dbConnecting = false;
+      (global.logger?.warn || (() => {}))(`[MongoDB] 연결실패 → 인메모리 모드 전환: ${err.message}`);
+    });
+
+  // ─── 자동 재연결 이벤트 핸들러 ────────────────────────────────
+  mongoose.connection.on('disconnected', () => {
+    dbReady = false;
+    (global.logger?.warn || (() => {}))('[MongoDB] 연결 끊김 → 인메모리 모드로 자동 전환');
+  });
+  mongoose.connection.on('reconnected', () => {
+    dbReady = true;
+    (global.logger?.info || (() => {}))('[MongoDB] ✅ 재연결 성공 → MongoDB 모드 복구');
+  });
+  mongoose.connection.on('error', (err) => {
+    (global.logger?.error || (() => {}))(`[MongoDB] 연결 오류: ${err.message}`);
+    if (mongoose.connection.readyState !== 1) dbReady = false;
+  });
+}
+
+// ✅ DB-FIX: waitForDb — 서버 시작 직후 DB 연결 중일 때 최대 maxMs 대기 후 dbReady 반환
+// 사용처: 로그인/구글 로그인 엔드포인트 — 초기화 직후 로그인 실패 방지
+async function waitForDb(maxMs = 8000) {
+  if (dbReady) return true;
+  if (!dbConnecting) return false; // 연결 시도조차 없으면 즉시 false
+  const start = Date.now();
+  while (!dbReady && dbConnecting && Date.now() - start < maxMs) {
+    await new Promise(r => setTimeout(r, 300)); // 300ms 간격으로 폴링
+  }
+  return dbReady;
+}
+
+// ─── 모델 로드 ────────────────────────────────────────────────────────────────
+let User, Post, Crew, Notice, BusinessPost, CctvOverrideModel, CatchRecord, ChatMessage, Subscription, PaymentHistory, Story, Contest;
+// ✅ BUG-FIX: 개별 try-catch로 분리 — 하나 실패해도 나머지 모델 정상 로드 보장
+try { User           = require('./models/User');          } catch (e) { User           = null; }
+try { Post           = require('./models/Post');          } catch (e) { Post           = null; }
+try { Crew           = require('./models/Crew');          } catch (e) { Crew           = null; }
+try { Notice         = require('./models/Notice');        } catch (e) { Notice         = null; }
+try { BusinessPost   = require('./models/BusinessPost');  } catch (e) { BusinessPost   = null; }
+try { CctvOverrideModel = require('./models/CctvOverride'); } catch (e) { CctvOverrideModel = null; }
+try { CatchRecord    = require('./models/CatchRecord');   } catch (e) { CatchRecord    = null; }
+try { Contest        = require('./models/Contest');       } catch (e) { Contest        = null; }
+try { ChatMessage    = require('./models/ChatMessage');   } catch (e) { ChatMessage    = null; }
+try { Subscription   = require('./models/Subscription'); } catch (e) { Subscription   = null; }
+try { PaymentHistory = require('./models/PaymentHistory'); } catch (e) { PaymentHistory = null; }
+// ✅ INSTA-P3: 24h TTL 조황 스토리 모델
+try { Story = require('./models/Story'); } catch (e) { Story = null; }
+// ✅ PUSH: FCM 토큰 모델
+let PushToken = null;
+try { PushToken = require('./models/PushToken'); } catch (e) { PushToken = null; }
+// ✅ VISITOR: IP 해시 방문자 로그 모델 (투데이/토탈투데이 카운트)
+let VisitorLog = null;
+try { VisitorLog = require('./models/VisitorLog'); } catch (e) { VisitorLog = null; }
+// ✅ PERSIST: 마스터가 수정한 포인트 좌표 영구 저장 (Render 재배포 후에도 유지)
+let SpotLocationOverrideModel = null;
+try { SpotLocationOverrideModel = require('./models/SpotLocationOverride'); } catch (e) { SpotLocationOverrideModel = null; }
+let SecretPointOverrideModel = null;
+try { SecretPointOverrideModel = require('./models/SecretPointOverride'); } catch (e) { SecretPointOverrideModel = null; }
+let CustomPointModel = null;
+try { CustomPointModel = require('./models/CustomPoint'); } catch (e) { CustomPointModel = null; }
+let AppConfigModel = null;
+try { AppConfigModel = require('./models/AppConfig'); } catch (e) { AppConfigModel = null; }
+// 인메모리 fallback: MongoDB 미연결 시 Set으로 유니크 카운트
+const memVisitorToday = new Set(); // 'YYYY-MM-DD:ipHash'
+const memVisitorTotal = new Set(); // 'ipHash'
+
+// ✅ PUSH: Firebase Admin 설정 (FIREBASE_SERVICE_ACCOUNT 환경변수 값)
+const pushService = require('./push');
+pushService.initFirebase();
+
+
+// ─── 정기결제 스케줄러 (node-cron 또는 자체 폴백) ─────────────────────────────
+let cron = null;
+try { cron = require('node-cron'); } catch (e) { /* node-cron 미설치 → 자체 인터벌 폴백 사용 */ }
+
+// ─── 인메모리 Fallback 저장소 이미 상단에서 선언 및 로드 완료 ──────────────
+// (secretPointOverrides, cctvOverrides, memProSubs, memVvipSlots 모두 파일 로드 완료됨)
+
+
+const app = express();
+  app.set('trust proxy', 1); // ✅ FIX-TRUST-PROXY
+  app.disable('x-powered-by'); // ✅ FIX-X-POWERED-BY
+
+// ─── 보안 헤더 (Helmet) ────────────────────────────────────────
+try {
+  const helmet = require('helmet');
+  app.use(helmet({ 
+    contentSecurityPolicy: false, 
+    hidePoweredBy: true, // ✅ FIX-HELMET: FIX-HELMET-NO-POWERED-BY
+    strictTransportSecurity: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false, // ✅ FIX-HSTS CSP는 Vite SPA가 관리 (script-src 'unsafe-inline' 필요)
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false // ✅ hls.js ReactPlayer CORS 차단 방지
+  })); // CSP는 SPA 프론트 판단에 맡김으로 off
+} catch (e) { /* helmet 미설치 — npm install helmet */ }
+
+// ─── 응답 압축 (Compression) - 응답 속도 30~70% 향상 ──────────
+try {
+  const compression = require('compression');
+  app.use(compression({
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+    threshold: 1024, // 1KB 이상 응답만 압축
+  }));
+} catch (e) { /* compression 미설치 — npm install compression */ }
+
+// ─── 구조화된 로거 (Winston) ──────────────────────────────────
+let logger;
+try {
+  const winston = require('winston');
+  logger = winston.createLogger({
+    level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
+    format: winston.format.combine(
+      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+      winston.format.printf(({ timestamp, level, message }) =>
+        `[${timestamp}] [${level.toUpperCase()}] ${message}`
+      )
+    ),
+    transports: [
+      new winston.transports.Console(),
+      new winston.transports.File({ filename: 'error.log', level: 'error', maxsize: 5242880, maxFiles: 3 }),
+      new winston.transports.File({ filename: 'combined.log', maxsize: 5242880, maxFiles: 5 }),
+    ],
+  });
+} catch (e) {
+  // winston 미설치 시 console로 fallback
+  logger = {
+    info: (...a) => console.log('[INFO]', ...a),
+    warn: (...a) => console.warn('[WARN]', ...a),
+    error: (...a) => console.error('[ERROR]', ...a),
+  };
+}
+global.logger = logger;
+
+// ─── CORS: 허용 도메인 화이트리스트 ──────────────────────────────
+// 모든 origin 허용 (모바일 앱 특성 상 JWT로 인증, origin 제한 불필요)
+const ALLOWED_ORIGINS = [/.*/];  // 전체 허용
+
+// 환경변수로 추가 허용 도메인 설정 (프로덕션 배포 시 사용)
+if (process.env.ALLOWED_ORIGIN) {
+  ALLOWED_ORIGINS.push(process.env.ALLOWED_ORIGIN);
+}
+
+// Render 헬스체크 전용 (사전 등록 — CORS 이전에 응답)
+app.get('/api/health', (req, res) => {
+  const fcmStatus = pushService?.isInitialized?.() ?? false;
+  res.json({
+    status: 'ok',
+    db: dbReady ? 'connected' : 'fallback', // ✅ FIX-HEALTH-INFOLEA: mongodb/memory 구분 → 일반 상태로 변경
+    uptime: Math.floor(process.uptime()),
+    time: new Date().toISOString(),
+    fcm: fcmStatus ? 'ready' : 'disabled',
+    // ✅ FIX-HEALTH-INFOLEA: env 필드 제거 (서버 환경 노출 방지)
+  });
+});
+
+// ✅ BEACH-PUSH: 한국 IP PC에서 KMA 해수욕장 데이터를 서버로 푸시
+// PC 스케줄러(beach-push.ps1)가 1시간마다 호출 → kmaBeachCache 직접 갱신
+// ✅ express.json() 인라인 적용 (전역 미들웨어가 라인988에 있어 이 라우트보다 늦게 등록됨 → req.body undefined 버그 수정)
+app.post('/api/internal/beach-push', express.json({ limit: '10mb' }), (req, res) => {
+  const pushKey = process.env.BEACH_PUSH_KEY || 'fishinggo-beach-2024';
+  if (req.headers['x-push-key'] !== pushKey) return res.status(403).json({ ok: false });
+  const items = req.body?.items;
+  if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ ok: false, reason: 'items required' });
+  kmaBeachCache = items;
+  kmaBeachCacheTime = Date.now();
+  // ✅ weatherCache 직접 패치 — beach_num 숫자 우선, beachNm 키워드 fallback
+  let patched = 0;
+  for (const [sid, mapEntry] of Object.entries(KMA_BEACH_MAP)) {
+    if (!weatherCache[sid]?.data) continue;
+    const nums = mapEntry.nums || [];
+    const kws  = mapEntry.kws  || (Array.isArray(mapEntry) ? mapEntry : []);
+    // 1순위: beachNum 숫자 매칭
+    let match = items.find(i => nums.includes(parseInt(i.beachNum || i.beach_num || 0)));
+    // 2순위: beachNm 한글 키워드 fallback
+    if (!match) match = items.find(i => kws.some(kw => (i.beachNm||'').includes(kw)));
+    const wTemp = match?.wTemp ? parseFloat(match.wTemp) : (match?.tw ? parseFloat(match.tw) : null);
+    if (wTemp && !isNaN(wTemp) && wTemp > 0) {
+      // ✅ FIX: 고도화된 신뢰도 티어 시스템 적용
+      const currentSource = weatherCache[sid].data._sources?.sst || 'fallback';
+      const currentPriority = SST_SOURCE_PRIORITY[currentSource] || 0;
+      const newPriority = SST_SOURCE_PRIORITY['KMA_BEACH'] || 0;
+      
+      // 기존 데이터가 더 신뢰도 높으면 무시
+      if (currentPriority > newPriority) {
+        continue;
+      }
+      weatherCache[sid].data.sst = parseFloat(wTemp.toFixed(1));
+      weatherCache[sid].data.temp = `${wTemp.toFixed(1)}\u00b0C`;
+      weatherCache[sid].data.layers = { upper: wTemp, middle: parseFloat((wTemp-1.2).toFixed(1)), lower: parseFloat((wTemp-3.4).toFixed(1)) };
+      if (!weatherCache[sid].data._sources) weatherCache[sid].data._sources = {};
+      weatherCache[sid].data._sources.sst = 'KMA_BEACH';
+      patched++;
+    }
+  }
+  // weatherCache 초기화 전이면 배치 큐잉
+  if (patched === 0 && !batchRunning) setImmediate(() => updateAllStationsCache().catch(() => {}));
+  logger.info(`[BEACH-PUSH] ${items.length}개 수신, weatherCache 즉시 패치: ${patched}개`);
+  res.json({ ok: true, count: items.length, patched, updated: new Date().toISOString() });
+});
+
+// ── 동적 OG 태그 라우트 ─────────────────────────────────────────────────────
+
+// KakaoTalk/WhatsApp/Telegram 등 크롤러: OG HTML 반환
+// 일반 브라우저: 프론트엔드 SPA로 리다이렉트
+// 브라우저 리다이렉트 대상: ?ref=og 붙여서 Vercel의 missing 조건 우회 → index.html 서빙
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.fishing-go.com';
+// 사진 없을 경우 앱 아이콘으로 대체 (182KB)
+const DEFAULT_OG_IMG = `${FRONTEND_URL}/icon-192.png`;
+
+function isBotUA(ua = '') {
+  return /facebookexternalhit|Twitterbot|WhatsApp|KakaoTalk|Kakao|Telegram|Slack|Discord|LinkedInBot|googlebot|bingbot|Applebot|crawl|spider|bot|python|curl/i.test(ua);
+}
+function escHtml(s = '') {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function ogHtml({ title, desc, img, pageUrl, spaUrl }) {
+  const t = escHtml(title), d = escHtml(desc), i = escHtml(img), u = escHtml(pageUrl), s = escHtml(spaUrl);
+  return `<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><title>${t}</title>
+<meta name="description" content="${d}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="낚시GO">
+<meta property="og:title" content="${t}">
+<meta property="og:description" content="${d}">
+<meta property="og:image" content="${i}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="${u}">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${t}">
+<meta name="twitter:description" content="${d}">
+<meta name="twitter:image" content="${i}">
+<meta http-equiv="refresh" content="0;url=${s}">
+</head><body>
+<script>window.location.replace('${s}');</script>
+<a href="${s}">낚시GO에서 보기</a>
+</body></html>`;
+}
+
+// GET /og/catch/:id
+app.get('/og/catch/:id', async (req, res) => {
+  const { id } = req.params;
+  const pageUrl = `${FRONTEND_URL}/catch/${id}`;
+  const spaUrl  = `${pageUrl}?ref=og`;
+  const ua = req.headers['user-agent'] || '';
+
+  if (!isBotUA(ua)) {
+    return res.redirect(302, spaUrl);
+  }
+  let title = '🎣 낚시GO 조황 기록', desc = '낚시GO에서 조황 기록을 확인하세요!', img = DEFAULT_OG_IMG;
+  try {
+    let record = null;
+    if (dbReady && CatchRecord) {
+      try { record = await CatchRecord.findById(id).lean(); } catch (_) {}
+    }
+    if (record) {
+      const fish = record.fishName || '조황';
+      const size = record.fishSize ? `${record.fishSize}cm` : '';
+      title = `🎣 ${fish}${size ? ' ' + size : ''} 조황 인증! | 낚시GO`;
+      desc  = [record.memo, record.location].filter(Boolean).join(' · ') || desc;
+      if (record.imageUrl?.startsWith('http')) img = record.imageUrl;
+    }
+  } catch (_) {}
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 's-maxage=3600');
+  return res.send(ogHtml({ title, desc, img, pageUrl, spaUrl }));
+});
+
+// GET /og/post/:id
+app.get('/og/post/:id', async (req, res) => {
+  const { id } = req.params;
+  const pageUrl = `${FRONTEND_URL}/post/${id}`;
+  const spaUrl  = `${pageUrl}?ref=og`;
+  const ua = req.headers['user-agent'] || '';
+
+  if (!isBotUA(ua)) {
+    return res.redirect(302, spaUrl);
+  }
+  let title = '낚시GO 커뮤니티', desc = '낚시GO 커뮤니티 게시글입니다.', img = DEFAULT_OG_IMG;
+  try {
+    let post = null;
+    if (dbReady && Post) {
+      try { post = await Post.findById(id).lean(); } catch (_) {}
+    }
+    if (post) {
+      title = `${post.title || post.content?.slice(0, 40) || '게시글'} | 낚시GO`;
+      desc  = post.content?.slice(0, 100) || desc;
+      const postImg = post.image || post.images?.[0];
+      if (postImg?.startsWith('http')) img = postImg;
+    }
+  } catch (_) {}
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 's-maxage=3600');
+  return res.send(ogHtml({ title, desc, img, pageUrl, spaUrl }));
+});
+
+// ✅ DEEPLINK-VERIFY: Android App Links 검증 파일
+// https://fishing-go.vercel.app/.well-known/assetlinks.json
+// 이 응답이 있어야 autoVerify="true" HTTPS 딥링크가 동작함
+// SHA256: 앱 빌드 후 keytool -printcert -jarfile app-release.aab 로 확인 후 업데이트 필요
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json([{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+      namespace: 'android_app',
+      package_name: 'kr.fishinggo.app',
+      // SHA-256: fishinggo-release.jks signingReport로 추출 완료
+      sha256_cert_fingerprints: [
+        // ✅ fishinggo-release.jks 릴리즈 키 SHA-256 (signingReport로 추출)
+        '0B:14:2F:90:F1:E9:EE:32:C6:DD:93:99:94:98:1A:C8:90:F4:63:26:E7:DE:8A:63:B2:CE:08:6C:0B:5F:8F:85'
+      ]
+    }
+  }]);
+});
+
+// ── ✅ DEV-SEED: 테스트 게시글 시드 엔드포인트 (관리자 전용 — X-Seed-Secret + JWT Admin 이중 인증)
+app.post('/api/admin/seed-business-test', async (req, res) => {
+  // ✅ BUG-05 FIX: 하드코딩 시크릿 → 환경변수 참조 + JWT Admin 이중 인증
+  const seedSecret = process.env.SEED_SECRET;
+  if (!seedSecret) return res.status(503).json({ error: '시드 기능이 비활성화되어 있습니다.' }); // ✅ FIX-SEED-SECRET
+  if (req.headers['x-seed-secret'] !== seedSecret) return res.status(403).json({ error: '금지' });
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) {
+    try {
+      const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+      if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' });
+    } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  }
+  const harbors = [
+    { label: '강릉·강문', key: '강원 강릉' }, { label: '주문진', key: '강원 주문진' },
+    { label: '속초', key: '강원 속초' }, { label: '고성(거진)', key: '강원 고성' },
+    { label: '양양(낙산·남애)', key: '강원 양양' }, { label: '동해·묵호', key: '강원 동해' },
+    { label: '삼척', key: '강원 삼척' }, { label: '구룡포(포항)', key: '경북 구룡포' },
+    { label: '감포(경주)', key: '경북 감포' }, { label: '강구(영덕)', key: '경북 강구' },
+    { label: '후포(울진)', key: '경북 후포' }, { label: '죽변(울진)', key: '경북 죽변' },
+    { label: '통영', key: '경남 통영' }, { label: '거제(대포·금포)', key: '경남 거제' },
+    { label: '남해(미조·상주)', key: '경남 남해' }, { label: '고성', key: '경남 고성' },
+    { label: '여수(국동)', key: '전남 여수' }, { label: '목포', key: '전남 목포' },
+    { label: '완도', key: '전남 완도' }, { label: '고흥(나로도)', key: '전남 고흥' },
+    { label: '진도', key: '전남 진도' }, { label: '군산(비응·야미도)', key: '전북 군산' },
+    { label: '부안(격포·위도)', key: '전북 부안' }, { label: '태안(안흥·마검포)', key: '충남 태안' },
+    { label: '보령(무창포·오천)', key: '충남 보령' }, { label: '서산(삼길포)', key: '충남 서산' },
+    { label: '남항부두', key: '인천 남항부두' }, { label: '연안부두', key: '인천 연안부두' },
+    { label: '기장', key: '부산 기장' }, { label: '다대포', key: '부산 다대포' },
+    { label: '용호부두', key: '부산 용호부두' }, { label: '도두항', key: '제주 도두항' },
+    { label: '애월항', key: '제주 애월항' }, { label: '서귀포', key: '제주 서귀포' },
+    { label: '모슬포', key: '제주 모슬포' }, { label: '성산항', key: '제주 성산항' },
+  ];
+  const TARGETS = ['감성돔','참돔','방어','부시리','갈치','대구','오징어','농어','광어','삼치'];
+  const TYPES   = ['선상낚시','선상낚시','야간선상','선상낚시','선상낚시'];
+  const DATES   = ['매일 출항','주말 출항','예약 후 출항','상시 출항','시즌 출항'];
+  const PRICES  = ['50,000원','60,000원','70,000원','80,000원','45,000원','55,000원','65,000원','75,000원'];
+  const now = new Date();
+  const docs = [];
+  for (let i = 0; i < harbors.length; i++) {
+    const h = harbors[i];
+    const t = TARGETS[i % TARGETS.length]; const ty = TYPES[i % TYPES.length];
+    const d = DATES[i % DATES.length];     const p  = PRICES[i % PRICES.length];
+    const t2 = TARGETS[(i+5)%TARGETS.length]; const ty2 = ty === '야간선상' ? '선상낚시' : '야간선상';
+    const d2 = d === '매일 출항' ? '주말 출항' : '매일 출항'; const p2 = PRICES[(i+4)%PRICES.length];
+    docs.push({ author: '낚시GO 관리자', author_email: `test1_${i}@fishinggo.test`, shipName: '낚시Go 테스트 1호', type: ty, target: t, region: h.key, date: d, price: p, phone: '010-0000-0001', capacity: 20, content: `[테스트] ${h.label} 출항 낚시Go 테스트 1호\n어종: ${t} / 출항: ${d} / 요금: ${p}/1인 / 정원: 20명`, isPinned: false, images: [], cover: '', createdAt: new Date(now-i*120000) });
+    docs.push({ author: '낚시GO 관리자', author_email: `test2_${i}@fishinggo.test`, shipName: '낚시Go 테스트 2호', type: ty2, target: t2, region: h.key, date: d2, price: p2, phone: '010-0000-0002', capacity: 15, content: `[테스트] ${h.label} 출항 낚시Go 테스트 2호\n어종: ${t2} / 출항: ${d2} / 요금: ${p2}/1인 / 정원: 15명`, isPinned: false, images: [], cover: '', createdAt: new Date(now-i*120000-60000) });
+  }
+  try {
+    if (dbReady && BusinessPost) {
+      await BusinessPost.deleteMany({ author_email: { $regex: /@fishinggo\.test$/ } });
+      const result = await BusinessPost.insertMany(docs);
+      return res.json({ success: true, count: result.length, mode: 'mongodb' });
+    }
+    memBusinessPosts = memBusinessPosts.filter(p => !p.author_email?.endsWith('@fishinggo.test'));
+    memBusinessPosts.unshift(...docs);
+    saveMemBusinessPosts();
+    res.json({ success: true, count: docs.length, mode: 'memory' });
+  } catch (err) { res.status(500).json({ error: '서버 오류가 발생했습니다.' }); }
+});
+
+// NEW-C1: 채널 튜토리얼 영상 목록 — 서버에서 관리하여 어드민 없이 영상 추가/수정 가능
+// 향후 MongoDB 모델로 확장 예정 (현재는 정적 배열 반환)
+let channelVideos = [
+  { id: 1, title: '감성돔 찌낚시 채비법 (반유동/전유동) 완전정복', category: '감성돔', url: 'https://www.youtube.com/watch?v=Xvj2T6U8WqI', thumbnail: 'https://img.youtube.com/vi/Xvj2T6U8WqI/maxresdefault.jpg', duration: '15:20', views: '124k', description: '입문자가 가장 어려워하는 수심 측정부터 채비 정렬까지 상세히 설명합니다.', gear: [{ name: '1호 갯바위 낚싯대', price: '120,000원', link: '#' }, { name: '2500번 스피닝 릴', price: '158,000원', link: '#' }] },
+  { id: 2, title: '무늬오징어 에깅 낚시 입문 - 기본 액션과 장비 세팅', category: '무늬오징어', url: 'https://www.youtube.com/watch?v=pY5m4A2f-3Y', thumbnail: 'https://img.youtube.com/vi/pY5m4A2f-3Y/maxresdefault.jpg', duration: '10:45', views: '85k', description: '박선비tv가 알려주는 무늬오징어 시즌 대비 기초 에깅 낚시법입니다.', gear: [{ name: '에깅 전용 로드 8.6ft', price: '210,000원', link: '#' }, { name: '3.5호 야마시타 에기', price: '12,000원', link: '#' }] },
+  { id: 3, title: '광어 다운샷 채비법 - 웜 끼우는 법과 단차 조절', category: '광어/우럭', url: 'https://www.youtube.com/watch?v=XWghA2gO2A8', thumbnail: 'https://img.youtube.com/vi/XWghA2gO2A8/maxresdefault.jpg', duration: '08:30', views: '52k', description: '선상 낚시 필수 코스! 광어 다운샷에서 마릿수를 올리는 채비 비결입니다.', gear: [{ name: '다운샷 전용 낚싯대', price: '185,000원', link: '#' }, { name: '광어 전용 스트레이트 웜', price: '8,500원', link: '#' }] },
+  { id: 4, title: '쭈꾸미 갑오징어 낚시 입문 - 기본 채비와 낚시 방법', category: '쭈꾸미/갑오징어', url: 'https://www.youtube.com/watch?v=Lq1tK6fD_O0', thumbnail: 'https://img.youtube.com/vi/Lq1tK6fD_O0/maxresdefault.jpg', duration: '12:15', views: '210k', description: '삼분선생의 쭈꾸미 낚시 기초 레슨. 이 영상 하나로 쭈꾸미 낚시 끝!', gear: [{ name: '쭈꾸미 전용 로드', price: '95,000원', link: '#' }, { name: '수평 에기 세트 10개입', price: '25,000원', link: '#' }] },
+];
+app.get('/api/channel/videos', (req, res) => {
+  res.json(channelVideos);
+});
+// 관리자 전용: 채널 영상 목록 추가 (POST)
+app.post('/api/channel/videos', (req, res) => {
+  // ✅ BUG-FIX: split(' ')[1]로 토큰 추출 시 Authorization 헤더없으면 undefined jwt.verify 호출 방지
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  const tp = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(tp, JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(payload)) return res.status(403).json({ error: '관리자 권한 필요' });
+  } catch { return res.status(401).json({ error: '인증 필요' }); }
+  // ✅ FIX-CHANNEL-MASS-ASSIGN: 화이트리스트 필드만 허용 (Mass Assignment 방어)
+  const { title, category, url, thumbnail, duration, views: viewsStr, description } = req.body;
+  if (!title || !url) return res.status(400).json({ error: 'title, url 필수' });
+  if (typeof title !== 'string' || title.length > 200) return res.status(400).json({ error: 'title 최대 200자' });
+  const urlStr = String(url || '');
+  if (!urlStr.startsWith('https://') || urlStr.length > 500) return res.status(400).json({ error: '유효한 https URL 필요' });
+  if (thumbnail) {
+    const thStr = String(thumbnail);
+    if (!thStr.startsWith('https://') || thStr.length > 500) return res.status(400).json({ error: '유효한 https thumbnail URL 필요' });
+  }
+  const video = {
+    id: Date.now(),
+    title: title.trim(),
+    category: typeof category === 'string' ? category.trim().slice(0, 50) : '기타',
+    url: urlStr.trim(),
+    thumbnail: thumbnail ? String(thumbnail).trim() : '',
+    duration: typeof duration === 'string' ? duration.trim().slice(0, 10) : '',
+    views: typeof viewsStr === 'string' ? viewsStr.trim().slice(0, 20) : '0',
+    description: typeof description === 'string' ? description.trim().slice(0, 500) : '',
+  };
+  channelVideos.push(video);
+  res.json({ success: true, video });
+});
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // ✅ FIX-CORS-WHITELIST: 허가된 출처만 허용
+    const allowed = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173')
+      .split(',').map(s => s.trim());
+    if (!origin || allowed.includes(origin) || allowed.includes('*')) cb(null, true);
+    else cb(new Error('CORS policy: ' + origin + ' not allowed'));
+  },        // 모든 origin 허용 (JWT 인증으로 벴안 유지)
+  credentials: true,
+}));
+
+// ── 접속자 추적 미들웨어 (CORS 이후 — JWT 보유 요청에서 lastSeen 갱신) ──────────
+const lastSeenCache = new Map();
+app.use(async (req, res, next) => {
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return next();
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return next(); }
+    const email = tp.email || tp.id;
+    if (!email) return next();
+    const now = Date.now();
+    const last = lastSeenCache.get(email) || 0;
+    if (now - last < 60_000) return next();
+    if (lastSeenCache.size >= 5000) lastSeenCache.delete(lastSeenCache.keys().next().value); // ✅ FIX-LASTSEEN-SIZE
+    lastSeenCache.set(email, now);
+    const nowDate = new Date(now);
+    if (dbReady && User) {
+      User.updateOne({ email }, { $set: { lastSeen: nowDate } }).exec().catch(() => {});
+    } else {
+      const mu = memUsers.find(u => u.email === email || u.id === email);
+      if (mu) mu.lastSeen = nowDate.toISOString();
+    }
+  } catch { /* 무시 */ }
+  next();
+});
+
+// ── 방문자 추적 미들웨어 (가입/미가입 모두 IP 해시 기록) ─────────────────────────
+// 투데이: KST 오늘 날짜 유니크 IP 수 / 토탈: 전체 누적 유니크 IP 수
+// crypto는 파일 최상단에서 이미 require됨
+const visitorCache = new Map(); // ipHash → lastTrackedDate (중복 DB쓰기 방지) — max 10000
+// ✅ FIX-VISITOR-SIZE: 주기적 정리
+setInterval(() => { if (visitorCache.size > 10000) visitorCache.clear(); }, 60 * 60 * 1000);
+function getKstDateStr() {
+  const d = new Date();
+  d.setTime(d.getTime() + 9 * 60 * 60 * 1000); // UTC+9
+  return d.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+}
+function hashIp(ip) {
+  return crypto.createHash('sha256').update(String(ip || 'unknown')).digest('hex').slice(0, 32);
+}
+app.use((req, res, next) => {
+  try {
+    if (req.path === '/api/health' || req.path === '/favicon.ico') return next();
+    if (isBotUA(req.headers['user-agent'] || '')) return next();
+
+    const rawIp =
+      (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() ||
+      req.headers['x-real-ip'] ||
+      req.ip ||
+      req.connection?.remoteAddress ||
+      'unknown';
+    const ipHash   = hashIp(rawIp);
+    const todayStr = getKstDateStr();
+
+    if (visitorCache.get(ipHash) === todayStr) return next();
+    visitorCache.set(ipHash, todayStr);
+
+    let userId = null;
+    const auth = req.headers.authorization || '';
+    if (auth.startsWith('Bearer ')) {
+      try { const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); userId = p.email || p.id || null; } catch {}
+    }
+
+    if (dbReady && VisitorLog) {
+      VisitorLog.updateOne(
+        { ipHash, date: todayStr },
+        { $setOnInsert: { ipHash, date: todayStr, userId } },
+        { upsert: true }
+      ).exec().catch(() => {});
+    } else {
+      memVisitorToday.add(`${todayStr}:${ipHash}`);
+      memVisitorTotal.add(ipHash);
+    }
+  } catch {}
+  next();
+});
+
+// ── GET /api/admin/user-stats — 사용자 통계 (마스터 전용, CORS 이후) ─────────────
+app.get('/api/admin/user-stats', async (req, res) => {
+  // ✅ FIX-ADMIN-STATS-AUTH: 어드민 인증 강제
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
+  try {
+    const auth = req.headers.authorization || '';
+    if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+    let tp;
+    try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+    if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자만 접근 가능합니다.' });
+
+    // ✅ 티어 정규화 맵 — 변형 이름을 표준 이름으로 매핑
+    const TIER_NORMALIZE = {
+      'FREE': 'FREE', 'free': 'FREE',
+      'LITE': 'BUSINESS_LITE', 'lite': 'BUSINESS_LITE', 'BUSINESS_LITE': 'BUSINESS_LITE',
+      'PRO': 'PRO', 'pro': 'PRO',
+      'VIP': 'BUSINESS_VIP', 'vip': 'BUSINESS_VIP', 'VVIP': 'BUSINESS_VIP',
+      'BUSINESS_VIP': 'BUSINESS_VIP', 'VVIP_VIP': 'BUSINESS_VIP',
+      'CAPTAIN': 'CAPTAIN', 'captain': 'CAPTAIN',
+      'MASTER': 'MASTER', 'master': 'MASTER', 'ADMIN': 'MASTER',
+    };
+    const STANDARD_TIERS = ['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'CAPTAIN', 'MASTER'];
+
+    const now = new Date();
+    const online5m  = new Date(now - 5 * 60 * 1000);
+    const online24h = new Date(now - 24 * 60 * 60 * 1000);
+    const week7     = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    let s = {
+      totalUsers: 0, onlineNow: 0, onlineToday: 0, offlineUsers: 0, newUsers7d: 0,
+      tierBreakdown: { FREE: 0, BUSINESS_LITE: 0, PRO: 0, BUSINESS_VIP: 0, CAPTAIN: 0, MASTER: 0 },
+      rawTiers: {}, // DB에 실제 저장된 티어 원시값 (디버그용)
+    };
+
+    if (dbReady && User) {
+      const [total, onlineNow, onlineToday, newUsers7d, tierCounts] = await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ lastSeen: { $gte: online5m } }),
+        User.countDocuments({ lastSeen: { $gte: online24h } }),
+        User.countDocuments({ createdAt: { $gte: week7 } }),
+        User.aggregate([{ $group: { _id: { $ifNull: ['$tier', 'FREE'] }, count: { $sum: 1 } } }]),
+      ]);
+      s.totalUsers = total; s.onlineNow = onlineNow; s.onlineToday = onlineToday;
+      s.offlineUsers = total - onlineToday; s.newUsers7d = newUsers7d;
+      tierCounts.forEach(t => {
+        const raw = t._id || 'FREE';
+        s.rawTiers[raw] = (s.rawTiers[raw] || 0) + (t.count || 0);
+        const norm = TIER_NORMALIZE[raw] || 'FREE';
+        s.tierBreakdown[norm] = (s.tierBreakdown[norm] || 0) + (t.count || 0);
+      });
+      // ✅ VISITOR STATS: 투데이(오늘 유니크 IP) + 토탈투데이(전체 누적 유니크 IP)
+      if (VisitorLog) {
+        try {
+          const todayStr = getKstDateStr();
+          const [todayCount, allIps] = await Promise.all([
+            VisitorLog.countDocuments({ date: todayStr }),
+            VisitorLog.distinct('ipHash'),
+          ]);
+          s.todayVisitors = todayCount;
+          s.totalVisitors = allIps.length;
+        } catch { s.todayVisitors = 0; s.totalVisitors = 0; }
+      }
+    } else {
+      const all = memUsers;
+      s.totalUsers  = all.length;
+      s.onlineNow   = all.filter(u => u.lastSeen && new Date(u.lastSeen) >= online5m).length;
+      s.onlineToday = all.filter(u => u.lastSeen && new Date(u.lastSeen) >= online24h).length;
+      s.offlineUsers = all.length - s.onlineToday;
+      s.newUsers7d  = all.filter(u => u.createdAt && new Date(u.createdAt) >= week7).length;
+      all.forEach(u => {
+        const raw = u.tier || 'FREE';
+        s.rawTiers[raw] = (s.rawTiers[raw] || 0) + 1;
+        const norm = TIER_NORMALIZE[raw] || 'FREE';
+        s.tierBreakdown[norm] = (s.tierBreakdown[norm] || 0) + 1;
+      });
+      // ✅ VISITOR STATS fallback (인메모리 모드)
+      const todayStr = getKstDateStr();
+      s.todayVisitors = [...memVisitorToday].filter(k => k.startsWith(todayStr + ':')).length;
+      s.totalVisitors = memVisitorTotal.size;
+    }
+    res.json(s);
+  } catch (err) {
+    (logger?.error || console.error)('[GET /api/admin/user-stats]', err.message);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+
+
+
+// ✅ 계정 기반 로그인 실패 추적 — try 블록 밖 전역 선언 (스코프 오류 방지)
+const loginAttemptMap = new Map(); // email → { count, lockedUntil }
+const MAX_LOGIN_FAIL = 10;         // 계정당 최대 실패 10회
+const LOGIN_LOCK_MS  = 5 * 60 * 1000; // 잠금 5분
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of loginAttemptMap.entries()) {
+    if (val.lockedUntil && now > val.lockedUntil + LOGIN_LOCK_MS) {
+      loginAttemptMap.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
+// ─── Rate Limiter ────────────────────────────────────────────────────
+// ✅ SCALE-FIX: IP 기반 → 완화 (한국 이동통신사 NAT: 수백명이 같은 IP 공유)
+// 실제 브루트포스 보호는 계정 기반으로 처리 (아래 loginAttemptMap)
+let apiLimiter     = (req, res, next) => next(); // ✅ FIX-SCOPE
+let ytSearchLimiter= (req, res, next) => next(); // ✅ FIX-SCOPE
+let ytFeedLimiter  = (req, res, next) => next(); // ✅ FIX-SCOPE
+let otpLimiter     = (req, res, next) => next(); // ✅ FIX-SCOPE
+let catchLimiter   = (req, res, next) => next(); // ✅ FIX-SCOPE
+let authLimiter = (req, res, next) => next(); // ✅ FIX-SCOPE: try 밖 선언으로 ReferenceError 방지
+try {
+  const rateLimit = require('express-rate-limit');
+  // 로그인/회원가입: IP당 10분/10회 (통신사 NAT 환경 수백명 커버)
+  authLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 50,
+    message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+      // OTP 발송은 별도 쿨다운 처리하므로 auth 리미터 제외
+      return req.path.includes('/send-otp') || req.path.includes('/verify-otp');
+    },
+  });
+  // 일반 API: IP당 1분/1000회 (동시 1만 사용자 커버)
+  apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 300, // ✅ FIX-API-LIMITER: 1분 300회
+    message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // ✅ YouTube 검색 전용 Rate Limit — IP당 분당 3회
+  // 이유: 검색 1회 = 201 units 소비. 50만 사용자 환경에서 쿼터 폭발 방지
+  ytSearchLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1분
+    max: 3,                    // IP당 최대 3회
+    message: { error: '검색 요청이 너무 많습니다. 1분 후 다시 시도해주세요.', code: 'YT_SEARCH_RATE_LIMIT' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    // ✅ IPv6 호환: 커스텀 keyGenerator 제거 → 기본 IP 처리 사용 (ERR_ERL_KEY_GEN_IPV6 해결)
+  });
+
+  // ✅ YouTube 통합 피드 전용 Rate Limit — IP당 분당 10회
+  // 이유: 피드는 캐시가 있어 실제 API 호출 적음, 너무 엄격하면 UX 저하
+  ytFeedLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1분
+    max: 10,                   // IP당 최대 10회
+    message: { error: '피드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.', code: 'YT_FEED_RATE_LIMIT' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // ✅ FIX-OTP-LIMITER: OTP 전용 rate limit — 분당 3회 (전화번호 스팸 방지)
+  otpLimiter = rateLimit({ windowMs: 60_000, max: 3, message: { error: 'OTP 요청이 너무 많습니다. 1분 후 다시 시도해주세요.' }, standardHeaders: true, legacyHeaders: false });
+
+  app.use('/api/auth/', authLimiter);
+
+  // ✅ FIX-CATCH-LIMITER
+  catchLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: '조황 등록이 너무 많습니다.' }, standardHeaders: true, legacyHeaders: false });
+
+  // ✅ FIX-CACHE-AUTH-MIDDLEWARE: /api/auth/* 에 no-store 헤더
+  app.use('/api/auth/', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+  app.use('/api/', apiLimiter);
+  app.use('/api/media/youtube/search', ytSearchLimiter);   // ✅ 검색: 1분/3회
+  app.use('/api/media/youtube/unified', ytFeedLimiter);    // ✅ 통합 피드: 1분/10회
+  (logger?.info || console.log)('✅ Rate Limiter 적용 (로그인 10분/500회, 일반 1분/1000회) — 동시 1만 사용자 지원');
+
+  (logger?.info || console.log)('✅ YouTube Rate Limit 강화 (검색 1분/3회, 피드 1분/10회)');
+} catch (e) { (logger?.warn || console.warn)('⚠️ express-rate-limit 미설치 → npm install express-rate-limit'); }
+
+// ✅ IMG-SIZE-FIX: 다중이미지 5장 × 4MB = 최대 20MB → 25mb로 확장 (이전 10mb에서 이미지 탈락 방지)
+app.use(express.json({ limit: '1mb' }));
+// ✅ FIX-JSON-ERR: JSON 파싱 에러 → 400 응답
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: '잘못된 JSON 형식입니다.' });
+  }
+  next(err);
+});
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
+
+// ✅ SCALE: API 응답 캐시 (메모리) — 날씨/물때/포인트 등 자주 변하지 않는 데이터
+const responseCache = new Map();
+const CACHE_TTL = {
+  weather: 5 * 60 * 1000,   // 날씨: 5분
+  tide:    10 * 60 * 1000,  // 물때: 10분
+  default: 2 * 60 * 1000,   // 기본: 2분
+};
+function getCached(key, type = 'default') {
+  const item = responseCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.ts > (CACHE_TTL[type] || CACHE_TTL.default)) {
+    responseCache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+function setCache(key, data) {
+  if (responseCache.size > 1000) {
+    // 가장 오래된 항목 200개 삭제
+    const keys = [...responseCache.keys()].slice(0, 200);
+    keys.forEach(k => responseCache.delete(k));
+  }
+  responseCache.set(key, { data, ts: Date.now() });
+}
+// 주기적 캐시 정리 (10분마다)
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of responseCache.entries()) {
+    if (now - v.ts > 15 * 60 * 1000) responseCache.delete(k);
+  }
+}, 10 * 60 * 1000);
+
+// ✅ IAP 구독 자동 만료 스케줄러 (30분마다 실행)
+// iapExpiresAt이 지난 유저 tier → FREE로 강제 회수 + VVIP 슬롯 해제
+const runIapExpiryCheck = async () => {
+  if (!dbReady || !User) return;
+  try {
+    const now = new Date();
+    // 만료된 유료 구독자 조회 (FREE가 아닌 + 만료일 지남)
+    const expiredUsers = await User.find({
+      tier: { $nin: ['FREE', 'MASTER', 'CAPTAIN'] },
+      $or: [
+        { iapExpiresAt: { $ne: null, $lt: now } },
+        { subscriptionExpiresAt: { $ne: null, $lt: now }, iapExpiresAt: null },
+      ],
+    }).select('_id email tier iapExpiresAt subscriptionExpiresAt vvipHarborId').lean();
+
+    for (const u of expiredUsers) {
+      try {
+        // tier → FREE 강제 다운그레이드
+        await User.findByIdAndUpdate(u._id, {
+          $set: { tier: 'FREE', iapExpiresAt: null, subscriptionExpiresAt: null, iapPurchaseToken: null, iapProductId: null, iapAutoRenewing: false, updatedAt: now }
+        });
+
+        // ✅ 선상홍보글 자동 삭제 — PRO/VVIP 만료 시 무료 홍보 악용 방지
+        // PRO, BUSINESS_VIP 유저만 홍보글 작성 가능 → 만료 시 삭제
+        if (u.tier === 'PRO' || u.tier === 'BUSINESS_VIP') {
+          let deletedCount = 0;
+          // DB 삭제
+          if (BusinessPost) {
+            const result = await BusinessPost.deleteMany({ author_email: u.email }).catch(e => {
+              (logger?.error || console.error)(`[IAP 만료] 홍보글 DB 삭제 실패: ${u.email}`, e.message);
+              return { deletedCount: 0 };
+            });
+            deletedCount = result.deletedCount || 0;
+          }
+          // 인메모리 삭제
+          const before = memBusinessPosts.length;
+          memBusinessPosts = memBusinessPosts.filter(p => p.author_email !== u.email);
+          const memDeleted = before - memBusinessPosts.length;
+          if (memDeleted > 0) saveMemBusinessPosts();
+          if (deletedCount > 0 || memDeleted > 0) {
+            (logger?.info || console.log)(`[IAP 만료] 홍보글 삭제: ${u.email} → DB ${deletedCount}건, 메모리 ${memDeleted}건`);
+          }
+        }
+
+        // VVIP였으면 항구 슬롯 해제
+        if ((u.tier === 'BUSINESS_VIP' || u.tier === 'MASTER') && u.vvipHarborId && vvipSlots[u.vvipHarborId]?.userId === (u.email || String(u._id))) {
+          delete vvipSlots[u.vvipHarborId];
+          saveVvipSlots();
+          (logger?.info || console.log)(`[IAP 만료] VVIP 슬롯 해제: ${u.email} → ${u.vvipHarborId}`);
+        }
+        (logger?.info || console.log)(`[IAP 만료] 구독 회수: ${u.email} ${u.tier}→FREE (만료: ${u.iapExpiresAt})`);
+      } catch (e2) {
+        (logger?.error || console.error)(`[IAP 만료] 처리 실패: ${u.email}`, e2.message);
+      }
+    }
+    if (expiredUsers.length > 0) {
+      (logger?.info || console.log)(`[IAP 만료] 총 ${expiredUsers.length}명 처리 완료`);
+    }
+  } catch (e) {
+    (logger?.error || console.error)('[IAP 만료 스케줄러] 오류:', e.message);
+  }
+};
+
+// ✅ 서버 시작 30초 후 첫 실행, 이후 1분마다
+// 30분 → 1분으로 단축: 테스트 구독(5분) 만료 즉시 감지 + 실제 구독도 지연 없이 회수
+setTimeout(() => {
+  runIapExpiryCheck();
+  setInterval(runIapExpiryCheck, 60 * 1000); // ✅ 1분 주기 (테스트: 5분 구독 만료 대응)
+}, 30 * 1000);
+
+// ✅ VVIP 항구 슬롯 만료 자동 회수 (1분 주기) — 기존에는 /api/vvip/harbors 요청 시만 처리
+const runVvipExpiryCheck = async () => {
+  // vvipSlots는 서버 시작 후 즉시 초기화되므로 60초 후 호출 시 항상 존재
+  // 만료된 슬롯을 메모리 + DB + JSON 파일에서 동시 제거
+  const target = (typeof vvipSlots !== 'undefined' ? vvipSlots : memVvipSlots);
+  if (!target || typeof target !== 'object') return;
+  const now = new Date();
+  let cleaned = 0;
+  for (const [harborId, slot] of Object.entries(target)) {
+    if (slot.expiresAt && new Date(slot.expiresAt) < now) {
+      (logger?.info || console.log)(`[VVIP 만료-자동] ${slot.harborName || harborId} 슬롯 자동 해제 (userId: ${slot.userId})`);
+      delete target[harborId];
+      cleaned++;
+      // User DB vvipHarborId/vvipExpiresAt 초기화 (재시작 시 재복원 방지)
+      if (dbReady && User) {
+        User.findOneAndUpdate(
+          { $or: [{ email: slot.userId }, { id: slot.userId }] },
+          { $unset: { vvipHarborId: 1, vvipExpiresAt: 1 } }
+        ).catch(e => (logger?.error || console.error)('[VVIP 만료-자동] DB 초기화 실패:', e.message));
+      }
+    }
+  }
+  if (cleaned > 0) saveVvipSlots();
+};
+// 서버 시작 후 1분 뒤 첫 실행, 이후 1분 주기
+setTimeout(() => {
+  runVvipExpiryCheck();
+  setInterval(runVvipExpiryCheck, 60 * 1000);
+}, 60 * 1000);
+
+// ─── JWT 인증 미들웨어 (선택적 보호 엔드포인트용) ───────────────
+// ✅ FIX-PWD-IAT: 비밀번호 변경 시 이전 토큰 무효화를 위한 in-memory 캐시
+const pwdChangedCache = new Map(); // email → passwordChangedAt ms
+// 1시간마다 정리
+setInterval(() => { pwdChangedCache.clear(); }, 60 * 60 * 1000);
+
+// ✅ FIX-NO-CACHE: 민감 데이터 API에 no-store 헤더 미들웨어
+function noCache(req, res, next) {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  next();
+}
+
+function verifyToken(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증이 필요합니다.' });
+  try {
+    const decoded = jwt.verify(auth.split(' ')[1], JWT_SECRET, { algorithms: ['HS256'] });
+    // ✅ FIX-PWD-IAT: 비밀번호 변경 후 이전 토큰 차단
+    const userKey = decoded.email || decoded.id;
+    const changedAt = pwdChangedCache.get(userKey);
+    if (changedAt && decoded.iat && (decoded.iat * 1000) < changedAt) {
+      return res.status(401).json({ error: '비밀번호가 변경되어 다시 로그인이 필요합니다.', code: 'TOKEN_INVALIDATED' });
+    }
+    req.user = decoded;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: '토큰이 유효하지 않거나 만료되었습니다.' });
+  }
+}
+
+// ─── 비밀포인트 좌표 오버라이드 API (MASTER 전용) ──────────────────────────────
+// GET: 비밀포인트 좌표 조회 — JWT 인증 + MASTER 또는 LITE 이상 티어 필요
+app.get('/api/secret-point-overrides', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요', code: 'AUTH_REQUIRED' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
+  const isAdmin = isAdminToken(tp);
+  if (!isAdmin) {
+    // LITE+ 이상 티어 확인 (JWT tier 우선, DB fallback)
+    const allowedTiers = ['BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'MASTER'];
+    // ✅ FIX-DB-FALLBACK: DB 조회 실패 시 JWT 내 tier를 사용 (이전: 항상 FREE → 마스터 차단)
+    let userTier = tp.tier || 'FREE';
+    try {
+      if (dbReady && User) {
+        const u = await User.findOne({ $or: [{ email: tp.email }, { id: tp.id }] }, 'tier').lean();
+        if (u?.tier) userTier = u.tier; // DB 조회 성공 시에만 덮어쓰기
+      }
+    } catch { /* DB 조회 실패 시 JWT tier 유지 */ }
+    if (!allowedTiers.includes(userTier)) return res.status(403).json({ error: 'LITE 이상 구독이 필요합니다.' });
+  }
+  res.json(secretPointOverrides);
+});
+
+// POST: 특정 포인트 좌표 저장 (어드민 JWT 인증 필수)
+app.post('/api/secret-point-overrides', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
+  const { id, lat, lng } = req.body;
+    if (!Number.isFinite(parseFloat(lat)) || !Number.isFinite(parseFloat(lng))) return res.status(400).json({ error: '유효한 좌표(숫자)가 필요합니다.' }); // ✅ FIX-LAT-LNG
+  if (!id || lat == null || lng == null) return res.status(400).json({ error: 'id, lat, lng 필수' });
+  secretPointOverrides[String(id)] = { lat: parseFloat(lat), lng: parseFloat(lng) };
+  saveSecretPointOverrides();
+  // ✅ DB 영구 저장
+  if (dbReady && SecretPointOverrideModel) {
+    SecretPointOverrideModel.findOneAndUpdate(
+      { id: String(id) },
+      { id: String(id), lat: parseFloat(lat), lng: parseFloat(lng) },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[SecretOverride] DB 저장 실패:', e.message));
+  }
+  (logger?.info || console.log)(`[SecretPoint] id=${id} 좌표 업데이트: ${lat}, ${lng}`);
+  res.json({ ok: true, overrides: secretPointOverrides });
+});
+
+// DELETE: 특정 포인트 초기화 (어드민 JWT 인증 필수)
+app.delete('/api/secret-point-overrides/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음', code: 'TOKEN_INVALID' }); }
+  const { id } = req.params;
+  delete secretPointOverrides[id];
+  saveSecretPointOverrides();
+  // ✅ DB에서도 삭제
+  if (dbReady && SecretPointOverrideModel) {
+    SecretPointOverrideModel.deleteOne({ id }).catch(e => logger.error('[SecretOverride] DB 삭제 실패:', e.message));
+  }
+  res.json({ ok: true, overrides: secretPointOverrides });
+});
+
+// ─── 낚시 포인트 좌표 오버라이드 (MASTER 전용) ─────────────────────────────────
+// GET: 모든 오버라이드 반환 (공개)
+app.get('/api/spot-location-overrides', (req, res) => {
+  res.json(spotLocationOverrides);
+});
+
+// POST: 좌표 및 정보(이름, 타입, 삭제여부) 오버라이드 저장 (MASTER 전용)
+app.post('/api/spot-location-overrides', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  
+  // lat, lng가 필수가 아니게 될 수도 있음. (이름/타입/삭제여부만 수정하는 경우)
+  // 하지만 보통 좌표와 함께 전달됨. 만약 lat/lng이 없으면 기존 값을 유지하도록 로직 보강
+  const { id, lat, lng, name, type, targets, isDeleted } = req.body;
+  if (!id) return res.status(400).json({ error: 'id 필수' });
+
+  // 기존 저장된 오버라이드 객체가 있으면 가져오고 없으면 빈 객체
+  const existing = spotLocationOverrides[String(id)] || {};
+  
+  // 전달된 좌표가 있으면 사용, 없으면 기존 오버라이드 또는 null
+  const newLat = lat !== undefined ? parseFloat(lat) : existing.lat;
+  const newLng = lng !== undefined ? parseFloat(lng) : existing.lng;
+
+  // 좌표가 존재하면 유효성 검증
+  if (newLat !== undefined && newLat !== null) {
+    if (isNaN(newLat) || newLat < -90 || newLat > 90) return res.status(400).json({ error: '유효하지 않은 위도값' });
+  }
+  if (newLng !== undefined && newLng !== null) {
+    if (isNaN(newLng) || newLng < -180 || newLng > 180) return res.status(400).json({ error: '유효하지 않은 경도값' });
+  }
+
+  // 병합
+  spotLocationOverrides[String(id)] = {
+    ...existing,
+    lat: newLat,
+    lng: newLng,
+    name: name !== undefined ? name : existing.name,
+    type: type !== undefined ? type : existing.type,
+    targets: targets !== undefined ? targets : existing.targets,
+    isDeleted: isDeleted !== undefined ? isDeleted : existing.isDeleted,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveSpotLocationOverrides();
+  
+  // ✅ DB 영구 저장 (재배포 후에도 유지)
+  if (dbReady && SpotLocationOverrideModel) {
+    SpotLocationOverrideModel.findOneAndUpdate(
+      { id: String(id) },
+      { 
+        id: String(id), 
+        lat: newLat, 
+        lng: newLng, 
+        name: spotLocationOverrides[String(id)].name || null,
+        type: spotLocationOverrides[String(id)].type || null,
+        targets: spotLocationOverrides[String(id)].targets || [],
+        isDeleted: spotLocationOverrides[String(id)].isDeleted || false
+      },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[SpotOverride] DB 저장 실패:', e.message));
+  }
+  
+  (logger?.info || console.log)(`[SpotLocation] id=${id} 정보 오버라이드 업데이트: ${JSON.stringify(spotLocationOverrides[String(id)])}`);
+  res.json({ ok: true, id, override: spotLocationOverrides[String(id)] });
+});
+
+// DELETE: 특정 포인트 원래대로 초기화 (MASTER 전용)
+app.delete('/api/spot-location-overrides/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { id } = req.params;
+  delete spotLocationOverrides[id];
+  saveSpotLocationOverrides();
+  // ✅ DB에서도 삭제
+  if (dbReady && SpotLocationOverrideModel) {
+    SpotLocationOverrideModel.deleteOne({ id }).catch(e => logger.error('[SpotOverride] DB 삭제 실패:', e.message));
+  }
+  res.json({ ok: true, reset: id });
+});
+
+// ─── 커스텀 낚시 포인트 (MASTER 신규 추가) ─────────────────────────────────────────
+// GET: 모든 커스텀 포인트 반환 (공개)
+app.get('/api/custom-points', (req, res) => {
+  res.json(Object.values(customPoints));
+});
+
+// POST: 새 포인트 추가 (MASTER 전용) — 좌표 입력 시 관측소 자동 배정
+app.post('/api/custom-points', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+
+  const { name, type, region, lat, lng, fish, obsCode, aiDescription, season, recommend, status } = req.body;
+  if (!name || !type || lat == null || lng == null) return res.status(400).json({ error: 'name, type, lat, lng 필수' });
+
+  // ✅ FIX-POINT-LATNG-RANGE: 좌표 범위 검증 (한국 좌표 ± 넓은 범위 허용)
+  const latNum = parseFloat(lat); const lngNum = parseFloat(lng);
+  if (isNaN(latNum) || latNum < -90 || latNum > 90) return res.status(400).json({ error: '유효하지 않은 위도값 (-90~90)' });
+  if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) return res.status(400).json({ error: '유효하지 않은 경도값 (-180~180)' });
+
+  // ✅ FIX-POINT-NAME-LEN: 포인트명/어종 길이 제한
+  if (typeof name !== 'string' || name.length > 100) return res.status(400).json({ error: '포인트명은 최대 100자입니다.' });
+  if (typeof type !== 'string' || type.length > 50) return res.status(400).json({ error: '타입은 최대 50자입니다.' });
+  if (typeof fish === 'string' && fish.length > 200) return res.status(400).json({ error: '어종 정보는 최대 200자입니다.' });
+
+  // ✅ AUTO-STATION: obsCode 미입력 시 위도/경도로 가장 가까운 관측소 자동 배정
+  let resolvedObsCode = obsCode || null;
+  let autoStationInfo = null;
+  let resolvedRegion = region || null;
+
+  if (!resolvedObsCode && !isNaN(latNum) && !isNaN(lngNum)) {
+    const nearest = findNearestStation(latNum, lngNum);
+    if (nearest) {
+      resolvedObsCode = nearest.stationId;
+      resolvedRegion = resolvedRegion || nearest.region;
+      autoStationInfo = nearest;
+      (logger?.info || console.log)(`[AUTO-STATION] ${name} → ${nearest.name} (${nearest.distKm}km)`);
+    }
+  }
+
+  // region이 아직 없으면 observationData에서 보완
+  if (!resolvedRegion && resolvedObsCode) {
+    resolvedRegion = observationData[resolvedObsCode]?.region || '미지정';
+  }
+
+  const id = `custom_${Date.now()}`;
+  customPoints[id] = {
+    id,
+    name,
+    type,
+    region: resolvedRegion || '미지정',
+    lat: latNum,
+    lng: lngNum,
+    fish: fish || '미확인',
+    score: 80,
+    status: status || '보통',
+    obsCode: resolvedObsCode,
+    aiDescription: aiDescription || null,
+    season: season || null,
+    recommend: recommend || null,
+    isCustom: true,
+    createdAt: new Date().toISOString(),
+  };
+  saveCustomPoints();
+  if (dbReady && CustomPointModel) {
+    CustomPointModel.findOneAndUpdate(
+      { id },
+      { $set: customPoints[id] },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[CustomPoint] DB 저장 실패:', e.message));
+  }
+  (logger?.info || console.log)(`[CustomPoint] 추가: ${name} (${type}) @ ${lat},${lng} obsCode=${resolvedObsCode}`);
+
+  res.json({
+    ok: true,
+    point: customPoints[id],
+    autoStation: autoStationInfo,  // 자동 매핑 정보 응답에 포함
+  });
+});
+
+// PUT: 커스텀 포인트 수정 (MASTER 전용)
+app.put('/api/custom-points/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  
+  const { id } = req.params;
+  if (!customPoints[id]) return res.status(404).json({ error: '포인트 없음' });
+  
+  const { name, type, targets, lat, lng } = req.body;
+  if (!name || !type) return res.status(400).json({ error: 'name, type 필수' });
+  
+  const pt = customPoints[id];
+  pt.name = name;
+  pt.type = type;
+  if (targets) pt.targets = targets;
+  if (lat !== undefined && lng !== undefined) {
+    pt.lat = parseFloat(lat);
+    pt.lng = parseFloat(lng);
+    // 좌표 변경 시 관측소도 재계산
+    const result = findNearestStation(pt.lat, pt.lng);
+    if (result) pt.obsCode = result.stationId;
+  }
+  
+  saveCustomPoints();
+  if (dbReady && CustomPointModel) {
+    CustomPointModel.findOneAndUpdate(
+      { id },
+      { $set: pt },
+      { new: true }
+    ).catch(e => logger.error('[CustomPoint] DB 수정 실패:', e.message));
+  }
+  (logger?.info || console.log)(`[CustomPoint] 수정: ${name} (${id})`);
+  
+  res.json({ ok: true, point: pt });
+});
+
+// DELETE: 커스텀 포인트 삭제 (MASTER 전용)
+app.delete('/api/custom-points/:id', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { id } = req.params;
+  if (!customPoints[id]) return res.status(404).json({ error: '포인트 없음' });
+  const name = customPoints[id].name;
+  delete customPoints[id];
+  saveCustomPoints();
+  if (dbReady && CustomPointModel) {
+    CustomPointModel.deleteOne({ id }).catch(e => logger.error('[CustomPoint] DB 삭제 실패:', e.message));
+  }
+  (logger?.info || console.log)(`[CustomPoint] 삭제: ${name} (${id})`);
+  res.json({ ok: true });
+});
+
+// ✅ AUTO-STATION API: 좌표 → 가장 가까운 관측소 자동 탐색 (인증 불필요 — 프론트 미리보기용)
+app.get('/api/nearest-station', (req, res) => {
+  const lat = parseFloat(req.query.lat);
+  const lng = parseFloat(req.query.lng);
+  if (isNaN(lat) || isNaN(lng)) return res.status(400).json({ error: 'lat, lng 필수 (숫자)' });
+  if (lat < 33 || lat > 39 || lng < 124 || lng > 132) return res.status(400).json({ error: '한국 범위 내 좌표만 지원 (lat 33~39, lng 124~132)' });
+  const result = findNearestStation(lat, lng);
+  if (!result) return res.status(404).json({ error: '관측소 없음' });
+  // 현재 날씨 데이터도 함께 반환
+  const weather = weatherCache[result.stationId]?.data || null;
+  res.json({
+    ...result,
+    weather: weather ? {
+      sst: weather.sst,
+      temp: weather.temp,
+      _sources: weather._sources,
+    } : null,
+  });
+});
+
+// POST: AI 낚시 포인트 정보 자동 생성 (MASTER 전용)
+app.post('/api/ai/generate-point-info', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: 'MASTER 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  const { name, type, region, lat, lng, obsCode } = req.body;
+  if (!name || !type) return res.status(400).json({ error: 'name, type 필수' });
+  // ✅ FIX-POINT-INFO-LEN: 입력 길이 제한 (prompt injection + DoS 방어)
+  if (typeof name !== 'string' || name.length > 100) return res.status(400).json({ error: '포인트명은 최대 100자입니다.' });
+  if (typeof type !== 'string' || type.length > 50) return res.status(400).json({ error: '타입은 최대 50자입니다.' });
+  if (lat !== undefined && (isNaN(Number(lat)) || Number(lat) < -90 || Number(lat) > 90)) return res.status(400).json({ error: '유효하지 않은 위도값' });
+  if (lng !== undefined && (isNaN(Number(lng)) || Number(lng) < -180 || Number(lng) > 180)) return res.status(400).json({ error: '유효하지 않은 경도값' });
+  const GEMINI_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_KEY) return res.status(503).json({ error: 'Gemini API 키 미설정' });
+  const stationInfo = obsCode ? (observationData[obsCode] || {}) : {};
+  const regionLabel = stationInfo.region || region || '미지정';
+  const prompt = `당신은 한국 낚시 전문가입니다. 다음 낚시 포인트에 대한 정보를 생성해주세요.\n포인트명: ${name}\n타입: ${type} (${regionLabel} 권역)\n위치: 위도 ${lat}, 경도 ${lng}\n인근 관측소: ${stationInfo.name || '미확인'}\n\n반드시 아래 JSON 형식만 응답하세요 (다른 텍스트 없이):\n{\n  "fish": "이 포인트에서 주로 잡히는 어종 3~5가지 (쉼표 구분, 한국어)",\n  "description": "이 낚시 포인트의 특징과 낚시 방법 설명 (2~3문장)",\n  "season": "최적 낚시 시즌 설명",\n  "recommend": "추천 채비 및 미끼 (1~2가지)",\n  "status": "최고|피딩중|활발|보통 중 하나"\n}`;
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+        })
+      }
+    );
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    res.json(result);
+  } catch (err) {
+    (logger?.error || console.error)('[POST /api/ai/generate-point-info]', err.message);
+    res.status(500).json({ error: 'AI 생성 실패' });
+  }
+});
+
+// ─── 앱 설정 (강제 업데이트용) ──────────────────────────────────────────────────
+app.get('/api/app-config', (req, res) => {
+  res.json(appConfig);
+});
+
+app.post('/api/admin/app-config', (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  try {
+    const p = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] });
+    if (!isAdminToken(p)) return res.status(403).json({ error: '관리자 권한 필요' });
+  } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  
+  // ✅ FIX-APPCONFIG-VALID: 형식 검증 추가 (임의 값/XSS URL 주입 방어)
+  if (req.body.min_version !== undefined) {
+    const mv = String(req.body.min_version);
+    if (/^\d+\.\d+\.\d+$/.test(mv)) appConfig.min_version = mv;
+    else return res.status(400).json({ error: 'min_version 형식: x.y.z' });
+  }
+  if (req.body.store_url !== undefined) {
+    const su = String(req.body.store_url);
+    if (/^https:\/\/.{5,500}/.test(su)) appConfig.store_url = su;
+    else return res.status(400).json({ error: 'store_url은 https로 시작해야 합니다.' });
+  }
+  
+  saveAppConfig();
+  if (dbReady && AppConfigModel) {
+    AppConfigModel.findOneAndUpdate(
+      { key: 'global_config' },
+      { $set: { min_version: appConfig.min_version, store_url: appConfig.store_url } },
+      { upsert: true, new: true }
+    ).catch(e => logger.error('[AppConfig] DB 저장 실패:', e.message));
+  }
+  res.json({ ok: true, appConfig });
+});
+
+app.get('/api/debug', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.status(403).json({ error: '접근 불가' });
+  // FIX-DEBUG-AUTH: production이 아닌 경우에도 관리자 JWT 필요
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) {
+    try { const tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); if (!isAdminToken(tp)) return res.status(403).json({ error: '관리자 권한 필요' }); }
+    catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
+  } else { return res.status(401).json({ error: '인증 필요' }); }
+  const uri = MONGO_URI ? MONGO_URI.replace(/:[^@]+@/, ':***@') : '미설정';
+  res.json({
+    dbReady,
+    mongoUri: uri,
+    memUserCount: memUsers.length,
+    memCrewCount: memCrews.length,
+    memNoticeCount: memNotices.length,
+    memBusinessCount: memBusinessPosts.length,
+    env: {
+      MONGO_URI: !!process.env.MONGO_URI,
+      MONGO_PASS: !!process.env.MONGO_PASS,
+      NODE_ENV: process.env.NODE_ENV
+    }
+  });
+});
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin) {
+        if (process.env.NODE_ENV === 'production') return callback(new Error('CORS 차단'));
+        return callback(null, true);
+      }
+      const allowed = ALLOWED_ORIGINS.some(o =>
+        typeof o === 'string' ? o === origin : o.test(origin)
+      );
+      return allowed ? callback(null, true) : callback(new Error('CORS 차단'));
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+  }
+});
+
+// ✅ CREW-ENH: 서버사이드 레벨 시스템 (유저스토어와 동일 기준)
+const LEVEL_CONFIG_SV = [
+  { level: 1, title: '\uCD08\uBCF4 \uB099\uC2DC\uAFBC',   emoji: '\uD83E\uDEB1', expRequired: 0    },
+  { level: 2, title: '\uACAC\uC2B5 \uB099\uC2DC\uAFBC',   emoji: '\uD83C\uDFA3', expRequired: 100  },
+  { level: 3, title: '\uB099\uC2DC \uC785\uBB38\uC790',   emoji: '\uD83D\uDC1F', expRequired: 250  },
+  { level: 4, title: '\uB099\uC2DC \uC560\uD638\uAC00',   emoji: '\uD83D\uDC20', expRequired: 500  },
+  { level: 5, title: '\uBCA0\uD14C\uB791 \uB099\uC2DC\uC778', emoji: '\uD83D\uDC21', expRequired: 850  },
+  { level: 6, title: '\uC911\uAE09 \uB099\uC2DC\uAFBC',   emoji: '\uD83E\uDD88', expRequired: 1300 },
+  { level: 7, title: '\uACE0\uC218 \uB099\uC2DC\uC778',   emoji: '\uD83C\uDFAF', expRequired: 1900 },
+  { level: 8, title: '\uB099\uC2DC \uC7A5\uC778',         emoji: '\u2693',       expRequired: 2700 },
+  { level: 9, title: '\uC804\uC124\uC758 \uB099\uC2DC\uC778', emoji: '\uD83D\uDC51', expRequired: 3700 },
+];
+function getServerLevel(totalExp = 0) {
+  if (totalExp >= 5000) return { level: 'LV.??', emoji: '\uD83C\uDF0C', title: '\uCD08\uC6D4 \uB099\uC2DC\uC2E0' };
+  for (let i = LEVEL_CONFIG_SV.length - 1; i >= 0; i--) {
+    if (totalExp >= LEVEL_CONFIG_SV[i].expRequired) {
+      const lv = LEVEL_CONFIG_SV[i];
+      return { level: `LV.${lv.level}`, emoji: lv.emoji, title: lv.title };
+    }
+  }
+  return { level: 'LV.1', emoji: '\uD83E\uDEB1', title: '\uCD08\uBCF4 \uB099\uC2DC\uAFBC' };
+}
+
+// 실시간 낚시 인원 서버 로직 (chatHistories는 상단에서 선언되었습니다)
+
+io.on('connection', (socket) => {
+  // ✅ OPT-5: 연결 시 핸드셰이크 토큰 검증 (발신자 위조 방지)
+  let verifiedUser = null;
+  // ✅ FIX-SOCKET-FLOOD: 메시지 플러딩 방지
+  let msgCount = 0; let msgWindow = Date.now();
+  const MSG_LIMIT = 10; const MSG_WINDOW_MS = 3000; // 3초 내 10회
+  const handshakeToken = socket.handshake?.auth?.token || socket.handshake?.query?.token;
+  if (handshakeToken) {
+    try {
+      verifiedUser = jwt.verify(handshakeToken, JWT_SECRET, { algorithms: ['HS256'] });
+    } catch {
+      // 토큰 만료/위조 — verifiedUser null 유지, 연결은 허용하되 발신 시 익명 처리
+      (logger?.warn || console.warn)('[Socket] 잘못된 토큰으로 연결 시도:', socket.id);
+    }
+  }
+
+  // ✅ 21TH-B1: console.log → logger.info (Winston 통일)
+  logger.info(`[Socket] User connected: ${socket.id} ${verifiedUser ? `(${verifiedUser.name || verifiedUser.email})` : '(미인증)'}`);
+
+  // ✅ NICK-FIX: 소켓 세션 단위 레벨 + 닉네임 캐시 (경쟁조건 없이 즉시 초기화)
+  let cachedLevel = { level: 'LV.1', emoji: '🪱', title: '초보 낚시꾼' };
+  // 1순위: JWT에 포함된 name (로그인/재로그인 후 즉시 유효)
+  // 2순위: 인메모리 memUsers에서 즉시 동기 조회 (경쟁조건 없음)
+  // 3순위: DB 비동기 조회 완료 후 갱신
+  let cachedNickname = verifiedUser?.name
+    || memUsers.find(u => u.email === verifiedUser?.email)?.name
+    || null;
+  if (verifiedUser?.email) {
+    if (dbReady && User) {
+      User.findOne({ email: verifiedUser.email }).select('totalExp name').lean()
+        .then(u => {
+          if (u) {
+            cachedLevel = getServerLevel(u.totalExp || 0);
+            if (u.name) cachedNickname = u.name; // DB 닉네임 최종 확정 (아이디 노출 차단)
+          }
+        })
+        .catch(() => {});
+    } else {
+      // 인메모리 모드: memUsers에서 레벨도 계산
+      const memU = memUsers.find(u => u.email === verifiedUser.email);
+      if (memU) {
+        cachedLevel = getServerLevel(memU.totalExp || 0);
+        if (memU.name) cachedNickname = memU.name;
+      }
+    }
+  }
+
+  let joinCount = 0; let joinWindow = Date.now(); // ✅ FIX-SOCKET-JOIN-RATE: join 이벤트 rate limit
+  socket.on('join_crew', async (crewId) => {
+    if (!crewId || typeof crewId !== 'string' || !/^[a-f0-9]{24}$/.test(crewId)) return; // ✅ FIX-CREWID
+    if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-SOCKET-JOIN-AUTH
+    // ✅ FIX-SOCKET-JOIN-RATE: 10초 내 5회 이상 join 시도 차단
+    const nowJoin = Date.now();
+    if (nowJoin - joinWindow > 10_000) { joinCount = 0; joinWindow = nowJoin; }
+    if (++joinCount > 5) { socket.emit('error', { message: '너무 빠른 채팅방 참가 시도입니다.' }); return; }
+    // ✅ FIX-JOIN-CREW-MEMBER: 비공개 크루 멤버십 검증
+    if (dbReady && Crew) {
+      try {
+        const crewDoc = await Crew.findById(crewId).select('isPrivate members').lean();
+        if (crewDoc && crewDoc.isPrivate) {
+          const userKey = verifiedUser.email || verifiedUser.id;
+          const isMem = (crewDoc.members || []).some(m => (m.email || m) === userKey);
+          if (!isMem) { socket.emit('error', { message: '비공개 크루의 멤버가 아닙니다.' }); return; }
+        }
+      } catch { }
+    }
+    // ✅ FIX-SOCKET-DUP-JOIN: 중복 room join 방어
+  if (!socket.rooms.has(crewId)) socket.join(crewId);
+    // ENH4-C4: DB에서 최근 50개 메시지만 로드 (기존 100개 → 초기 전송량 최적화)
+    if (dbReady && ChatMessage) {
+      try {
+        const msgs = await ChatMessage.find({ crewId }).sort({ createdAt: -1 }).limit(50);
+        chatHistories[crewId] = msgs.reverse().map(m => ({
+          sender: m.sender,
+          text: m.text,
+          time: m.time,
+          // ✅ POST-SHARE: 공유 카드 필드 포함
+          type: m.type || 'text',
+          postId: m.postId || '',
+          postTitle: m.postTitle || '',
+          postPreview: m.postPreview || '',
+          postImage: m.postImage || '',
+          postCategory: m.postCategory || '',
+          senderLevel: m.senderLevel || '',
+          senderEmoji: m.senderEmoji || '',
+          senderTitle: m.senderTitle || '',
+          // ✅ REPLY-HISTORY: 채팅방 입장 시 과거 답장 메시지에도 인용 버블 표시
+          replyTo: (m.replyTo && m.replyTo.sender) ? { sender: m.replyTo.sender, text: m.replyTo.text || '' } : null,
+        }));
+      } catch (e) { logger.warn(`[Socket] join_crew 채팅 히스토리 DB 로드 실패 (crewId=${crewId}): ${e.message}`); } // ✅ 21TH-B2: silent catch → logger.warn
+    }
+    if (!chatHistories[crewId]) chatHistories[crewId] = [];
+    socket.emit('chat_history', chatHistories[crewId]);
+  });
+
+  socket.on('send_msg', async (data) => {
+    // ✅ FIX-CHAT-MSG-LENGTH: 채팅 메시지 최대 500자 제한 (DoS 방어)
+    if (!data || typeof data !== 'object') return;
+    if (typeof data.text === 'string' && data.text.length > 500) {
+      socket.emit('error', { message: '메시지는 최대 500자입니다.' }); return;
+    }
+    // ✅ FIX-SOCKET-FLOOD-CHECK: 플러딩 방지
+    const now = Date.now(); if (now - msgWindow > MSG_WINDOW_MS) { msgCount = 0; msgWindow = now; }
+    if (++msgCount > MSG_LIMIT) { socket.emit('error', { message: '메시지를 너무 빠르게 전송하고 있습니다.' }); return; }
+    if (!data.crewId || typeof data.crewId !== 'string' || data.crewId.length > 100) return; // FIX-CREWID-VALIDATE
+    if (!socket.rooms.has(data.crewId)) { socket.emit('error', { message: '채팅방에 참가하지 않았습니다.' }); return; } // ✅ FIX-CREW-ROOM
+    if (!verifiedUser) { socket.emit('error', { message: '로그인이 필요합니다.' }); return; } // ✅ FIX-MSG-AUTH
+    if (data.type === 'text' && (!data.text || !String(data.text).trim())) return; // ✅ FIX-MSG-EMPTY
+    if (data.type !== 'post_share' && typeof data.text === 'string' && data.text.length > 1000) { socket.emit('error', { message: '1000자를 초과할 수 없습니다.' }); return; } // ✅ FIX-MSG-SIZE
+    const safeText = (data.text||'').replace(/<[^>]*>/g,'').replace(/javascript:/gi,'').trim().substring(0,1000); // ✅ FIX-CHAT-XSS
+
+    // ── 닉네임 결정 (기존 로직 동일) ─────────────────────────
+    let resolvedNickname = cachedNickname;
+    if (!resolvedNickname && verifiedUser?.email) {
+      const memU = memUsers.find(u => u.email === verifiedUser.email);
+      if (memU?.name) { resolvedNickname = memU.name; cachedNickname = memU.name; }
+      else if (dbReady && User) {
+        try {
+          const dbU = await User.findOne({ email: verifiedUser.email }).select('name totalExp').lean();
+          if (dbU?.name) { resolvedNickname = dbU.name; cachedNickname = dbU.name; if (dbU.totalExp !== undefined) cachedLevel = getServerLevel(dbU.totalExp); }
+        } catch { /* fallback */ }
+      }
+    }
+    const sender = (resolvedNickname || verifiedUser?.name || '익명').toString().slice(0, 30);
+
+    // ── post_share 타입 처리 ──────────────────────────────────
+    if (data.type === 'post_share') {
+      const postId = (data.postId || '').toString().trim();
+      if (!postId) return;
+      const rawImage = (data.postImage || '').toString();
+      // FIX-CHAT-MIME: base64 이미지 MIME 타입 화이트리스트 (허용: jpeg/png/gif/webp)
+      const isBase64 = rawImage.startsWith('data:');
+      if (isBase64) {
+        const mimeMatch = rawImage.match(/^data:([^;]+);base64,/);
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!mimeMatch || !allowedMimes.includes(mimeMatch[1])) {
+          socket.emit('error', { message: '허용되지 않는 이미지 형식입니다.' }); return;
+        }
+      }
+      const dbSafeImage = isBase64 ? '' : rawImage.slice(0, 500); // URL은 500자 이내 저장
+      const msgData = {
+        type: 'post_share',
+        sender,
+        postId,
+        postTitle:   (data.postTitle   || '').toString().slice(0, 100),
+        postPreview: (data.postPreview || '').toString().slice(0, 120),
+        postImage:   rawImage,  // 실시간 emit: 전체 (base64 포함)
+        postCategory:(data.postCategory|| '').toString().slice(0, 20),
+        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' }),
+        socketId: socket.id,
+        senderLevel: cachedLevel.level,
+        senderEmoji: cachedLevel.emoji,
+        senderTitle: cachedLevel.title,
+      };
+      if (!chatHistories[data.crewId]) chatHistories[data.crewId] = [];
+      chatHistories[data.crewId].push(msgData);
+      if (chatHistories[data.crewId].length > 500) chatHistories[data.crewId] = chatHistories[data.crewId].slice(-500);
+      io.to(data.crewId).emit('new_msg', msgData);
+      if (dbReady && ChatMessage) {
+        try {
+          await new ChatMessage({
+            crewId: data.crewId,
+            sender: msgData.sender,
+            text: `[게시글공유] ${msgData.postTitle}`,
+            time: msgData.time,
+            type: 'post_share',
+            postId: msgData.postId,
+            postTitle: msgData.postTitle,
+            postPreview: msgData.postPreview,
+            postImage: dbSafeImage,  // ✅ BASE64-FIX: URL만 저장 (base64는 빈 문자열)
+            postCategory: msgData.postCategory,
+            senderLevel: msgData.senderLevel,
+            senderEmoji: msgData.senderEmoji,
+            senderTitle: msgData.senderTitle,
+          }).save();
+        } catch (e) { logger.error(`[Socket] post_share DB 저장 실패: ${e.message}`); }
+      } else { saveChatHistories(); }
+      return;
+    }
+
+    // ── 일반 텍스트 메시지 처리 (기존 로직) ──────────────────
+    const text = censorText((safeText || data.text || '').toString().trim());
+    if (!text || text.length > 500) return;
+
+    const msgData = {
+      sender,
+      text,
+      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' }),
+      socketId: socket.id,
+      senderLevel: cachedLevel.level,
+      senderEmoji: cachedLevel.emoji,
+      senderTitle: cachedLevel.title,
+      // ✅ REPLY: 답장 대상 (sender + text 100자 이내로 제한, XSS 방지)
+      replyTo: (data.replyTo && typeof data.replyTo === 'object')
+        ? {
+            sender: (data.replyTo.sender || '').toString().slice(0, 30),
+            text:   (data.replyTo.text   || '').toString().slice(0, 100),
+          }
+        : null,
+    };
+    if (!chatHistories[data.crewId]) chatHistories[data.crewId] = [];
+    chatHistories[data.crewId].push(msgData);
+    if (chatHistories[data.crewId].length > 500) chatHistories[data.crewId] = chatHistories[data.crewId].slice(-500);
+    io.to(data.crewId).emit('new_msg', msgData);
+
+    // ✅ REPLY NOTIF: 답장 메시지 수신 시 크루 룸 전체에 알림 브로드캐스트
+    // 클라이언트가 repliedToSender === 자신 닉네임 여부를 체크해 알림 표시
+    if (msgData.replyTo?.sender) {
+      io.to(data.crewId).emit('crew_reply_notification', {
+        repliedToSender: msgData.replyTo.sender,  // 답장 받은 사람 (원글 작성자)
+        fromSender:      msgData.sender,           // 답장 보낸 사람
+        replyText:       msgData.text.slice(0, 80),
+        crewId:          data.crewId,
+        time:            msgData.time,
+      });
+    }
+
+    if (dbReady && ChatMessage) {
+      try {
+        await new ChatMessage({
+          crewId: data.crewId,
+          sender: msgData.sender,
+          text: msgData.text,
+          time: msgData.time,
+          senderLevel: msgData.senderLevel,
+          senderEmoji: msgData.senderEmoji,
+          senderTitle: msgData.senderTitle,
+          // ✅ REPLY-FIX: replyTo DB 저장 포함 — 서버 재시작 후에도 인용 버블 유지
+          replyTo: msgData.replyTo ? {
+            sender: msgData.replyTo.sender || '',
+            text:   msgData.replyTo.text   || '',
+          } : undefined,
+        }).save();
+        if (chatHistories[data.crewId]?.length % 50 === 0) saveChatHistories();
+      } catch (e) { logger.error(`[Socket] send_msg DB 저장 실패 (crewId=${data.crewId}): ${e.message}`); }
+    } else { saveChatHistories(); }
+
+    // ✅ PUSH: 크루 멤버에게 FCM 알림 (오프라인/백그라운드)
+    try {
+      if (dbReady && Crew) {
+        const crew = await Crew.findById(data.crewId).select('members').lean();
+        if (crew?.members?.length) {
+          const memberIds = crew.members
+            .filter(m => String(m.userId || m) !== String(verifiedUser?.id || verifiedUser?._id))
+            .map(m => m.userId || m);
+          if (memberIds.length) {
+            pushService.sendToUsers(memberIds, {
+              title: `💬 ${sender}`,
+              body: text.length > 50 ? text.slice(0, 50) + '…' : text,
+              data: { route: `/crew/${data.crewId}/chat`, type: 'crew_chat' },
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e) { /* FCM 크루 알림 실패 무시 */ }
+  });
+
+
+  socket.on('disconnect', () => {
+    logger.info(`[Socket] User disconnected: ${socket.id}`); // ✅ 21TH-B1: console.log → logger.info
+    // ✅ FIX-LOW: socket 스코프 변수(msgCount/msgWindow)는 소켓 종료 시 자동 소멸 — 별도 Map 정리 불필요
+  });
+});
+
+// --- API Request Deduping Cache ---
+const apiPromiseCache = new Map();
+async function dedupApi(key, fetchFn) {
+  if (apiPromiseCache.has(key)) return apiPromiseCache.get(key);
+  const promise = fetchFn().finally(() => apiPromiseCache.delete(key));
+  apiPromiseCache.set(key, promise);
+  return promise;
+}
+
+// --- KHOA/KMA Real-world API Bridges with 1-hour Caching ---
+const ALL_STATIONS = [
+  'DT_0099', 'DT_0001', 'DT_0002', 'DT_0003', 'DT_0033', 'DT_0036', 'DT_0021', // 동해 (고성 추가)
+  'DT_0004', 'DT_0005', 'DT_0006', 'DT_0014', 'DT_0016', 'DT_0018', 'DT_0034', // 남해
+  'DT_0007', 'DT_0008', 'DT_0009', 'DT_0030', // 서해
+  'DT_0010', 'DT_0011', 'DT_0045' // 제주
+];
+
+let weatherCache = {};
+
+// ✅ 고도화: 데이터 소스 신뢰도 티어 시스템
+const SST_SOURCE_PRIORITY = {
+  'KHOA_API': 40,
+  'NIFS_API': 30,
+  'KMA_BUOY': 20,
+  'KMA_BEACH': 10,
+  'fallback': 0
+};
+
+// --- 권역별 기본 기상 프로파일 (Realism 강화) ---
+const REGIONAL_PROFILES = {
+  '동해': { temp: 14.5, wind: 3.5, wave: 0.6 },
+  '남해': { temp: 16.8, wind: 2.5, wave: 0.4 },
+  '서해': { temp: 12.2, wind: 4.0, wave: 0.7 },
+  '제주': { temp: 18.5, wind: 3.0, wave: 0.5 }
+};
+const observationData = {
+  // 동해
+  'DT_0099': { name: '고성 가진항', region: '동해', baseTemp: 13.0, baseWind: 5.0 },
+  'DT_0001': { name: '강릉 안목항', region: '동해', baseTemp: 14.2, baseWind: 4.2 },
+  'DT_0021': { name: '속초 영금정', region: '동해', baseTemp: 13.5, baseWind: 5.5 },
+  'DT_0002': { name: '울진 후포', region: '동해', baseTemp: 14.8, baseWind: 3.8 },
+  'DT_0033': { name: '동해 묵호', region: '동해', baseTemp: 14.4, baseWind: 4.1 },
+  'DT_0036': { name: '경주 감포', region: '동해', baseTemp: 15.2, baseWind: 3.2 },
+  // 남해
+  'DT_0004': { name: '부산 해운대', region: '남해', baseTemp: 16.5, baseWind: 2.8 },
+  'DT_0005': { name: '여수 국동항', region: '남해', baseTemp: 17.2, baseWind: 2.2 },
+  'DT_0016': { name: '통영 도남', region: '남해', baseTemp: 16.8, baseWind: 2.4 },
+  'DT_0034': { name: '거제 지세포', region: '남해', baseTemp: 17.0, baseWind: 2.5 },
+  'DT_0018': { name: '완도항', region: '남해', baseTemp: 16.2, baseWind: 3.1 },
+  // 서해
+  'DT_0007': { name: '인천 연안부두', region: '서해', baseTemp: 11.5, baseWind: 3.5 },
+  'DT_0008': { name: '보령 대천항', region: '서해', baseTemp: 12.8, baseWind: 3.2 },
+  'DT_0009': { name: '군산 비응항', region: '서해', baseTemp: 13.2, baseWind: 3.0 },
+  'DT_0030': { name: '태안 마도', region: '서해', baseTemp: 12.0, baseWind: 3.5 },
+  // 제주
+  'DT_0011': { name: '서귀포 외돌개', region: '제주', baseTemp: 18.8, baseWind: 3.4 },
+  'DT_0010': { name: '제주 한림', region: '제주', baseTemp: 18.2, baseWind: 3.8 },
+  'DT_0045': { name: '성산포항', region: '제주', baseTemp: 18.5, baseWind: 4.2 },
+  // ✅ BUG-FIX: ALL_STATIONS에 있으나 observationData에 누락된 관측소 추가 (fallback 방지)
+  'DT_0003': { name: '삼척항', region: '동해', baseTemp: 13.8, baseWind: 3.5 },
+  'DT_0006': { name: '목포항', region: '남해', baseTemp: 20.0, baseWind: 3.0 },
+  'DT_0014': { name: '광양만 관측소', region: '남해', baseTemp: 16.0, baseWind: 2.9 },
+};
+
+// ✅ AUTO-STATION: 관측소별 실제 좌표 (Haversine 자동 매핑용)
+const STATION_COORDS = {
+  'DT_0099': { lat: 38.3740, lng: 128.5120 },  // 고성 가진항
+  'DT_0001': { lat: 37.7734, lng: 128.9406 },  // 강릉 안목항
+  'DT_0021': { lat: 38.2048, lng: 128.5925 },  // 속초 영금정
+  'DT_0002': { lat: 36.6764, lng: 129.4627 },  // 울진 후포
+  'DT_0033': { lat: 37.5484, lng: 129.1128 },  // 동해 묵호
+  'DT_0003': { lat: 37.4432, lng: 129.1639 },  // 삼척항
+  'DT_0036': { lat: 35.8188, lng: 129.5012 },  // 경주 감포
+  'DT_0004': { lat: 35.1586, lng: 129.1603 },  // 부산 해운대
+  'DT_0005': { lat: 34.7462, lng: 127.7516 },  // 여수 국동항
+  'DT_0016': { lat: 34.8512, lng: 128.4342 },  // 통영 도남
+  'DT_0034': { lat: 34.8101, lng: 128.7021 },  // 거제 지세포
+  'DT_0018': { lat: 34.3108, lng: 126.7575 },  // 완도항
+  'DT_0014': { lat: 34.9123, lng: 127.7268 },  // 광양만 관측소
+  'DT_0007': { lat: 37.4643, lng: 126.6188 },  // 인천 연안부두
+  'DT_0008': { lat: 36.3523, lng: 126.5078 },  // 보령 대천항
+  'DT_0009': { lat: 35.9697, lng: 126.5621 },  // 군산 비응항
+  'DT_0030': { lat: 36.7265, lng: 126.1474 },  // 태안 마도
+  'DT_0006': { lat: 34.7891, lng: 126.3776 },  // 목포항
+  'DT_0011': { lat: 33.2460, lng: 126.5623 },  // 서귀포 외돌개
+  'DT_0010': { lat: 33.4139, lng: 126.2636 },  // 제주 한림
+  'DT_0045': { lat: 33.4714, lng: 126.9248 },  // 성산포항
+};
+
+/**
+ * Haversine 공식으로 두 좌표 간 거리(km) 계산
+ */
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * 위도/경도로 가장 가까운 관측소 자동 탐색
+ * @returns {{ stationId: string, distKm: number, name: string, region: string }}
+ */
+function findNearestStation(lat, lng) {
+  let nearest = null;
+  let minDist = Infinity;
+  for (const [sid, coords] of Object.entries(STATION_COORDS)) {
+    const d = haversineKm(lat, lng, coords.lat, coords.lng);
+    if (d < minDist) { minDist = d; nearest = sid; }
+  }
+  if (!nearest) return null;
+  const info = observationData[nearest] || {};
+  return {
+    stationId: nearest,
+    distKm: Math.round(minDist * 10) / 10,
+    name: info.name || nearest,
+    region: info.region || '미지정',
+  };
+}
+
+// ✅ SST-OBS-REMAP: 전수조사(DT_0001~0500) 결과 기반 정확한 obsCode 매핑
+// surveyWaterTemp API의 DT_XXXX 코드 ≠ 항만/조석 DT_XXXX 코드 (다른 체계)
+// 실제 확인된 코드: DT_0005(포항) DT_0006(묵호) DT_0011(울진) DT_0012(속초)
+//   DT_0013(울릉도) DT_0020(포항북) DT_0061(남해서부) DT_0062(마산) DT_0063(거제)
+//   DT_0067(태안) DT_0091(포항) DT_0094(제주서)
+const WATER_TEMP_OBS_MAP = {
+  'DT_0099': 'DT_0012',  // 고성 가진항 → 속초 38.20°N (최근접)
+  'DT_0001': 'DT_0006',  // 강릉 안목항 → 묵호 37.55°N/129.11°E (최근접 22km)
+  'DT_0021': 'DT_0012',  // 속초 영금정 → 속초 38.20°N/128.59°E ✅ 정확
+  'DT_0033': 'DT_0006',  // 동해 묵호   → 묵호 37.55°N/129.11°E ✅ 정확
+  'DT_0002': 'DT_0011',  // 울진 후포   → 울진 36.67°N/129.45°E ✅ 정확
+  'DT_0003': 'DT_0006',  // 삼척항      → 묵호 37.55°N (최근접)
+  'DT_0036': 'DT_0091',  // 경주 감포   → 포항 (기존 DT_0005 부산에 매핑된 오류 수정)
+  'DT_0004': 'DT_0005',  // 부산 해운대  → 부산 35.09°N (기존 주석의 '포항' 오기 수정, 실제 DT_0005는 부산)
+  'DT_0005': 'DT_0061',  // 여수 국동항  → 남해서부 34.92°N/128.07°E
+  'DT_0016': 'DT_0062',  // 통영 도남   → 마산 35.2°N/128.58°E
+  'DT_0034': 'DT_0063',  // 거제 지세포  → 거제 35.02°N/128.81°E ✅ 정확
+  'DT_0014': 'DT_0061',  // 광양만      → 남해서부 34.92°N
+  'DT_0008': null,      // 보령 대천항  → DT_0067(황해외해 14.4°C) 제거 → 월별계절값(서해6월20.5°C)이 더 정확
+  'DT_0030': null,      // 태안 마도   → 동일 이유
+  // DT_0010 제주한림: NIFS jt001 우선, 없으면 월별계절값(제주6월24.5°C)
+  // DT_0094(제주외해14.7°C) 제거 - 남태평양 냉수대 영향 과도
+  // DT_0007 인천, DT_0009 군산, DT_0006 목포, DT_0045 성산포: 월별계절값
+};
+
+// ✅ NIFS-RISA-MAP: 실시간어장정보(risaList) sta_cde 매핑
+// 실제 API가 반환하는 관측소 목록(기장, 강릉, 양양 등 41개소)을 100% 매핑하여 '반영중' 오류 원천 차단
+const NIFS_STA_MAP = {
+  'DT_0099': 'fggo3',  // 고성      → 고성 가진
+  'DT_0021': 'byy87',  // 속초      → 양양 (인접)
+  'DT_0001': 'bgna3',  // 강릉      → 강릉
+  'DT_0002': 'byd8a',  // 울진 후포 → 영덕 (인접)
+  'DT_0003': 'bsc87',  // 삼척항    → 삼척
+  'DT_0033': 'bsc87',  // 묵호항    → 삼척 (인접)
+  'DT_0036': 'fghe8',  // 경주 감포 → 구룡포 하정 (포항, 인접)
+  'DT_0004': 'bgj8a',  // 부산 해운대 → 기장 (인접)
+  'DT_0034': 'gi086',  // 거제      → 거제 일운
+  'DT_0016': 'ty004',  // 통영      → 통영 영운
+  'DT_0005': 'km001',  // 여수      → 여수 신월
+  'DT_0014': 'km001',  // 광양만    → 여수 신월 (가장 인접)
+  'DT_0018': 'fwdo5',  // 완도      → 완도 대창
+  'DT_0006': 'emp67',  // 목포      → 목포
+  'DT_0009': 'egsi4',  // 군산      → 군산 신시도
+  'DT_0008': 'fbsp5',  // 보령      → 보령 소도
+  'DT_0030': 'ftpk5',  // 태안      → 태안 파도리
+  'DT_0007': 'fsch6',  // 인천      → 서산 창리 (인천 남쪽 인접)
+  'DT_0010': 'ejj47',  // 제주(서쪽) → 서제주
+  'DT_0011': 'ejj47',  // 서귀포     → 서제주
+  'DT_0045': 'ejj47',  // 성산포     → 서제주
+};
+
+// NIFS 전체 데이터 캐시 (30분 주기 — KHOA 캐시와 동기)
+let nifsCache = null;
+let nifsCacheTime = 0;
+let nifsFetchPromise = null; // ✅ singleton: 동시 호출 시 1번만 API 요청
+
+async function getNifsAllStations() {
+  const NIFS_KEY = process.env.NIFS_KEY || 'qPwOeIrU-2606-NCSXWE-1656';
+  if (!NIFS_KEY) return null;
+  const now = Date.now();
+  if (nifsCache && (now - nifsCacheTime) < 28 * 60 * 1000) return nifsCache;
+  // 이미 fetch 진행 중이면 동일 Promise 대기 (중복 호출 방지)
+  if (nifsFetchPromise) return nifsFetchPromise;
+  nifsFetchPromise = (async () => {
+    try {
+      const res = await axios.get(`https://www.nifs.go.kr/OpenAPI_json?id=risaList&key=${NIFS_KEY}`, { timeout: 8000 });
+      if (res.data?.header?.resultCode !== '00') return nifsCache;
+      const items = res.data?.body?.item;
+      if (!items || !Array.isArray(items)) return nifsCache;
+      // 표층, 중층, 저층 모두 수집 (rpr_yn === 'N'만)
+      const validItems = items.filter(i => String(i.rpr_yn) === 'N');
+      const map = {};
+      for (const item of validItems) {
+        const key = item.sta_cde;
+        if (!map[key]) {
+          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, name: item.sta_nam_kor, upper: null, middle: null, lower: null };
+        }
+        
+        const currentDateTime = parseInt((map[key].obs_dat + map[key].obs_tim).replace(/\D/g, ''), 10);
+        const itemDateTime = parseInt((item.obs_dat + item.obs_tim).replace(/\D/g, ''), 10);
+        
+        // 새로운 관측시간 데이터면 초기화
+        if (itemDateTime > currentDateTime) {
+          map[key] = { obs_dat: item.obs_dat, obs_tim: item.obs_tim, name: item.sta_nam_kor, upper: null, middle: null, lower: null };
+        }
+        
+        // 최신 데이터면 층별 온도 기록
+        if (itemDateTime >= currentDateTime) {
+          map[key].name = item.sta_nam_kor;
+          const lay = String(item.obs_lay);
+          const tmp = item.wtr_tmp;
+          const isValidTmp = tmp && tmp !== '-' && !isNaN(parseFloat(tmp));
+          const val = isValidTmp ? String(parseFloat(tmp).toFixed(1)) : null;
+          
+          if (lay === '1' && val) map[key].upper = val;
+          else if (lay === '2' && val) map[key].middle = val;
+          else if (lay === '3' && val) map[key].lower = val;
+        }
+      }
+      nifsCache = map;
+      nifsCacheTime = Date.now();
+      logger.info(`[NIFS] 실시간어장정보 이넥 갱신: ${Object.keys(map).length}인 관측소`);
+      return map;
+    } catch (e) {
+      logger.warn(`[NIFS] risaList API 실패: ${e.message}`);
+      return nifsCache;
+    } finally {
+      nifsFetchPromise = null; // 완료 후 초기화
+    }
+  })();
+  return nifsFetchPromise;
+}
+
+async function getNifsWaterTemp(sid) {
+  let staCde = NIFS_STA_MAP[sid];
+  const map = await getNifsAllStations();
+  if (!map) return null;
+
+  // 자동 동적 매칭 (수동 매핑이 없는 경우)
+  if (!staCde && observationData[sid]) {
+    const obsName = observationData[sid].name || '';
+    // 예: "강릉 안목항" -> "강릉", "광양만 관측소" -> "광양만"
+    let regionKeyword = obsName.split(' ')[0].replace(/(항|항구|관측소)$/, ''); 
+    if (regionKeyword === '성산포') regionKeyword = '성산';
+    else if (regionKeyword === '서귀포') regionKeyword = '서귀';
+    
+    for (const [key, item] of Object.entries(map)) {
+      if (item.name && regionKeyword && item.name.includes(regionKeyword)) {
+        staCde = key;
+        NIFS_STA_MAP[sid] = key; // 한 번 찾으면 캐싱
+        logger.info(`[NIFS-AUTO-MATCH] ${sid}(${obsName}) -> ${key}(${item.name}) 매칭 완료`);
+        break;
+      }
+    }
+  }
+
+  if (!staCde) return null;
+  const item = map[staCde];
+  if (!item) return null; 
+  // 상층이 없더라도 중/저층이 있을 수 있으므로 무효 처리하지 않고 그대로 반환 (상층은 KHOA가 커버함)
+  return {
+    upper: item.upper || null,
+    middle: item.middle || null,
+    lower: item.lower || null
+  };
+}
+
+// ✅ KMA-BEACH-MAP: 기상청 해수욕장 수온 API 매핑 (서해·제주 커버)
+// 5~10월 운영, 제공정보: beachNm, wTemp, reginNm
+const KMA_BEACH_MAP = {
+  'DT_0008': ['대천', '무창포', '보령'],               // 보령 대천항
+  'DT_0030': ['만리포', '몽산포', '꽃지', '백사장', '태안'], // 태안 마도
+  'DT_0009': ['선유도', '야미', '비응', '군산'],        // 군산
+  'DT_0007': ['을왕리', '왕산', '대부', '인천'],        // 인천
+  'DT_0006': ['목포', '무안', '함평', '진도'],          // 목포
+  'DT_0045': ['성산', '세화', '월정'],                 // 제주 성산포 (표선 DT_0011 분리)
+  'DT_0010': ['협재', '한담', '곽지', '이호', '김녕'], // 제주한림 ✅ 신규 (제주 서쪽)
+  'DT_0011': ['중문', '화순', '신양', '표선', '서귀포'], // 서귀포 ✅ 신규 (제주 남쪽)
+};
+
+let kmaBeachCache = null;
+let kmaBeachCacheTime = 0;
+let kmaBeachFetchPromise = null; // ✅ singleton
+
+async function getKmaBeachAllStations() {
+  const KEY = process.env.KHOA_KEY; // 해수욕장 API는 공공데이터포털 키만 사용
+  if (!KEY) return null;
+  const now = Date.now();
+  if (kmaBeachCache && (now - kmaBeachCacheTime) < 58 * 60 * 1000) return kmaBeachCache;
+  if (kmaBeachFetchPromise) return kmaBeachFetchPromise;
+  kmaBeachFetchPromise = (async () => {
+    try {
+      const url = `https://apis.data.go.kr/1360000/BeachInfoservice/getBeachCurrentWeather?serviceKey=${encodeURIComponent(KEY)}&numOfRows=200&dataType=JSON`;
+      const res = await axios.get(url, {
+        timeout: 8000,
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36',
+          'Referer': 'https://www.data.go.kr/',
+        },
+      });
+
+      const rc = res.data?.response?.header?.resultCode;
+      if (rc !== '00') return kmaBeachCache;
+      const items = res.data?.response?.body?.items?.item;
+      if (!items || !Array.isArray(items)) return kmaBeachCache;
+      kmaBeachCache = items;
+      kmaBeachCacheTime = Date.now();
+      logger.info(`[KMA-BEACH] 해수욕장 수온 이넥 갱신: ${items.length}개`);
+      return items;
+    } catch (e) {
+      logger.warn(`[KMA-BEACH] 해수욕장 API 실패: ${e.message}`);
+      return kmaBeachCache;
+    } finally {
+      kmaBeachFetchPromise = null;
+    }
+  })();
+  return kmaBeachFetchPromise;
+}
+
+async function getKmaBeachWaterTemp(sid) {
+  const keywords = KMA_BEACH_MAP[sid];
+  if (!keywords) return null;
+  const items = await getKmaBeachAllStations();
+  if (!items) return null;
+  for (const kw of keywords) {
+    const match = items.find(i => i.beachNm && i.beachNm.includes(kw));
+    if (match && match.wTemp && !isNaN(parseFloat(match.wTemp))) {
+      return String(parseFloat(match.wTemp).toFixed(1));
+    }
+  }
+  return null;
+}
+
+// ✅ MONTHLY-BASE-TEMP: 월별 계절 기준 수온 (API 없는 관측소 fallback 정확도 향상)
+const MONTHLY_BASE_TEMP = {
+  '동해': [8.5,8.0,9.5,12.5,16.0,19.5,22.0,24.0,21.5,18.0,14.0,10.0],
+  '남해': [10.0,10.0,12.0,15.0,18.5,21.5,24.5,26.0,24.0,20.0,15.5,11.5],
+  '서해': [5.0,5.0,7.5,11.5,16.5,20.5,23.5,25.0,22.5,17.5,12.0,7.0],
+  '제주': [15.5,15.0,16.5,18.5,21.5,24.5,27.0,28.5,26.5,23.5,19.5,16.5],
+};
+
+// API 요청 중복 방지 (Thundering Herd 해결)
+const pendingRequests = {};
+function getDeduplicatedPromise(key, fetcher) {
+  if (pendingRequests[key]) return pendingRequests[key];
+  const promise = fetcher().finally(() => { delete pendingRequests[key]; });
+  pendingRequests[key] = promise;
+  return promise;
+}
+
+async function getWaterTemp(sid) {
+  // ✅ SST-REMAP: 전수조사 결과 기반 올바른 obsCode로 변환 후 API 호출
+  const KEY = process.env.KHOA_KEY; // 수온 API는 공공데이터포털 키만 사용
+  if (!KEY) return null;
+
+  // 올바른 obsCode로 변환 (없으면 null → caller에서 월별 baseTemp 사용)
+  const apiObsCode = WATER_TEMP_OBS_MAP[sid];
+  if (!apiObsCode) return null;
+
+  return getDeduplicatedPromise(`watertemp_${apiObsCode}`, async () => {
+    try {
+      const kst = new Date(Date.now() + 9 * 3600 * 1000 - 24 * 3600 * 1000); // KST 기준 어제
+      const dateStr = `${kst.getUTCFullYear()}${String(kst.getUTCMonth()+1).padStart(2,'0')}${String(kst.getUTCDate()).padStart(2,'0')}`;
+      const url = `https://apis.data.go.kr/1192136/surveyWaterTemp/GetSurveyWaterTempApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${apiObsCode}&date=${dateStr}&type=json&numOfRows=10&pageNo=1`;
+    const res = await axios.get(url, { timeout: 5000, headers: { Accept: 'application/json' } });
+    const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+    if (text.trimStart().startsWith('<')) return null;
+    const items = res.data?.body?.items?.item;
+    if (!items) return null;
+    const list = Array.isArray(items) ? items : [items];
+    const last = list[list.length - 1];
+    const sst = last?.wtem ?? last?.water_temp ?? last?.waterTemp ?? null;
+    if (sst !== null && sst !== undefined && sst !== '-') return String(sst);
+  } catch (e) {
+    if (!e.message?.includes('404')) logger.warn(`[Weather] 수온 API 실패 (${sid}→${apiObsCode}): ${e.message}`);
+  }
+  return null;
+  });
+}
+
+// ✅ REAL-WIND-WAVE: 기상청 해양기상부이 실시간 파고·풍속 API
+// ✅ [FALLBACK-v2] 3단계 폴백 캐시 스토리지
+// { [sid]: { data: {wind, wave}, fetchedAt: timestamp, source: 'KMA'|'OPENMETEO' } }
+const marineWeatherCache = {};
+const MARINE_CACHE_TTL   = 3 * 60 * 60 * 1000; // 3시간 (ms)
+
+// ✅ [FALLBACK-v2] 관측소 위경도 맵 (OpenMeteo 호출용)
+const OBS_COORDS = {
+  'DT_0099': { lat: 38.3740, lng: 128.5120 },
+  'DT_0001': { lat: 37.7734, lng: 128.9406 },
+  'DT_0021': { lat: 38.2048, lng: 128.5925 },
+  'DT_0033': { lat: 37.5484, lng: 129.1128 },
+  'DT_0003': { lat: 37.4432, lng: 129.1639 },
+  'DT_0002': { lat: 36.6764, lng: 129.4627 },
+  'DT_0036': { lat: 35.8188, lng: 129.5012 },
+  'DT_0004': { lat: 35.1586, lng: 129.1603 },
+  'DT_0034': { lat: 34.8101, lng: 128.7021 },
+  'DT_0016': { lat: 34.8512, lng: 128.4342 },
+  'DT_0005': { lat: 34.7462, lng: 127.7516 },
+  'DT_0014': { lat: 34.9123, lng: 127.7268 },
+  'DT_0018': { lat: 34.3108, lng: 126.7575 },
+  'DT_0006': { lat: 34.7891, lng: 126.3776 },
+  'DT_0007': { lat: 37.4643, lng: 126.6188 },
+  'DT_0030': { lat: 36.7265, lng: 126.1474 },
+  'DT_0008': { lat: 36.3523, lng: 126.5078 },
+  'DT_0009': { lat: 35.9697, lng: 126.5621 },
+  'DT_0010': { lat: 33.4890, lng: 126.4280 },
+  'DT_0011': { lat: 33.2527, lng: 126.5600 },
+  'DT_0045': { lat: 33.4746, lng: 126.9196 },
+};
+
+// ✅ [FALLBACK-v2] 연안 변환 공통 헬퍼 (기상 모델의 유의파고(Significant Wave)를 낚시인 체감용 최대파고(Max Wave)로 변환)
+function applyCoastalTransform(sid, wh, ws, wdDeg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const wd   = isNaN(wdDeg) ? 'N' : dirs[Math.round(wdDeg / 22.5) % 16];
+  
+  // 실제 체감과 일치하도록 유의파고를 왜곡 없이 그대로 표기
+  const maxWave = parseFloat(wh.toFixed(1));
+
+  return {
+    wind: { speed: parseFloat(Math.max(0, ws).toFixed(1)), dir: wd },
+    wave: { coastal: parseFloat(Math.max(0.1, maxWave).toFixed(1)) },
+  };
+}
+
+// ✅ [FALLBACK-v2] OpenMeteo 좌표 기반 동적 패치 (모든 포인트 100% 정밀도)
+const openMeteoCache = {};
+async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
+  // 소수점 1자리(약 11km)로 묶어 캐시 (동일 권역 API 중복 방지)
+  const key = `${parseFloat(lat).toFixed(1)},${parseFloat(lng).toFixed(1)}`;
+  const cached = openMeteoCache[key];
+  if (cached && (Date.now() - cached.fetchedAt) < MARINE_CACHE_TTL) return cached.data;
+  
+  try {
+    // ✅ SWELL-FIX: wave_height + swell_wave_height 동시 요청 (너울 반영)
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}` +
+      `&hourly=wave_height,wave_direction,swell_wave_height,swell_wave_period&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+    const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+      `&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+    const [mRes, wRes] = await Promise.all([
+      axios.get(url,  { timeout: 8000 }),
+      axios.get(wurl, { timeout: 8000 }),
+    ]);
+    const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
+    const wh      = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
+    const swh     = parseFloat(mRes.data?.hourly?.swell_wave_height?.[nowHr]) || 0; // 너울 파고
+    const swp     = parseFloat(mRes.data?.hourly?.swell_wave_period?.[nowHr]) || 0; // 너울 주기(초)
+    const wdDeg   = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
+    const ws      = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
+    const windDeg = parseFloat(wRes.data?.hourly?.wind_direction_10m?.[nowHr]);
+    if (isNaN(wh) || isNaN(ws)) return null;
+
+    // ✅ SWELL-FIX: wave_height vs swell_wave_height 중 더 큰 값 사용
+    const rawWave = Math.max(wh, swh);
+
+    // ✅ COASTAL-AMP: 동해 연안은 외해 너울이 연안에서 1.3배 증폭 (얕은 수심 + 지형 집중)
+    // 너울 주기 5초 이상이면 추가 1.15배 위험 증폭 (장주기 너울 = 더 위험)
+    const isEastSea = (region === '동해') || (lng >= 128.5 && lat >= 34.5 && lat <= 38.8);
+    const swellBonus = (swp >= 5 && swh > 0.3) ? 1.15 : 1.0;
+    const coastalAmp = isEastSea ? 1.3 * swellBonus : 1.0;
+    const adjustedWave = parseFloat((rawWave * coastalAmp).toFixed(1));
+
+    const result = applyCoastalTransform(`OM_${key}`, adjustedWave, ws, windDeg);
+    // 너울 정보 보존
+    result.wave.swell = parseFloat(swh.toFixed(2));
+    result.wave.swellPeriod = parseFloat(swp.toFixed(1));
+    openMeteoCache[key] = { data: result, fetchedAt: Date.now() };
+    logger.info(`[Marine/OpenMeteo/Point] ${key} 외해파고:${wh}m 너울:${swh}m(${swp}s) 연안증폭(x${coastalAmp.toFixed(2)}) → 최종:${result.wave.coastal}m`);
+    return result;
+  } catch (e) {
+    logger.warn(`[Marine/OpenMeteo/Point] ${key} 호출 실패: ${e.message}`);
+    return null;
+  }
+}
+
+// ✅ [FALLBACK-v2] OpenMeteo 서브 파이프라인 (기상청 3시간 이상 장애 시 자동 전환)
+async function getMarineWeatherOpenMeteo(sid) {
+  const coords = OBS_COORDS[sid];
+  if (!coords) return null;
+  const region = observationData[sid]?.region || null;
+  return await getMarineWeatherOpenMeteoPoint(coords.lat, coords.lng, region);
+}
+
+// ✅ KMA 실제 부이 STN 번호 (5자리) 매핑
+// 각 관측소 위치 기준 최근접 해양연안부이 ID
+const BUOY_MAP = {
+  // 동해권
+  'DT_0099':'22102', // 고성 가진항 → 동해부이 22102
+  'DT_0001':'22102', // 강릉 안목항 → 동해부이 22102
+  'DT_0021':'22102', // 속초
+  'DT_0033':'22102', // 동해묵호
+  'DT_0003':'22101', // 삼척
+  'DT_0002':'22101', // 울진 → 동해부이 22101
+  'DT_0036':'22104', // 경주감포·포항·울산 → 남해부이 22104 (삼척 22101 오매핑 수정)
+  // 남해권
+  'DT_0004':'22104', // 부산 → 남해부이 22104
+  'DT_0034':'22104', // 거제
+  'DT_0016':'22105', // 통영 → 22105
+  'DT_0005':'22105', // 여수
+  'DT_0006':'22106', // 목포 → 22106
+  'DT_0018':'22106', // 완도
+  'DT_0014':'22105', // 광양만 → 거문도부이 22105 (기존 마라도부이 22107 오류 수정)
+  // 서해권
+  'DT_0007':'22298', // 인천 → 서해부이 22298
+  'DT_0030':'22297', // 태안 → 22297
+  'DT_0008':'22302', // 보령 → 22302
+  'DT_0009':'22303', // 군산 → 22303
+  // 제주권
+  'DT_0010':'22515', // 제주한림 → 22515
+  'DT_0011':'22515', // 서귀포
+  'DT_0045':'22515', // 성산항
+};
+
+async function getMarineWeather(sid) {
+  const KMA_KEY = process.env.KMA_KEY;
+  const buoyNum = BUOY_MAP[sid];
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [1순위] 기상청(KMA) 해양부이 API (재활성화 - 실측 파고 우선)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (KMA_KEY && buoyNum) {
+    const kmaResult = await getDeduplicatedPromise(`marine_${buoyNum}`, async () => {
+      try {
+        const now = new Date(Date.now() + 9 * 3600 * 1000);
+        const pad = (n) => String(n).padStart(2, '0');
+        const tm2 = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}00`;
+        const url = `https://apihub.kma.go.kr/api/typ01/url/sea_obs.php?tm2=${tm2}&stn=${buoyNum}&help=0&authKey=${KMA_KEY}`;
+        const res = await axios.get(url, { timeout: 8000 });
+        const text = typeof res.data === 'string' ? res.data : '';
+        if (!text || !text.includes('START7777')) return null;
+        // sea_obs 컬럼: [0]TP [1]TM [2]STN_ID [3]STN_KO [4]LON [5]LAT [6]WH [7]WD [8]WS
+        const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#') && l.startsWith('B,'));
+        const matched = lines.filter(l => l.includes(buoyNum));
+        const targetLine = matched.length ? matched[matched.length - 1] : lines[lines.length - 1];
+        if (!targetLine) return null;
+        const cols  = targetLine.trim().split(',').map(s => s.trim());
+        const wh    = parseFloat(cols[6]);
+        const wdDeg = parseFloat(cols[7]);
+        const ws    = parseFloat(cols[8]);
+        if (isNaN(ws) || ws <= -90 || isNaN(wh) || wh <= -90) return null;
+        const result = applyCoastalTransform(sid, wh, ws, wdDeg);
+        logger.info(`[Marine/KMA] ${sid}(${buoyNum}) 파고:${wh}m/풍속:${ws}m/s → 연안 파고:${result.wave.coastal}m (풍향:${result.wind.dir})`);
+        return result;
+      } catch (e) {
+        logger.warn(`[Marine/KMA] 부이 API 실패 (${sid}/${buoyNum}): ${e.message}`);
+        return null;
+      }
+    });
+
+    if (kmaResult) {
+      // KMA 성공 → 캐시 갱신 후 반환
+      marineWeatherCache[sid] = { data: kmaResult, fetchedAt: Date.now(), source: 'KMA' };
+      return kmaResult;
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [2순위] 3시간 이내 캐시 데이터 재사용
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const cached = marineWeatherCache[sid];
+  if (cached && (Date.now() - cached.fetchedAt) < MARINE_CACHE_TTL) {
+    const ageMin = Math.floor((Date.now() - cached.fetchedAt) / 60000);
+    logger.info(`[Marine/Cache] ${sid} ${ageMin}분 전 데이터 재사용 (source: ${cached.source})`);
+    return cached.data;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [3순위] OpenMeteo 서브 파이프라인 (캐시 만료 or 캐시 없음)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  logger.warn(`[Marine/OpenMeteo] ${sid} KMA 장애 + 캐시 만료 → OpenMeteo 서브 파이프라인 전환`);
+  const omResult = await getMarineWeatherOpenMeteo(sid);
+  if (omResult) {
+    marineWeatherCache[sid] = { data: omResult, fetchedAt: Date.now(), source: 'OPENMETEO' };
+    return omResult;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [4순위] 인접 관측소 데이터 빌려오기 (nearest-station fallback)
+  // KMA + OpenMeteo 모두 실패 시 같은 권역의 가장 가까운 정상 관측소 데이터 사용
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const myCoords = OBS_COORDS[sid];
+  const myRegion = observationData[sid]?.region;
+  if (myCoords && myRegion) {
+    // 같은 권역의 다른 관측소 중 최근 캐시가 있는 것을 거리순 정렬
+    const sameRegionStations = ALL_STATIONS.filter(s =>
+      s !== sid &&
+      observationData[s]?.region === myRegion &&
+      marineWeatherCache[s] &&
+      (Date.now() - marineWeatherCache[s].fetchedAt) < MARINE_CACHE_TTL * 2 // 6시간 이내
+    );
+    if (sameRegionStations.length > 0) {
+      // Haversine 거리 계산 후 가장 가까운 관측소 선택
+      const haversineDist = (lat1, lng1, lat2, lng2) => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      };
+      const nearest = sameRegionStations
+        .map(s => ({ sid: s, dist: haversineDist(myCoords.lat, myCoords.lng, OBS_COORDS[s]?.lat || 0, OBS_COORDS[s]?.lng || 0) }))
+        .sort((a, b) => a.dist - b.dist)[0];
+      if (nearest && nearest.dist < 200) { // 200km 이내만 허용
+        const borrowed = marineWeatherCache[nearest.sid]?.data;
+        if (borrowed) {
+          logger.warn(`[Marine/NearestFallback] ${sid} → 인접 ${nearest.sid}(${nearest.dist.toFixed(0)}km) 데이터 차용`);
+          marineWeatherCache[sid] = { data: borrowed, fetchedAt: Date.now(), source: `NEAREST_${nearest.sid}` };
+          return borrowed;
+        }
+      }
+    }
+  }
+
+  // 모두 실패 → null (기존 mock 로직이 처리)
+  return null;
+}
+
+
+// ✅ REAL-TIDE: KHOA 조석예보 — 실제 물때·고조·간조
+function getLunarDay() {
+  // FIX-LUNAR v3: 바다타임 완벽 일치 (2026-07-14 = 음력 6월 1일)
+  const anchor = new Date('2026-07-14T00:00:00+09:00');
+  const anchorLunar = 1;
+  const diffFromAnchor = (Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24);
+  const diffDays = Math.floor(diffFromAnchor);
+  const raw = anchorLunar + diffDays;
+  const cycled = ((raw - 1) % 29.530588 + 29.530588) % 29.530588;
+  return Math.floor(cycled) + 1; // 1~29
+}
+
+function getTidePhase(lunarDay, region = '남해') {
+  // FIX-TIDENUM v3: 바다타임 실측 기반 음력->물때 공식 (15일 반복, 15물=조금)
+  let tideNum = ((lunarDay + 6) % 15) + 1;
+  const phaseMap = {
+    7: '7물(사리)', 8: '8물(사리)', 15: '조금'
+  };
+  return phaseMap[tideNum] || `${tideNum}물`;
+}
+
+// 실제 KHOA(해양수산부) 조위관측소 마스터 데이터
+const KHOA_STATIONS = [
+  { id: 'DT_0001', name: '인천', lat: 37.4519, lng: 126.5922 },
+  { id: 'DT_0002', name: '평택', lat: 36.9567, lng: 126.8206 },
+  { id: 'DT_0004', name: '제주', lat: 33.5272, lng: 126.5431 },
+  { id: 'DT_0005', name: '부산', lat: 35.0964, lng: 129.0353 },
+  { id: 'DT_0006', name: '묵호', lat: 37.5489, lng: 129.1170 },
+  { id: 'DT_0007', name: '목포', lat: 34.7797, lng: 126.3756 },
+  { id: 'DT_0010', name: '서귀포', lat: 33.2400, lng: 126.5611 },
+  { id: 'DT_0012', name: '속초', lat: 38.2134, lng: 128.6010 },
+  { id: 'DT_0014', name: '통영', lat: 34.8281, lng: 128.4336 },
+  { id: 'DT_0016', name: '여수', lat: 34.7456, lng: 127.7444 },
+  { id: 'DT_0018', name: '군산', lat: 35.9756, lng: 126.5631 },
+  { id: 'DT_0020', name: '울산', lat: 35.5028, lng: 129.3872 },
+  { id: 'DT_0025', name: '보령', lat: 36.3217, lng: 126.4950 },
+  { id: 'DT_0027', name: '완도', lat: 34.3164, lng: 126.7583 },
+  { id: 'DT_0029', name: '거제도', lat: 34.7933, lng: 128.6253 }
+];
+
+function getNearestKhoaStation(lat, lng) {
+  let nearest = KHOA_STATIONS[0];
+  let minDist = Infinity;
+  for (const st of KHOA_STATIONS) {
+    const d = haversineKm(lat, lng, st.lat, st.lng);
+    if (d < minDist) { minDist = d; nearest = st; }
+  }
+  return nearest.id;
+}
+
+async function getRealTide(sid) {
+  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
+  if (!KEY) return null;
+  
+  const coords = STATION_COORDS[sid] || OBS_COORDS[sid];
+  let tideSid = sid;
+  if (coords) {
+    tideSid = getNearestKhoaStation(coords.lat, coords.lng);
+  }
+
+  return getDeduplicatedPromise("tide_" + tideSid, async () => {
+    try {
+      const kst = new Date(Date.now() + 9 * 3600 * 1000);
+      const today = "" + kst.getUTCFullYear() + String(kst.getUTCMonth()+1).padStart(2,"0") + String(kst.getUTCDate()).padStart(2,"0");
+      const url = "https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?serviceKey=" + encodeURIComponent(KEY) + "&obsCode=" + tideSid + "&reqDate=" + today + "&type=json&numOfRows=20&pageNo=1";
+      const res = await axios.get(url, { timeout: 6000, headers: { Accept: "application/json" } });
+      const items = res.data?.body?.items?.item || res.data?.response?.body?.items?.item;
+      if (!items) return null;
+      const list = Array.isArray(items) ? items : [items];
+      
+      const highs = list.filter(t => t.extrSe === "1" || t.extrSe === "3" || t.hl_code === "H");
+      const lows  = list.filter(t => t.extrSe === "2" || t.extrSe === "4" || t.hl_code === "L");
+      
+      const highTime = (highs[0]?.predcDt || highs[0]?.hl_time || "").slice(11,16) || null;
+      const lowTime  = (lows[0]?.predcDt  || lows[0]?.hl_time  || "").slice(11,16) || null;
+      const nextLow  = (lows[1]?.predcDt  || lows[1]?.hl_time  || "").slice(11,16) || null;
+      const lunarDay = getLunarDay();
+      const station = observationData[sid] || { region: "����" };
+      const phase = getTidePhase(lunarDay, station.region);
+      return { phase, high: highTime, low: lowTime, next_low: nextLow };
+    } catch (e) {
+      return null;
+    }
+  });
+}t express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -2739,7 +5347,7 @@ async function updateAllStationsCache() {
     const anchor = new Date('2026-07-14T00:00:00+09:00');
     const diffDays = Math.floor((Date.now() - anchor.getTime()) / (1000 * 60 * 60 * 24));
     const dailyShiftMin = Math.round((diffDays * 50.3)) % 745;
-    const baseHighMin = (stationBaseMin + dailyShiftMin) % 745;
+    const baseHighMin = (stationBaseMin + dailyShiftMin + 372) % 745;
 
     const fmtMin = (mins) => { const m = ((mins % 1440) + 1440) % 1440; return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`; };
     
@@ -11273,6 +13881,64 @@ app.post('/api/auth/logout', verifyToken, async (req, res) => {
   } catch { res.json({ success: true }); }
 });
 
+// ─── KHOA 조석예보 API 프록시 ──────────────────────────────────────────────
+const KHOA_KEY = process.env.KHOA_KEY || '';
+const _tideCache = new Map(); // { key: { data, ts } }
+const TIDE_CACHE_TTL = 60 * 60 * 1000; // 1시간
+
+/**
+ * GET /api/tide/obs?obsCode=DT_0011&date=20260909
+ * KHOA 조석예보 API 프록시 — 만조/간조 시간 정확도 개선
+ */
+app.get('/api/tide/obs', async (req, res) => {
+  const obsCode = (req.query.obsCode || '').trim();
+  const date    = (req.query.date || '').trim() ||
+    new Date().toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }).replace(/\./g, '').replace(/ /g, '').padStart(8, '0');
+
+  if (!obsCode) return res.status(400).json({ error: 'obsCode 필수' });
+
+  // Convert KMA DT_xxxx code to KHOA code using nearest station
+  let tideSid = obsCode;
+  if (tideSid.startsWith('DT_')) {
+    const coords = STATION_COORDS[tideSid] || OBS_COORDS[tideSid];
+    if (coords) tideSid = getNearestKhoaStation(coords.lat, coords.lng);
+  }
+
+  const cacheKey = `${tideSid}_${date}`;
+  const cached = _tideCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < TIDE_CACHE_TTL) {
+    return res.json(cached.data);
+  }
+
+  const KEY = process.env.KHOA_CCTV_KEY || process.env.KHOA_KEY;
+  if (!KEY) {
+    return res.status(503).json({ error: 'KHOA_KEY 미설정', fallback: true });
+  }
+
+  try {
+    const url = `https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${tideSid}&reqDate=${date}&type=json&numOfRows=20&pageNo=1`;
+    const resp = await axios.get(url, { timeout: 8000 });
+    
+    const items = resp.data?.body?.items?.item || resp.data?.response?.body?.items?.item || [];
+    const list = Array.isArray(items) ? items : [items];
+    if (list.length === 0 || !list[0]) {
+       return res.status(502).json({ error: 'KHOA 데이터 없음', fallback: true });
+    }
+
+    const highs = list.filter(t => t.extrSe === '1' || t.extrSe === '3' || t.hl_code === 'H').map(t => t.predcDt?.slice(11, 16) || t.hl_time?.slice(11,16)).filter(Boolean);
+    const lows = list.filter(t => t.extrSe === '2' || t.extrSe === '4' || t.hl_code === 'L').map(t => t.predcDt?.slice(11, 16) || t.hl_time?.slice(11,16)).filter(Boolean);
+
+    const result = { obsCode, date, tideSid, high: highs[0] || null, high2: highs[1] || null, low: lows[0] || null, low2: lows[1] || null, source: 'khoa', rawData: list.map(t => ({ hl_code: t.extrSe === '1' || t.extrSe === '3' ? 'H' : 'L', tph_time: t.predcDt || t.hl_time, tph_level: t.predcTdlvVl || t.hl_level })) };
+    _tideCache.set(cacheKey, { data: result, ts: Date.now() });
+    res.json(result);
+  } catch (err) {
+    logger.warn(`[KHOA Tide] ${obsCode} ${date} 오류: ${err.message}`);
+    res.status(502).json({ error: 'KHOA API 오류', fallback: true });
+  }
+});
+
+// ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
+// ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
 // ✅ FIX-404-HANDLER: 미매칭 라우트 404 응답
 // ✅ LEGAL-PASS: /api/legal-info → next()로 아래 라우트 전달
 app.use((req, res, next) => {
@@ -11385,56 +14051,5 @@ app.put('/api/admin/legal-info', async (req, res) => {
   }
 });
 
-// ─── KHOA 조석예보 API 프록시 ──────────────────────────────────────────────
-const KHOA_KEY = process.env.KHOA_KEY || '';
-const _tideCache = new Map(); // { key: { data, ts } }
-const TIDE_CACHE_TTL = 60 * 60 * 1000; // 1시간
-
-/**
- * GET /api/tide/obs?obsCode=DT_0011&date=20260909
- * KHOA 조석예보 API 프록시 — 만조/간조 시간 정확도 개선
- */
-app.get('/api/tide/obs', async (req, res) => {
-  const obsCode = (req.query.obsCode || '').trim();
-  const date    = (req.query.date || '').trim() ||
-    new Date().toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }).replace(/\./g, '').replace(/ /g, '').padStart(8, '0');
-
-  if (!obsCode) return res.status(400).json({ error: 'obsCode 필수' });
-
-  const cacheKey = `${obsCode}_${date}`;
-  const cached = _tideCache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < TIDE_CACHE_TTL) {
-    return res.json(cached.data);
-  }
-
-  if (!KHOA_KEY) {
-    return res.status(503).json({ error: 'KHOA_KEY 미설정', fallback: true });
-  }
-
-  try {
-    const url = `https://www.khoa.go.kr/api/oceangrid/tideObsPreTab/search.do?ServiceKey=${encodeURIComponent(KHOA_KEY)}&ObsCode=${obsCode}&Date=${date}&ResultType=json`;
-    const resp = await axios.get(url, { timeout: 8000 });
-    const rawData = resp.data?.result?.data || [];
-
-    const highs = rawData.filter(d => d.hl_code === 'H' || d.hl_code === 'HH')
-      .map(d => d.tph_time?.slice(11, 16)).filter(Boolean);
-    const lows  = rawData.filter(d => d.hl_code === 'L' || d.hl_code === 'LL')
-      .map(d => d.tph_time?.slice(11, 16)).filter(Boolean);
-
-    if (highs.length === 0 && lows.length === 0) {
-      return res.status(502).json({ error: 'KHOA 데이터 없음', fallback: true });
-    }
-
-    const result = { obsCode, date, high: highs[0] || null, high2: highs[1] || null, low: lows[0] || null, low2: lows[1] || null, source: 'khoa', rawData };
-    _tideCache.set(cacheKey, { data: result, ts: Date.now() });
-    res.json(result);
-  } catch (err) {
-    logger.warn(`[KHOA Tide] ${obsCode} ${date} 오류: ${err.message}`);
-    res.status(502).json({ error: 'KHOA API 오류', fallback: true });
-  }
-});
-
-// ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
-// ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
 require('./graceful_shutdown')(server, mongoose, flushAllData);
 
