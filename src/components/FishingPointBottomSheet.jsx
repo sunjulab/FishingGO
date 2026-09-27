@@ -309,7 +309,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
       finalYoutubeId = 'placeholder';
     }
 
-    const sid = selectedPoint.obsCode || '';
+    const sid = selectedPoint.obsCode || (marineData?.stationId) || '';
     const cctvOverrideId = selectedPoint.id ? `point_${selectedPoint.id}` : sid;
     try {
       setIsSavingCctv(true);
@@ -347,7 +347,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
 
     // ── 날씨 전용 silent 갱신 (CCTV·쇼핑 제외 — 불필요한 API 호출 방지) ──
     const silentRefresh = async () => {
-      const sid = selectedPoint.obsCode || '';
+      const sid = selectedPoint.obsCode || (marineData?.stationId) || '';
       const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const todayStr = kstDate.toISOString().slice(0, 10).replace(/-/g, '');
       try {
@@ -426,7 +426,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
     const loadData = async () => {
       setLoading(true);
       // ✅ FIX: obsCode 없으면 CCTV 로드 자체 스킵 (엉뚱한 DT_0001 방지)
-      const sid = selectedPoint.obsCode || ''; // 빈 문자열 — marineAPI는 lat/lng로 동작, CCTV만 스킵
+      const sid = selectedPoint.obsCode || (marineData?.stationId) || ''; // 빈 문자열 — marineAPI는 lat/lng로 동작, CCTV만 스킵
       if (!sid) {
         setCctvLoading(false);
         setCctvData(null);
@@ -1015,7 +1015,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             })()}
 
             {/* ✅ 민물 포인트: 수온 정보 없음 표기 */}
-            {selectedPoint?.type === '민물' || !selectedPoint?.obsCode ? (
+            {selectedPoint?.type === '민물' || (!selectedPoint?.obsCode && !marineData?.stationId) ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
                 <span style={{ fontWeight: '800', color: '#555' }}>현재 실측 수온</span>
                 <span style={{ color: '#8E8E93', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))` }}>민물 포인트 로 수온 정보 없음</span>
@@ -1028,7 +1028,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             )}
 
             {/* ✅ 민물 포인트: 층별 수온 없음 표기 */}
-            {selectedPoint?.type === '민물' || !selectedPoint?.obsCode ? (
+            {selectedPoint?.type === '민물' || (!selectedPoint?.obsCode && !marineData?.stationId) ? (
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
                 <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>층별 수온 정보 (표/중/저)</span>
                 <div style={{ textAlign: 'center', color: '#8E8E93', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, padding: '8px 0' }}>민물 포인트로 해수 수온 정보 없음</div>
@@ -1052,7 +1052,7 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
             )}
 
             {/* ✅ 민물 포인트: 물때 정보 없음 표기 */}
-            {selectedPoint?.type === '민물' || !selectedPoint?.obsCode ? (
+            {selectedPoint?.type === '민물' || (!selectedPoint?.obsCode && !marineData?.stationId) ? (
               <div style={{ backgroundColor: '#F4F6FA', padding: '16px', borderRadius: '12px' }}>
                 <span style={{ fontWeight: '900', display: 'block', marginBottom: '8px', color: '#333' }}>오늘의 물때 (만조/간조)</span>
                 <div style={{ textAlign: 'center', color: '#8E8E93', fontWeight: '800', fontSize: `calc(13px * var(--fs, 1))`, padding: '8px 0' }}>민물 포인트로 조석 정보 없음</div>

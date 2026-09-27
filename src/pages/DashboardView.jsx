@@ -262,10 +262,10 @@ export default function DashboardView({
                     </div>
                   ))}
                 </div>
-                {selectedPoint?.type !== '민물' && selectedPoint?.obsCode && (
+                {selectedPoint?.type !== '민물' && (selectedPoint?.obsCode || tideData?.stationId) && (
                   <div
                     onClick={async () => {
-                      const sid = selectedPoint.obsCode;
+                      const sid = selectedPoint?.obsCode || tideData?.stationId;
                       try {
                         const pointIdQuery = selectedPoint?.id ? `&pointId=point_${selectedPoint.id}` : '';
                         const res = await apiClient.get(`/api/weather/cctv?stationId=${sid}${pointIdQuery}`);
