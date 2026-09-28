@@ -1,4 +1,4 @@
-/**
+﻿/**
  * cctvMapping.js - 낚시GO 구역별 CCTV 연동 데이터
  *
  * [방식]
@@ -45,7 +45,7 @@ const CCTV_MAP = {
 
   // ── 경북 동해 ──
   'DT_0002': { areaName: '영덕 고래불',   region: '경북', type: 'mof', beachCode: null, label: '🎣 영덕/울진 실시간' },
-  'DT_0014': { areaName: '울진/후포 해역', region: '경북', type: 'mof', beachCode: null, label: '🎣 울진/후포 실시간' },
+  'DT_0014': { areaName: '광양항', region: '전남', type: 'no_cctv', beachCode: null, label: '📍 광양 실시간' },
   'DT_0036': { areaName: '울산 정자',     region: '경북', type: 'mof', beachCode: 74,   label: '🎣 경주/울산 실시간' },
   'DT_0020': { areaName: '울산/온산 해역', region: '경남', type: 'mof', beachCode: 74,   label: '🎣 울산 실시간' },
 
@@ -62,7 +62,7 @@ const CCTV_MAP = {
   'DT_0006': { areaName: '목포/진도 해역', region: '전남', type: 'mof', beachCode: 65, label: '🎣 목포/진도 실시간' },
 
   // ── 서해 ──
-  'DT_0007': { areaName: '안면도/보령',   region: '충남', type: 'mof', beachCode: 63, label: '🎣 안면도 실시간' },
+  'DT_0007': { areaName: '인천 연안부두', region: '인천', type: 'no_cctv', beachCode: null, label: '📍 인천 실시간' },
   'DT_0008': { areaName: '보령 대천해수욕장', region: '충남', type: 'mof', beachCode: 63, label: '🎣 보령/대천 실시간' },
   'DT_0025': { areaName: '태안/만리포',   region: '충남', type: 'mof', beachCode: 79, label: '🎣 태안 실시간' },
   'DT_0030': { areaName: '충남 서해 해역', region: '충남', type: 'mof', beachCode: 63, label: '🎣 충남 서해 실시간' },
@@ -124,3 +124,4 @@ function getCctvInfo(obsCode) {
 }
 
 module.exports = { getCctvInfo, CCTV_MAP };
+
