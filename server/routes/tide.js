@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const axios = require('axios');
 
 function createTideRouter({ STATION_COORDS, OBS_COORDS, getNearestKhoaStation, logger }) {
@@ -18,10 +18,7 @@ router.get("/obs", async (req, res) => {
   if (!obsCode) return res.status(400).json({ error: "obsCode �ʼ�" });
 
   let tideSid = obsCode;
-  if (tideSid.startsWith("DT_")) {
-    const coords = STATION_COORDS[tideSid] || OBS_COORDS[tideSid];
-    if (coords) tideSid = getNearestKhoaStation(coords.lat, coords.lng);
-  }
+  
 
   const cacheKey = tideSid + "_" + date;
   const cached = _tideCache.get(cacheKey);
@@ -59,3 +56,4 @@ router.get("/obs", async (req, res) => {
 }
 
 module.exports = createTideRouter;
+

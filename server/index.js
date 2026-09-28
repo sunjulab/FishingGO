@@ -2577,11 +2577,7 @@ async function getRealTide(sid) {
   if (!KEY) return null;
   
   // KMA sid의 위경도를 가져와 가장 가까운 KHOA 조위관측소 코드로 변환
-  const coords = STATION_COORDS[sid];
-  let tideSid = sid; // 기본값
-  if (coords) {
-    tideSid = getNearestKhoaStation(coords.lat, coords.lng);
-  }
+  let tideSid = sid;
 
   
   return getDeduplicatedPromise(`tide_${tideSid}`, async () => {
@@ -11398,5 +11394,6 @@ app.put('/api/admin/legal-info', async (req, res) => {
 // ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
 // ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
 require('./graceful_shutdown')(server, mongoose, flushAllData);
+
 
 
