@@ -2543,35 +2543,6 @@ function getTidePhase(lunarDay, region = '남해') {
   return phaseMap[tideNum] || `${tideNum}물`;
 }
 
-// 실제 KHOA(해양수산부) 조위관측소 마스터 데이터
-const KHOA_STATIONS = [
-  { id: 'DT_0001', name: '인천', lat: 37.4519, lng: 126.5922 },
-  { id: 'DT_0002', name: '평택', lat: 36.9567, lng: 126.8206 },
-  { id: 'DT_0004', name: '제주', lat: 33.5272, lng: 126.5431 },
-  { id: 'DT_0005', name: '부산', lat: 35.0964, lng: 129.0353 },
-  { id: 'DT_0006', name: '묵호', lat: 37.5489, lng: 129.1170 },
-  { id: 'DT_0007', name: '목포', lat: 34.7797, lng: 126.3756 },
-  { id: 'DT_0010', name: '서귀포', lat: 33.2400, lng: 126.5611 },
-  { id: 'DT_0012', name: '속초', lat: 38.2134, lng: 128.6010 },
-  { id: 'DT_0014', name: '통영', lat: 34.8281, lng: 128.4336 },
-  { id: 'DT_0016', name: '여수', lat: 34.7456, lng: 127.7444 },
-  { id: 'DT_0018', name: '군산', lat: 35.9756, lng: 126.5631 },
-  { id: 'DT_0020', name: '울산', lat: 35.5028, lng: 129.3872 },
-  { id: 'DT_0025', name: '보령', lat: 36.3217, lng: 126.4950 },
-  { id: 'DT_0027', name: '완도', lat: 34.3164, lng: 126.7583 },
-  { id: 'DT_0029', name: '거제도', lat: 34.7933, lng: 128.6253 }
-];
-
-function getNearestKhoaStation(lat, lng) {
-  let nearest = KHOA_STATIONS[0];
-  let minDist = Infinity;
-  for (const st of KHOA_STATIONS) {
-    const d = haversineKm(lat, lng, st.lat, st.lng);
-    if (d < minDist) { minDist = d; nearest = st; }
-  }
-  return nearest.id;
-}
-
 async function getRealTide(sid) {
   const KEY = process.env.KHOA_KEY;
   if (!KEY) return null;
@@ -11275,7 +11246,7 @@ app.post('/api/auth/logout', verifyToken, async (req, res) => {
 // ������ KHOA �������� API ���Ͻ� ��������������������������������������������������������������������������������������������
 // 조석/물때 전용 라우터 연동 (격리 및 보호 영역)
 const createTideRouter = require('./routes/tide');
-app.use('/api/tide', createTideRouter({ STATION_COORDS, OBS_COORDS, getNearestKhoaStation, logger }));
+app.use('/api/tide', createTideRouter({ STATION_COORDS, OBS_COORDS, logger }));
 
   
 
@@ -11394,6 +11365,7 @@ app.put('/api/admin/legal-info', async (req, res) => {
 // ✅ FIX-SIGTERM: Render 배포 graceful shutdown + uncaughtException 핸들러 등록
 // ✅ BUG-FIX: flushAllData 세 번째 인자 전달 — 종료 전 인메모리 데이터 파일 동기화 보장
 require('./graceful_shutdown')(server, mongoose, flushAllData);
+
 
 
 
