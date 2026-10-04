@@ -9031,6 +9031,21 @@ app.get('/api/media/youtube/unified', async (req, res) => {
       axios.get(`${YT_BASE}/search?${new URLSearchParams({ ...commonParams, order: 'viewCount', publishedAfter: publishedAfterPopular })}`, axiosCfg),
     ]);
 
+        // ✅ 사용자 고정 채널(UCeTWH8xNp0pg3qtI4Kz1yuQ) 최신 영상 1개 강제 삽입 로직
+    let pinnedVideo = null;
+    if (q === '낚시') {
+      try {
+        const pParams = { ...commonParams, channelId: 'UCeTWH8xNp0pg3qtI4Kz1yuQ', order: 'date', maxResults: '1' };
+        delete pParams.q; // 채널 검색 시 q 파라미터는 삭제하여 해당 채널 전체 최신 영상을 가져옴
+        const pinnedRes = await axios.get(`${YT_BASE}/search?${new URLSearchParams(pParams)}`, axiosCfg);
+        if (pinnedRes.data && pinnedRes.data.items && pinnedRes.data.items.length > 0) {
+           pinnedVideo = buildYtVideoList(pinnedRes.data.items)[0];
+        }
+      } catch (e) {
+        logger.warn('[YouTube Pinned] 고정 채널 영상 로드 실패: ' + e.message);
+      }
+    }
+
     let recent = recentResult.status === 'fulfilled' ? buildYtVideoList(recentResult.value.data.items) : [];
     let popular = popularResult.status === 'fulfilled' ? buildYtVideoList(popularResult.value.data.items) : [];
     logger.info(`[YouTube Unified] 검색 결과: 최신 ${recent.length}개, 인기 ${popular.length}개`);
