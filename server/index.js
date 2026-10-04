@@ -9032,14 +9032,21 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     ]);
 
         // ✅ 사용자 고정 채널(UCeTWH8xNp0pg3qtI4Kz1yuQ) 최신 영상 1개 강제 삽입 로직
+        // ✅ 사용자 고정 채널(UCeTWH8xNp0pg3qtI4Kz1yuQ) 롱폼 영상 필터링 삽입
     let pinnedVideo = null;
     if (q === '낚시') {
       try {
-        const pParams = { ...commonParams, channelId: 'UCeTWH8xNp0pg3qtI4Kz1yuQ', order: 'date', maxResults: '1' };
-        delete pParams.q; // 채널 검색 시 q 파라미터는 삭제하여 해당 채널 전체 최신 영상을 가져옴
+        // 숏폼을 걸러내기 위해 넉넉히 최근 5개 영상을 가져옵니다.
+        const pParams = { ...commonParams, channelId: 'UCeTWH8xNp0pg3qtI4Kz1yuQ', order: 'date', maxResults: '5' };
+        delete pParams.q;
         const pinnedRes = await axios.get(`${YT_BASE}/search?${new URLSearchParams(pParams)}`, axiosCfg);
         if (pinnedRes.data && pinnedRes.data.items && pinnedRes.data.items.length > 0) {
-           pinnedVideo = buildYtVideoList(pinnedRes.data.items)[0];
+           const channelVideos = buildYtVideoList(pinnedRes.data.items);
+           const cIds = channelVideos.map(v => v.youtubeId);
+           // 110초(거의 2분) 이상의 영상만 추출 (숏폼 제거 로직 재사용)
+           const validCIds = await filterByActualDuration(cIds, 110);
+           // 가장 최신 롱폼 영상을 선택
+           pinnedVideo = channelVideos.find(v => validCIds.has(v.youtubeId)) || null;
         }
       } catch (e) {
         logger.warn('[YouTube Pinned] 고정 채널 영상 로드 실패: ' + e.message);
