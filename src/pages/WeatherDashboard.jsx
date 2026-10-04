@@ -30,7 +30,7 @@ function buildMarineDisplay(data) {
   const wave   = applyWaveReduction(data.wave?.coastal ?? data.wave);
   const speed  = data.wind?.speed ?? data.wind;
   const dir    = data.wind?.dir ?? '';
-  const phase  = data.tide?.phase ?? data.tide;
+  let phase  = data.tide?.phase ?? data.tide;
   // ✅ NEW-2 FIX: fishingIndex는 공공 API의 1~5 등급 문자열 (1=매우좋음, 5=매우나쁨)
   // evaluator.js의 0~100 스케일과 동일하게 역산 후 등급 분류
   const rawFishingIndex = data.fishingIndex;
@@ -44,6 +44,17 @@ function buildMarineDisplay(data) {
     score = idxMap[rawFishingIndex] ?? 60;
   } else {
     score = 60; // 기본값
+  }
+
+  // ✅ TIDE FIX: 바다타임 캐시가 있으면 항상 최우선으로 덮어씌움
+  const staticData = getPointSpecificData(point);
+  if (staticData?.tide?.isReal) {
+    if (data.tide) {
+      data.tide = { ...data.tide, high: staticData.tide.high, high2: staticData.tide.high2, low: staticData.tide.low, low2: staticData.tide.low2, phase: staticData.tide.phase };
+    } else {
+      data.tide = staticData.tide;
+    }
+    phase = staticData.tide.phase;
   }
 
   let status = '보통';

@@ -4,7 +4,7 @@
  */
 
 // 1. 전국 주요 관측소 데이터 (fishingData.js의 마스터 데이터 참조)
-import { KHOA_OBSERVATORIES } from '../constants/fishingData';
+import { KHOA_OBSERVATORIES } from '../constants/fishingData.js';
 
 // ✅ TIDE-API: 해양수산부 API와 완벽 연동을 위해 fishingData.js의 마스터 데이터를 사용합니다.
 

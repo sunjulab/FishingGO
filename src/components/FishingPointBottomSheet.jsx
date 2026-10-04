@@ -382,17 +382,20 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           });
           const highs = predictions.filter(p => p.type === '고조').map(p => p.time).sort();
           const lows = predictions.filter(p => p.type === '간조').map(p => p.time).sort();
-          setMarineData(prev => ({
-            ...prev,
-            tide_predictions: predictions,
-            tide: {
-              ...(prev.tide || {}),
-              high: highs[0] || '-',
-              high2: highs[1] || '-',
-              low: lows[0] || '-',
-              low2: lows[1] || '-',
-            },
-          }));
+          setMarineData(prev => {
+            if (prev?.tide?.isReal) return { ...prev, tide_predictions: predictions }; // 바다타임 최우선 방어
+            return {
+              ...prev,
+              tide_predictions: predictions,
+              tide: {
+                ...(prev.tide || {}),
+                high: highs[0] || '-',
+                high2: highs[1] || '-',
+                low: lows[0] || '-',
+                low2: lows[1] || '-',
+              },
+            };
+          });
         }
         // 수온
         if (temp.status === 'fulfilled' && temp.value && temp.value !== '-') {
@@ -513,18 +516,21 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
           const highs = predictions.filter(p => p.type === '고조').map(p => p.time).sort();
           const lows = predictions.filter(p => p.type === '간조').map(p => p.time).sort();
 
-          if (!cancelled) setMarineData(prev => ({ // ✅ BUG-01 FIX
-            ...prev,
-            tide_predictions: predictions,
-            tide: {
-              ...(prev.tide || {}),
-              phase: prev.tide?.phase || '조석 데이터',
-              high: highs[0] || '-',
-              high2: highs[1] || '-',
-              low: lows[0] || '-',
-              low2: lows[1] || '-',
-            },
-          }));
+          if (!cancelled) setMarineData(prev => {
+            if (prev?.tide?.isReal) return { ...prev, tide_predictions: predictions }; // 바다타임 최우선 방어
+            return {
+              ...prev,
+              tide_predictions: predictions,
+              tide: {
+                ...(prev.tide || {}),
+                phase: prev.tide?.phase || '조석 데이터',
+                high: highs[0] || '-',
+                high2: highs[1] || '-',
+                low: lows[0] || '-',
+                low2: lows[1] || '-',
+              },
+            };
+          });
           if (!import.meta.env.PROD) console.info(`[BottomSheet] 조석예보 ${predictions.length}건 로드 완료`);
         })
         .catch(err => { if (!import.meta.env.PROD) console.warn('[BottomSheet] 조석예보 실패:', err); });

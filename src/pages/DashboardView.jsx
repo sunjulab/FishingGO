@@ -141,7 +141,7 @@ export default function DashboardView({
                     const _st = findNearestStation(p.lat, p.lng);
                     const _live = weatherCache[_st?.id];
                     const _sd = getPointSpecificData(p);
-                    const _wd = _live ? { ..._live, stationId: _st.id, tide: _live.tide || _sd?.tide, pointName: p.name } : _sd; // ✅ tide 실시간 우선
+                    const _wd = _live ? { ..._live, stationId: _st.id, tide: _sd?.tide?.isReal ? _sd.tide : (_live.tide || _sd?.tide), pointName: p.name } : _sd; // ✅ tide 바다타임 캐시 최우선
                     // ✅ _serverScore 활용: sst 없을 때 서버 계산 점수 즉시 사용
                     const _sc = (_live?._serverScore && !_live?.sst)
                       ? _live._serverScore

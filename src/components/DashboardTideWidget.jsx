@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Zap } from 'lucide-react';
 import { fetchTideForecast } from '../api/marineApi';
+import { getPointSpecificData } from '../constants/fishingData';
 
 export default function DashboardTideWidget({ pointName, obsCode, isGolden, phase, flow }) {
   const [tides, setTides] = useState(null);
@@ -57,7 +58,23 @@ export default function DashboardTideWidget({ pointName, obsCode, isGolden, phas
 
         // 오늘 데이터만 필터링
         const todayTides = allTides.filter(t => t.dateStr === dates[1]);
-        setTides(todayTides);
+
+        // ✅ TIDE-SYNC: 시간은 물때 탭과 동일하게 바다타임 캐시(TIDE_CALENDAR)를 기준으로 사용.
+        //    KHOA 값은 같은 종류(고/간조)가 ±60분 이내일 때만 조위(cm)/증감 표시에 활용.
+        const bt = getPointSpecificData({ obsCode }, 0)?.tide;
+        if (bt && bt.isReal) {
+          const toMin = s => parseInt(s.slice(0, 2), 10) * 60 + parseInt(s.slice(3, 5), 10);
+          const merged = [
+            { time: bt.high, type: '고조' }, { time: bt.high2, type: '고조' },
+            { time: bt.low, type: '간조' },  { time: bt.low2, type: '간조' },
+          ].filter(t => !!t.time).sort((a, b) => a.time.localeCompare(b.time)).map(t => {
+            const k = todayTides.find(x => x.type === t.type && Math.abs(toMin(x.time) - toMin(t.time)) <= 60);
+            return { ...t, level: k ? k.level : null, diffStr: k ? k.diffStr : '' };
+          });
+          setTides(merged);
+        } else {
+          setTides(todayTides);
+        }
       } catch (e) {
         console.error(e);
         if (isMounted) setTides([]);
@@ -125,7 +142,7 @@ export default function DashboardTideWidget({ pointName, obsCode, isGolden, phas
                       {isHigh ? '만조 ▲' : '간조 ▼'}
                     </span>
                     <span style={{ fontSize: `calc(13.5px * var(--fs, 1))`, fontWeight: '850', color: '#1A1A2E' }}>
-                      {t.time} <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>({t.level})</span>
+                      {t.time} {t.level != null && <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600' }}>({t.level})</span>}
                     </span>
                   </div>
                   {diffStr && (

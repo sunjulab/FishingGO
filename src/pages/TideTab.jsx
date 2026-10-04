@@ -117,7 +117,9 @@ export default function TideTab() {
     try {
       const saved = localStorage.getItem('fishinggo_last_point');
       const p = saved ? JSON.parse(saved) : null;
-      return p || ALL_FISHING_POINTS[0];
+      // ✅ TIDE-SYNC: 저장된 obsCode가 과거 매핑일 수 있으므로 최신 포인트 목록 기준으로 갱신
+      const fresh = p ? ALL_FISHING_POINTS.find(function(x) { return String(x.id) === String(p.id); }) : null;
+      return fresh || p || ALL_FISHING_POINTS[0];
     } catch { return ALL_FISHING_POINTS[0]; }
   });
 
@@ -133,7 +135,6 @@ export default function TideTab() {
   const marineData = null;
   const [loading, setLoading] = useState(false);
   const [hourlyWeather, setHourlyWeather] = useState(null); // 기상청 시간대별 실측 예보
-  const [khoaTide, setKhoaTide] = useState(null); // KHOA 실측 조석 데이터
   const [livePrecision, setLivePrecision] = useState(null); // ✅ 실시간 해양기상 (홈과 동기화)
 
   const fetchPrecision = useCallback(() => {
@@ -170,26 +171,9 @@ export default function TideTab() {
     return () => clearTimeout(t);
   }, [selectedPoint, fetchWeather]);
 
-  // ✅ KHOA 조석예보 API: 실측 만조/간조 시간 (fallback: tideData.tide)
-  useEffect(() => {
-    if (!selectedPoint || !selectedPoint.obsCode) return;
-    setKhoaTide(null);
-    var d = new Date();
-    d.setDate(d.getDate() + dateOffset);
-    var yyyy = d.getFullYear();
-    var mm = String(d.getMonth()+1).padStart(2,'0');
-    var dd = String(d.getDate()).padStart(2,'0');
-    var dateStr = yyyy + mm + dd;
-    apiClient.get('/api/tide/obs?obsCode=' + selectedPoint.obsCode + '&date=' + dateStr)
-      .then(function(res) {
-        if (res.data && res.data.high) {
-          setKhoaTide(res.data);
-        } else {
-          setKhoaTide(null);
-        }
-      })
-      .catch(function() { setKhoaTide(null); });
-  }, [selectedPoint, dateOffset]);
+  // ✅ TIDE-SYNC: 만조/간조는 홈 화면과 동일하게 getPointSpecificData()의 바다타임 캐시(TIDE_CALENDAR)만 사용.
+  //    (기존 KHOA /api/tide/obs 우선 적용은 제거 — 앱 내부 obsCode(DT_xxxx)가 실제 KHOA 관측소 코드와 달라
+  //     예: 앱 DT_0001=강릉 / KHOA DT_0001=인천 → 강릉 포인트에 인천 물때가 표시되는 오류가 있었음)
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -295,20 +279,20 @@ export default function TideTab() {
                 <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', color: '#1a1a2e' }}>📈 {isToday ? '오늘' : ''} 조석 그래프</div>
                 <div style={{ padding: '8px 0 16px' }}>
                   <TideGraph
-                    high={khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : null)}
-                    high2={khoaTide ? khoaTide.high2 : (tideData && tideData.tide ? tideData.tide.high2 : null)}
-                    low={khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : null)}
-                    low2={khoaTide ? khoaTide.low2 : (tideData && tideData.tide ? tideData.tide.low2 : null)}
+                    high={(tideData && tideData.tide ? tideData.tide.high : null)}
+                    high2={(tideData && tideData.tide ? tideData.tide.high2 : null)}
+                    low={(tideData && tideData.tide ? tideData.tide.low : null)}
+                    low2={(tideData && tideData.tide ? tideData.tide.low2 : null)}
                     currentHour={currentHour}
                     isToday={isToday}
                   />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {[
-                    { label: '🔴 만조', time: khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : null),  bg: '#ffebee', tc: '#b71c1c' },
-                    { label: '🔵 간조', time: khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : null),   bg: '#e3f2fd', tc: '#0d47a1' },
-                    { label: '🔴 만조 2', time: khoaTide ? khoaTide.high2 : (tideData && tideData.tide ? tideData.tide.high2 : null), bg: '#ffebee', tc: '#b71c1c' },
-                    { label: '🔵 간조 2', time: khoaTide ? khoaTide.low2 : (tideData && tideData.tide ? tideData.tide.low2 : null),  bg: '#e3f2fd', tc: '#0d47a1' },
+                    { label: '🔴 만조', time: (tideData && tideData.tide ? tideData.tide.high : null),  bg: '#ffebee', tc: '#b71c1c' },
+                    { label: '🔵 간조', time: (tideData && tideData.tide ? tideData.tide.low : null),   bg: '#e3f2fd', tc: '#0d47a1' },
+                    { label: '🔴 만조 2', time: (tideData && tideData.tide ? tideData.tide.high2 : null), bg: '#ffebee', tc: '#b71c1c' },
+                    { label: '🔵 간조 2', time: (tideData && tideData.tide ? tideData.tide.low2 : null),  bg: '#e3f2fd', tc: '#0d47a1' },
                   ].filter(function(r){ return !!r.time; }).map(function(r, i) {
                     return (
                       <div key={i} style={{ background: r.bg, borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
@@ -467,8 +451,8 @@ export default function TideTab() {
                   <div style={{ fontSize: '32px', fontWeight: '900' }}>{tideData && tideData.tide ? tideData.tide.current_level : '—'}</div>
                 </div>
                 <div style={{ textAlign: 'right', fontSize: '12px', opacity: 0.85 }}>
-                  <div>다음 만조: {khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : '—')}</div>
-                  <div>다음 간조: {khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : '—')}</div>
+                  <div>다음 만조: {(tideData && tideData.tide ? tideData.tide.high : '—')}</div>
+                  <div>다음 간조: {(tideData && tideData.tide ? tideData.tide.low : '—')}</div>
                 </div>
               </div>
               <div style={{ marginTop: '12px' }}>
@@ -483,10 +467,10 @@ export default function TideTab() {
               <div style={card}>
                 <div style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px' }}>🕐 {isToday ? '오늘' : '이 날의'} 조석 상세</div>
                 {[
-                  { type: '만조', time: khoaTide ? khoaTide.high : (tideData && tideData.tide ? tideData.tide.high : null),  icon: '🔴', tc: '#b71c1c' },
-                  { type: '간조', time: khoaTide ? khoaTide.low : (tideData && tideData.tide ? tideData.tide.low : null),   icon: '🔵', tc: '#0d47a1' },
-                  { type: '만조 2', time: khoaTide ? khoaTide.high2 : (tideData && tideData.tide ? tideData.tide.high2 : null), icon: '🔴', tc: '#b71c1c' },
-                  { type: '간조 2', time: khoaTide ? khoaTide.low2 : (tideData && tideData.tide ? tideData.tide.low2 : null),  icon: '🔵', tc: '#0d47a1' },
+                  { type: '만조', time: (tideData && tideData.tide ? tideData.tide.high : null),  icon: '🔴', tc: '#b71c1c' },
+                  { type: '간조', time: (tideData && tideData.tide ? tideData.tide.low : null),   icon: '🔵', tc: '#0d47a1' },
+                  { type: '만조 2', time: (tideData && tideData.tide ? tideData.tide.high2 : null), icon: '🔴', tc: '#b71c1c' },
+                  { type: '간조 2', time: (tideData && tideData.tide ? tideData.tide.low2 : null),  icon: '🔵', tc: '#0d47a1' },
                 ].filter(function(r){ return !!r.time; }).map(function(r, i) {
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>

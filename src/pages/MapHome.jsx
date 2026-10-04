@@ -799,8 +799,8 @@ export default function MapHome() {
         ? {
             ...liveData,
             stationId: st.id,
-            // ✅ NEW-1 FIX: 실시간 tide 우선, 없으면 정적 fallback (BUG-2와 동일 패턴 히트맵에 적용)
-            tide: liveData.tide || staticData?.tide,
+            // ✅ TIDE FIX: 바다타임 캐시 최우선, 없으면 실시간 우선
+            tide: staticData?.tide?.isReal ? staticData.tide : (liveData.tide || staticData?.tide),
             pointName: point.name,
           }
         : staticData;
@@ -1080,7 +1080,7 @@ export default function MapHome() {
         // ✅ FIX-SCORE-ALL: weatherCache 우선 → 히트맵·대시보드 점수 전체 동기화
         const liveData = weatherCache[st.id];
         const _weatherData = liveData
-          ? { ...liveData, stationId: st.id, tide: liveData.tide || staticData?.tide, pointName: p.name }
+          ? { ...liveData, stationId: st.id, tide: staticData?.tide?.isReal ? staticData.tide : (liveData.tide || staticData?.tide), pointName: p.name }
           : staticData;
         const weatherData = applyWaveReduction(_weatherData, p.type);
         // ✅ _serverScore 활용: sst가 없어도 서버가 계산한 점수를 즉시 표시
