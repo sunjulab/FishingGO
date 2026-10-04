@@ -9066,6 +9066,16 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     recent = recent.map(v => ({ ...v, tag: 'recent' }));
     popular = popular.map(v => ({ ...v, tag: 'popular' }));
 
+      // ✅ 고정 채널(내채널)이 있으면 중복 제거 후 첫 번째에 강제 삽입
+      if (pinnedVideo) {
+         pinnedVideo.tag = 'recent';
+         pinnedVideo.isPinned = true;
+         recent = recent.filter(v => v.youtubeId !== pinnedVideo.youtubeId);
+         popular = popular.filter(v => v.youtubeId !== pinnedVideo.youtubeId);
+         recent.unshift(pinnedVideo);
+      }
+
+
     logger.info(`[YouTube Unified] 필터 후: 최신 ${recent.length}개, 인기 ${popular.length}개 (≥110초)`);
 
     const result = { recent, popular };
