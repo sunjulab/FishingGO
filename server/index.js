@@ -9036,7 +9036,7 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     logger.info(`[YouTube Unified] 검색 결과: 최신 ${recent.length}개, 인기 ${popular.length}개`);
 
     // 실제 영상 길이 필터 (Videos API) — ✅ 2분+ 보장 (4분 → 2분 기준 완화)
-    const allIds = [...new Set([...recent.map(v => v.youtubeId), ...popular.map(v => v.youtubeId)])].filter(Boolean);
+    const allIds = [...new Set([...recent.map(v => v.youtubeId), ...popular.map(v => v.youtubeId), ...(pinnedVideo ? [pinnedVideo.youtubeId] : [])])].filter(Boolean);
     const validIds = await filterByActualDuration(allIds, 110);
     recent = recent.filter(v => validIds.has(v.youtubeId));
     popular = popular.filter(v => validIds.has(v.youtubeId));

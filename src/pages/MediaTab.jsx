@@ -43,10 +43,17 @@ function VideoCard({ video, onSelect, onNavigate, T }) {
           </div>
         )}
         {/* 태그 뱃지 */}
-        <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: isRecent ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.9)', borderRadius: '6px', padding: '3px 7px' }}>
-          <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>
-            {isRecent ? '🕐 최신' : '🔥 인기'}
-          </span>
+        <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '5px' }}>
+          {video.isPinned && (
+            <div style={{ backgroundColor: '#FF2D55', borderRadius: '6px', padding: '3px 7px', boxShadow: '0 2px 8px rgba(255,45,85,0.4)' }}>
+              <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>⭐ 공식</span>
+            </div>
+          )}
+          <div style={{ backgroundColor: isRecent ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.9)', borderRadius: '6px', padding: '3px 7px' }}>
+            <span style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>
+              {isRecent ? '🕐 최신' : '🔥 인기'}
+            </span>
+          </div>
         </div>
       </div>
 
