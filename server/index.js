@@ -2092,7 +2092,18 @@ async function getNifsAllStations() {
       const items = res.data?.body?.item;
       if (!items || !Array.isArray(items)) return nifsCache;
       // 표층, 중층, 저층 모두 수집 (rpr_yn === 'N'만)
-      const validItems = items.filter(i => String(i.rpr_yn) === 'N');
+      const nowMs = Date.now();
+      const validItems = items.filter(i => {
+        if (String(i.rpr_yn) !== 'N') return false;
+        if (i.obs_dat) {
+          const obsTimeStr = `${i.obs_dat}T${i.obs_tim || '00:00:00'}+09:00`;
+          const obsMs = new Date(obsTimeStr).getTime();
+          if (nowMs - obsMs > 48 * 60 * 60 * 1000) {
+            return false;
+          }
+        }
+        return true;
+      });
       const map = {};
       for (const item of validItems) {
         const key = item.sta_cde;
