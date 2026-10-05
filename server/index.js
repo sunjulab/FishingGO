@@ -7547,10 +7547,18 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
       const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
 if (ptWeather) {
   d.wind = ptWeather.wind;
-  d.wave = ptWeather.wave;
+  const currentWave = d.wave?.coastal ? parseFloat(d.wave.coastal) : 0;
+  const omWave = ptWeather.wave?.coastal ? parseFloat(ptWeather.wave.coastal) : 0;
+  if (!d.wave || omWave > currentWave) {
+    d.wave = ptWeather.wave;
+    if (!d._sources) d._sources = {};
+    d._sources.wave = 'OPENMETEO_POINT';
+  } else {
+    if (!d._sources) d._sources = {};
+    d._sources.wave = d._sources.wave || 'KMA_BUOY';
+  }
   if (!d._sources) d._sources = {};
   d._sources.wind = 'OPENMETEO_POINT';
-  d._sources.wave = 'OPENMETEO_POINT';
 }
 try {
    const kmaSrt = await getKmaUltraSrtNcst(lat, lng);
@@ -7636,11 +7644,15 @@ try {
     const stationRegion = observationData[sid]?.region || null;
     const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
     if (ptWeather) {
-      fbData.wind = ptWeather.wind;
-      fbData.wave = ptWeather.wave;
-      fbData._sources.wind = 'OPENMETEO_POINT';
-      fbData._sources.wave = 'OPENMETEO_POINT';
-    }
+  fbData.wind = ptWeather.wind;
+  const fbCurrentWave = fbData.wave?.coastal ? parseFloat(fbData.wave.coastal) : 0;
+  const fbOmWave = ptWeather.wave?.coastal ? parseFloat(ptWeather.wave.coastal) : 0;
+  if (!fbData.wave || fbOmWave > fbCurrentWave) {
+    fbData.wave = ptWeather.wave;
+    fbData._sources.wave = 'OPENMETEO_POINT';
+  }
+  fbData._sources.wind = 'OPENMETEO_POINT';
+}
   }
 
   res.json(fbData);
