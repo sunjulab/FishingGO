@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const http = require('http');
 const dns = require('dns');
 const crypto = require('crypto'); // ✅ VISITOR: SHA-256 IP 해시 (중복 선언 방지 — 파일 상단에 1회만)
@@ -9036,8 +9036,8 @@ app.get('/api/media/youtube/unified', async (req, res) => {
     let pinnedVideo = null;
     if (q === '낚시') {
       try {
-        // 숏폼을 걸러내기 위해 넉넉히 최근 5개 영상을 가져옵니다.
-        const pParams = { ...commonParams, channelId: 'UCeTWH8xNp0pg3qtI4Kz1yuQ', order: 'date', maxResults: '5' };
+        // 숏폼을 걸러내기 위해 넉넉히 최근 50개 영상을 가져옵니다.
+        const pParams = { ...commonParams, channelId: 'UCeTWH8xNp0pg3qtI4Kz1yuQ', order: 'date', maxResults: '50' };
         delete pParams.q;
         const pinnedRes = await axios.get(`${YT_BASE}/search?${new URLSearchParams(pParams)}`, axiosCfg);
         if (pinnedRes.data && pinnedRes.data.items && pinnedRes.data.items.length > 0) {
