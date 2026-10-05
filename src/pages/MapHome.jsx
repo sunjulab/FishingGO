@@ -558,7 +558,7 @@ export default function MapHome() {
       return;
     }
     try {
-      const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}`);
+      const res = await apiClient.get(`/api/weather/precision?stationId=${nearest.id}&lat=${point.lat}&lng=${point.lng}`);
       // ✅ SCORE-SYNC: precisionData의 수온 노이즈가 weatherCache를 오염시키지 않도록 setWeatherCache 동기화 삭제
       // ✅ TIDE-SYNC: API 응답의 tide 우선 → 없으면 weatherCache tide → 없으면 정적 fallback
       const staticTide = getPointSpecificData(point).tide;
