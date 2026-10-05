@@ -577,6 +577,15 @@ export default function MapHome() {
   }, []);
 
   /* ── 포인트 클릭 ── */
+  // 🐟 BUG-FIX: 초기 앱 로드 시 대시보드에 핀포인트 기상(OpenMeteo) 즉시 반영
+  // 이 코드가 없으면 사용자가 포인트를 클릭하기 전까지 기상청 먼바다 부표 데이터(weatherCache)가 노출되어 파고 거짓 경보가 발생함.
+  useEffect(() => {
+    if (!selectedPoint && !precisionData) {
+      _enterPoint(DEFAULT_POINT, true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handlePointClick = useCallback(async (point, fromDashboard = false) => {
     // 무료 유저일 경우 쿨타임 광고 적용
     if (!canAccessPremium && point.type !== '민물') {
