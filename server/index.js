@@ -7548,16 +7548,19 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
 if (ptWeather) {
   d.wind = ptWeather.wind;
   const currentWave = d.wave?.coastal ? parseFloat(d.wave.coastal) : 0;
-  const omWave = ptWeather.wave?.coastal ? parseFloat(ptWeather.wave.coastal) : 0;
-  if (!d.wave || omWave > currentWave) {
-    d.wave = ptWeather.wave;
-    if (!d._sources) d._sources = {};
-    d._sources.wave = 'OPENMETEO_POINT';
-  } else {
-    if (!d._sources) d._sources = {};
-    d._sources.wave = d._sources.wave || 'KMA_BUOY';
+  
+  // ✅ BUG-FIX REVISION: 실제 현장(내항/방파제)은 외해(부표)보다 파도가 훨씬 잔잔함. 
+  // 기상청 먼바다 부표 데이터(Math.max)를 적용하면 낚시 불가 수준의 거짓 경보(False Alarm) 발생.
+  // 핀포인트 지형이 반영된 OpenMeteo 파고를 최우선 진실(Source of Truth)로 복구함.
+  d.wave = ptWeather.wave;
+  
+  // (옵션) 외해 파도가 1m 이상 더 높을 경우, 너울성 파도 경고용으로만 참고 데이터로 남김
+  if (currentWave > parseFloat(ptWeather.wave?.coastal || 0) + 1.0) {
+    d.wave.outerSeaWave = currentWave;
   }
+
   if (!d._sources) d._sources = {};
+  d._sources.wave = 'OPENMETEO_POINT';
   d._sources.wind = 'OPENMETEO_POINT';
 }
 try {
@@ -7645,12 +7648,12 @@ try {
     const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
     if (ptWeather) {
   fbData.wind = ptWeather.wind;
-  const fbCurrentWave = fbData.wave?.coastal ? parseFloat(fbData.wave.coastal) : 0;
-  const fbOmWave = ptWeather.wave?.coastal ? parseFloat(ptWeather.wave.coastal) : 0;
-  if (!fbData.wave || fbOmWave > fbCurrentWave) {
-    fbData.wave = ptWeather.wave;
-    fbData._sources.wave = 'OPENMETEO_POINT';
-  }
+  
+  // 핀포인트 지형 반영 파고 최우선 적용 (외해 부표 덮어쓰기 금지)
+  fbData.wave = ptWeather.wave;
+  
+  if (!fbData._sources) fbData._sources = {};
+  fbData._sources.wave = 'OPENMETEO_POINT';
   fbData._sources.wind = 'OPENMETEO_POINT';
 }
   }
