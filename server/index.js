@@ -9438,14 +9438,20 @@ async function runFishingScoreAlarm() {
 app.get('/api/debug/om', async (req, res) => {
   const { lat = 37.5, lng = 129.1 } = req.query;
   const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=wave_height,wave_direction,swell_wave_height,swell_wave_period&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+  const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
   try {
-    const rawRes = await axios.get(url, { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } });
+    const [mRes, wRes] = await Promise.all([
+      axios.get(url,  { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } }),
+      axios.get(wurl, { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } }),
+    ]);
     const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
+    const wh = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
+    const ws = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
     delete openMeteoCache[`${parseFloat(lat).toFixed(1)},${parseFloat(lng).toFixed(1)}`];
     const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, '동해');
-    res.json({ ok: true, nowHr, rawWh: rawRes.data?.hourly?.wave_height?.[nowHr], ptWeather });
+    res.json({ ok: true, nowHr, wh, ws, isNaN_wh: isNaN(wh), isNaN_ws: isNaN(ws), ptWeather, mTimes: mRes.data?.hourly?.time?.slice(16, 20), wTimes: wRes.data?.hourly?.time?.slice(16, 20) });
   } catch (e) {
-    res.json({ ok: false, error: e.message, status: e.response?.status, data: e.response?.data });
+    res.json({ ok: false, error: e.message, status: e.response?.status });
   }
 });
 
