@@ -2426,7 +2426,7 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
     return result;
   } catch (e) {
     logger.warn(`[Marine/OpenMeteo/Point] ${key} 호출 실패: ${e.message}`);
-    return null;
+    return { __error: e.message, stack: e.stack };
   }
 }
 
@@ -9441,6 +9441,7 @@ app.get('/api/debug/om', async (req, res) => {
   try {
     const rawRes = await axios.get(url, { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } });
     const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
+    delete openMeteoCache[`${parseFloat(lat).toFixed(1)},${parseFloat(lng).toFixed(1)}`];
     const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, '동해');
     res.json({ ok: true, nowHr, rawWh: rawRes.data?.hourly?.wave_height?.[nowHr], ptWeather });
   } catch (e) {
