@@ -2359,22 +2359,62 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
       axios.get(wurl, { timeout: 8000 }),
     ]);
     const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
-    const wh      = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
-    const swh     = parseFloat(mRes.data?.hourly?.swell_wave_height?.[nowHr]) || 0; // 너울 파고
-    const swp     = parseFloat(mRes.data?.hourly?.swell_wave_period?.[nowHr]) || 0; // 너울 주기(초)
-    const wdDeg   = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
+    let wh      = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
+    let swh     = parseFloat(mRes.data?.hourly?.swell_wave_height?.[nowHr]) || 0; // 너울 파고
+    let swp     = parseFloat(mRes.data?.hourly?.swell_wave_period?.[nowHr]) || 0; // 너울 주기(초)
+    let wdDeg   = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
     const ws      = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
     const windDeg = parseFloat(wRes.data?.hourly?.wind_direction_10m?.[nowHr]);
+
+    // 🌊 육지 격자 감지 및 인근 해양 격자 자동 탐색 (Coastal Land Grid Offset Healing)
+    if (isNaN(wh) || wh === null) {
+      const offshoreOffsets = [
+        [0, 0.04],     // 동쪽 (동해/부산 등)
+        [-0.04, 0],    // 남쪽 (남해/제주 등)
+        [0, -0.04],    // 서쪽 (서해 등)
+        [-0.03, 0.03], // 남동쪽
+        [0, 0.08],     // 동쪽 원거리
+        [-0.08, 0],    // 남쪽 원거리
+        [0, -0.08],    // 서쪽 원거리
+      ];
+      for (const [dLat, dLng] of offshoreOffsets) {
+        try {
+          const tryLat = (parseFloat(lat) + dLat).toFixed(4);
+          const tryLng = (parseFloat(lng) + dLng).toFixed(4);
+          const tryUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${tryLat}&longitude=${tryLng}` +
+            `&hourly=wave_height,wave_direction,swell_wave_height,swell_wave_period&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+          const tryRes = await axios.get(tryUrl, { timeout: 4000 });
+          const tryWh = parseFloat(tryRes.data?.hourly?.wave_height?.[nowHr]);
+          if (!isNaN(tryWh) && tryWh !== null) {
+            wh = tryWh;
+            swh = parseFloat(tryRes.data?.hourly?.swell_wave_height?.[nowHr]) || 0;
+            swp = parseFloat(tryRes.data?.hourly?.swell_wave_period?.[nowHr]) || 0;
+            wdDeg = parseFloat(tryRes.data?.hourly?.wave_direction?.[nowHr]);
+            logger.info(`[Marine/OpenMeteo/Point] ${key} 육지격자 감지 → 해양격자(${tryLat},${tryLng}) 복구 성공: ${wh}m`);
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
     if (isNaN(wh) || isNaN(ws)) return null;
 
     // ✅ SWELL-FIX: wave_height vs swell_wave_height 중 더 큰 값 사용
     const rawWave = Math.max(wh, swh);
 
-    // ✅ COASTAL-AMP: 동해 연안은 외해 너울이 연안에서 1.3배 증폭 (얕은 수심 + 지형 집중)
-    // 너울 주기 5초 이상이면 추가 1.15배 위험 증폭 (장주기 너울 = 더 위험)
-    const isEastSea = (region === '동해') || (lng >= 128.5 && lat >= 34.5 && lat <= 38.8);
-    const swellBonus = (swp >= 5 && swh > 0.3) ? 1.15 : 1.0;
-    const coastalAmp = isEastSea ? 1.3 * swellBonus : 1.0;
+    // ✅ COASTAL-AMP: 동해 본토 연안(강원/경북 연안 얕은 수심 지형 집중)
+    // - 외해 화산섬(독도, 울릉도: lng > 130.0)은 수심이 깊어 연안 얕은 수심 천수 증폭 미적용 (원시 외해파고 유지)
+    // - 남해/부산/거제/서해(lat < 35.5)는 동해 연안 증폭 대상에서 제외 (실제 지형 및 핀포인트 원칙 일치)
+    // - 동해 본토 연안(lat >= 35.5)에서 장주기 너울(swp >= 6 && swh >= 0.5) 발생 시 지형 집중 1.15배 위험도 보정
+    const isEastSeaMainland = (region === '동해' || region === '강원' || region === '경북')
+      ? (parseFloat(lng) <= 130.0 && parseFloat(lat) >= 35.5)
+      : (parseFloat(lng) >= 129.3 && parseFloat(lat) >= 35.5 && parseFloat(lat) <= 38.8 && parseFloat(lng) <= 130.0);
+
+    let coastalAmp = 1.0;
+    if (isEastSeaMainland) {
+      const isDangerousSwell = (swp >= 6 && swh >= 0.5);
+      coastalAmp = isDangerousSwell ? 1.15 : 1.05;
+    }
     const adjustedWave = parseFloat((rawWave * coastalAmp).toFixed(1));
 
     const result = applyCoastalTransform(`OM_${key}`, adjustedWave, ws, windDeg);
@@ -2390,7 +2430,6 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
   }
 }
 
-// ✅ [FALLBACK-v2] OpenMeteo 서브 파이프라인 (기상청 3시간 이상 장애 시 자동 전환)
 async function getMarineWeatherOpenMeteo(sid) {
   const coords = OBS_COORDS[sid];
   if (!coords) return null;
@@ -2401,31 +2440,34 @@ async function getMarineWeatherOpenMeteo(sid) {
 // ✅ KMA 실제 부이 STN 번호 (5자리) 매핑
 // 각 관측소 위치 기준 최근접 해양연안부이 ID
 const BUOY_MAP = {
-  // 동해권
-  'DT_0099':'22102', // 고성 가진항 → 동해부이 22102
-  'DT_0001':'22102', // 강릉 안목항 → 동해부이 22102
-  'DT_0021':'22102', // 속초
-  'DT_0033':'22102', // 동해묵호
-  'DT_0003':'22101', // 삼척
-  'DT_0002':'22101', // 울진 → 동해부이 22101
-  'DT_0036':'22104', // 경주감포·포항·울산 → 남해부이 22104 (삼척 22101 오매핑 수정)
-  // 남해권
-  'DT_0004':'22104', // 부산 → 남해부이 22104
-  'DT_0034':'22104', // 거제
-  'DT_0016':'22105', // 통영 → 22105
-  'DT_0005':'22105', // 여수
-  'DT_0006':'22106', // 목포 → 22106
-  'DT_0018':'22106', // 완도
-  'DT_0014':'22105', // 광양만 → 거문도부이 22105 (기존 마라도부이 22107 오류 수정)
-  // 서해권
-  'DT_0007':'22298', // 인천 → 서해부이 22298
-  'DT_0030':'22297', // 태안 → 22297
-  'DT_0008':'22302', // 보령 → 22302
-  'DT_0009':'22303', // 군산 → 22303
-  // 제주권
-  'DT_0010':'22515', // 제주한림 → 22515
-  'DT_0011':'22515', // 서귀포
-  'DT_0045':'22515', // 성산항
+  // 동해 강원권 → 22105 (동해 부이)
+  'DT_0099': '22105', // 고성 가진항
+  'DT_0001': '22105', // 강릉 안목항
+  'DT_0021': '22105', // 속초
+  'DT_0033': '22105', // 동해묵호
+  'DT_0003': '22105', // 삼척
+  // 동해 경북권 → 22106 (포항 부이)
+  'DT_0002': '22106', // 울진 후포
+  'DT_0036': '22106', // 경주감포·포항
+  // 남해동부권 → 22104 (거제도 부이)
+  'DT_0004': '22104', // 부산
+  'DT_0034': '22104', // 거제
+  'DT_0016': '22104', // 통영
+  // 남해서부권 → 22103 (거문도 부이)
+  'DT_0005': '22103', // 여수
+  'DT_0014': '22103', // 광양만
+  'DT_0018': '22103', // 완도
+  // 서해남부권 → 22102 (칠발도 부이)
+  'DT_0006': '22102', // 목포
+  // 서해중북부권 → 22101 (덕적도 부이) / 22108 (외연도 부이)
+  'DT_0007': '22101', // 인천
+  'DT_0030': '22108', // 태안
+  'DT_0008': '22108', // 보령
+  'DT_0009': '22108', // 군산
+  // 제주권 → 22107 (마라도 부이)
+  'DT_0010': '22107', // 제주
+  'DT_0011': '22107', // 서귀포
+  'DT_0045': '22107', // 성산항
 };
 
 async function getMarineWeather(sid) {
@@ -2781,6 +2823,7 @@ async function updateAllStationsCache() {
         _sources: {
           sst:  khoaSst ? 'KHOA_API' : (nifsSst ? 'NIFS_API' : (beachSst ? 'KMA_BEACH' : 'fallback')),
           wind: (rainSnow && rainSnow.wsd !== null) ? 'KMA_ULTRASRT_PRECISION' : (marine ? 'KMA_BUOY' : 'fallback'),
+          wave: (marine && marineWeatherCache[sid]?.source) || (marine ? 'KMA_BUOY' : 'fallback'),
           tide: realTide ? 'KHOA_TIDE' : 'fallback',
         },
       },
@@ -7518,7 +7561,12 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
 
   if (weatherCache[sid]) {
     // 실시간성 체감을 위해 캐시 데이터에도 호출 시마다 미세 노이즈 추가
-    const d = { ...weatherCache[sid].data };
+    // ✅ 원본 캐시 오염 방지를 위해 깊은 복사 수행
+    const d = { 
+      ...weatherCache[sid].data,
+      _sources: { ...(weatherCache[sid].data._sources || {}) },
+      wave: { ...(weatherCache[sid].data.wave || {}) }
+    };
 
     // ✅ BEACH-REALTIME: kmaBeachCache가 있으면 precision 요청 시 실시간 반영
     // (단, 이미 NIFS_API나 KHOA_API 등 더 정확한 실데이터가 있다면 덮어쓰지 않음)
@@ -7556,23 +7604,26 @@ app.get('/api/weather/precision', checkSubscriptionValid, async (req, res) => {
     if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
       const stationRegion = observationData[sid]?.region || null;
       const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
-if (ptWeather) {
-  d.wind = ptWeather.wind;
+if (ptWeather && ptWeather.wave?.coastal != null) {
+  d.wind = { ...ptWeather.wind };
   const currentWave = d.wave?.coastal ? parseFloat(d.wave.coastal) : 0;
   
   // ✅ BUG-FIX REVISION: 실제 현장(내항/방파제)은 외해(부표)보다 파도가 훨씬 잔잔함. 
   // 기상청 먼바다 부표 데이터(Math.max)를 적용하면 낚시 불가 수준의 거짓 경보(False Alarm) 발생.
   // 핀포인트 지형이 반영된 OpenMeteo 파고를 최우선 진실(Source of Truth)로 복구함.
-  d.wave = ptWeather.wave;
+  // (캐시 원본 변조 방지를 위해 깊은 복사 할당)
+  d.wave = { ...ptWeather.wave };
   
   // (옵션) 외해 파도가 1m 이상 더 높을 경우, 너울성 파도 경고용으로만 참고 데이터로 남김
   if (currentWave > parseFloat(ptWeather.wave?.coastal || 0) + 1.0) {
     d.wave.outerSeaWave = currentWave;
   }
 
-  if (!d._sources) d._sources = {};
   d._sources.wave = 'OPENMETEO_POINT';
   d._sources.wind = 'OPENMETEO_POINT';
+} else {
+  // 해양 핀포인트 조회가 불가능한 경우 관측소 기본 파고 사용 표시
+  if (!d._sources.wave) d._sources.wave = 'STATION_FALLBACK';
 }
 try {
    const kmaSrt = await getKmaUltraSrtNcst(lat, lng);
@@ -7657,15 +7708,18 @@ try {
   if (lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
     const stationRegion = observationData[sid]?.region || null;
     const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, stationRegion);
-    if (ptWeather) {
-  fbData.wind = ptWeather.wind;
+    if (ptWeather && ptWeather.wave?.coastal != null) {
+  fbData.wind = { ...ptWeather.wind };
   
   // 핀포인트 지형 반영 파고 최우선 적용 (외해 부표 덮어쓰기 금지)
-  fbData.wave = ptWeather.wave;
+  fbData.wave = { ...ptWeather.wave };
   
   if (!fbData._sources) fbData._sources = {};
   fbData._sources.wave = 'OPENMETEO_POINT';
   fbData._sources.wind = 'OPENMETEO_POINT';
+} else {
+  if (!fbData._sources) fbData._sources = {};
+  fbData._sources.wave = 'STATION_FALLBACK';
 }
   }
 
