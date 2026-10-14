@@ -2363,8 +2363,11 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
     let swh     = parseFloat(mRes.data?.hourly?.swell_wave_height?.[nowHr]) || 0; // 너울 파고
     let swp     = parseFloat(mRes.data?.hourly?.swell_wave_period?.[nowHr]) || 0; // 너울 주기(초)
     let wdDeg   = parseFloat(mRes.data?.hourly?.wave_direction?.[nowHr]);
-    const ws      = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
-    const windDeg = parseFloat(wRes.data?.hourly?.wind_direction_10m?.[nowHr]);
+    let ws        = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
+    let windDeg   = parseFloat(wRes.data?.hourly?.wind_direction_10m?.[nowHr]);
+    // 풍속이 해상에서 결측일 경우 기본값 폴백 (파고 데이터가 풍속 결측으로 인해 버려지는 치명적 오류 차단)
+    if (isNaN(ws) || ws === null) ws = 3.5;
+    if (isNaN(windDeg) || windDeg === null) windDeg = isNaN(wdDeg) ? 45 : wdDeg;
 
     // 🌊 육지 격자 감지 및 인근 해양 격자 자동 탐색 (Coastal Land Grid Offset Healing)
     if (isNaN(wh) || wh === null) {
@@ -2397,7 +2400,8 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
       }
     }
 
-    if (isNaN(wh) || isNaN(ws)) return null;
+    // ✅ CRITICAL-FIX: 파고(wh)가 유효하면 풍속과 무관하게 핀포인트 파고 정상 적용
+    if (isNaN(wh) || wh === null) return null;
 
     // ✅ SWELL-FIX: wave_height vs swell_wave_height 중 더 큰 값 사용
     const rawWave = Math.max(wh, swh);
@@ -2426,7 +2430,7 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
     return result;
   } catch (e) {
     logger.warn(`[Marine/OpenMeteo/Point] ${key} 호출 실패: ${e.message}`);
-    return { __error: e.message, stack: e.stack };
+    return null;
   }
 }
 
@@ -9434,26 +9438,6 @@ async function runFishingScoreAlarm() {
   }
 }
 
-
-app.get('/api/debug/om', async (req, res) => {
-  const { lat = 37.5, lng = 129.1 } = req.query;
-  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=wave_height,wave_direction,swell_wave_height,swell_wave_period&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
-  const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
-  try {
-    const [mRes, wRes] = await Promise.all([
-      axios.get(url,  { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } }),
-      axios.get(wurl, { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } }),
-    ]);
-    const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
-    const wh = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
-    const ws = parseFloat(wRes.data?.hourly?.wind_speed_10m?.[nowHr]);
-    delete openMeteoCache[`${parseFloat(lat).toFixed(1)},${parseFloat(lng).toFixed(1)}`];
-    const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, '동해');
-    res.json({ ok: true, nowHr, wh, ws, isNaN_wh: isNaN(wh), isNaN_ws: isNaN(ws), ptWeather, mTimes: mRes.data?.hourly?.time?.slice(16, 20), wTimes: wRes.data?.hourly?.time?.slice(16, 20) });
-  } catch (e) {
-    res.json({ ok: false, error: e.message, status: e.response?.status });
-  }
-});
 
 // 가상 알람푸쉬 테스트용 임시 API
 app.get('/api/test-score-alarm', async (req, res) => {
