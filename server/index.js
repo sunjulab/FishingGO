@@ -2355,8 +2355,8 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
     const wurl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
       `&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
     const [mRes, wRes] = await Promise.all([
-      axios.get(url,  { timeout: 8000 }),
-      axios.get(wurl, { timeout: 8000 }),
+      axios.get(url,  { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } }),
+      axios.get(wurl, { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } }),
     ]);
     const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
     let wh      = parseFloat(mRes.data?.hourly?.wave_height?.[nowHr]);
@@ -2383,7 +2383,7 @@ async function getMarineWeatherOpenMeteoPoint(lat, lng, region = null) {
           const tryLng = (parseFloat(lng) + dLng).toFixed(4);
           const tryUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${tryLat}&longitude=${tryLng}` +
             `&hourly=wave_height,wave_direction,swell_wave_height,swell_wave_period&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
-          const tryRes = await axios.get(tryUrl, { timeout: 4000 });
+          const tryRes = await axios.get(tryUrl, { timeout: 4000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } });
           const tryWh = parseFloat(tryRes.data?.hourly?.wave_height?.[nowHr]);
           if (!isNaN(tryWh) && tryWh !== null) {
             wh = tryWh;
@@ -9433,6 +9433,20 @@ async function runFishingScoreAlarm() {
     logger.error(`[Fishing Score Alarm] 실패: ${err.message}`);
   }
 }
+
+
+app.get('/api/debug/om', async (req, res) => {
+  const { lat = 37.5, lng = 129.1 } = req.query;
+  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=wave_height,wave_direction,swell_wave_height,swell_wave_period&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=1`;
+  try {
+    const rawRes = await axios.get(url, { timeout: 8000, headers: { 'User-Agent': 'FishingGO-Server/1.0' } });
+    const nowHr = new Date(Date.now() + 9 * 3600000).getUTCHours();
+    const ptWeather = await getMarineWeatherOpenMeteoPoint(lat, lng, '동해');
+    res.json({ ok: true, nowHr, rawWh: rawRes.data?.hourly?.wave_height?.[nowHr], ptWeather });
+  } catch (e) {
+    res.json({ ok: false, error: e.message, status: e.response?.status, data: e.response?.data });
+  }
+});
 
 // 가상 알람푸쉬 테스트용 임시 API
 app.get('/api/test-score-alarm', async (req, res) => {
