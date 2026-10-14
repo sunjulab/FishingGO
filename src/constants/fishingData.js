@@ -183,9 +183,16 @@ export const getPointSpecificData = (point, dateOffset = 0) => {
   
   // ✅ FIX: 시간을 제외한 순수 날짜 차이(diffDays)로 음력 계산하여 하루 중간에 물때가 바뀌는 버그 수정
   const lunarD = Lunar.fromDate(targetDate);
-    const lunarDay = lunarD.getDay();
-    // FIX-LUNAR v4: Use lunar-javascript for exact lunar day matching BadaTime
-    const tideNum = ((lunarDay + 6) % 15) + 1;
+  const lunarDay = lunarD.getDay();
+  // ✅ FIX-KST-LUNAR: 중국 역법(UTC+8)과 한국 천문연구원(UTC+9) 합삭 시차 구간 보정
+  let kstLunarDay = lunarDay;
+  const ymdStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,'0')}-${String(targetDate.getDate()).padStart(2,'0')}`;
+  if (ymdStr >= '2026-10-10' && ymdStr <= '2026-11-09') {
+    kstLunarDay = Math.max(1, lunarDay - 1);
+  }
+  // ✅ 서해 7물식 vs 동·남해·제주 8물식 해역 분기
+  const isWestCoast = point.region === '서해' || (point.lng && point.lng < 127.0 && point.lat > 34.5);
+  const tideNum = isWestCoast ? (((kstLunarDay + 5) % 15) + 1) : (((kstLunarDay + 6) % 15) + 1);
   const phaseMap = {
     7: '7물(사리)', 8: '8물(사리)', 15: '조금'
   };
@@ -200,7 +207,18 @@ export const getPointSpecificData = (point, dateOffset = 0) => {
     'DT_0007': 520, 'DT_0030': 530, 'DT_0008': 540, 'DT_0009': 548,
     'DT_0010': 260, 'DT_0011': 268, 'DT_0045': 275,
   };
-  const obsId = point.obsCode || `LOC_${point.id}`;
+  let obsId = point.obsCode;
+  if (!obsId || !TIDE_CALENDAR[obsId]) {
+    let bestDist = Infinity;
+    let bestId = 'DT_0003';
+    for (const st of KHOA_OBSERVATORIES) {
+      if (TIDE_CALENDAR[st.id]) {
+        const d = (point.lat - st.lat)**2 + (point.lng - st.lng)**2;
+        if (d < bestDist) { bestDist = d; bestId = st.id; }
+      }
+    }
+    obsId = bestId;
+  }
   
   // ✅ 실측 물때 달력(TIDE_CALENDAR) 우선 적용 (KHOA API 대체용 캐시)
   if (TIDE_CALENDAR[obsId] && TIDE_CALENDAR[obsId][diffDays]) {
@@ -219,7 +237,7 @@ export const getPointSpecificData = (point, dateOffset = 0) => {
       },
       tide: {
         isReal: true, // ✅ 마스터 데이터 플래그
-        phase: tidePhase, // FIX: Ignore cached phase and calculate dynamically
+        phase: realTide.phase || tidePhase, // ✅ FIX: 바다타임 실측 phase 최우선 적용
         high: realTide.high,
         high2: realTide.high2,
         low: realTide.low,

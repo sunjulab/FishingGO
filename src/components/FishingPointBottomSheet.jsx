@@ -1072,15 +1072,44 @@ export default function FishingPointBottomSheet({ selectedPoint, onClose, onCond
                     <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '800', borderBottom: '1px solid #ddd', paddingBottom: '4px', marginBottom: '4px' }}>
                       {marineData.tide.phase || '조석 분석 중'}
                     </div>
-                    {/* 예측 데이터 리스트가 있는 경우 표시 */}
-                    {marineData.tide_predictions && marineData.tide_predictions.slice(0, 4).map((t, idx) => (
-                      <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(13px * var(--fs, 1))` }}>
-                        <span style={{ fontWeight: '700' }}>{t.tph_time || t.time}</span>
-                        <span style={{ color: (t.hl_code || t.type) === '고조' ? '#E65100' : '#1565C0', fontWeight: '800' }}>
-                          {(t.hl_code || t.type) === '고조' ? '▲ 만조' : '▼ 간조'} : {t.tph_level || t.level}cm
-                        </span>
-                      </li>
-                    ))}
+                    {/* 예측 데이터 리스트가 있는 경우 표시, 없으면 marineData.tide 만조/간조 표시 */}
+                    {marineData.tide_predictions && marineData.tide_predictions.length > 0 ? (
+                      marineData.tide_predictions.slice(0, 4).map((t, idx) => (
+                        <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(13px * var(--fs, 1))` }}>
+                          <span style={{ fontWeight: '700' }}>{t.tph_time || t.time}</span>
+                          <span style={{ color: (t.hl_code || t.type) === '고조' ? '#E65100' : '#1565C0', fontWeight: '800' }}>
+                            {(t.hl_code || t.type) === '고조' ? '▲ 만조' : '▼ 간조'} {t.tph_level || t.level ? `: ${t.tph_level || t.level}cm` : ''}
+                          </span>
+                        </li>
+                      ))
+                    ) : (
+                      <>
+                        {marineData.tide?.high && (
+                          <li style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(13px * var(--fs, 1))` }}>
+                            <span style={{ fontWeight: '700' }}>{marineData.tide.high}</span>
+                            <span style={{ color: '#E65100', fontWeight: '800' }}>▲ 만조</span>
+                          </li>
+                        )}
+                        {marineData.tide?.low && (
+                          <li style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(13px * var(--fs, 1))` }}>
+                            <span style={{ fontWeight: '700' }}>{marineData.tide.low}</span>
+                            <span style={{ color: '#1565C0', fontWeight: '800' }}>▼ 간조</span>
+                          </li>
+                        )}
+                        {marineData.tide?.high2 && (
+                          <li style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(13px * var(--fs, 1))` }}>
+                            <span style={{ fontWeight: '700' }}>{marineData.tide.high2}</span>
+                            <span style={{ color: '#E65100', fontWeight: '800' }}>▲ 만조 2</span>
+                          </li>
+                        )}
+                        {marineData.tide?.low2 && (
+                          <li style={{ display: 'flex', justifyContent: 'space-between', fontSize: `calc(13px * var(--fs, 1))` }}>
+                            <span style={{ fontWeight: '700' }}>{marineData.tide.low2}</span>
+                            <span style={{ color: '#1565C0', fontWeight: '800' }}>▼ 간조 2</span>
+                          </li>
+                        )}
+                      </>
+                    )}
                   </div>
                 ) : (
                   <li style={{ color: '#888', fontSize: `calc(13px * var(--fs, 1))` }}>현장 물때 데이터를 실시간 분석 중입니다.</li>

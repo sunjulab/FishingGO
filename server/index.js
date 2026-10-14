@@ -2592,8 +2592,9 @@ function getLunarDay() {
 }
 
 function getTidePhase(lunarDay, region = '남해') {
-  // FIX-TIDENUM v3: 바다타임 실측 기반 음력->물때 공식 (15일 반복, 15물=조금)
-  let tideNum = ((lunarDay + 6) % 15) + 1;
+  // FIX-TIDENUM v3: 바다타임 실측 기반 음력->물때 공식 (서해 7물식, 동·남해 8물식)
+  const isWest = region === '서해';
+  let tideNum = isWest ? (((lunarDay + 5) % 15) + 1) : (((lunarDay + 6) % 15) + 1);
   const phaseMap = {
     7: '7물(사리)', 8: '8물(사리)', 15: '조금'
   };
@@ -2641,7 +2642,7 @@ async function getRealTide(sid) {
     try {
       const kst = new Date(Date.now() + 9 * 3600 * 1000); // KST 기준 오늘
       const today = `${kst.getUTCFullYear()}${String(kst.getUTCMonth()+1).padStart(2,'0')}${String(kst.getUTCDate()).padStart(2,'0')}`;
-      const url = `https://apis.data.go.kr/1192136/tideFcstHighLw/GetTideFcstHighLwApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${tideSid}&reqDate=${today}&type=json&numOfRows=20&pageNo=1`;
+      const url = `https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?serviceKey=${encodeURIComponent(KEY)}&obsCode=${tideSid}&reqDate=${today}&type=json&numOfRows=20&pageNo=1`;
       const res = await axios.get(url, { timeout: 6000, headers: { Accept: 'application/json' } });
     const text = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
     if (text.trimStart().startsWith('<')) return null;
