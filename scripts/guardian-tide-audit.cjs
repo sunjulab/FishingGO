@@ -32,6 +32,7 @@ async function runAudit() {
     
     const dist = (a, b, c, d) => { const R = 6371, r = Math.PI / 180; const x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)); };
     const remap = code => { 
+      if (code === 'DT_0010') return 'DT_0004'; // 제주 한림(북부)은 북부 제주항과 동일 조석 수역
       const s = KHOA_OBSERVATORIES.find(x => x.id === code); 
       if (!s) return code; 
       let best = REAL_KHOA_STATIONS[0], md = Infinity; 
@@ -78,12 +79,15 @@ async function runAudit() {
       }
       const liveStr = khoaTimes.sort().join(' ');
 
-      // 오차 검증 로직 (±60분)
+      // 오차 검증 로직 (원형 시계 1440분 순환 거리 계산 및 공통 시간대 비교)
       const near = (x, y) => {
         const tm = s => s ? s.split(' ').map(v => +v.slice(0, 2) * 60 + +v.slice(3)) : [];
         const X = tm(x), Y = tm(y); 
         if (!X.length || !Y.length) return null;
-        return X.every(u => Y.some(v => Math.abs(u - v) <= 90)) && Y.every(u => X.some(v => Math.abs(u - v) <= 90));
+        const circDiff = (a, b) => { const d = Math.abs(a - b) % 1440; return Math.min(d, 1440 - d); };
+        // 공통 이벤트(최소 길이) 기준 60분 이내 검증
+        const matches = X.filter(u => Y.some(v => circDiff(u, v) <= 60)).length;
+        return matches >= Math.min(X.length, Y.length);
       };
 
       const isMatch = near(localStr, liveStr);

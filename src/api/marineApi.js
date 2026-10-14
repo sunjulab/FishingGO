@@ -160,6 +160,10 @@ function getKhoaObsCode(kmaCode) {
     return kmaCode.replace('KHOA_', '');
   }
 
+  // ✅ 조석 조화분조(Tidal Basin) 수역 일치 오버라이드
+  // 제주 한림(DT_0010, 북서부)은 모슬포(DT_0023, 남부-반대위상)가 아닌 제주항(DT_0004, 북부)과 동일 조석계
+  if (kmaCode === 'DT_0010') return 'DT_0004';
+
   const kmaStation = KHOA_OBSERVATORIES.find(s => s.id === kmaCode);
   if (!kmaStation) return kmaCode;
   

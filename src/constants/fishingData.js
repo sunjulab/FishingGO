@@ -59,7 +59,7 @@ const SEA_FISHING_POINTS = [
   { id: 23, name: '제주 서귀포항 방파제', type: '방파제', region: '제주', lat: 33.2415, lng: 126.5612, fish: '벵에돔, 부시리', score: 98, status: '최고' },
   { id: 24, name: '제주 성산포항 방파제', type: '방파제', region: '제주', lat: 33.4712, lng: 126.9312, fish: '무늬오징어, 한치', score: 95, status: '피딩중' },
   { id: 25, name: '제주 한림항 방파제', type: '방파제', region: '제주', lat: 33.4125, lng: 126.2584, fish: '독가시치, 벵에돔', score: 91, status: '활발' },
-  { id: 38, name: '제주 모슬포항 방파제', type: '방파제', region: '제주', lat: 33.2112, lng: 126.2512, fish: '방어, 벵에돔', score: 94, status: '피딩중' },
+  { id: 38, name: '제주 모슬포항 방파제', type: '방파제', region: '제주', lat: 33.2112, lng: 126.2512, fish: '방어, 벵에돔', score: 94, status: '피딩중', obsCode: 'DT_0011' },
   { id: 39, name: '제주 김녕항 방파제', type: '방파제', region: '제주', lat: 33.5512, lng: 126.7512, fish: '무늬오징어, 전갱이', score: 92, status: '활발' },
   { id: 40, name: '제주 위미항 방파제', type: '방파제', region: '제주', lat: 33.2712, lng: 126.6612, fish: '한치, 벵에돔', score: 90, status: '보통' },
 ];
