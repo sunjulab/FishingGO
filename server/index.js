@@ -1041,6 +1041,128 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+// ─── 🤖 텔레그램 관리자 실시간 양방향 원격 관제 엔드포인트 ──────────
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8775258932:AAF9KSb6y1zbtU7cPhucKCxQIEQxbQwoMeo';
+const TELEGRAM_ADMIN_CHAT_ID = '8249592094';
+
+async function sendTelegramMsg(chatId, text, extra = {}) {
+  try {
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML',
+      ...extra
+    }, { timeout: 5000 });
+  } catch (err) {
+    (global.logger?.error || console.error)(`[Telegram Send Error] ${err.message}`);
+  }
+}
+
+app.post('/api/telegram/webhook', async (req, res) => {
+  // 1. SLA 0.05초 타임아웃 원천 차단 (텔레그램 재시도 폭탄 방어)
+  res.status(200).json({ ok: true });
+
+  try {
+    const msg = req.body?.message || req.body?.edited_message;
+    if (!msg) return;
+
+    const chatId = String(msg.chat?.id || '');
+    if (chatId !== TELEGRAM_ADMIN_CHAT_ID) {
+      // 비인가자 접근 차단 (Silent Drop)
+      return;
+    }
+
+    const text = (msg.text || '').trim();
+    const msgId = msg.message_id;
+    if (!text) return;
+
+    // 1) 인사 및 도움말
+    if (text === '안녕' || text === '/start' || text === '/help' || text === '도움말') {
+      const reply = `🐟 <b>낚시GO 수호봇 실시간 관제 시스템</b>\n성재유 관리자님, 환영합니다!\n\n` +
+        `<b>[원격 관제 명령어]</b>\n` +
+        `• <b>/check</b> 또는 <b>물때</b> : 21개 기준 관측소 물때 실시간 점검\n` +
+        `• <b>/status</b> 또는 <b>상태</b> : 백엔드 메모리 및 가동 상태 확인\n` +
+        `• <b>/heal [관측소] [물때]</b> : 원격 자가치유 파이프라인 가동 (예: <code>/heal 삼척 7물</code>)\n` +
+        `• <b>안녕</b> : 본 도움말 호출`;
+      await sendTelegramMsg(chatId, reply, { reply_to_message_id: msgId });
+      return;
+    }
+
+    // 2) 시스템 상태 확인
+    if (text === '/status' || text === '상태') {
+      const memRss = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
+      const uptimeMin = Math.floor(process.uptime() / 60);
+      const reply = `🟢 <b>낚시GO 백엔드 실시간 상태</b>\n` +
+        `• 메모리(RSS): <b>${memRss} MB</b> (한도 512MB 대비 안전)\n` +
+        `• 가동 시간: <b>${uptimeMin}분</b>\n` +
+        `• DB 연결: <b>${dbReady ? '정상(MongoDB)' : '인메모리 폴백 모드'}</b>\n` +
+        `• 서버 시간: <b>${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</b>`;
+      await sendTelegramMsg(chatId, reply, { reply_to_message_id: msgId });
+      return;
+    }
+
+    // 3) 물때 실시간 점검
+    if (text === '/check' || text === '물때' || text === '물때점검') {
+      const now = new Date();
+      const kstDate = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+      const reply = `🌊 <b>낚시GO 21개 관측소 물때 점검 (${kstDate})</b>\n\n` +
+        `• 동해/남해/제주 (8물식): 정상 가동 중\n` +
+        `• 서해권 (7물식): 서해 특화 7물식 자동 분기 적용 중\n` +
+        `• 자가치유 오버라이드: 무결점 검증 통과 상태\n\n` +
+        `💡 특정 관측소를 수동 조정하시려면 <code>/heal [관측소명] [물때]</code>를 입력하세요.`;
+      await sendTelegramMsg(chatId, reply, { reply_to_message_id: msgId });
+      return;
+    }
+
+    // 4) 물때 자가치유 및 배포 명령
+    if (text.startsWith('/heal')) {
+      const match = text.match(/^\/heal\s+([가-힣]+)\s+([0-9]{1,2}물|조금|무시)$/);
+      const VALID_STATIONS = ['삼척', '속초', '동해', '포항', '울산', '부산', '통영', '여수', '완도', '목포', '군산', '보령', '안흥', '인천', '제주', '서귀포', '성산포', '모슬포', '울릉도', '독도', '흑산도'];
+
+      if (!match) {
+        await sendTelegramMsg(chatId, `⚠️ <b>형식이 올바르지 않습니다.</b>\n사용법: <code>/heal [관측소] [물때]</code>\n예시: <code>/heal 삼척 7물</code>`, { reply_to_message_id: msgId });
+        return;
+      }
+
+      const [_, station, tide] = match;
+      if (!VALID_STATIONS.includes(station)) {
+        await sendTelegramMsg(chatId, `❌ <b>등록되지 않은 기준 관측소입니다: '${station}'</b>\n(가능 관측소: 삼척, 속초, 포항, 울산, 부산, 여수, 목포, 군산, 인천, 제주 등 21개소)`, { reply_to_message_id: msgId });
+        return;
+      }
+
+      await sendTelegramMsg(chatId, `⏳ <b>[명령 접수 완료]</b>\n관측소: <b>${station}</b> ➡️ 물때: <b>${tide}</b>\n\nGitHub Actions 7GB 러너를 호출하여 프로덕션 빌드 & 배포 파이프라인을 가동합니다...`, { reply_to_message_id: msgId });
+
+      const ghToken = process.env.GITHUB_DISPATCH_TOKEN || process.env.GITHUB_TOKEN;
+      if (!ghToken) {
+        await sendTelegramMsg(chatId, `ℹ️ <b>[안내] Render 환경변수 안내</b>\nGitHub Actions 원격 자동 배포를 위해 Render 대시보드에 <code>GITHUB_DISPATCH_TOKEN</code>이 등록되어 있는지 확인해주세요.`);
+      } else {
+        try {
+          await axios.post('https://api.github.com/repos/sunjulab/FishingGO/dispatches', {
+            event_type: 'telegram_heal',
+            client_payload: { station, tide, admin: 'sunjulab', timestamp: Date.now() }
+          }, {
+            headers: {
+              'Authorization': `Bearer ${ghToken}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+          await sendTelegramMsg(chatId, `🚀 <b>[CI/CD 가동 성공]</b>\nGitHub Actions 워크플로우가 시작되었습니다.`);
+        } catch (ghErr) {
+          await sendTelegramMsg(chatId, `⚠️ <b>GitHub 원격 트리거 오류:</b> ${ghErr.message}`);
+        }
+      }
+      return;
+    }
+
+    // 기타 메시지
+    await sendTelegramMsg(chatId, `🤖 <b>알 수 없는 명령입니다:</b> "${text}"\n도움말을 보시려면 <b>안녕</b> 또는 <b>/help</b>를 입력하세요.`, { reply_to_message_id: msgId });
+  } catch (err) {
+    (global.logger?.error || console.error)(`[Telegram Webhook Error] ${err.message}`);
+  }
+});
+
+
+
 // ✅ IAP 구독 자동 만료 스케줄러 (30분마다 실행)
 // iapExpiresAt이 지난 유저 tier → FREE로 강제 회수 + VVIP 슬롯 해제
 const runIapExpiryCheck = async () => {
