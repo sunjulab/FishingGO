@@ -4,8 +4,8 @@
  * - 미설정 시: 에러 없이 콘솔에만 출력 후 안전하게 스킵
  */
 export async function sendTelegramReport({ status, title, details = [] }) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const token = process.env.TELEGRAM_BOT_TOKEN || '8775258932:AAF9KSb6y1zbtU7cPhucKCxQIEQxbQwoMeo';
+  const chatId = process.env.TELEGRAM_CHAT_ID || '8249592094';
 
   if (!token || !chatId) {
     console.log(`ℹ️ [Telegram] TELEGRAM_BOT_TOKEN 또는 TELEGRAM_CHAT_ID 미설정 — 알림 발송 스킵`);
