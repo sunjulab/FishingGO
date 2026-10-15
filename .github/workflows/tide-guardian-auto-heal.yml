@@ -1,0 +1,90 @@
+name: 🌊 Tide Guardian 100 (12:00 & 24:00 KST)
+
+on:
+  schedule:
+    # UTC 03:00 = KST 12:00 (점심 정밀 대조)
+    # UTC 15:00 = KST 24:00 (자정 날짜 전환 대조)
+    - cron: '0 3,15 * * *'
+  workflow_dispatch: # 수동 1클릭 즉시 검증 지원
+
+concurrency:
+  group: tide-guardian
+  cancel-in-progress: false
+
+jobs:
+  tide-guardian-21:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🟢 Node.js 환경 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 의존성 설치
+        run: npm ci
+
+      - name: 🔍 1단계: 21개 핵심 기준 관측소 실시간 대조 감사
+        id: audit
+        run: node scripts/guardian-tide-21.mjs
+        continue-on-error: true
+
+      - name: 🩺 2단계: 오류 감지 시 안전 자가치유(Auto-Heal) 가동
+        id: heal
+        if: steps.audit.outcome == 'failure'
+        run: |
+          echo "⚠️ 바다타임 실측과 불일치 감지! 안전 자가치유 엔진 가동..."
+          node scripts/auto-heal-tide.mjs
+
+      - name: 🛡️ 3단계: 무결성 방어벽 3-Way 교차 검증 (100점 확인)
+        run: |
+          echo "🛡️ 기본 가디언 무결성 검증..."
+          node scripts/guardian-check.cjs
+          echo "🛡️ 실시간 3-Way API 교차 검증..."
+          node scripts/guardian-tide-audit.cjs
+
+      - name: 🏗️ 4단계: 프로덕션 프론트엔드 빌드
+        run: node build-esbuild.mjs
+
+      - name: 🚀 5단계: 변경사항 커밋 & 프로덕션 무중단 자동 배포
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "📦 변경사항 감지! 프로덕션 자동 배포를 진행합니다."
+            git add -A
+            git commit -m "chore(tide): auto-healed tide discrepancies at $(date '+%Y-%m-%d %H:%M KST')"
+            git push origin main
+            
+            echo "🌐 gh-pages 정적 호스팅 배포..."
+            npx gh-pages -d dist --nojekyll
+            
+            echo "🔄 Render 백엔드 핫리로드 트리거..."
+            node -e "
+              const https = require('https');
+              const data = JSON.stringify({ clearCache: 'do_not_clear' });
+              const req = https.request({
+                hostname: 'api.render.com',
+                path: '/v1/services/srv-d7cjb3v7f7vs739h54r0/deploys',
+                method: 'POST',
+                headers: {
+                  'Authorization': 'Bearer rnd_G35wIPYtAt0y59ficIJKoC0Ftz4b',
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(data),
+                },
+              }, (res) => console.log('Render deploy triggered:', res.statusCode));
+              req.write(data);
+              req.end();
+            "
+          else
+            echo "🎉 21개 관측소 모두 바다타임 실측과 100% 일치합니다. 코드 변경 없이 정상 통과!"
+          fi

@@ -1,6 +1,7 @@
 // ✅ 4TH-C6: id는 이력 상 비연속 (1~28, 38~110) — 향후 id 직접 조회 대신 obsCode를 primary key로 사용 권장
 import { FRESHWATER_FISHING_POINTS } from './freshwaterData.js';
 import { TIDE_CALENDAR } from './tideCalendarData.js';
+import { TIDE_OVERRIDES } from './tideOverrideData.js';
 import { Lunar } from 'lunar-javascript';
 
 const SEA_FISHING_POINTS = [
@@ -221,8 +222,8 @@ export const getPointSpecificData = (point, dateOffset = 0) => {
   }
   
   // ✅ 실측 물때 달력(TIDE_CALENDAR) 우선 적용 (KHOA API 대체용 캐시)
-  if (TIDE_CALENDAR[obsId] && TIDE_CALENDAR[obsId][diffDays]) {
-    const realTide = TIDE_CALENDAR[obsId][diffDays];
+  const realTide = TIDE_OVERRIDES[obsId]?.[diffDays] || (TIDE_CALENDAR[obsId] && TIDE_CALENDAR[obsId][diffDays]);
+  if (realTide) {
     return {
       stationId: obsId,
       pointName: point.name,

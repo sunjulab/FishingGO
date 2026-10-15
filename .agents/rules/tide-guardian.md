@@ -1,18 +1,17 @@
 ---
 name: tide-guardian
-description: Self-healing rule for FishingGO tide and weather APIs.
+description: 100-Point Self-healing rule for FishingGO tide and weather APIs.
 trigger: model_decision
 ---
 
-# FishingGO Tide & Weather Guardian Rule
+# FishingGO Tide & Weather Guardian Rule (100-Point Architecture)
 
-When a user reports that "물때가 이상해요" (tide is weird) or the CI/CD deploy fails due to `guardian-tide-audit.cjs`, you are authorized to autonomously perform the self-healing routine:
+When a user reports that "물때가 이상해요" (tide is weird) or scheduled audit fails, autonomously perform the 100-point self-healing routine:
 
-## Self-Healing Routine
+## 100-Point Self-Healing Routine
 
-1. **Verify the Issue:** Run `node scripts/guardian-tide-audit.cjs` to reproduce the error.
-2. **Find API Changes:** Use Haversine distance logic (similar to `remap` in `guardian-tide-audit.cjs`) against KHOA's real live observatories to identify if KHOA has changed station IDs (e.g. `DT_0006` changed coordinates).
-3. **Update Map:** Edit `src/constants/fishingData.js` and `scripts/syncTides.mjs` with the newly discovered station IDs.
-4. **Re-scrape Data:** Run `node scripts/syncTides.mjs` to rebuild the `TIDE_CALENDAR` cache.
-5. **Verify Fix:** Run `node scripts/guardian-tide-audit.cjs` again. It must pass.
-6. **Deploy:** If it passes, commit the changes using `git commit -m "fix(tide): auto-heal KHOA mapping drift"` and deploy using `npm run release:patch`.
+1. **Verify 21 Core Stations:** Run `node scripts/guardian-tide-21.mjs` to cross-check against BadaTime.
+2. **Safe Auto-Heal:** If discrepancies exist, run `node scripts/auto-heal-tide.mjs` to safely patch `src/constants/tideOverrideData.js` without touching core code.
+3. **Verify 3-Way Integrity:** Run `node scripts/guardian-check.cjs` and `node scripts/guardian-tide-audit.cjs`. Must pass 100%.
+4. **Build Verification:** Run `node build-esbuild.mjs`.
+5. **Deploy:** If all pass, commit with `chore(tide): auto-healed tide discrepancies` and deploy to gh-pages & trigger Render backend hot-reload.
