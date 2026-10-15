@@ -10,6 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { KHOA_OBSERVATORIES, getPointSpecificData } from '../src/constants/fishingData.js';
 import { TIDE_CALENDAR } from '../src/constants/tideCalendarData.js';
+import { sendTelegramReport } from './notify-telegram.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -180,6 +181,16 @@ async function run() {
     process.exit(1);
   } else {
     console.log(`🎉 [SUCCESS] 21개 모든 핵심 기준 관측소가 바다타임 실측과 100% 일치합니다!`);
+    await sendTelegramReport({
+      status: 'SUCCESS',
+      title: '정기 감사 100점 정상 일치',
+      details: [
+        `검증 대상: 21개 핵심 기준 관측소 (전수 통과)`,
+        `물때 표기: 동해/남해/제주 12물, 서해 11물 정상`,
+        `조석 시각: 바다타임 실측과 분 단위 100% 일치`,
+        `코드 변경: 불필요 (무결점 유지 중)`
+      ]
+    });
     process.exit(0);
   }
 }

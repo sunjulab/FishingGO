@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { sendTelegramReport } from './notify-telegram.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,11 +88,29 @@ async function autoHeal() {
 
     console.log(`\n🎉 [SUCCESS] 자가치유 후 모든 무결성 검증을 100% 만점으로 통과했습니다!`);
     console.log(`🚀 안전하게 프로덕션 배포 파이프라인으로 인계합니다.`);
+    await sendTelegramReport({
+      status: 'HEALED',
+      title: `물때 자가치유 완료 (${healCount}건 핫픽스)`,
+      details: [
+        `치유 건수: ${healCount}개 관측소 실측 일치화`,
+        `무결성 검증: 기본 가디언 & 실시간 3-Way 100점 통과`,
+        `배포 상태: 프로덕션(gh-pages + Render) 자동 배포 진행`
+      ]
+    });
     process.exit(0);
   } catch (err) {
     console.error(`\n🚨 [FATAL] 자가치유 후 재검증에 실패했습니다! 안전을 위해 즉각 롤백합니다.`);
     fs.writeFileSync(OVERRIDE_FILE, backupCode, 'utf8');
     console.log(`⏪ 'tideOverrideData.js' 백업 복원 완료 (롤백 완료).`);
+    await sendTelegramReport({
+      status: 'FAIL',
+      title: `🚨 물때 자가치유 실패 (자동 롤백됨)`,
+      details: [
+        `발생 원인: 치유 후 3-Way 재검증 불일치 감지`,
+        `조치 내역: 안전을 위해 배포 전면 차단 및 백업 복원 완료`,
+        `요청 사항: 수동 원인 점검 필요 (${err.message})`
+      ]
+    });
     process.exit(1);
   }
 }
