@@ -1,6 +1,6 @@
-﻿User-agent: *
+User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /admin/
 
-Sitemap: https://fishing-go.vercel.app/sitemap.xml
+Sitemap: https://www.fishing-go.com/sitemap.xml

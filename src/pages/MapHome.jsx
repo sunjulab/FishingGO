@@ -576,6 +576,34 @@ export default function MapHome() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
+
+  // ✅ DEFAULT-POINT: 홈화면 표시명(강릉 안목항 방파제)와 데이터 소스를 동일 포인트로 통일
+  // ✅ FIX-DEFAULT-POINT: 사용자 위치 기반 가장 가까운 바다 포인트 탐색 (민물 제외)
+  const DEFAULT_POINT = useMemo(() => {
+    // [1순위] 마지막으로 선택했던 포인트 (통합 localStorage 복원)
+    try {
+      const saved = localStorage.getItem('fishinggo_last_point');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.type !== '민물') return parsed;
+      }
+    } catch { /* 무시 */ }
+    // [2순위] 실시간 GPS 근처 바다 포인트
+    if (userLoc) {
+      let nearest = null;
+      let minDist = Infinity;
+      ALL_FISHING_POINTS.forEach(p => {
+        if (p.type === '민물') return;
+        const d = getDistance(userLoc.lat, userLoc.lng, p.lat, p.lng);
+        if (d < minDist) { minDist = d; nearest = p; }
+      });
+      if (nearest) return nearest;
+    }
+    // [3순위] 기본값 강릉 안목항 방파제
+    return ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
+  }, [userLoc, effectiveAllPoints]);
+
   /* ── 포인트 클릭 ── */
   // 🐟 BUG-FIX: 초기 앱 로드 시 대시보드에 핀포인트 기상(OpenMeteo) 즉시 반영
   // 이 코드가 없으면 사용자가 포인트를 클릭하기 전까지 기상청 먼바다 부표 데이터(weatherCache)가 노출되어 파고 거짓 경보가 발생함.
@@ -1009,31 +1037,7 @@ export default function MapHome() {
   // precisionData: 포인트 클릭 시 서버에서 받은 정밀 데이터
   // weatherCache:  앱 시작 2초 후 배치 패치된 실시간 날씨 (10분마다 갱신)
   // 정적 fallback: weatherCache 로드 전 임시 표시
-  // ✅ DEFAULT-POINT: 홈화면 표시명(강릉 안목항 방파제)와 데이터 소스를 동일 포인트로 통일
-  // ✅ FIX-DEFAULT-POINT: 사용자 위치 기반 가장 가까운 바다 포인트 탐색 (민물 제외)
-  const DEFAULT_POINT = useMemo(() => {
-    // [1순위] 마지막으로 선택했던 포인트 (통합 localStorage 복원)
-    try {
-      const saved = localStorage.getItem('fishinggo_last_point');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.type !== '민물') return parsed;
-      }
-    } catch { /* 무시 */ }
-    // [2순위] 실시간 GPS 근처 바다 포인트
-    if (userLoc) {
-      let nearest = null;
-      let minDist = Infinity;
-      ALL_FISHING_POINTS.forEach(p => {
-        if (p.type === '민물') return;
-        const d = getDistance(userLoc.lat, userLoc.lng, p.lat, p.lng);
-        if (d < minDist) { minDist = d; nearest = p; }
-      });
-      if (nearest) return nearest;
-    }
-    // [3순위] 기본값 강릉 안목항 방파제
-    return ALL_FISHING_POINTS.find(p => p.id === 3) || ALL_FISHING_POINTS[0];
-  }, [userLoc, effectiveAllPoints]);
+
   const _selectedPt   = selectedPoint || DEFAULT_POINT;
   const _nearestSt    = findNearestStation(_selectedPt.lat, _selectedPt.lng);
   const _cachedLive   = weatherCache[_nearestSt?.id];

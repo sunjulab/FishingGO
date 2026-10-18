@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => {
       manifest: {
         name: '낚시GO Premium',
         short_name: '낚시GO',
-        description: '낚시GO — 실시간 조황 정보, 낚시 기록, 낚시터 지도 앱',
+        description: '낚시GO — 실시간 조황 정보, 낚시 기록, 낚시터 지도 플랫폼',
         theme_color: '#0B1F3A',
         background_color: '#0B1F3A',
         display: 'standalone',

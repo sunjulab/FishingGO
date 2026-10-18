@@ -24,7 +24,7 @@ function applyWaveReduction(wave) {
 }
 
 // API 응답 → 표시용 객체 변환
-function buildMarineDisplay(data) {
+function buildMarineDisplay(data, point = null) {
   if (!data) return null;
   const sst    = data.sst ?? data.layers?.upper;
   const wave   = applyWaveReduction(data.wave?.coastal ?? data.wave);
@@ -47,7 +47,7 @@ function buildMarineDisplay(data) {
   }
 
   // ✅ TIDE FIX: 바다타임 캐시가 있으면 항상 최우선으로 덮어씌움
-  const staticData = getPointSpecificData(point);
+  const staticData = point ? getPointSpecificData(point) : null;
   if (staticData?.tide?.isReal) {
     if (data.tide) {
       data.tide = { ...data.tide, high: staticData.tide.high, high2: staticData.tide.high2, low: staticData.tide.low, low2: staticData.tide.low2, phase: staticData.tide.phase };
@@ -268,7 +268,7 @@ export default function WeatherDashboard() {
     if (selectedPoint) {
       _title = selectedPoint.name;
       _cur = (liveData && !apiLoading)
-        ? (buildMarineDisplay(liveData) || buildLocalFallback(selectedPoint))
+        ? (buildMarineDisplay(liveData, selectedPoint) || buildLocalFallback(selectedPoint))
         : buildLocalFallback(selectedPoint);
     } else {
       _title = `${activeRegion} 앞바다`;
