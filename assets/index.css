@@ -1,0 +1,435 @@
+﻿/* ??9TH-C1: Pretendard ?고듃??index.html <link> ?쒓렇濡?濡쒕뱶 ??CSS @import 以묐났 ?쒓굅 */
+/* @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css'); */
+/* font-display:swap ? index.html link ?쒓렇??preload ?ㅼ젙?쇰줈 ?쒖뼱??*/
+
+:root {
+  --primary: #0056D2;
+  --primary-light: rgba(0, 86, 210, 0.08);
+  --secondary: #FF5A5F;
+  --accent: #FF9B26;
+  --bg-gray: #F8F9FA;
+  --text-main: #1C1C1E;
+  --text-muted: #8E8E93;
+  --text-light: #C7C7CC;
+  --border: #F2F2F7;
+  --glass: rgba(255, 255, 255, 0.7);
+  --glass-dark: rgba(28, 28, 30, 0.7);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+  --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
+
+  /* ??SAFE-AREA: 湲곌린 ?곹븯???쒖뒪??UI ?먮룞 ?뚰뵾 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* ?섎떒 ?ㅻ퉬寃뚯씠??珥??믪씠 = 75px + 湲곌린 ?ㅻ퉬寃뚯씠?섎컮 */
+  --nav-height: calc(75px + var(--safe-bottom));
+  /* ✅ FIX-SHOP-HEADER: 헤더 높이 CSS 변수 통합 — Shop/MediaTab sticky top 일원화 */
+  --header-height: calc(60px + var(--safe-top));
+
+  /* ??FONT-SCALE: ?ъ슜???고듃 ?ш린 ?ㅼ젙 (1.0=湲곕낯 / 1.15=?ш쾶 / 1.3=?뷀겕寃?/ 1.5=理쒕?) */
+  --fs: 1;
+}
+
+/* ?ъ슜???고듃 ?ш린 4?④퀎 */
+html[data-fs="1"]   { --fs: 1;    }
+html[data-fs="1.15"]{ --fs: 1.15; }
+html[data-fs="1.3"] { --fs: 1.3;  }
+html[data-fs="1.5"] { --fs: 1.5;  }
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: #E8EBF0;  /* PC?먯꽌 蹂댁씠??諛붽묑 諛곌꼍 */
+  color: var(--text-main);
+  overflow-x: hidden;
+  user-select: none;
+  display: flex;
+  justify-content: center;
+}
+
+/* ENH-A4: ?볤?쨌硫붾え쨌寃뚯떆湲 蹂몃Ц泥섎읆 ?ъ슜?먭? 蹂듭궗?댁빞 ???붿냼???곸슜 */
+.selectable {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+#root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  background-color: var(--bg-gray);
+  position: relative;
+  overflow-x: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,0.15);
+  /* ??SAFE-AREA: padding ?쒓굅 ??premium-header媛 y=0遺??吏곸젒 而ㅻ쾭 */
+}
+
+/* ?? 紐⑤컮??而⑦뀒?대꼫 ?대? 怨좎젙 諛?(?섎떒 ?대컮 / FAB ?? ?? */
+/* position:fixed ?붿냼瑜????덈퉬(480px) ?덉뿉 媛?먮뒗 怨듯넻 ?좏떥 */
+.fixed-inner-bar {
+  position: fixed;
+  bottom: var(--safe-bottom);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 500;
+}
+
+.page-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  position: relative;
+  background-color: #fff;
+  /* ??SAFE-AREA: ?섎떒 ?ㅻ퉬寃뚯씠?섎컮 ?ㅻ줈 肄섑뀗痢좉? ?⑥? ?딅룄濡??먮룞 ?щ갚 */
+  padding-bottom: var(--nav-height);
+  /* ??SAFE-AREA: ?쒕툕?섏씠吏???ㅻ뜑?먯꽌 吏곸젒 padding-top ?곸슜 (AdminDashboard/CrewChat/PostDetail 李멸퀬) */
+}
+
+/* ??SAFE-AREA: ?ㅽ겕濡?而⑦뀒?대꼫 怨듯넻 ?좏떥 ??紐⑤뱺 ?섏씠吏???ㅽ겕濡??곸뿭?먯꽌?ъ슜 */
+.app-scroll-content {
+  padding-bottom: var(--nav-height);
+  overflow-y: auto;
+}
+
+/* --- Premium Animations --- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.fade-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* --- Navigation --- */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  /* ??SAFE-AREA: 湲곌린 ?섎떒 ?ㅻ퉬寃뚯씠?섎컮 ?믪씠留뚰겮 ?먮룞 ?뺤옣 */
+  height: var(--nav-height);
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  padding-top: 10px;
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  z-index: 1000;
+}
+
+.nav-item {
+  color: var(--text-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item.active {
+  color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.nav-item.active svg {
+  filter: drop-shadow(0 4px 8px rgba(0, 86, 210, 0.3));
+}
+
+/* --- Header --- */
+.premium-header {
+  position: sticky;
+  /* ??SAFE-AREA: top:0 ???곹깭諛??곸뿭(y=0~safe-top)源뚯? ?ㅻ뜑 諛곌꼍?쇰줈 ?꾩쟾 而ㅻ쾭 */
+  top: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  /* ?꾩껜 ?믪씠 = ?곹깭諛?+ ?ㅻ뜑 肄섑뀗痢?60px */
+  height: calc(60px + var(--safe-top));
+  /* 濡쒓퀬瑜??덊솕硫닿낵 ?숈씪 ?꾩튂(safe-top + 12px)??諛곗튂 */
+  padding-top: calc(var(--safe-top) + 12px);
+  padding-bottom: 12px;
+  padding-left: 20px;
+  padding-right: 20px;
+  background: var(--glass);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 900;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.premium-badge {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* --- Common UI Components --- */
+.card {
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* ENH-C4: ?곗뒪?ы넲 hover ?④낵 */
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.chip-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 20px;
+  scrollbar-width: none;
+}
+
+.chip-scroll::-webkit-scrollbar { display: none; }
+
+.chip-item {
+  padding: 8px 18px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  /* ??FONT-SCALE: CSS ?대옒???띿뒪?몃뒗 calc()濡??먮룞 ?ㅼ???*/
+  font-size: calc(13px * var(--fs, 1));
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chip-item.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 86, 210, 0.2);
+}
+
+/* ??29TH-C3: #naver-map ?쒓굅 ???꾨줈?앺듃??移댁뭅?ㅻ㏊?쇰줈 ?꾪솚 ?꾨즺, ?대떦 ID??dead code */
+
+.map-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.marker-point {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: var(--shadow-md);
+}
+
+.marker-point.諛⑺뙆??{ background: #00C48C; }
+.marker-point.媛?컮??{ background: var(--primary); }
+.marker-point.??뎄   { background: #9B59B6; } /* ??FIX: ??뎄 ???留덉빱 諛곌꼍??異붽? ??誘몄젙?섎줈 ?щ챸 ?뚮뜑留?踰꾧렇 ?섏젙 */
+.marker-point.?좎긽   { background: var(--secondary); }
+.marker-point.?꾨낫   { background: var(--accent); }
+
+
+/* --- Search Bar --- */
+.search-container {
+  padding: 0 16px;
+  margin-top: 20px;
+}
+
+.premium-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  font-size: 15px;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ??? AdSense Fallback (濡쒖뺄/?뚯뒪??臾댁쓳??諛⑹뼱) ??? */
+ins.adsbygoogle[data-ad-status="unfilled"] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background-color: #F2F2F7 !important;
+  color: #8E8E93 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  border: 1px dashed #C7C7CC;
+}
+
+ins.adsbygoogle[data-ad-status="unfilled"]::after {
+  content: "援ш? 愿묎퀬 ?덉빟 ?곸뿭 (Unfilled)";
+}
+
+/* ??? ?ㅼ펷?덊넠 shimmer 濡쒕뵫 ?좊땲硫붿씠????????????????????????????????????????? */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e8e8e8 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* ??? 醫뗭븘???섑듃 踰꾩뒪???좊땲硫붿씠????????????????????????????????????????????? */
+@keyframes heartBurst {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  50%  { opacity: 0.9; transform: translateY(-16px) scale(1.4); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.8); }
+}
+
+/* ??? 諛뷀??쒗듃 ?щ씪?대뱶???????????????????????????????????????????????????????? */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ??? AI ?싳떆 吏??寃뚯씠吏 pulse ?????????????????????????????????????????????? */
+@keyframes gaugePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 196, 140, 0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(0, 196, 140, 0); }
+}
+
+.gauge-pulse {
+  animation: gaugePulse 2s ease-in-out infinite;
+}
+
+/* ??? ??5TH-A1: RealTimeAlert slideDown ???몃씪??style ?쒓굅 ???꾩뿭 ?닿? ???? */
+@keyframes slideDown {
+  from { transform: translate(-50%, -100%); opacity: 0; }
+  to   { transform: translate(-50%, 0);     opacity: 1; }
+}
+.premium-alert-toast { transition: transform 0.2s; }
+.premium-alert-toast:hover { transform: translateX(-50%) scale(1.02); }
+
+/* ??? ??FIX: spin \ub204\ub77d \ucd94\uac00 \u2014 LoadingSpinner, \uc9c0\ub3c4 \ub85c\ub529 \ub4f1 animation: spin \ucc38\uc870 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ??? \ube44\ubc00\ud3ec\uc778\ud2b8 \ubcc4 pulse \ub2e4\uc774\ub098\ubbf9 \u2014 MapHome secretPulse */
+@keyframes secretPulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px rgba(255,200,0,0.9)); }
+  50%       { transform: scale(1.15); filter: drop-shadow(0 0 14px rgba(255,200,0,1)) drop-shadow(0 0 4px rgba(255,160,0,0.8)); }
+}
+
+/* ??? \ud574\uc591 CCTV \ubaa8\ub2ec fade \u2014 CctvAdmin */
+@keyframes modalFade {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.modal-fade { animation: modalFade 0.25s ease-out forwards; }
+
+/* ??? \ucf54\uc778 \ub9ac\uc6cc\ub4dc \ubc14\uc6b4\uc2a4 \u2014 \ub808\ubca8\uc5c5 toast */
+@keyframes coinBounce {
+  0%   { transform: translateY(0) scale(1); }
+  30%  { transform: translateY(-8px) scale(1.15); }
+  60%  { transform: translateY(2px) scale(0.95); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* ??? ?묒냽???ㅼ떆媛??쒖떆 pulse ??? */
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0,196,140,0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(0,196,140,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,196,140,0); }
+}
+
+/* ??? ?붾툝???섑듃 ??컻 (?몄뒪?洹몃옩?? ??? */
+@keyframes heartPop {
+  0%   { transform: scale(0.3); opacity: 0.9; }
+  40%  { transform: scale(1.5); opacity: 1; }
+  70%  { transform: scale(1.2); opacity: 0.85; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* ??? ?ㅽ넗由?留?shimmer (24h 議고솴 ?ㅽ넗由? ??? */
+@keyframes storyRingPulse {
+  0%, 100% { box-shadow: 0 0 0 2px #FF5A5F, 0 0 0 4px rgba(255,90,95,0.3); }
+  50%       { box-shadow: 0 0 0 2px #FF9B26, 0 0 0 5px rgba(255,155,38,0.4); }
+}
+.story-ring-active {
+  animation: storyRingPulse 2s ease-in-out infinite;
+}
+
+/* ??? ?몄뒪?洹몃옩???대?吏 ?щ씪?대뜑 ?ㅽ겕濡ㅻ컮 ?④? ??? */
+.insta-slider::-webkit-scrollbar { display: none; }
+.insta-slider { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* 가로 스크롤 필터 바 스크롤바 숨기기 (Chrome/Safari webkit + Firefox) */
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { scrollbar-width: none; -ms-overflow-style: none; }
+
+@keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
