@@ -34,7 +34,10 @@ console.log('=============================================');
 // 1. Lint 검사 (사전 안전 장치 - lint-staged에서 수행하므로 전체 검사는 생략)
 // run('npm run lint', 'Lint 검사 실패. 코드를 수정해주세요.');
 
-// 2. 프론트엔드 빌드
+// 2. 버전 먼저 올리기 — 빌드 결과(version.json, 번들 APP_VERSION)가 이번 릴리즈 버전과 같아지도록
+run('npm version patch --no-git-tag-version', '버전 올리기 실패.');
+
+// 2-1. 프론트엔드 빌드
 run('npm run build:esbuild', '프론트엔드 빌드(dist 생성) 실패.');
 
 // 3. 안드로이드 에셋 동기화
@@ -54,7 +57,8 @@ if (status.trim() !== '') {
 // release:patch 스크립트 내부에서 update-version.cjs --push를 호출하며
 // gh-pages 배포 및 Render 재시작이 포함됩니다.
 console.log('\n📦 패치 버전 릴리즈 및 클라우드 배포 중...');
-run('npm run release:patch', '버전 릴리즈 및 서버/호스팅 배포 실패.');
+// 버전은 2단계에서 이미 올렸으므로 release:patch(재증가) 대신 update-version만 실행
+run('node update-version.cjs --push', '버전 릴리즈 및 서버/호스팅 배포 실패.');
 
 console.log('\n=============================================');
 console.log('🎉 모든 배포 파이프라인이 성공적으로 완료되었습니다!');

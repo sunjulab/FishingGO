@@ -1,8 +1,10 @@
 name: FishingGO Auto Deploy
 
 on:
-  # ✅ CI-DEDUP: push마다 Render 훅 + Vercel(구주소) + APK 빌드가 중복 실행되던 문제 → 수동 실행만 유지
-  #   (Render는 render.yaml autoDeploy, 웹은 npm run deploy가 담당)
+  # ✅ CI-FIX (2026-10-25 재수정): Render 자동배포(autoDeploy)가 꺼져 있어 push 시 Deploy Hook이 유일한 서버 배포 경로임
+  #   → push 때는 Render 배포만 실행하고, Vercel(구주소)·APK 빌드는 수동 실행 때만 돌림
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -27,6 +29,7 @@ jobs:
           fi
 
   deploy-vercel:
+    if: github.event_name == 'workflow_dispatch'  # ✅ CI-FIX: push 때는 실행 안 함
     name: "Vercel Frontend Deploy"
     runs-on: ubuntu-22.04
     continue-on-error: true
@@ -47,6 +50,7 @@ jobs:
           npx vercel@latest --prod --token "$VERCEL_TOKEN" --yes
 
   build-apk:
+    if: github.event_name == 'workflow_dispatch'  # ✅ CI-FIX: push 때는 실행 안 함
     name: "Android APK Build"
     runs-on: ubuntu-22.04
     steps:

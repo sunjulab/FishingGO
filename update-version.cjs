@@ -120,7 +120,7 @@ function request(method, urlPath, body) {
 }
 
 async function triggerRenderDeploy() {
-  if (!RENDER_API_KEY) { console.log('ℹ️ RENDER_API_KEY 미설정 — Render 자동배포(autoDeploy)에 맡기고 수동 트리거는 건너뜁니다.'); return; }
+  if (!RENDER_API_KEY) { console.warn('⚠️ RENDER_API_KEY 미설정 — 이 스크립트로는 Render 서버를 재배포하지 않습니다. (Render autoDeploy 꺼짐) GitHub Actions main.yml의 Deploy Hook이 없으면 Render 대시보드에서 Manual Deploy를 눌러야 서버 변경이 반영됩니다.'); return; }
   console.log('🔄 Render 서버 재배포 트리거 중...');
   const res = await request('POST', `/v1/services/${RENDER_SVC_ID}/deploys`, { clearCache: 'do_not_clear' });
   if (res.status === 201 || res.status === 200) {

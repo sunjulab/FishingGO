@@ -9,12 +9,13 @@ const jwt  = require('jsonwebtoken');
 // server/.env에서 JWT_SECRET 로드
 const envPath  = path.join(__dirname, '.env');
 const envLines = fs.readFileSync(envPath, 'utf-8').split('\n');
-let JWT_SECRET = 'fishinggo_secret_2024';
+let JWT_SECRET = process.env.JWT_SECRET || ''; // ✅ SEC: 하드코딩 기본값 제거
 for (const line of envLines) {
   const m = line.match(/^JWT_SECRET=(.+)/);
   if (m) { JWT_SECRET = m[1].trim(); break; }
 }
-console.log('[시드] JWT_SECRET:', JWT_SECRET.slice(0, 15) + '...');
+if (!JWT_SECRET) { console.error('JWT_SECRET이 없습니다. server/.env에 설정하세요.'); process.exit(1); }
+console.log('[시드] JWT_SECRET:', JWT_SECRET.slice(0, 4) + '...');
 
 const token = jwt.sign(
   { email: 'sunjulab.k@gmail.com', name: '낚시GO 관리자', tier: 'MASTER' },

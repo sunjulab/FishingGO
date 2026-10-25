@@ -23,8 +23,8 @@
 ## 빌드와 배포
 
 - 프론트 빌드는 `npm run build:esbuild`를 씁니다. `npm run build`(vite)는 메시지 없이 실패하는 문제가 남아 있습니다.
-- 통합 배포: `npm run deploy` (esbuild 빌드 → cap sync → 자동 커밋 → `release:patch`로 push, gh-pages, Render 재배포).
-- GitHub Actions의 push 자동 배포(deploy-pages, main)는 중복이라 수동 실행으로 바꿨습니다. 웹 배포는 `npm run deploy`, 서버는 Render autoDeploy가 담당합니다.
+- 통합 배포: `npm run deploy` (버전 올리기 → esbuild 빌드 → cap sync → 자동 커밋 → `update-version.cjs --push`로 push, gh-pages, Render 재배포). 버전을 빌드 전에 올려야 `version.json`이 실제 버전과 맞습니다.
+- Render autoDeploy는 꺼져 있습니다. 서버 배포 경로는 두 가지입니다: push 때 `main.yml`이 실행하는 Deploy Hook(GitHub Secret `RENDER_DEPLOY_HOOK_URL`), 그리고 `update-version.cjs`의 Render API 호출(로컬 `.env`의 `RENDER_API_KEY`). `deploy-pages.yml`은 중복이라 수동 실행만 남겼고, `main.yml`의 Vercel·APK 작업도 수동 실행 때만 돕니다.
 - 웹은 GitHub Pages(`gh-pages` 브랜치, www.fishing-go.com)에 올라갑니다. `main`만 push하면 사이트에 반영되지 않습니다.
 - 백엔드는 Render(`fishing-go-backend.onrender.com`, free 플랜)입니다. 재기동에 1~3분 걸립니다.
 - 안드로이드 앱(Capacitor, `kr.fishinggo.app`)은 `capacitor.config.json`의 `server.url`로 실서버를 불러옵니다. 그래서 웹 배포만 해도 앱 화면이 바뀝니다. 네이티브 변경(플러그인, 아이콘, MainActivity 등)이 있을 때만 AAB가 필요합니다.

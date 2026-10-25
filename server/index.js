@@ -10892,7 +10892,7 @@ app.get('/api/shop/manual/dbtest', async (req, res) => {
     const auth = req.headers.authorization || '';
     if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
     try {
-      const tp = require('jsonwebtoken').verify(auth.slice(7), process.env.JWT_SECRET || 'fishinggo_jwt_secret_2024', { algorithms: ['HS256'] });
+      const tp = require('jsonwebtoken').verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); // ✅ SEC: 별도 기본값 리터럴 제거 — 공용 JWT_SECRET 사용
       
       const ADMIN_ID = process.env.ADMIN_ID || 'sunjulab';
       if (tp.email !== ADMIN_EMAIL && tp.id !== ADMIN_ID && tp.email !== 'sunjulab.k@gmail.com') {
