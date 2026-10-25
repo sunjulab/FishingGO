@@ -282,11 +282,11 @@ body {
   box-shadow: var(--shadow-md);
 }
 
-.marker-point.諛⑺뙆??{ background: #00C48C; }
-.marker-point.媛?컮??{ background: var(--primary); }
-.marker-point.??뎄   { background: #9B59B6; } /* ??FIX: ??뎄 ???留덉빱 諛곌꼍??異붽? ??誘몄젙?섎줈 ?щ챸 ?뚮뜑留?踰꾧렇 ?섏젙 */
-.marker-point.?좎긽   { background: var(--secondary); }
-.marker-point.?꾨낫   { background: var(--accent); }
+.marker-point.방파제 { background: #00C48C; } /* ✅ FIX-ENCODING: 깨진 클래스명 복원 */
+.marker-point.갯바위 { background: var(--primary); }
+.marker-point.항구   { background: #9B59B6; }
+.marker-point.선상   { background: var(--secondary); }
+.marker-point.도보   { background: var(--accent); }
 
 
 /* --- Search Bar --- */
@@ -322,7 +322,7 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
 }
 
 ins.adsbygoogle[data-ad-status="unfilled"]::after {
-  content: "援ш? 愿묎퀬 ?덉빟 ?곸뿭 (Unfilled)";
+  content: "광고 영역"; /* ✅ FIX-ENCODING: 화면에 깨진 글자로 노출되던 문구 복원 */
 }
 
 /* ??? ?ㅼ펷?덊넠 shimmer 濡쒕뵫 ?좊땲硫붿씠????????????????????????????????????????? */

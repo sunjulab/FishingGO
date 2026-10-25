@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🕐 현재 시각 출력
-        run: echo "배포 트리거 시각 (UTC): $(date -u)"
+        run: |
+          echo "배포 트리거 시각 (UTC): $(date -u)"
 
       - name: 🚀 Render 배포 트리거 (API)
         env:

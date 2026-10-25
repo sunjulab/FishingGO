@@ -4,7 +4,7 @@
  * - 미설정 시: 에러 없이 콘솔에만 출력 후 안전하게 스킵
  */
 export async function sendTelegramReport({ status, title, details = [] }) {
-  const token = process.env.TELEGRAM_BOT_TOKEN || '8775258932:AAF9KSb6y1zbtU7cPhucKCxQIEQxbQwoMeo';
+  const token = process.env.TELEGRAM_BOT_TOKEN || ''; // ✅ SEC: 하드코딩 제거 — 환경변수 필수
   const chatId = process.env.TELEGRAM_CHAT_ID || '8249592094';
 
   if (!token || !chatId) {

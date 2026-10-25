@@ -1,8 +1,8 @@
 name: FishingGO Auto Deploy
 
 on:
-  push:
-    branches: [ "main" ]
+  # ✅ CI-DEDUP: push마다 Render 훅 + Vercel(구주소) + APK 빌드가 중복 실행되던 문제 → 수동 실행만 유지
+  #   (Render는 render.yaml autoDeploy, 웹은 npm run deploy가 담당)
   workflow_dispatch:
 
 jobs:

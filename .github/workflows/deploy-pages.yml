@@ -1,8 +1,7 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  # ✅ CI-DEDUP: gh-pages 배포는 npm run deploy(update-version.cjs)가 담당 — push마다 커밋된 dist를 force_orphan 재배포하던 중복 제거
   workflow_dispatch:
 
 permissions:

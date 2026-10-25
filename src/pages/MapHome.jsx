@@ -760,17 +760,22 @@ export default function MapHome() {
       ...ALL_FISHING_POINTS.map(p => findNearestStation(p.lat, p.lng).id),
       ...customPoints.map(p => findNearestStation(p.lat, p.lng).id),
     ])];
-    uniqueStationIds.forEach(id => {
-      apiClient.get(`/api/weather/precision?stationId=${id}`)
-        .then(res => {
+    // ✅ PERF-THROTTLE: 관측소 수십 곳을 한 번에 동시 호출하던 것을 동시 4건으로 제한 (콜드스타트 서버 부하·모바일 지연 완화)
+    const stationQueue = [...uniqueStationIds];
+    const fetchNextStation = async () => {
+      while (stationQueue.length) {
+        const id = stationQueue.shift();
+        try {
+          const res = await apiClient.get(`/api/weather/precision?stationId=${id}`);
           // ✅ _serverScore 보존: precision 응답이 덮어써도 서버점수는 유지
           setWeatherCache(prev => ({
             ...prev,
             [id]: { _serverScore: prev[id]?._serverScore, ...res.data, stationId: id },
           }));
-        })
-        .catch(() => {});
-    });
+        } catch { /* 개별 관측소 실패는 무시 (기존 동작 유지) */ }
+      }
+    };
+    for (let i = 0; i < Math.min(4, stationQueue.length); i++) fetchNextStation();
 
     // ② ✅ TIDE-HOME: 홈 화면 대표 포인트 조석예보도 패치 (5분마다 갱신)
     (async () => {

@@ -163,6 +163,15 @@ html = html.replace(
 writeFileSync('dist/index.html', html, 'utf8');
 console.log('✅ index.html →', jsHashedName);
 
+// ✅ SPA-DEEPLINK: GitHub Pages는 /shop 같은 경로를 HTTP 404로 응답 → 검색엔진·공유 미리보기 불리
+// 고정 경로마다 index.html 사본을 두어 200으로 응답하게 함 (동적 경로 /post/:id 등은 기존 404.html 리다이렉트 유지)
+const STATIC_ROUTES = ['media', 'community', 'tide', 'shop', 'mypage', 'catch-ranking', 'weather', 'tide-calendar', 'vvip-subscribe', 'login'];
+for (const r of STATIC_ROUTES) {
+  mkdirSync(`dist/${r}`, { recursive: true });
+  writeFileSync(`dist/${r}/index.html`, html, 'utf8');
+}
+console.log(`✅ 고정 경로 ${STATIC_ROUTES.length}개 index.html 사본 생성 (딥링크 200 응답)`);
+
 // ── 요약 ─────────────────────────────────────────────────────────────────────
 console.log(`\n🎉 빌드 성공! (v${appVersion})`);
 console.log(`   JS : dist/assets/${jsHashedName}  (${(jsBuf.length / 1024 / 1024).toFixed(2)} MB)`);

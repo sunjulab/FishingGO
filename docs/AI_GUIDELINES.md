@@ -7,8 +7,9 @@
 아래 명시된 핵심 해양/기상 로직은 바다타임 및 KMA 실측 데이터와 100% 동기화되어 있으므로, **다른 기능을 개발할 때 절대 이 부분을 수정하거나 삭제, 간소화하지 마십시오.**
 
 1. **조석예보 (KHOA API) 프록시 로직**
-   - **위치:** server/index.js 내부 /api/tide/obs 라우터
-   - **핵심 요소:** pis.data.go.kr/1192136/tideFcstHghLw 엔드포인트 호출, getNearestKhoaStation() 매핑 함수, 수학적 Fallback 오프셋(+372) 코드.
+   - **위치:** `server/routes/tide.js`의 `/api/tide/obs` 라우터 (`server/index.js`에서 `app.use('/api/tide', createTideRouter(...))`로 등록)
+   - **핵심 요소:** apis.data.go.kr/1192136/tideFcstHghLw 엔드포인트 호출, 프론트가 보낸 obsCode를 재매핑 없이 그대로 사용(이중 재매핑 금지), `server/index.js`의 getNearestKhoaStation() 매핑 함수, 조석 폴백 계산의 오프셋(+372) 코드.
+   - (2026-10-25: 실제 코드 위치에 맞게 설명만 갱신. 보호 규칙은 동일)
 
 2. **물때 달력 (Lunar Phase) 정밀 계산 로직**
    - **위치:** src/constants/fishingData.js 내부

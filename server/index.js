@@ -454,6 +454,7 @@ if (process.env.ALLOWED_ORIGIN) {
 
 // Render 헬스체크 전용 (사전 등록 — CORS 이전에 응답)
 app.get('/api/health', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*'); // ✅ FIX-HEALTH-CORS: 프론트 예열 요청 콘솔 오류 제거 (민감정보 없음)
   const fcmStatus = pushService?.isInitialized?.() ?? false;
   res.json({
     status: 'ok',
@@ -1042,10 +1043,14 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 // ─── 🤖 텔레그램 관리자 실시간 양방향 원격 관제 엔드포인트 ──────────
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8775258932:AAF9KSb6y1zbtU7cPhucKCxQIEQxbQwoMeo';
-const TELEGRAM_ADMIN_CHAT_ID = '8249592094';
+// ✅ SEC-TELEGRAM: 봇 토큰은 환경변수에서만 읽음 (소스 하드코딩 제거)
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_ADMIN_CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || '8249592094');
+// ✅ SEC-TELEGRAM: setWebhook(secret_token)으로 등록한 값 — 텔레그램 서버가 보낸 요청인지 검증
+const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 
 async function sendTelegramMsg(chatId, text, extra = {}) {
+  if (!TELEGRAM_BOT_TOKEN) return; // 토큰 미설정 시 조용히 스킵
   try {
     await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       chat_id: chatId,
@@ -1058,8 +1063,35 @@ async function sendTelegramMsg(chatId, text, extra = {}) {
   }
 }
 
+// ✅ TG-DISPATCH: GitHub Actions 물때 가디언 워크플로우 원격 실행 (repository_dispatch)
+async function dispatchTideGuardian(eventType, chatId, msgId) {
+  const ghToken = process.env.GITHUB_DISPATCH_TOKEN || '';
+  if (!ghToken) {
+    await sendTelegramMsg(chatId, `ℹ️ <b>원격 실행 불가</b>\nRender 환경변수에 <code>GITHUB_DISPATCH_TOKEN</code>이 없습니다.\n(GitHub에서 repo 권한 토큰 발급 후 등록하면 동작합니다)`, { reply_to_message_id: msgId });
+    return;
+  }
+  try {
+    await axios.post('https://api.github.com/repos/sunjulab/FishingGO/dispatches', {
+      event_type: eventType,
+      client_payload: { requestedBy: 'telegram', timestamp: Date.now() },
+    }, {
+      headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' },
+      timeout: 8000,
+    });
+    await sendTelegramMsg(chatId, `⏳ <b>[접수 완료]</b> GitHub Actions 물때 가디언을 실행했습니다.\n러너 배정까지 1~3분, 결과는 이 채팅으로 자동 보고됩니다.`, { reply_to_message_id: msgId });
+  } catch (ghErr) {
+    const code = ghErr?.response?.status;
+    await sendTelegramMsg(chatId, `⚠️ <b>GitHub 원격 실행 실패</b> (${code || ghErr.message})\n토큰 권한·만료 여부를 확인해주세요.`, { reply_to_message_id: msgId });
+  }
+}
+
 app.post('/api/telegram/webhook', async (req, res) => {
-  // 1. SLA 0.05초 타임아웃 원천 차단 (텔레그램 재시도 폭탄 방어)
+  // ✅ SEC-TELEGRAM: 비밀 토큰 헤더 검증 — 미설정 또는 불일치 시 처리하지 않음 (위조 요청 차단)
+  const secretHeader = req.headers['x-telegram-bot-api-secret-token'] || '';
+  if (!TELEGRAM_WEBHOOK_SECRET || secretHeader !== TELEGRAM_WEBHOOK_SECRET) {
+    return res.status(401).json({ ok: false });
+  }
+  // 1. 텔레그램 재시도 폭탄 방지를 위해 즉시 200 응답
   res.status(200).json({ ok: true });
 
   try {
@@ -1080,9 +1112,10 @@ app.post('/api/telegram/webhook', async (req, res) => {
     if (text === '안녕' || text === '/start' || text === '/help' || text === '도움말') {
       const reply = `🐟 <b>낚시GO 수호봇 실시간 관제 시스템</b>\n성재유 관리자님, 환영합니다!\n\n` +
         `<b>[원격 관제 명령어]</b>\n` +
-        `• <b>/check</b> 또는 <b>물때</b> : 21개 기준 관측소 물때 실시간 점검\n` +
+        `• <b>/check</b> 또는 <b>물때</b> : 21개 기준 관측소 바다타임 대조 점검 실행 (결과 자동 보고)\n` +
+        `• <b>/heal</b> : 점검 + 불일치 자동 치유·배포 실행 (결과 자동 보고)\n` +
         `• <b>/status</b> 또는 <b>상태</b> : 백엔드 메모리 및 가동 상태 확인\n` +
-        `• <b>/heal [관측소] [물때]</b> : 원격 자가치유 파이프라인 가동 (예: <code>/heal 삼척 7물</code>)\n` +
+        `• <b>파고 / 날씨 / 특보</b>, <b>삼척 파고</b> 등 : 해양 기상 브리핑\n` +
         `• <b>안녕</b> : 본 도움말 호출`;
       await sendTelegramMsg(chatId, reply, { reply_to_message_id: msgId });
       return;
@@ -1093,7 +1126,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
       const memRss = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
       const uptimeMin = Math.floor(process.uptime() / 60);
       const reply = `🟢 <b>낚시GO 백엔드 실시간 상태</b>\n` +
-        `• 메모리(RSS): <b>${memRss} MB</b> (한도 512MB 대비 안전)\n` +
+        `• 메모리(RSS): <b>${memRss} MB</b>\n` +
         `• 가동 시간: <b>${uptimeMin}분</b>\n` +
         `• DB 연결: <b>${dbReady ? '정상(MongoDB)' : '인메모리 폴백 모드'}</b>\n` +
         `• 서버 시간: <b>${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</b>`;
@@ -1101,56 +1134,15 @@ app.post('/api/telegram/webhook', async (req, res) => {
       return;
     }
 
-    // 3) 물때 실시간 점검
+    // 3) 물때 점검 — ✅ TG-CHECK-REAL: 고정 문구 대신 실제 21개 관측소 대조 워크플로우 실행
     if (text === '/check' || text === '물때' || text === '물때점검') {
-      const now = new Date();
-      const kstDate = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
-      const reply = `🌊 <b>낚시GO 21개 관측소 물때 점검 (${kstDate})</b>\n\n` +
-        `• 동해/남해/제주 (8물식): 정상 가동 중\n` +
-        `• 서해권 (7물식): 서해 특화 7물식 자동 분기 적용 중\n` +
-        `• 자가치유 오버라이드: 무결점 검증 통과 상태\n\n` +
-        `💡 특정 관측소를 수동 조정하시려면 <code>/heal [관측소명] [물때]</code>를 입력하세요.`;
-      await sendTelegramMsg(chatId, reply, { reply_to_message_id: msgId });
+      await dispatchTideGuardian('telegram_check', chatId, msgId);
       return;
     }
 
-    // 4) 물때 자가치유 및 배포 명령
+    // 4) 물때 자가치유 — ✅ TG-HEAL-REAL: 워크플로우가 실제로 수신하도록 repository_dispatch 연결
     if (text.startsWith('/heal')) {
-      const match = text.match(/^\/heal\s+([가-힣]+)\s+([0-9]{1,2}물|조금|무시)$/);
-      const VALID_STATIONS = ['삼척', '속초', '동해', '포항', '울산', '부산', '통영', '여수', '완도', '목포', '군산', '보령', '안흥', '인천', '제주', '서귀포', '성산포', '모슬포', '울릉도', '독도', '흑산도'];
-
-      if (!match) {
-        await sendTelegramMsg(chatId, `⚠️ <b>형식이 올바르지 않습니다.</b>\n사용법: <code>/heal [관측소] [물때]</code>\n예시: <code>/heal 삼척 7물</code>`, { reply_to_message_id: msgId });
-        return;
-      }
-
-      const [_, station, tide] = match;
-      if (!VALID_STATIONS.includes(station)) {
-        await sendTelegramMsg(chatId, `❌ <b>등록되지 않은 기준 관측소입니다: '${station}'</b>\n(가능 관측소: 삼척, 속초, 포항, 울산, 부산, 여수, 목포, 군산, 인천, 제주 등 21개소)`, { reply_to_message_id: msgId });
-        return;
-      }
-
-      await sendTelegramMsg(chatId, `⏳ <b>[명령 접수 완료]</b>\n관측소: <b>${station}</b> ➡️ 물때: <b>${tide}</b>\n\nGitHub Actions 7GB 러너를 호출하여 프로덕션 빌드 & 배포 파이프라인을 가동합니다...`, { reply_to_message_id: msgId });
-
-      const ghToken = process.env.GITHUB_DISPATCH_TOKEN || process.env.GITHUB_TOKEN;
-      if (!ghToken) {
-        await sendTelegramMsg(chatId, `ℹ️ <b>[안내] Render 환경변수 안내</b>\nGitHub Actions 원격 자동 배포를 위해 Render 대시보드에 <code>GITHUB_DISPATCH_TOKEN</code>이 등록되어 있는지 확인해주세요.`);
-      } else {
-        try {
-          await axios.post('https://api.github.com/repos/sunjulab/FishingGO/dispatches', {
-            event_type: 'telegram_heal',
-            client_payload: { station, tide, admin: 'sunjulab', timestamp: Date.now() }
-          }, {
-            headers: {
-              'Authorization': `Bearer ${ghToken}`,
-              'Accept': 'application/vnd.github.v3+json'
-            }
-          });
-          await sendTelegramMsg(chatId, `🚀 <b>[CI/CD 가동 성공]</b>\nGitHub Actions 워크플로우가 시작되었습니다.`);
-        } catch (ghErr) {
-          await sendTelegramMsg(chatId, `⚠️ <b>GitHub 원격 트리거 오류:</b> ${ghErr.message}`);
-        }
-      }
+      await dispatchTideGuardian('telegram_heal', chatId, msgId);
       return;
     }
 
@@ -3077,12 +3069,15 @@ if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
 }
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ✅ SEC-UPLOAD: 업로드 허용 폴더 화이트리스트 (임의 폴더 생성 차단)
+const UPLOAD_FOLDER_WHITELIST = new Set(['fishinggo', 'fishinggo_video', 'fishinggo_posts', 'fishinggo_avatar', 'fishinggo_crew', 'fishinggo_business', 'fishinggo_catch']);
 // ─── Cloudinary 조건부 이미지 업로드 ─────────────────────────────────────────
 // CLOUDINARY_URL 환경변수가 설정된 경우에만 CDN 업로드 활성화
 // 미설정 시: base64 그대로 반환 (기존 방식 유지, 하위 호환)
-app.post('/api/upload/image', async (req, res) => {
+app.post('/api/upload/image', verifyToken, async (req, res) => { // ✅ SEC-UPLOAD: 로그인 사용자만
   try {
-    const { base64, folder = 'fishinggo' } = req.body;
+    const { base64 } = req.body;
+    const folder = UPLOAD_FOLDER_WHITELIST.has(req.body.folder) ? req.body.folder : 'fishinggo'; // ✅ SEC-UPLOAD: 폴더 화이트리스트
     if (!base64) return res.status(400).json({ error: '이미지 데이터 필요' });
 
     if (!process.env.CLOUDINARY_URL) {
@@ -3150,7 +3145,8 @@ app.get('/api/upload/signature', async (req, res) => {
 const os = require('os');
 const uploadDisk = multer ? multer({ dest: os.tmpdir(), limits: { fileSize: 30 * 1024 * 1024 } }) : null;
 
-app.get('/api/debug-multer', (req, res) => {
+app.get('/api/debug-multer', verifyToken, (req, res) => { // ✅ SEC-DEBUG: 관리자 전용
+  if (!isAdminToken(req.user)) return res.status(403).json({ error: '관리자 권한 필요' });
   res.json({
     multerType: typeof multer,
     uploadDiskIsNull: uploadDisk === null,
@@ -3179,7 +3175,7 @@ app.get('/api/debug-multer', (req, res) => {
     });
   };
 
-  app.post('/api/upload/media', uploadMediaHandler, async (req, res) => {
+  app.post('/api/upload/media', verifyToken, uploadMediaHandler, async (req, res) => { // ✅ SEC-UPLOAD: 로그인 사용자만
     try {
       if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
       
@@ -3238,7 +3234,10 @@ app.get('/api/debug-multer', (req, res) => {
 //   PORTONE_API_SECRET : 포트원 API 시크릿  (테스트: test_sk_...)
 // 미설정 시: 테스트 모드 (금액 검증 생략, 구독만 즉시 처리)
 
-const PLAN_PRICES = { LITE: 9900, PRO: 110000, VVIP: 550000 };
+const PLAN_PRICES = { LITE: 3300, PRO: 110000, VVIP: 550000 }; // ✅ PRICE-UNIFY: LITE 3,300원 통일 (Google Play 동일)
+// ✅ PRO-CLOSED: 110,000원 PRO 플랜 임시 판매중지 — 신규 결제/구독 차단 (기존 구독자 등급·자동갱신 데이터는 유지)
+// ✅ VVIP-CLOSED: 550,000원 VVIP 플랜 폐지 — 신규 결제/구독 차단 (기존 구독자는 만료일까지 유지)
+const CLOSED_PLANS = new Set(['PRO', 'VVIP']);
 const PLAN_TIERS = { LITE: 'BUSINESS_LITE', PRO: 'PRO', VVIP: 'BUSINESS_VIP' };
 
 // ══════════════════════════════════════════════════════════════════
@@ -3266,6 +3265,10 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
     const planInfo = IAP_PLAN_MAP[productId];
     if (!planInfo) {
       return res.status(400).json({ error: `유효하지 않은 상품 ID: ${productId}` });
+    }
+    // ✅ PRO-CLOSED: 판매중지 플랜은 신규 구매 차단 — 이미 PRO 등급인 기존 구독자의 갱신/복원만 허용
+    if (CLOSED_PLANS.has(planInfo.planId) && tp.tier !== planInfo.tier) {
+      return res.status(410).json({ error: '현재 판매가 중지된 플랜입니다.', code: 'PLAN_CLOSED' });
     }
 
     // ── Google Play Developer API 검증 ─────────────────────────
@@ -3310,16 +3313,31 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
           (logger?.warn || console.warn)(`[Google IAP] Play API ${httpStatus} 오류 → 유효하지 않은 토큰:`, e.message);
           return res.status(402).json({ error: `결제 검증 실패 — 유효하지 않은 구매 토큰 (${httpStatus})` });
         }
-        // 5xx / 네트워크 오류만 신뢰 모드 허용 (Google 서버 장애 대응)
-        (logger?.warn || console.warn)('[Google IAP] Play API 서버/네트워크 오류 → 신뢰 모드 폴백:', e.message);
-        verified = true;
+        // ✅ SEC-IAP-NOTRUST: 5xx/네트워크 오류 시 무조건 통과(신뢰 모드) 제거 — 503 반환
+        // 클라이언트는 finish()를 호출하지 않으므로 다음 앱 실행 시 approved 이벤트로 자동 재검증됨
+        (logger?.warn || console.warn)('[Google IAP] Play API 서버/네트워크 오류 → 재시도 요청:', e.message);
+        return res.status(503).json({ error: 'Google 결제 서버 응답이 지연되고 있습니다. 잠시 후 자동으로 다시 확인합니다.', code: 'IAP_RETRY' });
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      // ✅ SEC-IAP-NOTRUST: 운영 환경에서 서비스 계정 미설정 시 검증 불가 → 결제 처리 보류 (무료 구독 악용 차단)
+      (logger?.error || console.error)('[Google IAP] GOOGLE_PLAY_SERVICE_ACCOUNT 미설정 — 결제 검증 불가');
+      return res.status(503).json({ error: '결제 검증 설정이 완료되지 않았습니다. 잠시 후 자동으로 다시 확인합니다.', code: 'IAP_NOT_CONFIGURED' });
     } else {
-      (logger?.warn || console.warn)('[Google IAP] 서비스 계정 미설정 — 신뢰 모드');
+      (logger?.warn || console.warn)('[Google IAP] 서비스 계정 미설정 — 개발 환경 신뢰 모드');
       verified = true;
     }
 
     if (!verified) return res.status(402).json({ error: '결제 검증 실패 (결제 미완료 상태)' });
+
+    // ✅ SEC-IAP-TOKEN-OWNER: 등급 부여 전에 구매 토큰 소유자 확인 — 토큰 하나로 여러 계정 업그레이드 차단
+    if (dbReady && User) {
+      const myKey = tp.email || tp.id;
+      const owner = await User.findOne({ iapPurchaseToken: purchaseToken }).select('email').lean().catch(() => null);
+      if (owner && owner.email !== myKey && String(owner._id) !== String(tp.id)) {
+        (logger?.warn || console.warn)('[IAP] 다른 계정에 이미 사용된 purchaseToken 재사용 시도:', myKey);
+        return res.status(409).json({ error: '이미 다른 계정에서 사용된 결제입니다.', code: 'TOKEN_OWNED' });
+      }
+    }
 
     // ── DB 티어 업데이트 ────────────────────────────────────────
     const newTier  = planInfo.tier;
@@ -3353,7 +3371,8 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
     if (dbReady && PaymentHistory) {
     // ✅ FIX-PAYMENT-DEDUP: 동일 purchaseToken 중복 결제 방지
     const dupPayment = await PaymentHistory.findOne({ purchaseToken }).lean().catch(() => null);
-    if (dupPayment) { logger.warn('[IAP] 중복 purchaseToken:', purchaseToken); return res.status(409).json({ error: '이미 처리된 결제입니다.' }); } // FIX-PAYMENT-DEDUP
+    // ✅ SEC-IAP-TOKEN-OWNER: 같은 계정의 복원/갱신 재검증은 정상 처리(이력만 중복 저장하지 않음)
+    if (dupPayment) { return res.json({ success: true, tier: newTier, expiresAt, planId: planInfo.planId, message: `${planInfo.label} 구독이 확인되었습니다.` }); } // FIX-PAYMENT-DEDUP
       await PaymentHistory.create({
         userId: tp.id || tp.email, email: tp.email,
         pg: 'google_play', method: 'iap',
@@ -3389,7 +3408,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 const PAYPLE_ENABLED = process.env.PAYPLE_ENABLED === 'true';
 const PAYPLE_PLAN_MAP = {
-  BASIC: { tier: 'BUSINESS_LITE', amount: 9900,   label: '베이직', days: 31  },
+  BASIC: { tier: 'BUSINESS_LITE', amount: 3300,   label: '베이직', days: 31  }, // ✅ PRICE-UNIFY: 3,300원
   PRO:   { tier: 'PRO',           amount: 110000, label: 'PRO',    days: 365 },
   VVIP:  { tier: 'BUSINESS_VIP',  amount: 550000, label: 'VVIP',   days: 31  },
 };
@@ -3403,6 +3422,7 @@ app.post('/api/payment/payple/request', verifyToken, async (req, res) => {
     const tp = req.user;
     const { planId, price, goodsName, email, name } = req.body;
     if (!PAYPLE_PLAN_MAP[planId]) return res.status(400).json({ error: '유효하지 않은 플랜' });
+    if (CLOSED_PLANS.has(planId)) return res.status(410).json({ error: '현재 판매가 중지된 플랜입니다.', code: 'PLAN_CLOSED' }); // ✅ PRO-CLOSED
 
     // TODO: 페이플 API 연동 — CST_ID / CUST_KEY 발급 후 구현
     // const payple = require('./payple'); // 별도 모듈로 분리 예정
@@ -3424,10 +3444,12 @@ app.post('/api/payment/payple/webhook', async (req, res) => {
     // ✅ FIX-PAYPLE-IP-WHITELIST: 페이플 공식 IP 화이트리스트
     const PAYPLE_ALLOWED_IPS = ['13.209.243.147', '13.125.162.144', '54.180.203.98', '127.0.0.1', '::1'];
     const reqIp = (String(req.headers['x-forwarded-for'] || '')).split(',')[0].trim() || req.ip || '';
-    if (process.env.NODE_ENV === 'production' && PAYPLE_ALLOWED_IPS.length > 3 && !PAYPLE_ALLOWED_IPS.some(ip => reqIp.includes(ip))) {
-      (logger?.warn || console.warn)('[Payple] 허용되지 않은 IP:', reqIp);
-      // IP 불일치 경고만 (페이플 IP 변경 가능성 고려, 차단하지 않음)
+    if (process.env.NODE_ENV === 'production' && !PAYPLE_ALLOWED_IPS.includes(reqIp)) {
+      // ✅ SEC-PAYPLE: 허용 IP가 아니면 차단 (경고만 하던 동작 → 위조 결제 차단). 정확 일치로 비교
+      (logger?.warn || console.warn)('[Payple] 허용되지 않은 IP 차단:', reqIp);
+      return res.status(403).json({ result: 'forbidden' });
     }
+    // ⚠️ TODO(UCB 연동 시): 페이플 결제 조회 API로 결제건 재검증 후 등급 부여할 것
     const { PCD_PAY_RST, PCD_PAY_CODE, PCD_PAYER_EMAIL, PCD_PAY_GOODS, PCD_PAY_TOTAL } = req.body;
 
     if (PCD_PAY_RST !== 'success' || PCD_PAY_CODE !== '0000') {
@@ -3459,7 +3481,7 @@ app.post('/api/payment/payple/webhook', async (req, res) => {
 
     if (dbReady && PaymentHistory) {
       await PaymentHistory.create({
-        email, pg: 'payple', method: 'ucb',
+        userId: email, email, pg: 'payple', method: 'ucb', // ✅ FIX-PAYHIST-SCHEMA: userId 필수값 누락 수정
         planId, tier: newTier, amount: planInfo.amount,
         status: 'paid', paidAt: new Date(),
       }).catch(() => {});
@@ -3491,8 +3513,9 @@ app.post('/api/payment/verify', async (req, res) => {
     let tp;
     try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 유효하지 않음' }); }
 
-    const { imp_uid, merchant_uid, planId, tier, harborId, userId, userName } = req.body;
+    const { imp_uid, merchant_uid, planId, harborId, userId, userName } = req.body; // ✅ SEC-VERIFY: tier는 클라이언트 값 사용 금지
     if (!planId || !userId) return res.status(400).json({ error: '필수 항목 누락' });
+    if (CLOSED_PLANS.has(planId)) return res.status(410).json({ error: '현재 판매가 중지된 플랜입니다.', code: 'PLAN_CLOSED' }); // ✅ PRO-CLOSED
 
     // 본인 또는 어드민만 처리 가능
     const isAdmin = isAdminToken(tp);
@@ -3501,10 +3524,20 @@ app.post('/api/payment/verify', async (req, res) => {
     }
 
     const expectedAmount = PLAN_PRICES[planId];
-    const expectedTier = tier || PLAN_TIERS[planId];
-    const isTestMode = !process.env.PORTONE_API_KEY;
+    const expectedTier = PLAN_TIERS[planId]; // ✅ SEC-VERIFY: 서버 정의 등급만 부여 (MASTER 등 임의 등급 주입 차단)
+    if (!expectedTier || !expectedAmount) return res.status(400).json({ error: '유효하지 않은 플랜' });
+    // ✅ SEC-VERIFY: 테스트 모드는 개발 환경에서만 — 운영에서는 포트원 검증 필수
+    const isTestMode = process.env.NODE_ENV !== 'production' && !process.env.PORTONE_API_KEY;
+    if (!isTestMode) {
+      if (!process.env.PORTONE_API_KEY) return res.status(503).json({ error: '결제 검증 설정이 완료되지 않았습니다.' });
+      if (!imp_uid || typeof imp_uid !== 'string') return res.status(400).json({ error: '결제 정보(imp_uid)가 없습니다.' });
+      if (dbReady && PaymentHistory) {
+        const usedImp = await PaymentHistory.findOne({ imp_uid }).lean().catch(() => null);
+        if (usedImp) return res.status(409).json({ error: '이미 처리된 결제입니다.' });
+      }
+    }
 
-    if (!isTestMode && imp_uid) {
+    if (!isTestMode) {
       // ─── 실서비스: 포트원 API로 결제 금액 검증 ──────────────────
       try {
         const axios = require('axios');
@@ -4765,7 +4798,7 @@ app.post('/api/admin/create-test-account', async (req, res) => {
     } else {
       // 인메모리
       const hashMem = require('bcryptjs').hashSync(testPw, 10); // ✅ FIX-TESTACCT-PWDLEAK: 인메모리도 bcrypt 해싱
-      users.push({ email: testEmail, password: hashMem, name: testName, tier: 'BUSINESS_LITE' });
+      memUsers.push({ email: testEmail, password: hashMem, name: testName, tier: 'BUSINESS_LITE' }); saveMemUsers(); // ✅ FIX-UNDEF: users → memUsers
       return res.json({ ok: true, message: '인메모리 계정 생성', email: testEmail }); // ✅ FIX-TESTACCT-PWDLEAK
     }
   } catch (err) {
@@ -4784,6 +4817,10 @@ app.post('/api/auth/register', authLimiter, async (req, res) => { // ✅ FIX-REG
     // 입력값 검증
     if (email.trim().length < 4) return res.status(400).json({ error: 'ID는 4자 이상이어야 합니다.' });
     if (!/^([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}|[a-zA-Z0-9_-]{4,30})$/.test(email.trim())) { return res.status(400).json({ error: '이메일 또는 아이디 형식이 올바르지 않습니다. (영문, 숫자 허용)' }); } // ✅ FIX-EMAIL
+    // ✅ SEC-REGISTER-ADMIN: 관리자 계정 식별자로는 신규 가입 불가 (DB 장애 시 관리자 계정 탈취 차단)
+    if (isAdminToken({ email: email.trim() }) || /^sunjulab\.k/i.test(email.trim())) return res.status(400).json({ error: '사용할 수 없는 아이디입니다.' });
+    // ✅ SEC-REGISTER-ADMIN: 운영 환경에서 DB 미연결 시 가입 중단 (인메모리 계정은 재시작 시 유실)
+    if (process.env.NODE_ENV === 'production' && !(dbReady && User)) return res.status(503).json({ error: '서버 점검 중입니다. 잠시 후 다시 시도해주세요.' });
     if (password.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' });
     if (!/(?=.*[A-Za-z])(?=.*[0-9]).{8,}/.test(password)) return res.status(400).json({ error: '비밀번호는 영문+숫자 조합 8자 이상이어야 합니다.' }); // ✅ FIX-PWD-COMPLEXITY
     if (name.trim().length < 2) return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
@@ -8467,6 +8504,8 @@ app.post('/api/pro/purchase', async (req, res) => {
   const { userId, userName } = req.body;
   if (!userId) return res.status(400).json({ error: '필수 정보 누락' });
   const isAdmin = isAdminToken(tp);
+  // ✅ PRO-CLOSED: 결제 검증 없는 구버전 PRO 부여 경로 — 판매중지 기간에는 관리자 수동 부여만 허용
+  if (!isAdmin) return res.status(410).json({ error: '현재 판매가 중지된 플랜입니다.', code: 'PLAN_CLOSED' });
   if (!isAdmin && tp.id !== userId && tp.email !== userId) {
     return res.status(403).json({ error: '본인 구독만 저장 가능합니다.' });
   }
@@ -9698,9 +9737,16 @@ app.post('/api/payment/billing/register', async (req, res) => {
 
     const plan = BILLING_PLAN_MAP[planId];
     if (!plan) return res.status(400).json({ error: '유효하지 않은 플랜' });
+    if (CLOSED_PLANS.has(planId)) return res.status(410).json({ error: '현재 판매가 중지된 플랜입니다.', code: 'PLAN_CLOSED' }); // ✅ PRO-CLOSED
 
     // 첫 결제 포트원 검증 (실서비스)
-    if (process.env.PORTONE_API_KEY && imp_uid) {
+    // ✅ SEC-BILLING: 운영 환경에서는 imp_uid + 포트원 검증 필수 (생략 시 무료 등급 획득 차단)
+    const billingTestMode = process.env.NODE_ENV !== 'production' && !process.env.PORTONE_API_KEY;
+    if (!billingTestMode) {
+      if (!process.env.PORTONE_API_KEY) return res.status(503).json({ error: '결제 검증 설정이 완료되지 않았습니다.' });
+      if (!imp_uid || typeof imp_uid !== 'string') return res.status(400).json({ error: '첫 결제 정보(imp_uid)가 없습니다.' });
+    }
+    if (!billingTestMode) {
       try {
         const token = await getPortoneToken();
         const payRes = await axios.get(`https://api.iamport.kr/payments/${imp_uid}`, {
@@ -9752,7 +9798,10 @@ app.post('/api/payment/billing/register', async (req, res) => {
     // ✅ BUG-FIX-VVIP: VVIP 결제 시 vvipSlots에도 항구 선점 자동 등록
     if (planId === 'VVIP' && harborId) {
       const harbor = HARBOR_LIST.find(h => h.id === harborId);
-      if (harbor) {
+      const curSlot = vvipSlots[harborId];
+      // ✅ SEC-BILLING: 다른 사람이 점유 중인(미만료) 슬롯은 덮어쓰지 않음
+      const slotFree = !curSlot || !curSlot.expiresAt || new Date(curSlot.expiresAt) < new Date() || curSlot.userId === userId;
+      if (harbor && slotFree) {
         vvipSlots[harborId] = {
           userId, userName: userName || userId,
           purchasedAt: new Date().toISOString(),
@@ -9858,6 +9907,7 @@ app.put('/api/payment/subscription/:userId/plan', async (req, res) => {
     const { newPlanId } = req.body;
     const plan = BILLING_PLAN_MAP[newPlanId];
     if (!plan) return res.status(400).json({ error: '유효하지 않은 플랜' });
+    if (CLOSED_PLANS.has(newPlanId)) return res.status(410).json({ error: '현재 판매가 중지된 플랜입니다.', code: 'PLAN_CLOSED' }); // ✅ PRO-CLOSED
 
     if (dbReady && Subscription) {
       await Subscription.findOneAndUpdate(
@@ -9987,6 +10037,8 @@ app.get('/api/payment/history', async (req, res) => {
 app.post('/api/payment/history/record', verifyToken, async (req, res) => {
   try {
     const { userId, userName, planId, pgProvider, paymentType, amount, status, imp_uid, merchant_uid, failReason, isTest } = req.body;
+    // ✅ SEC-PAY-RECORD: 결제 기록은 서버 검증 경로에서만 생성 — 이 엔드포인트는 관리자 수동 기록 전용
+    if (!isAdminToken(req.user)) return res.status(403).json({ error: '관리자만 결제 기록을 등록할 수 있습니다.' });
     // 요청 userId와 토큰 userId 일치 여부 확인 (본인 결제만 기록 가능)
     const tokenId = req.user.email || req.user.id;
     const isAdmin = isAdminToken(req.user);
@@ -10736,7 +10788,7 @@ app.get('/api/shop/recommend', async (req, res) => {
         img: p.productImage, link: p.coupangUrl,
         badge: `🎣 ${fish || pointType} 추천`, source: 'coupang',
       })),
-      ...aliRec.map(p => ({
+      ...(Array.isArray(aliRec) ? aliRec : (aliRec?.items || [])).map(p => ({ // ✅ FIX-SHOP-500: searchAliExpress는 {items} 객체 반환
         id: `ali_${p.productId}`, name: p.title,
         price: p.salePrice, discount: p.discount,
         img: p.imageUrl, link: p.productUrl,
@@ -11092,7 +11144,6 @@ function _mapToAliKeyword(category) {
   const map = {
     // ── 기본 ────────────────────────────────────────────────────────────────
     '낚시용품':    'fishing accessories set',
-    '소모품':      'fishing accessories set hook',
     '채비':        'fishing rig terminal tackle',
     '기본':        'fishing tackle accessories set',
 
@@ -11132,12 +11183,10 @@ function _mapToAliKeyword(category) {
     '릴':          'spinning fishing reel',
     '스피닝':      'spinning fishing reel 2000 3000 5000',
     '베이트':      'baitcasting fishing reel low profile',
-    '전동릴':      'electric fishing reel sea boat',
     '낚시릴':      'spinning fishing reel 2000 3000',
     '낚싯대':      'fishing rod telescopic carbon',
     '루어대':      'lure fishing rod spinning ultralight',
     '원투대':      'surf casting fishing rod long distance',
-    '갯바위대':    'rock shore fishing rod spinning',
     '찌낚시대':    'float fishing rod telescopic carp',
     '선상대':      'boat fishing rod jigging heavy',
     '민물대':      'freshwater telescopic fishing pole carp',
@@ -11149,7 +11198,6 @@ function _mapToAliKeyword(category) {
     '루어':        'fishing lure set soft bait',
     '에기':        'squid egi jig lure',
     '에깅':        'squid egi jig spinning lure',
-    '지그':        'fishing metal jig lure',
     '지그헤드':    'jig head fishing hook weight set',
     '웜':          'soft plastic worm fishing lure',
     '소프트웜':    'soft fishing worm lure bass',

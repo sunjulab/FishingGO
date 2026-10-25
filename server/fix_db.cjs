@@ -1,7 +1,8 @@
 require('dotenv').config({ path: require('path').join(__dirname, 'server', '.env') });
 const mongoose = require('mongoose');
 
-const MONGO_URI = `mongodb+srv://fishinggo:${encodeURIComponent(process.env.MONGO_PASS)}@cluster0.cyqhznd.mongodb.net/fishinggo?appName=Cluster0`;
+const MONGO_URI = process.env.MONGO_URI; // ✅ SEC: DB 비밀번호 하드코딩 제거 — server/.env의 MONGO_URI 사용
+if (!MONGO_URI) { console.error('MONGO_URI 환경변수가 없습니다.'); process.exit(1); }
 
 async function fixDB() {
   await mongoose.connect(MONGO_URI);

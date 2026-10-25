@@ -1,15 +1,15 @@
 /**
  * GoogleIAPService.js — 100점 완전판
  * cordova-plugin-purchase v13 — 구글 플레이 인앱결제
- * BASIC(3,300/월) · PRO(110,000/월) · VVIP(550,000/월)
+ * BASIC(3,300/월) · PRO(110,000/월, 판매중지) · VVIP(550,000/월, 폐지)
  */
 import apiClient from '../api/index.js'; // ✅ 토큰 자동 갱신 인터셉터 포함
 
 // ── 상품 ID (Google Play Console에 등록된 값과 동일) ─────────────
 export const IAP_PRODUCTS = {
   BASIC: { id: 'kr.fishinggo.app.lite_monthly',  type: 'PAID_SUBSCRIPTION', price: 3300,   label: 'BASIC', tier: 'BUSINESS_LITE' },
-  PRO:   { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 110000, label: 'PRO',   tier: 'PRO'           },
-  VVIP:  { id: 'kr.fishinggo.app.vvip_monthly',  type: 'PAID_SUBSCRIPTION', price: 550000, label: 'VVIP',  tier: 'BUSINESS_VIP'  },
+  PRO:   { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 110000, label: 'PRO',   tier: 'PRO', closed: true }, // ✅ PRO-CLOSED: 기존 구독 복원용으로 등록만 유지, 신규 구매 차단
+  VVIP:  { id: 'kr.fishinggo.app.vvip_monthly',  type: 'PAID_SUBSCRIPTION', price: 550000, label: 'VVIP',  tier: 'BUSINESS_VIP', closed: true }, // ✅ VVIP-CLOSED: 폐지 — 기존 구독 복원용 등록만 유지
 };
 
 // ── 모듈 레벨 상태 ────────────────────────────────────────────────
@@ -183,6 +183,7 @@ export async function purchasePlan(planKey) {
 
   const product = IAP_PRODUCTS[planKey];
   if (!product) throw new Error('잘못된 플랜입니다.');
+  if (product.closed) throw new Error('현재 판매가 중지된 플랜입니다.'); // ✅ PRO-CLOSED
 
   const storeProduct = store.get(product.id, window.CdvPurchase.Platform.GOOGLE_PLAY);
   if (!storeProduct) {

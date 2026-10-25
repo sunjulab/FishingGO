@@ -1,0 +1,67 @@
+name: Deploy to GitHub Pages
+
+on:
+  # ✅ CI-DEDUP: gh-pages 배포는 npm run deploy(update-version.cjs)가 담당 — push마다 커밋된 dist를 force_orphan 재배포하던 중복 제거
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ✅ AUTO-UPDATE: 배포마다 고유 version.json 생성 → 클라이언트 자동 감지용
+      - name: Generate version.json
+        run: |
+          mkdir -p dist
+          VERSION=$(date +%s)
+          BUILT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          printf '{"version":"%s","built":"%s"}\n' "$VERSION" "$BUILT" > dist/version.json
+          echo "✅ version.json 생성됨:"
+          cat dist/version.json
+
+      - name: Deploy dist/ to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          force_orphan: true
+          cname: www.fishing-go.com   # ✅ CNAME 자동 설정
+
+      - name: Enable GitHub Pages via API (gh-pages branch)
+        run: |
+          echo "Configuring GitHub Pages source to gh-pages branch..."
+          # 먼저 Pages가 이미 활성화되어 있는지 확인
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/pages)
+
+          if [ "$STATUS" = "200" ]; then
+            echo "Pages already enabled. Updating source..."
+            curl -s -X PUT \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.repository }}/pages \
+              -d '{"source":{"branch":"gh-pages","path":"/"}}'
+          else
+            echo "Enabling Pages for the first time..."
+            curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.repository }}/pages \
+              -d '{"source":{"branch":"gh-pages","path":"/"}}'
+          fi
+          echo "Done."
+

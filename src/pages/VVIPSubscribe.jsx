@@ -619,7 +619,7 @@ export default function VVIPSubscribe() {
             <div style={{ fontSize: `calc(16px * var(--fs,1))`, fontWeight: '900', marginBottom: '4px' }}>항구별 선착순 1명 독점</div>
             <div style={{ fontSize: `calc(12px * var(--fs,1))`, opacity: 0.75, lineHeight: 1.6, marginBottom: '12px' }}>선상 홍보 피드 <strong style={{ color: '#FFD700' }}>최상단 고정</strong></div>
             <div style={{ display: 'flex', gap: '16px' }}>
-              <div><div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: '#FFD700' }}>₩550,000</div><div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>월 정액</div></div>
+              <div><div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: '#FFD700' }}>판매 종료</div><div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>기존 VVIP 전용</div></div>{/* ✅ VVIP-CLOSED */}
               <div>
                 <div style={{ fontSize: `calc(20px * var(--fs,1))`, fontWeight: '950', color: availableCount > 0 ? '#00C48C' : '#FF5A5F' }}>{availableCount}석</div>
                 <div style={{ fontSize: `calc(10px * var(--fs,1))`, opacity: 0.65 }}>전국 잔여</div>
@@ -780,11 +780,12 @@ export default function VVIPSubscribe() {
               // ✅ 비 VVIP 유저 → VVIP 구독 유도
               <>
                 <div style={{ fontSize: `calc(12px * var(--fs,1))`, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, background: 'rgba(255,215,0,0.06)', borderRadius: '14px', padding: '14px', marginBottom: '18px' }}>
-                  VVIP 항구 독점 선점은 <strong style={{ color: '#FFD700' }}>VVIP 구독 후</strong> 가능합니다.<br />
-                  월 ₩550,000으로 항구 독점 + 선상 최상단 고정을 누리세요.
+                  {/* ✅ VVIP-CLOSED: VVIP 신규 구독 폐지 */}
+                  VVIP 신규 구독은 <strong style={{ color: '#FFD700' }}>종료</strong>되었습니다.<br />
+                  항구 선점은 기존 VVIP 구독자만 이용할 수 있습니다.
                 </div>
-                <button onClick={() => { setShowHarborConfirm(false); setView('plan'); handlePlanClick('VVIP'); }} style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: `calc(15px * var(--fs,1))`, fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
-                  VVIP 구독하기
+                <button onClick={() => { setShowHarborConfirm(false); setView('plan'); }} style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#FFD700,#FF9B26)', color: '#1A1A2E', fontSize: `calc(15px * var(--fs,1))`, fontWeight: '950', cursor: 'pointer', marginBottom: '10px' }}>
+                  구독 플랜 보기
                 </button>
               </>
             )}

@@ -2,7 +2,8 @@
 const https = require('https');
 const fs = require('fs');
 
-const RENDER_API_KEY = 'rnd_G35wIPYtAt0y59ficIJKoC0Ftz4b';
+const RENDER_API_KEY = process.env.RENDER_API_KEY; // ✅ SEC: 하드코딩 키 제거 — 실행 전 환경변수 설정 필요
+if (!RENDER_API_KEY) { console.error('RENDER_API_KEY 환경변수를 설정하세요.'); process.exit(1); }
 const SERVICE_ID = 'srv-d7cjb3v7f7vs739h54r0'; // web 서버
 
 function request(method, path, body) {

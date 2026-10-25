@@ -59,18 +59,13 @@ if (isWeatherFail) {
 }
 
 if (isTideFail) {
-  console.log('\n⚠️ [WARNING] 훼손된 물때 로직 발견! 손상된 모듈만 원상 복구(Partial Healing)합니다.');
-  try {
-    execSync('git fetch origin main && git checkout origin/main -- server/routes/tide.js src/constants/fishingData.js', { stdio: 'ignore' });
-    console.log('✅ [HEALED] 손상된 물때 파일 복구 완료.');
-    console.log('🛡️ [SUCCESS] 나머지 신규 기능들은 안전하게 배포(Deploy) 파이프라인으로 넘깁니다.');
-    console.log('======================================================\n');
-    process.exit(0);
-  } catch (healErr) {
-    console.error('🚨 [FATAL] 복구 실패! 배포를 강제 차단합니다.');
-    console.log('======================================================\n');
-    process.exit(1);
-  }
+  // ✅ GUARDIAN-SAFE: 예전에는 git checkout으로 로컬 수정 파일을 말없이 덮어쓴 뒤 배포를 진행(exit 0)했음
+  //    → 의도한 수정이 사라지거나 손상된 코드가 배포될 위험. 이제는 배포를 차단하고 사람에게 알림.
+  console.log('\n🚨 [FATAL] 물때 핵심 로직(fishingData.js / server/routes/tide.js) 훼손이 감지되었습니다.');
+  console.log('자동 덮어쓰기는 하지 않습니다. 변경 내용을 확인한 뒤 복구하고 다시 배포해주세요.');
+  console.log('복구 참고: git diff origin/main -- server/routes/tide.js src/constants/fishingData.js');
+  console.log('======================================================\n');
+  process.exit(1);
 }
 
 if (!isTideFail && !isWeatherFail) {

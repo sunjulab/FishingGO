@@ -15,9 +15,9 @@ export const UCB_ENABLED = false; // import.meta.env.VITE_UCB_ENABLED === 'true'
 
 /** 페이플 상품 정보 */
 export const PAYPLE_PRODUCTS = {
-  BASIC: { planId: 'BASIC', price: 9900,   label: 'BASIC 월 구독',  period: '월',  tier: 'BUSINESS_LITE' },
-  PRO:   { planId: 'PRO',   price: 110000, label: 'PRO 연간 구독',  period: '년',  tier: 'PRO'           },
-  VVIP:  { planId: 'VVIP',  price: 550000, label: 'VVIP 월 구독',  period: '월',  tier: 'BUSINESS_VIP'  },
+  BASIC: { planId: 'BASIC', price: 3300,   label: 'BASIC 월 구독',  period: '월',  tier: 'BUSINESS_LITE' }, // ✅ PRICE-UNIFY: 3,300원
+  PRO:   { planId: 'PRO',   price: 110000, label: 'PRO 월 구독',    period: '월',  tier: 'PRO', closed: true }, // ✅ PRO-CLOSED: 임시 판매중지
+  VVIP:  { planId: 'VVIP',  price: 550000, label: 'VVIP 월 구독',  period: '월',  tier: 'BUSINESS_VIP', closed: true }, // ✅ VVIP-CLOSED: 폐지
 };
 
 /**
@@ -31,6 +31,7 @@ export async function openPayplePayment(planKey, userInfo) {
   }
 
   const product = PAYPLE_PRODUCTS[planKey];
+  if (product?.closed) throw new Error('PLAN_CLOSED'); // ✅ PRO-CLOSED
   if (!product) throw new Error('INVALID_PLAN');
 
   // 서버에서 페이플 결제 요청 토큰 발급

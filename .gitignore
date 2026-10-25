@@ -68,4 +68,6 @@ android/app/google-services.json
 android/app/*firebase*adminsdk*.json
 server/.env
 
-
+# ✅ SEC (2026-10-25): 토큰·임시 자격증명 파일은 커밋 금지
+server/token.txt
+*.token

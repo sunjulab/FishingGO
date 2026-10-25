@@ -17,7 +17,17 @@ const path         = require('path');
 const { execSync } = require('child_process');
 
 // ─── 설정 ──────────────────────────────────────────────────────────────────
-const RENDER_API_KEY = 'rnd_G35wIPYtAt0y59ficIJKoC0Ftz4b';
+// ✅ SEC: Render API 키 하드코딩 제거 — 환경변수 또는 로컬 .env(RENDER_API_KEY=...)에서 읽음
+function readLocalEnv(key) {
+  for (const f of ['.env', '.env.local', 'server/.env']) {
+    try {
+      const m = fs.readFileSync(path.join(__dirname, f), 'utf-8').match(new RegExp('^\\s*' + key + '\\s*=\\s*(.+)$', 'm'));
+      if (m) return m[1].trim().replace(/^['"]|['"]$/g, '');
+    } catch { /* 파일 없음 */ }
+  }
+  return '';
+}
+const RENDER_API_KEY = process.env.RENDER_API_KEY || readLocalEnv('RENDER_API_KEY');
 const RENDER_SVC_ID  = 'srv-d7cjb3v7f7vs739h54r0';
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
 const PUSH_MODE      = process.argv.includes('--push');
@@ -110,6 +120,7 @@ function request(method, urlPath, body) {
 }
 
 async function triggerRenderDeploy() {
+  if (!RENDER_API_KEY) { console.log('ℹ️ RENDER_API_KEY 미설정 — Render 자동배포(autoDeploy)에 맡기고 수동 트리거는 건너뜁니다.'); return; }
   console.log('🔄 Render 서버 재배포 트리거 중...');
   const res = await request('POST', `/v1/services/${RENDER_SVC_ID}/deploys`, { clearCache: 'do_not_clear' });
   if (res.status === 201 || res.status === 200) {
