@@ -8195,15 +8195,25 @@ app.get('/api/weather/hourly', async (req, res) => {
 });
 
 // 제3자 이미지/MOF 스트리밍 프록시 (CORS/Mixed Content 우회)
+// ✅ SEC-CCTV-PROXY: 프록시 허용 호스트 (해양수산부 연안포털 CCTV 이미지)
+const CCTV_PROXY_ALLOWED_HOSTS = new Set(['coast.mof.go.kr', '220.95.232.18']);
 app.get('/api/weather/cctv/proxy', async (req, res) => {
   const { url } = req.query;
-  if (!url || !url.startsWith('http')) return res.status(400).json({ error: '잘못된 URL' });
+  if (!url || typeof url !== 'string' || !url.startsWith('http')) return res.status(400).json({ error: '잘못된 URL' });
+  // ✅ SEC-CCTV-PROXY: 허용된 CCTV 이미지 호스트만 통과 (오픈 프록시·SSRF 차단)
+  let target;
+  try { target = new URL(url); } catch { return res.status(400).json({ error: '잘못된 URL' }); }
+  if (!CCTV_PROXY_ALLOWED_HOSTS.has(target.hostname) || (target.port && !['80', '443', '8080'].includes(target.port))) {
+    return res.status(403).json({ error: '허용되지 않은 CCTV 주소' });
+  }
 
   try {
     const response = await axios({
       method: 'get',
-      url: url,
+      url: target.toString(),
       responseType: 'stream',
+      maxRedirects: 0, // ✅ SEC-CCTV-PROXY: 리다이렉트로 허용 목록 우회 차단
+      maxContentLength: 5 * 1024 * 1024,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,*/*',
@@ -8212,6 +8222,8 @@ app.get('/api/weather/cctv/proxy', async (req, res) => {
       timeout: 5000
     });
 
+    const ctype = String(response.headers['content-type'] || '');
+    if (ctype && !ctype.startsWith('image/')) { response.data.destroy(); return res.status(502).end(); } // ✅ SEC-CCTV-PROXY: 이미지 외 응답 차단
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
