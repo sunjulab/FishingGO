@@ -10,7 +10,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, NavLink, useNavigate, 
 const PLAY_STORE_URL = 'https://play.google.com/apps/internaltest/4701312289208373704';
 
 import { GoogleOAuthProvider } from '@react-oauth/google'; // 구글 로그인 연동
-import { Home, Tv, Users, Waves, User, Anchor, Camera, Trophy, Bot } from 'lucide-react';
+import { Home, Users, Waves, User, Anchor, Camera, Trophy, Bot, Fish } from 'lucide-react';
 
 import Toast from './components/Toast';
 import { useToastStore } from './store/useToastStore';
@@ -87,12 +87,12 @@ function KakaoSdkInit() {
 const DEFAULT_AVATAR_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23E5E5EA'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23AEAEB2'/%3E%3Cellipse cx='20' cy='36' rx='12' ry='9' fill='%23AEAEB2'/%3E%3C/svg%3E";
 
 // ✅ 3RD-B2: hideNav/hideHeader 경로 배열 통합 — 한 곳에서 관리 (✅ 3RD-B1: /media 제거 — MediaTab 네비게이션 정상 노출)
-const HIDE_OVERLAY_PATHS = ['/write', '/write-business', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin', '/payment-history', '/vvip-subscribe', '/admin-dashboard', '/weather', '/user/', '/tide-calendar'];
+const HIDE_OVERLAY_PATHS = ['/write', '/write-business', '/create-crew', '/post/', '/catch/', '/login', '/crew/', '/cctv-admin', '/notice/', '/secret-admin', '/payment-history', '/vvip-subscribe', '/admin-dashboard', '/weather', '/user/', '/tide-calendar', '/meta'];  // ✅ META-GAME: 게임은 전체 화면
 
 // ✅ STATIC IMPORTS: esbuild 단일 번들에서 lazy() + 동적 import() → 404 에러
 // splitting: false 환경에서 동적 chunk 파일이 없으므로 정적 import로 통일
 import MapHome from './pages/MapHome';
-import MediaTab from './pages/MediaTab';
+// import MediaTab from './pages/MediaTab'; // ✅ META-NAV: 커뮤니티 탭에서 lazy 로드
 import CommunityTab from './pages/CommunityTab';
 import Shop from './pages/Shop';
 import MyPage from './pages/MyPage';
@@ -113,6 +113,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import UserProfile from './pages/UserProfile';
 import TideCalendar from './pages/TideCalendar';
 import TideTab from './pages/TideTab';
+import MetaGame from './pages/MetaGame'; // ✅ META-GAME: 낚시 게임(public/meta/game.html)
 
 import CatchUploadPage from './pages/CatchUploadPage';
 import CatchRankingPage from './pages/CatchRankingPage';
@@ -177,7 +178,7 @@ function BackButtonHandler() {
   const location = useLocation();
 
   useEffect(() => {
-    const ROOT_PATHS = ['/', '/community', '/media', '/tide', '/shop', '/mypage', '/catch-ranking', '/catch-upload', '/contest'];
+    const ROOT_PATHS = ['/', '/community', '/media', '/tide', '/shop', '/mypage', '/catch-ranking', '/catch-upload', '/contest'];  // ✅ META-GAME: /meta는 뒤로가기로 이전 화면 복귀(루트 아님)
 
     const isRoot = ROOT_PATHS.includes(location.pathname);
 
@@ -190,11 +191,23 @@ function BackButtonHandler() {
           sessionStorage.setItem('community_return_tab', 'open');
         }
       }
-      if (window.history.length <= 1) {
-        navigate('/community', { replace: true });
-      } else {
-        navigate(-1);
+      // ✅ META-EXIT-FIX: history.length는 게임 iframe 기록까지 세므로 React Router idx(첫 화면이면 0)로 판단
+      const fallback = () => {
+        if ((window.history.state?.idx || 0) === 0) navigate(location.pathname === '/meta' ? '/' : '/community', { replace: true });
+        else navigate(-1);
+      };
+      // ✅ META-BACK (2026-11-07): /meta에서는 게임에 먼저 물어본다. 낚시터 안이면 게임이 지도로 나가기(채비·파이팅·출조 정리)를 하고,
+      // 지도면 게임이 'meta-exit'를 보내 MetaGame이 이전 화면으로. 게임이 답하지 않으면(로딩 중 등) 예전처럼 처리
+      const fr = location.pathname === '/meta' ? document.querySelector('iframe[title="낚시게임"]') : null;
+      if (fr && fr.contentWindow) {
+        let done = false;
+        const onAck = (e) => { if (e.origin === window.location.origin && e.source === fr.contentWindow && e.data && e.data.type === 'meta-ack') { done = true; window.removeEventListener('message', onAck); } };
+        window.addEventListener('message', onAck);
+        try { fr.contentWindow.postMessage({ type: 'meta-back' }, window.location.origin); } catch (x) { /* 무시 */ }
+        setTimeout(() => { window.removeEventListener('message', onAck); if (!done) fallback(); }, 700);
+        return;
       }
+      fallback();
     };
 
     if (CapApp) {
@@ -259,8 +272,8 @@ function BottomNav() {
   const navigate = useNavigate();
   const navItems = [
     { path: '/',          name: '홈',      icon: Home },
-    { path: '/media',     name: '낚시채널', icon: Tv },
     { path: '/community', name: '커뮤니티', icon: Users },
+    { path: '/meta',      name: '낚시게임', icon: Fish },  // ✅ META-GAME: 가운데 탭(2026-11-04)
     { path: '/tide',      name: '물때',    icon: Waves },
 
     { path: '/mypage',    name: '마이',    icon: User },
@@ -613,8 +626,9 @@ export default function App() {
           <>
             <Routes>
               <Route path="/" element={<MapHome />} />
-              <Route path="/media" element={<MediaTab />} />
+              <Route path="/media" element={<Navigate to="/community?tab=media" replace />} /> {/* ✅ META-NAV: 낚시채널은 커뮤니티 안 탭으로 이동(2026-11-04), 기존 /media 링크는 커뮤니티 낚시채널 탭으로 연결 */}
               <Route path="/community" element={<CommunityTab />} />
+              <Route path="/meta" element={<MetaGame />} /> {/* ✅ META-GAME */}
               <Route path="/tide" element={<TideTab />} />
               <Route path="/shop" element={<Shop />} />
 

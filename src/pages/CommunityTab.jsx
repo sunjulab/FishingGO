@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspens
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MessageSquare, Heart, Lock, Users, PlusCircle, Phone, Award, Trash2, Edit2, Share2, X as XIcon, Send } from 'lucide-react';
 const CatchRankingPage = lazy(() => import('./CatchRankingPage'));
+const MediaTab = lazy(() => import('./MediaTab')); // ✅ META-NAV: 낚시채널을 커뮤니티 탭으로 이동
 import { Capacitor } from '@capacitor/core';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore';
 import { AD_CONFIG } from '../constants/adSettings';
@@ -912,6 +913,7 @@ export default function CommunityTab() {
         <div style={{ display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', gap: '0' }}>
           {[
             { key: 'open',     label: '🐟 낚시그램',  color: '#0056D2' },
+            { key: 'media',    label: '📺 낚시채널', color: '#0056D2' },
             { key: 'crew',     label: '크루',       color: '#0056D2' },
             { key: 'notice',   label: '공지사항',   color: '#FF3B30' },
             { key: 'business', label: '선상예약', color: '#0056D2' },
@@ -1022,9 +1024,13 @@ export default function CommunityTab() {
 
 
       {/* 탭 내용 렌더링 영역 */}
-      <div style={{ padding: activeTab === 'ranking' ? '0' : '16px' }}>
-        {(activeTab === 'open' ? loadingPosts : loading) && activeTab !== 'ranking' ? (
+      <div style={{ padding: (activeTab === 'ranking' || activeTab === 'media') ? '0' : '16px' }}>
+        {(activeTab === 'open' ? loadingPosts : loading) && activeTab !== 'ranking' && activeTab !== 'media' ? (
           <div style={{ padding: '16px' }}><SkeletonCard count={5} /></div>
+        ) : activeTab === 'media' ? (
+          <Suspense fallback={<div style={{padding:'32px',textAlign:'center'}}>로딩 중...</div>}>
+            <MediaTab embedded />
+          </Suspense>
         ) : activeTab === 'ranking' ? (
           <Suspense fallback={<div style={{padding:'32px',textAlign:'center'}}>로딩 중...</div>}>
             <KakaoAdBanner type="ali" style={{ margin: '16px 16px 0 16px' }} />
@@ -2100,7 +2106,7 @@ export default function CommunityTab() {
       )}
 
       {/* 플로팅 글쓰기/방만들기 버튼 (FAB) */}
-      {(!((activeTab === 'notice') && !isAdmin)) && (
+      {(!((activeTab === 'notice') && !isAdmin)) && activeTab !== 'media' && (
         <button
           onClick={handleFabClick}
           style={{

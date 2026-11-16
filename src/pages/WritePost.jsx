@@ -268,7 +268,7 @@ export default function WritePost() {
           >
             <div style={{ fontSize: `calc(24px * var(--fs, 1))` }}>💎</div>
             <div>
-              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>PRO 멤버십 — 월 ₩3,300</div>
+              <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>PRO 멤버십 — 월 ₩9,900</div>
               <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.85)' }}>광고 영구 제거 및 심층 낚시 분석 리포트 열람</div>
             </div>
             <div style={{ marginLeft: 'auto', fontSize: `calc(18px * var(--fs, 1))` }}>›</div>

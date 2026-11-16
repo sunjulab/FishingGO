@@ -1,0 +1,671 @@
+{
+ "auditedAt": "2026-10-27",
+ "source": "coast.mof.go.kr /coastScene/json_camera_info.do (39대), 실서버 /api/weather/cctv 조회",
+ "mofCameras": {
+  "2": [
+   "거제 구조라",
+   34.8085532839545,
+   128.690671920776
+  ],
+  "4": [
+   "강릉 남항진",
+   37.76296345,
+   128.9565153
+  ],
+  "9": [
+   "남해 상주",
+   34.720783,
+   127.988046
+  ],
+  "17": [
+   "경주 전촌·나정",
+   35.784886,
+   129.491279
+  ],
+  "51": [
+   "강릉 강문",
+   37.7946166,
+   128.9173251
+  ],
+  "52": [
+   "강릉 경포",
+   37.805453,
+   128.907841
+  ],
+  "53": [
+   "강릉 소돌",
+   37.907017,
+   128.825085
+  ],
+  "54": [
+   "강릉 염전",
+   37.741978,
+   128.98426
+  ],
+  "55": [
+   "강릉 영진",
+   37.86916,
+   128.845279
+  ],
+  "56": [
+   "강릉 정동진",
+   37.6861845,
+   129.0400387
+  ],
+  "57": [
+   "고성 공현진",
+   38.358173,
+   128.509054
+  ],
+  "58": [
+   "고성 교암",
+   38.291047,
+   128.546972
+  ],
+  "59": [
+   "고성 봉포",
+   38.25275,
+   128.566292
+  ],
+  "60": [
+   "고성 초도",
+   38.490699,
+   128.430379
+  ],
+  "61": [
+   "군산 선유도",
+   35.816204,
+   126.411228
+  ],
+  "62": [
+   "동해 하맹방",
+   37.394157,
+   129.225396
+  ],
+  "63": [
+   "보령 대천",
+   36.30563,
+   126.516048
+  ],
+  "65": [
+   "삼척 원평",
+   37.319878,
+   129.27222
+  ],
+  "66": [
+   "서귀포 신양",
+   33.434996,
+   126.923134
+  ],
+  "67": [
+   "서귀포 중문",
+   33.244975,
+   126.411703
+  ],
+  "69": [
+   "속초 영랑",
+   38.2134606,
+   128.5983045
+  ],
+  "71": [
+   "신안 대광",
+   35.103071,
+   126.069566
+  ],
+  "72": [
+   "안산 방아머리",
+   37.283919,
+   126.568053
+  ],
+  "73": [
+   "옹진 장골(덕적도)",
+   37.24888,
+   126.315907
+  ],
+  "74": [
+   "울산 정자",
+   35.628359,
+   129.441832
+  ],
+  "75": [
+   "울산 진하",
+   35.383418,
+   129.346104
+  ],
+  "76": [
+   "울진 월송정",
+   36.74094,
+   129.472092
+  ],
+  "78": [
+   "태안 꽃지",
+   36.496939,
+   126.335205
+  ],
+  "79": [
+   "태안 만리포",
+   36.7864201,
+   126.1335951
+  ],
+  "80": [
+   "부산 송도",
+   35.07545,
+   129.016758
+  ],
+  "81": [
+   "부산 해운대",
+   35.15864904,
+   129.1598721
+  ],
+  "82": [
+   "울진 봉평",
+   37.0445,
+   129.4138
+  ],
+  "84": [
+   "울진 금음리",
+   36.6737,
+   129.4408
+  ],
+  "85": [
+   "목포 대반동",
+   34.7888,
+   126.366
+  ],
+  "86": [
+   "광양 온동",
+   34.8924,
+   127.7269
+  ],
+  "87": [
+   "속초 장사",
+   38.2193,
+   128.592
+  ],
+  "88": [
+   "삼척 문암·초곡",
+   37.31,
+   129.2859
+  ]
+ },
+ "workingMofCodes": [
+  2,
+  4,
+  9,
+  17,
+  51,
+  52,
+  53,
+  54,
+  55,
+  56,
+  57,
+  58,
+  59,
+  60,
+  61,
+  62,
+  63,
+  65,
+  66,
+  67,
+  69,
+  71,
+  72,
+  73,
+  74,
+  75,
+  76,
+  78,
+  79,
+  80,
+  81,
+  82,
+  84,
+  85,
+  86,
+  87,
+  88
+ ],
+ "stations": [
+  {
+   "obsCode": "DT_0099",
+   "name": "고성 가진",
+   "current": "57번 고성 공현진",
+   "currentKm": 1.8,
+   "nearestCode": 57,
+   "nearestName": "고성 공현진",
+   "nearestKm": 1.8
+  },
+  {
+   "obsCode": "DT_0001",
+   "name": "강릉",
+   "current": "51번 강릉 강문",
+   "currentKm": 3.1,
+   "nearestCode": 4,
+   "nearestName": "강릉 남항진",
+   "nearestKm": 1.8
+  },
+  {
+   "obsCode": "DT_0021",
+   "name": "속초",
+   "current": "57번 고성 공현진",
+   "currentKm": 18.5,
+   "nearestCode": 69,
+   "nearestName": "속초 영랑",
+   "nearestKm": 1.1
+  },
+  {
+   "obsCode": "DT_0002",
+   "name": "울진 후포",
+   "current": "카메라 없음",
+   "currentKm": null,
+   "nearestCode": 84,
+   "nearestName": "울진 금음리",
+   "nearestKm": 2.0
+  },
+  {
+   "obsCode": "DT_0033",
+   "name": "동해 묵호",
+   "current": "56번 강릉 정동진",
+   "currentKm": 16.6,
+   "nearestCode": 56,
+   "nearestName": "강릉 정동진",
+   "nearestKm": 16.6
+  },
+  {
+   "obsCode": "DT_0003",
+   "name": "삼척",
+   "current": "53번 강릉 소돌",
+   "currentKm": 59.6,
+   "nearestCode": 62,
+   "nearestName": "동해 하맹방",
+   "nearestKm": 7.7
+  },
+  {
+   "obsCode": "DT_0036",
+   "name": "경주 감포",
+   "current": "74번 울산 정자",
+   "currentKm": 21.8,
+   "nearestCode": 17,
+   "nearestName": "경주 전촌·나정",
+   "nearestKm": 3.9
+  },
+  {
+   "obsCode": "DT_0004",
+   "name": "부산 해운대",
+   "current": "81번 부산 해운대",
+   "currentKm": 0.0,
+   "nearestCode": 81,
+   "nearestName": "부산 해운대",
+   "nearestKm": 0.0
+  },
+  {
+   "obsCode": "DT_0005",
+   "name": "여수",
+   "current": "70번 (응답 없음)",
+   "currentKm": null,
+   "nearestCode": 86,
+   "nearestName": "광양 온동",
+   "nearestKm": 16.4
+  },
+  {
+   "obsCode": "DT_0016",
+   "name": "통영",
+   "current": "9번 남해 상주",
+   "currentKm": 43.2,
+   "nearestCode": 2,
+   "nearestName": "거제 구조라",
+   "nearestKm": 23.9
+  },
+  {
+   "obsCode": "DT_0034",
+   "name": "거제",
+   "current": "84번 울진 금음리",
+   "currentKm": 217.7,
+   "nearestCode": 2,
+   "nearestName": "거제 구조라",
+   "nearestKm": 1.1
+  },
+  {
+   "obsCode": "DT_0018",
+   "name": "완도",
+   "current": "71번 신안 대광",
+   "currentKm": 108.2,
+   "nearestCode": 85,
+   "nearestName": "목포 대반동",
+   "nearestKm": 64.1
+  },
+  {
+   "obsCode": "DT_0014",
+   "name": "광양",
+   "current": "카메라 없음",
+   "currentKm": null,
+   "nearestCode": 86,
+   "nearestName": "광양 온동",
+   "nearestKm": 2.2
+  },
+  {
+   "obsCode": "DT_0007",
+   "name": "인천",
+   "current": "카메라 없음",
+   "currentKm": null,
+   "nearestCode": 72,
+   "nearestName": "안산 방아머리",
+   "nearestKm": 20.6
+  },
+  {
+   "obsCode": "DT_0008",
+   "name": "보령",
+   "current": "63번 보령 대천",
+   "currentKm": 5.2,
+   "nearestCode": 63,
+   "nearestName": "보령 대천",
+   "nearestKm": 5.2
+  },
+  {
+   "obsCode": "DT_0009",
+   "name": "군산",
+   "current": "79번 태안 만리포",
+   "currentKm": 98.6,
+   "nearestCode": 61,
+   "nearestName": "군산 선유도",
+   "nearestKm": 21.8
+  },
+  {
+   "obsCode": "DT_0030",
+   "name": "태안",
+   "current": "63번 보령 대천",
+   "currentKm": 57.2,
+   "nearestCode": 79,
+   "nearestName": "태안 만리포",
+   "nearestKm": 6.8
+  },
+  {
+   "obsCode": "DT_0006",
+   "name": "목포",
+   "current": "65번 삼척 원평",
+   "currentKm": 383.2,
+   "nearestCode": 85,
+   "nearestName": "목포 대반동",
+   "nearestKm": 1.1
+  },
+  {
+   "obsCode": "DT_0011",
+   "name": "서귀포",
+   "current": "83번 (응답 없음)",
+   "currentKm": null,
+   "nearestCode": 67,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 14.0
+  },
+  {
+   "obsCode": "DT_0010",
+   "name": "제주 한림",
+   "current": "80번 부산 송도",
+   "currentKm": 313.3,
+   "nearestCode": 67,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 23.3
+  },
+  {
+   "obsCode": "DT_0045",
+   "name": "성산포",
+   "current": "82번 울진 봉평",
+   "currentKm": 457.0,
+   "nearestCode": 66,
+   "nearestName": "서귀포 신양",
+   "nearestKm": 4.1
+  }
+ ],
+ "points31": [
+  {
+   "name": "묵호항 방파제",
+   "current": "강릉 정동진",
+   "currentKm": 17.2,
+   "nearestName": "강릉 정동진",
+   "nearestKm": 17.2,
+   "nearestCode": 56
+  },
+  {
+   "name": "강릉 안목항 방파제",
+   "current": "강릉 강문",
+   "currentKm": 3.9,
+   "nearestName": "강릉 남항진",
+   "nearestKm": 1.2,
+   "nearestCode": 4
+  },
+  {
+   "name": "동해 어달항",
+   "current": "강릉 정동진",
+   "currentKm": 15.5,
+   "nearestName": "강릉 정동진",
+   "nearestKm": 15.5,
+   "nearestCode": 56
+  },
+  {
+   "name": "경주 감포항",
+   "current": "울산 정자",
+   "currentKm": 20.4,
+   "nearestName": "경주 전촌·나정",
+   "nearestKm": 2.6,
+   "nearestCode": 17
+  },
+  {
+   "name": "통영 도남동 방파제",
+   "current": "남해 상주",
+   "currentKm": 42.7,
+   "nearestName": "거제 구조라",
+   "nearestKm": 22.9,
+   "nearestCode": 2
+  },
+  {
+   "name": "사천 삼천포항 방파제",
+   "current": "없음",
+   "currentKm": null,
+   "nearestName": "남해 상주",
+   "nearestKm": 23.8,
+   "nearestCode": 9
+  },
+  {
+   "name": "남해 가천 갯바위",
+   "current": "70번 응답 없음",
+   "currentKm": null,
+   "nearestName": "남해 상주",
+   "nearestKm": 8.6,
+   "nearestCode": 9
+  },
+  {
+   "name": "목포 북항 방파제",
+   "current": "삼척 원평",
+   "currentKm": 382.9,
+   "nearestName": "목포 대반동",
+   "nearestKm": 1.9,
+   "nearestCode": 85
+  },
+  {
+   "name": "여수 금오도 갯바위",
+   "current": "70번 응답 없음",
+   "currentKm": null,
+   "nearestName": "남해 상주",
+   "nearestKm": 30.2,
+   "nearestCode": 9
+  },
+  {
+   "name": "완도 청산도 갯바위",
+   "current": "신안 대광",
+   "currentKm": 128.0,
+   "nearestName": "서귀포 신양",
+   "nearestKm": 80.8,
+   "nearestCode": 66
+  },
+  {
+   "name": "진도 가사도 갯바위",
+   "current": "삼척 원평",
+   "currentKm": 429.8,
+   "nearestName": "목포 대반동",
+   "nearestKm": 45.9,
+   "nearestCode": 85
+  },
+  {
+   "name": "군산 선유도 갯바위",
+   "current": "태안 만리포",
+   "currentKm": 111.6,
+   "nearestName": "군산 선유도",
+   "nearestKm": 1.0,
+   "nearestCode": 61
+  },
+  {
+   "name": "보성 득량만 갯바위",
+   "current": "신안 대광",
+   "currentKm": 113.3,
+   "nearestName": "광양 온동",
+   "nearestKm": 62.5,
+   "nearestCode": 86
+  },
+  {
+   "name": "부안 모항 갯바위",
+   "current": "태안 만리포",
+   "currentKm": 138.1,
+   "nearestName": "군산 선유도",
+   "nearestKm": 27.5,
+   "nearestCode": 61
+  },
+  {
+   "name": "제주 한림항 방파제",
+   "current": "부산 송도",
+   "currentKm": 313.8,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 23.4,
+   "nearestCode": 67
+  },
+  {
+   "name": "보령 무창포 갯바위",
+   "current": "보령 대천",
+   "currentKm": 6.5,
+   "nearestName": "보령 대천",
+   "nearestKm": 6.5,
+   "nearestCode": 63
+  },
+  {
+   "name": "서천 비인 갯바위",
+   "current": "태안 만리포",
+   "currentKm": 84.4,
+   "nearestName": "보령 대천",
+   "nearestKm": 21.4,
+   "nearestCode": 63
+  },
+  {
+   "name": "제주 모슬포항 방파제",
+   "current": "83번 응답 없음",
+   "currentKm": null,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 15.4,
+   "nearestCode": 67
+  },
+  {
+   "name": "제주 서귀포항 방파제",
+   "current": "83번 응답 없음",
+   "currentKm": null,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 13.9,
+   "nearestCode": 67
+  },
+  {
+   "name": "제주 성산포항 방파제",
+   "current": "울진 봉평",
+   "currentKm": 456.8,
+   "nearestName": "서귀포 신양",
+   "nearestKm": 4.1,
+   "nearestCode": 66
+  },
+  {
+   "name": "제주 김녕항 방파제",
+   "current": "울진 봉평",
+   "currentKm": 457.4,
+   "nearestName": "서귀포 신양",
+   "nearestKm": 20.5,
+   "nearestCode": 66
+  },
+  {
+   "name": "제주 위미항 방파제",
+   "current": "83번 응답 없음",
+   "currentKm": null,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 23.4,
+   "nearestCode": 67
+  },
+  {
+   "name": "옥계 금진항",
+   "current": "강릉 정동진",
+   "currentKm": 4.0,
+   "nearestName": "강릉 정동진",
+   "nearestKm": 4.0,
+   "nearestCode": 56
+  },
+  {
+   "name": "제주 가문동포구",
+   "current": "부산 송도",
+   "currentKm": 298.8,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 26.9,
+   "nearestCode": 67
+  },
+  {
+   "name": "광진항 내항",
+   "current": "강릉 소돌",
+   "currentKm": 59.7,
+   "nearestName": "동해 하맹방",
+   "nearestKm": 7.4,
+   "nearestCode": 62
+  },
+  {
+   "name": "제주 공천포 방파제",
+   "current": "83번 응답 없음",
+   "currentKm": null,
+   "nearestName": "서귀포 중문",
+   "nearestKm": 21.6,
+   "nearestCode": 67
+  },
+  {
+   "name": "강릉 금진항옆 (에깅 훈련소)",
+   "current": "강릉 정동진",
+   "currentKm": 3.9,
+   "nearestName": "강릉 정동진",
+   "nearestKm": 3.9,
+   "nearestCode": 56
+  },
+  {
+   "name": "강릉 안인 방파제",
+   "current": "강릉 강문",
+   "currentKm": 9.1,
+   "nearestName": "강릉 염전",
+   "nearestKm": 0.8,
+   "nearestCode": 54
+  },
+  {
+   "name": "강릉 영진 작은방파제",
+   "current": "강릉 강문",
+   "currentKm": 10.2,
+   "nearestName": "강릉 영진",
+   "nearestKm": 0.3,
+   "nearestCode": 55
+  },
+  {
+   "name": "광진항 갯바위",
+   "current": "강릉 소돌",
+   "currentKm": 59.6,
+   "nearestName": "동해 하맹방",
+   "nearestKm": 7.5,
+   "nearestCode": 62
+  },
+  {
+   "name": "강릉 금진 헌화로 갯바위",
+   "current": "강릉 정동진",
+   "currentKm": 3.2,
+   "nearestName": "강릉 정동진",
+   "nearestKm": 3.2,
+   "nearestCode": 56
+  }
+ ]
+}

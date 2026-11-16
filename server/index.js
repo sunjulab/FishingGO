@@ -734,15 +734,19 @@ app.post('/api/channel/videos', (req, res) => {
   res.json({ success: true, video });
 });
 
-app.use(cors({
-  origin: (origin, cb) => {
-    // ✅ FIX-CORS-WHITELIST: 허가된 출처만 허용
-    const allowed = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173')
-      .split(',').map(s => s.trim());
-    if (!origin || allowed.includes(origin) || allowed.includes('*')) cb(null, true);
-    else cb(new Error('CORS policy: ' + origin + ' not allowed'));
-  },        // 모든 origin 허용 (JWT 인증으로 벴안 유지)
-  credentials: true,
+// ✅ FIX-CORS-500 (2026-11-04): 허가되지 않은 출처를 에러로 넘기면 전역 에러 핸들러가 500을 돌려줘서(CORS 헤더 없음)
+//   공개 날씨 조회까지 실패했다. 허가 안 된 출처는 CORS 헤더만 빼고 정상 처리(브라우저가 차단), 공개 날씨 GET은 모든 출처 허용(쿠키 없이).
+const CORS_DEFAULT = ['https://www.fishing-go.com', 'https://fishing-go.com', 'https://fishing-go.vercel.app', 'https://localhost', 'capacitor://localhost', 'http://localhost', 'http://localhost:5173'];
+const CORS_ALLOWED = new Set([...CORS_DEFAULT, ...String(process.env.ALLOWED_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean)]);
+const corsRejected = new Set(); // 거절한 출처는 한 번씩만 기록(배포 전 기기의 location.origin 확인용)
+app.use(cors((req, cb) => {
+  const origin = req.header('Origin');
+  // ✅ FIX-CORS-WHITELIST: 허가된 출처만 허용(쿠키·인증 포함)
+  //   기본 목록(웹 www/apex · vercel 배포 주소 · 앱 WebView https/capacitor/http localhost · 개발 서버) + ALLOWED_ORIGIN(쉼표 구분)을 합친다
+  if (!origin || CORS_ALLOWED.has(origin) || CORS_ALLOWED.has('*')) return cb(null, { origin: true, credentials: true });
+  if ((req.method === 'GET' || req.method === 'OPTIONS') && req.path.startsWith('/api/weather/')) return cb(null, { origin: '*', credentials: false });
+  if (!corsRejected.has(origin) && corsRejected.size < 50) { corsRejected.add(origin); logger.warn('[CORS] 허용 목록에 없는 출처:', origin); }
+  return cb(null, { origin: false });
 }));
 
 // ── 접속자 추적 미들웨어 (CORS 이후 — JWT 보유 요청에서 lastSeen 갱신) ──────────
@@ -2801,10 +2805,10 @@ function getTidePhase(lunarDay, region = '남해') {
   // FIX-TIDENUM v3: 바다타임 실측 기반 음력->물때 공식 (서해 7물식, 동·남해 8물식)
   const isWest = region === '서해';
   let tideNum = isWest ? (((lunarDay + 5) % 15) + 1) : (((lunarDay + 6) % 15) + 1);
-  const phaseMap = {
-    7: '7물(사리)', 8: '8물(사리)', 15: '조금'
-  };
-  return phaseMap[tideNum] || `${tideNum}물`;
+  // LS #267: 사리 표시도 물때식에 맞춘다 — 서해(7물때식)는 6·7물, 동·남해(8물때식)는 7·8물(게임 용어 설명 '사리가 서해 6물, 남해 7물'과 같음)
+  const sari = isWest ? [6, 7] : [7, 8];
+  if (tideNum === 15) return '조금';
+  return sari.includes(tideNum) ? `${tideNum}물(사리)` : `${tideNum}물`;
 }
 
 // 실제 KHOA(해양수산부) 조위관측소 마스터 데이터
@@ -3234,7 +3238,7 @@ app.get('/api/debug-multer', verifyToken, (req, res) => { // ✅ SEC-DEBUG: 관�
 //   PORTONE_API_SECRET : 포트원 API 시크릿  (테스트: test_sk_...)
 // 미설정 시: 테스트 모드 (금액 검증 생략, 구독만 즉시 처리)
 
-const PLAN_PRICES = { LITE: 3300, PRO: 110000, VVIP: 550000 }; // ✅ PRICE-UNIFY: LITE 3,300원 통일 (Google Play 동일)
+const PLAN_PRICES = { LITE: 9900, PRO: 110000, VVIP: 550000 }; // ✅ PRICE-9900(2026-11-12): 3,300원 요금제 폐지 → 9,900원 (Google Play 동일)
 // ✅ PRO-CLOSED: 110,000원 PRO 플랜 임시 판매중지 — 신규 결제/구독 차단 (기존 구독자 등급·자동갱신 데이터는 유지)
 // ✅ VVIP-CLOSED: 550,000원 VVIP 플랜 폐지 — 신규 결제/구독 차단 (기존 구독자는 만료일까지 유지)
 const CLOSED_PLANS = new Set(['PRO', 'VVIP']);
@@ -3257,8 +3261,9 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
 
     // ── 상품 ID → 플랜 매핑 (3개 플랜 전체 지원) ────────────────
     const IAP_PLAN_MAP = {
-      'kr.fishinggo.app.lite_monthly': { planId: 'BASIC', tier: 'BUSINESS_LITE', amount: 3300,   label: '베이직', days: 31  }, // ✅ Google Play Console KRW 3,300 동기화
-      'kr.fishinggo.app.pro_monthly':  { planId: 'PRO',   tier: 'PRO',           amount: 110000, label: 'PRO',   days: 31  },
+      // ✅ PRO-9900(2026-11-16): 3,300원 상품(lite_monthly) 폐지 — 기존 구독자 갱신·복원만 허용. 신규는 '낚시GO PRO'(pro_monthly) 9,900원
+      'kr.fishinggo.app.lite_monthly': { planId: 'BASIC', tier: 'BUSINESS_LITE', amount: 3300,   label: '베이직(판매종료)', days: 31, legacyOnly: true },
+      'kr.fishinggo.app.pro_monthly':  { planId: 'BASIC', tier: 'BUSINESS_LITE', amount: 9900,   label: 'PRO 멤버십', days: 31  }, // ✅ PRO-9900: 화면의 'PRO 멤버십'과 같은 혜택
       'kr.fishinggo.app.vvip_monthly': { planId: 'VVIP',  tier: 'BUSINESS_VIP',  amount: 550000, label: 'VVIP',  days: 31  },
     };
 
@@ -3270,12 +3275,17 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
     if (CLOSED_PLANS.has(planInfo.planId) && tp.tier !== planInfo.tier) {
       return res.status(410).json({ error: '현재 판매가 중지된 플랜입니다.', code: 'PLAN_CLOSED' });
     }
+    // ✅ PRO-9900: 판매종료 상품은 이미 그 등급인 기존 구독자만 갱신·복원 가능
+    if (planInfo.legacyOnly && tp.tier !== planInfo.tier) {
+      return res.status(410).json({ error: '판매가 종료된 요금제입니다. PRO 멤버십(9,900원)을 이용해 주세요.', code: 'PLAN_CLOSED' });
+    }
 
     // ── Google Play Developer API 검증 ─────────────────────────
     const serviceAccountJson = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT;
     let verified = false;
     let autoRenewing = true;
     let googleExpiryMs = null; // ✅ Google Play 실제 만료 시각 (테스트: 5분, 실제: ~30일)
+    let googlePaidKrw = null;  // ✅ PRICE-9900: Google이 알려준 실제 결제 금액(기존 3,300원 구독자 갱신분을 9,900원으로 잘못 기록하지 않도록)
 
     if (serviceAccountJson) {
       try {
@@ -3293,10 +3303,23 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
           token: purchaseToken,
         });
         const sub = result.data;
-        // paymentState: 0=무료체험중, 1=결제완료, 2=지연결제 — 0,1,2 모두 유효
-        if (sub.paymentState === 0 || sub.paymentState === 1 || sub.paymentState === 2) {
+        // ✅ PAY-FAIL-AUDIT(2026-11-11): Google 공식 정의 — 0=결제 대기, 1=결제 완료, 2=무료 체험, 3=변경 대기
+        // 결제 대기(0)·변경 대기(3)는 돈이 아직 안 들어온 상태 → 등급 부여 금지. 만료된 구독도 거부
+        const subExpiryMs = sub.expiryTimeMillis ? parseInt(sub.expiryTimeMillis, 10) : 0;
+        if (subExpiryMs && subExpiryMs < Date.now()) {
+          (logger?.warn || console.warn)('[Google IAP] 이미 만료된 구독 토큰 → 거부');
+          return res.status(402).json({ error: '만료된 구독입니다. 다시 구매해주세요.', code: 'IAP_EXPIRED' });
+        }
+        if (sub.paymentState === 0) {
+          return res.status(402).json({ error: '결제가 아직 완료되지 않았습니다. 결제 완료 후 자동으로 적용됩니다.', code: 'IAP_PENDING' });
+        }
+        if (sub.paymentState === 1 || sub.paymentState === 2) {
           verified = true;
           autoRenewing = sub.autoRenewing !== false;
+          if (sub.priceCurrencyCode === 'KRW' && sub.priceAmountMicros) {
+            const krw = Math.round(Number(sub.priceAmountMicros) / 1e6);
+            if (Number.isFinite(krw) && krw > 0) googlePaidKrw = krw;
+          }
           // ✅ Google Play의 실제 만료 시각 추출 (테스트 구독: 5분, 실제: 30일)
           if (sub.expiryTimeMillis) {
             googleExpiryMs = parseInt(sub.expiryTimeMillis, 10);
@@ -3340,7 +3363,8 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
     }
 
     // ── DB 티어 업데이트 ────────────────────────────────────────
-    const newTier  = planInfo.tier;
+    // ✅ PRO-9900: 기존 상위 등급(기존 PRO·VVIP·마스터)은 9,900원 결제로 내려가지 않게 유지
+    const newTier  = ['PRO', 'BUSINESS_VIP', 'MASTER'].includes(tp.tier) ? tp.tier : planInfo.tier;
     // ✅ Google Play 실제 만료 시각 우선 사용 (테스트 구독 5분 정확히 반영)
     // Google Play API 미사용 시 planInfo.days 폴백
     const expiresAt = googleExpiryMs
@@ -3377,7 +3401,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
         userId: tp.id || tp.email, email: tp.email,
         pg: 'google_play', method: 'iap',
         planId: planInfo.planId, tier: newTier,
-        amount: planInfo.amount, purchaseToken, productId,
+        amount: googlePaidKrw || planInfo.amount, purchaseToken, productId,
         status: 'paid', paidAt: new Date(),
       }).catch(e => (logger?.warn || console.warn)('[Google IAP] 이력 저장 실패:', e.message));
     }
@@ -3408,7 +3432,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
 // ══════════════════════════════════════════════════════════════════
 const PAYPLE_ENABLED = process.env.PAYPLE_ENABLED === 'true';
 const PAYPLE_PLAN_MAP = {
-  BASIC: { tier: 'BUSINESS_LITE', amount: 3300,   label: '베이직', days: 31  }, // ✅ PRICE-UNIFY: 3,300원
+  BASIC: { tier: 'BUSINESS_LITE', amount: 9900,   label: '베이직', days: 31  }, // ✅ PRICE-9900: 9,900원
   PRO:   { tier: 'PRO',           amount: 110000, label: 'PRO',    days: 365 },
   VVIP:  { tier: 'BUSINESS_VIP',  amount: 550000, label: 'VVIP',   days: 31  },
 };
@@ -3566,6 +3590,23 @@ app.post('/api/payment/verify', async (req, res) => {
             imp_uid, reason: '결제 금액 불일치 (위변조 의심)',
           }, { headers: { Authorization: accessToken } });
           return res.status(400).json({ error: '결제 금액이 일치하지 않습니다.' });
+        }
+        // ✅ PAY-FAIL-AUDIT: 다른 주문의 결제건을 끼워 넣는 것 차단
+        if (merchant_uid && payment.merchant_uid && payment.merchant_uid !== merchant_uid) {
+          return res.status(400).json({ error: '주문 정보가 일치하지 않습니다.' });
+        }
+        // ✅ PAY-FAIL-AUDIT: 등급 부여 전에 결제 이력을 먼저 남김 → 같은 imp_uid로 여러 계정·반복 연장 불가
+        if (dbReady && PaymentHistory) {
+          try {
+            await PaymentHistory.create({
+              userId, userName, email: tp.email, planId, tier: expectedTier, pg: 'portone', method: 'portone',
+              pgProvider: payment.pg_provider || undefined, paymentType: 'one_time',
+              amount: payment.amount, status: 'paid', imp_uid, merchant_uid: payment.merchant_uid || merchant_uid || undefined,
+              paidAt: new Date(),
+            });
+          } catch (e) {
+            return res.status(409).json({ error: '이미 처리된 결제입니다.' });
+          }
         }
         (logger?.info || console.log)(`[결제검증] ✅ ${userName} / ${planId} / ${payment.amount}원 / ${imp_uid}`);
       } catch (verifyErr) {
@@ -9576,7 +9617,7 @@ setInterval(() => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 const BILLING_PLAN_MAP = {
-  LITE: { tier: 'BUSINESS_LITE', amount: 3300 },  // ✅ Google Play Console KRW 3,300 동기화
+  LITE: { tier: 'BUSINESS_LITE', amount: 9900 },  // ✅ PRICE-9900: 신규 9,900원 (기존 구독자는 등록 당시 sub.amount로 계속 청구)
   PRO: { tier: 'PRO', amount: 110000 },
   VVIP: { tier: 'BUSINESS_VIP', amount: 550000 },
 };
@@ -9595,7 +9636,8 @@ async function getPortoneToken() {
 async function chargeBilling(sub) {
   const token = await getPortoneToken();
   if (!token) {
-    // 테스트모드: 실제 청구 없이 성공 처리
+    // ✅ PAY-FAIL-AUDIT: 운영 환경에서 결제 키가 없으면 청구가 불가능 → 성공 처리 금지(무상 연장 차단)
+    if (process.env.NODE_ENV === 'production') throw new Error('결제 키 미설정 — 자동청구 불가');
     (logger?.info || console.log)(`[BillingTest] 테스트모드 자동청구 성공 - ${sub.userId} / ${sub.planId}`);
     return { success: true, testMode: true };
   }
@@ -9631,6 +9673,14 @@ async function processSubscription(sub) {
         { $or: [{ email: sub.userId }, { id: sub.userId }] },
         { tier: BILLING_PLAN_MAP[sub.planId]?.tier, subscriptionExpiresAt: next }
       ).catch(() => { });
+    }
+    // ✅ PAY-FAIL-AUDIT: 자동청구 성공도 결제 이력에 남김 (실매출 집계 반영)
+    if (dbReady && PaymentHistory && result && !result.testMode) {
+      await PaymentHistory.create({
+        userId: sub.userId, userName: sub.userName, planId: sub.planId, tier: BILLING_PLAN_MAP[sub.planId]?.tier,
+        pg: 'portone', method: 'billing', pgProvider: sub.pgProvider, paymentType: 'billing_auto',
+        amount: sub.amount, status: 'paid', imp_uid: result.imp_uid, paidAt: new Date(),
+      }).catch(e => (logger?.warn || console.warn)('[Billing] 이력 저장 실패:', e.message));
     }
     (logger?.info || console.log)(`[Billing] ✅ 자동청구 성공 - ${sub.userId} / ${sub.planId} / ${sub.amount}원`);
   } catch (err) {
@@ -9707,6 +9757,7 @@ async function runFishingScoreAlarm() {
 
 // 가상 알람푸쉬 테스트용 임시 API
 app.get('/api/test-score-alarm', async (req, res) => {
+  if (!isMaster(req)) return res.status(403).json({ error: '관리자 전용' }); // ✅ PAY-FAIL-AUDIT: 누구나 전체 푸시를 보낼 수 있던 문제 차단
   try {
     await runFishingScoreAlarm();
     res.json({ success: true, message: '가상 알람 스케줄러 수동 실행 완료' });
@@ -9759,16 +9810,35 @@ app.post('/api/payment/billing/register', async (req, res) => {
       if (!imp_uid || typeof imp_uid !== 'string') return res.status(400).json({ error: '첫 결제 정보(imp_uid)가 없습니다.' });
     }
     if (!billingTestMode) {
+      // ✅ PAY-FAIL-AUDIT: 이미 쓰인 첫 결제건 재사용 차단
+      if (dbReady && PaymentHistory) {
+        const usedImp = await PaymentHistory.findOne({ imp_uid }).lean().catch(() => null);
+        if (usedImp) return res.status(409).json({ error: '이미 처리된 결제입니다.' });
+      }
+      let firstPayment;
       try {
         const token = await getPortoneToken();
         const payRes = await axios.get(`https://api.iamport.kr/payments/${imp_uid}`, {
           headers: { Authorization: token },
         });
-        const payment = payRes.data.response;
-        if (payment.status !== 'paid' || payment.amount !== plan.amount)
+        firstPayment = payRes.data.response;
+        if (firstPayment.status !== 'paid' || firstPayment.amount !== plan.amount)
           return res.status(400).json({ error: '첫 결제 금액 불일치' });
       } catch (e) {
         return res.status(500).json({ error: '첫 결제 검증 실패: ' + e.message });
+      }
+      // ✅ PAY-FAIL-AUDIT: 등급 부여 전에 결제 이력 선기록
+      if (dbReady && PaymentHistory) {
+        try {
+          await PaymentHistory.create({
+            userId, userName, email: tp.email, planId, tier: plan.tier, pg: 'portone', method: 'billing',
+            pgProvider: pgProvider || firstPayment.pg_provider || undefined, paymentType: 'billing_first',
+            amount: firstPayment.amount, status: 'paid', imp_uid, merchant_uid: firstPayment.merchant_uid || undefined,
+            paidAt: new Date(),
+          });
+        } catch (e) {
+          return res.status(409).json({ error: '이미 처리된 결제입니다.' });
+        }
       }
     }
 
@@ -10267,21 +10337,35 @@ app.get('/api/admin/revenue', async (req, res) => {
 
     const now = new Date();
     const month1 = new Date(now.getUTCFullYear(), now.getUTCMonth(), 1);
-    let stats = { totalRevenue: 0, monthRevenue: 0, activeSubscriptions: 0, planBreakdown: {}, recentPayments: [] };
+    let stats = { totalRevenue: 0, monthRevenue: 0, activeSubscriptions: 0, paidUsers: 0, activePaidUsers: 0, unverifiedCount: 0, unverifiedAmount: 0, planBreakdown: {}, recentPayments: [] };
 
     if (dbReady && PaymentHistory && Subscription) {
-      const [allPaid, monthPaid, activeSubs, recentList] = await Promise.all([
-        PaymentHistory.aggregate([{ $match: { status: 'paid', isTest: { $ne: true } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-        PaymentHistory.aggregate([{ $match: { status: 'paid', createdAt: { $gte: month1 }, isTest: { $ne: true } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      // ✅ REAL-PAID(2026-11-11): 결제사 확인 근거(imp_uid·Google 구매토큰·페이플 웹훅)가 있는 결제만 실매출로 집계
+      const VERIFIED = { status: 'paid', isTest: { $ne: true }, $or: [
+        { imp_uid: { $exists: true, $nin: [null, ''] } },
+        { purchaseToken: { $exists: true, $nin: [null, ''] } },
+        { pg: 'payple' },
+      ] };
+      const since31 = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+      const [allPaid, monthPaid, activeSubs, recentList, payers, activePayers, unverified, planAgg] = await Promise.all([
+        PaymentHistory.aggregate([{ $match: VERIFIED }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+        PaymentHistory.aggregate([{ $match: { ...VERIFIED, createdAt: { $gte: month1 } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
         Subscription.countDocuments({ status: 'active', isTest: { $ne: true } }),
-        PaymentHistory.find({ status: 'paid', isTest: { $ne: true } }).sort({ createdAt: -1 }).limit(10).lean(),
+        PaymentHistory.find(VERIFIED).sort({ createdAt: -1 }).limit(10).select('userId userName planId pgProvider pg amount status createdAt merchant_uid').lean(),
+        PaymentHistory.distinct('userId', VERIFIED),
+        PaymentHistory.distinct('userId', { ...VERIFIED, createdAt: { $gte: since31 } }),
+        PaymentHistory.aggregate([{ $match: { status: 'paid', isTest: { $ne: true }, imp_uid: { $in: [null, ''] }, purchaseToken: { $in: [null, ''] }, pg: { $ne: 'payple' } } }, { $group: { _id: null, n: { $sum: 1 }, total: { $sum: '$amount' } } }]),
+        PaymentHistory.aggregate([{ $match: VERIFIED }, { $group: { _id: '$planId', count: { $sum: 1 }, revenue: { $sum: '$amount' } } }]),
       ]);
-      const breakdown = await Subscription.aggregate([{ $match: { status: 'active', isTest: { $ne: true } } }, { $group: { _id: '$planId', count: { $sum: 1 }, revenue: { $sum: '$amount' } } }]);
 
       stats.totalRevenue = allPaid[0]?.total || 0;
       stats.monthRevenue = monthPaid[0]?.total || 0;
       stats.activeSubscriptions = activeSubs;
-      stats.planBreakdown = Object.fromEntries(breakdown.map(b => [b._id, { count: b.count, revenue: b.revenue }]));
+      stats.paidUsers = payers.length;
+      stats.activePaidUsers = activePayers.length;
+      stats.unverifiedCount = unverified[0]?.n || 0;
+      stats.unverifiedAmount = unverified[0]?.total || 0;
+      stats.planBreakdown = Object.fromEntries(planAgg.map(b => [b._id || '기타', { count: b.count, revenue: b.revenue }]));
       stats.recentPayments = recentList;
     } else {
       // 인메모리 통계

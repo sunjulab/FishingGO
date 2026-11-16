@@ -15,7 +15,7 @@ export const UCB_ENABLED = false; // import.meta.env.VITE_UCB_ENABLED === 'true'
 
 /** 페이플 상품 정보 */
 export const PAYPLE_PRODUCTS = {
-  BASIC: { planId: 'BASIC', price: 3300,   label: 'BASIC 월 구독',  period: '월',  tier: 'BUSINESS_LITE' }, // ✅ PRICE-UNIFY: 3,300원
+  BASIC: { planId: 'BASIC', price: 9900,   label: 'BASIC 월 구독',  period: '월',  tier: 'BUSINESS_LITE' }, // ✅ PRICE-9900: 9,900원
   PRO:   { planId: 'PRO',   price: 110000, label: 'PRO 월 구독',    period: '월',  tier: 'PRO', closed: true }, // ✅ PRO-CLOSED: 임시 판매중지
   VVIP:  { planId: 'VVIP',  price: 550000, label: 'VVIP 월 구독',  period: '월',  tier: 'BUSINESS_VIP', closed: true }, // ✅ VVIP-CLOSED: 폐지
 };

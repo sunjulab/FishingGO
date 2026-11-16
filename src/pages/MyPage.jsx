@@ -1367,7 +1367,7 @@ export default function MyPage() {
                   {
                     tier: 'BUSINESS_LITE',
                     name: 'PRO 멤버십',
-                    price: '₩3,300/월',
+                    price: '₩9,900/월',
                     badge: 'PRO',
                     badgeColor: '#fff',
                     badgeBg: 'linear-gradient(135deg, #0056D2, #003fa3)',

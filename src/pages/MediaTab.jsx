@@ -130,7 +130,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 2592000)}개월 전`;
 }
 
-export default function MediaTab() {
+export default function MediaTab({ embedded = false }) { // ✅ META-NAV: 커뮤니티 탭 안에 들어갈 때 embedded
   const [activeChip, setActiveChip] = useState('전체');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -246,7 +246,7 @@ export default function MediaTab() {
   // VideoCard, SectionHeader → 모듈 레벨 컴포넌트 (위로 이동됨 — 렌더마다 재생성 방지)
 
   return (
-    <div className="page-container" style={{ backgroundColor: '#F2F2F7', overflowX: 'hidden' }}>
+    <div className={embedded ? undefined : 'page-container'} style={{ backgroundColor: '#F2F2F7', overflowX: 'hidden' }}>
 
       {/* 전체화면 모달 */}
       {selectedVideo && (
@@ -309,8 +309,8 @@ export default function MediaTab() {
       )}
 
       {/* 헤더 */}
-      <div style={{ backgroundColor: '#fff', padding: '30px 20px 10px', borderBottom: '1px solid #E5E5EA' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+      <div style={{ backgroundColor: '#fff', padding: embedded ? '12px 20px 10px' : '30px 20px 10px', borderBottom: '1px solid #E5E5EA' }}>
+        <div style={{ display: embedded ? 'none' : 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ padding: '8px', backgroundColor: '#0056D2', borderRadius: '14px', color: '#fff' }}><Tv size={22} /></div>
             <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '950', color: '#1C1C1E', margin: 0 }}>낚시채널</h1>

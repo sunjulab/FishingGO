@@ -48,12 +48,15 @@ const HARBORS_STATIC = [
 const REGION_TABS  = ['전체', '동해권', '남해권', '서해권', '제주권'];
 const REGION_EMOJI = { '동해권': '🌊', '남해권': '⚓', '서해권': '🦀', '제주권': '🌺' };
 
+// ✅ V50 (2026-11-16): 낚시 게임(방구석 낚시꾼) 혜택 줄 — 게임이 등급분류를 받고 출시된 뒤에 true로 바꾼다(그 전에는 약속하지 않음)
+const META_GAME_LIVE = false;
+
 /* ── 플랜 정의 ──────────────────────────────────────────────────── */
 const PLANS = [
   {
     key: 'BASIC',
-    label: 'PRO 멤버십', // The user requested the UI text to say PRO 멤버십 but internally it's LITE
-    price: '₩3,300',
+    label: 'PRO 멤버십', // ✅ PRO-9900: Play 상품 pro_monthly(9,900원) 결제 → 등급 BUSINESS_LITE(화면 표시 'PRO')
+    price: '₩9,900',
     period: '/ 월',
     color: '#64B5F6',
     border: 'rgba(100,181,246,0.4)',
@@ -65,6 +68,7 @@ const PLANS = [
       { icon: '👑', text: 'PRO 닉네임 뱃지 제공' },
       { icon: '📡', text: 'CCTV 및 해양 히트맵 확인' },
       { icon: '🤖', text: 'AI 낚시 컨디션 심층 리포트' },
+      ...(META_GAME_LIVE ? [{ icon: '🎣', text: '방구석 낚시꾼 자동 낚시 수확 2배(무료 대비)' }] : []), // ✅ V50: 게임 출시(등급분류) 뒤 META_GAME_LIVE=true
     ],
   },
   {

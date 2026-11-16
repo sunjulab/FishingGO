@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Users, CreditCard, DollarSign, RefreshCw, AlertCircle, BellRing, Send, MessageSquare, CheckCircle, Clock, ChevronDown, ChevronUp, Filter, Wifi, WifiOff, UserCheck, UserPlus, Activity, Eye, Globe } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, CreditCard, DollarSign, RefreshCw, AlertCircle, BellRing, Send, MessageSquare, CheckCircle, Clock, ChevronDown, ChevronUp, Filter, Wifi, UserPlus, Eye } from 'lucide-react';
 import { useUserStore, ADMIN_ID, ADMIN_EMAIL } from '../store/useUserStore'; // ✅ 11TH-A1: ADMIN_ID/EMAIL import
 import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
@@ -38,8 +38,6 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const [userStats, setUserStats] = useState(null);
-  const [userStatsLoading, setUserStatsLoading] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // ✅ 알림 관련 state
   const [alertState, setAlertState] = useState({
@@ -91,24 +89,48 @@ export default function AdminDashboard() {
 
 
   const fetchUserStats = useCallback(async () => {
-    setUserStatsLoading(true);
     try {
       const res = await apiClient.get('/api/admin/user-stats');
       setUserStats(res.data);
     } catch { /* 무시 */ }
-    finally { setUserStatsLoading(false); }
   }, []);
 
-  // 자동 새로고침 (30초 간격)
+  // 자동 새로고침 (30초 간격, 관리자 확인 후에만)
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!authChecked) return;
     const id = setInterval(fetchUserStats, 30_000);
     return () => clearInterval(id);
-  }, [autoRefresh, fetchUserStats]);
+  }, [authChecked, fetchUserStats]);
 
   // 심플 바 차트 (recharts 없이 CSS로 구현)
   const planBreakdown = stats?.planBreakdown || {};
   const maxPlanRevenue = Math.max(...Object.values(planBreakdown).map(p => p.revenue || 0), 1);
+
+  // ✅ DASH-CLEAN(2026-11-11): 판매 중인 플랜만 표시 (PRO·VIP 판매 종료, MASTER는 관리자라 제외)
+  const PLAN_ROWS = [
+    ['FREE',          '무료',   '#8E8E93', true],
+    ['BUSINESS_LITE', '라이트', '#64B5F6', true],
+    ['PRO',           '프로',   '#00C48C', false],
+    ['BUSINESS_VIP',  'VIP',    '#FFD700', false],
+    ['CAPTAIN',       '캡틴',   '#00C48C', false],
+  ];
+  const tierBreakdown = userStats?.tierBreakdown || {};
+  const PAY_PLAN_LABEL = { BASIC: 'PRO 멤버십', LITE: 'PRO 멤버십', BUSINESS_LITE: 'PRO 멤버십', PRO: '기존 PRO', VVIP: 'VIP', BUSINESS_VIP: 'VIP' }; // ✅ PRO-9900
+  const fmt = (v) => (typeof v === 'number' ? v.toLocaleString() : '-');
+  const maskId = (id) => { const s = String(id || ''); return s.length > 8 ? `${s.slice(0, 6)}…` : (s || '알 수 없음'); };
+  const sectionTitle = { fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', margin: '0 0 10px' };
+  const Tile = ({ icon: Icon, color, value, label, sub }) => (
+    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={17} color={color} />
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: `calc(20px * var(--fs, 1))`, fontWeight: '950', color: '#fff', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginTop: '3px' }}>{label}</div>
+        {sub && <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>{sub}</div>}
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100dvh', background: '#070B14', color: '#fff', fontFamily: 'Pretendard, sans-serif', paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))' }}>
@@ -118,8 +140,9 @@ export default function AdminDashboard() {
           <button onClick={() => window.history.length <= 1 ? navigate('/', { replace: true }) : navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <ArrowLeft size={22} color="#fff" />
           </button>
-          <span style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950' }}>⚙️ 수익 대시보드</span>
+          <span style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950' }}>수익 대시보드</span>
         </div>
+        {/* ✅ DASH-CLEAN: 새로고침 버튼 하나로 통합 (사용자 현황은 30초마다 자동 갱신) */}
         <button onClick={fetchStats} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>
           <RefreshCw size={14} color="#fff" /> 새로고침
         </button>
@@ -140,178 +163,119 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── 사용자 현황 통계 (userStats 독립 조건 — stats 실패해도 표시) ── */}
-        {userStats && (
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>👥 사용자 현황</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button onClick={() => setAutoRefresh(r => !r)} style={{ background: autoRefresh ? 'rgba(0,196,140,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: autoRefresh ? '#00C48C' : 'rgba(255,255,255,0.5)', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800' }}>
-                  {autoRefresh ? '🔴 자동갱신 중' : '⏸ 자동갱신'}
-                </button>
-                <button onClick={fetchUserStats} disabled={userStatsLoading} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <RefreshCw size={11} />{userStatsLoading ? '...' : '갱신'}
-                </button>
-              </div>
+        {/* ── 1. 매출 ── */}
+        {stats && !loading && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={sectionTitle}>매출</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+              <StatCard label="이번 달 매출" value={`${(stats.monthRevenue || 0).toLocaleString()}원`} icon={TrendingUp} color="#00C48C" />
+              <StatCard label="누적 매출" value={`${(stats.totalRevenue || 0).toLocaleString()}원`} icon={DollarSign} color="#FFD700" />
+              <StatCard label="결제 회원" value={`${stats.activePaidUsers || 0}명`} icon={CreditCard} color="#64B5F6" sub="최근 31일 실제 결제" />
+              <StatCard label="누적 결제자" value={`${stats.paidUsers || 0}명`} icon={Users} color="#FF9B26" sub="한 번 이상 실제 결제" />
             </div>
-            {/* 주요 지표 3개 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ background: 'rgba(100,181,246,0.08)', border: '1px solid rgba(100,181,246,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
-                <Users size={18} color="#64B5F6" style={{ marginBottom: '6px' }} />
-                <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#fff', lineHeight: 1 }}>{(userStats.totalUsers || 0).toLocaleString()}</div>
-                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>전체 가입자</div>
-              </div>
-              <div style={{ background: 'rgba(0,196,140,0.08)', border: '1px solid rgba(0,196,140,0.25)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '6px', right: '8px', width: '7px', height: '7px', borderRadius: '50%', background: '#00C48C', boxShadow: '0 0 0 2px rgba(0,196,140,0.3)', animation: 'pulse 2s infinite' }} />
-                <Wifi size={18} color="#00C48C" style={{ marginBottom: '6px' }} />
-                <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#00C48C', lineHeight: 1 }}>{userStats.onlineNow || 0}</div>
-                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>현재 접속 중</div>
-                <div style={{ fontSize: `calc(9px * var(--fs, 1))`, color: 'rgba(0,196,140,0.6)', fontWeight: '600' }}>5분 이내 활동</div>
-              </div>
-              <div style={{ background: 'rgba(255,90,95,0.08)', border: '1px solid rgba(255,90,95,0.2)', borderRadius: '14px', padding: '14px 10px', textAlign: 'center' }}>
-                <WifiOff size={18} color="#FF5A5F" style={{ marginBottom: '6px' }} />
-                <div style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', color: '#FF5A5F', lineHeight: 1 }}>{(userStats.offlineUsers || 0).toLocaleString()}</div>
-                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '4px' }}>미접속 (24h)</div>
-              </div>
-            </div>
-            {/* 보조 지표 2개 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Activity size={16} color="#FFD700" />
-                <div>
-                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#FFD700' }}>{userStats.onlineToday || 0}</div>
-                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>오늘 접속자</div>
-                </div>
-              </div>
-              <div style={{ background: 'rgba(255,155,38,0.06)', border: '1px solid rgba(255,155,38,0.15)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <UserPlus size={16} color="#FF9B26" />
-                <div>
-                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#FF9B26' }}>{userStats.newUsers7d || 0}</div>
-                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>신규 가입 (7일)</div>
-                </div>
-              </div>
-            </div>
-            {/* ✅ VISITOR: 투데이 + 토탈투데이 (IP 기반 유니크 방문자) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ background: 'rgba(100,210,255,0.06)', border: '1px solid rgba(100,210,255,0.18)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Eye size={16} color="#64D2FF" />
-                <div>
-                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#64D2FF' }}>{(userStats.todayVisitors ?? '-').toLocaleString?.() ?? userStats.todayVisitors ?? '-'}</div>
-                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>투데이 (IP 기준)</div>
-                </div>
-              </div>
-              <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.18)', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Globe size={16} color="#A78BFA" />
-                <div>
-                  <div style={{ fontSize: `calc(18px * var(--fs, 1))`, fontWeight: '950', color: '#A78BFA' }}>{(userStats.totalVisitors ?? '-').toLocaleString?.() ?? userStats.totalVisitors ?? '-'}</div>
-                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>토탈투데이 (누적)</div>
-                </div>
-              </div>
-            </div>
-            {/* 티어별 분포 미니 바 */}
-            {userStats.tierBreakdown && (
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '12px 14px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>플랜별 가입자</div>
-                {[
-                  ['FREE',          '무료',           '#8E8E93'],
-                  ['BUSINESS_LITE', '라이트',         '#64B5F6'],
-                  ['PRO',           '프로',           '#00C48C'],
-                  ['BUSINESS_VIP',  'VIP',            '#FFD700'],
-                  ['MASTER',        '마스터',         '#FF9B26'],
-                  ['CAPTAIN',       '캡틴',           '#00C48C'],
-                ].map(([tier, label, color]) => {
-                  const cnt = userStats.tierBreakdown[tier] || 0;
-                  const pct = userStats.totalUsers > 0 ? Math.round(cnt / userStats.totalUsers * 100) : 0;
-                  return (
-                    <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <div style={{ width: '68px', flexShrink: 0 }}>
-                        <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', color }}>{label}</div>
-                        <div style={{ fontSize: `calc(8px * var(--fs, 1))`, color: 'rgba(255,255,255,0.25)', fontWeight: '600' }}>{tier}</div>
-                      </div>
-                      <div style={{ flex: 1, height: '5px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
-                      </div>
-                      <span style={{ fontSize: `calc(11px * var(--fs, 1))`, color: cnt > 0 ? color : 'rgba(255,255,255,0.3)', fontWeight: '900', minWidth: '28px', textAlign: 'right' }}>{cnt}명</span>
-                    </div>
-                  );
-                })}
-                {/* DB 원시 티어 디버그 — 예상 밖의 티어명 발견 시 표시 */}
-                {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r)) && (
-                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div style={{ fontSize: `calc(9px * var(--fs, 1))`, fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ DB 원시 티어 (정규화 필요)</div>
-                    {Object.entries(userStats.rawTiers)
-                      .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r))
-                      .map(([raw, cnt]) => (
-                        <div key={raw} style={{ fontSize: `calc(9px * var(--fs, 1))`, color: 'rgba(255,100,100,0.7)', fontWeight: '700' }}>{raw}: {cnt}명</div>
-                      ))
-                    }
-                  </div>
-                )}
+            {/* ✅ REAL-PAID: 결제사 확인이 안 된 기록은 합계에서 빼고 건수만 알림 */}
+            {stats.unverifiedCount > 0 && (
+              <div style={{ marginTop: '8px', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
+                결제사 확인이 안 된 기록 {stats.unverifiedCount}건({(stats.unverifiedAmount || 0).toLocaleString()}원)은 합계에서 뺐습니다.
               </div>
             )}
           </div>
         )}
 
-        {stats && !loading && (
-          <>
-
-            {/* 주요 지표 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '20px' }}>
-
-              <StatCard label="이번 달 매출" value={`${(stats.monthRevenue || 0).toLocaleString()}원`} icon={TrendingUp} color="#00C48C" sub="당월 결제 합계" />
-              <StatCard label="누적 매출" value={`${(stats.totalRevenue || 0).toLocaleString()}원`} icon={DollarSign} color="#FFD700" sub="전체 결제 합계" />
-              <StatCard label="활성 구독자" value={`${stats.activeSubscriptions || 0}명`} icon={Users} color="#64B5F6" sub="현재 정기구독 중" />
-              <StatCard label="최근 결제" value={`${stats.recentPayments?.length || 0}건`} icon={CreditCard} color="#FF9B26" sub="최근 10건 기준" />
+        {/* ── 2. 방문·회원 (userStats 독립 조건 — stats 실패해도 표시) ── */}
+        {userStats && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={sectionTitle}>방문·회원</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <Tile icon={Eye} color="#64D2FF" value={fmt(userStats.todayVisitors)} label="오늘 방문자" sub={`누적 ${fmt(userStats.totalVisitors)}`} />
+              <Tile icon={Wifi} color="#00C48C" value={fmt(userStats.onlineNow || 0)} label="지금 접속 중" sub="5분 이내 활동" />
+              <Tile icon={Users} color="#A78BFA" value={fmt(userStats.totalUsers || 0)} label="전체 가입자" />
+              <Tile icon={UserPlus} color="#FF9B26" value={fmt(userStats.newUsers7d || 0)} label="신규 가입" sub="최근 7일" />
             </div>
+          </div>
+        )}
 
-            {/* 플랜별 분포 */}
-            {Object.keys(planBreakdown).length > 0 && (
-              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '16px', padding: '18px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '14px' }}>플랜별 수익</div>
-                {Object.entries(planBreakdown).map(([plan, data]) => (
-                  <div key={plan} style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: PLAN_COLOR[plan] || '#fff' }}>{plan}</span>
-                      <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '950', color: '#fff' }}>
-                        {(data.revenue || 0).toLocaleString()}원 <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>({data.count}명)</span>
-                      </span>
+        {/* ── 3. 플랜별 가입자 ── */}
+        {userStats?.tierBreakdown && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={sectionTitle}>플랜별 가입자</div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
+              {PLAN_ROWS.filter(([tier, , , onSale]) => onSale || (tierBreakdown[tier] || 0) > 0).map(([tier, label, color]) => {
+                const cnt = tierBreakdown[tier] || 0;
+                const pct = userStats.totalUsers > 0 ? Math.round(cnt / userStats.totalUsers * 100) : 0;
+                return (
+                  <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{ width: '48px', flexShrink: 0, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color }}>{label}</div>
+                    <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
                     </div>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${((data.revenue || 0) / maxPlanRevenue) * 100}%`, background: PLAN_COLOR[plan] || '#64B5F6', borderRadius: '3px', transition: 'width 0.8s ease' }} />
+                    <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: cnt > 0 ? '#fff' : 'rgba(255,255,255,0.3)', fontWeight: '900', minWidth: '34px', textAlign: 'right' }}>{cnt}명</span>
+                  </div>
+                );
+              })}
+              {/* DB 원시 티어 경고 — 예상 밖의 티어명이 있을 때만 표시 */}
+              {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r)) && (
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ 정리가 필요한 티어 값</div>
+                  {Object.entries(userStats.rawTiers)
+                    .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r))
+                    .map(([raw, cnt]) => (
+                      <div key={raw} style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,100,100,0.7)', fontWeight: '700' }}>{raw}: {cnt}명</div>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── 4. 플랜별 수익 (데이터 있을 때만) ── */}
+        {stats && !loading && Object.keys(planBreakdown).length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={sectionTitle}>플랜별 수익</div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
+              {Object.entries(planBreakdown).map(([plan, data]) => (
+                <div key={plan} style={{ marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                    <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: PLAN_COLOR[plan] || '#fff' }}>{PAY_PLAN_LABEL[plan] || plan}</span>
+                    <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>
+                      {(data.revenue || 0).toLocaleString()}원 <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>({data.count}건)</span>
+                    </span>
+                  </div>
+                  <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${((data.revenue || 0) / maxPlanRevenue) * 100}%`, background: PLAN_COLOR[plan] || '#64B5F6', borderRadius: '3px', transition: 'width 0.8s ease' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── 5. 최근 결제 (5건) ── */}
+        {stats && !loading && stats.recentPayments?.length > 0 && (
+          <div style={{ marginBottom: '8px' }}>
+            <div style={sectionTitle}>최근 결제 (결제사 확인분)</div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              {stats.recentPayments.slice(0, 5).map((p, i) => {
+                const meta = [PAY_PLAN_LABEL[p.planId] || p.planId, PG_LABEL[p.pgProvider] || p.pgProvider, p.createdAt ? new Date(p.createdAt).toLocaleDateString('ko-KR') : null].filter(Boolean).join(' · ');
+                const ok = p.status === 'paid';
+                return (
+                  <div key={String(p._id || p.merchant_uid || i)} style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{p.userName || maskId(p.userId)}</div>
+                      <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>{meta}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: ok ? '#00C48C' : '#FF5A5F' }}>{(p.amount || 0).toLocaleString()}원</div>
+                      <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: ok ? 'rgba(0,196,140,0.8)' : '#FF5A5F', marginTop: '2px' }}>
+                        {ok ? '완료' : p.status === 'failed' ? '실패' : p.status}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* 최근 결제 내역 */}
-            {stats.recentPayments?.length > 0 && (
-              <div>
-                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '800', color: 'rgba(255,255,255,0.5)', marginBottom: '10px' }}>최근 결제 내역</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {stats.recentPayments.map((p, i) => (
-                    <div key={String(p._id || p.merchant_uid || i)} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div>
-                        <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>{p.userName || p.userId}</div>
-                        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>
-                          {p.planId} · {PG_LABEL[p.pgProvider] || p.pgProvider} · {new Date(p.createdAt).toLocaleDateString('ko-KR')}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '950', color: p.status === 'paid' ? '#00C48C' : '#FF5A5F' }}>
-                          {(p.amount || 0).toLocaleString()}원
-                        </div>
-                        <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: p.status === 'paid' ? '#00C48C' : '#FF5A5F', marginTop: '2px' }}>
-                          {p.status === 'paid' ? '완료' : p.status === 'failed' ? '실패' : p.status}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                </div>
-              </div>
-            )}
-          </>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {/* ✅ LOW-1: 관리자 알림 발송 패널 */}

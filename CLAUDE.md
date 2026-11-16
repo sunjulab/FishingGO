@@ -37,3 +37,10 @@
 - 2026-10-25에 하드코딩 키(텔레그램 봇 토큰, Render API 키)를 코드에서 제거했습니다. 예전 키는 git 이력에 남아 있으므로 재발급이 필요합니다.
 - 필요한 환경변수: Render `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_DISPATCH_TOKEN`, `GOOGLE_PLAY_SERVICE_ACCOUNT` / GitHub Secrets `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `RENDER_API_KEY` / 로컬 `.env`의 `RENDER_API_KEY`
 - 결제 등급은 서버 검증으로만 부여합니다. 요청 본문의 `tier` 값을 신뢰하는 코드를 다시 만들지 않습니다.
+
+## 낚시 게임(낚시GO 메타) 통합
+
+- 낚시 게임은 별도 앱이 아니라 낚시GO 안의 새 화면 `/meta`로 넣습니다. 계획·결정 사항은 `docs/META_GAME_INTEGRATION.md`에 있습니다. 작업 전에 먼저 읽으세요.
+- 하단 메뉴 제안: 홈 · 물때 · 낚시게임(가운데) · 커뮤니티(안에 낚시채널 영상 탭) · 마이. 낚시채널 위치는 사용자 결정 전까지 바꾸지 않습니다.
+- 홈 지도에 게임 진입 버튼을 넣는 것은 홈 화면 UI 변경이라 사용자 허락 후에만 합니다.
+- 게임 포인트·랭킹·이용권은 서버 검증만 신뢰합니다.
