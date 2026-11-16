@@ -290,6 +290,23 @@ export default function DashboardView({
 
 
 
+        {/* ✅ HOME-GAME-BANNER (2026-11-16): 방구석 낚시꾼 게임 바로가기 — 사용자 요청으로 쿠팡 배너 위에 추가 */}
+        <button
+          type="button"
+          onClick={() => navigate('/meta')}
+          aria-label="방구석 낚시꾼 게임하러 가기"
+          style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: 'calc(100% - 32px)', margin: '12px 16px 0', padding: '18px 20px', border: 0, borderRadius: '20px', cursor: 'pointer', textAlign: 'left', background: 'linear-gradient(135deg, #0B3D6E 0%, #0E6BA8 55%, #18A0C9 100%)', boxShadow: '0 8px 22px rgba(14,107,168,0.28)', color: '#fff', fontFamily: 'inherit', wordBreak: 'keep-all' }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span aria-hidden="true" style={{ fontSize: `calc(42px * var(--fs, 1))`, lineHeight: 1, flexShrink: 0 }}>🎣</span>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+              <span style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '950', letterSpacing: '-0.3px', lineHeight: 1.2 }}>방구석 낚시꾼</span>
+              <span style={{ fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', opacity: 0.85 }}>by 낚시GO · 집에서 즐기는 낚시 게임</span>
+            </span>
+          </span>
+          <span style={{ display: 'block', textAlign: 'center', background: '#FFE14D', color: '#0B3D6E', fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', padding: '12px 16px', borderRadius: '14px' }}>🎮 게임하러 가기 ›</span>
+        </button>
+
         {/* 쿠팡 상단 배너 */}
         <KakaoAdBanner type="coupang" />
 
