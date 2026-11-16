@@ -42,10 +42,30 @@ function payReqOk(r) {
   };
 }
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useUserStore } from '../store/useUserStore';
+import { useToastStore } from '../store/useToastStore';
+// ✅ META-LOGIN (2026-11-16): 게임은 낚시GO 회원만 — 로그인(게스트 제외)하지 않았으면 로그인 화면으로 보내고, 로그인 뒤 게임으로 돌아온다
+function metaLoggedIn(u) {
+  let tok = '';
+  try { tok = localStorage.getItem('access_token') || ''; } catch (e) { tok = ''; }
+  return !!(u && u.id && u.id !== 'GUEST' && tok);
+}
 
 export default function MetaGame() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const user = useUserStore(s => s.user);
+  const loggedIn = metaLoggedIn(user);
+  useEffect(() => {
+    if (loggedIn) return undefined;
+    // 앱 시작 직후 저장소 복구(hydrate)가 늦을 수 있어 잠깐 기다린 뒤 한 번 더 확인
+    const t = setTimeout(() => {
+      if (metaLoggedIn(useUserStore.getState().user)) return;
+      useToastStore.getState().addToast('방구석 낚시꾼은 낚시GO 회원 전용입니다. 로그인(가입) 후 이용해 주세요.', 'info');
+      navigate('/login?redirect=' + encodeURIComponent('/meta' + window.location.search), { replace: true });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [loggedIn, navigate]);
   const src = useMemo(() => {
     const q = new URLSearchParams({ embed: '1' });
     ['spot', 'view'].forEach((k) => { const v = params.get(k); if (v && /^[\w가-힣-]{1,20}$/.test(v)) q.set(k, v); }); // view=draw(협찬 선물 추첨)·gold(황금 물고기)
@@ -109,6 +129,8 @@ export default function MetaGame() {
     window.addEventListener('message', onPay);
     return () => window.removeEventListener('message', onPay);
   }, []);
+
+  if (!loggedIn) return <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: '#0b161d' }} />; // ✅ META-LOGIN: 로그인 확인 전에는 게임을 띄우지 않음
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: '#0b161d' }}>

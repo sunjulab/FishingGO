@@ -7,6 +7,29 @@ import { useToastStore } from '../store/useToastStore';
 import apiClient from '../api/index';
 import { Preferences } from '@capacitor/preferences';
 
+// ✅ LOGIN-REDIRECT (2026-11-16): /login?redirect=/meta 처럼 같은 사이트 경로만 받아 로그인 뒤 그 화면으로 돌려보낸다(네이버처럼 외부 로그인 왕복은 sessionStorage로 보관)
+const REDIRECT_KEY = 'login_redirect';
+function safeRedirectPath(v) {
+  if (typeof v !== 'string' || v.length > 200) return null;
+  if (!v.startsWith('/') || v.startsWith('//') || v.startsWith('/login')) return null;
+  if (!/^\/[\w\-/?=&%.가-힣]*$/.test(v)) return null;
+  return v;
+}
+function rememberRedirect() {
+  try {
+    const r = safeRedirectPath(new URLSearchParams(window.location.search).get('redirect'));
+    if (r) sessionStorage.setItem(REDIRECT_KEY, r);
+  } catch (e) { /* ignore */ }
+}
+function takeRedirect() {
+  let r = null;
+  try {
+    r = safeRedirectPath(new URLSearchParams(window.location.search).get('redirect')) || safeRedirectPath(sessionStorage.getItem(REDIRECT_KEY));
+    sessionStorage.removeItem(REDIRECT_KEY);
+  } catch (e) { /* ignore */ }
+  return r;
+}
+
 const GUEST_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23E8F2FF'/%3E%3Ccircle cx='50' cy='36' r='19' fill='%230056D2' opacity='.75'/%3E%3Cellipse cx='50' cy='88' rx='30' ry='22' fill='%230056D2' opacity='.55'/%3E%3C/svg%3E";
 
 // ─── 아이디 찾기 / 비밀번호 찾기 모달 ─────────────────────────────────────
@@ -251,6 +274,7 @@ function FindAccountModal({ mode, onClose, onFoundId }) {
 // ─── 메인 로그인 페이지 ───────────────────────────────────────────────────
 export default function LoginPage() {
   const navigate = useNavigate();
+  useEffect(() => { rememberRedirect(); }, []); // ✅ LOGIN-REDIRECT
   const setUser = useUserStore(state => state.setUser);
   const addToast = useToastStore(state => state.addToast);
   const timerRef = useRef(null);
@@ -297,7 +321,8 @@ export default function LoginPage() {
         addToast(`🎁 보상: [${reward}] 지급 완료!`, 'info');
       }, 1600);
     }
-    navigate('/');
+    const back = takeRedirect(); // ✅ LOGIN-REDIRECT: 게임 등에서 왔으면 그 화면으로
+    navigate(back || '/', back ? { replace: true } : undefined);
   };
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
