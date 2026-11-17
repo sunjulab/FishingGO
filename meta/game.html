@@ -7042,10 +7042,21 @@ const netReady=(async()=>{if(NET_API&&!tokNow()&&AUTH_API&&(lsGet('refresh_token
     if(ahead&&((local.count||0)>0||lvL>1)&&!done){
       const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
       if(m.s===200&&m.j){applyProfile(m.j);shown=true;const p=m.j,dx=Object.keys(p.dex||{}).length,ow=Object.keys((p.inv||{}).own||{}).length;setTimeout(()=>toast('이 기기 기록을 계정으로 옮겼습니다 · Lv.'+((p.rpg||{}).lv||1)+' · '+fmtN(p.pt||0)+'P · 어록 '+dx+'종 · 장비 '+ow+'개 (옮기기 상한 적용)',6000),500);}
-      if(m.s===200||m.s===409||m.s===410){try{localStorage.setItem(KEY+'.mig2','1');}catch(e){}}}}catch(e){}
+      if(m.s===200||m.s===409||m.s===410){try{localStorage.setItem(KEY+'.mig2','1');}catch(e){}}}
+    /* V60: 이 기기에 계정보다 앞선 예전 기록이 남아 있는데 옮기지 못했으면, 이유와 함께 '가져오기' 버튼을 보여 준다(직접 다시 시도) */
+    if(!shown&&ahead&&((local.count||0)>0||lvL>1))setTimeout(()=>migOffer(local),1200);}catch(e){}
   if(!shown)applyProfile(r.j);saveBanner();document.body.classList.add('srv');
   payReturn();ppRun();iapResume();setInterval(flushLog,60e3);addEventListener('pagehide',()=>flushLog(true));srvPresence();setInterval(srvPresence,30e3);})();
 netReady.then(()=>{netDone=true;unlockCheck();});
+function migOffer(local){const b=$('#netBanner');if(!b||!SRV)return;try{if(localStorage.getItem(KEY+'.migNo')==='1')return;}catch(e){}const lvL=(local.rpg&&local.rpg.lv)||1;
+  b.innerHTML='이 기기에 예전 기록(Lv.'+lvL+' · '+fmtN(local.pt||0)+'P)이 남아 있습니다<button type="button" id="migGo">계정으로 가져오기</button><button type="button" id="migX">닫기</button>';b.hidden=false;
+  $('#migX').onclick=()=>{b.hidden=true;};
+  $('#migGo').onclick=async()=>{const g=$('#migGo');g.disabled=true;g.textContent='가져오는 중…';
+    const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
+    if(m.s===200&&m.j){applyProfile(m.j);b.hidden=true;try{localStorage.setItem(KEY+'.mig2','1');}catch(e){}toast('예전 기록을 가져왔습니다 · Lv.'+((m.j.rpg||{}).lv||1)+' · '+fmtN(m.j.pt||0)+'P (옮기기 상한 Lv.10·2,000P·Lv.3 이하 장비)',6000);return;}
+    if(m.s===409||m.s===410){try{localStorage.setItem(KEY+'.migNo','1');}catch(e){}}/* 다시 해도 안 되는 이유면 다음부터 묻지 않음 */
+    const why=m.s===409&&m.j&&m.j.error==='DONE'?'이 계정은 이미 한 번 기록을 옮겼습니다(계정마다 1회)':m.s===410?'기록 옮기기 기간이 끝났습니다':m.s===401?'로그인이 끝났습니다 · 낚시GO에 다시 로그인해 주세요':'잠시 후 다시 눌러 주세요 ('+(m.s||'연결 안 됨')+')';
+    b.innerHTML='예전 기록을 가져오지 못했습니다 · '+esc(why)+'<button type="button" id="migX">닫기</button>';$('#migX').onclick=()=>{b.hidden=true;};};}
 // 지도: 포인트별 접속 인원(공개 API)
 async function srvPresence(){if(!SRV||$('#map').hidden)return;const r=await net('presence');if(r.s===200&&r.j&&r.j.counts){peerCount=r.j.counts;drawMap();}}
 
