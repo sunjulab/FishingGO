@@ -1903,7 +1903,12 @@ function fmtTime(iso){if(!iso)return'-';const d=new Date(iso);if(isNaN(d))return
 function kstNow(){const d=new Date(Date.now()+9*3600e3);return{y:d.getUTCFullYear(),mo:d.getUTCMonth()+1,d:d.getUTCDate(),h:d.getUTCHours()+d.getUTCMinutes()/60,min:d.getUTCHours()*60+d.getUTCMinutes()};}
 
 /* 실시간 조회 (낚시GO 도메인·로컬 파일에서 작동) → 실패하면 공유 스냅샷 → 내장 스냅샷 */
-function tfetch(url,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(url,{signal:c.signal}).then(r=>{clearTimeout(t);if(!r.ok)throw new Error(r.status);return r.json();});}
+/* V62: 낚시GO 앱은 CapacitorHttp로 fetch를 네이티브 요청으로 바꿔 끼운다 — 이 경로에서 게임의 POST가 응답 없이 멈춰(취소 신호도 안 먹음)
+   퀘스트 받기·식당·장비·방 입장·기록 옮기기가 '받는 중'에서 끝나지 않았다. 웹뷰 원래 fetch(CapacitorWebFetch)를 쓰고, 정해진 시간이 지나면 무조건 실패로 끝낸다 */
+const FETCH0=(()=>{try{if(typeof window.CapacitorWebFetch==='function')return window.CapacitorWebFetch.bind(window);}catch(e){}return window.fetch.bind(window);})();
+function xfetch(url,opt,ms){opt=opt||{};const c=new AbortController();const o=Object.assign({},opt,{signal:c.signal});let tm;
+  return Promise.race([FETCH0(url,o),new Promise((_,rej)=>{tm=setTimeout(()=>{try{c.abort();}catch(e){}rej(new Error('timeout'));},ms||8000);})]).finally(()=>clearTimeout(tm));}
+function tfetch(url,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return xfetch(url,{signal:c.signal},ms+500).then(r=>{clearTimeout(t);if(!r.ok)throw new Error(r.status);return r.json();});}
 async function liveWeather(s){
   // 저장본(스냅샷) 위에 성공한 실시간 값만 덮어쓴다. 일부 조회가 실패해도 나머지는 유지.
   const d=Object.assign({},WX.spots[s.id]||{});d.src=Object.assign({},d.src||{});const parts=[];
@@ -6946,7 +6951,7 @@ function tokFresh(force,old,need){if(!AUTH_API)return Promise.resolve(tokNow());
     await sleepMs(300+Math.random()*1200);const cur1=tokNow(),rt=lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token');
     if(cur1!==cur0&&tokExp(cur1)-Date.now()>60e3)return cur1;/* 그 사이 낚시GO가 바꿈 */if(!rt)return cur1;
     const c=new AbortController();const tm=setTimeout(()=>c.abort(),60e3);/* Render가 잠에서 깨는 시간까지 기다림(중간에 끊으면 바뀐 토큰을 못 받음) */
-    try{const res=await fetch(AUTH_API+'/api/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:rt}),signal:c.signal});if(!res.ok){tokFailAt=Date.now();return tokNow();}
+    try{const res=await xfetch(AUTH_API+'/api/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:rt})},60e3);if(!res.ok){tokFailAt=Date.now();return tokNow();}
       const j=await res.json();const at=j&&(j.accessToken||j.token);if(!at){tokFailAt=Date.now();return tokNow();}
       lsSet('access_token',at);if(lsGet('CapacitorStorage.access_token'))lsSet('CapacitorStorage.access_token',at);
       if(j.refreshToken){lsSet('refresh_token',j.refreshToken);if(lsGet('CapacitorStorage.refresh_token'))lsSet('CapacitorStorage.refresh_token',j.refreshToken);}
@@ -6984,7 +6989,7 @@ async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const pos
   if(TAB_RO&&post)return{s:0,j:{error:'TAB_RO',message:'다른 탭에서 열려 있습니다'}};
   const c=new AbortController();let to=false;const tm=setTimeout(()=>{to=true;c.abort();},o.ms||8000);let s=0,j=null;
   try{const h={};if(post)h['Content-Type']='application/json';if(tok&&tokOK(apiURL(path)))h.Authorization='Bearer '+tok;
-    const res=await fetch(apiURL(path),{method:post?'POST':'GET',headers:h,body:post?JSON.stringify(body):undefined,signal:c.signal,keepalive:!!o.keep});s=res.status;try{j=await res.json();}catch(e){if(to)s=0;}}
+    const res=await xfetch(apiURL(path),{method:post?'POST':'GET',headers:h,body:post?JSON.stringify(body):undefined,keepalive:!!o.keep},o.ms||8000);s=res.status;try{j=await Promise.race([res.json(),new Promise((_,rj)=>setTimeout(()=>rj(new Error('t')),5000))]);}catch(e){if(to)s=0;}}
   catch(e){s=0;}finally{clearTimeout(tm);}
   const k=o.n409||0;if(s===409&&j&&j.error==='CONFLICT'&&k<3&&!o.no409){await sleepMs(120+Math.random()*380*(k+1));if(!k){const p=await net('profile',undefined,{n409:9});if(p.s===200&&p.j)applyProfile(p.j);}return net(path,body,Object.assign({},o,{n409:k+1}));}
   if(s===401&&!o.again401&&AUTH_API&&tok&&tokExp(tok)-Date.now()<120e3){const nt=await tokFresh(true,tok);if(nt&&nt!==tok){if(NET_DEAD)NET_DEAD=false;return net(path,body,Object.assign({},o,{again401:1}));}}/* V58: 토큰 끝남 → 갱신 뒤 한 번 더 */
@@ -8497,7 +8502,7 @@ async function v36Claim(kind,arg){if(v36Busy)return false;const t=kind==='tut'?T
   const label=kind==='tut'?'안내 보상 · '+t.n:kind==='lv'?'Lv.'+arg+' 목표 보상':arg+' 어록 완성 보상';
   if(SRV){v36Busy=true;v36Render(true);v36Rerender();let r;try{r=await netRid(kind==='tut'?'tut-claim':kind==='lv'?'lv-claim':'region-claim',kind==='tut'?{step:arg}:kind==='lv'?{lv:arg}:{zone:arg});}finally{v36Busy=false;}
     const j=r&&r.j;if(j){V36P=V36P||{};if(isObj(j.tut))V36P.tut=j.tut;if(isObj(j.miles))V36P.miles=j.miles;}
-    if(!(r.s===200&&j&&j.ok)){toast(v36Err(r));if(!j||r.s===0||r.s>=500||j.error==='ALREADY')v36Later(300);v36Render(true);v36Rerender();return false;}
+    if(!(r.s===200&&j&&j.ok)){if(j&&j.error==='ALREADY'){/* V62: 이미 받은 것(기록 옮기기로 받은 것으로 처리된 레벨 보상 등) → 서버 목록으로 다시 맞추고 조용히 넘어감 */try{await srvRefresh();}catch(e){}v36Render(true);v36Rerender();return false;}toast(v36Err(r));if(!j||r.s===0||r.s>=500)v36Later(300);v36Render(true);v36Rerender();return false;}
     if(typeof j.pt==='number')save.pt=j.pt;if(j.wallet)setWal(j.wallet);if(isObj(j.cosm))v4Merge({cosm:j.cosm});refreshWallet();
     v36Got(label,kind==='tut'?(+(j.reward&&j.reward.pt)||t.pt):(+j.reward||0),kind==='tut'?j.reward:null);}
   else{const S=v36S();let pt=0,rw=null;
