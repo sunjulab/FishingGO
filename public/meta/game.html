@@ -7029,7 +7029,7 @@ async function notesShow(L){if(notesBusy||!Array.isArray(L))return;const q=L.fil
 async function srvReconcile(){const [p,w]=await Promise.all([net('profile'),net('wallet')]);if(p.s===200&&p.j&&typeof p.j.pt==='number')applyProfile(p.j);if(w.s===200&&w.j)setWal(w.j);refreshWallet();bagRefresh();if(!$('#shop').hidden)renderShop();return p.s===200?p.j:null;}
 async function srvRefresh(){const r=await net('profile');if(r.s===200&&r.j)applyProfile(r.j);}
 // 시작: 프로필 → (조건 맞으면) 브라우저 기록 1회 이전
-const netReady=(async()=>{if(!NET_API||!tokNow())return;let local=null;try{local=JSON.parse(JSON.stringify(save));}catch(e){}
+const netReady=(async()=>{if(NET_API&&!tokNow()&&AUTH_API&&(lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token')))await tokFresh(true,'');/* V59: 접속 토큰이 없어도 로그인 유지 정보(refresh)가 있으면 받아서 자동 연결 */if(!NET_API||!tokNow())return;let local=null;try{local=JSON.parse(JSON.stringify(save));}catch(e){}
   const r=await net('profile');
   if(r.s!==200||!r.j||typeof r.j.pt!=='number'){if(r.s===401)showBanner();else if(!V45.stop)offBanner();/* v45 시험 끝·인원 다 참이면 연습 모드로 넘기지 않음 */return;}
   SRV=true;
