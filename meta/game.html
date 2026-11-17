@@ -7006,17 +7006,18 @@ async function srvRefresh(){const r=await net('profile');if(r.s===200&&r.j)apply
 const netReady=(async()=>{if(!NET_API||!tokNow())return;let local=null;try{local=JSON.parse(JSON.stringify(save));}catch(e){}
   const r=await net('profile');
   if(r.s!==200||!r.j||typeof r.j.pt!=='number'){if(r.s===401)showBanner();else if(!V45.stop)offBanner();/* v45 시험 끝·인원 다 참이면 연습 모드로 넘기지 않음 */return;}
-  SRV=true;applyProfile(r.j);saveBanner();document.body.classList.add('srv');
-  try{const prog=local&&((local.count||0)>0||((local.rpg||{}).lv||1)>1);const fresh=(r.j.count||0)===0&&((r.j.rpg||{}).lv||1)===1;let done=false;try{done=localStorage.getItem(KEY+'.migrated')==='1';}catch(e){}
-    let skip=false;try{skip=sessionStorage.getItem(KEY+'.migSkip')==='1';}catch(e){}
-    // C6 #160: 옮기기 전에 무엇이 어떻게 옮겨지는지 묻고(상한 안내), 옮긴 뒤에는 실제로 반영된 것을, 거절되면 이유와 '이 기기 기록은 그대로'를 알린다
-    if(prog&&fresh&&!done&&!skip){const lv0=(local.rpg||{}).lv||1,dx0=Object.keys(local.dex||{}).filter(k=>(local.dex[k]||{}).n>0).length,own0=Object.keys((local.inv||{}).own||{}).length;
-      /* V56: 묻지 않고 처음 접속할 때 자동으로 옮긴다(운영자 결정) — 상한(Lv.3·2,000P·어록 10종·Lv.3 이하 장비)은 서버가 그대로 적용, 이 기기에서 한 번만, 이 기기 기록은 지우지 않음 */
-      {const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
-      if(m.s===200&&m.j){applyProfile(m.j);const p=m.j,dx=Object.keys(p.dex||{}).length,ow=Object.keys((p.inv||{}).own||{}).length;setTimeout(()=>toast('이 기기 기록을 계정으로 자동으로 옮겼습니다 · Lv.'+((p.rpg||{}).lv||1)+' · '+fmtN(p.pt||0)+'P · 어록 '+dx+'종 · 장비 '+ow+'개 (상한 적용)',6000),500);}
-      else if(m.s===409||m.s===410){const why=m.s===410?'기록 이전 기간이 끝났습니다':m.j&&m.j.error==='HAS_CATCHES'?'이 계정에는 이미 서버에 조과가 있습니다':'이미 한 번 옮긴 계정입니다';
-        /* V56 자동 이전: 옮길 수 없는 경우(이미 조과가 있는 계정 등)는 창을 띄우지 않고 계정 기록으로 이어 간다 */void why;}
-      if(m.s===200||m.s===409||m.s===410){try{localStorage.setItem(KEY+'.migrated','1');}catch(e){}}}}}catch(e){}
+  SRV=true;
+  /* V57: 기존 기기 기록 자동 이전 — 서버 계정에 조과가 있어도 이 기기 기록이 더 앞서 있으면 1회 옮긴다(상한 Lv.10·2,000P·Lv.3 이하 장비·어록 10종, 서버가 적용).
+     옮기는 동안 서버 Lv.1이 잠깐 보이지 않게 이전을 먼저 하고 결과를 한 번에 보여 준다. 예전(V56) 표시는 무시하고 새 표시(.mig2)로 한 번 더 시도 */
+  let shown=false;
+  try{const sv=r.j,lvL=(local&&local.rpg&&local.rpg.lv)||1,lvS=(sv.rpg||{}).lv||1;
+    const ahead=!!local&&(lvL>lvS||(local.count||0)>(sv.count||0)||(local.pt||0)>(sv.pt||0));
+    let done=false;try{done=localStorage.getItem(KEY+'.mig2')==='1';}catch(e){}
+    if(ahead&&((local.count||0)>0||lvL>1)&&!done){
+      const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
+      if(m.s===200&&m.j){applyProfile(m.j);shown=true;const p=m.j,dx=Object.keys(p.dex||{}).length,ow=Object.keys((p.inv||{}).own||{}).length;setTimeout(()=>toast('이 기기 기록을 계정으로 옮겼습니다 · Lv.'+((p.rpg||{}).lv||1)+' · '+fmtN(p.pt||0)+'P · 어록 '+dx+'종 · 장비 '+ow+'개 (옮기기 상한 적용)',6000),500);}
+      if(m.s===200||m.s===409||m.s===410){try{localStorage.setItem(KEY+'.mig2','1');}catch(e){}}}}catch(e){}
+  if(!shown)applyProfile(r.j);saveBanner();document.body.classList.add('srv');
   payReturn();ppRun();iapResume();setInterval(flushLog,60e3);addEventListener('pagehide',()=>flushLog(true));srvPresence();setInterval(srvPresence,30e3);})();
 netReady.then(()=>{netDone=true;unlockCheck();});
 // 지도: 포인트별 접속 인원(공개 API)
