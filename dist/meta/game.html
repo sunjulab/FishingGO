@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><script>window.META_CONFIG={"api": "", "pay": null};</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<html lang="ko"><head><script>window.META_CONFIG={"api": "https://fishinggo-meta.fishinggo.workers.dev/api/meta", "pay": null};</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
 <title>방구석 낚시꾼</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500&family=Jua&display=swap">
@@ -793,6 +793,7 @@ ol.v36tq li b{font-weight:500;min-width:0;overflow-wrap:anywhere}ol.v36tq li.don
 .thl .lkSexB[aria-pressed="true"]{background:linear-gradient(180deg,var(--s1),var(--s2));border-color:var(--sb);color:#fff;box-shadow:inset 0 -3px 0 var(--sb),0 3px 0 rgba(16,75,124,.25);text-shadow:0 1px 0 rgba(0,40,80,.35)}
 .thl .lkSexB[aria-pressed="true"] svg{background:#fff}
 .thl .lkStage::before{background:radial-gradient(closest-side,rgba(255,255,255,.95),rgba(255,255,255,.45) 58%,rgba(255,255,255,0))}
+.nkrow{display:flex;gap:6px;align-items:stretch}.nkrow>input{flex:1 1 auto;min-width:0;margin:0!important}.nkrow>.nkchk{flex:none;padding:0 12px;font-size:13px;white-space:nowrap;border-radius:8px}.nkmsg{font-size:12.5px;margin:4px 0 0;min-height:0}.nkmsg.ok{color:var(--good,#2e9d52)}.nkmsg.no{color:var(--bad,#d24b3c)}#intro .nkmsg{margin:-8px 0 12px}#intro .nkrow{margin:0 0 14px}
 .lkFoot{padding:10px 16px calc(12px + var(--sab));border-top:1px solid var(--line);display:grid;gap:6px}
 .lkFoot label{font-size:12px;color:var(--mute)}.lkFoot input{width:100%;box-sizing:border-box;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:9px 11px;font-size:15px;font-family:var(--body)}
 .lkBtns{display:flex;gap:8px}.lkBtns .btn{flex:1 1 auto}.lkBtns .ghost{flex:none;min-width:64px}#lkCost{font-size:11.5px;line-height:1.45}
@@ -1478,6 +1479,8 @@ body #v36map{padding:4px;gap:0}
 #ptpill::after,#mptbtn::after{content:'+';position:absolute;right:5px;top:50%;margin-top:-10px;width:20px;height:20px;border-radius:50%;background:linear-gradient(180deg,#62d683,#1f9d47);color:#fff;font:800 16px/19px var(--body);text-align:center;box-shadow:inset 0 -2px 0 #157a35;pointer-events:none}
 @media (max-width:600px){#world #spotbar>#ptpill{max-width:146px}#world #spotbar>.hb,#world #spotbar>#satchip{flex-shrink:1}.lvchip.hb .xpbar,#world #spotbar .lvchip.hb .xpbar{width:38px}#world #spotbar>.lvchip.hb{padding-right:10px}#world #spotbar>#satchip:not([hidden]){padding:0 10px 0 7px}:root #world #spotbar>#satchip:not([hidden]) i{min-width:28px}}
 @media (max-width:400px){#world #spotbar>#ptpill{max-width:128px;padding-right:29px}.thl #world #spotbar .rpill .num{font-size:16px}}
+/* V54 좁은 휴대폰에서 '낚시GO로' 단추가 있으면 게임 이름 칸을 숨겨 레벨·포인트가 화면 밖으로 밀리지 않게(오른쪽 잘림·좌우 비대칭) */
+@media (max-width:460px){#mbar:has(#exitGo:not([hidden])) #brand{display:none}}
 @media (max-width:420px){#mbar{gap:5px}#mbar #brand{gap:6px;padding:0 10px 0 5px}#mbar #brand .mark{width:24px;height:24px}#mbar #brand h1{font-size:16px}#mbar>#mptbtn{padding-left:5px}}
 /* 휴대폰 세로: 안내문·구명조끼 띠·감정 표현은 둥근 자동 버튼 위로 */
 @media (max-width:600px) and (min-height:501px){#world #hint,#pfdBar,#world #emobar{bottom:calc(var(--dockh) + 212px)}}
@@ -1573,6 +1576,8 @@ body #v36map{padding:4px;gap:0}
 .thl .dock .qbadge.done{background:var(--good);color:#fff}
 #dock>#gearbtn[data-n]::after,.dock .qbadge,#mdock .cbdg{top:1px;left:calc(50% + 10px)}
 @media (max-width:600px) and (min-height:501px){.thl .dock{border-width:2px 0 0}}
+/* V54 지도 독도 휴대폰 세로에서는 화면 전체 폭(왼쪽에 붙고 오른쪽이 비던 것 — #mdock 폭 지정이 left:0·right:0을 이기던 문제) */
+@media (max-width:600px) and (min-height:501px){#mdock{width:auto}}
 @media (max-height:500px){.dock>button .ic.v44i{width:24px;height:24px}}
 /* ---- 던지기 · 조이스틱 · 보조 버튼 ---- */
 .thl #act:not(.off):not(.hold){background:radial-gradient(circle at 50% 30%,var(--o1),var(--accent-2) 72%);color:var(--ink)}
@@ -1921,7 +1926,7 @@ async function loadSharedSnapshot(){try{if(!window.claude||!window.claude.use)re
   const snap=await Promise.race([db.doc('wx/current').get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),10000))]);
   const v=snap&&snap.exists?snap.data():null;
   if(v&&v.spots&&v.fetchedAt&&(!WX.fetchedAt||new Date(v.fetchedAt)>new Date(WX.fetchedAt))){WX=wxSaneAll(v);WX_KIND='shared';stamp();drawMap();}}catch(e){}}
-function stamp(){$('#wxstamp').innerHTML='기상 기준 <b class="num">'+esc(fmtTime(WX.fetchedAt))+'</b> · 낚시GO 정밀기상 · Open-Meteo'+(WX_KIND==='shared'?' (공유 저장본)':WX_KIND==='embedded'?' (저장본)':'');}
+function stamp(){const age=WX.fetchedAt?Date.now()-new Date(WX.fetchedAt).getTime():0,old=age>6*36e5;/* V55: 6시간 넘은 저장본이면 지도 색이 지금 날씨가 아님을 알린다 */$('#wxstamp').innerHTML='기상 기준 <b class="num">'+esc(fmtTime(WX.fetchedAt))+'</b> · 낚시GO 정밀기상 · Open-Meteo'+(WX_KIND==='shared'?' (공유 저장본)':WX_KIND==='embedded'?' (저장본)':'')+(old?' · <b>'+(age>=864e5?Math.floor(age/864e5)+'일':Math.floor(age/36e5)+'시간')+' 전 값</b> · 낚시터에 들어가면 실시간으로 바뀝니다':'');}
 
 /* ===================== 저장 ===================== */
 let SRV=false;const KEY='fishinggo.meta.v2';let save={nick:'',score:0,count:0,dex:{},spots:{}};
@@ -3036,7 +3041,7 @@ async function captSell(){if(boatFly||!MYB||!MYB.boat)return;const rf=BOAT_PRICE
 const mcv=$('#mapcv'),mx=mcv.getContext('2d');let MW=0,MH=0,DPR=1;
 const LAT0=36.2,KX=Math.cos(LAT0*Math.PI/180);
 let view={cx:127.8,cy:35.9,s:1};let filt='all',query='',sel=null,peerCount={};
-function fitMap(){const pad=60;const w=MW-pad*2,h=MH-pad*2-40;const sx=w/((131.0-124.5)*KX),sy=h/(38.7-33.0);view.s=Math.min(sx,sy);view.cx=127.75;view.cy=35.85;}
+function fitMap(){const pad=60;const w=MW-pad*2,h=MH-pad*2-40;const sx=w/((131.0-124.5)*KX),sy=h/(38.7-33.0);view.s=Math.min(sx,sy);view.cx=127.75;view.cy=35.85;fitMap.v=[view.s,view.cx,view.cy];}
 function proj(lng,lat){return[MW/2+(lng-view.cx)*KX*view.s,MH/2-(lat-view.cy)*view.s];}
 function unproj(x,y){return[view.cx+(x-MW/2)/(KX*view.s),view.cy-(y-MH/2)/view.s];}
 let BEGIN=null;
@@ -3048,7 +3053,7 @@ function beginSpots(){if(!beginOn())return[];if(BEGIN)return BEGIN;const vis={};
   return BEGIN=out;}
 let beginI=0;function beginNext(){const L=beginSpots();if(!L.length)return;const s=L[beginI++%L.length];view.cx=s.lng;view.cy=s.lat;view.s=Math.max(view.s,520);openSheet(s);}
 function beginRow(){const r=$('#beginRow');if(r)r.hidden=!beginSpots().length;const lb=$('#lgBegin');if(lb&&r)lb.hidden=r.hidden;}
-function resizeMap(){DPR=Math.min(window.devicePixelRatio||1,2);MW=innerWidth;MH=innerHeight;mcv.width=MW*DPR;mcv.height=MH*DPR;if(!resizeMap.done){fitMap();resizeMap.done=1;}drawMap();}
+function resizeMap(){DPR=Math.min(window.devicePixelRatio||1,2);MW=innerWidth;MH=innerHeight;mcv.width=MW*DPR;mcv.height=MH*DPR;const fv=fitMap.v,wch=resizeMap.w!==MW;resizeMap.w=MW;if(!resizeMap.done||(wch&&fv&&fv[0]===view.s&&fv[1]===view.cx&&fv[2]===view.cy)){fitMap();resizeMap.done=1;}/* 폭이 바뀔 때만(휴대폰 자판이 올라와 높이만 줄 때는 그대로) *//* V54 사용자가 지도를 옮기거나 확대하기 전이면 창 크기가 바뀔 때마다 다시 맞춤 — 앱 화면이 처음에 다른 폭으로 잡혔다가 바뀌어도 한반도가 가운데(오른쪽으로 쏠림 해결) */drawMap();}
 function visible(s){if(filt!=='all'&&s.w!==filt)return false;if(query&&!(s.n+s.r+(s.f||'')).includes(query))return false;return true;}
 function drawMap(){if($('#map').hidden)return;const x=mx;x.setTransform(DPR,0,0,DPR,0,0);const MP=v44MP();/* V44-UI 화면 스타일별 지도 색 */
   const g=x.createLinearGradient(0,0,0,MH);g.addColorStop(0,MP.s0);g.addColorStop(1,MP.s1);x.fillStyle=g;x.fillRect(0,0,MW,MH);
@@ -6164,7 +6169,7 @@ function questHTML(){if(SRV&&RG.day!==dayKey()){setTimeout(dayTick,0);return'<di
   return'<div class="sumbox"><div>'+attTxt()+'</div></div>'+RG.miss.map(m=>{const d=MPOOL.find(x=>x.id===m.id)||{n:m.id,goal:1};const pc=Math.min(100,Math.round(m.p/d.goal*100));
     return'<div class="item qitem'+(m.done?' on':'')+'" data-q="'+esc(m.id)+'"><div><b class="qt">'+esc(d.n)+'</b><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+d.goal+'" aria-valuenow="'+m.p+'"><i style="width:'+pc+'%"></i></div><div class="spec qs">진행 <span class="num">'+m.p+'/'+d.goal+'</span> · +'+(40+RG.lv*20)+'XP<span class="v39sr"> · 일일 퀘스트 보상 '+Q_PT+'P (무상)</span></div></div><div class="act2 qr"><span class="qp"><b>+'+Q_PT+'P</b><small>무상</small><span class="qd'+(m.done?'':' go')+'">'+(m.done?'완료':'진행 중')+'</span></span>'+(!m.done&&!m.p&&RG.rr!==dayKey()?'<button class="qrr" type="button" data-qrr="'+esc(m.id)+'" aria-label="퀘스트 교체 · '+esc(d.n)+'" title="교체"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg><span class="v39sr">교체</span></button>':'')+'</div></div>';}).join('')+'<p class="src">'+(RG.rr===dayKey()?'오늘 무료 교체를 썼습니다':'아직 시작하지 않은 퀘스트 1개를 하루 한 번 무료로 바꿀 수 있습니다')+'</p>'+
    '<div class="item qitem bonus'+(bon?' on':'')+'" id="qBonus"><div><b class="qt">3개 모두 완료 보너스</b><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="'+nd+'"><i style="width:'+Math.round(nd/3*100)+'%"></i></div><div class="spec qs">완료 <span class="num">'+nd+'/3</span><span class="v39sr"> · 3개 모두 완료 보너스 +'+Q_BONUS+'P (무상)</span></div></div><div class="act2 qr"><span class="qp"><b>+'+Q_BONUS+'P</b><small>무상</small><span class="qd'+(bon?'':' go')+'">'+(bon?'받음':'진행 중')+'</span></span></div></div>'+
-   captGoalHTML()+'<p class="src">'+(TOPUP_ON?'무상 포인트는 환불·양도·현금 교환이 불가합니다.':'게임 포인트는 게임 안에서만 쓰는 재화로 현금·상품권·재화로 바꿀 수 없고, 회원끼리 직접 주고받는 기능은 없습니다. 선장 몫은 게임 규칙에 따라 지급되는 게임 내 보상입니다. 포인트·배·계정을 현금으로 사고팔거나 그런 거래를 중개하면 포인트 회수와 이용 제한 대상이 됩니다.')+'</p><p class="src">퀘스트는 매일 자정(한국 시각)에 바뀝니다. 금어기 어종과 자동 낚시 조과는 퀘스트에 들어가지 않습니다.</p>';}
+   captGoalHTML()+'<p class="src">'+(TOPUP_ON?'무상 포인트는 환불·양도·현금 교환이 불가합니다.':'게임 포인트는 게임 안에서만 쓰는 재화로 현금·상품권이나 다른 재화로 바꿀 수 없고, 회원끼리 직접 주고받는 기능은 없습니다. 선장 몫은 게임 규칙에 따라 지급되는 게임 내 보상입니다. 포인트·배·계정을 현금으로 사고팔거나 그런 거래를 중개하면 포인트 회수와 이용 제한 대상이 됩니다.')+'</p><p class="src">퀘스트는 매일 자정(한국 시각)에 바뀝니다. 금어기 어종과 자동 낚시 조과는 퀘스트에 들어가지 않습니다.</p>';}
 function openQuests(){shopClose();if(!$('#bag').hidden)bagSet(false);openRPG('miss');}
 $('#questbtn').addEventListener('click',openQuests);$('#wquestbtn').addEventListener('click',openQuests);
 
@@ -6453,7 +6458,7 @@ function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.n
   if(SRV&&((!v45Beta()&&V45.rating)||A.sub))/* V52-4 운영자 미리 보기(A.sub)도 표시 · V50 멤버십 칸: 서버 연결·등급분류 표시가 있을 때만(시험용이면 숨김) */h+='<div class="item mode'+(A.mode==='sub'?' on':'')+'" id="subCard"><div><b>낚시GO PRO 멤버십</b> <span class="mtag">'+(A.sub?'적용 중':'월 9,900원 · 자동 갱신')+'</span><div class="spec">'+(A.sub?'구독 중 · 자동 낚시가 최대 '+A.capH+'시간 쌓임(무료 기본 8시간) · 포만감 줄어드는 속도 절반 · 수확량은 무료와 같음':'낚시GO PRO 멤버십을 구독하면 자동 낚시가 최대 '+SUB_CAP_H+'시간 쌓임(무료 기본 8시간) · 포만감 줄어드는 속도 절반 · 수확량은 무료와 같음 · 게임 안 유료 상품은 없습니다')+(s&&rateTxt(s,'sub')?' · '+rateTxt(s,'sub'):'')+'</div></div><div class="act2">'+v45RateHTML()+(A.sub?'':'<button class="mini buy" type="button" id="subGo">멤버십 보기</button>')+'</div></div>';
   const N=A.netNext;h+='<div class="item"><div><b>어망 크기</b> <span class="mtag">'+(A.sub?'내 어망 '+NET_CAP_H[A.net|0]+'시간 · 멤버십 중 '+A.capH+'시간':'지금 '+A.capH+'시간')+'</span><div class="spec">무료·광고 부스트로 쌓이는 최대 시간 · 포인트로만 키움(8 → 10 → 12시간)'+(A.sub?' · 멤버십 중에는 '+SUB_CAP_H+'시간이 먼저 적용되고, 키운 어망은 멤버십이 끝난 뒤 쓰입니다':'')+'</div></div><div class="act2">'+(N?'<button class="mini" type="button" id="netUpB"'+(spendNow()<N.price?' disabled':'')+'>'+N.capH+'시간으로 · '+fmtN(N.price)+'P</button>':'<span class="k">가장 큰 어망</span>')+'</div></div>';
   h+=goalHTML(s);
-  h+='<p class="src">자동 낚시는 직접 낚시와 같은 확률(입질 없음·헛챔질·바늘털이·밑걸림 포함)로 낚시법에 따라 '+AUTO_CYC.lure+'~'+AUTO_CYC.surf+'초에 한 번 던지고, 한 마리당 기본 포인트 50%·경험치 35%를 받습니다. 무료·낚시GO PRO 멤버십은 그 절반이고, 광고 부스트는 무료의 2배입니다. 멤버십은 수확량 대신 쌓이는 시간이 최대 '+SUB_CAP_H+'시간(무료 기본 8시간)으로 늘어납니다. 광고 부스트 시간에는 포만감이 무료와 같은 속도로 줄어듭니다. 직접 낚시로 낚으면 따로 포인트 +30% 보너스가 붙습니다. 게임을 끄거나 화면을 떠난 동안에도 계속되며, 돌아오면 서버 시간으로 정산합니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다. 위험 기상·채비 소진·선상에서는 멈춥니다.</p>';
+  h+='<p class="src">자동 낚시는 직접 낚시와 같은 확률(입질 없음·헛챔질·바늘털이·밑걸림 포함)로 낚시법에 따라 '+AUTO_CYC.lure+'~'+AUTO_CYC.surf+'초에 한 번 던지고, 한 마리당 기본 포인트 50%·경험치 35%를 받습니다. 무료는 그 절반이고, 광고 부스트는 무료의 2배입니다. '+(subAvail(A)?'낚시GO PRO 멤버십은 수확량은 무료와 같고 쌓이는 시간이 최대 '+SUB_CAP_H+'시간(무료 기본 8시간)으로 늘어나며, 포만감은 절반 속도로 줄어듭니다(광고 부스트 시간에는 무료와 같은 속도). ':'')+'직접 낚시로 낚으면 따로 포인트 +30% 보너스가 붙습니다. 게임을 끄거나 화면을 떠난 동안에도 계속되며, 돌아오면 서버 시간으로 정산합니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다. 위험 기상·채비 소진·선상에서는 멈춥니다.</p>';
   const B=$('#autoBody');B.innerHTML=h;B.dataset.v='info';$('#autoModal').hidden=false;bindPay();
   const on=$('#autoOnB');if(on)on.onclick=()=>{if(!player||$('#world').hidden){toast('낚시터에 들어가서 켜세요');return;}setAuto(true);openAutoInfo();};
   const off=$('#autoOff');if(off)off.onclick=()=>{setAuto(false);$('#autoModal').hidden=true;};
@@ -6529,23 +6534,21 @@ function autoNotify(){const LN=capPlug('LocalNotifications');if(!LN)return;const
 /* ---- 채비·상점 화면 ---- */
 const TABS=[['my','내 채비'],['rod','낚싯대'],['line','원줄'],['leader','목줄·쇼크리더'],['term','루어·채비'],['net','투망'],['cosm','꾸미기'],['unlock','해금'],['charge','포인트 충전']].filter(x=>TOPUP_ON||x[0]!=='charge');// v33: 충전 끔(TOPUP_ON=false)이면 충전 탭 없음
 if(!TOPUP_ON){const b=document.getElementById('shopCharge');if(b)b.remove();}let shopTab='my';
-// v32 D5 환불 안내 — 초안(DRAFT): 출시 전 변호사 검토 필요. 서버가 wallet.refundTxt({draft,note,text} 또는 문자열)를 주면 그 문구를 쓴다
-// FIXUP2 LEGAL-2: 서버 src/index.js REFUND_TXT.text와 글자까지 같은 문구(바꾸면 둘 다) · 초안이면 앞에 '[초안 — 확정 문구 아님]'
+// v32 D5 환불 안내 — V55 출시 문구(초안 표시 없음). 서버가 wallet.refundTxt({draft,note,text} 또는 문자열)를 주면 그 문구를 쓴다
+// FIXUP2 LEGAL-2: 서버 src/index.js REFUND_TXT.text와 글자까지 같은 문구(바꾸면 둘 다)
 // v33: 충전이 없어져 24시간 자동낚시 이용권만 다룬다(예전 유상 포인트 기록은 아래 내역·청약철회 버튼으로 계속 처리)
-const REFUND_TXT0='· 게임 안에서 파는 유료 상품은 없습니다. 자동 낚시 최대 20시간(무료 기본 8시간)은 낚시GO PRO 멤버십(월 9,900원) 혜택이며, 멤버십 결제·해지·환불은 낚시GO 이용약관(Google Play로 구독한 경우 Google Play 환불 정책 포함)을 따릅니다. 게임 포인트는 낚시로만 모을 수 있고 판매·충전하지 않습니다. 게임 포인트는 게임 안에서만 쓰는 재화로 현금·상품권·재화로 바꿀 수 없고, 회원끼리 직접 주고받는 기능은 없습니다. 선장 몫은 게임 규칙에 따라 지급되는 게임 내 보상입니다. 포인트·배·계정을 현금으로 사고팔거나 그런 거래를 중개하면 포인트 회수와 이용 제한 대상이 됩니다.\n'+
- '· 예전에 산 24시간 이용권 중 이용 시간이 아직 시작되지 않은 이용권(사용 중에 이어서 산 이용권)은 시작 전까지 언제든 청약철회(환불)를 요청할 수 있습니다.\n'+
- '· 예전에 산 이용권 중 이용 시간이 시작된 이용권은 디지털콘텐츠 제공이 시작된 것이어서 청약철회할 수 없습니다(전자상거래법 제17조 제2항 제5호). 다만 이용권이 안내한 내용과 다르게 제공되었거나 회사 사정으로 이용하지 못했다면 그 사실을 안 날부터 30일(제공받은 날부터 3개월) 안에 환불을 요청할 수 있습니다.\n'+
- '· 요청은 영업일 기준 3일 이내에 처리하여 원래 결제수단으로 결제를 취소하며, 카드사 사정에 따라 반영까지 시간이 더 걸릴 수 있습니다. 처리 전에는 요청을 취소할 수 있습니다.\n'+
- '· 서비스를 종료할 때에는 종료일로부터 최소 30일 동안 환불 창구를 운영합니다.\n'+
- '· 앱(구글 플레이)에서 결제한 이용권은 구매 후 48시간 이내에는 구글 플레이에서 직접 환불을 요청할 수 있습니다. 그 밖의 청약철회는 sunjulab.a1@gmail.com으로 주문번호와 함께 요청해 주세요.\n'+
- '· 문의: sunjulab.a1@gmail.com';
-let REFUND_TXT=REFUND_TXT0,REFUND_DRAFT=true;
+const REFUND_TXT0='· 현재 게임 안에서 판매하는 유료 상품은 없습니다. 자동 낚시 최대 20시간(무료 기본 8시간)은 낚시GO PRO 멤버십(월 9,900원) 혜택이며, 멤버십 결제·해지·환불은 낚시GO 이용약관(Google Play로 구독한 경우 Google Play 환불 정책 포함)을 따릅니다. 게임 포인트는 낚시로만 모을 수 있고 판매·충전하지 않습니다. 게임 포인트는 게임 안에서만 쓰는 재화로 현금·상품권이나 다른 재화로 바꿀 수 없고, 회원끼리 직접 주고받는 기능은 없습니다. 선장 몫은 게임 규칙에 따라 지급되는 게임 내 보상입니다. 포인트·배·계정을 현금으로 사고팔거나 그런 거래를 중개하면 포인트 회수와 이용 제한 대상이 됩니다.\n' +
+    '· 문의: sunjulab.a1@gmail.com';
+let REFUND_TXT=REFUND_TXT0,REFUND_DRAFT=false;/* V55 출시: 초안 표시 없음 */
 // 서버 값이 없으면(다른 응답의 wallet) 마지막으로 받은 문구를 그대로 둔다
-function refundTxtSync(){const r=WAL&&WAL.refundTxt;if(r&&r.beta)return;/* v45 시험용 문구는 refundTxt()가 직접 */const t=typeof r==='string'?r:(r&&typeof r.text==='string'?r.text:'');if(t.trim()){REFUND_TXT=t.trim().slice(0,1200);REFUND_DRAFT=typeof r==='string'?false:!!r.draft;}else if(!REFUND_TXT){REFUND_TXT=REFUND_TXT0;REFUND_DRAFT=true;}}
-function refundTxt(){if(v45Beta())return V45_BETA_REFUND;/* v45 시험용: 유료 상품 없음 */return(REFUND_DRAFT?'[초안 — 확정 문구 아님] ':'')+REFUND_TXT;}
+function refundTxtSync(){const r=WAL&&WAL.refundTxt;if(r&&r.beta)return;/* v45 시험용 문구는 refundTxt()가 직접 */const t=typeof r==='string'?r:(r&&typeof r.text==='string'?r.text:'');if(t.trim()){REFUND_TXT=t.trim().slice(0,3000);REFUND_DRAFT=typeof r==='string'?false:!!r.draft;}else if(!REFUND_TXT){REFUND_TXT=REFUND_TXT0;REFUND_DRAFT=false;}}
+/* V55 멤버십 혜택이 켜진 때(서버 연결 + 등급분류 표시, 또는 운영자 미리 보기)만 멤버십 안내를 보인다 — 켜지지 않은 혜택을 약속하지 않게 */
+function subAvail(A){try{A=A||autoNow();}catch(e){}return !!(SRV&&((!v45Beta()&&V45.rating)||(A&&A.sub)));}
+const MEMB_SENT='자동 낚시 최대 20시간(무료 기본 8시간)은 낚시GO PRO 멤버십(월 9,900원) 혜택이며, 멤버십 결제·해지·환불은 낚시GO 이용약관(Google Play로 구독한 경우 Google Play 환불 정책 포함)을 따릅니다. ';
+function refundTxt(){if(v45Beta())return V45_BETA_REFUND;/* v45 시험용: 유료 상품 없음 */return subAvail()?REFUND_TXT:REFUND_TXT.replace(MEMB_SENT,'');}/* V55: 초안 표시를 붙이지 않는다 */
 let chgSel=TOPUP[0],chgFor=null;
 // 충전 가능 여부: 앱(Capacitor) → 준비 중, 오프라인(아티팩트 등) → 낚시GO 웹 안내, 서버 모드인데 결제 설정 없음 → 준비 중
-const PREVIEW_PAY=TOPUP_ON?'미리보기에서는 결제가 되지 않습니다 · 낚시GO 게임 안에서 바로 충전됩니다':'미리보기에서는 결제가 되지 않습니다 · 이용권은 낚시GO 게임 안에서 살 수 있습니다';
+const PREVIEW_PAY=TOPUP_ON?'미리보기에서는 결제가 되지 않습니다 · 낚시GO 게임 안에서 바로 충전됩니다':'미리보기에서는 결제가 되지 않습니다';
 function chargeState(){if(isApp()){if(!SRV)return{ok:false,msg:'낚시GO 계정으로 접속하면 충전할 수 있습니다'};if(!iapKind())return{ok:false,msg:'앱 업데이트 후 이용할 수 있습니다'};return{ok:true,app:true};}if(!SRV)return{ok:false,msg:PREVIEW_PAY};if(!payCfg())return{ok:false,msg:'결제 준비 중입니다'};return{ok:true};}
 function canCharge(){return chargeState().ok;}
 function pkgFor(short){return TOPUP.find(w=>w>=short)||null;}
@@ -7008,12 +7011,11 @@ const netReady=(async()=>{if(!NET_API||!tokNow())return;let local=null;try{local
     let skip=false;try{skip=sessionStorage.getItem(KEY+'.migSkip')==='1';}catch(e){}
     // C6 #160: 옮기기 전에 무엇이 어떻게 옮겨지는지 묻고(상한 안내), 옮긴 뒤에는 실제로 반영된 것을, 거절되면 이유와 '이 기기 기록은 그대로'를 알린다
     if(prog&&fresh&&!done&&!skip){const lv0=(local.rpg||{}).lv||1,dx0=Object.keys(local.dex||{}).filter(k=>(local.dex[k]||{}).n>0).length,own0=Object.keys((local.inv||{}).own||{}).length;
-      const yes=await askBox('이 기기 기록을 계정으로 옮길까요?','이 기기: Lv.'+lv0+' · '+fmtN(local.pt||0)+'P · 어록 '+dx0+'종 · 장비 '+own0+'개. 옮길 때는 레벨 최대 Lv.3, 무상 포인트 최대 2,000P, 어록은 많이 잡은 순 최대 10종, 장비는 Lv.3 이하 해금 장비만 옮겨집니다. 한 번만 옮길 수 있고, 이 기기 기록은 지워지지 않습니다.','옮기기','나중에');
-      if(!yes){try{sessionStorage.setItem(KEY+'.migSkip','1');}catch(e){}}
-      else{const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
-      if(m.s===200&&m.j){applyProfile(m.j);const p=m.j,dx=Object.keys(p.dex||{}).length,ow=Object.keys((p.inv||{}).own||{}).length;setTimeout(()=>toast('계정으로 옮겼습니다 · Lv.'+((p.rpg||{}).lv||1)+' · '+fmtN(p.pt||0)+'P · 어록 '+dx+'종 · 장비 '+ow+'개 (상한 적용)',6000),500);}
+      /* V56: 묻지 않고 처음 접속할 때 자동으로 옮긴다(운영자 결정) — 상한(Lv.3·2,000P·어록 10종·Lv.3 이하 장비)은 서버가 그대로 적용, 이 기기에서 한 번만, 이 기기 기록은 지우지 않음 */
+      {const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
+      if(m.s===200&&m.j){applyProfile(m.j);const p=m.j,dx=Object.keys(p.dex||{}).length,ow=Object.keys((p.inv||{}).own||{}).length;setTimeout(()=>toast('이 기기 기록을 계정으로 자동으로 옮겼습니다 · Lv.'+((p.rpg||{}).lv||1)+' · '+fmtN(p.pt||0)+'P · 어록 '+dx+'종 · 장비 '+ow+'개 (상한 적용)',6000),500);}
       else if(m.s===409||m.s===410){const why=m.s===410?'기록 이전 기간이 끝났습니다':m.j&&m.j.error==='HAS_CATCHES'?'이 계정에는 이미 서버에 조과가 있습니다':'이미 한 번 옮긴 계정입니다';
-        setTimeout(()=>askBox('이 기기 기록을 옮길 수 없습니다',why+'. 화면에는 계정 기록이 나오고, 이 기기 기록은 지워지지 않고 이 브라우저에 그대로 남아 있습니다.','확인','닫기'),400);}
+        /* V56 자동 이전: 옮길 수 없는 경우(이미 조과가 있는 계정 등)는 창을 띄우지 않고 계정 기록으로 이어 간다 */void why;}
       if(m.s===200||m.s===409||m.s===410){try{localStorage.setItem(KEY+'.migrated','1');}catch(e){}}}}}catch(e){}
   payReturn();ppRun();iapResume();setInterval(flushLog,60e3);addEventListener('pagehide',()=>flushLog(true));srvPresence();setInterval(srvPresence,30e3);})();
 netReady.then(()=>{netDone=true;unlockCheck();});
@@ -7453,7 +7455,7 @@ function passHistHTML(ps){if(!Array.isArray(ps)||!ps.length)return'';const ST={a
 async function openRefund(){const m=$('#refundModal'),box=$('#refundBody');m.hidden=false;
   const head='<div class="chgnote">'+esc(refundTxt())+'</div>'+(TOPUP_ON?'<p class="src" style="margin:0 0 8px">무상 포인트는 환불·양도·현금 교환이 불가합니다. 포인트는 무상 포인트부터 먼저 사용됩니다. 앱(구글 플레이)에서 결제한 상품은 구매 후 48시간 이내에는 구글 플레이에서 직접 환불을 요청할 수 있습니다. 그 밖의 청약철회(구매일로부터 7일 이내, 사용하지 않은 유상 포인트)는 sunjulab.a1@gmail.com으로 주문번호와 함께 요청해 주시면 구글 플레이 결제를 취소해 드립니다.</p>':'');
   const HN=TOPUP_ON?'충전 내역':'구매 내역';
-  if(!SRV){box.innerHTML=head+'<div class="k">'+HN+'은 낚시GO 계정으로 접속하면 여기에서 볼 수 있습니다.</div>';return;}
+  if(!SRV){box.innerHTML=head;return;}/* V55: 판매하는 상품이 없으니 '구매 내역' 안내를 띄우지 않는다 */
   box.innerHTML=head+'<div class="k">'+HN+' 불러오는 중…</div>';const r=await net('wallet');if(m.hidden)return;
   if(r.s===200&&r.j)setWal(r.j);refreshWallet();const w=walletNow();const pend=ppLoad().filter(ppMine);const wErr=!(r.s===200&&r.j)&&!WAL;
   box.innerHTML=head+'<div class="walln"><span class="walsplit">'+walletTxt()+'</span></div>'+
@@ -7699,7 +7701,16 @@ function bootExtras(){buildEmoBar();
 // C6 #109: 서버 cleanNick과 같은 규칙으로 미리 거르고, 서버가 확정한 이름을 내 이름표·입력칸·접속 정보에 반영
 // v31 S4 #41·#83: 글자(코드 포인트) 단위로 자르고 짝 없는 서로게이트·채움 문자(ㅤ 등)를 지움 · 글자나 숫자가 하나는 있어야 함(운영자 사칭 이름은 서버가 거절)
 const cleanNickC=n=>{let s=Array.from(String(n||'')).filter(c=>c.length===2||!/[\uD800-\uDFFF]/.test(c)).join('');try{s=s.replace(/[^\u3131-\u318E]+/g,m=>m.normalize('NFKC'));}catch(e){}/* LS #187: 호환 자모(ㅋㅋ)는 그대로(서버 cleanNick과 같음) */s=s.replace(/[\u0000-\u001f\u007f<>&"'`\\]/g,'').replace(/[\u00AD\u034F\u115F\u1160\u17B4\u17B5\u180B-\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2069\u2800\u3164\uFE00-\uFE0F\uFEFF\uFFA0]/g,'').replace(/\s+/g,' ').trim();s=Array.from(s).slice(0,12).join('').trim();return /[\p{L}\p{N}]/u.test(s)?s:'';};
+/* V54 닉네임 중복 확인: 입력칸 옆 '중복 확인' 단추 → 서버 nick-check(다른 계정이 쓰는 이름인지 · 대소문자·띄어쓰기 무시). 서버 없이(이 기기 저장) 할 때는 단추를 숨긴다 — 이름이 겹쳐도 다른 사람에게 보이지 않음 */
+function nickChk(inp){if(!inp||inp.dataset.nk)return;inp.dataset.nk='1';const row=document.createElement('div');row.className='nkrow';inp.parentNode.insertBefore(row,inp);row.appendChild(inp);
+  const b=document.createElement('button');b.type='button';b.className='ghost nkchk';b.textContent='중복 확인';row.appendChild(b);const m=document.createElement('p');m.className='nkmsg';m.setAttribute('role','status');row.after(m);
+  const vis=()=>{b.hidden=!SRV;};vis();inp.addEventListener('focus',vis);inp.addEventListener('input',()=>{seq++;m.textContent='';m.className='nkmsg';});
+  let seq=0;b.onclick=async()=>{vis();if(!SRV)return;const raw=inp.value.trim(),v=cleanNickC(raw);if(!v){m.className='nkmsg no';m.textContent=raw?'이름에 글자나 숫자가 하나는 있어야 합니다':'이름을 입력해 주세요';return;}
+    const my=++seq;b.disabled=true;m.className='nkmsg';m.textContent='확인 중…';const r=await net('nick-check',{nick:v});b.disabled=false;if(my!==seq||cleanNickC(inp.value.trim())!==v)return;/* 확인 중에 입력을 바꿨으면 옛 결과는 버림 */
+    if(r.s===200&&r.j){m.className='nkmsg '+(r.j.ok?'ok':'no');m.textContent=r.j.ok?(r.j.mine?'지금 쓰는 이름입니다':'"'+r.j.nick+'" — 쓸 수 있는 이름입니다'):(r.j.message||'쓸 수 없는 이름입니다');}
+    else{m.className='nkmsg no';m.textContent='확인하지 못했습니다 · '+errMsg(r);}};}
 function nickSync(){try{$('#nick').value=save.nick;}catch(e){}if(myPres&&myPres.n!==save.nick){myPres.n=save.nick;sendPres(true);}if(player&&player.nl)myLabelSync(true);persist();}
+try{nickChk($('#nick'));}catch(e){}/* V54 */
 $('#enter').addEventListener('click',async()=>{const eb=$('#enter');if(eb.disabled)return;audio();eb.disabled=true;const t0=eb.textContent;eb.textContent='불러오는 중…';try{await netReady;}catch(e){}eb.disabled=false;eb.textContent=t0;
   if(lookNeed()&&!(LKC&&LKC.open)){const r0=$('#nick').value.trim(),v0=cleanNickC(r0);if(v0&&!SRV)save.nick=v0;lkOpen({done:()=>{$('#nick').value=save.nick;$('#enter').click();}});return;}/* v37 처음이면 캐릭터 만들기부터(닉네임 포함) */
   rollDaily();renderLv();const raw=$('#nick').value.trim(),v=cleanNickC(raw);
@@ -8705,7 +8716,7 @@ function lkOpen(o){o=o||{};if(LKC&&LKC.open)return;const first=lookFirst(),L0=my
     $('#lkBody').addEventListener('click',e=>{const b=e.target.closest('[data-lk]');if(!b||!LKC)return;const k=b.dataset.lk,i=+b.dataset.i;if(!(k in LKC.L))return;LKC.L[k]=i;AVP.fzT=LK_FACE[k]?1:0;AVP.faceAt=performance.now()+(LK_FACE[k]?4500:2500);lkRender();});
     $('#lkSex').addEventListener('click',e=>{const b=e.target.closest('[data-sex]');if(b)lkSex(+b.dataset.sex);});
     $('#lkRand').onclick=()=>{if(!LKC)return;const sx=LKC.L.sex===1?1:0;LKC.L=lookRand();LKC.L.sex=sx;if(sx)LKC.L.beard=0;/* v47 성별은 그대로 */AVP.fzT=0;if(AVP.a){AVP.a.A.emo='wave';AVP.a.A.emoT=0;}lkRender();};
-    $('#lkGo').onclick=()=>lkGo();$('#lkX').onclick=()=>lkClose();$('#lkNick').addEventListener('input',lkFoot);
+    $('#lkGo').onclick=()=>lkGo();$('#lkX').onclick=()=>lkClose();$('#lkNick').addEventListener('input',lkFoot);nickChk($('#lkNick'));/* V54 */
     m.addEventListener('keydown',e=>{if(e.key==='Escape'&&LKC&&!LKC.first){e.stopPropagation();lkClose();}});}
   if(LKC.introWas)$('#intro').hidden=true;const hm=$('#helpModal');if(hm)hm.hidden=true;
   $('#lkNick').value=save.nick||'';$('#lkX').hidden=first;$('#lkSub').textContent=first?'남자·여자를 고르고 얼굴과 머리 모양을 골라 주세요 · 처음 한 번은 무료입니다':'바꿀 때마다 '+fmtN(lookPriceNow())+'P · 이름은 그대로 두어도 됩니다';
