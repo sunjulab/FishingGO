@@ -51,11 +51,14 @@ const REGION_EMOJI = { '동해권': '🌊', '남해권': '⚓', '서해권': '�
 // ✅ V50 (2026-11-16): 낚시 게임(방구석 낚시꾼) 혜택 줄 — 게임이 등급분류를 받고 출시된 뒤에 true로 바꾼다(그 전에는 약속하지 않음)
 const META_GAME_LIVE = false;
 
+// ✅ PAY-PAUSE (2026-11-17): 서버 확장 전까지 PRO 멤버십(9,900원) 신규 결제만 '결제 준비 중'으로 막는다. 안내·가격·기존 구독자 표시는 그대로. 다시 열 때 false
+const MEMBERSHIP_PAY_PAUSED = true;
+
 /* ── 플랜 정의 ──────────────────────────────────────────────────── */
 const PLANS = [
   {
     key: 'BASIC',
-    label: 'PRO 멤버십', // ✅ PRO-9900: Play 상품 pro_monthly(9,900원) 결제 → 등급 BUSINESS_LITE(화면 표시 'PRO')
+    label: 'PRO 멤버십', // The user requested the UI text to say PRO 멤버십 but internally it's LITE
     price: '₩9,900',
     period: '/ 월',
     color: '#64B5F6',
@@ -68,7 +71,7 @@ const PLANS = [
       { icon: '👑', text: 'PRO 닉네임 뱃지 제공' },
       { icon: '📡', text: 'CCTV 및 해양 히트맵 확인' },
       { icon: '🤖', text: 'AI 낚시 컨디션 심층 리포트' },
-      ...(META_GAME_LIVE ? [{ icon: '🎣', text: '방구석 낚시꾼 자동 낚시 수확 2배(무료 대비)' }] : []), // ✅ V50: 게임 출시(등급분류) 뒤 META_GAME_LIVE=true
+      ...(META_GAME_LIVE ? [{ icon: '🎣', text: '방구석 낚시꾼 자동 낚시 최대 20시간(무료 기본 8시간)' }] : []), // ✅ V52: 2배 수확 → 20시간 어망 · 게임 출시(등급분류) 뒤 META_GAME_LIVE=true
     ],
   },
   {
@@ -341,6 +344,7 @@ export default function VVIPSubscribe() {
       return;
     }
 
+    if (planKey === 'BASIC' && MEMBERSHIP_PAY_PAUSED) return addToast('결제 준비 중입니다. 조금만 기다려 주세요.', 'info'); // ✅ PAY-PAUSE
     if (!user) return addToast('로그인이 필요합니다.', 'error');
     if (!isNative) return addToast('앱에서만 구독 가능합니다.', 'info');
     // ✅ storeReady state로 체크 (모듈 변수 isStoreReady() 대신)
@@ -525,7 +529,11 @@ export default function VVIPSubscribe() {
                   <div style={{ width: '100%', padding: '13px', borderRadius: '14px', background: `rgba(${plan.color === '#C8D400' ? '200,212,0' : plan.color === '#64B5F6' ? '100,181,246' : '255,215,0'},0.1)`, border: `1px solid ${plan.border}`, textAlign: 'center', color: plan.color, fontWeight: '900', fontSize: `calc(14px * var(--fs,1))` }}>
                     ✅ 현재 이용 중
                   </div>
-                ) : plan.key === 'VVIP' ? null : (
+                ) : plan.key === 'VVIP' ? null : (plan.key === 'BASIC' && MEMBERSHIP_PAY_PAUSED) ? (
+                  <div style={{ width: '100%', padding: '14px', borderRadius: '14px', background: 'rgba(100,181,246,0.12)', border: `1px solid ${plan.border}`, textAlign: 'center', color: '#64B5F6', fontSize: `calc(14px * var(--fs,1))`, fontWeight: '950' }}>
+                    결제 준비 중
+                  </div>
+                ) : (
                   <button
                     onClick={() => handlePlanClick(plan.key)}
                     disabled={owned || isLoading || (plan.key !== 'CAPTAIN' && !iapReady)}
