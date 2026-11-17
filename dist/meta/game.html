@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><script>window.META_CONFIG={"api": "https://fishinggo-meta.fishinggo.workers.dev/api/meta", "pay": null};</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<html lang="ko"><head><script>window.META_CONFIG={"api": "https://fishinggo-meta.fishinggo.workers.dev/api/meta", "pay": null, "auth": "https://fishing-go-backend.onrender.com"};</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
 <title>방구석 낚시꾼</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500&family=Jua&display=swap">
@@ -1727,7 +1727,7 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
   </div>
   <!-- v38-UI 왼쪽 추적기: 월파 · 처음 안내 · 전국 대물 · 항구 게시판 · 목표/다음 해금을 한 목록으로(3줄 + 더보기) -->
   <aside id="trk" hidden aria-label="퀘스트 · 알림"><button id="trkHd" type="button" aria-expanded="true" aria-controls="trkBody"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20.5V4M6 4.5h11l-2.2 4 2.2 4H6"/></svg><span>퀘스트 · 알림</span><b class="num" id="trkN"></b><svg class="ic cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><div id="trkBody"><div id="tut" class="panel" hidden role="dialog" aria-label="처음 안내" aria-live="polite"><div class="hd"><span id="tutStep">1 / 6</span><b id="tutTitle"></b></div><p id="tutBody"></p><div class="row"><span class="tgo" id="tutGo"></span><button class="ghost" id="tutSkip" type="button">건너뛰기</button><button class="btn" id="tutNext" type="button">다음</button></div></div><div id="v36hud" hidden></div></div><button id="trkMore" type="button" hidden></button></aside>
-  <div id="feed" class="panel"><div class="hd"><span>이 낚시터 소식</span><span id="here">나 혼자</span></div><div id="log" aria-live="polite"></div></div>
+  <div id="feed" class="panel"><div class="hd"><span>이 낚시터 소식</span><span id="here">연결 확인 중…</span></div><div id="log" aria-live="polite"></div></div>
   <div id="hint" class="panel">물가로 걸어가세요</div>
   <div id="fight" class="panel" hidden>
     <div id="fhint" aria-hidden="true"></div>
@@ -6474,9 +6474,9 @@ let autoBeat=0,autoRelT=1.1;
 function autoRest(){return 3;}// 자동 낚시 채비 정리 3초(2026-11-05)
 // C6 #138: 화면 속 자동 낚시는 연출 — 어종·크기를 말하지 않고, 실제 조과는 정산 기록(어종 이름 포함)으로 알린다
 let autoVisT=0;function autoVisNote(){const n=performance.now();if(n-autoVisT<60e3)return;autoVisT=n;const m=Math.max(1,Math.ceil((300e3-autoBeat)/60e3));toast('[자동] 화면의 고기는 연출입니다 · 포인트와 쿨러 고기는 5분마다 한꺼번에 들어옵니다 · 다음 정산 약 '+m+'분 뒤',4200);}
-/* 자동 정산 알림: 포인트가 들어온 걸 바로 보이게 */function autoGainNote(n,pts){toast('자동 정산 · '+fmtN(n)+'마리 · +'+fmtN(pts)+'P',3200);try{const w=$('#wallet');if(w){w.classList.remove('ptpop');void w.offsetWidth;w.classList.add('ptpop');}}catch(e){}}
+/* 자동 정산 알림: 포인트가 들어온 걸 바로 보이게 · V58: 무엇을 낚았는지(어종·마릿수·가장 큰 고기)도 */function autoGainNote(n,pts,tally,best){const fish=Object.entries(tally||{}).sort((a,b)=>(b[1].n||0)-(a[1].n||0)).slice(0,3).map(([k,v])=>k+' '+(v.n||0)+'마리').join(' · ');const big=best&&best.n&&best.cm?' · 가장 큰 고기 '+best.n+' '+(Math.round(best.cm*10)/10)+'cm':'';toast('자동 낚시로 낚았습니다 · '+(fish||fmtN(n)+'마리')+big+' · +'+fmtN(pts)+'P',5200);try{const w=$('#wallet');if(w){w.classList.remove('ptpop');void w.offsetWidth;w.classList.add('ptpop');}}catch(e){}}
 const tallyTxt=t=>{const e=Object.entries(t||{}).sort((a,b)=>b[1].n-a[1].n).slice(0,4);return e.length?' ('+e.map(([k,v])=>esc(k)+' '+v.n).join(', ')+')':'';};
-function autoTick(dt,rdt){if(!autoOn)return;if((autoBeat+=rdt)>300e3&&!(SRV&&adBusy)){autoBeat=0;if(SRV)srvSettle(true,'tick');else{const R=settleLocal(true,'tick');if(R&&R.n){logMsg('자동 정산 · '+R.n+'마리'+tallyTxt(R.tally)+' · +'+fmtN(R.pts)+'P · +'+fmtN(R.xp)+'XP','sys');autoGainNote(R.n,R.pts);}}}/* 5분마다 확인(정산) → 어망 시간도 그때부터 다시 */
+function autoTick(dt,rdt){if(!autoOn)return;if((autoBeat+=rdt)>(SRV&&cur&&SA&&SA.spot===cur.id&&!document.hidden?120e3:300e3)&&!(SRV&&adBusy)){/* V58: 자동 낚시 중인 낚시터를 보고 있으면 2분마다 조과를 보여 줌(그 밖에는 5분) */autoBeat=0;if(SRV)srvSettle(true,'tick');else{const R=settleLocal(true,'tick');if(R&&R.n){logMsg('자동 낚시 · '+R.n+'마리'+tallyTxt(R.tally)+' · +'+fmtN(R.pts)+'P · +'+fmtN(R.xp)+'XP','sys');autoGainNote(R.n,R.pts,R.tally,null);}}}/* 5분마다 확인(정산) → 어망 시간도 그때부터 다시 */
   if(W&&status(cur,W)==='b'){setAuto(false);toast('위험 기상이라 자동 낚시를 멈췄습니다');return;}
   autoT+=dt;
   if(state==='idle'){if(autoT>autoRest()&&!nearWater()){autoT=0;}/* v43: 물가 끝이 아니면 화면 속 던지기만 쉬고 자동 낚시는 그대로(수확은 시간으로 정산) */
@@ -6930,6 +6930,31 @@ const EMBED=QS.get('embed')==='1';
 let NET_DEAD=false,SA=null,SRV_TRIP=null;
 function apiURL(p){return new URL(NET_API+'/'+p,location.href).href;}
 function tokNow(){try{return localStorage.getItem('access_token')||'';}catch(e){return'';}}
+/* V58: 낚시GO 로그인 토큰은 1시간이면 끝난다. 게임 화면에서는 낚시GO가 갱신해 주지 않으므로(낚시GO API를 부르지 않음),
+   끝나기 전·401(TOKEN_INVALID)일 때 게임이 직접 낚시GO 갱신(/api/auth/refresh)을 부르고 새 토큰을 낚시GO와 같은 자리에 저장한다.
+   CFG.auth(낚시GO 백엔드 주소)가 있을 때만. 여러 창이 동시에 갱신하지 않게 잠금(navigator.locks) + 저장된 새 토큰 다시 확인 */
+const AUTH_API=String(CFG.auth||'').replace(/\/+$/,'');
+function tokExp(t){try{const p=JSON.parse(decodeURIComponent(escape(atob(String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))));return(+p.exp||0)*1000;}catch(e){return 0;}}
+function lsGet(k){try{return localStorage.getItem(k)||'';}catch(e){return'';}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+let tokFly=null,tokFailAt=0;
+/* need: 남은 시간이 이보다 적으면 갱신. 실패하면 2분 동안 다시 부르지 않음. 낚시GO가 같은 때 갱신 중일 수 있어 잠깐 기다렸다가 저장소를 다시 본다(같은 refresh 토큰을 두 번 보내지 않게) */
+function tokFresh(force,old,need){if(!AUTH_API)return Promise.resolve(tokNow());if(tokFly)return tokFly;need=need||90e3;
+  const run=async()=>{const fresh=t=>t&&(t!==old||!force)&&tokExp(t)-Date.now()>need;let cur0=tokNow();if(fresh(cur0))return cur0;
+    if(Date.now()-tokFailAt<120e3)return cur0;
+    const rt0=lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token');if(!rt0)return cur0;
+    await sleepMs(300+Math.random()*1200);const cur1=tokNow(),rt=lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token');
+    if(cur1!==cur0&&tokExp(cur1)-Date.now()>60e3)return cur1;/* 그 사이 낚시GO가 바꿈 */if(!rt)return cur1;
+    const c=new AbortController();const tm=setTimeout(()=>c.abort(),60e3);/* Render가 잠에서 깨는 시간까지 기다림(중간에 끊으면 바뀐 토큰을 못 받음) */
+    try{const res=await fetch(AUTH_API+'/api/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:rt}),signal:c.signal});if(!res.ok){tokFailAt=Date.now();return tokNow();}
+      const j=await res.json();const at=j&&(j.accessToken||j.token);if(!at){tokFailAt=Date.now();return tokNow();}
+      lsSet('access_token',at);if(lsGet('CapacitorStorage.access_token'))lsSet('CapacitorStorage.access_token',at);
+      if(j.refreshToken){lsSet('refresh_token',j.refreshToken);if(lsGet('CapacitorStorage.refresh_token'))lsSet('CapacitorStorage.refresh_token',j.refreshToken);}
+      try{const P=typeof capPlug==='function'&&isApp()&&capPlug('Preferences');if(P&&P.set){P.set({key:'access_token',value:at}).catch(()=>{});if(j.refreshToken)P.set({key:'refresh_token',value:j.refreshToken}).catch(()=>{});}}catch(e){}/* 앱 저장소도 같이 */
+      tokFailAt=0;return at;}catch(e){tokFailAt=Date.now();return tokNow();}finally{clearTimeout(tm);}};
+  tokFly=(async()=>{try{return(navigator.locks&&navigator.locks.request)?await navigator.locks.request('fishinggo-auth-refresh',run):await run();}finally{tokFly=null;}})();return tokFly;}
+/* 미리 갱신: 1분마다 확인해 5분 안에 끝나면 갱신, 끊겨 있었으면 되살림 */
+if(AUTH_API)setInterval(async()=>{const t=tokNow();if(!t||document.hidden)return;if(tokExp(t)-Date.now()<5*60e3){await tokFresh(false,'',5*60e3);}if(typeof NET_DEAD!=='undefined'&&NET_DEAD&&tokNow()&&tokNow()!==deadTok)revive(true);},60e3);
 // C6 #185: 서버 오류 코드 → 게임 안 문장(경로 이름·개발용 표현 없이). 모르는 코드만 서버 문장을 그대로 쓴다
 const ERR_KO={AGE_CONFIRM:'만 14세 이상인지 확인해 주세요 (만 14세 미만은 응모할 수 없습니다)',BAD:'요청 내용이 올바르지 않습니다',BAD_ITEM:'이 칸에 쓸 수 없는 장비입니다',
   TOKEN_INVALID:'다시 로그인해 주세요',TICKET_INVALID:'접속이 만료되었습니다 · 다시 연결합니다',POINTS:j=>'포인트가 부족합니다'+(j.short>0?' ('+Math.ceil(j.short).toLocaleString('ko-KR')+'P 더 필요)':''),
@@ -6953,7 +6978,7 @@ function errMsg(r){const e=r&&r.j&&r.j.error;const T=e&&ERR_KO[e];if(T){try{retu
 const sleepMs=ms=>new Promise(r=>setTimeout(r,ms));
 // v23 요청: 토큰은 매번 다시 읽는다(낚시GO가 갱신함). 8초 제한(본문까지), 409 CONFLICT는 프로필을 다시 받은 뒤 최대 3번 재시도(지터), 401은 새 토큰이 있으면 다시, 없으면 안내 띠
 let deadTok='';
-async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const post=body!==undefined;const tok=tokNow();
+async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const post=body!==undefined;if(AUTH_API&&tokNow()&&tokExp(tokNow())-Date.now()<60e3)await tokFresh(false);/* V58 */const tok=tokNow();
   if(NET_DEAD&&tok&&tok!==deadTok)revive(true);
   if(NET_DEAD&&post)return{s:401,j:{error:'TOKEN_INVALID',message:'다시 로그인해 주세요'}};
   if(TAB_RO&&post)return{s:0,j:{error:'TAB_RO',message:'다른 탭에서 열려 있습니다'}};
@@ -6962,6 +6987,7 @@ async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const pos
     const res=await fetch(apiURL(path),{method:post?'POST':'GET',headers:h,body:post?JSON.stringify(body):undefined,signal:c.signal,keepalive:!!o.keep});s=res.status;try{j=await res.json();}catch(e){if(to)s=0;}}
   catch(e){s=0;}finally{clearTimeout(tm);}
   const k=o.n409||0;if(s===409&&j&&j.error==='CONFLICT'&&k<3&&!o.no409){await sleepMs(120+Math.random()*380*(k+1));if(!k){const p=await net('profile',undefined,{n409:9});if(p.s===200&&p.j)applyProfile(p.j);}return net(path,body,Object.assign({},o,{n409:k+1}));}
+  if(s===401&&!o.again401&&AUTH_API&&tok&&tokExp(tok)-Date.now()<120e3){const nt=await tokFresh(true,tok);if(nt&&nt!==tok){if(NET_DEAD)NET_DEAD=false;return net(path,body,Object.assign({},o,{again401:1}));}}/* V58: 토큰 끝남 → 갱신 뒤 한 번 더 */
   if(s===401&&!o.again401&&tokNow()&&tokNow()!==tok)return net(path,body,Object.assign({},o,{again401:1}));
   if(s===401&&SRV)authLost(tok);
   try{v35Sync(path,s,j);}catch(e){}/* v35 내구도·자동 수리 */
@@ -6985,7 +7011,7 @@ function authLost(tok){NET_DEAD=true;deadTok=tok||tokNow();showBanner();}
 // v23: 같은 창에서 낚시GO가 토큰을 새로 넣으면(또는 "다시 연결") 세션을 되살린다 — 요청마다·포커스·탭 복귀 때 확인
 let reviving=null;
 function revive(quiet){if(reviving)return reviving;reviving=(async()=>{const tok=tokNow();if(!tok)return false;const was=NET_DEAD;NET_DEAD=false;const r=await net('profile');
-  if(r.s===200&&r.j&&typeof r.j.pt==='number'){$('#netBanner').hidden=true;deadTok='';if(SRV)applyProfile(r.j);if(was&&!quiet)toast('다시 연결했습니다');else if(was)toast('다시 연결했습니다');ppRun(true);return true;}
+  if(r.s===200&&r.j&&typeof r.j.pt==='number'){$('#netBanner').hidden=true;deadTok='';if(SRV)applyProfile(r.j);if(was&&!quiet)toast('다시 연결했습니다');else if(was)toast('다시 연결했습니다');ppRun(true);if(was){try{wsBack=1000;wsKick();}catch(e){}}/* V58: 끊겼다 되살아나면 실시간 방도 다시 연결 */return true;}
   if(r.s===401){NET_DEAD=true;deadTok=tok;showBanner();}else if(was){NET_DEAD=true;}return false;})().finally(()=>{reviving=null;});return reviving;}
 function tokCheck(){if(NET_DEAD&&tokNow()&&tokNow()!==deadTok)revive(true);}
 addEventListener('focus',tokCheck);
@@ -7221,7 +7247,7 @@ function srvSettle(keep,why){srvAutoQ=srvAutoQ.then(async()=>{const spotId=SA&&S
   // v32 #217: 켜 둔 채 잠깐(10분 미만) 다른 앱을 보고 온 복귀 정산은 큰 창 대신 소식 + 짧은 알림
   const quick=why==='return'&&keep&&Math.max(+j.away||0,+j.elapsed||0)<600e3;
   srvApplySettle(j,why!=='tick'&&!quick);await srvRefresh();if(!(SA&&SA.on)&&autoOn){autoOn=false;$('#autobtn').classList.remove('on');}renderAutoBtn();
-  if(why==='tick'||quick){if(j.n){logMsg('자동 정산 · '+j.n+'마리'+tallyTxt(j.tally)+' · +'+fmtN(j.pts)+'P · +'+fmtN(j.xp)+'XP','sys');if(why==='tick')autoGainNote(j.n,j.pts);if(quick)toast('자리를 비운 동안 자동 낚시 · '+j.n+'마리 · +'+fmtN(j.pts)+'P');}return;}
+  if(why==='tick'||quick){if(j.n){logMsg('자동 낚시 · '+j.n+'마리'+tallyTxt(j.tally)+(j.best&&j.best.n&&j.best.cm?' · 최대 '+esc(j.best.n)+' '+(Math.round(j.best.cm*10)/10)+'cm':'')+' · +'+fmtN(j.pts)+'P · +'+fmtN(j.xp)+'XP','sys');if(why==='tick')autoGainNote(j.n,j.pts,j.tally,j.best);if(quick)toast('자리를 비운 동안 자동 낚시 · '+j.n+'마리 · +'+fmtN(j.pts)+'P');}return;}
   const s=SPOTS.find(x=>x.id===spotId);showAwayPopup(s,awayR(j));}).catch(()=>{});return srvAutoQ;}
 function srvVis(){if(document.hidden){flushLog(true);return;}tokCheck();ppRun();if(SA&&SA.on&&!adBusy)srvSettle(true,'return');}// C6 #35: 접속·복귀 정산은 자동 낚시를 끄지 않는다(끄기는 직접 눌렀을 때만)// v29 S2: 광고를 보는 중(앱 광고 창이 닫히며 돌아옴)에는 정산하지 않음
 
