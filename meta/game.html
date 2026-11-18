@@ -7566,14 +7566,14 @@ function openCoupon(){if(!SRV){toast('낚시GO에 로그인해 서버에 연결�
   const opts=Object.keys(GBY).filter(id=>{const c=catOf(id);return c&&c!=='net';}).sort((a,b)=>(catOf(a)||'').localeCompare(catOf(b)||'')||((GBY[a].ti||0)-(GBY[b].ti||0))).map(id=>'<option value="'+esc(id)+'">'+esc(({rod:'낚싯대',line:'원줄',leader:'목줄',term:'채비'})[catOf(id)]||catOf(id))+' · '+esc(GBY[id].n)+(GBY[id].tier?' ('+esc(GBY[id].tier)+')':'')+'</option>').join('');
   const m=uiBox('cpM','modal','');m.innerHTML='<div class="sheet2 panel" role="dialog" aria-labelledby="cpT"><div class="row" style="margin-bottom:6px"><h2 id="cpT" style="margin:0">쿠폰 입력</h2><button class="ghost" id="cpX" type="button" style="margin-left:auto">닫기</button></div>'
     +'<p class="lead" style="margin:0 0 6px">받은 쿠폰 번호를 넣으면 포인트·아이템이 계정에 바로 들어옵니다(쿠폰마다 계정당 1번).</p>'
-    +'<div class="cprow"><input id="cpCode" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="예: WELCOME2026" aria-label="쿠폰 번호"><button class="btn" id="cpGo" type="button">적용</button></div><div class="cpmsg" id="cpMsg" role="status" aria-live="polite"></div>'
+    +'<div class="cprow"><input id="cpCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="예: 방구석오픈 · WELCOME2026" aria-label="쿠폰 번호"><button class="btn" id="cpGo" type="button">적용</button></div><div class="cpmsg" id="cpMsg" role="status" aria-live="polite"></div>'
     +(adm?'<div class="cpadm"><h3 style="margin:0 0 4px;font-size:16px">운영자 · 쿠폰 만들기</h3>'
       +'<label for="cpPt">포인트(무상, 0~100,000P)</label><input id="cpPt" type="number" min="0" max="100000" step="100" value="0">'
       +'<label for="cpItem">아이템(최대 10개)</label><div class="cprow"><select id="cpItem">'+opts+'</select><input id="cpN" type="number" min="1" max="99" value="1" style="max-width:72px" aria-label="개수"><button class="ghost" id="cpAdd" type="button">추가</button></div><div class="cpchips" id="cpChips"></div>'
       +'<label for="cpMax">받을 수 있는 인원(0 = 제한 없음)</label><input id="cpMax" type="number" min="0" step="1" value="0">'
       +'<label for="cpUntil">마감일(비우면 마감 없음)</label><input id="cpUntil" type="date">'
       +'<label for="cpNote">메모(받는 사람에게 보임, 40자)</label><input id="cpNote" type="text" maxlength="40" placeholder="예: 오픈 기념">'
-      +'<label for="cpNew">쿠폰 번호(비우면 자동, 영문·숫자 4~24자)</label><input id="cpNew" type="text" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false">'
+      +'<label for="cpNew">쿠폰 번호(비우면 자동 · 한글·영문·숫자 3~24자, 띄어쓰기 무시)</label><input id="cpNew" type="text" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false">'
       +'<div class="cprow"><button class="btn" id="cpMake" type="button">쿠폰 만들기</button></div><div class="cpmsg" id="cpAdmMsg" role="status" aria-live="polite"></div>'
       +'<h3 style="margin:12px 0 4px;font-size:15px">만든 쿠폰</h3><div id="cpList" class="k">불러오는 중…</div></div>':'')
     +'</div>';
