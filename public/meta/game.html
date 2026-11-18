@@ -5988,7 +5988,7 @@ let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+
     else if(meth==='surf'){setHint('초릿대와 방울을 지켜보세요 · '+Math.round(castD)+'m');setAct('거두기','길게 누르기');}
     else{setHint(cur.w==='sea'&&(+w.wave||0)>1.2?'파도가 높아 찌가 크게 출렁입니다. 깊게 잠길 때가 입질':'찌를 지켜보세요. 깊게 잠기면 챔질');setAct('거두기','길게 누르기');}}
   else if(state==='bite'&&EG.on){setHint('턱! 에기에 무게가 실렸습니다 · 챔질',true);setAct('챔질!','지금');}
-  else if(state==='hooking'){setHint('챔질 확인 중…');setAct('확인 중','','off');}
+  else if(state==='hooking'){setHint('챔질!');setAct('챔질!','','off');}/* V64: 서버 응답(보통 0.5초 안팎)을 기다리는 동안 '확인 중' 대신 챔질 동작으로 보이게 */
   else if(state==='bite'){setHint(meth==='float'?'찌가 잠겼습니다! 챔질':meth==='surf'?'초릿대가 떨립니다! 챔질':'툭! 입질입니다. 챔질',true);setAct('챔질!','지금');}
   else if(state==='fight'&&escJ>0){setHint(escPlan&&escPlan.kind==='jump'?'바늘털이! 바늘이 빠지는 중…':'바늘이 빠지는 중…',true);setAct('감기','놓치는 중','off');}// v32 #208: 빠지는 연출 중에는 느슨 안내·누르기 요청 없음
   else if(state==='fight'){const eW=escPlan&&!escPlan.fired&&escPlan.warn>0;setHint(eW?(escPlan.kind==='jump'?'바늘털이! 고기가 물 위로 솟구칩니다':'고기가 머리를 세차게 흔듭니다!'):fGrace>0&&ratio>2.5?'대물! 손을 떼고 드랙으로 버티세요':fCue>0&&surge>0?'차고 나갑니다! 잠깐 떼세요':tension>.8?'장력 위험! 손을 떼세요':slackT>.5?'느슨! '+Math.max(0,1.6-slackT).toFixed(1)+'초 안에 감으세요':tension<.08?'줄이 느슨합니다 — 감으세요':'누르고 있으면 감깁니다',eW||tension>.8||tension<.08||fCue>0||(fGrace>0&&ratio>2.5));setAct('감기','누르고 있기','hold');}
@@ -7043,25 +7043,25 @@ const netReady=(async()=>{if(NET_API&&!tokNow()&&AUTH_API&&(lsGet('refresh_token
   let shown=false;
   try{const sv=r.j,lvL=(local&&local.rpg&&local.rpg.lv)||1,lvS=(sv.rpg||{}).lv||1;
     const ahead=!!local&&(lvL>lvS||(local.count||0)>(sv.count||0)||(local.pt||0)>(sv.pt||0));
-    let done=false;try{done=localStorage.getItem(KEY+'.mig3')==='1';}catch(e){}
+    let done=false;try{done=localStorage.getItem(KEY+'.mig4')==='1';}catch(e){}
     if(ahead&&((local.count||0)>0||lvL>1)&&!done){
       const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
       if(m.s===200&&m.j){applyProfile(m.j);shown=true;const p=m.j,dx=Object.keys(p.dex||{}).length,ow=Object.keys((p.inv||{}).own||{}).length;setTimeout(()=>toast('이 기기 기록을 계정으로 옮겼습니다 · Lv.'+((p.rpg||{}).lv||1)+' · '+fmtN(p.pt||0)+'P · 어록 '+dx+'종 · 장비 '+ow+'개 (옮기기 상한 적용)',6000),500);}
-      if(m.s===200||m.s===409||m.s===410){try{localStorage.setItem(KEY+'.mig3','1');}catch(e){}}}
+      if(m.s===200||m.s===409||m.s===410){try{localStorage.setItem(KEY+'.mig4','1');}catch(e){}}}
     /* V60: 이 기기에 계정보다 앞선 예전 기록이 남아 있는데 옮기지 못했으면, 이유와 함께 '가져오기' 버튼을 보여 준다(직접 다시 시도) */
     if(!shown&&ahead&&((local.count||0)>0||lvL>1))setTimeout(()=>migOffer(local),1200);}catch(e){}
   if(!shown)applyProfile(r.j);saveBanner();document.body.classList.add('srv');
   payReturn();ppRun();iapResume();setInterval(flushLog,60e3);addEventListener('pagehide',()=>flushLog(true));srvPresence();setInterval(srvPresence,30e3);})();
 netReady.then(()=>{netDone=true;unlockCheck();});
-function migOffer(local){const b=$('#netBanner');if(!b||!SRV)return;try{if(localStorage.getItem(KEY+'.migNo3')==='1')return;}catch(e){}const lvL=(local.rpg&&local.rpg.lv)||1;
+function migOffer(local){const b=$('#netBanner');if(!b||!SRV)return;try{if(localStorage.getItem(KEY+'.migNo4')==='1')return;}catch(e){}const lvL=(local.rpg&&local.rpg.lv)||1;
   /* V61: 버튼을 기다리지 않고 바로 가져온다(연결 문제면 3초·8초 뒤 두 번 더) — 끝내 안 되면 이유와 '다시 시도' 버튼 */
   const say=(h)=>{b.innerHTML=h;b.hidden=false;const x=$('#migX');if(x)x.onclick=()=>{b.hidden=true;};const g=$('#migGo');if(g)g.onclick=()=>run(0);};
   const run=async(k)=>{say('이 기기의 예전 기록(Lv.'+lvL+' · '+fmtN(local.pt||0)+'P)을 계정으로 가져오는 중…');
     const m=await net('migrate',{save:{pt:local.pt,nick:local.nick,rpg:local.rpg,inv:{own:(local.inv||{}).own||{}},dex:local.dex||{}}});
-    if(m.s===200&&m.j){applyProfile(m.j);b.hidden=true;try{localStorage.setItem(KEY+'.mig3','1');}catch(e){}toast('예전 기록을 가져왔습니다 · Lv.'+((m.j.rpg||{}).lv||1)+' · '+fmtN(m.j.pt||0)+'P (옮기기 상한 Lv.10·10,000P·Lv.3 이하 장비)',6000);return;}
+    if(m.s===200&&m.j){applyProfile(m.j);b.hidden=true;try{localStorage.setItem(KEY+'.mig4','1');}catch(e){}toast('예전 기록을 가져왔습니다 · Lv.'+((m.j.rpg||{}).lv||1)+' · '+fmtN(m.j.pt||0)+'P (옮기기 상한 Lv.10·10,000P·Lv.3 이하 장비)',6000);return;}
     const fixed=m.s===409||m.s===410||m.s===401;
     if(!fixed&&k<2){setTimeout(()=>run(k+1),k?8000:3000);return;}
-    if(m.s===409||m.s===410){try{localStorage.setItem(KEY+'.migNo3','1');}catch(e){}}/* 다시 해도 안 되는 이유면 다음부터 묻지 않음 */
+    if(m.s===409||m.s===410){try{localStorage.setItem(KEY+'.migNo4','1');}catch(e){}}/* 다시 해도 안 되는 이유면 다음부터 묻지 않음 */
     const why=m.s===409&&m.j&&m.j.error==='DONE'?'이 계정은 이미 한 번 기록을 옮겼습니다(계정마다 1회)':m.s===410?'기록 옮기기 기간이 끝났습니다':m.s===401?'로그인이 끝났습니다 · 낚시GO에 다시 로그인해 주세요':'연결이 불안정합니다 ('+(m.s||'연결 안 됨')+')';
     say('예전 기록을 가져오지 못했습니다 · '+esc(why)+(fixed?'':'<button type="button" id="migGo">다시 시도</button>')+'<button type="button" id="migX">닫기</button>');};
   run(0);}
@@ -7094,7 +7094,7 @@ function srvReel(c){if(!c||!c.n||c.done)return;c.done=true;net('reel-in',{n:c.n}
   else if(w>5000)toast('앞서 던진 채비 때문에 '+Math.ceil(w/1000)+'초 뒤에 다시 던질 수 있습니다');});}// #55
 function srvCast(){const c={tSend:performance.now(),res:null,n:null,pulls:0,need:1+Math.floor(Math.random()*3)};srvC=c;srvWaitTo(CAST_GAP+300);
   const b={spot:cur.id,castD:+(curChk&&curChk.D?Math.min(curChk.D,castD):castD).toFixed(1)};if(curTrip)b.trip=curTrip.id;/* v31 S3 #89: 화면 판정(curList)과 같은 거리(반올림 안 함) · FIXUP S3-a: 배 위 trip id 복구 */
-  net('cast',b).then(async function H(r){if(r.s===409&&r.j&&r.j.error==='CAST_PENDING'&&r.j.kind==='none'&&!r.j.hooked&&+r.j.untilMs<=2500&&!c.rt&&!c.dead){c.rt=1;await new Promise(f=>setTimeout(f,+r.j.untilMs+200));if(c.dead){c.res={err:1};c.done=true;return;}c.tSend=performance.now();return net('cast',b).then(H);}/* LS #241: 입질 없음이 2.5초 안에 끝나면(시계 차이) 묻지 않고 잠깐 기다려 다시 던진다 */if(r.s===200&&r.j&&r.j.n){c.tSend=(c.tSend+performance.now())/2;c.res=r.j;c.n=r.j.n;if(c.dead)srvReel(c);return;}// 서버는 받은 시각부터 잰다 → 왕복 시간의 절반만큼 늦춰 맞춘다
+  net('cast',b).then(async function H(r){if(r.s===409&&r.j&&r.j.error==='CAST_PENDING'&&r.j.kind==='none'&&!r.j.hooked&&+r.j.untilMs<=2500&&!c.rt&&!c.dead){c.rt=1;await new Promise(f=>setTimeout(f,+r.j.untilMs+200));if(c.dead){c.res={err:1};c.done=true;return;}c.tSend=performance.now();return net('cast',b).then(H);}/* LS #241: 입질 없음이 2.5초 안에 끝나면(시계 차이) 묻지 않고 잠깐 기다려 다시 던진다 */if(r.s===200&&r.j&&r.j.n){{const now=performance.now(),mid=(c.tSend+now)/2;c.tSend=typeof r.j.age==='number'&&r.j.age>=0?Math.max(mid,now-r.j.age):mid;}/* V64: 서버가 시각을 정한 뒤 지난 시간(age)으로 맞춘다 — 화면 입질이 서버보다 먼저 나와 챔질이 '아직 입질 전'으로 되돌아오며(재시도) 몇 초 멈추던 문제 */c.res=r.j;c.n=r.j.n;if(c.dead)srvReel(c);return;}// 서버는 받은 시각부터 잰다 → 왕복 시간의 절반만큼 늦춰 맞춘다
     c.res={err:1};c.done=true;const e=r.j&&r.j.error;const end=m=>{if(!c.dead){c.dead=true;resetLine();}if(m)toast(m);};
     if(r.s===409&&e==='CAST_PENDING'){end('');const hk=!!(r.j&&r.j.hooked),kd=r.j&&r.j.kind;// v32 #106: 서버가 걸린 고기 여부(hooked)·종류(kind: bite·snag·none)를 알려 줌
       const ok=await askBox(hk?'다른 곳에서 고기와 겨루는 중입니다':'이전 채비가 물에 있습니다',hk?'다른 기기나 창에서 고기를 걸어 겨루고 있습니다. 여기서 거두면 그 고기를 놓칩니다.':kd==='snag'?'이전에 던진 채비가 밑걸림에 걸린 채 물에 있습니다. 거두면 그 밑걸림은 그대로 끝납니다.':'이전에 던진 채비가 아직 물에 있습니다. 다른 기기나 창에서 낚시 중이면, 거둘 때 그쪽 입질·파이팅이 끝납니다.',hk?'놓치고 여기서 낚시':'거두고 여기서 낚시','그대로 두기');
