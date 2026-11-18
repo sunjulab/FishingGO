@@ -302,6 +302,7 @@ ol.rk li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:6px 0;
 
 /* ---- modals ---- */
 .modal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(5,10,14,.55);padding:16px;z-index:20}
+.attbox{display:block}.atth{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.atth b{font-size:15px}.attrow{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}.attd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.5);min-width:0}.attd b{font-size:13px}.attd small{font-size:10px;line-height:1.15;text-align:center;color:var(--mute);word-break:keep-all}.attm{font-size:16px;font-weight:800;height:20px;line-height:20px}.attd.on{background:#2f8fe0;border-color:#2f8fe0;color:#fff}.attd.on small{color:rgba(255,255,255,.85)}.attd.today{box-shadow:0 0 0 2px #ff8a2a inset}.attd.miss{opacity:.45}.attbox .btn{width:100%;margin:2px 0 4px}.attbox .attn{font-size:11px;margin-top:6px}
 #cpM .sheet2{width:min(460px,100%);box-sizing:border-box;max-height:calc(100% - 24px);overflow:auto}#cpM input,#cpM select{width:100%;box-sizing:border-box;min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--line,#d9cdb3);background:var(--bg2,#fff);color:var(--fg);font:inherit;font-size:16px}#cpM .cprow{display:flex;gap:8px;align-items:center;margin:8px 0}#cpM .cprow>*{flex:1;min-width:0}#cpM .cprow>button{flex:none}#cpM .cpmsg{min-height:20px;margin:6px 0;font-size:14px}#cpM .cpmsg.ok{color:#1b7f45}#cpM .cpmsg.bad{color:#c0392b}#cpM .cpadm{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line,#d9cdb3)}#cpM .cpchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}#cpM .cpchips span{padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.06);font-size:13px}#cpM .cpl{font-size:13px;margin:4px 0;display:flex;gap:6px;align-items:center}#cpM .cpl code{font-weight:700}#cpM label{display:block;font-size:13px;color:var(--mute);margin-top:8px}
 .sheet2{width:min(460px,100%);max-height:calc(100% - 32px);overflow:auto;padding:22px}
 .sheet2 h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0 0 6px;text-wrap:balance}
@@ -328,7 +329,7 @@ ol.rk li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:6px 0;
 .fchip.cl{color:var(--fresh);border-color:rgba(124,196,232,.6)}
 .dex .cltag{display:inline-block;margin:4px 0 0;white-space:normal;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
 #emobar{position:fixed;right:calc(124px + env(safe-area-inset-right,0px));bottom:calc(28px + var(--sab));z-index:5;display:flex;flex-wrap:wrap;gap:6px;max-width:min(360px,calc(100vw - 32px));justify-content:center}
-#emoMore{flex-basis:100%;display:flex;flex-direction:column;gap:8px;padding-top:4px}#emoMore[hidden]{display:none}#emoMore .emogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;justify-items:center}#emoMore .qpl{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.qp{padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font-size:13px;line-height:1.2}.qp:hover{background:rgba(232,238,240,.12)}#emobar.more{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;gap:4px;max-width:min(380px,calc(100vw - 16px))}#emobar.more>.emo{width:44px}#emobar{width:max-content}#emobar.more,#world #emobar.more{width:min(340px,calc(100vw - 16px));max-width:none;box-sizing:border-box}
+#emoMore{flex-basis:100%;display:flex;flex-direction:column;gap:8px;padding-top:4px}#emoMore[hidden]{display:none}#emoMore .emogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;justify-items:center}#emoMore .qpl{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.qsay{padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font-size:13px;line-height:1.2}.qsay:hover{background:rgba(232,238,240,.12)}#emobar.more{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;gap:4px;max-width:min(380px,calc(100vw - 16px))}#emobar.more>.emo{width:44px}#emobar{width:max-content}#emobar.more,#world #emobar.more{width:min(340px,calc(100vw - 16px));max-width:none;box-sizing:border-box}
 #ctxEmo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh,64px) + 120px + var(--sab,0px));z-index:8}#ctxEmo[hidden]{display:none}#ctxEmo button{padding:9px 16px;border-radius:999px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.18);animation:ctxIn .25s ease-out}@keyframes ctxIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}@media (prefers-reduced-motion:reduce){#ctxEmo button{animation:none}}
 .emo{display:flex;flex-direction:column;align-items:center;gap:1px;width:46px;padding:5px 0 4px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-size:11px;color:var(--fg)}
 .emo svg{width:22px;height:22px;display:block}.emo:hover{background:rgba(232,238,240,.12)}.emo.cool{opacity:.5}
@@ -1942,6 +1943,7 @@ let SRV=false;const KEY='fishinggo.meta.v2';let save={nick:'',score:0,count:0,de
 let SAVE_RAW=null,SAVE_BAD=false,TAB_RO=false;const SAVE_FIX=[];
 try{SAVE_RAW=localStorage.getItem(KEY);}catch(e){SAVE_BAD=true;}
 if(SAVE_RAW!=null){try{const s=JSON.parse(SAVE_RAW);if(s&&typeof s==='object'&&!Array.isArray(s))save=Object.assign(save,s);else SAVE_FIX.push('json');}catch(e){SAVE_FIX.push('json');}}
+if(!save.v70n){if(SAVE_RAW!=null){try{fishRename70(save,true);}catch(e){}}save.v70n=1;}/* V70 노래미 → 쥐노래미(이 기기 기록) */
 const isObj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
 // 숫자 칸: 문자열 숫자는 숫자로, NaN·무한대는 기본값, 하한 미만은 하한으로(없는 칸은 def가 있으면 조용히 채움)
 function fixNum(o,k,def,lo){const v=o[k];if(v===undefined||v===null){if(def!==undefined){if(v===null)SAVE_FIX.push(k);o[k]=def;}return;}
@@ -2018,7 +2020,7 @@ const ALLM=[1,2,3,4,5,6,7,8,9,10,11,12];
 // min: 법정 포획금지체장(이 크기 '이하'는 방생). 수산자원관리법 시행령 별표2(2024.6.4 개정), 내수면어업법 시행령 별표1(2024.12.24) 전장 기준.
 // minNote: 법정 기준이 전장이 아닌 어종(갈치 항문장, 살오징어 외투장). 게임 cm는 전장이라 min을 두지 않고(전장으로는 거의 걸리지 않아 오해 소지) 어록에 규정만 안내.
 // v30 C4(#59): 금지체장이 있는 입문 어종(감성돔·우럭·볼락·고등어·광어·노래미·가자미·산천어)은 cm 하한을 금지체장 바로 아래로 올려, 기본 채비(크기 지수 약 2.9)에서 방생이 약 20%(자동 약 25%)가 되게 했다(예전 50~60%).
-// m에서 법정 금어기 달은 뺐다(감성돔 5월, 쥐노래미 11~12월, 문치가자미 12~1월, 갈치 7월, 쏘가리 5~6월, 은어 9월).
+// m에서 법정 금어기 달은 뺐다(감성돔 5월, 쥐노래미 11~12월(노래미는 금어기 없음), 문치가자미 12~1월, 갈치 7월, 쏘가리 5~6월, 은어 9월).
 const FISH=[
  {n:'감성돔',z:['동해','남해','서남해','서해','제주'],m:[9,10,11,12,1,2,3,4],cm:[24.7,55],min:25,str:.72,pts:5,col:'#8d9aa3'},
  {n:'우럭',a:['조피볼락'],z:['서해','서남해','남해','동해'],m:ALLM,cm:[22.7,50],min:23,str:.55,pts:3,col:'#4a4a42'},
@@ -2027,7 +2029,8 @@ const FISH=[
  {n:'전갱이',a:['갱이'],z:['남해','동해','제주'],m:[7,8,9,10,11],cm:[15,35],str:.42,pts:2,col:'#9aa7a0'},
  {n:'학꽁치',z:['동해','남해'],m:[10,11,12,1,2,3],cm:[20,40],str:.3,pts:2,col:'#a9c1c6'},
  {n:'광어',a:['넙치'],z:['서해','서남해','남해','동해'],m:[4,5,6,7,8,9,10,11],cm:[34.7,70],min:35,str:.62,pts:3,col:'#6b5d45'},
- {n:'노래미',a:['놀래미','쥐노래미'],z:['동해','남해','서해','서남해'],m:[1,2,3,4,5,6,7,8,9,10],cm:[19.8,40],min:20,str:.4,pts:2,col:'#7a6a3a'},
+ {n:'쥐노래미',z:['동해','남해','서해','서남해'],m:[1,2,3,4,5,6,7,8,9,10],cm:[19.8,40],min:20,str:.4,pts:2,col:'#7a6a3a'},/* V70: 예전 '노래미'(법정 금어기 11~12월·20cm 이하 금지 = 쥐노래미 기준) → 이름을 쥐노래미로 */
+ {n:'노래미',z:['동해','남해','서해','서남해'],m:ALLM,cm:[12,26],str:.3,pts:2,col:'#6e6436'},/* V70: 노래미(Hexagrammos agrammus) — 법정 금어기·금지체장 없음(수산자원관리법 시행령 별표 1에 없음), 쥐노래미보다 작음 */
  {n:'숭어',z:['서해','서남해','남해','동해'],m:ALLM,cm:[30,70],str:.6,pts:2,col:'#8e9a9e'},
  {n:'농어',z:['남해','서해','서남해','동해'],m:[6,7,8,9,10,11],cm:[40,90],min:30,str:.8,pts:4,col:'#a2aaa8'},
  {n:'무늬오징어',z:['남해','제주','동해'],m:[8,9,10,11],cm:[15,40],str:.5,pts:5,col:'#c9b6a0',sq:1},
@@ -2072,13 +2075,13 @@ const FISH=[
 ];
 // 법정 금어기(낚시인 포함, 전국 기본 규칙). 수산자원관리법 시행령 별표1(2024.6.4) · 내수면어업법 시행령 별표1(2024.12.24).
 // 금어기에 잡히면 방생(포인트·최고기록 없음). 시·도 조례로 더 엄격할 수 있음. 고등어는 해수부가 매년 4~6월 중 1개월을 고시하므로 제외했습니다(출조 전 고시 확인).
-const CLOSED={감성돔:[[5,1,5,31]],삼치:[[5,1,5,31]],갈치:[[7,1,7,31]],노래미:[[11,1,12,31]],가자미:[[12,1,12,31],[1,1,1,31]],전어:[[5,1,7,15]],
+const CLOSED={감성돔:[[5,1,5,31]],삼치:[[5,1,5,31]],갈치:[[7,1,7,31]],쥐노래미:[[11,1,12,31]],가자미:[[12,1,12,31],[1,1,1,31]],전어:[[5,1,7,15]],
  살오징어:[[4,1,5,31]],주꾸미:[[5,11,8,31]],쏘가리:[[4,20,6,30]],은어:[[4,1,5,20],[9,1,11,15]],빙어:[[3,1,3,20]]};
 // v30 C4: 쏘가리·은어는 지역·댐(호소)마다 기간이 달라(내수면어업법 시행령 별표1, 2024.12.24) 포인트(s)를 알면 그 지역 기간, 모르면 위 CLOSED(모든 지역을 합친 가장 넓은 기간)로 판정한다.
 // r: 시·도(s.r), riv: 하천, dam: 댐·호소. 이름에 '댐'·'○○호'면 댐·호소, 저수지·늪·제는 하천·댐 기간을 모두 적용(법보다 느슨해지지 않게)
 const CLOSED_RG={쏘가리:[{r:['전북','전남','경북','경남'],riv:[[4,20,5,30]],dam:[[5,10,6,20]]},{riv:[[5,1,6,10]],dam:[[5,20,6,30]]}],
  은어:[{r:['강원','경북'],riv:[[4,20,5,20],[9,1,10,31]]},{riv:[[4,1,4,30],[9,15,11,15]]}]};
-const CLOSED_NOTE={전어:'강원·경북 제외',노래미:'쥐노래미 기준, 백령 11.15~12.14',가자미:'문치가자미 기준',갈치:'북위 33도 이북 해역',쏘가리:'전북·전남·경북·경남 4.20~5.30(댐·호소 5.10~6.20), 그 밖 5.1~6.10(댐·호소 5.20~6.30)',은어:'강원·경북 4.20~5.20·9.1~10.31, 그 밖 4.1~4.30·9.15~11.15'};
+const CLOSED_NOTE={전어:'강원·경북 제외',쥐노래미:'백령·대청 해역 11.15~12.14',가자미:'문치가자미 기준',갈치:'북위 33도 이북 해역',쏘가리:'전북·전남·경북·경남 4.20~5.30(댐·호소 5.10~6.20), 그 밖 5.1~6.10(댐·호소 5.20~6.30)',은어:'강원·경북 4.20~5.20·9.1~10.31, 그 밖 4.1~4.30·9.15~11.15'};
 function closedSpan(f,s){const R=CLOSED[f.n];if(!R)return null;const G=s&&s.w==='fresh'&&CLOSED_RG[f.n];if(!G)return R;
   const g=G.find(x=>!x.r||x.r.includes(s.r));if(!g)return R;const n=String(s.n||'');const k=/댐|호( |\(|$)/.test(n)?1:/저수지|늪|제( |\(|$)/.test(n)?2:0;
   return g.dam&&k===1?g.dam:g.dam&&k===2?g.riv.concat(g.dam):g.riv;}
@@ -2104,7 +2107,7 @@ const NONE_WAIT={float:[25,45],pole:[25,45],surf:[40,70],boat:[30,50]};
 // 파이팅 중 바늘이 빠질 기본 확률 + 어종 성향(게임 조정값: 점프·머리 흔들기가 심한 어종은 높게, 바닥에서 버티는 어종은 낮게)
 const ESC_BASE=.08;
 const ESC_SP={농어:.09,삼치:.06,방어:.05,부시리:.06,숭어:.06,고등어:.05,전갱이:.04,학꽁치:.03,갈치:.03,참돔:.02,벵에돔:.01,배스:.05,송어:.04,산천어:.04,가물치:.04,강준치:.03,끄리:.03,무늬오징어:.03,한치:.03,살오징어:.03,
- 광어:-.04,우럭:-.04,노래미:-.04,가자미:-.04,망둥어:-.04,메기:-.03,꺽지:-.03,쏘가리:-.02,붕어:-.02,주꾸미:-.03,갑오징어:-.02};
+ 광어:-.04,우럭:-.04,쥐노래미:-.04,노래미:-.04,가자미:-.04,망둥어:-.04,메기:-.03,꺽지:-.03,쏘가리:-.02,붕어:-.02,주꾸미:-.03,갑오징어:-.02};
 // v15 던진 거리 계수(게임 조정값): 발 앞(최대 비거리의 25% 이내)은 사람 발소리·그림자에 고기가 빠지고 노리는 수심·물골까지 닿지 않아 입질이 적다(루어 0.15~0.3배 · 원투 0.35~0.5배).
 // 멀리(최대의 70% 이상, 또는 그 어종이 붙는 거리 FX.r 이상) 던질수록 1.0~1.1배. 찌낚시·민장대는 갯바위 발 앞 홈통·수중여(감성돔·벵에돔)도 좋은 자리라 약하게(0.7배),
 // 선상은 수직으로 내리므로 계수 없음. 자동 낚시는 평균 캐스팅(최대의 AUTO_DX=80%)으로 계산. 클라이언트는 실제로 날아간 castD, 서버는 보고된 castD를 계산한 최대 비거리로 잘라 쓴다.
@@ -2407,7 +2410,7 @@ const SAT_NET=.1;
 const SAT_AUTO_H=7;
 const SAT_PASS_K=.5;
 const SAT_TRIP_MIN=15;
-const SAT_EAT_MAX=90;
+const SAT_EAT_MAX=100;/* V69: 포만감이 100 미만이면(99여도) 먹을 수 있음 — 넘치는 만큼은 버려짐(100에서 멈춤) */
 const SAT_TXT='배가 고파 낚시를 할 수 없습니다';
 const HUNGRY_MSG='배가 고파 자동 낚시 수확이 멈췄습니다 · 식당에서 식사하세요';
 const SAT_INTRO='새로 생긴 포만감 · 낚시를 하면 배가 고파집니다 · 낚시터 뒤 식당에서 잡은 고기를 골라 요리해 드세요 · 지금은 배가 가득 찼습니다';
@@ -2444,7 +2447,7 @@ sukhoe:{n:'숙회',t:'cooked',fee:330,sat:30,buf:1},maeun:{n:'매운탕',t:'soup
 jjim:{n:'찜',t:'steam',fee:450,sat:52},twigim:{n:'튀김',t:'fry',fee:300,sat:32},bokkeum:{n:'볶음',t:'stir',fee:320,sat:36},eojuk:{n:'어죽',t:'porridge',fee:340,sat:48},dori:{n:'도리뱅뱅이',t:'pan',fee:280,sat:30}};
 // 어종 → 될 수 있는 요리(sv: 한 그릇에 드는 마릿수 — 1보다 크면 쿨러 한 칸에 겹쳐 담김). 민물고기는 날것 요리가 없다(간흡충 — 질병관리청)
 const DISH_OF={감성돔:{sv:1,d:['hoe','chobap','maeun','jiri','gui','jjim']},우럭:{sv:1,d:['hoe','maeun','jiri','gui','jjim','twigim']},볼락:{sv:2,d:['hoe','gui','jorim','maeun','twigim']},고등어:{sv:1,d:['hoe','gui','jorim']},
-전갱이:{sv:2,d:['hoe','gui','twigim','jorim']},학꽁치:{sv:3,d:['hoe','gui','twigim','muchim']},광어:{sv:1,d:['hoe','chobap','mulhoe','maeun','jiri','twigim']},노래미:{sv:1,d:['hoe','maeun','gui','jorim']},
+전갱이:{sv:2,d:['hoe','gui','twigim','jorim']},학꽁치:{sv:3,d:['hoe','gui','twigim','muchim']},광어:{sv:1,d:['hoe','chobap','mulhoe','maeun','jiri','twigim']},쥐노래미:{sv:1,d:['hoe','maeun','gui','jorim']},노래미:{sv:1,d:['hoe','maeun','gui','jorim']},
 숭어:{sv:1,d:['hoe','muchim','gui','maeun']},농어:{sv:1,d:['hoe','chobap','jiri','maeun','gui','jjim']},무늬오징어:{sv:1,d:['hoe','sukhoe','chobap','twigim','bokkeum']},갑오징어:{sv:1,d:['hoe','sukhoe','bokkeum','twigim']},
 한치:{sv:2,d:['hoe','mulhoe','sukhoe','twigim','bokkeum']},살오징어:{sv:1,d:['hoe','mulhoe','sukhoe','bokkeum','twigim','gui']},주꾸미:{sv:3,d:['sukhoe','bokkeum']},삼치:{sv:1,d:['hoe','gui','jorim','twigim']},
 방어:{sv:1,d:['hoe','chobap','gui','jiri']},벵에돔:{sv:1,d:['hoe','gui','maeun']},갈치:{sv:1,d:['hoe','gui','jorim','jiri','twigim']},참돔:{sv:1,d:['hoe','chobap','jiri','maeun','gui','jjim']},
@@ -2525,6 +2528,8 @@ const FOOD_TXT='게임 속 음식입니다 · 실제 음식·쿠폰으로 바꿀
 
 // 포인트의 주요 어종 표기 → 게임 어종. 괄호 설명·'대물' 등을 떼고 이름/별칭이 정확히 같을 때만 연결(예: '오징어'가 '무늬오징어'를 가로채지 않음).
 function namedTokens(s){return(s.f||'').replace(/\([^)]*\)/g,'').replace(/대물|대형/g,'').split(/[,·]/).map(x=>x.trim()).filter(Boolean);}
+/* V70: 예전 기록의 어종 이름 '노래미'(쥐노래미 기준이던 것)를 '쥐노래미'로 — 값·키가 정확히 '노래미'인 것만(nick·name 값은 어디서든 그대로). 서버 프로필·이 기기 기록에 한 번(v70n) */
+function fishRename70(o,top){if(Array.isArray(o)){for(let i=0;i<o.length;i++){if(o[i]==='노래미')o[i]='쥐노래미';else if(o[i]&&typeof o[i]==='object')fishRename70(o[i],false);}return o;}if(!o||typeof o!=='object')return o;for(const k of Object.keys(o)){if(k==='nick'||k==='name')continue;const v=o[k];if(v==='노래미')o[k]='쥐노래미';else if(v&&typeof v==='object')fishRename70(v,false);if(k==='노래미'){if(!Object.prototype.hasOwnProperty.call(o,'쥐노래미'))o['쥐노래미']=o[k];delete o[k];}}return o;}
 function matchFish(tok){return FISH.find(f=>f.n===tok||(f.a||[]).includes(tok))||null;}
 function missingFish(s){return namedTokens(s).filter(t=>!matchFish(t));}
 // v32 LC2 #268: 게임에 있지만 이 낚시터 해역(zone)에서는 나오지 않는 어종(예: 민물 하구의 숭어) — 낚시터 카드에 따로 표시
@@ -2553,7 +2558,8 @@ const FX={
  전갱이:{k:.011,me:{float:.8,lure:.7,pole:.6},t:['jig','sabiki','krill'],tm:'n'},
  학꽁치:{k:.002,me:{float:1,pole:1},t:['krill'],tm:'d',bait:'곤쟁이, 작은 막대찌'},
  광어:{k:.011,me:{lure:1,surf:.4},t:['jig','metal','minnow','surf'],r:10},
- 노래미:{k:.013,me:{lure:.7,float:.6,surf:.6},t:['jig','krill','surf'],rk:1},
+ 쥐노래미:{k:.011,me:{lure:.7,float:.6,surf:.6},t:['jig','krill','surf'],rk:1},
+ 노래미:{k:.012,me:{lure:.6,float:.7,surf:.5},t:['jig','krill','surf'],rk:1},
  숭어:{k:.009,me:{float:.6,surf:.3},t:['krill','surf']},
  농어:{k:.009,me:{lure:1,float:.5},t:['minnow','metal','jig','krill'],tm:'n'},
  무늬오징어:{k:.05,me:{lure:1},t:['egi'],tm:'n'},
@@ -2889,7 +2895,7 @@ const HOOK={감성돔:.55,벵에돔:.6,갈치:.5,참돔:.6,볼락:.75,붕어:.65
 const BOAT_TRIPS=[
  {id:'jjukku',n:'주꾸미(쭈꾸미)·갑오징어 선상',z:['서해','서남해'],m:[3,4,5,9,10,11],tm:'d',fee:900,won:'약 8~10만 원',depth:[8,25],rig:{n:'선상 주꾸미대 · PE 0.8호 · 봉돌+애자·에기',cap:3,act:'egi'},lam:.28,fish:[{n:'주꾸미',w:8,cm:[8,16]},{n:'갑오징어',w:3,cm:[12,28]}],how:'봉돌로 바닥을 찍고 살짝 들어 기다립니다'},
  {id:'galchi',n:'갈치 선상(텐빈·외줄)',z:['남해','제주','서남해'],m:[8,9,10,11],tm:'N',fee:1900,won:'약 15~24만 원',depth:[40,80],rig:{n:'갈치 선상대 · PE 3호 · 텐빈 채비+꽁치살',cap:6,act:'bait'},lam:.2,fish:[{n:'갈치',w:10,cm:[80,130]}],how:'집어등 아래에서 천천히 고패질합니다'},
- {id:'ureok',n:'우럭·광어 선상',z:['서해','서남해'],m:ALLM,tm:'d',fee:1000,won:'약 9~12만 원',depth:[20,60],rig:{n:'선상 우럭대 · PE 3호 · 외줄·편대 채비+오징어살(광어는 다운샷)',cap:8,act:'bait'},lam:.18,fish:[{n:'우럭',w:8,cm:[25,60]},{n:'광어',w:4,cm:[40,90]},{n:'노래미',w:2,cm:[25,45]}],how:'바닥에서 봉돌을 띄워 기다립니다'},
+ {id:'ureok',n:'우럭·광어 선상',z:['서해','서남해'],m:ALLM,tm:'d',fee:1000,won:'약 9~12만 원',depth:[20,60],rig:{n:'선상 우럭대 · PE 3호 · 외줄·편대 채비+오징어살(광어는 다운샷)',cap:8,act:'bait'},lam:.18,fish:[{n:'우럭',w:8,cm:[25,60]},{n:'광어',w:4,cm:[40,90]},{n:'쥐노래미',w:2,cm:[25,45]}],how:'바닥에서 봉돌을 띄워 기다립니다'},
  {id:'taira',n:'참돔 타이라바',z:['남해','서남해','제주','서해'],m:[4,5,6,9,10,11],tm:'d',fee:1200,won:'약 10~13만 원',depth:[40,80],rig:{n:'타이라바 로드 · PE 1호 · 타이라바 100g',cap:6,act:'jig'},lam:.14,fish:[{n:'참돔',w:8,cm:[35,90]},{n:'광어',w:2,cm:[40,80]}],how:'바닥을 찍고 일정한 속도로 감아 올립니다'},
  {id:'jigging',n:'방어·부시리 지깅',z:['동해','제주','남해'],m:ALLM,tm:'d',fee:1800,won:'약 15~20만 원',depth:[40,100],rig:{n:'지깅 로드 · PE 4호 · 메탈지그 150g',cap:20,act:'jig'},lam:.1,fish:[{n:'방어',w:6,cm:[60,110]},{n:'부시리',w:4,cm:[70,120]},{n:'삼치',w:2,cm:[60,100]}],how:'짧게 저킹하며 빠르게 감아 올립니다'},
  {id:'ikametal',n:'한치·오징어 이카메탈',z:['제주','동해','남해'],m:[6,7,8,9,10,11],tm:'N',fee:1100,won:'약 10~13만 원',depth:[20,50],rig:{n:'이카메탈 로드 · PE 0.8호 · 이카메탈·오징어 다단 에기',cap:3,act:'egi'},lam:.24,fish:[{n:'한치',w:6,cm:[18,40]},{n:'살오징어',w:6,cm:[22,38]}],how:'집어등 아래에서 천천히 흔들고 멈춥니다'}
@@ -4033,7 +4039,7 @@ function avFish(a,f,cm,rel,gold){if(!a||!a.A||!f)return;a.A.fishT=0;a.A.fRel=!!r
 const SH_T=SHOW.maxMs/1000;
 // 몸 모양: [최대 반높이(전장 1.2 기준), 두께 비, 꼬리 갈래 0~1, 등지느러미 높이, 꼬리 반높이]
 const AVF_SH={deep:[.19,.38,.5,.1,.2],mid:[.145,.45,.65,.08,.18],slim:[.105,.6,.95,.06,.16],round:[.13,.55,0,.07,.13],flat:[.2,.25,.1,.04,.13],long:[.04,.35,0,.035,0]};
-const AVF_KIND={deep:'감성돔 참돔 돌돔 벵에돔 붕어 독가시치 전어 향어 잉어',slim:'고등어 삼치 방어 부시리 학꽁치 숭어 강준치 은어 빙어 피라미 끄리 누치 모래무지 멸치 전갱이 산천어 송어 참마자',round:'메기 가물치 쏘가리 꺽지 망둥어 노래미 임연수어',flat:'광어 가자미'};
+const AVF_KIND={deep:'감성돔 참돔 돌돔 벵에돔 붕어 독가시치 전어 향어 잉어',slim:'고등어 삼치 방어 부시리 학꽁치 숭어 강준치 은어 빙어 피라미 끄리 누치 모래무지 멸치 전갱이 산천어 송어 참마자',round:'메기 가물치 쏘가리 꺽지 망둥어 쥐노래미 노래미 임연수어',flat:'광어 가자미'};
 function avFishSh(f){if(f&&f.long)return'long';const n=f&&f.n;if(n)for(const k in AVF_KIND)if(AVF_KIND[k].split(' ').includes(n))return k;return'mid';}
 // 고기 메시(+x 머리, 전장 1.2): 몸통(고리 단면) · 아가미 선 · 등·뒷·배·가슴지느러미 · 꼬리 · 눈. 색 칸 = [음영, 배 밝기, 0](b=0이 표시 — 오징어류 메시는 그대로 곱하기)
 function avFishGeo2(f){const sh=avFishSh(f),stp=!!(f&&f.n==='돌돔'),key='fish2_'+sh+(stp?'s':'');if(AVG[key])return AVG[key];
@@ -5161,7 +5167,7 @@ function bobScr(){if(!pBob||!pBob.visible||!camera)return null;return scr(pBob.g
 let fightSlot=null;
 function fightSlots(){const L='max(12px, env(safe-area-inset-left,0px))',R='max(12px, env(safe-area-inset-right,0px))',B='calc(12px + var(--sab))';
   const S={tl:{left:L,right:'auto',transform:'none',bottom:'auto',top:'COL'},tr:{left:'auto',right:R,transform:'none',bottom:'auto',top:'COL'},tc:{bottom:'auto',top:'COL'},bl:{left:L,right:'auto',transform:'none',top:'auto',bottom:B},br:{left:'auto',right:R,transform:'none',top:'auto',bottom:B},def:{}};
-  let o;if(LANDQ.matches){const b=bobScr(),right=!!b&&b.x<innerWidth/2;o=right?['tr','tl','tc','br','bl']:['tl','tr','tc','bl','br'];}else o=['def','tc','bl','br','tl','tr'];return o.map(k=>[k,S[k]]);}
+  let o;if(LANDQ.matches){const b=bobScr(),right=!!b&&b.x<innerWidth/2;o=right?['tr','tl','tc','br','bl']:['tl','tr','tc','bl','br'];}else o=['tc'];/* V71: 세로 화면은 위쪽 가운데 한 자리에 고정(가운데·아래로 오르내리지 않게) */return o.map(k=>[k,S[k]]);}
 function fightApply(fi,v){fi.style.left=v.left||'';fi.style.right=v.right||'';fi.style.transform=v.transform||'';fi.style.bottom=v.bottom||'';fi.style.top=v.top==='COL'?colTop(fi,['#tut','#alert'])+'px':(v.top||'');}
 function fightBad(fi){const r=fi.getBoundingClientRect();let s=0;const ar=(a,b)=>a&&b?Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)):0;
   if(r.left<0||r.top<0||r.right>innerWidth+.5||r.bottom>innerHeight+.5)s+=1e6;s+=ar(r,avRect())*10;const b=bobScr();if(b&&b.x>-20&&b.x<innerWidth+20)s+=ar(r,{left:b.x-22,right:b.x+22,top:b.y-22,bottom:b.y+22})*10;
@@ -6179,10 +6185,23 @@ $('#rpgClose').addEventListener('click',()=>{$('#rpg').hidden=true;});$('#rpgBod
 document.querySelectorAll('.lvchip').forEach(b=>b.addEventListener('click',()=>openRPG('me')));
 $('#rankbtn').addEventListener('click',()=>openRPG('rank'));
 // v19 오늘의 퀘스트: 3개 × 100P(무상) + 3개 모두 완료 보너스 300P(무상, 하루 한 번)
+/* ===================== V68 주간 출석(월~일) — 서버가 하루 첫 접속에 칸을 채우고 요일 채비를 줌, 7칸이면 완주 보상 ===================== */
+let ATT=null,attBusy=false,attLoading=false;const rigNm=id=>{const x=GBY[id];return x?String(x.n).replace(/\s*\d+개입$/,'').replace(/ 세트 \d+$/,' 세트'):id;};const ATT_DN=['월','화','수','목','금','토','일'];
+function attTake(j){if(!j||!j.att)return;ATT=j.att;if(j.term&&save.inv)save.inv.term=Object.assign(save.inv.term||{},j.term);
+  if(j.attGave){const g=j.attGave,x=GBY[g.id];setTimeout(()=>toast('주간 출석 '+ATT.n+'/7 · '+ATT_DN[g.dow]+'요일 채비 '+rigNm(g.id)+' '+g.n+'개 · 오늘은 '+g.m+' 데이'+(ATT.on&&ATT.n<7?' · '+(7-ATT.n)+'일 더 오면 '+fmtN(ATT.pt)+'P':''),5200),1800);try{bagRefresh();}catch(e){}}
+  if(ATT.on&&ATT.n===7&&!ATT.claimed)setTimeout(()=>toast('이번 주 7일 출석 완료! 퀘스트 창에서 '+fmtN(ATT.pt)+'P를 받으세요',5200),j.attGave?7200:1500);}
+let attTried=0;function attCardHTML(){if(!ATT){if(!attLoading&&!attTried){attTried=1;attLoading=true;srvDaily().finally(()=>{attLoading=false;if(rpgTab==='miss'&&!$('#rpg').hidden)renderRPG();});}return'';}
+  const A=ATT,cells=A.days.map((on,i)=>{const r=A.rigs[i]||{},x=GBY[r.id];return'<div class="attd'+(on?' on':'')+(i===A.today?' today':'')+(i<A.today&&!on?' miss':'')+'" title="'+esc(ATT_DN[i]+'요일 · '+(r.m||'')+' · '+rigNm(r.id)+' '+(r.n||'')+'개')+'"><b>'+ATT_DN[i]+'</b><span class="attm" aria-hidden="true">'+(on?'✓':i<A.today?'–':'')+'</span><small>'+esc(r.m||'')+'</small></div>';}).join('');
+  const missed=A.days.some((on,i)=>i<A.today&&!on);
+  const foot=!A.on?'<div class="k">지금은 완주 보상이 쉬는 중입니다 · 요일 채비는 그대로 받습니다</div>':A.claimed?'<div class="k">이번 주 완주 보상 '+fmtN(A.pt)+'P를 받았습니다 · 다음 주 월요일에 새로 시작</div>':A.n===7?'<button class="btn" type="button" id="attGo"'+(attBusy?' disabled':'')+'>'+fmtN(A.pt)+'P 받기</button>':missed?'<div class="k">이번 주는 빠진 날이 있어 완주가 어렵습니다 · 남은 날도 오면 요일 채비는 받아요</div>':'<div class="k">'+(7-A.n)+'일 더 출석하면 <b>'+fmtN(A.pt)+'P</b></div>';
+  return'<div class="sumbox attbox"><div class="atth"><b>이번 주 출석</b><span class="num">'+A.n+'/7</span></div><div class="attrow">'+cells+'</div>'+foot+'<div class="k attn">접속만 해도 출석 · 요일마다 다른 채비 · 빠진 날은 보충되지 않습니다 · 무상 포인트(현금·상품권 교환·양도 불가)</div></div>';}
+document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('#attGo');if(!b||attBusy)return;attBusy=true;b.disabled=true;
+  try{const r=await netRid('att-claim',{});if(r.s===200&&r.j&&r.j.ok){ATT=r.j.att;save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);refreshWallet();toast('주간 출석 완주 보상 +'+fmtN(r.j.reward)+'P');}else{toast((r.j&&r.j.message)||errMsg(r));if(r.j&&r.j.error==='ALREADY'&&ATT)ATT.claimed=true;}}
+  finally{attBusy=false;if(rpgTab==='miss'&&!$('#rpg').hidden)renderRPG();}});
 function questHTML(){if(SRV&&RG.day!==dayKey()){setTimeout(dayTick,0);return'<div class="sumbox"><div>오늘의 퀘스트를 불러오는 중입니다</div><div class="k">연결되면 바로 바뀝니다 · 잠시 후 다시 열어 보세요</div></div>';}
   const nd=RG.miss.filter(m=>m.done).length,bon=RG.qb===dayKey();
   /* V39-UI: 줄 = 제목(15px) · 진행 막대 · 진행 n/goal · +XP / 오른쪽 = 보상 P(무상) · 상태 · 교체(작은 아이콘 버튼) */
-  return'<div class="sumbox"><div>'+attTxt()+'</div></div>'+RG.miss.map(m=>{const d=MPOOL.find(x=>x.id===m.id)||{n:m.id,goal:1};const pc=Math.min(100,Math.round(m.p/d.goal*100));
+  return(SRV?attCardHTML():'')+'<div class="sumbox"><div>'+attTxt()+'</div></div>'+RG.miss.map(m=>{const d=MPOOL.find(x=>x.id===m.id)||{n:m.id,goal:1};const pc=Math.min(100,Math.round(m.p/d.goal*100));
     return'<div class="item qitem'+(m.done?' on':'')+'" data-q="'+esc(m.id)+'"><div><b class="qt">'+esc(d.n)+'</b><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+d.goal+'" aria-valuenow="'+m.p+'"><i style="width:'+pc+'%"></i></div><div class="spec qs">진행 <span class="num">'+m.p+'/'+d.goal+'</span> · +'+(40+RG.lv*20)+'XP<span class="v39sr"> · 일일 퀘스트 보상 '+Q_PT+'P (무상)</span></div></div><div class="act2 qr"><span class="qp"><b>+'+Q_PT+'P</b><small>무상</small><span class="qd'+(m.done?'':' go')+'">'+(m.done?'완료':'진행 중')+'</span></span>'+(!m.done&&!m.p&&RG.rr!==dayKey()?'<button class="qrr" type="button" data-qrr="'+esc(m.id)+'" aria-label="퀘스트 교체 · '+esc(d.n)+'" title="교체"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg><span class="v39sr">교체</span></button>':'')+'</div></div>';}).join('')+'<p class="src">'+(RG.rr===dayKey()?'오늘 무료 교체를 썼습니다':'아직 시작하지 않은 퀘스트 1개를 하루 한 번 무료로 바꿀 수 있습니다')+'</p>'+
    '<div class="item qitem bonus'+(bon?' on':'')+'" id="qBonus"><div><b class="qt">3개 모두 완료 보너스</b><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="'+nd+'"><i style="width:'+Math.round(nd/3*100)+'%"></i></div><div class="spec qs">완료 <span class="num">'+nd+'/3</span><span class="v39sr"> · 3개 모두 완료 보너스 +'+Q_BONUS+'P (무상)</span></div></div><div class="act2 qr"><span class="qp"><b>+'+Q_BONUS+'P</b><small>무상</small><span class="qd'+(bon?'':' go')+'">'+(bon?'받음':'진행 중')+'</span></span></div></div>'+
    captGoalHTML()+'<p class="src">'+(TOPUP_ON?'무상 포인트는 환불·양도·현금 교환이 불가합니다.':'게임 포인트는 게임 안에서만 쓰는 재화로 현금·상품권이나 다른 재화로 바꿀 수 없고, 회원끼리 직접 주고받는 기능은 없습니다. 선장 몫은 게임 규칙에 따라 지급되는 게임 내 보상입니다. 포인트·배·계정을 현금으로 사고팔거나 그런 거래를 중개하면 포인트 회수와 이용 제한 대상이 됩니다.')+'</p><p class="src">퀘스트는 매일 자정(한국 시각)에 바뀝니다. 금어기 어종과 자동 낚시 조과는 퀘스트에 들어가지 않습니다.</p>';}
@@ -7064,7 +7083,7 @@ const netReady=(async()=>{if(NET_API&&!tokNow()&&AUTH_API&&(lsGet('refresh_token
     /* V60: 이 기기에 계정보다 앞선 예전 기록이 남아 있는데 옮기지 못했으면, 이유와 함께 '가져오기' 버튼을 보여 준다(직접 다시 시도) */
     if(!shown&&ahead&&((local.count||0)>0||lvL>1))setTimeout(()=>migOffer(local),1200);}catch(e){}
   if(!shown)applyProfile(r.j);saveBanner();document.body.classList.add('srv');
-  payReturn();ppRun();iapResume();setInterval(flushLog,60e3);addEventListener('pagehide',()=>flushLog(true));srvPresence();setInterval(srvPresence,30e3);})();
+  payReturn();ppRun();iapResume();setTimeout(()=>{if(SRV&&!ATT)srvDaily().catch(()=>{});},1200);/* V68 접속하면 바로 주간 출석(요일 채비) */setInterval(flushLog,60e3);addEventListener('pagehide',()=>flushLog(true));srvPresence();setInterval(srvPresence,30e3);})();
 netReady.then(()=>{netDone=true;unlockCheck();});
 function migOffer(local){const b=$('#netBanner');if(!b||!SRV)return;try{if(localStorage.getItem(KEY+'.migNo4')==='1')return;}catch(e){}const lvL=(local.rpg&&local.rpg.lv)||1;
   /* V61: 버튼을 기다리지 않고 바로 가져온다(연결 문제면 3초·8초 뒤 두 번 더) — 끝내 안 되면 이유와 '다시 시도' 버튼 */
@@ -7232,7 +7251,7 @@ async function srvBuy(id,keep,msg){const x=GBY[id];if(buyFly)return;buyFly=true;
 async function srvEquip(slot,id){if(eqBusy)return;eqBusy=true;try{const r=await netRid('equip',{slot,id});if(r.s===200&&r.j){save.eq=r.j.eq;if(r.j.settle){if(r.j.auto)setSA(r.j.auto);srvApplySettle(r.j);if(r.j.settle.n)logMsg('장비를 바꾸기 전까지 자동 정산 · '+r.j.settle.n+'마리 · +'+fmtN(r.j.settle.pts)+'P','sys');}}else{toast(errMsg(r));if(srvFix(r))await srvReconcile();}}finally{eqBusy=false;renderShop();bagRefresh();}}
 let skBusy=false;async function srvSkill(s){if(skBusy)return;skBusy=true;document.querySelectorAll('[data-sk]').forEach(b=>b.disabled=true);/* v32 LC2 #233: 요청 끝날 때까지 배우기 잠금 */let r;try{r=await netRid('skill',{id:s.id});if(r.s===409&&r.j&&r.j.error==='CONFLICT'){await sleepMs(400);r=await netRid('skill',{id:s.id});}}finally{skBusy=false;}if(r.s===200&&r.j){applyRPG(r.j.rpg);toast(s.n+' '+sk(s.id)+'단계');}else{toast(errMsg(r));if(r.s===0||r.s>=500)await srvReconcile();}renderRPG();}
 let srvDailyFail='';
-function srvDaily(){return net('daily',{}).then(r=>{if(r.s!==200||!r.j){srvDailyFail=dayKey();if(r.s===0||r.s>=500)srvReconcile();return false;}const j=r.j,prevSt=RG.streak||0,same=RG.day===dayKey()&&Array.isArray(RG.miss)&&RG.miss.length;RG.day=dayKey();RG.streak=j.streak;if(j.miss){if(j.already&&same){const L={};RG.miss.forEach(m=>L[m.id]=m);RG.miss=j.miss.map(m=>{const o=L[m.id];return o&&((o.done&&!m.done)||(+o.p||0)>(+m.p||0))?o:m;});}else RG.miss=j.miss;}/* v32 LC2 #232: 'already' 응답은 더 앞선 로컬 진행을 덮지 않음 */
+function srvDaily(){return net('daily',{}).then(r=>{if(r.s!==200||!r.j){srvDailyFail=dayKey();if(r.s===0||r.s>=500)srvReconcile();return false;}try{attTake(r.j);}catch(e){}const j=r.j,prevSt=RG.streak||0,same=RG.day===dayKey()&&Array.isArray(RG.miss)&&RG.miss.length;RG.day=dayKey();RG.streak=j.streak;if(j.miss){if(j.already&&same){const L={};RG.miss.forEach(m=>L[m.id]=m);RG.miss=j.miss.map(m=>{const o=L[m.id];return o&&((o.done&&!m.done)||(+o.p||0)>(+m.p||0))?o:m;});}else RG.miss=j.miss;}/* v32 LC2 #232: 'already' 응답은 더 앞선 로컬 진행을 덮지 않음 */
   if(!j.already){RG.last=dayKey();save.pt=j.pt;save.inv.term.t_jig3=j.jig;refreshWallet();const rs=j.streak===1&&prevSt>1;setTimeout(()=>toast((rs?'하루를 건너뛰어 출석이 1일째부터 다시 시작됩니다 · ':'')+'출석 '+j.streak+'일째 · +'+j.bonus+'P · 오늘의 퀘스트 3개 · 기본 지그헤드 10개 지급',rs?4200:0),400);}if(j.rr)RG.rr=dayKey();renderLv();return true;});}
 // v32 #18: 불러왔을 때 서버에 진행 중인 출조(SRV_TRIP.until > 지금)가 있고 이 화면은 출조 중이 아니면 이어서 탈지 묻는다(선비를 다시 내지 않음)
 let tripAsked=false;
@@ -7587,7 +7606,8 @@ function openCoupon(){if(!SRV){toast('낚시GO에 로그인해 서버에 연결�
       +'<label for="cpNote">메모(받는 사람에게 보임, 40자)</label><input id="cpNote" type="text" maxlength="40" placeholder="예: 오픈 기념">'
       +'<label for="cpNew">쿠폰 번호(비우면 자동 · 한글·영문·숫자 3~24자, 띄어쓰기 무시)</label><input id="cpNew" type="text" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false">'
       +'<div class="cprow"><button class="btn" id="cpMake" type="button">쿠폰 만들기</button></div><div class="cpmsg" id="cpAdmMsg" role="status" aria-live="polite"></div>'
-      +'<h3 style="margin:12px 0 4px;font-size:15px">만든 쿠폰</h3><div id="cpList" class="k">불러오는 중…</div></div>':'')
+      +'<h3 style="margin:12px 0 4px;font-size:15px">만든 쿠폰</h3><div id="cpList" class="k">불러오는 중…</div>'
+      +'<h3 style="margin:16px 0 4px;font-size:16px">운영자 · 주간 출석 완주 보상</h3><div class="cprow"><label style="display:flex;gap:6px;align-items:center;margin:0;flex:none"><input type="checkbox" id="attOn" style="width:22px;min-height:22px"> 켜기</label><input id="attPt" type="number" min="0" max="20000" step="500" aria-label="완주 보상 포인트"><button class="ghost" id="attSave" type="button">저장</button></div><div class="cpmsg" id="attMsg" role="status" aria-live="polite"></div></div>':'')
     +'</div>';
   m.hidden=false;const close=()=>{m.hidden=true;};$('#cpX').onclick=close;m.onclick=e=>{if(e.target===m)close();};
   const code=$('#cpCode'),msg=$('#cpMsg');setTimeout(()=>{try{code.focus();}catch(e){}},50);
@@ -7606,7 +7626,11 @@ function openCoupon(){if(!SRV){toast('낚시GO에 로그인해 서버에 연결�
     const b=$('#cpMake');b.disabled=true;am.className='cpmsg';am.textContent='만드는 중…';const r=await net('coupon-admin',body);b.disabled=false;
     if(r.s===200&&r.j&&r.j.coupon){const c=r.j.coupon;am.className='cpmsg ok';am.innerHTML='만들었습니다 · <b>'+esc(c.code)+'</b> <button type="button" class="ghost mini" id="cpCopy">번호 복사</button>';$('#cpCopy').onclick=()=>{try{navigator.clipboard.writeText(c.code).then(()=>toast('쿠폰 번호를 복사했습니다'),()=>toast(c.code));}catch(e){toast(c.code);}};cpItems=[];chips();$('#cpNew').value='';list();return;}
     am.className='cpmsg bad';am.textContent=(r.j&&r.j.message)||errMsg(r);};
-  list();}
+  list();
+  /* V68 주간 출석 설정(배포 없이 바로) */
+  const attShow=j=>{if(!j||!j.cfg)return;$('#attOn').checked=!!j.cfg.on;$('#attPt').value=j.cfg.pt;$('#attMsg').className='cpmsg';$('#attMsg').textContent=(j.cfg.on?'켜짐':'꺼짐')+' · 완주 '+fmtN(j.cfg.pt)+'P · 이번 주('+j.week+'~) 받은 사람 '+fmtN(j.claims)+'명';};
+  net('att-admin',{op:'get'}).then(r=>{if(r.s===200)attShow(r.j);else $('#attMsg').textContent=errMsg(r);});
+  $('#attSave').onclick=async()=>{const b=$('#attSave');b.disabled=true;const r=await net('att-admin',{op:'set',on:$('#attOn').checked,pt:Math.floor(+$('#attPt').value||0)});b.disabled=false;if(r.s===200){attShow(r.j);toast('주간 출석 설정을 저장했습니다');}else{$('#attMsg').className='cpmsg bad';$('#attMsg').textContent=(r.j&&r.j.message)||errMsg(r);}};}
 function acctUid(){const pl=jwtPayload();let u='';if(pl.id!==undefined&&pl.id!==null){if(typeof pl.id==='string'||(typeof pl.id==='number'&&Number.isFinite(pl.id)))u=String(pl.id);else return'';}else if(typeof pl.email==='string')u=pl.email;u=u.trim();return u&&u.length<=128?u:'';}
 // v29 C2: 확인 대기 중인 이용권 결제가 있으면 먼저 다시 확인하고, 그래도 남아 있으면 새 결제를 막는다(겹쳐 사면 두 번째 이용권은 결제 시점에 시작하지 않음)
 function passPend(){return ppLoad().filter(e=>ppMine(e)&&Date.now()-e.t<3*864e5&&(e.kind==='pass'||(e.kind==='play'&&e.pk==='pass')));}
@@ -7673,7 +7697,7 @@ const QP_KEYS=Object.keys(QP);let lastEmote=0,emoteN=0;
 const emoSVG=k=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+EMO[k].d+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function buildEmoBar(){const bar=$('#emobar');const btn=(k,i)=>'<button class="emo" type="button" data-emo="'+k+'" aria-label="'+EMO[k].t+'" title="'+EMO[k].t+(i<4?' ('+(i+1)+')':'')+'">'+emoSVG(k)+'<span>'+EMO[k].t+'</span></button>';
   bar.innerHTML=EMO_KEYS.map(btn).join('')+'<button class="emo emomore" type="button" id="emoMoreBtn" aria-expanded="false" aria-controls="emoMore" title="표현·빠른 말 더 보기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h.01M12 12h.01M18 12h.01" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span>더보기</span></button>'
-    +'<div id="emoMore" hidden><div class="emogrid">'+EMO_MORE.map((k,i)=>btn(k,9)).join('')+'</div><div class="qpl">'+QP_KEYS.map(k=>'<button type="button" class="qp" data-qp="'+k+'">'+esc(QP[k])+'</button>').join('')+'</div></div>';
+    +'<div id="emoMore" hidden><div class="emogrid">'+EMO_MORE.map((k,i)=>btn(k,9)).join('')+'</div><div class="qpl">'+QP_KEYS.map(k=>'<button type="button" class="qsay" data-qp="'+k+'">'+esc(QP[k])+'</button>').join('')+'</div></div>';
   bar.querySelectorAll('[data-emo]').forEach(b=>b.addEventListener('click',()=>{emote(b.dataset.emo);closeEmo();canvas.focus();}));
   bar.querySelectorAll('[data-qp]').forEach(b=>b.addEventListener('click',()=>{quickSay(b.dataset.qp);closeEmo();canvas.focus();}));
   $('#emoMoreBtn').addEventListener('click',e=>{e.stopPropagation();const m=$('#emoMore'),on=m.hidden;m.hidden=!on;$('#emoMoreBtn').setAttribute('aria-expanded',String(on));bar.classList.toggle('more',on);if(!bar.classList.contains('open')){bar.classList.add('open');document.body.classList.add('emo-open');}clearTimeout(emoT);if(on)emoT=setTimeout(closeEmo,15000);else emoT=setTimeout(closeEmo,6000);});}
@@ -8008,7 +8032,7 @@ function chumTick(){const l=chumLeft(),c=$('#chumchip');if(c){const on=l>0&&inWo
   document.querySelectorAll('[data-chumleft]').forEach(e=>e.textContent=fmtMs(l));if(chumWasOn&&l<=0){chumWasOn=false;if(inWorld())toast('집어제 효과가 끝났습니다');if(!$('#shop').hidden)renderShop();}else if(l>0)chumWasOn=true;}
 
 /* ---- 물고기 모양(어항·어탁 공용): 머리 +x, 길이 L, 꼬리 흔들기 ph·amp ---- */
-var FK_DEEP=/^(감성돔|참돔|돌돔|벵에돔|붕어|독가시치|향어|잉어|전어)$/,FK_SLIM=/^(학꽁치|삼치|강준치|피라미|빙어|가물치|메기|임연수어|은어|숭어|누치|끄리|송어|산천어|참마자|모래무지)$/,FK_LOW=/^(광어|가자미|우럭|노래미|망둥어|메기|모래무지|쏘가리|꺽지|주꾸미|돌돔|민어)$/;
+var FK_DEEP=/^(감성돔|참돔|돌돔|벵에돔|붕어|독가시치|향어|잉어|전어)$/,FK_SLIM=/^(학꽁치|삼치|강준치|피라미|빙어|가물치|메기|임연수어|은어|숭어|누치|끄리|송어|산천어|참마자|모래무지)$/,FK_LOW=/^(광어|가자미|우럭|쥐노래미|노래미|망둥어|메기|모래무지|쏘가리|꺽지|주꾸미|돌돔|민어)$/;
 function fishKind(f){if(!f)return'n';if(f.sq)return f.n==='주꾸미'?'o':f.n==='갑오징어'?'c':'s';if(f.long)return'l';if(/광어|가자미/.test(f.n))return'f';return FK_DEEP.test(f.n)?'d':FK_SLIM.test(f.n)?'t':'n';}
 var FK_R={d:.42,n:.3,t:.19,f:.42,l:.07,s:.2,c:.34,o:.4};
 function qpts(P,ax,ay,cx,cy,bx,by,n){for(let i=1;i<=n;i++){const t=i/n,u=1-t;P.push([u*u*ax+2*u*t*cx+t*t*bx,u*u*ay+2*u*t*cy+t*t*by]);}}
@@ -9385,7 +9409,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   else if(d.v38arm!=null){V38.arm=null;v38Panel();}
   else if((d.v38eat||d.v38dr)&&+d.v38fee>0&&!d.v38ok){V38.arm=d.v38key;v38Panel();}/* V39-UI: 값이 있는 주문은 한 번 더 눌러 확인 */
   else if(d.v38eat){V38.arm=null;v38Order('food',{dish:d.v38eat,item:d.v38item,fish:d.v38fish});}else if(d.v38dr){V38.arm=null;v38Order('drink',{drink:d.v38dr});}else if(d.v38drop)v38Drop(d.v38drop,b);else if(d.v38up)v38Up(b);});
-// 오프라인 주문(서버 /eat와 같은 순서: 자동이면 먼저 정산 → 요리 규칙 → 90 이상 → 쿨다운 → 포인트 → 꺼내기 → +포만감 → 손맛)
+// 오프라인 주문(서버 /eat와 같은 순서: 자동이면 먼저 정산 → 요리 규칙 → 100(가득) → 쿨다운 → 포인트 → 꺼내기 → +포만감 → 손맛)
 function v38EatLocal(kind,b){const now=Date.now(),s=cur;const E=(e,m,o)=>({err:Object.assign({error:e,message:m},o||{})});let settle=null;if(save.auto&&save.auto.on)settle=settleLocal(true,'eat');
   let d,id,item=null,f=null,siga=false,sv=1;
   if(kind==='food'){id=b.dish;if(!id||!Object.prototype.hasOwnProperty.call(DISH,id))return E('DISH_BAD','이 고기로는 만들 수 없는 요리입니다');
@@ -9817,7 +9841,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
     if(k==='buy')openShop('rod');else if(k==='auto'){if(!autoOn)setAuto(true);else openAutoInfo();}else if(k==='harvest')openAutoInfo();else if(k==='dex5')openDex();else if(k==='tank')openTank();else if(k==='zone2')$('#back').click();return;}
   const t=e.target.closest&&e.target.closest('[data-v44th]');if(t)v44Theme(t.dataset.v44th);});
 v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>

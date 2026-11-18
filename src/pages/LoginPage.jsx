@@ -8,6 +8,8 @@ import apiClient from '../api/index';
 import { Preferences } from '@capacitor/preferences';
 
 // ✅ LOGIN-REDIRECT (2026-11-16): /login?redirect=/meta 처럼 같은 사이트 경로만 받아 로그인 뒤 그 화면으로 돌려보낸다(네이버처럼 외부 로그인 왕복은 sessionStorage로 보관)
+// ✅ SNS-HIDE (2026-11-18): 구글·카카오·네이버 간편 로그인 버튼 숨김(코드는 유지). 다시 보이게 하려면 true
+const SOCIAL_LOGIN_ENABLED = false;
 const REDIRECT_KEY = 'login_redirect';
 function safeRedirectPath(v) {
   if (typeof v !== 'string' || v.length > 200) return null;
@@ -681,7 +683,7 @@ export default function LoginPage() {
               {loading ? '처리 중...' : isLogin ? '로그인' : '회원가입 완료'}
             </button>
 
-            {isLogin && (
+            {isLogin && SOCIAL_LOGIN_ENABLED && ( /* ✅ SNS-HIDE (2026-11-18): 구글·카카오·네이버 간편 로그인 숨김 — 다시 열 때 SOCIAL_LOGIN_ENABLED = true */
               <div style={{ marginTop: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                   <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
@@ -689,7 +691,11 @@ export default function LoginPage() {
                   <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={() => loginWithGoogle()} style={{
+                  <button onClick={() => {
+                    // ✅ GOOGLE-APP (2026-11-18): 구글은 앱 안 웹뷰에서 OAuth 로그인을 막는다(disallowed_useragent). 네이티브 구글 로그인을 붙이기 전까지 앱에서는 안내만 한다(웹은 정상)
+                    if (window?.Capacitor?.isNativePlatform?.()) { addToast('앱에서는 구글 로그인을 준비 중입니다. 아이디·카카오·네이버 로그인을 이용해 주세요.', 'info'); return; }
+                    loginWithGoogle();
+                  }} style={{
                     flex: 1, height: '50px', borderRadius: '12px', border: '1px solid #e5e7eb',
                     background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
                   }}>
