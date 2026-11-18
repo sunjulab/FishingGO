@@ -7,7 +7,7 @@ import apiClient from '../api/index.js'; // ✅ 토큰 자동 갱신 인터셉�
 
 // ── 상품 ID (Google Play Console에 등록된 값과 동일) ─────────────
 export const IAP_PRODUCTS = {
-  BASIC: { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 9900,   label: 'PRO 멤버십', tier: 'BUSINESS_LITE', paused: true }, // ✅ PAY-PAUSE(2026-11-17): 신규 결제 일시 중지 — 다시 열 때 paused 삭제 · ✅ PRO-9900(2026-11-16): 'PRO 멤버십' = Play '낚시GO PRO' 9,900원
+  BASIC: { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 9900,   label: 'PRO 멤버십', tier: 'BUSINESS_LITE' }, // ✅ PAY-RESUME(2026-11-18): 일시 중지 해제 · ✅ PRO-9900(2026-11-16): 'PRO 멤버십' = Play '낚시GO PRO' 9,900원
   LITE_LEGACY: { id: 'kr.fishinggo.app.lite_monthly', type: 'PAID_SUBSCRIPTION', price: 3300, label: '베이직(판매종료)', tier: 'BUSINESS_LITE', closed: true }, // ✅ PRO-9900: 3,300원 폐지 — 기존 구독 복원용 등록만 유지
   VVIP:  { id: 'kr.fishinggo.app.vvip_monthly',  type: 'PAID_SUBSCRIPTION', price: 550000, label: 'VVIP',  tier: 'BUSINESS_VIP', closed: true }, // ✅ VVIP-CLOSED: 폐지 — 기존 구독 복원용 등록만 유지
 };
