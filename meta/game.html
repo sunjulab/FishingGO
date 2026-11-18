@@ -2135,6 +2135,7 @@ function rawPts(f,cm,method,ratio){const MD={lure:.8,float:1,pole:.8,surf:1.2,bo
 // v15fix 선상 출조별 포인트 배율(게임 조정값, 경험치에는 안 씀): 15분 출조를 잘 했을 때 — 입문 출조(주꾸미·우럭·이카메탈)는 선비를 조금 밑돌거나 본전,
 // 중급(갈치·타이라바)은 본전~조금 이익, 지깅은 이익이지만 시간당 연안 최고의 2~3배 이하. 작은 주꾸미는 마릿수로 버는 낚시라 배율이 크다
 // v30 C4(#137): 15분 Monte-Carlo(qa100/scratch/C4/boatmc.mjs)로 순이익이 해금 레벨 순서(주꾸미<우럭<이카메탈<갈치<타이라바<지깅)로 오르게 다시 맞춤. 이전 값 jjukku 6.3·ureok 1.4·ikametal 2.5·galchi 1.9·taira .77·jigging .65
+// V72(운영자 "선상 돈을 너무 많이 준다" → E 방식): 1회 보상은 그대로 두고, 선상 출조를 하루 무료 1회 · 멤버십 2회로 묶는다(서버 boatDay · 운영자가 boat:cfg로 조절). 보고서: 선상 출조 하루 횟수 제한 검토 보고서
 const BOAT_PK={jjukku:6.3,ureok:1.2,ikametal:2.55,galchi:1.7,taira:.88,jigging:.8};
 function catchPts(f,cm,method,ratio,auto,trip){return Math.round(rawPts(f,cm,method,ratio)*PT_K*(auto?AUTO_PT:1)*(method==='boat'&&trip?(BOAT_PK[trip]||1):1));}
 // ---- v23 경제·자동 낚시 공용 규칙(원본 — 서버 src/econ.js는 scripts/extract-rules.cjs로 뽑은 rules.js를 그대로 다시 내보낸다. 여기서만 고친다) ----
@@ -2927,13 +2928,22 @@ function tripFinish(why){if(autoOn)setAuto(false);if(SRV&&why!=='gone')srvTripEn
   toast(why==='gone'?'출조가 끝나 귀항했습니다':why==='time'?'출조 시간이 끝나 귀항했습니다':'귀항했습니다');enterSpot(port);if(S&&t)setTimeout(()=>tripSummary(port,t,S),600);}
 function tripSummary(port,t,S){const gain=S.pts-S.fee,sg=v=>(v>=0?'+':'−')+fmtN(Math.abs(v))+'P';
   const L=['낚은 고기 '+S.n+'마리'+(S.rel?'(방생 '+S.rel+')':''),'최대어 '+(S.best?S.best.n+' '+S.best.cm.toFixed(1)+'cm':'없음'),'얻은 포인트 +'+fmtN(S.pts)+'P','선비 '+fmtN(S.fee)+'P'].concat(S.rig>0?['대여 채비 손실 '+fmtN(S.rig)+'P']:[],['손익 '+sg(gain-(S.rig||0))],S.boat?['탄 배 '+S.boat]:[]);
+  {const B=boatDayCur();if(SRV&&B&&B.cap)L.push('오늘 남은 선상 출조 '+Math.max(0,B.left|0)+'회');}
   if(SRV)L.push('랭킹 반영 +'+fmtN(S.rank)+'P'+(S.owe>0?'(선비 '+fmtN(S.owe)+'P 덜 갚음)':''));
-  askBox('출조 결산 · '+t.n,L.join(' · '),'다시 출조','닫기').then(y=>{if(y&&cur===port&&state==='idle')openBoat(port);});}
+  askBox('출조 결산 · '+t.n,L.join(' · '),SRV&&boatDayCur()&&boatDayCur().cap&&(boatDayCur().left|0)<=0?'출조 목록':'다시 출조','닫기').then(y=>{if(y&&cur===port&&state==='idle')openBoat(port);});}
 function tripTally(trip,f,cm,rel,pts,j){if(!TS||!trip||curTrip!==trip)return;TS.n++;if(rel)TS.rel++;TS.pts+=pts||0;if(!rel&&(!TS.best||cm>TS.best.cm))TS.best={n:f.n,cm};
   if(j){TS.rank+=j.rankPt!=null?j.rankPt:(pts||0);const o0=TS.owe;if(j.trip&&j.trip.owe!=null)TS.owe=Math.max(0,+j.trip.owe||0);if(o0>0&&TS.owe===0)setTimeout(()=>toast('선비를 다 갚았습니다 · 이제 랭킹 포인트가 그대로 쌓입니다'),1200);}}
-function openBoat(s){const m=$('#boatModal');fleetSpot=s.id;$('#boatTitle').textContent=s.n+' 선상 출조';$('#boatList').innerHTML=(isPort(s)?'<div id="fleetBox">'+fleetHTML(s)+'</div>':'')+'<p class="src" style="margin:0 0 10px">게임에서는 선비에 대여 장비·미끼를 포함했습니다(실제로는 대여료 1~2만 원·채비 별도인 경우가 많습니다). 출조 시간은 게임 기준 '+TRIP_MIN+'분입니다. '+'출조 중 얻은 포인트는 그대로 받지만, 랭킹 점수에는 선비만큼을 먼저 갚은 뒤 반영됩니다. '+'밑걸림으로 대여 채비를 잃으면 한 번에 '+(SRV?'무상 포인트에서 ':'')+'최대 30P를 냅니다. '+(()=>{const w=walletNow();return'쓸 수 있는 포인트 '+fmtN(spendNow())+'P'+(w.held>0?' (환불 요청 중 '+fmtN(w.held)+'P 제외)':'');})()+'</p>'+tripListHTML(s);
+/* V72 선상 출조 하루 횟수(서버가 정함 · 한국 시간 0시 초기화): 무료 1회 · 멤버십 2회(운영자가 바꿀 수 있음) */
+let BOATD=null;
+function boatDayTake(j){if(j&&j.boatDay&&typeof j.boatDay==='object'){BOATD=j.boatDay;const el=$('#boatDayBox');if(el)el.innerHTML=boatDayHTML();}}
+function boatDayCur(){const b=BOATD;return b&&(!b.d||b.d===dayKey())?b:null;}/* 날짜가 지난 값(0시 직후 등)은 버리고 서버 판정에 맡김 */
+function boatDayHTML(){const b=boatDayCur();if(!SRV||!b||!b.cap)return'';const left=Math.max(0,b.left|0);
+  return'<b>오늘 선상 출조 <span class="num">'+fmtN(b.used)+'/'+fmtN(b.cap)+'</span>회</b>'+(left?' · 남은 '+left+'회':' · 오늘은 모두 탔어요 · 한국시간 0시에 다시 열려요')+(!b.sub&&(b.subCap===0||b.subCap>b.cap)&&!v45Beta()&&V45.rating?' · 낚시GO 멤버십은 '+(b.subCap?'하루 '+b.subCap+'회':'횟수 제한 없음'):'');}
+function openBoat(s){const m=$('#boatModal');fleetSpot=s.id;$('#boatTitle').textContent=s.n+' 선상 출조';$('#boatList').innerHTML='<p class="src" id="boatDayBox" style="margin:0 0 10px;font-size:15px">'+boatDayHTML()+'</p>'+(isPort(s)?'<div id="fleetBox">'+fleetHTML(s)+'</div>':'')+'<p class="src" style="margin:0 0 10px">게임에서는 선비에 대여 장비·미끼를 포함했습니다(실제로는 대여료 1~2만 원·채비 별도인 경우가 많습니다). 출조 시간은 게임 기준 '+TRIP_MIN+'분입니다. '+'출조 중 얻은 포인트는 그대로 받지만, 랭킹 점수에는 선비만큼을 먼저 갚은 뒤 반영됩니다. '+'밑걸림으로 대여 채비를 잃으면 한 번에 '+(SRV?'무상 포인트에서 ':'')+'최대 30P를 냅니다. '+(()=>{const w=walletNow();return'쓸 수 있는 포인트 '+fmtN(spendNow())+'P'+(w.held>0?' (환불 요청 중 '+fmtN(w.held)+'P 제외)':'');})()+'</p>'+tripListHTML(s);
   m.hidden=false;m.querySelectorAll('[data-tshort]').forEach(b=>b.onclick=()=>openCharge(+b.dataset.tshort,null));m.querySelectorAll('[data-trip]').forEach(b=>b.onclick=()=>{const t=BOAT_TRIPS.find(x=>x.id===b.dataset.trip);const st=tripState(s,t);if(!st.ok){toast(st.why);return;}if(pfdBlock())return;/* v37 */if(v38TripBlock())return;/* v38 포만감 15 */if(RG.lv<(TRIP_LV[t.id]||1)){toast('Lv.'+TRIP_LV[t.id]+'부터 탈 수 있습니다');return;}if(spendNow()<feeOf(t)){toast('포인트가 부족합니다');return;}
-    if(SRV){srvTrip(s,t,m);return;}evt('boat');save.pt-=feeOf(t);if(autoOn)setAuto(false);persist();refreshWallet();m.hidden=true;tripBoatLbl=BOAT_SYS;tripHullId='';enterSpot(s,t);});
+    if(SRV){const B=boatDayCur();if(B&&B.cap&&(B.left|0)<=0){toast('오늘 선상 출조를 모두 탔어요 · 한국시간 0시에 다시 열려요');return;}
+      if(B&&B.cap){askBox('오늘의 선상 출조','오늘 남은 선상 출조 '+(B.left|0)+'회 중 1회를 씁니다 · '+t.n+' · 선비 '+fmtN(feeOf(t))+'P · 귀항해도 횟수는 돌아오지 않아요','출발','취소').then(y=>{if(y)srvTrip(s,t,m);});return;}
+      srvTrip(s,t,m);return;}evt('boat');save.pt-=feeOf(t);if(autoOn)setAuto(false);persist();refreshWallet();m.hidden=true;tripBoatLbl=BOAT_SYS;tripHullId='';enterSpot(s,t);});
   if(isPort(s)){bindFleet(s);if(SRV)loadBoats(s.id).then(()=>fleetRefresh(s));}}
 $('#boatClose').addEventListener('click',()=>{$('#boatModal').hidden=true;});
 $('#boatbtn').addEventListener('click',()=>{if(cur&&state==='idle')openBoat(cur);});
@@ -2961,7 +2971,7 @@ function mineNorm(m,all){const f=(all||[]).find(x=>x.mine)||null;if(!m||typeof m
   const sh=bNum(m.todayShare,m.share,m.todaySh);
   return{boat:b,todayRides:bNum(m.todayRides,m.today,b&&b.today),todayShare:sh,unclaimed:Math.max(0,bNum(m.unclaimed)),capLeft:m.capLeft!=null?Math.max(0,bNum(m.capLeft)):Math.max(0,capNow()-sh),yRides:m.yRides!=null?bNum(m.yRides):null,ySh:m.ySh!=null?bNum(m.ySh):null};}
 // spot을 주면 그 항구만, 빼면 전국 항구. 실패하면 null(그 항구 목록은 null로 표시)
-async function loadBoats(spot){const r=await net(spot?'boats?spot='+encodeURIComponent(spot):'boats');const P=r.s===200&&r.j?boatsParse(r.j,spot):null;
+async function loadBoats(spot){const r=await net(spot?'boats?spot='+encodeURIComponent(spot):'boats');if(r.s===200&&r.j)try{boatDayTake(r.j);}catch(e){}/* V72 */const P=r.s===200&&r.j?boatsParse(r.j,spot):null;
   if(!P){if(spot&&!BOATS[spot])BOATS[spot]=null;return false;}
   for(const k in P.by)BOATS[k]=P.by[k];if(P.hasMine&&isObj(P.mine)&&P.mine.cabin!=null)v4Merge({cabin:P.mine.cabin});/* v34 선실 */if(spot&&!P.by[spot])BOATS[spot]=[];
   const all=[].concat(...Object.values(BOATS).filter(Array.isArray));
@@ -7004,7 +7014,7 @@ const ERR_KO={AGE_CONFIRM:'만 14세 이상인지 확인해 주세요 (만 14세
   NEW_DAY:'날짜가 바뀌었습니다 · 오늘의 퀘스트를 새로 불러옵니다',BROKEN:j=>j&&String(j.item||'')[0]==='n'?'투망이 찢어졌습니다 · 수리한 뒤 쓰세요':'낚싯대가 망가졌습니다 · 수리한 뒤 쓰세요',NET_BUSY:'투망을 거두는 중입니다 · 잠시 뒤 던지세요',FULL:'고칠 곳이 없습니다',NET_FRESH:'강·호수(내수면)에서는 투망을 쓸 수 없습니다',NET_SPOT:'항구 안에서는 투망을 쓸 수 없습니다',NET_EMPTY:'지금 이 바다에는 투망에 드는 고기가 없습니다',NO_NET:'투망을 먼저 사서 장착하세요',NET_CD:'투망은 조금 뒤에 다시 던질 수 있습니다',MAX:'이미 가장 큰 어망입니다',LEVEL_CHANGED:'어망 단계가 바뀌었습니다 · 다시 확인해 주세요',
   IN_FLIGHT:'앞선 요청을 처리하는 중입니다. 잠시 후 다시 확인해 주세요',AD_LIMIT:'오늘 광고 보상을 모두 받았습니다',PASS_ACTIVE:'이용권을 쓰는 동안에는 광고 보상이 없습니다',NO_X2:'2배로 받을 무료 자동낚시 몫이 없습니다',DEBT:j=>'환불로 생긴 미정산 '+fmtN(j&&j.debt||debtNow())+'P가 남아 있어 지금은 구매할 수 없습니다 · '+(TOPUP_ON?'게임에서 얻는 포인트나 다음 충전으로 먼저 정산됩니다':'낚시로 얻는 포인트로 먼저 정산됩니다'),
   TOPUP_OFF:'포인트 충전은 제공하지 않습니다 · 이미 결제했다면 sunjulab.a1@gmail.com으로 문의해 주세요',HAS_BOAT:'이미 배가 있습니다 · 배는 계정당 1척입니다',SLOT_TAKEN:'방금 다른 낚시꾼이 이 자리를 샀습니다 · 다른 자리를 골라 주세요',
-  NOT_PORT:'항구에서만 할 수 있습니다',ON_TRIP:'출조 중에는 할 수 없습니다 · 귀항한 뒤 다시 해 주세요',NO_BOAT:'내 배가 없습니다',NOT_OWNER:'내 배가 아닙니다',BOAT_GONE:'그 배를 찾지 못했습니다 · 목록을 다시 불러옵니다',NO_SUCH_BOAT:'그 배를 찾지 못했습니다 · 목록을 다시 불러옵니다',
+  NOT_PORT:'항구에서만 할 수 있습니다',ON_TRIP:'출조 중에는 할 수 없습니다 · 귀항한 뒤 다시 해 주세요',BOAT_DAY:'오늘 선상 출조를 모두 탔어요 · 한국시간 0시에 다시 열려요',NO_BOAT:'내 배가 없습니다',NOT_OWNER:'내 배가 아닙니다',BOAT_GONE:'그 배를 찾지 못했습니다 · 목록을 다시 불러옵니다',NO_SUCH_BOAT:'그 배를 찾지 못했습니다 · 목록을 다시 불러옵니다',
   BAD_NAME:'배 이름은 2~12자로 정해 주세요',NAME:'배 이름은 2~12자로 정해 주세요',NOTHING:'수령할 선장 몫이 없습니다',NO_CLAIM:'수령할 선장 몫이 없습니다',PAY_BAD_TOKEN:'구매 정보가 올바르지 않습니다 · 주문번호와 함께 sunjulab.a1@gmail.com으로 문의해 주세요',NO_NONCE:'광고 보상 요청을 찾지 못했습니다 · 다시 시도해 주세요',
   ALREADY:'이번 달에는 이미 응모했습니다',CLOSED:'응모 기간이 끝났습니다',MONTH:'이번 달 추첨에만 응모할 수 있습니다',NO_DRAW:'이달의 협찬 선물이 아직 없습니다',NOT_WINNER:'당첨 내역이 없습니다',
   DONE:'이미 기록을 옮겼습니다',HAS_CATCHES:'이미 서버에 조과가 있는 계정이라 이 기기 기록을 옮길 수 없습니다',
@@ -7055,7 +7065,7 @@ addEventListener('focus',tokCheck);
 // 서버 프로필 → 화면 저장값
 function applyRPG(r){for(const k of Object.keys(RG))delete RG[k];Object.assign(RG,{xp:0,lv:1,sp:0,sk:{},day:'',miss:[],streak:0,last:''},r||{});if(!RG.sk)RG.sk={};if(!RG.miss)RG.miss=[];}
 function setSA(a){if(a){SA=Object.assign({},a,{at:Date.now()});try{autoNotify();}catch(e){}}}
-function applyProfile(p){if(!p)return;try{save.v34=v4Norm({srv:1});v4Merge(p);}catch(e){}/* v34 */save.nick=p.nick||save.nick;save.pt=p.pt||0;save.score=p.score||0;save.count=p.count||0;
+function applyProfile(p){if(!p)return;try{boatDayTake(p);}catch(e){}/* V72 */try{save.v34=v4Norm({srv:1});v4Merge(p);}catch(e){}/* v34 */save.nick=p.nick||save.nick;save.pt=p.pt||0;save.score=p.score||0;save.count=p.count||0;
   save.inv=p.inv||{own:{},term:{}};if(!save.inv.own)save.inv.own={};if(!save.inv.term)save.inv.term={};if(p.eq)save.eq=p.eq;save.dex=p.dex||{};save.spots=p.spots||{};save.gold=goldNorm(p.gold);try{v35Prof(p);}catch(e){}/* v35 */
   applyRPG(p.rpg);setWal(p.wallet);save.auto={on:0,pass:0,boosts:[],net:0};save.rk={};setSA(p.auto);SRV_TRIP=p.trip||null;captSync(p);refreshWallet();renderLv();try{if(!$('#intro').hidden)$('#nick').value=save.nick;}catch(e){}notesShow(p.notes);try{myLookApply();chumTick();}catch(e){}try{v36Prof(p);}catch(e){}/* v36 */try{v37Prof(p);}catch(e){}/* v37 외모 */try{v38Prof(p);}catch(e){}/* v38 포만감·쿨러 */try{v45Prof(p);}catch(e){}/* v45 이용등급·시험용 */}
 // FIXUP #107: 서버 계정 알림(환불·청약철회 처리 결과 등)을 한 번씩 보여 주고 확인하면 /notes-ack로 지운다
@@ -7251,7 +7261,7 @@ async function srvBuy(id,keep,msg){const x=GBY[id];if(buyFly)return;buyFly=true;
 async function srvEquip(slot,id){if(eqBusy)return;eqBusy=true;try{const r=await netRid('equip',{slot,id});if(r.s===200&&r.j){save.eq=r.j.eq;if(r.j.settle){if(r.j.auto)setSA(r.j.auto);srvApplySettle(r.j);if(r.j.settle.n)logMsg('장비를 바꾸기 전까지 자동 정산 · '+r.j.settle.n+'마리 · +'+fmtN(r.j.settle.pts)+'P','sys');}}else{toast(errMsg(r));if(srvFix(r))await srvReconcile();}}finally{eqBusy=false;renderShop();bagRefresh();}}
 let skBusy=false;async function srvSkill(s){if(skBusy)return;skBusy=true;document.querySelectorAll('[data-sk]').forEach(b=>b.disabled=true);/* v32 LC2 #233: 요청 끝날 때까지 배우기 잠금 */let r;try{r=await netRid('skill',{id:s.id});if(r.s===409&&r.j&&r.j.error==='CONFLICT'){await sleepMs(400);r=await netRid('skill',{id:s.id});}}finally{skBusy=false;}if(r.s===200&&r.j){applyRPG(r.j.rpg);toast(s.n+' '+sk(s.id)+'단계');}else{toast(errMsg(r));if(r.s===0||r.s>=500)await srvReconcile();}renderRPG();}
 let srvDailyFail='';
-function srvDaily(){return net('daily',{}).then(r=>{if(r.s!==200||!r.j){srvDailyFail=dayKey();if(r.s===0||r.s>=500)srvReconcile();return false;}try{attTake(r.j);}catch(e){}const j=r.j,prevSt=RG.streak||0,same=RG.day===dayKey()&&Array.isArray(RG.miss)&&RG.miss.length;RG.day=dayKey();RG.streak=j.streak;if(j.miss){if(j.already&&same){const L={};RG.miss.forEach(m=>L[m.id]=m);RG.miss=j.miss.map(m=>{const o=L[m.id];return o&&((o.done&&!m.done)||(+o.p||0)>(+m.p||0))?o:m;});}else RG.miss=j.miss;}/* v32 LC2 #232: 'already' 응답은 더 앞선 로컬 진행을 덮지 않음 */
+function srvDaily(){return net('daily',{}).then(r=>{if(r.s!==200||!r.j){srvDailyFail=dayKey();if(r.s===0||r.s>=500)srvReconcile();return false;}try{attTake(r.j);}catch(e){}try{boatDayTake(r.j);}catch(e){}const j=r.j,prevSt=RG.streak||0,same=RG.day===dayKey()&&Array.isArray(RG.miss)&&RG.miss.length;RG.day=dayKey();RG.streak=j.streak;if(j.miss){if(j.already&&same){const L={};RG.miss.forEach(m=>L[m.id]=m);RG.miss=j.miss.map(m=>{const o=L[m.id];return o&&((o.done&&!m.done)||(+o.p||0)>(+m.p||0))?o:m;});}else RG.miss=j.miss;}/* v32 LC2 #232: 'already' 응답은 더 앞선 로컬 진행을 덮지 않음 */
   if(!j.already){RG.last=dayKey();save.pt=j.pt;save.inv.term.t_jig3=j.jig;refreshWallet();const rs=j.streak===1&&prevSt>1;setTimeout(()=>toast((rs?'하루를 건너뛰어 출석이 1일째부터 다시 시작됩니다 · ':'')+'출석 '+j.streak+'일째 · +'+j.bonus+'P · 오늘의 퀘스트 3개 · 기본 지그헤드 10개 지급',rs?4200:0),400);}if(j.rr)RG.rr=dayKey();renderLv();return true;});}
 // v32 #18: 불러왔을 때 서버에 진행 중인 출조(SRV_TRIP.until > 지금)가 있고 이 화면은 출조 중이 아니면 이어서 탈지 묻는다(선비를 다시 내지 않음)
 let tripAsked=false;
@@ -7267,6 +7277,7 @@ async function srvTrip(s,t,m){const t0=performance.now();const r=await net('trip
   if(r.s===409&&r.j&&r.j.error==='ON_TRIP'&&r.j.trip){const tr=r.j.trip,s2=SPOTS.find(x=>x.id===tr.spot),t2=BOAT_TRIPS.find(x=>x.id===tr.id);// 새로고침·응답 유실로 남은 서버 출조
     const ok=await askBox('진행 중인 선상 출조','이미 산 출조'+(s2&&t2?'('+s2.n+' · '+t2.n+')':'')+'가 약 '+Math.max(1,Math.round(((+tr.leftMs||0)-120e3)/60000))+'분 남았습니다. 선비를 다시 내지 않고 이어서 탈 수 있습니다.','다시 승선','귀항');
     if(ok&&s2&&t2){srvTrip(s2,t2,m);return;}if(await srvTripEnd())toast('귀항 처리했습니다 · 다시 출조할 수 있습니다');else toast('귀항을 확인하지 못했습니다 · 잠시 뒤 다시 시도하세요');return;}
+  if(r.j&&r.j.boatDay)boatDayTake(r.j);/* V72 */
   if(r.s!==200||!r.j){toast(errMsg(r));if(r.s===0||r.s>=500)srvReconcile();return;}
   tripBoatLbl=boatLabel(r.j.boat);tripHullId=(r.j.boat&&hullOk(r.j.boat.hull))||'';/* v34 출조 배 선체 색 */if(r.j.resumed)toast('진행 중인 출조에 다시 승선했습니다');else{toast(tripBoatLbl+'에 승선했습니다');if(srvC&&!srvC.hooked)srvC.done=true;srvNextAt=0;}// v31 S3 #55: 서버가 물에 있던 캐스팅과 대기를 지움(새 출조만 · FIXUP S3-c: 다시 승선은 서버가 캐스팅을 그대로 둠)
   evt('boat');save.pt=r.j.pt;setWal(r.j.wallet);SRV_TRIP=r.j.trip;if(autoOn)setAuto(false);refreshWallet();m.hidden=true;enterSpot(s,t);
@@ -7607,7 +7618,7 @@ function openCoupon(){if(!SRV){toast('낚시GO에 로그인해 서버에 연결�
       +'<label for="cpNew">쿠폰 번호(비우면 자동 · 한글·영문·숫자 3~24자, 띄어쓰기 무시)</label><input id="cpNew" type="text" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false">'
       +'<div class="cprow"><button class="btn" id="cpMake" type="button">쿠폰 만들기</button></div><div class="cpmsg" id="cpAdmMsg" role="status" aria-live="polite"></div>'
       +'<h3 style="margin:12px 0 4px;font-size:15px">만든 쿠폰</h3><div id="cpList" class="k">불러오는 중…</div>'
-      +'<h3 style="margin:16px 0 4px;font-size:16px">운영자 · 주간 출석 완주 보상</h3><div class="cprow"><label style="display:flex;gap:6px;align-items:center;margin:0;flex:none"><input type="checkbox" id="attOn" style="width:22px;min-height:22px"> 켜기</label><input id="attPt" type="number" min="0" max="20000" step="500" aria-label="완주 보상 포인트"><button class="ghost" id="attSave" type="button">저장</button></div><div class="cpmsg" id="attMsg" role="status" aria-live="polite"></div></div>':'')
+      +'<h3 style="margin:16px 0 4px;font-size:16px">운영자 · 주간 출석 완주 보상</h3><div class="cprow"><label style="display:flex;gap:6px;align-items:center;margin:0;flex:none"><input type="checkbox" id="attOn" style="width:22px;min-height:22px"> 켜기</label><input id="attPt" type="number" min="0" max="20000" step="500" aria-label="완주 보상 포인트"><button class="ghost" id="attSave" type="button">저장</button></div><div class="cpmsg" id="attMsg" role="status" aria-live="polite"></div><h3 style="margin:16px 0 4px;font-size:16px">운영자 · 선상 출조 하루 횟수</h3><div class="cprow"><label style="display:flex;gap:4px;align-items:center;margin:0;flex:none">무료 <input id="bdFree" type="number" min="0" max="20" step="1" style="width:64px" aria-label="무료 하루 선상 횟수"></label><label style="display:flex;gap:4px;align-items:center;margin:0;flex:none">멤버십 <input id="bdSub" type="number" min="0" max="20" step="1" style="width:64px" aria-label="멤버십 하루 선상 횟수"></label><button class="ghost" id="bdSave" type="button">저장</button></div><div class="cpmsg" id="bdMsg" role="status" aria-live="polite"></div></div>':'')
     +'</div>';
   m.hidden=false;const close=()=>{m.hidden=true;};$('#cpX').onclick=close;m.onclick=e=>{if(e.target===m)close();};
   const code=$('#cpCode'),msg=$('#cpMsg');setTimeout(()=>{try{code.focus();}catch(e){}},50);
@@ -7630,6 +7641,12 @@ function openCoupon(){if(!SRV){toast('낚시GO에 로그인해 서버에 연결�
   /* V68 주간 출석 설정(배포 없이 바로) */
   const attShow=j=>{if(!j||!j.cfg)return;$('#attOn').checked=!!j.cfg.on;$('#attPt').value=j.cfg.pt;$('#attMsg').className='cpmsg';$('#attMsg').textContent=(j.cfg.on?'켜짐':'꺼짐')+' · 완주 '+fmtN(j.cfg.pt)+'P · 이번 주('+j.week+'~) 받은 사람 '+fmtN(j.claims)+'명';};
   net('att-admin',{op:'get'}).then(r=>{if(r.s===200)attShow(r.j);else $('#attMsg').textContent=errMsg(r);});
+  /* V72 선상 출조 하루 횟수(배포 없이 바로 · 0 = 제한 없음) */
+  const bdShow=j=>{if(!j||!j.cfg)return;$('#bdFree').value=j.cfg.free;$('#bdSub').value=j.cfg.sub;$('#bdMsg').className='cpmsg';$('#bdMsg').textContent='무료 '+(j.cfg.free?'하루 '+j.cfg.free+'회':'제한 없음')+' · 멤버십 '+(j.cfg.sub?'하루 '+j.cfg.sub+'회':'제한 없음')+' · 1~2분 안에 모두에게 적용';if(j.boatDay)boatDayTake(j);};
+  net('boat-admin',{op:'get'}).then(r=>{if(r.s===200)bdShow(r.j);else $('#bdMsg').textContent=errMsg(r);});
+  $('#bdSave').onclick=async()=>{const fv=$('#bdFree').value.trim(),sv=$('#bdSub').value.trim(),f=+fv,su=+sv;if(fv===''||sv===''||!Number.isInteger(f)||!Number.isInteger(su)||f<0||su<0||f>20||su>20){$('#bdMsg').className='cpmsg bad';$('#bdMsg').textContent='무료·멤버십 횟수를 0~20 사이 정수로 넣어 주세요(0 = 제한 없음)';return;}
+    if((f===0||su===0)&&!await askBox('선상 횟수 제한 없음','0으로 저장하면 '+(f===0&&su===0?'모든 계정':f===0?'무료 계정':'멤버십 계정')+'의 선상 출조 횟수 제한이 사라집니다. 저장할까요?','저장','취소'))return;
+    const b=$('#bdSave');b.disabled=true;const r=await net('boat-admin',{op:'set',free:f,sub:su});b.disabled=false;if(r.s===200){bdShow(r.j);toast('선상 출조 횟수를 저장했습니다');}else{$('#bdMsg').className='cpmsg bad';$('#bdMsg').textContent=(r.j&&r.j.message)||errMsg(r);}};
   $('#attSave').onclick=async()=>{const b=$('#attSave');b.disabled=true;const r=await net('att-admin',{op:'set',on:$('#attOn').checked,pt:Math.floor(+$('#attPt').value||0)});b.disabled=false;if(r.s===200){attShow(r.j);toast('주간 출석 설정을 저장했습니다');}else{$('#attMsg').className='cpmsg bad';$('#attMsg').textContent=(r.j&&r.j.message)||errMsg(r);}};}
 function acctUid(){const pl=jwtPayload();let u='';if(pl.id!==undefined&&pl.id!==null){if(typeof pl.id==='string'||(typeof pl.id==='number'&&Number.isFinite(pl.id)))u=String(pl.id);else return'';}else if(typeof pl.email==='string')u=pl.email;u=u.trim();return u&&u.length<=128?u:'';}
 // v29 C2: 확인 대기 중인 이용권 결제가 있으면 먼저 다시 확인하고, 그래도 남아 있으면 새 결제를 막는다(겹쳐 사면 두 번째 이용권은 결제 시점에 시작하지 않음)
@@ -9842,6 +9859,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   const t=e.target.closest&&e.target.closest('[data-v44th]');if(t)v44Theme(t.dataset.v44th);});
 v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},boatDayTake,boatDayHTML,openBoat}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
