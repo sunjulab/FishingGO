@@ -302,6 +302,7 @@ ol.rk li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:6px 0;
 
 /* ---- modals ---- */
 .modal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(5,10,14,.55);padding:16px;z-index:20}
+#cpM .sheet2{width:min(460px,100%);box-sizing:border-box;max-height:calc(100% - 24px);overflow:auto}#cpM input,#cpM select{width:100%;box-sizing:border-box;min-height:44px;padding:8px 12px;border-radius:12px;border:1px solid var(--line,#d9cdb3);background:var(--bg2,#fff);color:var(--fg);font:inherit;font-size:16px}#cpM .cprow{display:flex;gap:8px;align-items:center;margin:8px 0}#cpM .cprow>*{flex:1;min-width:0}#cpM .cprow>button{flex:none}#cpM .cpmsg{min-height:20px;margin:6px 0;font-size:14px}#cpM .cpmsg.ok{color:#1b7f45}#cpM .cpmsg.bad{color:#c0392b}#cpM .cpadm{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line,#d9cdb3)}#cpM .cpchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}#cpM .cpchips span{padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.06);font-size:13px}#cpM .cpl{font-size:13px;margin:4px 0;display:flex;gap:6px;align-items:center}#cpM .cpl code{font-weight:700}#cpM label{display:block;font-size:13px;color:var(--mute);margin-top:8px}
 .sheet2{width:min(460px,100%);max-height:calc(100% - 32px);overflow:auto;padding:22px}
 .sheet2 h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0 0 6px;text-wrap:balance}
 .sheet2 .lead{color:var(--mute);line-height:1.7;margin:0 0 14px}
@@ -5118,7 +5119,7 @@ function buildMenu(){const m=$('#menu');m.innerHTML='';const p=document.createEl
   document.querySelectorAll('#v44q [data-v44q]').forEach(q=>{if(q.hidden)return;const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.dataset.k='q_'+q.dataset.v44q;b.className='ghost mq'+(q.classList.contains('rdot')?' rdot':'');
     b.innerHTML=v44Svg(q.dataset.v44q)+'<span>'+esc(q.dataset.v44q==='food'?q.getAttribute('aria-label'):q.querySelector('.v44ql').textContent)+'</span>';b.onclick=()=>{menuSet(false);q.click();};m.appendChild(b);});
   const mk=(id,txt,cls)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.dataset.k=id;b.className='ghost'+(cls?' '+cls:'');b.textContent=txt;b.onclick=()=>{menuSet(false);$('#'+id).click();};m.appendChild(b);};
-  if(!$('#boatbtn').hidden)mk('boatbtn','선상 출조');if($('#v36pbtn')&&!$('#v36pbtn').hidden)mk('v36pbtn','항구 게시판');mk('autobtn',$('#autobtn').textContent,autoOn?'on':'');/* v38-UI: 가방·상점·퀘스트·어록은 하단 독에 */{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent=VXS.snd?'소리 끄기':'소리 켜기';b.onclick=()=>{menuSet(false);sndToggle();};m.appendChild(b);}if(!$('#captbtn').hidden){const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent=$('#captbtn').textContent;b.onclick=()=>{menuSet(false);openCapt();};m.appendChild(b);}mk('helpbtn','설정 · 소리 · 화질 · 도움말');if(!$('#exitGo2').hidden)mk('exitGo2','낚시GO로');mk('back',$('#back').textContent);}
+  if(!$('#boatbtn').hidden)mk('boatbtn','선상 출조');if($('#v36pbtn')&&!$('#v36pbtn').hidden)mk('v36pbtn','항구 게시판');mk('autobtn',$('#autobtn').textContent,autoOn?'on':'');/* v38-UI: 가방·상점·퀘스트·어록은 하단 독에 */{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent=VXS.snd?'소리 끄기':'소리 켜기';b.onclick=()=>{menuSet(false);sndToggle();};m.appendChild(b);}if(!$('#captbtn').hidden){const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent=$('#captbtn').textContent;b.onclick=()=>{menuSet(false);openCapt();};m.appendChild(b);}if(SRV){const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent='쿠폰 입력';b.onclick=()=>{menuSet(false);openCoupon();};m.appendChild(b);}/* V65 */mk('helpbtn','설정 · 소리 · 화질 · 도움말');if(!$('#exitGo2').hidden)mk('exitGo2','낚시GO로');mk('back',$('#back').textContent);}
 $('#menubtn').addEventListener('click',()=>{const on=$('#menu').hidden;hudClose('menu');menuSet(on);});$('#autochip').addEventListener('click',()=>{hudClose();if(autoOn||(SRV&&autoNow().x2))openAutoInfo();else setAuto(true);});
 $('#wxchip').addEventListener('click',()=>{const on=!$('#rcol').classList.contains('open');hudClose('wx');wxSet(on);});
 $('#newsbtn').addEventListener('click',()=>{const on=!$('#world').classList.contains('newsopen');hudClose('news');newsSet(on);});
@@ -7554,6 +7555,46 @@ function loadPortOne(){if(window.PortOne)return Promise.resolve(window.PortOne);
   portoneP=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.portone.io/v2/browser-sdk.js';s.onload=()=>window.PortOne?ok(window.PortOne):no(new Error('sdk'));s.onerror=()=>{portoneP=null;no(new Error('sdk'));};document.head.appendChild(s);});return portoneP;}
 function jwtPayload(){try{const p=tokNow().split('.')[1];const b=atob(p.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((p.length+3)%4));return JSON.parse(new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0))));}catch(e){return{};}}
 // v29 C2: 서버 verifyJWT와 같은 규칙의 계정 id(id가 문자열·유한한 수면 그 값, 없으면 email, 앞뒤 공백 제거). 결제 customData·플레이 계정·광고 SSV·대기 목록이 모두 이 값을 쓴다
+/* ===================== V65 쿠폰 입력(메뉴) · 운영자(MASTER) 쿠폰 만들기 =====================
+   서버가 계정마다 1번만 지급(무상 포인트·장비·채비). 등급은 화면 표시용으로만 읽고, 만들기 권한은 서버가 로그인 토큰으로 다시 확인 */
+function isMasterTok(){try{return String(jwtPayload().tier||'').trim().toUpperCase()==='MASTER';}catch(e){return false;}}
+let cpItems=[];
+function cpItemName(id){const x=GBY[id];return x?x.n:id;}
+function cpGotTxt(g){const a=[];if(g.pt)a.push('+'+fmtN(g.pt)+'P');(g.items||[]).forEach(it=>a.push(cpItemName(it.id)+(it.n>1?' ×'+it.n:'')));let t=a.join(' · ');if(g.had&&g.had.length)t+=(t?' · ':'')+'이미 가진 장비 '+g.had.length+'개는 빼고 지급';return t||'지급할 것이 없습니다';}
+function openCoupon(){if(!SRV){toast('낚시GO에 로그인해 서버에 연결된 뒤 쓸 수 있습니다');return;}
+  const adm=isMasterTok();cpItems=[];
+  const opts=Object.keys(GBY).filter(id=>{const c=catOf(id);return c&&c!=='net';}).sort((a,b)=>(catOf(a)||'').localeCompare(catOf(b)||'')||((GBY[a].ti||0)-(GBY[b].ti||0))).map(id=>'<option value="'+esc(id)+'">'+esc(({rod:'낚싯대',line:'원줄',leader:'목줄',term:'채비'})[catOf(id)]||catOf(id))+' · '+esc(GBY[id].n)+(GBY[id].tier?' ('+esc(GBY[id].tier)+')':'')+'</option>').join('');
+  const m=uiBox('cpM','modal','');m.innerHTML='<div class="sheet2 panel" role="dialog" aria-labelledby="cpT"><div class="row" style="margin-bottom:6px"><h2 id="cpT" style="margin:0">쿠폰 입력</h2><button class="ghost" id="cpX" type="button" style="margin-left:auto">닫기</button></div>'
+    +'<p class="lead" style="margin:0 0 6px">받은 쿠폰 번호를 넣으면 포인트·아이템이 계정에 바로 들어옵니다(쿠폰마다 계정당 1번).</p>'
+    +'<div class="cprow"><input id="cpCode" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="예: WELCOME2026" aria-label="쿠폰 번호"><button class="btn" id="cpGo" type="button">적용</button></div><div class="cpmsg" id="cpMsg" role="status" aria-live="polite"></div>'
+    +(adm?'<div class="cpadm"><h3 style="margin:0 0 4px;font-size:16px">운영자 · 쿠폰 만들기</h3>'
+      +'<label for="cpPt">포인트(무상, 0~100,000P)</label><input id="cpPt" type="number" min="0" max="100000" step="100" value="0">'
+      +'<label for="cpItem">아이템(최대 10개)</label><div class="cprow"><select id="cpItem">'+opts+'</select><input id="cpN" type="number" min="1" max="99" value="1" style="max-width:72px" aria-label="개수"><button class="ghost" id="cpAdd" type="button">추가</button></div><div class="cpchips" id="cpChips"></div>'
+      +'<label for="cpMax">받을 수 있는 인원(0 = 제한 없음)</label><input id="cpMax" type="number" min="0" step="1" value="0">'
+      +'<label for="cpUntil">마감일(비우면 마감 없음)</label><input id="cpUntil" type="date">'
+      +'<label for="cpNote">메모(받는 사람에게 보임, 40자)</label><input id="cpNote" type="text" maxlength="40" placeholder="예: 오픈 기념">'
+      +'<label for="cpNew">쿠폰 번호(비우면 자동, 영문·숫자 4~24자)</label><input id="cpNew" type="text" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false">'
+      +'<div class="cprow"><button class="btn" id="cpMake" type="button">쿠폰 만들기</button></div><div class="cpmsg" id="cpAdmMsg" role="status" aria-live="polite"></div>'
+      +'<h3 style="margin:12px 0 4px;font-size:15px">만든 쿠폰</h3><div id="cpList" class="k">불러오는 중…</div></div>':'')
+    +'</div>';
+  m.hidden=false;const close=()=>{m.hidden=true;};$('#cpX').onclick=close;m.onclick=e=>{if(e.target===m)close();};
+  const code=$('#cpCode'),msg=$('#cpMsg');setTimeout(()=>{try{code.focus();}catch(e){}},50);
+  const use=async()=>{const v=code.value.trim();if(!v){msg.className='cpmsg bad';msg.textContent='쿠폰 번호를 넣어 주세요';return;}const g=$('#cpGo');g.disabled=true;msg.className='cpmsg';msg.textContent='확인 중…';
+    const r=await netRid('coupon',{code:v});g.disabled=false;
+    if(r.s===200&&r.j&&r.j.ok){msg.className='cpmsg ok';msg.textContent='받았습니다 · '+cpGotTxt(r.j.got)+(r.j.note?' ('+r.j.note+')':'');code.value='';if(typeof r.j.pt==='number')save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);if(r.j.inv)save.inv=r.j.inv;refreshWallet();try{bagRefresh();}catch(e){}toast('쿠폰 · '+cpGotTxt(r.j.got));srvRefresh();return;}
+    msg.className='cpmsg bad';msg.textContent=(r.j&&r.j.message)||errMsg(r);};
+  $('#cpGo').onclick=use;code.addEventListener('keydown',e=>{if(e.key==='Enter')use();});
+  if(!adm)return;
+  const chips=()=>{$('#cpChips').innerHTML=cpItems.map((it,i)=>'<span>'+esc(cpItemName(it.id))+(it.n>1?' ×'+it.n:'')+' <button type="button" class="ghost mini" data-cpdel="'+i+'" aria-label="빼기">×</button></span>').join('');$('#cpChips').querySelectorAll('[data-cpdel]').forEach(b=>b.onclick=()=>{cpItems.splice(+b.dataset.cpdel,1);chips();});};
+  $('#cpAdd').onclick=()=>{if(cpItems.length>=10){toast('아이템은 10개까지');return;}const id=$('#cpItem').value,n=Math.max(1,Math.min(99,Math.floor(+$('#cpN').value||1)));const f=cpItems.find(x=>x.id===id);if(f)f.n=Math.min(99,f.n+n);else cpItems.push({id,n});chips();};
+  const list=async()=>{const r=await net('coupon-admin',{op:'list'});const el=$('#cpList');if(!el)return;if(!(r.s===200&&r.j)){el.textContent=errMsg(r);return;}
+    el.innerHTML=r.j.list.length?r.j.list.map(c=>'<div class="cpl"><code>'+esc(c.code)+'</code><span style="flex:1;min-width:0">'+esc(cpGotTxt({pt:c.pt,items:c.items}))+' · '+fmtN(c.used)+(c.maxUses?'/'+fmtN(c.maxUses):'')+'명'+(c.until?' · ~'+new Date(c.until).toLocaleDateString('ko-KR'):'')+(c.off?' · 꺼짐':'')+'</span><button type="button" class="ghost mini" data-cpoff="'+esc(c.code)+'" data-on="'+(c.off?1:0)+'">'+(c.off?'켜기':'끄기')+'</button></div>').join(''):'아직 만든 쿠폰이 없습니다';
+    el.querySelectorAll('[data-cpoff]').forEach(b=>b.onclick=async()=>{b.disabled=true;const x=await net('coupon-admin',{op:'off',code:b.dataset.cpoff,on:b.dataset.on==='1'});if(x.s!==200)toast(errMsg(x));list();});};
+  $('#cpMake').onclick=async()=>{const am=$('#cpAdmMsg'),d=$('#cpUntil').value;const body={op:'create',pt:Math.floor(+$('#cpPt').value||0),items:cpItems,maxUses:Math.floor(+$('#cpMax').value||0),note:$('#cpNote').value.trim(),code:$('#cpNew').value.trim(),until:d?new Date(d+'T23:59:59+09:00').getTime():0};
+    const b=$('#cpMake');b.disabled=true;am.className='cpmsg';am.textContent='만드는 중…';const r=await net('coupon-admin',body);b.disabled=false;
+    if(r.s===200&&r.j&&r.j.coupon){const c=r.j.coupon;am.className='cpmsg ok';am.innerHTML='만들었습니다 · <b>'+esc(c.code)+'</b> <button type="button" class="ghost mini" id="cpCopy">번호 복사</button>';$('#cpCopy').onclick=()=>{try{navigator.clipboard.writeText(c.code).then(()=>toast('쿠폰 번호를 복사했습니다'),()=>toast(c.code));}catch(e){toast(c.code);}};cpItems=[];chips();$('#cpNew').value='';list();return;}
+    am.className='cpmsg bad';am.textContent=(r.j&&r.j.message)||errMsg(r);};
+  list();}
 function acctUid(){const pl=jwtPayload();let u='';if(pl.id!==undefined&&pl.id!==null){if(typeof pl.id==='string'||(typeof pl.id==='number'&&Number.isFinite(pl.id)))u=String(pl.id);else return'';}else if(typeof pl.email==='string')u=pl.email;u=u.trim();return u&&u.length<=128?u:'';}
 // v29 C2: 확인 대기 중인 이용권 결제가 있으면 먼저 다시 확인하고, 그래도 남아 있으면 새 결제를 막는다(겹쳐 사면 두 번째 이용권은 결제 시점에 시작하지 않음)
 function passPend(){return ppLoad().filter(e=>ppMine(e)&&Date.now()-e.t<3*864e5&&(e.kind==='pass'||(e.kind==='play'&&e.pk==='pass')));}
@@ -9743,6 +9784,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
     if(k==='buy')openShop('rod');else if(k==='auto'){if(!autoOn)setAuto(true);else openAutoInfo();}else if(k==='harvest')openAutoInfo();else if(k==='dex5')openDex();else if(k==='tank')openTank();else if(k==='zone2')$('#back').click();return;}
   const t=e.target.closest&&e.target.closest('[data-v44th]');if(t)v44Theme(t.dataset.v44th);});
 v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
