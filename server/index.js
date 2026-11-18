@@ -3285,6 +3285,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
     let verified = false;
     let autoRenewing = true;
     let googleExpiryMs = null; // ✅ Google Play 실제 만료 시각 (테스트: 5분, 실제: ~30일)
+    let googleIsTest = false;  // ✅ IAP-TEST(2026-11-18): 라이선스 테스트 결제(purchaseType 0)는 매출에서 제외
     let googlePaidKrw = null;  // ✅ PRICE-9900: Google이 알려준 실제 결제 금액(기존 3,300원 구독자 갱신분을 9,900원으로 잘못 기록하지 않도록)
 
     if (serviceAccountJson) {
@@ -3316,6 +3317,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
         if (sub.paymentState === 1 || sub.paymentState === 2) {
           verified = true;
           autoRenewing = sub.autoRenewing !== false;
+          googleIsTest = sub.purchaseType === 0; // ✅ IAP-TEST: Google 정의 0=테스트(라이선스 테스트 계정) 구매
           if (sub.priceCurrencyCode === 'KRW' && sub.priceAmountMicros) {
             const krw = Math.round(Number(sub.priceAmountMicros) / 1e6);
             if (Number.isFinite(krw) && krw > 0) googlePaidKrw = krw;
@@ -3402,7 +3404,7 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
         pg: 'google_play', method: 'iap',
         planId: planInfo.planId, tier: newTier,
         amount: googlePaidKrw || planInfo.amount, purchaseToken, productId,
-        status: 'paid', paidAt: new Date(),
+        status: 'paid', paidAt: new Date(), isTest: googleIsTest, // ✅ IAP-TEST
       }).catch(e => (logger?.warn || console.warn)('[Google IAP] 이력 저장 실패:', e.message));
     }
 
