@@ -1684,6 +1684,29 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
 .v45over .v45box{max-width:420px;width:100%;text-align:center;display:grid;gap:10px;justify-items:center}
 .v45over h2{margin:0;font-size:20px;line-height:1.35;word-break:keep-all;color:var(--fg)}.v45over p{margin:0;font-size:15px;color:var(--mute);word-break:keep-all}
 .thl .v45over{background:#fffaf0}
+
+/* ===================== V77 상단 두 줄 고정 · 화면 폭 비율 ===================== */
+#spotbar>#back.trip{width:var(--hbh)!important;min-width:var(--hbh)!important;padding:0!important;flex-direction:column!important;justify-content:center!important;align-items:center!important;gap:0!important}
+#spotbar>#back.trip .ic{width:17px!important;height:17px!important;margin:0!important}
+#spotbar>#back.trip .bl{display:block!important;font-size:10px!important;line-height:1.05!important;font-weight:800!important;letter-spacing:-.04em;white-space:nowrap}
+#spotbar>#back.trip .bl .sl{display:none!important}
+#world #spotbar>#lvbtn2{max-width:112px;min-width:0;overflow:hidden}
+#world #spotbar>#ptpill{max-width:136px;min-width:0;overflow:hidden}
+#spotbar>#ptpill b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#world #spotbar>#satchip:not([hidden]):not(.warn):not(.low){max-width:100px;overflow:hidden}
+#spotbar>#loc{min-width:0;overflow:hidden}
+#spotbar>#loc>#spotName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.15}
+#spotbar>#loc>#wxchip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#spotbar.tight1{gap:4px!important}
+#world #spotbar.tight1>#ptpill{max-width:110px!important}#world #spotbar.tight1>#lvbtn2{max-width:92px!important}
+#world #spotbar.tight2>#ptpill .pico{display:none!important}#world #spotbar.tight2>#lvbtn2{max-width:76px!important}#world #spotbar.tight2>#satchip:not([hidden]):not(.warn):not(.low){max-width:76px!important}
+@media (max-width:820px){#world .top{zoom:var(--uis,1)}}
+/* V77 하단: 작은 화면(폭 390 미만)에서만 같은 비율로 줄인다(키우지는 않음 — 위 칸들과 겹치지 않게) */
+@media (max-width:820px){#dock,#act,#greet,#emobar,#cutbtn,#twbtn{zoom:var(--uisb,1)}
+  #joy{transform:scale(var(--uisb,1));transform-origin:left bottom}/* 조이스틱은 zoom 대신 transform — 모든 엔진에서 터치 좌표·rect가 맞음 */
+  #world .top #rcol,#world .top #wxcard{max-width:calc((100vw - 20px) / var(--uis,1))!important}
+  #world #spotbar>#satchip.warn,#world #spotbar>#satchip.low{max-width:calc((100vw - 20px) / var(--uis,1))!important}
+  #world #spotbar>#autochip:not([hidden]){right:calc((max(18px, env(safe-area-inset-right,0px)) + 12px) * var(--uisb,1) / var(--uis,1))!important;bottom:calc((var(--dockh) + 116px) * var(--uisb,1) / var(--uis,1))!important}}
 </style>
 
 <!-- ===== 지도 ===== -->
@@ -5346,7 +5369,14 @@ function toastPlace(){const ts=$('#toast');ts.classList.remove('tl','tr');ts.sty
   {let cTop=innerHeight-10;CTRLQ.forEach(q=>{const a=vrect($(q));if(a)cTop=Math.min(cTop,a.top);});const y=Math.round(cTop-(ts.offsetHeight||36)-8);if(y>hudBottom()){ts.style.top=y+'px';if(!hitEx())return true;}}
   ts.style.top=y0+'px';return true;}
 function hudBottom(){let y=0;['#spotbar','#wxchip','#newsbtn'].forEach(q=>{const r=vrect($(q));if(r)y=Math.max(y,r.bottom);});return Math.round(y+6);}
-function layoutHUD(){if($('#world').hidden)return;const Wd=$('#world');Wd.classList.toggle('fighting',!$('#fight').hidden);Wd.classList.toggle('charging',!$('#charge').hidden);
+/* V77 상단 두 줄 고정 · 화면 폭 비율(기준 폭 390 · 0.82~1.15배) — 글자 크기 설정이 커도 윗줄이 넘치면 한 단계씩 줄여 두 줄을 지킨다 */
+function uisSet(){const w=Math.min(innerWidth||390,document.documentElement.clientWidth||innerWidth||390);const k=Math.max(.82,Math.min((innerHeight||800)<=500?1:1.15,w/390));/* 가로 모드(높이 500 이하)는 키우지 않음 */document.documentElement.style.setProperty('--uis',k.toFixed(3));document.documentElement.style.setProperty('--uisb',Math.min(1,k).toFixed(3));}
+uisSet();addEventListener('resize',()=>{uisSet();try{layoutHUD();}catch(e){}});
+function topFit(){const sb=$('#spotbar');if(!sb)return;const b=$('#back'),sat=$('#satchip'),pt=$('#ptpill');const top=e=>e&&e.offsetParent?e.getBoundingClientRect().top:null;
+  for(const c of ['tight1','tight2'])sb.classList.remove(c);const t0=top(b);if(t0==null)return;
+  const wrapped=()=>[sat&&!sat.classList.contains('warn')&&!sat.classList.contains('low')?sat:null,pt].some(e=>{const t=top(e);return t!=null&&t>t0+8;});
+  if(wrapped())sb.classList.add('tight1');if(wrapped())sb.classList.add('tight2');}
+function layoutHUD(){if($('#world').hidden)return;try{topFit();}catch(e){}const Wd=$('#world');Wd.classList.toggle('fighting',!$('#fight').hidden);Wd.classList.toggle('charging',!$('#charge').hidden);
   if(cmp()){const hb=hudBottom();document.documentElement.style.setProperty('--hudb',hb+'px');if(!$('#fight').hidden&&!fightOn){fightOn=1;hudClose();}fightOn=$('#fight').hidden?0:1;
     const fe=$('#feed');fe.style.top=hb+'px';$('#menu').style.top='';$('#charge').style.bottom='';egiPlace();tutPlace();fightPlace();toastRecheck();trkPlace();return;}/* v38-UI: 소식은 상태 바 바로 아래로 펼치고, 메뉴는 하단 독 위로 */
   fightOn=0;
@@ -9783,7 +9813,7 @@ function dockSync(){try{const G=v36Goal(),c=!!(G&&G.claim);['#wquestbtn','#quest
   on('#ptpill',()=>{hudClose();openShop('my');});on('#mptbtn',()=>openShop('my'));
   on('#loc',e=>{if(!e.target.closest('#wxchip'))$('#wxchip').click();});
   ['#wquestbtn','#questbtn'].forEach(q=>on(q,e=>{if(!e.currentTarget.classList.contains('rdot'))return;e.stopImmediatePropagation();shopClose();if(!$('#bag').hidden)bagSet(false);hudClose();openRPG('goal');},true));
-  const ws=()=>{const a=$('#wallet'),b=$('#wpt');if(a&&b&&b.textContent!==a.textContent)b.textContent=a.textContent;};try{new MutationObserver(ws).observe($('#wallet'),{childList:true,characterData:true,subtree:true});}catch(e){}ws();
+  const ws=()=>{const a=$('#wallet'),b=$('#wpt');if(!a||!b)return;const n=+String(a.textContent).replace(/[^0-9]/g,''),t=n>=1e6?Math.floor(n/1e4).toLocaleString('ko-KR')+'만':a.textContent;/* V77 100만 P 이상은 줄여 칸 폭 고정 */if(b.textContent!==t){b.textContent=t;b.title=a.textContent+'P';}};try{new MutationObserver(ws).observe($('#wallet'),{childList:true,characterData:true,subtree:true});}catch(e){}ws();
   setInterval(trkSync,300);setInterval(dockSync,1000);setTimeout(()=>{trkSync();dockSync();},0);}
 /* ===================== V39-UI: 두 번째 정리 — 접는 칸 · 아이콘 칸 · 처음 안내 카드 · 낚은 고기 카드 · 어록 자세히 · 가방 내구도 =====================
    화면 그리기만 바꾼다(게임 규칙·서버·공유 규칙 블록은 그대로). */
