@@ -104,6 +104,7 @@ import LoginPage from './pages/LoginPage';
 import CrewChat from './pages/CrewChat';
 import WeatherDashboard from './pages/WeatherDashboard';
 import VVIPSubscribe from './pages/VVIPSubscribe';
+import GameAppNoPay, { isGameApp } from './components/GameAppNoPay'; // ✅ GAME-APP: 게임 앱에서는 결제 화면 대신 안내
 import WriteBusinessPost from './pages/WriteBusinessPost';
 import CctvAdmin from './pages/CctvAdmin';
 import NoticeDetail from './pages/NoticeDetail';
@@ -644,7 +645,7 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/weather" element={<WeatherDashboard />} />
               <Route path="/tide-calendar" element={<TideCalendar />} />
-              <Route path="/vvip-subscribe" element={<VVIPSubscribe />} />
+              <Route path="/vvip-subscribe" element={isGameApp() ? <GameAppNoPay /> : <VVIPSubscribe />} />
               <Route path="/write-business" element={<WriteBusinessPost />} />
               {/* ENH3-C1: AdminRoute 컴포넌트로 분리 — App() 리렌더 수 절감 */}
               <Route path="/cctv-admin" element={<AdminRoute><CctvAdmin /></AdminRoute>} />
