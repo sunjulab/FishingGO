@@ -1290,6 +1290,10 @@ body .qitem .bar{height:6px;margin:8px 0 6px;border-radius:3px}
 #legend .lgbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 #legend #lgBtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;height:40px;padding:0 14px;border-radius:999px;background:var(--glass);border:1px solid var(--gline);color:var(--fg);font-size:13px;font-weight:700;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 #legend #lgBtn .cv{width:14px;height:14px;transition:transform .2s}
+#legend #backSpot{display:inline-flex;align-items:center;gap:6px;min-height:44px;height:44px;padding:0 16px;border-radius:999px;background:var(--glass);border:1px solid var(--gline);color:var(--fg);font-size:14px;font-weight:600;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);max-width:min(78vw,420px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+#legend #backSpot[hidden]{display:none}
+#legend #backSpot.on{background:#1f6fd1;border-color:#1f6fd1;color:#fff}#legend #backSpot b{font-weight:800}
+#legend #backSpot .bsdot{width:8px;height:8px;border-radius:50%;background:#7cf29a;box-shadow:0 0 0 3px rgba(124,242,154,.3);flex:none}
 #legend #lgBtn[aria-expanded="true"] .cv{transform:rotate(180deg)}
 #legend #lgBtn .lgd{display:inline-flex;gap:3px}#legend #lgBtn .lgd i{width:7px;height:7px;border-radius:50%}
 #legend #beginRow{display:inline-flex;align-items:center}
@@ -1703,7 +1707,7 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
     <button class="ghost" id="shopbtn" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.5V20h15v-9.5M3.5 10.5L5.5 4h13l2 6.5zM10 20v-5h4v5"/></svg>상점</button>
   </nav>
   <div id="legend" class="panel v39lg">
-    <div class="lgbar"><button type="button" id="lgBtn" aria-expanded="false" aria-controls="lgBody"><span class="lgd" aria-hidden="true"><i class="g"></i><i class="w"></i><i class="b"></i></span>범례<svg class="cv" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg></button><div id="beginRow" hidden><button class="ghost" id="beginBtn" type="button" style="padding:4px 10px;font-size:12.5px;color:#7ff0c8;border-color:#7ff0c8" title="방파제 · 지금 채비로 잡기 쉬운 곳(눌러서 차례로 보기)">초보 추천 3곳</button> <span>방파제 · 지금 채비로 잡기 쉬운 곳(눌러서 차례로 보기)</span></div></div>
+    <div class="lgbar"><button type="button" id="backSpot" hidden></button><button type="button" id="lgBtn" aria-expanded="false" aria-controls="lgBody"><span class="lgd" aria-hidden="true"><i class="g"></i><i class="w"></i><i class="b"></i></span>범례<svg class="cv" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg></button><div id="beginRow" hidden><button class="ghost" id="beginBtn" type="button" style="padding:4px 10px;font-size:12.5px;color:#7ff0c8;border-color:#7ff0c8" title="방파제 · 지금 채비로 잡기 쉬운 곳(눌러서 차례로 보기)">초보 추천 3곳</button> <span>방파제 · 지금 채비로 잡기 쉬운 곳(눌러서 차례로 보기)</span></div></div>
     <div id="lgBody">
     <div><span class="dot g"></span><b>양호</b> · <span class="dot w"></span><b>주의</b> · <span class="dot b"></span><b>위험</b> <span>(게임 내 기준: 파고·풍속)</span></div>
     <div>● 바다 · ■ 민물 · 숫자 = 지금 그 낚시터에 있는 사람</div>
@@ -2924,7 +2928,7 @@ function tripListHTML(s){return BOAT_TRIPS.map(t=>{const st=tripState(s,t);retur
 // v30 C4(#59): 처음 금지체장 이하로 놓아줄 때 한 번만 이유 안내
 function relTip(){if(save.relTip)return;save.relTip=1;try{persist();}catch(e){}setTimeout(()=>toast('법정 금지체장 이하라 놓아주었습니다 · 포인트는 없지만 어록 마릿수에 들어갑니다 · 오늘 방생 퀘스트가 있으면 함께 채워집니다'),1800);}
 function tripGoneNow(){if(!curTrip)return;tripGone=true;tripEnd=0;}
-function tripFinish(why){if(autoOn)setAuto(false);if(SRV&&why!=='gone')srvTripEnd();const port=cur,t=curTrip,S=TS;if(S&&tripBoatLbl)S.boat=tripBoatLbl;tripBoatLbl='';tripHullId='';curTrip=null;TS=null;tripGone=false;
+function tripFinish(why){if(cur)lastSpotId=cur.id;if(autoOn)setAuto(false);if(SRV&&why!=='gone')srvTripEnd();const port=cur,t=curTrip,S=TS;if(S&&tripBoatLbl)S.boat=tripBoatLbl;tripBoatLbl='';tripHullId='';curTrip=null;TS=null;tripGone=false;
   toast(why==='gone'?'출조가 끝나 귀항했습니다':why==='time'?'출조 시간이 끝나 귀항했습니다':'귀항했습니다');enterSpot(port);if(S&&t)setTimeout(()=>tripSummary(port,t,S),600);}
 function tripSummary(port,t,S){const gain=S.pts-S.fee,sg=v=>(v>=0?'+':'−')+fmtN(Math.abs(v))+'P';
   const L=['낚은 고기 '+S.n+'마리'+(S.rel?'(방생 '+S.rel+')':''),'최대어 '+(S.best?S.best.n+' '+S.best.cm.toFixed(1)+'cm':'없음'),'얻은 포인트 +'+fmtN(S.pts)+'P','선비 '+fmtN(S.fee)+'P'].concat(S.rig>0?['대여 채비 손실 '+fmtN(S.rig)+'P']:[],['손익 '+sg(gain-(S.rig||0))],S.boat?['탄 배 '+S.boat]:[]);
@@ -5085,12 +5089,13 @@ function myColor0(){let h=0;for(const ch of save.nick)h=(h*31+ch.charCodeAt(0))>
 function startPos(){if(kind==='boat')return[1.6,-2];if(kind==='pier')return[0,8];if(kind==='port')return[2.6,8];if(kind==='rock')return[0,12];return[0,3];}
 let entryTok=0;
 function leaveSettle(){if(!cur||!player)return true;
+  if(autoOn&&!curTrip){if(state!=='idle'){if(state==='result')$('#card').hidden=true;resetLine();}return true;}/* V73: 자동이 던진 채비(연출)는 조용히 거둔다 — 손실·놓침 없음 */
   if(state==='snag'){cutLine();if(state==='snag')return false;return true;}
   if(state==='bite'||state==='hooking'){biteEnd(true);resetLine();nonCatch('late','입질 놓침 — 자리를 떠나 입질을 놓쳤습니다');return true;}
   if(state==='fight'){const n=fish?(fishGold?'황금 ':'')+fish.n:'물고기';fishGold=false;lose('놓침 — 자리를 떠나 걸려 있던 '+n+((c=>c>=0&&c<11172&&c%28)(n.charCodeAt(n.length-1)-0xAC00)?'을':'를')+' 놓쳤습니다','lost');return true;}
   return true;}
 // v30 나가기 확인: 밑걸림 · 선상 출조 중(남은 시간, 선비 환불 없음) · 입질/파이트 중(걸린 물고기를 놓침)
-function leaveNeed(){if(!cur||!player||$('#world').hidden)return null;if(state==='snag')return'snag';if(curTrip||['bite','hooking','fight'].includes(state))return'leave';return null;}
+function leaveNeed(){if(!cur||!player||$('#world').hidden)return null;if(autoOn&&!curTrip)return null;/* V73 자동 연출은 묻지 않음 */if(state==='snag')return'snag';if(curTrip||['bite','hooking','fight'].includes(state))return'leave';return null;}
 function leaveAsk(go,mode){const m=uiBox('leaveAsk','modal','<div class="sheet2 panel" role="alertdialog" aria-labelledby="leaveAskT"><h2 id="leaveAskT"></h2><p class="lead" id="leaveAskP"></p><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" id="leaveYes" type="button"></button><button class="ghost" id="leaveNo" type="button">계속 낚시</button></div></div>');
   if(mode!=='leave'){$('#leaveAskT').textContent='줄을 끊고 나갈까요?';$('#leaveYes').textContent='줄 끊고 나가기';$('#leaveAskP').textContent='채비가 바닥에 걸려 있습니다. 지금 나가면 줄을 끊어 '+(curTrip?(()=>{const c=rentCost();return c>0?'대여 채비 값 '+c+'P를 냅니다.':'대여 채비를 잃습니다(낼 포인트 없음).';})():'채비 1개를 잃습니다.')+' 먼저 당겨 보면 풀릴 때가 많습니다.';$('#leaveNo').textContent='당겨 보기';}
   else{const L=[];if(curTrip){const ms=Math.max(0,tripEnd-performance.now()),mm=Math.floor(ms/60000),ss=Math.floor(ms/1000)%60;L.push('출조 남은 시간 '+mm+':'+String(ss).padStart(2,'0')+' · 선비는 환불되지 않습니다.');}
@@ -5100,7 +5105,7 @@ function leaveAsk(go,mode){const m=uiBox('leaveAsk','modal','<div class="sheet2 
 // v24 뒤로 가기: 포인트에 들어가면 기록을 하나 쌓아 뒤로 → 지도, (낚시GO 안에서) 지도에서 뒤로 → 낚시GO로
 let histOn=false,histSkip=false;
 function histPush(){if(histOn)return;try{history.pushState({meta:'spot'},'');histOn=true;}catch(e){}}
-async function enterSpot(s,trip){if(!ensureRenderer())return;try{qLearnLoad();if(!qApplyPend(true))applyQ(true);}catch(e){}if(cur&&player)leaveSettle();$('#card').hidden=true;clearTimeout(cardDT);cardDT=null;const lk=$('#leaveAsk');if(lk)lk.hidden=true;histPush();const tok=++entryTok;resetLine();player=null;cur=s;curTrip=trip||null;tripEnd=trip?performance.now()+TRIP_MIN*60000:0;tripMo=trip?((SRV&&SRV_TRIP&&SRV_TRIP.id===trip.id&&+SRV_TRIP.mo)||kstNow().mo):0;/* FIXUP C4-c: 다시 승선하면 서버가 산 달(mo)을 따름 */if(trip){TS={fee:feeOf(trip),owe:SRV?0:feeOf(trip),n:0,rel:0,pts:0,rank:0,best:null,w60:0,w10:0};tripGone=false;}$('#map').hidden=true;$('#sheet').hidden=true;$('#world').hidden=false;$('#loading').hidden=false;$('#alert').hidden=true;ensureRenderer();
+async function enterSpot(s,trip){if(!ensureRenderer())return;if(autoOn&&cur&&s&&(s.id!==cur.id||trip)){if(SRV&&!curTrip)autoDetach(false);else setAuto(false);}/* V73 다른 낚시터로 옮겨도 서버 자동은 계속 */try{qLearnLoad();if(!qApplyPend(true))applyQ(true);}catch(e){}if(cur&&player)leaveSettle();$('#card').hidden=true;clearTimeout(cardDT);cardDT=null;const lk=$('#leaveAsk');if(lk)lk.hidden=true;histPush();const tok=++entryTok;resetLine();player=null;cur=s;curTrip=trip||null;tripEnd=trip?performance.now()+TRIP_MIN*60000:0;tripMo=trip?((SRV&&SRV_TRIP&&SRV_TRIP.id===trip.id&&+SRV_TRIP.mo)||kstNow().mo):0;/* FIXUP C4-c: 다시 승선하면 서버가 산 달(mo)을 따름 */if(trip){TS={fee:feeOf(trip),owe:SRV?0:feeOf(trip),n:0,rel:0,pts:0,rank:0,best:null,w60:0,w10:0};tripGone=false;}$('#map').hidden=true;$('#sheet').hidden=true;$('#world').hidden=false;$('#loading').hidden=false;$('#alert').hidden=true;ensureRenderer();
   let w=WX.spots[s.id]||{};W=w;
   try{const lw=await liveWeather(s);WX.spots[s.id]=lw;if(tok===entryTok&&cur===s)W=w=lw;}catch(e){}
   if(tok!==entryTok||cur!==s)return;// 기다리는 사이 다른 곳으로 갔거나 지도로 돌아감
@@ -5110,7 +5115,7 @@ async function enterSpot(s,trip){if(!ensureRenderer())return;try{qLearnLoad();if
   renderWx();$('#log').innerHTML='';logMsg((W.live?'방금 조회한':'저장된')+' 실제 기상으로 장면을 만들었습니다.','sys');
   const sp=ENV.sun;logMsg('현지 시각 기준 해 고도 '+sp.el.toFixed(0)+'° · '+(ENV.night?'밤':'낮')+' 장면','sys');
   $('#loading').hidden=true;myPres={s:curTrip?s.id+':'+curTrip.id:s.id,n:save.nick,c:myColor(),h:V4().eq.hat||null,ti:V4().eq.title||null,x:sx,z:sz,ry:Math.PI,st:'idle'};myPresWear();/* v37 */if(curTrip)logMsg('선상 출조 — '+esc(curTrip.n)+' · 대여 장비 '+esc(curTrip.rig.n)+' · '+TRIP_MIN+'분 뒤 귀항','sys');sendPres(true);
-  peers.forEach((p,id)=>dropPeer(id));updHere();canvas.focus();audioScene();hudClose();layoutHUD();/* V39-UI: 소식 창은 저절로 열지 않고 빨간 점만 */if($('#log')&&$('#log').children.length)$('#newsbtn').classList.add('unread');evt('enter');qStart();tutMaybe();if(autoPend){autoPend=false;setTimeout(()=>{if(tok===entryTok&&player&&!autoOn){setAuto(true);}},600);}/* V67 지도에서 누른 자동 */setTimeout(()=>{if(tok===entryTok)trShow();},1500);}
+  peers.forEach((p,id)=>dropPeer(id));updHere();canvas.focus();audioScene();hudClose();layoutHUD();/* V39-UI: 소식 창은 저절로 열지 않고 빨간 점만 */if($('#log')&&$('#log').children.length)$('#newsbtn').classList.add('unread');evt('enter');qStart();tutMaybe();if(autoPend){autoPend=false;setTimeout(()=>{if(tok===entryTok&&player&&!autoOn){setAuto(true);}},600);}/* V67 지도에서 누른 자동 */else setTimeout(()=>{if(tok!==entryTok)return;if(player&&!autoOn&&!curTrip&&SRV&&SA&&SA.on&&cur&&SA.spot===cur.id)autoAttach();else renderAutoBtn();},600);/* V73 자동 중인 낚시터로 돌아오면 이어서 보여 줌 */setTimeout(()=>{if(tok===entryTok)trShow();},1500);}
 function spawnMe(sx,sz,ry){player=Object.assign(makeAngler(myVestNow(),0x22262a,false,{life:kind==='boat',hat:lookOf('hat'),wear:myWear()}),{name:save.nick});/* v37 외모·입는 꾸미기 */if(walkFn(sx,sz)==null){const d=sx>0?-.3:.3;for(let k=1;k<=8;k++)if(walkFn(sx+d*k,sz)!=null){sx+=d*k;break;}}/* V48 fix: 다시 지을 때 짐 더미 안에 서 있었으면 옆으로 비켜 세움 */player.g.position.set(sx,walkFn(sx,sz)||0,sz);player.g.rotation.y=ry;
   const nl=label(save.nick,{me:1,gold:hasGold(),t:titleName(lookOf('title'))});nl.position.y=AV_LBL;player.g.add(nl);player.nl=nl;player.nlG=hasGold();player.nlT=titleName(lookOf('title'));
   {const hl=new THREE.PointLight(0xe2ecff,0,10,2);/* V48 env 마무리: 머리등 .7 → .3 · 고침: .22, 해 고도로 서서히 */hl.userData.bi=ENV.lampsOn?.22:0;hl.intensity=hl.userData.bi*lampK();hl.position.set(0,1.9,.4);player.g.add(hl);SKYR.hl=hl;}
@@ -5146,7 +5151,7 @@ function buildMenu(){const m=$('#menu');m.innerHTML='';const p=document.createEl
     b.innerHTML=v44Svg(q.dataset.v44q)+'<span>'+esc(q.dataset.v44q==='food'?q.getAttribute('aria-label'):q.querySelector('.v44ql').textContent)+'</span>';b.onclick=()=>{menuSet(false);q.click();};m.appendChild(b);});
   const mk=(id,txt,cls)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.dataset.k=id;b.className='ghost'+(cls?' '+cls:'');b.textContent=txt;b.onclick=()=>{menuSet(false);$('#'+id).click();};m.appendChild(b);};
   if(!$('#boatbtn').hidden)mk('boatbtn','선상 출조');if($('#v36pbtn')&&!$('#v36pbtn').hidden)mk('v36pbtn','항구 게시판');mk('autobtn',$('#autobtn').textContent,autoOn?'on':'');/* v38-UI: 가방·상점·퀘스트·어록은 하단 독에 */{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent=VXS.snd?'소리 끄기':'소리 켜기';b.onclick=()=>{menuSet(false);sndToggle();};m.appendChild(b);}if(!$('#captbtn').hidden){const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent=$('#captbtn').textContent;b.onclick=()=>{menuSet(false);openCapt();};m.appendChild(b);}if(SRV){const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.className='ghost';b.textContent='쿠폰 입력';b.onclick=()=>{menuSet(false);openCoupon();};m.appendChild(b);}/* V65 */mk('helpbtn','설정 · 소리 · 화질 · 도움말');if(!$('#exitGo2').hidden)mk('exitGo2','낚시GO로');mk('back',$('#back').textContent);}
-$('#menubtn').addEventListener('click',()=>{const on=$('#menu').hidden;hudClose('menu');menuSet(on);});$('#autochip').addEventListener('click',()=>{hudClose();if(autoOn||(SRV&&autoNow().x2))openAutoInfo();else setAuto(true);});
+$('#menubtn').addEventListener('click',()=>{const on=$('#menu').hidden;hudClose('menu');menuSet(on);});$('#autochip').addEventListener('click',()=>{hudClose();if(autoOn||(SRV&&(autoNow().x2||(SA&&SA.on))))openAutoInfo();else setAuto(true);});/* V73 다른 곳 자동: 정보창(돌아가기·끄기) */
 $('#wxchip').addEventListener('click',()=>{const on=!$('#rcol').classList.contains('open');hudClose('wx');wxSet(on);});
 $('#newsbtn').addEventListener('click',()=>{const on=!$('#world').classList.contains('newsopen');hudClose('news');newsSet(on);});
 document.addEventListener('pointerdown',e=>{if($('#world').hidden||e.target.closest('#rcol,#loc,#feed,#menu,#menubtn,#autochip,#newsbtn'))return;hudClose();},true);
@@ -5227,9 +5232,10 @@ function layoutHUD(){if($('#world').hidden)return;const Wd=$('#world');Wd.classL
 function goMap(fromPop,ok){if(fromPop)histOn=false;
   const a=ok?null:leaveNeed();if(a){if(fromPop)histPush();leaveAsk(()=>goMap(false,true),a);return;}
   if(cur&&!leaveSettle()){if(fromPop)histPush();return;}
-  tutHide();bagSet(false);if(autoOn)setAuto(false);if(curTrip&&cur){tripFinish('leave');return;}entryTok++;resetLine();cur=null;$('#card').hidden=true;myPres={s:null,n:save.nick};sendPres(true);$('#world').hidden=true;$('#map').hidden=false;stopAudio();resizeMap();if(sel)openSheet(sel);
+  tutHide();bagSet(false);if(autoOn){if(SRV&&!curTrip)autoDetach(true);else setAuto(false);}/* V73: 서버 자동 낚시는 지도로 나가도 계속 */if(curTrip&&cur){tripFinish('leave');return;}entryTok++;resetLine();if(cur)lastSpotId=cur.id;cur=null;$('#card').hidden=true;myPres={s:null,n:save.nick};sendPres(true);$('#world').hidden=true;$('#map').hidden=false;stopAudio();resizeMap();if(sel)openSheet(sel);backSpotRender();
   if(histOn){histOn=false;histSkip=true;try{history.back();}catch(e){histSkip=false;}}}
 $('#back').addEventListener('click',()=>goMap(false));
+$('#backSpot').addEventListener('click',()=>{const x=backSpotTarget();if(!x)return;$('#sheet').hidden=true;enterSpot(x.t);});/* V73 지도 → 자동 중인(또는 방금 있던) 낚시터로 */
 // v30 기록은 포인트 1개만 쌓는다(지도에는 쌓지 않음) → 지도에서 뒤로는 낚시GO가 처리. 지도에서 다시 쌓으면 meta-exit가 끝없이 돈다
 addEventListener('popstate',()=>{if(histSkip){histSkip=false;return;}if(exiting)return;if(!$('#world').hidden&&cur){goMap(true);return;}histOn=false;});
 let exiting=false;
@@ -6413,9 +6419,18 @@ const fmtMs=ms=>{const s=Math.floor(Math.max(0,ms)/1000);return(s>=3600?Math.flo
 function autoChipTxt(A){if(A.full)return'어망 가득';if(A.mode==='pass')return'이용권 '+chipMs(A.passUntil-Date.now());if(A.mode==='ad')return'부스트 '+chipMs(A.boostLeftMs);if(A.mode==='sub')return'멤버십 '+chipMs(A.leftMs);return'무료 '+chipMs(A.leftMs);}
 /* V67: 물가가 아니면 가장 가까운 던질 수 있는 자리(16m 안)로 옮겨 세운다 */
 let autoPend=false;function waterSnap(){if(!player||kind==='boat')return true;if(nearWater())return true;const p=player.g.position;for(let R=1;R<=16;R+=.5){const n=Math.max(8,Math.round(R*6));for(let i=0;i<n;i++){const r=i/n*Math.PI*2,x=p.x+Math.sin(r)*R,z=p.z+Math.cos(r)*R;if(castSpotAt(x,z)&&walkFn(x,z)!=null){p.set(x,walkFn(x,z),z);NW.t=0;myPres.x=x;myPres.z=z;sendPres(true);return nearWater();}}}return false;}
-function setAuto(on){if(on===autoOn)return;
+/* V73 자동 낚시 끊기지 않게: 서버 자동은 지도·다른 낚시터를 구경해도 계속 돈다(끄기는 직접 눌렀을 때만).
+   autoDetach = 이 화면의 자동 연출만 멈춤(서버 호출 없음) · autoAttach = 자동 중인 낚시터에 돌아오면 연출을 다시 붙임 */
+let lastSpotId=null;
+function autoDetach(toMap){if(!autoOn)return;if(state!=='idle'){if(state==='result')$('#card').hidden=true;resetLine();}autoOn=false;autoT=0;autoHold=0;autoBeat=0;holding=false;$('#autobtn').classList.remove('on');renderAutoBtn();
+  const t=SA&&SA.spot&&SPOTS.find(x=>x.id===SA.spot);toast('자동 낚시는 '+(t?t.n+'에서 ':'')+'계속 돌아갑니다'+(toMap?' · 지도 아래 버튼으로 바로 돌아갈 수 있어요':''));backSpotRender();}
+function autoAttach(k){if(autoOn||!(SRV&&SA&&SA.on)||!cur||SA.spot!==cur.id||curTrip)return;if(state!=='idle'||(srvC&&!srvC.done)||!player){if((k|0)<20)setTimeout(()=>autoAttach((k|0)+1),500);return;}if(!nearWater()&&state==='idle')waterSnap();autoOn=true;autoT=0;autoHold=0;autoBeat=0;$('#autobtn').classList.add('on');renderAutoBtn();autoNotify();toast('자동 낚시 중인 낚시터입니다 · 이어서 보여 드려요');}
+function backSpotTarget(){if(SRV&&SA&&SA.on&&SA.spot){const t=SPOTS.find(x=>x.id===SA.spot);if(t)return{t,auto:true};}const t=lastSpotId&&SPOTS.find(x=>x.id===lastSpotId);return t?{t,auto:false}:null;}
+function backSpotRender(){const b=$('#backSpot');if(!b)return;const x=$('#map').hidden?null:backSpotTarget();b.hidden=!x;if(!x)return;const h=(x.auto?'<i class="bsdot" aria-hidden="true"></i><b>자동 중</b> · ':'<b>방금 있던 곳</b> · ')+esc(x.t.n)+' <span aria-hidden="true">↩</span>';if(b.dataset.h!==h){b.dataset.h=h;b.innerHTML=h;}b.classList.toggle('on',x.auto);b.setAttribute('aria-label',(x.auto?'자동 낚시 중인 ':'방금 있던 ')+x.t.n+'(으)로 돌아가기');}
+function setAuto(on,move){if(on===autoOn)return;
   if(on){if(pfdBlock())return;/* v37 */if(!player||$('#world').hidden){/* V67: 지도에서 눌러도 바로 — 고른(또는 자동 중이던·마지막) 낚시터로 들어가 물가에서 켠다 */const t=(typeof sel!=='undefined'&&sel)||(SA&&SA.spot&&SPOTS.find(x=>x.id===SA.spot))||(cur&&SPOTS.find(x=>x.id===cur.id));if(t){autoPend=true;toast(t.n+'에 들어가 자동 낚시를 켭니다');enterSpot(t);}else toast('낚시터를 고른 뒤 눌러 주세요');return;}if(v38AutoBlock())return;/* v38 포만감 */if(TW.ph){toast('투망을 마친 뒤 켜세요');return;}if(dvRodBroken()){dvAsk(save.eq.rod,'auto');return;}/* v35 */if(curTrip){toast('선상에서는 자동 낚시를 쓸 수 없습니다');return;}
-    if(['bite','hooking','fight'].includes(state)){toast('파이팅을 마친 뒤 켜세요');return;}if(state==='snag'){toast('밑걸림을 먼저 처리한 뒤 켜세요');return;}if(!nearWater()&&state==='idle'&&!waterSnap()){toast('물가에서 켜세요');return;}}
+    if(['bite','hooking','fight'].includes(state)){toast('파이팅을 마친 뒤 켜세요');return;}if(state==='snag'){toast('밑걸림을 먼저 처리한 뒤 켜세요');return;}if(!nearWater()&&state==='idle'&&!waterSnap()){toast('물가에서 켜세요');return;}
+    if(!move&&SRV&&SA&&SA.on&&SA.spot&&cur&&SA.spot!==cur.id){const t=SPOTS.find(x=>x.id===SA.spot);if(t){askBox('자동 낚시 중',t.n+'에서 자동 낚시가 돌고 있어요. 그곳으로 돌아갈까요, 아니면 여기로 옮길까요?','그곳으로 돌아가기','여기로 옮기기').then(y=>{if(y){if(state==='idle'&&!curTrip)enterSpot(t);}else setAuto(true,true);});return;}}}/* V73 — 파이팅·밑걸림·출조 검사 뒤에 묻는다 */
   if(on&&srvC&&!srvC.dead)srvC.done=true;// 서버가 자동 켜기 때 물에 있던 채비를 거둔다
   if(!on&&state!=='idle'){if(state==='result')$('#card').hidden=true;resetLine();}// 자동이 던진 채비(연출)는 조용히 거둔다 — 서버가 굴린 적 없는 밑걸림·입질이 남지 않게, 손실 없음
   autoOn=on;autoT=0;autoHold=0;autoBeat=0;holding=false;$('#autobtn').classList.toggle('on',on);
@@ -6424,7 +6439,7 @@ function setAuto(on){if(on===autoOn)return;
   else{if(SRV)srvAutoSet(false);else{const R=settleLocal(false,'off');if(save.auto&&save.auto.on){autoStop(save.auto,Date.now());persist();}toast(R&&R.n?'자동 낚시를 껐습니다 · 정산 '+R.n+'마리 · +'+fmtN(R.pts)+'P · +'+fmtN(R.xp)+'XP':'자동 낚시를 껐습니다');}autoNotify();}
   renderAutoBtn();}
 function renderAutoBtn(){const A=autoNow();const b=$('#autobtn');if(!b)return;const t=autoOn?'자동 ON · '+autoChipTxt(A):'자동';if(b.textContent!==t)b.textContent=t;b.title=autoOn?modeLong(A):'자동 낚시';
-  const c=$('#autochip');if(c){if(c.hidden)c.hidden=false;c.classList.toggle('off',!autoOn);const ct=(autoOn?autoChipTxt(A):'자동')+(A.x2&&isApp()&&!A.pass&&A.adsLeftToday>0?' · 2배':'');if(c.dataset.t!==ct){c.dataset.t=ct;c.innerHTML=AUTO_SVG+'<b class="v44an">자동</b><em class="v44ao">'+(autoOn?'ON':'OFF')+'</em><span>'+esc(autoOn?ct:ct.replace(/^자동( · )?/,''))+'</span>';/* V44-UI 둥근 자동 버튼 */c.classList.toggle('full',!!(autoOn&&A.full));c.setAttribute('aria-label',autoOn?'자동 낚시 켜짐 · 자세히 보기':'자동 낚시 켜기');}}
+  const c=$('#autochip');if(c){if(c.hidden)c.hidden=false;const away=!autoOn&&SRV&&SA&&SA.on&&SA.spot&&cur&&SA.spot!==cur.id;/* V73 다른 낚시터에서 자동 중 */c.classList.toggle('off',!autoOn&&!away);const ct=(away?'다른 곳':autoOn?autoChipTxt(A):'자동')+(A.x2&&isApp()&&!A.pass&&A.adsLeftToday>0?' · 2배':'');if(c.dataset.t!==ct){c.dataset.t=ct;c.innerHTML=AUTO_SVG+'<b class="v44an">자동</b><em class="v44ao">'+(autoOn||away?'ON':'OFF')+'</em><span>'+esc(autoOn||away?ct:ct.replace(/^자동( · )?/,''))+'</span>';/* V44-UI 둥근 자동 버튼 */c.classList.toggle('full',!!(autoOn&&A.full));c.setAttribute('aria-label',autoOn?'자동 낚시 켜짐 · 자세히 보기':away?'다른 낚시터에서 자동 낚시 중 · 자세히 보기':'자동 낚시 켜기');}}
   const mb=document.querySelector('#menu [data-k="autobtn"]');if(mb&&mb.textContent!==t){mb.textContent=t;mb.classList.toggle('on',!!autoOn);}}
 $('#autobtn').addEventListener('click',()=>{if(autoOn)openAutoInfo();else setAuto(true);});
 // 자동 낚시를 한 번 던졌을 때의 확률(서버 settleCore·calc.autoRates와 같은 식) — 정산과 시간당 예상에 같이 쓴다
@@ -6492,13 +6507,13 @@ async function netUp(){const A=autoNow();const N=A.netNext;if(!N){toast('가장 
   if(SRV){const r=await net('net-up',{level:A.net+1});if(r.s===200&&r.j){save.pt=r.j.pt;setWal(r.j.wallet);if(r.j.rpg)applyRPG(r.j.rpg);setSA(r.j.auto);refreshWallet();renderLv();if(r.j.settle&&r.j.settle.n)logMsg('자동 정산 · '+r.j.settle.n+'마리 · +'+fmtN(r.j.settle.pts)+'P','sys');toast('어망을 '+r.j.capH+'시간으로 키웠습니다');}else{toast(errMsg(r));if(r.s===0||r.s>=500)srvReconcile();}}
   else{const a=save.auto;if(a.on)settleLocal(true,'net');save.pt-=N.price;a.net=A.net+1;persist();refreshWallet();toast('어망을 '+N.capH+'시간으로 키웠습니다');}
   if(!$('#autoModal').hidden&&$('#autoBody').dataset.v==='info')openAutoInfo();autoNotify();}
-function curAutoSpot(){const A=autoNow();return cur&&!curTrip?cur:SPOTS.find(x=>x.id===A.spot)||sel||null;}
+function curAutoSpot(){const A=autoNow();if(SRV&&A.on&&A.spot){const t=SPOTS.find(x=>x.id===A.spot);if(t)return t;}/* V73 */return cur&&!curTrip?cur:SPOTS.find(x=>x.id===A.spot)||sel||null;}
 function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.now();const app=isApp(),adOk=app&&!!capPlug('AdMob')&&SRV;
   let h='<div class="sumbox" id="autoState"><div>'+(autoOn||A.on?'<b>자동 낚시 켜짐</b> · '+esc(MODE_TXT[A.mode]):'<b>자동 낚시 꺼짐</b>')+(s?' · '+esc(s.n):'')+'</div>'+
     (A.full?'<div class="fullnote">어망이 가득 찼습니다 · 정산하면 다시 쌓입니다</div>':A.on?'<div class="k">'+(A.mode==='pass'?'이용권 남은 '+fmtMs(A.passUntil-now):'어망이 차기까지 '+fmtMs(A.leftMs))+(A.mode==='ad'?' · 광고 부스트 남은 '+fmtMs(A.boostLeftMs):'')+'</div>':'')+(passNextTxt(A)?'<div class="k" id="passNext">'+passNextTxt(A)+'</div>':'')+(v38Sat()<56?'<div class="k" id="v38autoP">'+esc(v38Sat()<=0?SAT_TXT:v38AutoTxt())+'</div>':'')+
     (s&&rateTxt(s,A.on?A.mode:(A.sub?'sub':'free'))?'<div class="k" id="rateNow">지금 자동: '+rateTxt(s,A.on?A.mode:(A.sub?'sub':'free'))+' ('+esc(MODE_TXT[A.on?A.mode:(A.sub?'sub':'free')])+')</div>':'')+'</div>';
   h+=(A.x2&&A.x2.pts>0&&adOk&&!A.pass&&A.adsLeftToday>0?'<div class="item mode" id="x2Card"><div><b>무료·멤버십 자동낚시 몫 2배</b> <span class="mtag">+'+fmtN(A.x2.pts||0)+'P</span><div class="spec">지난 정산의 무료·멤버십 구간만(멤버십은 확인 뒤 첫 '+NET_CAP_H[A.net|0]+'시간 안에 잡은 몫까지 · 무료와 같은 범위) · 이용권·부스트 구간 제외 · 남은 시간 '+fmtMs(A.x2.until-now)+' · 광고 1회</div></div><div class="act2"><button class="mini buy" type="button" id="autoX2">광고 보고 받기</button></div></div>':'');
-  h+='<div class="item mode'+(A.mode==='free'&&A.on?' on':'')+'"><div><b>무료</b> <span class="mtag">기본</span><div class="spec">시간 제한 없음 · 마지막 확인(켜기·정산) 뒤 최대 '+NET_CAP_H[A.net|0]+'시간 쌓임'+(s&&rateTxt(s,'free')?' · '+rateTxt(s,'free'):'')+'</div></div><div class="act2">'+(autoOn?'<button class="mini" type="button" id="autoOff">끄고 정산</button>':'<button class="mini buy" type="button" id="autoOnB">자동 낚시 켜기</button>')+'</div></div>';
+  h+='<div class="item mode'+(A.mode==='free'&&A.on?' on':'')+'"><div><b>무료</b> <span class="mtag">기본</span><div class="spec">시간 제한 없음 · 마지막 확인(켜기·정산) 뒤 최대 '+NET_CAP_H[A.net|0]+'시간 쌓임'+(s&&rateTxt(s,'free')?' · '+rateTxt(s,'free'):'')+'</div></div><div class="act2">'+(autoOn||(SRV&&A.on)?'<button class="mini" type="button" id="autoOff">끄고 정산</button>':'<button class="mini buy" type="button" id="autoOnB">자동 낚시 켜기</button>')+'</div></div>';
   if(app)h+='<div class="item mode'+(A.mode==='ad'?' on':'')+'" id="adCard"><div><b>광고 부스트</b> <span class="mtag">1시간 2배</span><div class="spec">광고 1회 = 1시간 동안 자동 수확 2배(무료 대비) · 오늘 남은 '+A.adsLeftToday+'/'+A.adsMax+'회'+(A.boostLeftMs>0?' · 남은 부스트 '+fmtMs(A.boostLeftMs):'')+(s&&rateTxt(s,'ad')?' · '+rateTxt(s,'ad'):'')+'</div></div><div class="act2">'+
     (!adOk?'<span class="k">앱 업데이트 후 이용할 수 있습니다</span>':A.pass?'<span class="k">이용권 사용 중</span>':!autoOn?'<span class="k">자동 낚시를 켠 뒤 볼 수 있습니다</span>':A.adsLeftToday<=0?'<span class="k">오늘 광고를 모두 봤습니다</span>':'<button class="mini buy" type="button" id="adBoost">광고 보고 1시간 부스트</button>')+'</div></div>';
   if(A.pass)h+='<div class="item mode on"><div><b>24시간 이용권</b> <span class="mtag">사용 중</span><div class="spec">예전에 산 이용권 · 끝까지 자동 수확 2배(무료 대비) · 어망 한도 없이 이용권 끝까지 쌓임</div></div><div class="act2"><span class="k">남은 '+fmtMs(A.passUntil-now)+'</span></div></div>';/* V50 이용권 판매 종료 — 예전에 산 것만 표시 */
@@ -6508,7 +6523,7 @@ function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.n
   h+='<p class="src">자동 낚시는 직접 낚시와 같은 확률(입질 없음·헛챔질·바늘털이·밑걸림 포함)로 낚시법에 따라 '+AUTO_CYC.lure+'~'+AUTO_CYC.surf+'초에 한 번 던지고, 한 마리당 기본 포인트 50%·경험치 35%를 받습니다. 무료는 그 절반이고, 광고 부스트는 무료의 2배입니다. '+(subAvail(A)?'낚시GO PRO 멤버십은 수확량은 무료와 같고 쌓이는 시간이 최대 '+SUB_CAP_H+'시간(무료 기본 8시간)으로 늘어나며, 포만감은 절반 속도로 줄어듭니다(광고 부스트 시간에는 무료와 같은 속도). ':'')+'직접 낚시로 낚으면 따로 포인트 +30% 보너스가 붙습니다. 게임을 끄거나 화면을 떠난 동안에도 계속되며, 돌아오면 서버 시간으로 정산합니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다. 위험 기상·채비 소진·선상에서는 멈춥니다.</p>';
   const B=$('#autoBody');B.innerHTML=h;B.dataset.v='info';$('#autoModal').hidden=false;bindPay();
   const on=$('#autoOnB');if(on)on.onclick=()=>{if(!player||$('#world').hidden){toast('낚시터에 들어가서 켜세요');return;}setAuto(true);openAutoInfo();};
-  const off=$('#autoOff');if(off)off.onclick=()=>{setAuto(false);$('#autoModal').hidden=true;};
+  const off=$('#autoOff');if(off)off.onclick=()=>{autoOffAny();$('#autoModal').hidden=true;};/* V73 다른 곳에서 도는 자동도 여기서 끔 */
   const ad=$('#adBoost');if(ad)ad.onclick=async()=>{ad.disabled=true;const t0=ad.textContent;ad.textContent='보상 확인 중…';const r=await adWatch('boost');if(document.body.contains(ad)&&!(r&&r.status==='credited')){ad.disabled=false;ad.textContent=t0;}};
   const sg=$('#subGo');if(sg)sg.onclick=subGo;/* V50 */const ax=$('#autoX2');if(ax)ax.onclick=x2Click(ax);const nb=$('#netUpB');if(nb)nb.onclick=()=>{nb.disabled=true;netUp();};}
 // V50 멤버십 보기: 낚시GO 안(iframe)이면 낚시GO 멤버십 화면으로(부모 창이 이동), 따로 연 게임이면 새 창으로
@@ -7064,7 +7079,7 @@ function tokCheck(){if(NET_DEAD&&tokNow()&&tokNow()!==deadTok)revive(true);}
 addEventListener('focus',tokCheck);
 // 서버 프로필 → 화면 저장값
 function applyRPG(r){for(const k of Object.keys(RG))delete RG[k];Object.assign(RG,{xp:0,lv:1,sp:0,sk:{},day:'',miss:[],streak:0,last:''},r||{});if(!RG.sk)RG.sk={};if(!RG.miss)RG.miss=[];}
-function setSA(a){if(a){SA=Object.assign({},a,{at:Date.now()});try{autoNotify();}catch(e){}}}
+function setSA(a){if(a){SA=Object.assign({},a,{at:Date.now()});try{autoNotify();}catch(e){}try{backSpotRender();}catch(e){}}}
 function applyProfile(p){if(!p)return;try{boatDayTake(p);}catch(e){}/* V72 */try{save.v34=v4Norm({srv:1});v4Merge(p);}catch(e){}/* v34 */save.nick=p.nick||save.nick;save.pt=p.pt||0;save.score=p.score||0;save.count=p.count||0;
   save.inv=p.inv||{own:{},term:{}};if(!save.inv.own)save.inv.own={};if(!save.inv.term)save.inv.term={};if(p.eq)save.eq=p.eq;save.dex=p.dex||{};save.spots=p.spots||{};save.gold=goldNorm(p.gold);try{v35Prof(p);}catch(e){}/* v35 */
   applyRPG(p.rpg);setWal(p.wallet);save.auto={on:0,pass:0,boosts:[],net:0};save.rk={};setSA(p.auto);SRV_TRIP=p.trip||null;captSync(p);refreshWallet();renderLv();try{if(!$('#intro').hidden)$('#nick').value=save.nick;}catch(e){}notesShow(p.notes);try{myLookApply();chumTick();}catch(e){}try{v36Prof(p);}catch(e){}/* v36 */try{v37Prof(p);}catch(e){}/* v37 외모 */try{v38Prof(p);}catch(e){}/* v38 포만감·쿨러 */try{v45Prof(p);}catch(e){}/* v45 이용등급·시험용 */}
@@ -7123,7 +7138,8 @@ let logT=0,logBusy=false;async function flushLog(final){if(!SRV||logBusy)return;
    밑걸림은 그 시각에 /snag-resolve · 버린 캐스팅은 /reel-in(다음 캐스팅 시각을 서버가 알려 줌) ---- */
 let srvC=null,srvNextAt=0,srvCatchPending=false,srvCapAt=0;// FIXUP S2-a: 하루 기록 한도(DAY_CAP)면 초기화 시각까지 던지기 멈춤
 function srvWaitTo(ms){srvNextAt=Math.max(srvNextAt,performance.now()+Math.max(0,ms||0));}
-function srvCanCast(){if(NET_DEAD){toast('다시 로그인해 주세요');return false;}if(srvCatchPending){toast('조과를 기록하는 중입니다');return false;}
+function srvCanCast(){if(NET_DEAD){toast('다시 로그인해 주세요');return false;}
+  if(!autoOn&&SA&&SA.on&&SA.spot&&cur&&!curTrip&&SA.spot!==cur.id){const t=SPOTS.find(x=>x.id===SA.spot);askBox('다른 낚시터에서 자동 낚시 중',(t?t.n:'다른 낚시터')+'에서 자동 낚시가 돌고 있어 여기서는 직접 던질 수 없습니다. 자동 낚시를 정산하고 끈 뒤 여기서 직접 낚시할까요?','끄고 여기서 낚시','그대로 두기').then(y=>{if(y)srvAutoSet(false);});return false;}/* V73 */if(srvCatchPending){toast('조과를 기록하는 중입니다');return false;}
   const capL=srvCapAt-performance.now();if(capL>0){toast('오늘 기록 한도('+DAY_CAP+'마리)에 닿았습니다 · '+Math.max(1,Math.ceil(capL/3600e3))+'시간 안에 초기화됩니다');return false;}
   const left=srvNextAt-performance.now();if(left>0){toast(Math.ceil(left/1000)+'초 뒤에 다시 던질 수 있습니다');return false;}return true;}
 // 서버에 남은 캐스팅 거두기
@@ -7278,6 +7294,7 @@ async function srvTrip(s,t,m){const t0=performance.now();const r=await net('trip
     const ok=await askBox('진행 중인 선상 출조','이미 산 출조'+(s2&&t2?'('+s2.n+' · '+t2.n+')':'')+'가 약 '+Math.max(1,Math.round(((+tr.leftMs||0)-120e3)/60000))+'분 남았습니다. 선비를 다시 내지 않고 이어서 탈 수 있습니다.','다시 승선','귀항');
     if(ok&&s2&&t2){srvTrip(s2,t2,m);return;}if(await srvTripEnd())toast('귀항 처리했습니다 · 다시 출조할 수 있습니다');else toast('귀항을 확인하지 못했습니다 · 잠시 뒤 다시 시도하세요');return;}
   if(r.j&&r.j.boatDay)boatDayTake(r.j);/* V72 */
+  if(r.s===409&&r.j&&r.j.error==='AUTO_ON'&&!m.__autoRetry){if(await askBox('자동 낚시 중','선상 출조를 하려면 자동 낚시를 정산하고 꺼야 합니다. 끄고 출조할까요?','끄고 출조','취소')){m.__autoRetry=1;if(autoOn)setAuto(false);else srvAutoSet(false);await srvAutoQ;await srvTrip(s,t,m);m.__autoRetry=0;}return;}/* V73 지도에서도 자동이 계속 돌므로 */
   if(r.s!==200||!r.j){toast(errMsg(r));if(r.s===0||r.s>=500)srvReconcile();return;}
   tripBoatLbl=boatLabel(r.j.boat);tripHullId=(r.j.boat&&hullOk(r.j.boat.hull))||'';/* v34 출조 배 선체 색 */if(r.j.resumed)toast('진행 중인 출조에 다시 승선했습니다');else{toast(tripBoatLbl+'에 승선했습니다');if(srvC&&!srvC.hooked)srvC.done=true;srvNextAt=0;}// v31 S3 #55: 서버가 물에 있던 캐스팅과 대기를 지움(새 출조만 · FIXUP S3-c: 다시 승선은 서버가 캐스팅을 그대로 둠)
   evt('boat');save.pt=r.j.pt;setWal(r.j.wallet);SRV_TRIP=r.j.trip;if(autoOn)setAuto(false);refreshWallet();m.hidden=true;enterSpot(s,t);
@@ -9859,6 +9876,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   const t=e.target.closest&&e.target.closest('[data-v44th]');if(t)v44Theme(t.dataset.v44th);});
 v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},boatDayTake,boatDayHTML,openBoat}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
