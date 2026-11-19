@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import apiClient from '../api/index';
+import { Preferences } from '@capacitor/preferences';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 // ✅ FIX-TZ: KST(UTC+9) 기준 날짜 코드 — toISOString()은 UTC이어서 한국에서 오후 6시 리셋 버그 방지
@@ -17,6 +18,17 @@ function isHiddenToday(noticeId) {
 }
 function getHideAllKey() {
   return 'popup_hidden_all_' + getTodayKST(); // ✅ FIX-TZ: KST 기준
+}
+// ✅ POPUP-HIDE-FIX (2026-11-19): '오늘 하루 안 보기'를 앱 저장소(Preferences)에도 남긴다 — 안드로이드 웹뷰가 localStorage를 비워도 유지
+function saveHideAllToday() {
+  const k = getHideAllKey();
+  try { localStorage.setItem(k, '1'); } catch { /* ok */ }
+  Preferences.set({ key: k, value: '1' }).catch(() => {});
+}
+async function isHideAllToday() {
+  const k = getHideAllKey();
+  try { if (localStorage.getItem(k)) return true; } catch { /* ok */ }
+  try { const { value } = await Preferences.get({ key: k }); return !!value; } catch { return false; }
 }
 
 
@@ -35,9 +47,9 @@ export default function AnnouncementPopup() {
 
   // ── 공지 목록 로드 (마운트 1회) ──────────────────────────────────────────
   useEffect(() => {
-    try { if (localStorage.getItem(getHideAllKey())) return; } catch { /* ok */ }
     let alive = true; // ✅ BUG-06 FIX: 언마운트 후 setState 방지
 
+    isHideAllToday().then(hidden => { if (hidden || !alive) return;
     apiClient.get('/api/community/notices')
       .then(res => {
         if (!alive) return; // ✅ BUG-06 FIX
@@ -51,17 +63,15 @@ export default function AnnouncementPopup() {
         }
       })
       .catch(() => { /* 팝업 로드 실패 무시 */ });
+    });
     return () => { alive = false; }; // ✅ BUG-06 FIX
   }, []);
 
   // ── 닫기 (개별 "오늘 안보기" 처리 후 다음 팝업으로) ──────────────────────
   const handleClose = useCallback(() => {
-    if (hideToday) {
-      try {
-        const cur = notices[idx];
-        if (cur) localStorage.setItem(getTodayKey(String(cur._id || cur.id)), '1');
-      } catch { /* ok */ }
-    }
+    // ✅ POPUP-HIDE-FIX: 체크하고 닫으면(X·닫기·바깥 터치 모두) 오늘은 공지 팝업을 전부 띄우지 않는다.
+    // 예전에는 '지금 보던 공지 1개'만 숨겨서, 공지가 여러 개면 다음 공지가 바로 또 떴다
+    if (hideToday) { saveHideAllToday(); setVisible(false); return; }
     const remaining = notices.filter((_, i) => i !== idx);
     if (remaining.length > 0) {
       setNotices(remaining);
@@ -74,8 +84,8 @@ export default function AnnouncementPopup() {
 
   // ── 전체 오늘 안보기 ──────────────────────────────────────────────────────
   const handleHideAll = useCallback(() => {
+    saveHideAllToday(); // ✅ POPUP-HIDE-FIX
     try {
-      localStorage.setItem(getHideAllKey(), '1');
       notices.forEach(n => localStorage.setItem(getTodayKey(String(n._id || n.id)), '1'));
     } catch { /* ok */ }
     setVisible(false);
@@ -85,21 +95,20 @@ export default function AnnouncementPopup() {
   const handleNoticeClick = useCallback(() => {
     const n = notices[idx];
     if (!n) return;
+    if (hideToday) saveHideAllToday(); // ✅ POPUP-HIDE-FIX: 체크 후 '자세히 보기'로 나가도 오늘은 다시 안 띄움
     setVisible(false);
     navigate('/notice/' + String(n._id || n.id), { state: { notice: n } });
-  }, [notices, idx, navigate]);
+  }, [notices, idx, navigate, hideToday]);
 
   // ── carousel 이동 ─────────────────────────────────────────────────────────
   const goPrev = useCallback((e) => {
     e.stopPropagation();
-    setIdx(i => Math.max(0, i - 1));
-    setHideToday(false);
+    setIdx(i => Math.max(0, i - 1)); // ✅ POPUP-HIDE-FIX: 넘겨도 체크 유지
   }, []);
 
   const goNext = useCallback((e) => {
     e.stopPropagation();
-    setIdx(i => Math.min(notices.length - 1, i + 1));
-    setHideToday(false);
+    setIdx(i => Math.min(notices.length - 1, i + 1)); // ✅ POPUP-HIDE-FIX: 넘겨도 체크 유지
   }, [notices.length]);
 
   if (!visible || notices.length === 0) return null;
@@ -205,9 +214,9 @@ export default function AnnouncementPopup() {
         {/* ── 하단 액션 ── */}
         <div style={{ padding: '12px 20px 20px', borderTop: '1px solid #F8F8F8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           {/* 오늘 하루 안 보기 */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none', flex: 1 }}>
+          {/* ✅ POPUP-HIDE-FIX: 네모 칸뿐 아니라 '오늘 하루 안 보기' 글자를 눌러도 체크되게 */}
+          <label role="checkbox" aria-checked={hideToday} onClick={() => setHideToday(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none', flex: 1 }}>
             <div
-              onClick={() => setHideToday(v => !v)}
               style={{ width: '20px', height: '20px', borderRadius: '5px', border: '2px solid ' + (hideToday ? '#0056D2' : '#C7C7CC'), background: hideToday ? '#0056D2' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', flexShrink: 0 }}
             >
               {hideToday && (
