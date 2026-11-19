@@ -137,7 +137,8 @@ apiClient.interceptors.response.use(
 
       try {
         // ✅ FIX-TIMEOUT: 직접 axios 호출에 10s 타임아웃 — apiClient 기본값 미적용, 갱신 서버 지연 시 인터셉터 무한 대기 방지
-        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken }, { timeout: 10000 });
+        // ✅ STAY-LOGIN (2026-11-19): Render 무료 서버가 깨어나는 데 최대 50초 → 10초면 갱신이 실패해 로그아웃되던 문제. 60초로 늘림
+        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken }, { timeout: 60000 });
         // BUG-34: 서버가 accessToken 또는 token 키 중 어느 것으로도 응답할 수 있음
         const newAccessToken = response.data.accessToken || response.data.token;
         const { refreshToken: newRefreshToken } = response.data;
@@ -164,6 +165,13 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         // Refresh Token도 만료된 경우 → 엄격한 Zustand 스토어 + localStorage 전체 정리
         processQueue(refreshError, null);
+        // ✅ STAY-LOGIN (2026-11-19): 서버가 토큰을 '확실히 거절'(401·403)했을 때만 로그아웃한다.
+        // 네트워크 끊김·시간 초과·서버 재시작(5xx)은 로그인 유지 — 다음 요청 때 다시 갱신을 시도한다
+        const refreshStatus = refreshError?.response?.status;
+        if (refreshStatus !== 401 && refreshStatus !== 403) {
+          if (!import.meta.env.PROD) console.warn('[Auth] 토큰 갱신 일시 실패 → 로그인 유지:', refreshError?.message);
+          return Promise.reject(refreshError);
+        }
         try {
           const { useUserStore } = await import('../store/useUserStore');
           useUserStore.getState().logout(); // user, userTier, lastExpGain 모두 초기화

@@ -5112,9 +5112,9 @@ app.post('/api/auth/refresh', async (req, res) => {
       if (Date.now() - cached.timestamp < 60000) {
         // 60초 이내 중복 갱신 요청은 동일한 새 토큰을 반환 (다중 탭 로그아웃 방지)
         return res.json({ accessToken: cached.newAccessToken, refreshToken: cached.newRefreshToken });
-      } else {
-        return res.status(401).json({ error: '만료된 Refresh Token입니다. 다시 로그인해주세요.' });
       }
+      // ✅ STAY-LOGIN (2026-11-19): 60초 뒤 같은 토큰이 다시 와도 401로 로그아웃시키지 않는다.
+      // 갱신 응답이 통신 중에 끊겨 앱이 예전 토큰을 들고 있는 경우가 있어서다. 서명·만료(365일)는 위에서 이미 검증했으므로 새 토큰을 내준다
     }
     if (decoded.type !== 'refresh') return res.status(401).json({ error: '유효하지 않은 Refresh Token입니다.' });
 

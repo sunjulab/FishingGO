@@ -534,7 +534,14 @@ export default function LoginPage() {
         onFoundId={(id) => { setUserId(id); }}  // ✅ 아이디 자동입력
       />}
 
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'linear-gradient(160deg, #0a1628 0%, #0d2a4a 60%, #0056D2 100%)' }} />
+      {/* ✅ LOGIN-COLLAB (2026-11-19): 낚시GO × 방구석 낚시꾼 콜라보 배경 — 게임 아이콘의 청록 바다·물결 */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'linear-gradient(180deg, #45C8D6 0%, #26A9BF 45%, #1689A3 75%, #0E6E84 100%)', overflow: 'hidden' }}>
+        <svg aria-hidden="true" viewBox="0 0 1440 320" preserveAspectRatio="none" style={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: '34vh' }}>
+          <path d="M0,120 C180,90 300,150 480,128 C660,106 780,70 960,98 C1140,126 1260,150 1440,118 L1440,320 L0,320 Z" fill="#1A93AA" />
+          <path d="M0,120 C180,90 300,150 480,128 C660,106 780,70 960,98 C1140,126 1260,150 1440,118" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" />
+          <path d="M0,220 C200,190 380,250 620,222 C860,194 1040,236 1240,214 C1340,203 1400,208 1440,212 L1440,320 L0,320 Z" fill="#0F6F86" />
+        </svg>
+      </div>
 
       <div style={{
         position: 'relative', zIndex: 1, minHeight: '100dvh', overflowY: 'auto',
@@ -550,18 +557,24 @@ export default function LoginPage() {
           boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
           marginTop: 'auto', marginBottom: 'auto',
         }}>
-          {/* 로고 */}
+          {/* 로고 — ✅ LOGIN-COLLAB: 낚시GO × 방구석 낚시꾼 */}
           <div style={{ textAlign: 'center', marginBottom: '18px' }}>
-            <div style={{
-              width: '68px', height: '68px', borderRadius: '20px', margin: '0 auto 10px',
-              background: 'linear-gradient(135deg, #0056D2, #003fa3)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 8px 24px rgba(0,86,210,0.35)',
-            }}>
-              <Anchor size={34} color="#fff" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '12px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '18px',
+                background: 'linear-gradient(135deg, #0056D2, #003fa3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 20px rgba(0,86,210,0.32)',
+              }}>
+                <Anchor size={32} color="#fff" />
+              </div>
+              <span aria-hidden="true" style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', color: '#94a3b8' }}>×</span>
+              <img src="/collab/bangguseok-icon.png" alt="방구석 낚시꾼" width="64" height="64" style={{ width: '64px', height: '64px', borderRadius: '18px', boxShadow: '0 8px 20px rgba(22,137,163,0.35)', display: 'block' }} />
             </div>
-            <h1 style={{ fontSize: `calc(24px * var(--fs, 1))`, fontWeight: '900', color: '#0d1b2a', margin: 0 }}>낚시GO</h1>
-            <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#64748b', marginTop: '2px' }}>프리미엄 낚시 커뮤니티 플랫폼</p>
+            <h1 style={{ fontSize: `calc(22px * var(--fs, 1))`, fontWeight: '900', color: '#0d1b2a', margin: 0, letterSpacing: '-0.3px', wordBreak: 'keep-all' }}>
+              낚시GO <span style={{ color: '#94a3b8', fontWeight: '800' }}>×</span> <span style={{ color: '#1689A3' }}>방구석 낚시꾼</span>
+            </h1>
+            <p style={{ fontSize: `calc(12px * var(--fs, 1))`, color: '#64748b', marginTop: '4px', wordBreak: 'keep-all' }}>낚시GO 아이디 하나로 앱과 게임을 함께</p>
           </div>
 
           {/* 탭 */}
