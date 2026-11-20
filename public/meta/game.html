@@ -2131,8 +2131,8 @@ const GEAR_PRICE_MUL=20;
 // v14 현실 조과: 던질 때마다 무는 게 아니라 입질 없음·헛챔질·바늘털이가 있어 시간당 마릿수가 v13의 약 1/5 → PT_K .06→.3, 경험치 XP_K 4배, 선상 MD.boat 3→2(실효 배율은 상승)로 시간당 포인트(450~1300P)·장비 구매 시간은 v13 목표 그대로.
 // AUTO_CYC: 자동 낚시가 한 번 던지고 거두는 데 걸리는 시간(초, 낚시법별) — 한 번 던질 때의 확률은 직접 낚시와 같고, 자동은 직접의 약 35~50%. 선상(MD.boat)은 15분 출조를 하루 출조로 압축한 값
 // v37 수입 배율(운영자 "한 마리 잡을 때마다 너무 적게 들어온다"): 모든 조과 포인트(직접·자동·투망·선상·대물)를 한 배율로 올린다. 가격(장비·꾸미기·배·어항·선실)과 고정 보상(안내·레벨·퀘스트·출석)은 그대로(ECON_SPEC v37)
-const INCOME_K=3;
-const PT_K=.3*INCOME_K,AUTO_PT=.5,AUTO_XP=.35,XP_K=4;
+const INCOME_K=4.5;/* V84: 3 → 4.5(운영자 결정 — 직접 낚시 수입 1.5배) */
+const PT_K=.3*INCOME_K,AUTO_PT=2/3,/* V84: .5 → 2/3(수입 배율 1.5배와 합쳐 자동 수입 2배) */AUTO_XP=.35,XP_K=4;
 // v15fix: 루어 입질이 설정대로 다 나오게 고친 뒤(시간당 입질 약 1.4배) 루어 배율 MD 1.2→0.8, 자동 루어 주기 110→80초로 직접·자동 시간당 포인트를 v15 목표(450~1300P, 자동은 직접의 35~50%)에 맞춤
 const AUTO_CYC={lure:47,float:58,pole:58,surf:80};
 // ---- v14 한 번 던졌을 때의 결과 (게임 조정값 — 실제 조과 통계표가 아님) ----
@@ -2244,7 +2244,7 @@ function lookStr(L){const x=lookOK(L);return x?LOOK_KEYS.map(([k,c])=>c+x[k]).jo
 function lookParse(s){if(typeof s!=='string')return null;const n=s.length/2;if(n!==LOOK_KEYS.length&&n!==LOOK_KEYS.length-2)return null;const o={};for(let i=0;i<n;i++){const [k,c]=LOOK_KEYS[i];if(s[i*2]!==c||!/[0-9]/.test(s[i*2+1]))return null;o[k]=+s[i*2+1];}return lookOK(o);}
 function lookRand(r){r=r||Math.random;const o={};for(const [k] of LOOK_KEYS)o[k]=Math.floor(r()*LOOK[k].length)%LOOK[k].length;if(o.beard&&r()<.6)o.beard=0;return lookOK(o);}
 // v37: 집어제 값 220 → 660(수입 × INCOME_K와 같이 — 중급 30분 더 버는 몫의 80~100% 규칙 유지, ECON_SPEC v37)
-const CHUM={ms:30*60e3,maxMs:2*3600e3,k:1.15,p:660};
+const CHUM={ms:30*60e3,maxMs:2*3600e3,k:1.15,p:990};/* V84: 660 → 990(= 220 × 수입 배율) */
 const TANK_SLOTS=[3,5,10,20];const TANK_PRICE=[0,10000,40000,120000];
 const TANK_DECO=[{id:'d_weed',n:'수초',p:2000},{id:'d_rock',n:'돌무더기',p:3000},{id:'d_coral',n:'산호',p:8000},{id:'d_light',n:'수조 조명',p:15000}];
 const GYOTAK_PRICE=5000;const RELEASE_PRICE=1000;const RELEASE_N=100;
@@ -3059,6 +3059,10 @@ const BOAT_TRIPS=[
 const TRIP_MIN=15;// 게임 속 출조 시간(분)
 function isPort(s){return s&&s.w==='sea'&&(s.t==='항구'||/항/.test(s.n));}
 // v30 C4: 금어기 어종은 출조 대상에서 뺀다(주꾸미 5.11~8.31 등). mo: 출조를 산 달(자정을 넘겨 달이 바뀌어도 그 출조의 대상 어종 유지, 금어기는 늘 지금 기준)
+/* V84 출조 대상 중 이번 달 철이 아닌 어종 안내(예: 11월 한치·오징어 이카메탈 → 이번 달 살오징어만 · 한치 6~9월) */
+function mRange(m){const a=[...m].sort((x,y)=>x-y);const out=[];let st=a[0],pv=a[0];for(let i=1;i<=a.length;i++){if(a[i]===pv+1){pv=a[i];continue;}out.push(st===pv?st+'월':st+'~'+pv+'월');st=pv=a[i];}return out.join('·');}
+function tripSeasonTxt(s,t){const now=tripFish(s,t).map(x=>x.f.n),off=t.fish.map(x=>FISH.find(y=>y.n===x.n)).filter(f=>f&&!now.includes(f.n));if(!off.length)return'';return(now.length?'이번 달은 '+now.join('·')+'만':'이번 달 대상 어종 없음')+' · '+off.map(f=>f.n+' '+mRange(f.m)).join(', ');}
+function tripSeasonHTML(s,t){const x=tripSeasonTxt(s,t);return x?'<div class="spec" style="color:var(--warn,#b45309)">'+esc(x)+'</div>':'';}
 function tripFish(s,t,mo){mo=mo||kstNow().mo;const z=zoneOf(s),now=Date.now();return t.fish.map(x=>{const f=FISH.find(y=>y.n===x.n);if(!f||!f.z.includes(z)||!f.m.includes(mo)||closedRange(f,now,s))return null;return{f,w:x.w,cm:x.cm};}).filter(Boolean);}
 // 이 해역에서 실제로 대상 어종이 나오는 달(출조 철 ∩ 어종 철), 카드의 철 안내용
 function tripMonths(s,t){const z=zoneOf(s);return t.m.filter(mo=>t.fish.some(x=>{const f=FISH.find(y=>y.n===x.n);return f&&f.z.includes(z)&&f.m.includes(mo);}));}
@@ -3074,7 +3078,7 @@ function tripState(s,t){const k=kstNow(),w=WX.spots[s.id]||{};const z=zoneOf(s);
   if((+w.wave||0)>=2||(+w.wind||0)>=12)return{ok:false,why:'출항 제한(게임 기준: 파고 2m·풍속 12m/s 이상) — 실제로는 풍랑특보가 발효되면 출항이 통제됩니다'};
   if(!tripFish(s,t).length)return{ok:false,why:'지금은 대상 어종이 없음(금어기·철)'};
   return{ok:true};}
-function tripListHTML(s){return BOAT_TRIPS.map(t=>{const st=tripState(s,t);return'<div class="item'+(st.ok?'':' dim')+'"><div><b>'+esc(t.n)+'</b><div class="spec">'+esc(t.rig.n)+' · 수심 <span class="num">'+t.depth[0]+'~'+t.depth[1]+'m</span> · 대여 장비 한계 <span class="num">'+t.rig.cap+'kg</span></div><div class="spec">대상 '+tripTargets(s,t)+' · 현실의 선상낚시 요금 참고: '+t.won+'(게임 포인트와는 관계없습니다) · <b>Lv.'+(TRIP_LV[t.id]||1)+' 이상</b></div>'+(st.ok?'':'<div class="spec badline">'+esc(st.why)+'</div>')+'</div><div class="act2"><button class="mini buy" data-trip="'+t.id+'"'+(st.ok&&spendNow()>=feeOf(t)&&RG.lv>=(TRIP_LV[t.id]||1)?'':' disabled')+'>'+feeOf(t)+'P 출조</button>'+(st.ok&&RG.lv>=(TRIP_LV[t.id]||1)&&spendNow()<feeOf(t)?(()=>{const sh=feeOf(t)-spendNow(),pk=pkgFor(sh);if(!TOPUP_ON)return'<span class="k">'+fmtN(sh)+'P 부족 · 낚시로 모으기</span>';return pk?'<button class="mini short" type="button" data-tshort="'+pk+'">'+fmtN(sh)+'P 부족 · '+fmtN(pk)+'원 충전하기</button>':'';})():'')+'</div></div>';}).join('');}
+function tripListHTML(s){return BOAT_TRIPS.map(t=>{const st=tripState(s,t);return'<div class="item'+(st.ok?'':' dim')+'"><div><b>'+esc(t.n)+'</b>'+tripSeasonHTML(s,t)+'<div class="spec">'+esc(t.rig.n)+' · 수심 <span class="num">'+t.depth[0]+'~'+t.depth[1]+'m</span> · 대여 장비 한계 <span class="num">'+t.rig.cap+'kg</span></div><div class="spec">대상 '+tripTargets(s,t)+' · 현실의 선상낚시 요금 참고: '+t.won+'(게임 포인트와는 관계없습니다) · <b>Lv.'+(TRIP_LV[t.id]||1)+' 이상</b></div>'+(st.ok?'':'<div class="spec badline">'+esc(st.why)+'</div>')+'</div><div class="act2"><button class="mini buy" data-trip="'+t.id+'"'+(st.ok&&spendNow()>=feeOf(t)&&RG.lv>=(TRIP_LV[t.id]||1)?'':' disabled')+'>'+feeOf(t)+'P 출조</button>'+(st.ok&&RG.lv>=(TRIP_LV[t.id]||1)&&spendNow()<feeOf(t)?(()=>{const sh=feeOf(t)-spendNow(),pk=pkgFor(sh);if(!TOPUP_ON)return'<span class="k">'+fmtN(sh)+'P 부족 · 낚시로 모으기</span>';return pk?'<button class="mini short" type="button" data-tshort="'+pk+'">'+fmtN(sh)+'P 부족 · '+fmtN(pk)+'원 충전하기</button>':'';})():'')+'</div></div>';}).join('');}
 // v30 C4: 귀항(시간 끝·서버 출조 끝·직접 귀항) → 항구로 돌아가 출조 결산 카드
 // v30 C4(#59): 처음 금지체장 이하로 놓아줄 때 한 번만 이유 안내
 function relTip(){if(save.relTip)return;save.relTip=1;try{persist();}catch(e){}setTimeout(()=>toast('법정 금지체장 이하라 놓아주었습니다 · 포인트는 없지만 어록 마릿수에 들어갑니다 · 오늘 방생 퀘스트가 있으면 함께 채워집니다'),1800);}
@@ -5283,7 +5287,7 @@ async function enterSpot(s,trip){if(!ensureRenderer())return;if(autoOn&&cur&&s&&
   $('#spotName').textContent=curTrip?curTrip.n:s.n;$('#spotSub').textContent=curTrip?s.n+' 출항 · '+curTrip.how:s.t+' · '+s.r+' · 주요 어종 '+(s.f||'-');$('#boatbtn').hidden=!(isPort(s)&&!curTrip);{const bk=$('#back');bk.querySelector('.bl').innerHTML='<span class="sl">← </span>'+(curTrip?'귀항':'지도');bk.classList.toggle('trip',!!curTrip);}/* v38-UI: 화살표 아이콘 + 글자(읽기 도구·메뉴는 ‘← 지도’ 그대로) */
   renderWx();$('#log').innerHTML='';logMsg((W.live?'방금 조회한':'저장된')+' 실제 기상으로 장면을 만들었습니다.','sys');
   const sp=ENV.sun;logMsg('현지 시각 기준 해 고도 '+sp.el.toFixed(0)+'° · '+(ENV.night?'밤':'낮')+' 장면','sys');
-  $('#loading').hidden=true;myPres={s:curTrip?s.id+':'+curTrip.id:s.id,n:save.nick,c:myColor(),h:V4().eq.hat||null,ti:V4().eq.title||null,x:sx,z:sz,ry:Math.PI,st:'idle'};myPresWear();/* v37 */if(curTrip)logMsg('선상 출조 — '+esc(curTrip.n)+' · 대여 장비 '+esc(curTrip.rig.n)+' · '+TRIP_MIN+'분 뒤 귀항','sys');sendPres(true);
+  $('#loading').hidden=true;myPres={s:curTrip?s.id+':'+curTrip.id:s.id,n:save.nick,c:myColor(),h:V4().eq.hat||null,ti:V4().eq.title||null,x:sx,z:sz,ry:Math.PI,st:'idle'};myPresWear();/* v37 */if(curTrip)logMsg('선상 출조 — '+esc(curTrip.n)+' · 대여 장비 '+esc(curTrip.rig.n)+' · '+TRIP_MIN+'분 뒤 귀항'+(tripSeasonTxt(s,curTrip)?' · '+esc(tripSeasonTxt(s,curTrip)):''),'sys');sendPres(true);
   peers.forEach((p,id)=>dropPeer(id));updHere();canvas.focus();audioScene();hudClose();layoutHUD();/* V39-UI: 소식 창은 저절로 열지 않고 빨간 점만 */if($('#log')&&$('#log').children.length)$('#newsbtn').classList.add('unread');evt('enter');qStart();tutMaybe();if(autoPend){autoPend=false;setTimeout(()=>{if(tok===entryTok&&player&&!autoOn){setAuto(true);}},600);}/* V67 지도에서 누른 자동 */else setTimeout(()=>{if(tok!==entryTok)return;if(player&&!autoOn&&!curTrip&&SRV&&SA&&SA.on&&cur&&SA.spot===cur.id)autoAttach();else renderAutoBtn();},600);/* V73 자동 중인 낚시터로 돌아오면 이어서 보여 줌 */setTimeout(()=>{if(tok===entryTok)trShow();},1500);}
 function spawnMe(sx,sz,ry){player=Object.assign(makeAngler(myVestNow(),0x22262a,false,{life:kind==='boat',hat:lookOf('hat'),wear:myWear()}),{name:save.nick});/* v37 외모·입는 꾸미기 */if(walkFn(sx,sz)==null){const d=sx>0?-.3:.3;for(let k=1;k<=8;k++)if(walkFn(sx+d*k,sz)!=null){sx+=d*k;break;}}/* V48 fix: 다시 지을 때 짐 더미 안에 서 있었으면 옆으로 비켜 세움 */player.g.position.set(sx,walkFn(sx,sz)||0,sz);player.g.rotation.y=ry;
   const nl=label(save.nick,{me:1,gold:hasGold(),t:titleName(lookOf('title'))});nl.position.y=AV_LBL;player.g.add(nl);player.nl=nl;player.nlG=hasGold();player.nlT=titleName(lookOf('title'));
@@ -6082,7 +6086,7 @@ addEventListener('pointerdown',e=>{if(cardDT&&state==='result'&&!$('#world').hid
 let T=0,snagMoveT=-1e9,chargeRy0=null;const camP=new THREE.Vector3(0,8,30),camT=new THREE.Vector3();
 let lastRT=performance.now();
 let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+=dt;const p=player.g.position;{const bc=state==='bite'||state==='hooking';if(bc!==bitingCls){bitingCls=bc;$('#world').classList.toggle('biting',bc);}
-  /* v32 LC2 #255: 입질·밑걸림도 presence로(다른 사람에게 찌가 들어가거나 대를 당기는 모습). wait↔bite↔snag 사이만 여기서 바꾸고 나머지는 기존 흐름 */if(PRES_SUB[myPres.st]&&PRES_SUB[state]&&myPres.st!==state&&!autoOn){myPres.st=state;sendPres(true);}}{const now=performance.now();const rdt=Math.min(1000,now-lastRT);lastRT=now;autoTick(dt,rdt);}
+  /* v32 LC2 #255: 입질·밑걸림도 presence로(다른 사람에게 찌가 들어가거나 대를 당기는 모습). wait↔bite↔snag 사이만 여기서 바꾸고 나머지는 기존 흐름 */if(PRES_SUB[myPres.st]&&PRES_SUB[state]&&myPres.st!==state&&!autoOn){myPres.st=state;sendPres(true);}}{const now=performance.now();const rdt=Math.min(1000,now-lastRT);lastRT=now;autoTick(dt,rdt);}try{boatAutoTick(dt);}catch(e){}/* V84 선상 자동 모습 */
   // 이동
   let ix=0,iy=0;if(keys.w||keys.arrowup)iy++;if(keys.s||keys.arrowdown)iy--;if(keys.a||keys.arrowleft)ix--;if(keys.d||keys.arrowright)ix++;if(keys.q||keys.e)yawGoal=null;if(keys.q)yaw+=dt*1.6;if(keys.e)yaw-=dt*1.6;
   ix+=joyV.x;iy+=joyV.y;const il=Math.hypot(ix,iy);
@@ -6190,6 +6194,7 @@ let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+
   if(TW.ph)twHud();/* v35 */
   else if(state==='idle'&&curTrip){setHint((TOUCH?'버튼으로':'Space 또는 버튼으로')+' 채비를 내립니다 · '+curTrip.n);setAct('채비 내리기','Space');}
   else if(state==='idle'&&autoOn){setHint('자동 낚시 · 채비를 정리하는 중 · '+Math.max(0,Math.ceil(autoRest()-autoT))+'초 뒤 던집니다');setAct('자동','ON','off');}
+  else if(BOATAUTO&&curTrip){setHint('선상 자동 낚시 중 · 알아서 채비를 내리고 낚습니다(조과는 몇 분마다 정산) · 끄려면 자동 버튼');setAct('자동 중','선상 자동','off');}/* V84 */
   else if(state==='idle'&&V38E){setHint(V38E.q.name+' · '+V38E.o.n);setAct(V38E.o.n,TOUCH?'':'Space','off');}/* v38 요리·먹는 중(누르면 넘김) */
   else if(state==='idle'&&V38.near){const P=V38.near;setHint(P.name+' · '+P.tag);setAct(P.at==='food'?'식당 들어가기':'카페 들어가기',TOUCH?'':'E');}/* v38 걸어 들어가기(2.5m) */
   else if(state==='idle'){if(nearWater()){{const g=gear(),pl=g.rod&&g.rod.me==='pole';setHint((TOUCH?(pl?'던지기 버튼으로 찌를 넣으세요':'누르고 있다가 떼면 던집니다'):(pl?'Space 또는 던지기 버튼으로 찌를 넣으세요':'Space를 누르고 있다가 놓으면 던집니다'))+(g.rod?' · '+g.rod.n:''));setAct('던지기','Space');}}else{{const g0=waterGuide();setHint('물가 끝까지 걸어가세요'+(g0?' · '+g0:'')+' · '+(TOUCH?'조이스틱으로 이동':'WASD·방향키로 이동'));}setAct('던지기','물가에서','off');}}
@@ -6703,7 +6708,7 @@ function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.n
   if(SRV&&(GAME_APP?A.sub:((!v45Beta()&&(V45.rating||V45.subOn))||A.sub)))/* V78 게임 앱은 가입한 회원에게만(구매 버튼 없음) · V52-4 운영자 미리 보기(A.sub)도 표시 · V50 멤버십 칸: 서버 연결·등급분류 표시가 있을 때만(시험용이면 숨김) */h+='<div class="item mode'+(A.mode==='sub'?' on':'')+'" id="subCard"><div><b>낚시GO PRO 멤버십</b> <span class="mtag">'+(A.sub?'적용 중':'월 9,900원 · 자동 갱신')+'</span><div class="spec">'+(A.sub?'구독 중 · 자동 낚시 하루 24시간(무료는 하루 8시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음':'낚시GO PRO 멤버십을 구독하면 자동 낚시를 하루 '+SUB_CAP_H+'시간(무료는 하루 8시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음 · 게임 안 유료 상품은 없습니다')+(s&&rateTxt(s,'sub')?' · '+rateTxt(s,'sub'):'')+'</div></div><div class="act2">'+v45RateHTML()+(A.sub?'':'<button class="mini buy" type="button" id="subGo">멤버십 보기</button>')+'</div></div>';
   const N=A.netNext;h+='<div class="item"><div><b>어망 크기</b> <span class="mtag">'+(A.sub?'내 어망 '+NET_CAP_H[A.net|0]+'시간 · 멤버십 중 '+A.capH+'시간':'지금 '+A.capH+'시간')+'</span><div class="spec">무료 자동 낚시를 하루에 쓸 수 있는 시간 · 포인트로만 키움(8 → 10 → 12시간)'+(A.sub?' · 멤버십 중에는 '+SUB_CAP_H+'시간이 먼저 적용되고, 키운 어망은 멤버십이 끝난 뒤 쓰입니다':'')+'</div></div><div class="act2">'+(N?'<button class="mini" type="button" id="netUpB"'+(spendNow()<N.price?' disabled':'')+'>'+N.capH+'시간으로 · '+fmtN(N.price)+'P</button>':'<span class="k">가장 큰 어망</span>')+'</div></div>';
   h+=goalHTML(s);
-  h+='<p class="src">자동 낚시는 직접 낚시와 같은 확률(입질 없음·헛챔질·바늘털이·밑걸림 포함)로 낚시법에 따라 '+AUTO_CYC.lure+'~'+AUTO_CYC.surf+'초에 한 번 던지고, 한 마리당 기본 포인트 50%·경험치 35%를 받습니다. 무료는 그 절반이고, 광고 부스트는 무료의 2배입니다. '+(subAvail(A)?'낚시GO PRO 멤버십은 수확량은 무료와 같고 자동 낚시를 하루 '+SUB_CAP_H+'시간(무료는 하루 8시간) 쓸 수 있으며, 포만감은 절반 속도로 줄어듭니다(광고 부스트 시간에는 무료와 같은 속도). ':'')+'직접 낚시로 낚으면 따로 포인트 +30% 보너스가 붙습니다. 게임을 끄거나 화면을 떠난 동안에도 계속되며, 돌아오면 서버 시간으로 정산합니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다. 위험 기상·채비 소진·선상에서는 멈춥니다.</p>';
+  h+='<p class="src">자동 낚시는 직접 낚시와 같은 확률(입질 없음·헛챔질·바늘털이·밑걸림 포함)로 낚시법에 따라 '+AUTO_CYC.lure+'~'+AUTO_CYC.surf+'초에 한 번 던지고, 한 마리당 기본 포인트 약 67%·경험치 35%를 받습니다. 무료는 그 절반이고, 광고 부스트는 무료의 2배입니다. '+(subAvail(A)?'낚시GO PRO 멤버십은 수확량은 무료와 같고 자동 낚시를 하루 '+SUB_CAP_H+'시간(무료는 하루 8시간) 쓸 수 있으며, 포만감은 절반 속도로 줄어듭니다(광고 부스트 시간에는 무료와 같은 속도). ':'')+'직접 낚시로 낚으면 따로 포인트 +30% 보너스가 붙습니다. 게임을 끄거나 화면을 떠난 동안에도 계속되며, 돌아오면 서버 시간으로 정산합니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다. 위험 기상·채비 소진·선상에서는 멈춥니다.</p>';
   const B=$('#autoBody');B.innerHTML=h;B.dataset.v='info';$('#autoModal').hidden=false;bindPay();
   const on=$('#autoOnB');if(on)on.onclick=()=>{if(!player||$('#world').hidden){toast('낚시터에 들어가서 켜세요');return;}setAuto(true);openAutoInfo();};
   const off=$('#autoOff');if(off)off.onclick=()=>{autoOffAny();$('#autoModal').hidden=true;};/* V73 다른 곳에서 도는 자동도 여기서 끔 */
@@ -7176,9 +7181,17 @@ function tokOK(url){return DEV_HOST||API_OK.includes(urlOrigin(url));}
 const EMBED=QS.get('embed')==='1';
 let NET_DEAD=false,SA=null,SRV_TRIP=null,BOATAUTO=false;/* V79 선상 자동(PRO 멤버십) */
 const baOn=tr=>!!(tr&&tr.auto&&!tr.auto.done);
+/* V84 선상 자동(PRO)도 화면에서 낚는 모습: 서버 정산과 별개로 보여 주기만(서버 /cast를 부르지 않음 · 입질 없음) — 채비 내림 → 고패질 → 몇 분마다 서버 정산해 조과 안내 */
+let BA_T=0,BA_SET=0,BA_H=0,BA_BUSY=false;
+function boatAutoCastVis(){if(!player||!curTrip||!pBob||!pLine)return;curChk=boatChk(curTrip);const p=player.g.position;const side=p.x>=0?1:-1;player.g.rotation.y=side*Math.PI/2;castD=curTrip.depth[1];player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(side*3.4,0,p.z);plan=null;escPlan=null;escJ=0;state='cast';t0=0;castRel=0;pBob.visible=true;pBob.scale.setScalar(.4);pLine.l.visible=true;myPres.st='wait';myPres.bx=+castTo.x.toFixed(1);myPres.bz=+castTo.z.toFixed(1);sendPres(true);}
+async function boatAutoSettleNow(){if(BA_BUSY||!SRV||!BOATAUTO)return;BA_BUSY=true;try{const r=await net('trip-auto-settle',{});if(r.s===200&&r.j){if(r.j.trip)SRV_TRIP=r.j.trip;const o=r.j.boatAuto;if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);if(r.j.rpg)applyRPG(r.j.rpg);refreshWallet();}if(o&&(o.n|0)>0){boatAutoMsg(o);if(state==='wait'){resetLine();BA_T=0;}}if(r.j.trip&&!baOn(r.j.trip)){BOATAUTO=false;resetLine();renderAutoBtn();}}}catch(e){}BA_BUSY=false;}
+function boatAutoTick(dt){if(!BOATAUTO||!curTrip||!player){BA_T=0;BA_SET=0;return;}BA_T+=dt;BA_SET+=dt;
+  if(state==='idle'&&BA_T>2.5){BA_T=0;boatAutoCastVis();}
+  else if(state==='wait'){BA_H-=dt;if(BA_H<=0){holding=!holding;BA_H=holding?1.2:2.4;}}
+  if(BA_SET>150){BA_SET=0;boatAutoSettleNow();}}
 function boatAutoMsg(o){if(!o)return;const top=Object.entries(o.tally||{}).sort((a,b)=>b[1].n-a[1].n).slice(0,3).map(([k,v])=>k+' '+v.n).join(', ');toast('선상 자동 정산 · '+(o.n|0)+'마리'+(top?' ('+top+')':'')+' · +'+fmtN(o.pts|0)+'P');try{if(TS){TS.n+=o.n|0;TS.pts+=o.pts|0;}}catch(e){}}
 async function boatAutoToggle(){if(!curTrip)return;const want=!BOATAUTO;if(want&&!autoNow().sub){toast('선상 자동 낚시는 낚시GO PRO 멤버십 혜택입니다');return;}if(want&&state!=='idle'){toast('채비를 거둔 뒤 켜세요');return;}
-  const r=await net('trip-auto',{on:want});if(r.s!==200||!r.j){toast(errMsg(r));return;}SRV_TRIP=r.j.trip||SRV_TRIP;BOATAUTO=baOn(r.j.trip);if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);if(r.j.rpg)applyRPG(r.j.rpg);refreshWallet();}
+  const r=await net('trip-auto',{on:want});if(r.s!==200||!r.j){toast(errMsg(r));return;}SRV_TRIP=r.j.trip||SRV_TRIP;BOATAUTO=baOn(r.j.trip);if(!BOATAUTO&&state!=='idle')resetLine();/* V84 끄면 내린 채비 거둠 */if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);if(r.j.rpg)applyRPG(r.j.rpg);refreshWallet();}
   if(want)toast('선상 자동 낚시를 켰습니다 · 출조가 끝날 때까지 자동으로 낚고, 귀항할 때 정산합니다(앱을 꺼도 계속)');else boatAutoMsg(r.j.boatAuto);renderAutoBtn();}
 function apiURL(p){return new URL(NET_API+'/'+p,location.href).href;}
 function tokNow(){try{return localStorage.getItem('access_token')||'';}catch(e){return'';}}
@@ -7246,7 +7259,8 @@ async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const pos
   try{v36Sync(path,s,j);}catch(e){}/* v36 안내 퀘스트·전국 대물·짧은 목표 */
   try{v37Sync(path,s,j);}catch(e){}/* v37 구명조끼(409 NO_PFD) · 벗을 때 자동 정산 */
   try{v38Sync(path,s,j);}catch(e){}/* v38 포만감·쿨러·손맛·배고픈 정산 */
-  try{if(j&&j.trialOffer)setTimeout(()=>trialShow(j.trialOffer),1800);}catch(e){}/* V82 PRO 3일 체험 제안(서버가 정한 때만) */
+  try{if(j&&j.trialOffer)setTimeout(()=>trialShow(j.trialOffer),1800);}catch(e){}
+  try{const M=s===200&&j&&/^(auto|auto-settle|trip|trip-end|trip-auto|trip-auto-settle)$/.test(path)?(j.missions||(j.settle&&j.settle.missions)||(j.boatAuto&&j.boatAuto.missions)||[]):[];M.forEach((m,i)=>setTimeout(()=>toast(m.bonus?'오늘의 퀘스트 3개 모두 완료 · 보너스 +'+m.pt+'P':'퀘스트 완료(자동 낚시) · '+m.n+' · +'+m.pt+'P +'+m.xp+'XP'),2400+i*2600));if(M.length){try{questBadge();}catch(e){}}}catch(e){}/* V85 자동 조과로 끝난 오늘의 퀘스트 안내 *//* V82 PRO 3일 체험 제안(서버가 정한 때만) */
   try{v45Sync(path,s,j);}catch(e){}/* v45 시험 기간 끝·인원 다 참 → 화면 전체 안내 */
   return{s,j,to:s===0&&to};}
 // C6 #26: 로그인했는데 서버가 실패하면 '연습 모드(계정에 저장 안 됨)'를 계속 보여 주고 20초마다 다시 연결 → 되면 새로 불러와 계정 기록으로
@@ -10081,7 +10095,7 @@ v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V74 */boatBadge,boatGo,boatPick,boatPortGo,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,boatAutoSettleNow/* V84 */}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
