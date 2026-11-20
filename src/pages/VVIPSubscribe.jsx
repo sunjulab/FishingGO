@@ -71,7 +71,7 @@ const PLANS = [
       { icon: '👑', text: 'PRO 닉네임 뱃지 제공' },
       { icon: '📡', text: 'CCTV 및 해양 히트맵 확인' },
       { icon: '🤖', text: 'AI 낚시 컨디션 심층 리포트' },
-      ...(META_GAME_LIVE ? [{ icon: '🎣', text: '방구석 낚시꾼 자동 낚시 최대 24시간(무료 기본 12시간)' }] : []), // ✅ V52: 2배 수확 → 20시간 어망 · 게임 출시(등급분류) 뒤 META_GAME_LIVE=true
+      ...(META_GAME_LIVE ? [{ icon: '🎣', text: '방구석 낚시꾼 자동 낚시 하루 24시간(무료는 하루 8시간)' }] : []), // ✅ V52: 2배 수확 → 20시간 어망 · 게임 출시(등급분류) 뒤 META_GAME_LIVE=true
     ],
   },
   {
