@@ -2558,7 +2558,7 @@ function coolerTake(c,id,sv){const i=c.items.findIndex(z=>z.id===id);if(i<0)retu
   if(Array.isArray(x.ts)){if(x.ts.length<sv)return{short:x.ts.length};const t=x.ts.splice(0,sv);x.n=x.ts.length;if(!x.n)c.items.splice(i,1);else x.at=x.ts[0];return{f:x.f,n:sv,at:t[0]};}
   c.items.splice(i,1);return{f:x.f,n:1,at:x.at,kg:x.kg};}
 // 광고주 간판(식당·카페 지붕 위 따로 — 이름판은 그대로). signs = GET /stall-signs의 {<포인트 id|지역|'all'>:[…]} · 포인트 > 지역 > 전체, at은 그 곳('food'|'cafe') 또는 'all'
-const SIGN_EMPTY='간판 비어 있음';
+const SIGN_EMPTY='간판 비어 있음';const SIGN_AD_LINE='본 간판은 광고입니다';
 const SIGN_AD_TXT='게임 속 간판 광고입니다 · 게임 속 식당·카페와 음식은 광고주와 관계없습니다';
 function signAd(brand){return'광고 · '+String(brand||'');}
 function signPick(signs,s,at,now){if(!signs||!s)return null;for(const k of [s.id,zoneOf(s),'all']){const L=Object.prototype.hasOwnProperty.call(signs,k)?signs[k]:null;if(!Array.isArray(L))continue;
@@ -9424,8 +9424,8 @@ function v38SignDraw(P){const x=P.cv.getContext('2d');x.clearRect(0,0,512,256);
     x.strokeStyle='#2a8fd4';x.lineWidth=3;x.strokeRect(4,4,299,120);x.fillStyle='#4a3620';x.textAlign='center';x.textBaseline='middle';v38FitTxt(x,SIGN_EMPTY,260,30,'600');x.fillText(SIGN_EMPTY,153,64);}
   else{x.fillStyle=v38CssC(S.c,'#2f6fa8');x.fillRect(0,0,307,128);const fg=v38CssC(S.c2,'#ffffff');let lx=153,mw=270;
     if(P.logo){const r=Math.min(64/P.logo.width,64/P.logo.height);const w=P.logo.width*r,h=P.logo.height*r;x.drawImage(P.logo,14,36+(64-h)/2,w,h);lx=92+(307-92)/2-6;mw=200;}
-    x.fillStyle=fg;x.textAlign='center';x.textBaseline='middle';v38FitTxt(x,String(S.text||''),mw,40);x.fillText(String(S.text||''),lx,62);
-    x.font='600 15px "IBM Plex Sans KR",sans-serif';x.fillText(String(S.ad||signAd(S.brand)),153,110);
+    x.fillStyle=fg;x.textAlign='center';x.textBaseline='middle';if(S.sub){v38FitTxt(x,String(S.sub),mw,22,'600');x.fillText(String(S.sub),lx,36);v38FitTxt(x,String(S.text||''),mw,44,'800');x.fillText(String(S.text||''),lx,74);}/* V86 윗줄(지역 맛집 등) + 큰 상호 */else{v38FitTxt(x,String(S.text||''),mw,40);x.fillText(String(S.text||''),lx,62);}
+    x.font='600 17px "IBM Plex Sans KR",sans-serif';x.fillText(SIGN_AD_LINE,153,110);/* V86: 아래 줄 = '본 간판은 광고입니다'(운영자 결정 · 광고 표시는 그대로) */
     x.fillStyle='rgba(10,12,14,.88)';x.fillRect(0,0,52,26);x.fillStyle='#ffffff';x.textAlign='left';x.font='700 17px "IBM Plex Sans KR",sans-serif';x.fillText('광고',8,14);}/* 광고 표시(표시광고법): 흰 글자·어두운 바탕 · 간판 높이의 20% */
   x.restore();x.fillStyle=P.lamps?'#ffcf80':'#d9cdb4';x.fillRect(508,0,4,4);/* V48 f2: 뒷벽 등 상자 텍셀(v38WarmPanel) */P.tex.needsUpdate=true;}
 // 이름판·간판·전구를 한 지오메트리(텍스처 하나)로
