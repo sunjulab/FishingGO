@@ -1707,6 +1707,7 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
   #world .top #rcol,#world .top #wxcard{max-width:calc((100vw - 20px) / var(--uis,1))!important}
   #world #spotbar>#satchip.warn,#world #spotbar>#satchip.low{max-width:calc((100vw - 20px) / var(--uis,1))!important}
   #world #spotbar>#autochip:not([hidden]){right:calc((max(18px, env(safe-area-inset-right,0px)) + 12px) * var(--uisb,1) / var(--uis,1))!important;bottom:calc((var(--dockh) + 116px) * var(--uisb,1) / var(--uis,1))!important}}
+.proTag{display:inline-block;padding:0 6px;border-radius:6px;background:#39ff88;color:#04230f;font-weight:900;box-shadow:0 0 8px rgba(57,255,136,.8)}
 </style>
 
 <!-- ===== 지도 ===== -->
@@ -2179,11 +2180,11 @@ const MANUAL_K=1.3;
 const AUTO_FREE_K=.5;
 const AUTO_PASS_K=1;
 const AUTO_AD_K=1;
-// 무료 자동은 시간 제한이 없고, 마지막 확인(켜기·정산) 뒤 어망 크기만큼만 쌓인다(기본 12시간, 포인트로 13·14시간 어망)
-const AUTO_CAP_H=12;/* V79: 무료 12시간(예전 8) */
+// 무료 자동은 시간 제한이 없고, 마지막 확인(켜기·정산) 뒤 어망 크기만큼만 쌓인다(기본 8시간, 포인트로 10·12시간 어망)
+const AUTO_CAP_H=8;/* V80: 무료 8시간(V79 12시간 → 운영자 결정으로 되돌림) */
 const AUTO_CAP_MS=AUTO_CAP_H*3600e3;
-const NET_CAP_H=[12,13,14];/* V79: 기본 12 → 13 → 14시간(예전 8·10·12 · 산 단계는 그대로, 시간만 늘어남) · 포만감(시간당 7)이 14시간에 98이라 그 이상은 배고픔으로 멈춤 */
-const SUB_CAP_H=24;/* V79 낚시GO PRO 멤버십: 어망 24시간(무료 12시간) · V52 예전 20시간(무료 8시간) · 수확은 무료와 같음 */
+const NET_CAP_H=[8,10,12];/* V80: 8 → 10 → 12시간(V79 12·13·14에서 되돌림) */
+const SUB_CAP_H=24;/* V79 낚시GO PRO 멤버십: 어망 24시간(무료 8시간) · V52 예전 20시간 · 수확은 무료와 같음 */
 const NET_PRICE=[0,20000,60000];
 // 광고 보상 1회 = 1시간 100%(앞선 부스트 뒤에 이어 붙음) · 하루(KST) 5회 · 이용권 중에는 광고 없음 · 자동 낚시를 켠 동안만
 const AD_BOOST_MS=3600e3;
@@ -2273,10 +2274,19 @@ function ptsK(f,cm,method,ratio,auto,trip,k){return Math.round(rawPts(f,cm,metho
 function xpK(f,cm,raw,rel,first,lv,auto,k){const x=catchXP(f,cm,raw,rel,first,lv,auto);return k===1?x:Math.max(1,Math.round(x*k));}
 function manualK(){return MANUAL_K;}
 function autoK(mode){return mode==='pass'?AUTO_PASS_K:mode==='ad'?AUTO_AD_K:AUTO_FREE_K;}
-// 어망 크기(a.net 0·1·2) → 쌓이는 최대 시간
+// 어망 크기(a.net 0·1·2) → V81: 무료 자동 낚시 하루 사용 시간(멤버십은 마지막 확인 뒤 24시간)
 function netCapMs(a){const L=Math.max(0,Math.min(NET_CAP_H.length-1,Math.floor(+((a&&a.net)||0))));return(a&&a.sub?Math.max(SUB_CAP_H,NET_CAP_H[L]):NET_CAP_H[L])*3600e3;}
 // a = auto { on(켠·마지막 정산 시각), passFrom, pass(이용권 끝), boosts:[[시작,끝],...], net }
-function capAtOf(a){if(!a||!a.on)return 0;const c=a.on+netCapMs(a);return a.pass>a.on?Math.max(c,a.pass):c;}
+/* V81 무료 자동 낚시 = 하루(한국 시간 0시 기준) 사용 시간 총량(netCapMs: 8·10·12시간). a.ud = 사용 기록한 날(kday), a.um = 그날 쓴 ms.
+   켠 뒤 켠 날 남은 시간을 다 쓰면 멈춤(수확해도 다시 늘지 않음) · 켜 둔 채 0시를 넘기면 넘긴 만큼은 다음 날 사용 시간으로 셈 · 멤버십(sub)은 예전처럼 마지막 확인 뒤 24시간 */
+function AUTO_DAY_H(){try{const A=SRV?SA:save.auto;return SRV?Math.round((A&&A.dayCapMs||AUTO_CAP_MS)/3600e3):netCapMs(A)/3600e3;}catch(e){return AUTO_CAP_H;}}
+function kday(t){return Math.floor((t+9*3600e3)/864e5);}
+function kdayEnd(t){return(kday(t)+1)*864e5-9*3600e3;}
+function autoUsed(a,t){return a&&a.ud===kday(t)?Math.max(0,+a.um||0):0;}
+function autoDayLeft(a,t){return Math.max(0,netCapMs(a)-autoUsed(a,t));}
+function autoAddUse(a,from,to){if(!(to>from))return;const d=kday(to),s0=d*864e5-9*3600e3,ms=to-Math.max(from,s0);if(a.ud!==d){a.ud=d;a.um=0;}a.um=(+a.um||0)+ms;}
+function capFreeOf(a){if(!a||!a.on)return 0;const cap=netCapMs(a);if(a.sub)return a.on+cap;return a.on+autoDayLeft(a,a.on);}
+function capAtOf(a){if(!a||!a.on)return 0;const c=capFreeOf(a);return a.pass>a.on?Math.max(c,a.pass):c;}
 // v32 D2: a.pw = 이용권 창 [{s,e,x?}] — 이어 산 이용권·끝난 이용권도 정산이 각 창을 그대로 본다(x: 취소된 창). 예전 프로필은 passFrom~pass만
 /* V52 멤버십(sub): 낚시GO 9,900원 월 요금제 구독자 — 정산을 요청한 그 순간 서버가 로그인 등급으로 판정해 a.sub에 둔다. 수확은 무료와 같은 1배, 어망 상한(netCapMs) 24시간·포만감 절반·하루 한도는 이용권과 같은 크기. 광고 부스트 시간은 부스트(2배)가 먼저 */
 function modeAt(a,t){if(a.pass>t&&t>=(a.passFrom||0))return'pass';for(const w of a.pw||[])if(!w.x&&t>=w.s&&t<w.e)return'pass';for(const b of a.boosts||[])if(t>=b[0]&&t<b[1])return'ad';return a.sub?'sub':'free';}
@@ -2302,7 +2312,7 @@ function autoStart(a,now){if(!a.on)a.on=now;unbankBoosts(a,now);return a;}
 function autoStop(a,now){if(a.on)bankBoosts(a,now);a.on=0;return a;}
 // 정산 창 [on, min(now, capAt))을 구간으로 나누고 cycMs마다 한 번 던진 횟수(남는 시간은 다음 구간으로)
 // v29 S2: 이용권 밖(무료·광고) 시간은 켠 뒤 어망 크기(netCapMs)까지만 — 이용권이 capAt을 늘려도 그 앞의 무료 시간이 어망보다 길게 쌓이지 않게. 끝에 남은 반쯤 던진 시간은 out.carry
-function autoCasts(a,now,cycMs){const end=Math.min(now,capAtOf(a));const lim=a.on+netCapMs(a);const segs=autoSegments(a,a.on,end).map(s=>s.mode==='pass'||s.to<=lim?s:Object.assign({},s,{to:Math.max(s.from,lim)})).filter(s=>s.to>s.from);let carry=0;
+function autoCasts(a,now,cycMs){const end=Math.min(now,capAtOf(a));const lim=capFreeOf(a);/* V81 */const segs=autoSegments(a,a.on,end).map(s=>s.mode==='pass'||s.to<=lim?s:Object.assign({},s,{to:Math.max(s.from,lim)})).filter(s=>s.to>s.from);let carry=0;
   const out=segs.map(s=>{const c0=carry;carry+=s.to-s.from;const n=Math.floor(carry/cycMs);carry-=n*cycMs;return Object.assign({},s,{casts:n,off:cycMs-c0});});out.carry=carry;return out;}/* v32 LC2 #248: off = 구간 시작부터 첫 캐스팅까지(앞 구간 이월 반영), m번째 캐스팅 시각 = from+off+m*cycMs */
 function dayCap(pass){/* V52: 멤버십(24시간 어망)도 pass=true로 부른다 */return pass?DAY_CAP+Math.ceil(PASS_MS/1000/Math.min(...Object.values(AUTO_CYC))):DAY_CAP;}
 // v29 S2: 한 번 정산 상한 — 이용권 구간이 있으면 이용권 하루 한도, 아니면 SETTLE_MAX와 어망 크기만큼 던지는 횟수 중 큰 값(큰 어망을 산 만큼 정산에서 잘리지 않게)
@@ -3086,7 +3096,7 @@ const BOAT_MINI='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 9.5h1
 function boatBadge(){const b=$('#menubtn');if(!b)return;let i=b.querySelector('.bdbg');const B=boatDayCur();if(!SRV||!B||!B.cap||curTrip){if(i)i.remove();return;}if(!i){i=document.createElement('span');i.className='bdbg';b.appendChild(i);}const left=Math.max(0,B.left|0),h=BOAT_MINI+'<b>'+left+'</b>';if(i.dataset.h!==h){i.dataset.h=h;i.innerHTML=h;}i.classList.toggle('none',!left);b.setAttribute('aria-label','메뉴 · 오늘 선상 낚시 '+(left?left+'회 남음':'모두 탐'));}
 function boatDayCur(){const b=BOATD;return b&&(!b.d||b.d===dayKey())?b:null;}/* 날짜가 지난 값(0시 직후 등)은 버리고 서버 판정에 맡김 */
 function boatDayHTML(){const b=boatDayCur();if(!SRV||!b||!b.cap)return'';const left=Math.max(0,b.left|0);
-  return'<b>오늘 선상 출조 <span class="num">'+fmtN(b.used)+'/'+fmtN(b.cap)+'</span>회</b>'+(left?' · 남은 '+left+'회':' · 오늘은 모두 탔어요 · 한국시간 0시에 다시 열려요')+(!b.sub&&!GAME_APP&&(b.subCap===0||b.subCap>b.cap)&&!v45Beta()&&V45.rating?' · 낚시GO 멤버십은 '+(b.subCap?'하루 '+b.subCap+'회':'횟수 제한 없음'):'');}
+  return'<b>오늘 선상 출조 <span class="num">'+fmtN(b.used)+'/'+fmtN(b.cap)+'</span>회</b>'+(left?' · 남은 '+left+'회':' · 오늘은 모두 탔어요 · 한국시간 0시에 다시 열려요')+(!b.sub&&!GAME_APP&&(b.subCap===0||b.subCap>b.cap)&&!v45Beta()&&(V45.rating||V45.subOn)?' · 낚시GO 멤버십은 '+(b.subCap?'하루 '+b.subCap+'회':'횟수 제한 없음'):'');}
 /* V74 선상 낚시 바로 가기: 항구에 있으면 출조 창, 아니면 지금 출항할 수 있는 가까운 항구 목록(눌러서 들어가면 출조 창이 바로 열림) */
 function kmOf(a,b){if(!a||!b)return null;const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lng-a.lng)*r,x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
 function boatGo(){if(curTrip){toast('지금 선상 출조 중입니다');return;}if(player&&!$('#world').hidden&&(leaveNeed()||(!autoOn&&state!=='idle'))){toast('지금 낚시 중입니다 · 채비를 거두거나 파이팅을 마친 뒤 눌러 주세요');return;}/* 걸린 고기·밑걸림을 말없이 잃지 않게 */
@@ -4302,11 +4312,12 @@ function wlpTheme(){wlpRead();for(const k in EMO_TEX){try{EMO_TEX[k].dispose();}
 function label(text,o){o=o||{};if(!WLP.ok)wlpRead();const cv=document.createElement('canvas');cv.width=512;cv.height=128;labelDraw(cv,text,o);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,transparent:true}));sp.scale.set(3.2,.8,1);sp.renderOrder=10;sp.onBeforeRender=labCap;sp.userData.wl={text,o};return sp;}
 function labelDraw(cv,text,o){const x=cv.getContext('2d');x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,512,128);x.shadowBlur=0;x.shadowColor='rgba(0,0,0,0)';
-  x.font=(o.b?'500 34px ':'700 34px ')+'"IBM Plex Sans KR","Malgun Gothic",sans-serif';const t=text.length>18?text.slice(0,17)+'…':text;const w=Math.min(492,x.measureText(t).width+40);
-  const X=(512-w)/2,Y=o.b?12:36,H=o.b?80:56;x.fillStyle=o.b?WLP.bub:(o.me?WLP.buoy:WLP.glass);/* V48-UI fix: 내 이름표는 두 화면 스타일 모두 부표 주황(가이드 4.3) */if(o.gold&&!o.b){const gr=x.createLinearGradient(X,0,X+w,0);gr.addColorStop(0,'#ffe58a');gr.addColorStop(.5,'#ffbf2f');gr.addColorStop(1,'#ffe58a');x.fillStyle=gr;x.shadowColor='rgba(255,200,60,.95)';x.shadowBlur=20;}x.beginPath();(x.roundRect?x.roundRect(X,Y,w,H,14):x.rect(X,Y,w,H));x.fill();x.shadowBlur=0;
+  x.font=(o.b?'500 34px ':'700 34px ')+'"IBM Plex Sans KR","Malgun Gothic",sans-serif';const t=text.length>18?text.slice(0,17)+'…':text;const PR=!!o.pro&&!o.b,PW=92,w=Math.min(PR?492-PW-10:492,x.measureText(t).width+40);/* V82 PRO 형광 표시: 이름표 오른쪽 */
+  const X=(512-(PR?w+10+PW:w))/2,Y=o.b?12:36,H=o.b?80:56;x.fillStyle=o.b?WLP.bub:(o.me?WLP.buoy:WLP.glass);/* V48-UI fix: 내 이름표는 두 화면 스타일 모두 부표 주황(가이드 4.3) */if(o.gold&&!o.b){const gr=x.createLinearGradient(X,0,X+w,0);gr.addColorStop(0,'#ffe58a');gr.addColorStop(.5,'#ffbf2f');gr.addColorStop(1,'#ffe58a');x.fillStyle=gr;x.shadowColor='rgba(255,200,60,.95)';x.shadowBlur=20;}x.beginPath();(x.roundRect?x.roundRect(X,Y,w,H,14):x.rect(X,Y,w,H));x.fill();x.shadowBlur=0;
   const ol=WLP.lt&&!o.gold&&!o.me;if(ol){x.lineWidth=3;x.strokeStyle=WLP.line;x.stroke();}/* 밝게: 흰 알약 테두리(HUD 알약과 같은 선) */
   if(o.b){x.beginPath();x.moveTo(242,Y+H-2);x.lineTo(256,Y+H+16);x.lineTo(270,Y+H-2);x.fill();if(ol){x.beginPath();x.moveTo(243,Y+H+.5);x.lineTo(256,Y+H+16);x.lineTo(269,Y+H+.5);x.stroke();}}
-  x.fillStyle=o.b?WLP.bubFg:(o.gold?'#2a1d00':o.me?WLP.meFg:WLP.fg);x.textAlign='center';x.textBaseline='middle';x.fillText(t,256,Y+H/2+1);
+  x.fillStyle=o.b?WLP.bubFg:(o.gold?'#2a1d00':o.me?WLP.meFg:WLP.fg);x.textAlign='center';x.textBaseline='middle';x.fillText(t,PR?X+w/2:256,Y+H/2+1);
+  if(PR){const PX=X+w+10;x.save();x.shadowColor='rgba(57,255,136,.95)';x.shadowBlur=18;x.fillStyle='#39ff88';x.beginPath();(x.roundRect?x.roundRect(PX,Y+6,PW,H-12,12):x.rect(PX,Y+6,PW,H-12));x.fill();x.shadowBlur=0;x.lineWidth=2.5;x.strokeStyle='#eafff2';x.stroke();x.fillStyle='#04230f';x.font='900 30px "IBM Plex Sans KR","Malgun Gothic",sans-serif';x.textAlign='center';x.fillText('PRO',PX+PW/2,Y+H/2+1);x.restore();}
   if(o.t&&!o.b){const tt=o.t.length>12?o.t.slice(0,11)+'…':o.t;x.font='700 24px "IBM Plex Sans KR","Malgun Gothic",sans-serif';x.lineWidth=7;x.lineJoin='round';x.strokeStyle='rgba(6,16,22,.9)';x.strokeText(tt,256,17);x.fillStyle=o.gold?'#ffe58a':'#8ff0d0';x.fillText(tt,256,17);}/* v34 칭호 */}
 // 가까이 다가가도 이름표·말풍선이 화면을 덮지 않게: 카메라 9m 안쪽에서는 세계 크기를 거리만큼 줄여 화면 크기를 고정
 const _lbv=new THREE.Vector3();function labCap(r,sc,cam){this.getWorldPosition(_lbv);const k=Math.max(.25,Math.min(1,cam.position.distanceTo(_lbv)/9));if(Math.abs(this.scale.x-3.2*k)>.01)this.scale.set(3.2*k,.8*k,1);}
@@ -5532,8 +5543,9 @@ let chRs=[];function chargeTicks(chk){chRs=[];const bar=$('#charge .bar');bar.qu
 // C3 #73: 지금 자리에서 실제로 닿는 최대 거리(doCast와 같은 방향 탐색) — 충전 표시용
 function reachMax(chk){if(!player||!chk||chk.meth==='boat')return chk?chk.D:0;const r0=player.g.rotation.y,loose=chk.G&&chk.G.rod&&chk.G.rod.me==='pole';let best=0;for(let i=0;i<=8;i++)for(const sg of i?[1,-1]:[1]){const c=castTarget(r0+sg*i*Math.PI/8,chk.D,loose);if(c&&c.d>best)best=c.d;}return best;}
 let chargeReach=0;
+function camFar(g,lim){const d=Math.atan2(Math.sin(g-yaw),Math.cos(g-yaw));return Math.abs(d)>lim;}/* V80 */
 function doCast(power){const chk=curChk;
-  if(chk.meth==='boat'){const p=player.g.position;const side=p.x>=0?1:-1;player.g.rotation.y=side*Math.PI/2;yawGoal=player.g.rotation.y+Math.PI;castD=curTrip.depth[1];// v32 #201: 서버(/cast)와 같은 수심(출조의 바닥 수심) — 기록·카드도 이 값
+  if(chk.meth==='boat'){const p=player.g.position;const side=p.x>=0?1:-1;player.g.rotation.y=side*Math.PI/2;if(!autoOn&&camFar(player.g.rotation.y+Math.PI,1.75))yawGoal=player.g.rotation.y+Math.PI;/* V80: 선상에서 던질 때마다 시점이 돌아가지 않게 — 내가 돌려 둔 시점에서 찌 쪽이 안 보일 때만 돌린다 */castD=curTrip.depth[1];// v32 #201: 서버(/cast)와 같은 수심(출조의 바닥 수심) — 기록·카드도 이 값
     player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(side*3.4,0,p.z);state='cast';t0=0;castRel=0;pBob.visible=true;pBob.scale.setScalar(.4);pLine.l.visible=true;
     curList=tripFish(cur,curTrip,tripMo);plan=null;escPlan=null;escJ=0;SES.c++;logMsg('채비 내림 · 바닥 수심 약 '+castD+'m','sys');myPres.st='wait';myPres.bx=+castTo.x.toFixed(1);myPres.bz=+castTo.z.toFixed(1);sendPres(true);evt('cast');if(SRV&&!autoOn)srvCast();return;}const want=Math.max(4,chk.D*power),loose=chk.G.rod.me==='pole';
   let ry=player.g.rotation.y,t=castTarget(ry,want,loose);const castRy0=ry;
@@ -5542,7 +5554,7 @@ function doCast(power){const chk=curChk;
   if(!t&&!loose&&firstWet(player.g.rotation.y,chk.D)){state='idle';toast('물까지 닿지 않았습니다 · 조금 더 길게 눌러 세게 던지세요');return;}
   if(!t){state='idle';toast(loose?'민장대가 닿는 '+chk.D+'m 안에 물이 없습니다 · 물가 끝으로 더 다가가세요':'여기서는 '+Math.round(chk.D)+'m 안에 던질 물이 없습니다 · 물가 끝으로 더 다가가세요');return;}
   if(Math.abs(Math.atan2(Math.sin(ry-castRy0),Math.cos(ry-castRy0)))>.5&&!autoOn)toast('고른 방향은 물이 가까워 물이 넓은 쪽으로 몸을 돌려 던졌습니다',2600);// C6 #90
-  if(!autoOn)yawGoal=ry+Math.PI;// 던지면서 몸을 돌렸으면 시점도 천천히 따라 돌아 찌가 화면 안에 오게 · v43: 자동 낚시 중에는 내가 돌려 둔 시점을 그대로 둔다
+  if(!autoOn&&camFar(ry+Math.PI,Math.abs(Math.atan2(Math.sin(ry-castRy0),Math.cos(ry-castRy0)))>.5?.6:1.75))yawGoal=ry+Math.PI;/* V80: 몸을 크게 돌렸거나 찌가 화면 밖일 때만 시점을 따라 돌린다(던질 때마다 돌아가지 않게) */// 던지면서 몸을 돌렸으면 시점도 천천히 따라 돌아 찌가 화면 안에 오게 · v43: 자동 낚시 중에는 내가 돌려 둔 시점을 그대로 둔다
   castD=t.d;player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(t.x,0,t.z);state='cast';t0=0;castRel=0;
   const m=chk.meth;pBob.visible=true;pBob.scale.setScalar(m==='lure'||m==='surf'?.45:1);pLine.l.visible=true;vxSfx('whoosh');
   const nt=liveNight(cur),all=catchable(cur,chk,nt).filter(x=>x.w>0);curList=shoreCatch(cur,chk.meth,chk.G.term.kind,castD,nt).filter(x=>x.w>0);// 실제로 날아간 거리 기준(서버 shoreList와 같은 식)
@@ -5780,7 +5792,7 @@ function peerNorm(s){if(!s||typeof s!=='object')s={};const f=v=>{v=+v;return isF
 function peerFx(o,kind){try{if(!scene||o.bx==null||vxCalm()||peers.size>12)return;const d=camera?Math.hypot(camera.position.x-o.bx,camera.position.z-o.bz):0;if(d>45)return;const a=Math.max(.15,1-d/45),y=o.bx,z=o.bz;
   if(kind==='land'){vxSplash(y,z,.45);vxRing(y,z,.06,.7,.7,.6);vxSfx('plop',.5*a);}else if(kind==='hook'){vxSplash(y,z,.9);vxRing(y,z,.08,1,.8,.7);vxSfx('splash',.6*a);}else{vxSplash(y,z,.7);vxSfx('splash',.5*a);}}catch(e){}}
 function onPeer(id,st){st=peerNorm(st);if(!scene||!cur||st.s!==myPres.s){dropPeer(id);return;}peerLast.set(id,st);let p=peers.get(id);
-  if(!p){const pw0=peerWear(st);p=makeAngler(st.c,0x22262a,true,{life:kind==='boat',len:kind==='boat'?2.1:3.2,hat:st.h,wear:pw0});p.wk=wearKey(pw0);/* v37 방 lk·꾸미기 */p.name=st.n||'낚시꾼';const l=label(p.name,{gold:!!st.gd,t:titleName(st.ti)});l.position.y=AV_LBL;p.g.add(l);p.nl=l;p.t0id=st.ti||null;p.body.frustumCulled=true;if(p.ol)p.ol.frustumCulled=true;p.bob=makeBobber();p.line=makeLine();p.en0=st.en;p.tx=st.x||0;p.tz=st.z||0;p.g.position.set(p.tx,walkFn(p.tx,p.tz)||0,p.tz);p.st=st.st;p.g0=st.g;if(st.k){p.k0=st.k.t;p.trK=st.k.t;}p.t0=Date.now();peers.set(id,p);if(!peerQuiet&&!(Date.now()-(peerSeen().get(id)||0)<60e3))logMsg('<b>'+esc(p.name)+'</b> 님이 들어왔습니다','sys');if(!st.__snap)ctxSay('반가워요','q10');}/* LS #244: 서버 번호가 다시 연결해도 같으므로 1분 안에 다시 보이면 들어옴을 다시 쓰지 않는다 */// C6 #84·#110: 처음 보이는 사람은 이미 던져 둔 채비·지난 조과를 다시 재생하지 않는다
+  if(!p){const pw0=peerWear(st);p=makeAngler(st.c,0x22262a,true,{life:kind==='boat',len:kind==='boat'?2.1:3.2,hat:st.h,wear:pw0});p.wk=wearKey(pw0);/* v37 방 lk·꾸미기 */p.name=st.n||'낚시꾼';const l=label(p.name,{gold:!!st.gd,t:titleName(st.ti),pro:!!st.pr});/* V82 */l.position.y=AV_LBL;p.g.add(l);p.nl=l;p.t0id=st.ti||null;p.pr0=!!st.pr;p.body.frustumCulled=true;if(p.ol)p.ol.frustumCulled=true;p.bob=makeBobber();p.line=makeLine();p.en0=st.en;p.tx=st.x||0;p.tz=st.z||0;p.g.position.set(p.tx,walkFn(p.tx,p.tz)||0,p.tz);p.st=st.st;p.g0=st.g;if(st.k){p.k0=st.k.t;p.trK=st.k.t;}p.t0=Date.now();peers.set(id,p);if(!peerQuiet&&!(Date.now()-(peerSeen().get(id)||0)<60e3))logMsg('<b>'+esc(p.name)+'</b> 님이 들어왔습니다','sys');if(!st.__snap)ctxSay('반가워요','q10');}/* LS #244: 서버 번호가 다시 연결해도 같으므로 1분 안에 다시 보이면 들어옴을 다시 쓰지 않는다 */// C6 #84·#110: 처음 보이는 사람은 이미 던져 둔 채비·지난 조과를 다시 재생하지 않는다
   peerLook(p,st);p.tx=+st.x||0;p.tz=+st.z||0;p.try=+st.ry||0;if(p.st!==st.st){if(st.st==='wait'&&p.st!=='fight'&&p.st!=='bite'&&p.st!=='snag'){p.A.castT=0;p.vbx=null;p.ed=null;p.jq=0;p.landed=0;}if(st.st==='fight'){p.A.hookT=0;if(p.st)peerFx(p,'hook');}if(st.st==='show')p.A.showT=0;}p.st=st.st;p.bx=st.bx;p.bz=st.bz;p.m=st.m;if(st.j!=null&&st.j!==p.j0){if(p.j0!=null&&st.st==='wait'&&st.m==='egi'){p.A.jkT=0;p.jT=T;p.ed=Math.max(.05,(p.ed==null?.3:p.ed)-.6);p.jq=Math.min(3,((+st.j-p.j0)%1e4+1e4)%1e4)-1;}p.j0=st.j;}// v32 #212: 묶여 온 샤크리(2~3번)는 0.36초 간격으로 나눠 재생
   if(st.g&&st.g!==p.g0){p.g0=st.g;if(st.g<1e6||Date.now()-st.g<15000)bubble(p,'반갑습니다');}/* v31 S4 #167: g는 인사 순번(1~9999 — 서버가 숫자만 전달). 예전 클라이언트의 시각 값도 그대로 받음 */if(st.en!=null&&st.en!==p.en0){p.en0=st.en;if(st.e&&EMO[st.e])showEmote(p,st.e);else if(st.e&&QP[st.e]&&!st.__snap){p.bubAt=0;showQuick(p,st.e,p.name);}}
   try{trNote(p,st);}catch(e){}if(st.k&&st.k.t!==p.k0){p.k0=st.k.t;const kf=FISH.find(x=>x.n===st.k.f),kn=Date.now();if(kf&&!st.__snap&&(st.k.a!=null?+st.k.a<30000:true)&&kn-(p.kAt||0)>=1e4){p.kAt=kn;/* C6 #84: 보낸 사람 시계 대신 도착 시점 기준(서버가 나이 a를 주면 그것으로) · v31 S4 #27: 어종 목록에 없는 이름은 보이지 않고, 사람마다 10초에 한 번 */{const f=kf;avFish(p,f,+st.k.z,(f.min!=null&&+st.k.z<=f.min)||!!closedRange(f,0,cur));if(p.st==='show')p.A.showT=0;peerFx(p,'catch');}logMsg('<b>'+esc(p.name)+'</b> · '+esc(st.k.f)+' '+(+st.k.z).toFixed(1)+'cm');ctxSay('축하해요!','q3');bubble(p,st.k.f+' '+Math.round(st.k.z)+'cm!');}}}
@@ -6557,7 +6569,7 @@ function cutLine(){if(state!=='snag')return;if(SRV&&!autoOn&&srvC&&srvC.res&&srv
 {const cb=$('#cutbtn');cb.addEventListener('pointerdown',e=>{e.preventDefault();if(state!=='snag'||performance.now()-snagAt<700)return;cutHold=performance.now();try{cb.setPointerCapture(e.pointerId);}catch(x){}});
   ['pointerup','pointercancel','lostpointercapture'].forEach(t=>cb.addEventListener(t,()=>{if(cutHold&&state==='snag'&&performance.now()-cutHold<CUT_MS)toast('줄을 끊으려면 길게 누르세요');cutHold=0;}));
   cb.addEventListener('click',e=>{if(e.detail===0&&state==='snag'&&performance.now()-snagAt>=700)cutLine();});cb.addEventListener('contextmenu',e=>e.preventDefault());}
-// v23 자동 낚시: 무료는 시간 제한 없이 수확 ×0.5, 마지막 확인(켜기·정산) 뒤 어망 크기(12·13·14시간)까지만 쌓임 · 광고 부스트 1시간 ×1.0(앱) · 24시간 이용권 ×1.0
+// v23 자동 낚시: 무료는 시간 제한 없이 수확 ×0.5, 하루(0시 기준) 어망 크기(8·10·12시간)만큼 쓸 수 있음(V81) · 광고 부스트 1시간 ×1.0(앱) · 24시간 이용권 ×1.0
 // 오프라인(이 기기 저장)도 서버 profile.auto와 같은 모양·같은 공용 규칙(capAtOf·autoCasts·ptsK·xpK·dayCap·settleMax)으로 정산한다
 function autoNorm(){let a=save.auto;if(!a||typeof a!=='object')a=save.auto={};if(a.away&&!a.on){a.on=+a.away.t||0;a.spot=a.away.s||null;}delete a.away;delete a.used;delete a.day;
   if(!Array.isArray(a.boosts))a.boosts=[];a.on=+a.on||0;a.pass=+a.pass||0;a.net=Math.max(0,Math.min(NET_CAP_H.length-1,a.net|0));return a;}
@@ -6566,7 +6578,7 @@ let autoOn=false,autoT=0,autoHold=0;
 function adsLeftOf(a){return a.adDay===dayKey()?Math.max(0,AD_MAX_PER_DAY-(a.adN||0)):AD_MAX_PER_DAY;}
 // 서버 autoStatus와 같은 모양
 function autoStatusOf(a,now){now=now||Date.now();const pass=a.pass>now,capAt=a.on?capAtOf(a):0,net=Math.max(0,Math.min(NET_CAP_H.length-1,a.net|0)),capMs=netCapMs(a);const mode=modeAt(a,now);
-  return{on:!!a.on,spot:a.spot||null,since:a.on||null,pass,passUntil:a.pass,mode,k:autoK(mode),capAt:capAt||null,full:!!a.on&&now>=capAt,leftMs:a.on?Math.max(0,capAt-now):(pass?Math.max(a.pass-now,capMs):capMs),
+  return{on:!!a.on,spot:a.spot||null,since:a.on||null,pass,passUntil:a.pass,mode,k:autoK(mode),capAt:capAt||null,full:!!a.on&&now>=capAt,leftMs:a.on?Math.max(0,capAt-now):(pass?Math.max(a.pass-now,capMs):a.sub?capMs:autoDayLeft(a,now)),dayCapMs:capMs,dayUsedMs:a.sub?0:autoUsed(a,now)+(a.on&&!pass?Math.max(0,Math.min(now,capAt)-Math.max(a.on,kdayEnd(now)-864e5)):0),/* V81 */
     boostLeftMs:boostLeftMs(a,now),adsLeftToday:pass?0:adsLeftOf(a),adsMax:AD_MAX_PER_DAY,net,capH:capMs/3600e3,netNext:net+1<NET_CAP_H.length?{capH:NET_CAP_H[net+1],price:NET_PRICE[net+1]}:null,x2:null};}
 // 지금 상태: 서버 모드는 마지막 서버 응답(SA)을 시계로 보정
 function autoNow(){const now=Date.now();if(!SRV)return autoStatusOf(save.auto,now);const S=SA||{};const el=Math.max(0,now-(S.at||now));const pass=!!S.passUntil&&S.passUntil>now;
@@ -6574,12 +6586,12 @@ function autoNow(){const now=Date.now();if(!SRV)return autoStatusOf(save.auto,no
   // v32 #216: 서버가 구간(boosts·passFrom·pw)을 주면 공용 modeAt으로 지금 구간을 계산(이용권이 끝나 미뤄 둔 부스트가 시작돼도 다음 응답을 기다리지 않음)
   if(Array.isArray(S.boosts)){const a={pass:S.passUntil||0,passFrom:S.passFrom||0,pw:Array.isArray(S.pw)?S.pw:[],boosts:S.boosts,sub:S.sub?1:0};mode=modeAt(a,now);bl=boostLeftMs(a,now)+(+S.boostBankMs||0);}
   const x2=S.x2&&S.x2.until>now?S.x2:null;
-  return{on:!!S.on,spot:S.spot||null,since:S.since||null,pass,passUntil:S.passUntil||0,sub:!!S.sub,mode,k:autoK(mode),capAt,full:!!S.on&&!!capAt&&now>=capAt,leftMs:S.on?Math.max(0,capAt-now):(S.leftMs||AUTO_CAP_MS),
+  return{on:!!S.on,spot:S.spot||null,since:S.since||null,pass,passUntil:S.passUntil||0,sub:!!S.sub,mode,k:autoK(mode),capAt,full:!!S.on&&!!capAt&&now>=capAt,leftMs:S.on?Math.max(0,capAt-now):(S.leftMs!=null?S.leftMs:AUTO_CAP_MS),dayCapMs:S.dayCapMs||AUTO_CAP_MS,dayUsedMs:(S.dayUsedMs||0)+(S.on&&!S.sub&&!pass?Math.min(el,Math.max(0,(capAt||now)-(S.at||now))):0),/* V81 */
     boostLeftMs:bl,adsLeftToday:pass?0:(S.adsLeftToday!=null?S.adsLeftToday:AD_MAX_PER_DAY),adsMax:S.adsMax||AD_MAX_PER_DAY,net:S.net|0,capH:S.capH||NET_CAP_H[S.net|0],netNext:S.netNext!==undefined?S.netNext:{capH:NET_CAP_H[1],price:NET_PRICE[1]},x2};}
 // (호환) 남은 시간: 이용권이면 이용권 남은 시간, 아니면 어망이 찰 때까지
 function autoLeft(){const A=autoNow();return A.pass?{pass:true,ms:Math.max(0,A.passUntil-Date.now())}:{pass:false,ms:A.leftMs};}
 const MODE_TXT={free:'무료',ad:'광고 부스트(무료의 2배)',pass:'이용권(무료의 2배)',sub:'멤버십(최대 24시간)'};// C6 #118: 배율은 무료 대비로 말한다
-function modeLong(A){return A.mode==='sub'?'낚시GO PRO 멤버십 · 자동 낚시 최대 '+A.capH+'시간 쌓임(무료 기본 12시간) · 수확량은 무료와 같음':A.mode==='pass'?'24시간 이용권 · 자동 수확 2배(무료 대비) · 이용권 끝까지 쌓임':A.mode==='ad'?'광고 부스트 · 자동 수확 2배(무료 대비) · 남은 '+fmtMs(A.boostLeftMs):'무료 · 최대 '+A.capH+'시간 쌓임';}
+function modeLong(A){return A.mode==='sub'?'낚시GO PRO 멤버십 · 자동 낚시 하루 24시간(무료는 하루 8시간) · 수확량은 무료와 같음':A.mode==='pass'?'24시간 이용권 · 자동 수확 2배(무료 대비) · 이용권 끝까지 쌓임':A.mode==='ad'?'광고 부스트 · 자동 수확 2배(무료 대비) · 남은 '+fmtMs(A.boostLeftMs):'무료 · 하루 '+A.capH+'시간 사용';}
 const AUTO_SVG='<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" style="vertical-align:-1px;margin-right:3px"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.6h-2.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const chipMs=ms=>{const s=Math.floor(Math.max(0,ms)/1000),m=Math.floor(s/60);return m>=100?Math.floor(m/60)+'h':m+':'+String(s%60).padStart(2,'0');};// 자동 칩: 아이콘 + 분:초
 const fmtMs=ms=>{const s=Math.floor(Math.max(0,ms)/1000);return(s>=3600?Math.floor(s/3600)+':':'')+String(Math.floor(s%3600/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
@@ -6596,7 +6608,7 @@ function autoAttach(k){if(autoOn||!(SRV&&SA&&SA.on)||!cur||SA.spot!==cur.id||cur
 function backSpotTarget(){if(SRV&&SA&&SA.on&&SA.spot){const t=SPOTS.find(x=>x.id===SA.spot);if(t)return{t,auto:true};}const t=lastSpotId&&SPOTS.find(x=>x.id===lastSpotId);return t?{t,auto:false}:null;}
 function backSpotRender(){const b=$('#backSpot');if(!b)return;const x=$('#map').hidden?null:backSpotTarget();b.hidden=!x;if(!x)return;const h=(x.auto?'<i class="bsdot" aria-hidden="true"></i><b>자동 중</b> · ':'<b>방금 있던 곳</b> · ')+esc(x.t.n)+' <span aria-hidden="true">↩</span>';if(b.dataset.h!==h){b.dataset.h=h;b.innerHTML=h;}b.classList.toggle('on',x.auto);b.setAttribute('aria-label',(x.auto?'자동 낚시 중인 ':'방금 있던 ')+x.t.n+'(으)로 돌아가기');}
 function setAuto(on,move){if(on===autoOn)return;
-  if(on){if(pfdBlock())return;/* v37 */if(!player||$('#world').hidden){/* V67: 지도에서 눌러도 바로 — 고른(또는 자동 중이던·마지막) 낚시터로 들어가 물가에서 켠다 */const t=(typeof sel!=='undefined'&&sel)||(SA&&SA.spot&&SPOTS.find(x=>x.id===SA.spot))||(cur&&SPOTS.find(x=>x.id===cur.id));if(t){autoPend=true;toast(t.n+'에 들어가 자동 낚시를 켭니다');enterSpot(t);}else toast('낚시터를 고른 뒤 눌러 주세요');return;}if(v38AutoBlock())return;/* v38 포만감 */if(TW.ph){toast('투망을 마친 뒤 켜세요');return;}if(dvRodBroken()){dvAsk(save.eq.rod,'auto');return;}/* v35 */if(curTrip){toast('선상에서는 자동 낚시를 쓸 수 없습니다');return;}
+  if(on){if(pfdBlock())return;/* v37 */if(!player||$('#world').hidden){/* V67: 지도에서 눌러도 바로 — 고른(또는 자동 중이던·마지막) 낚시터로 들어가 물가에서 켠다 */const t=(typeof sel!=='undefined'&&sel)||(SA&&SA.spot&&SPOTS.find(x=>x.id===SA.spot))||(cur&&SPOTS.find(x=>x.id===cur.id));if(t){autoPend=true;toast(t.n+'에 들어가 자동 낚시를 켭니다');enterSpot(t);}else toast('낚시터를 고른 뒤 눌러 주세요');return;}if(v38AutoBlock())return;/* v38 포만감 */if(TW.ph){toast('투망을 마친 뒤 켜세요');return;}if(dvRodBroken()){dvAsk(save.eq.rod,'auto');return;}/* v35 */if(curTrip){toast(SRV?'선상에서는 오른쪽 아래 자동 버튼(선상 자동 · PRO)을 눌러 주세요':'선상에서는 자동 낚시를 쓸 수 없습니다');return;}{const A0=SRV?SA:save.auto,n0=Date.now();if(A0&&!A0.on&&!A0.sub&&!(SRV?A0.pass:A0.pass>n0)&&(SRV?(A0.leftMs!=null&&A0.leftMs<=0):autoDayLeft(A0,n0)<=0)){toast('오늘 자동 낚시 '+AUTO_DAY_H()+'시간을 다 썼습니다 · 내일 0시(한국 시간)에 다시 채워집니다',3200);return;}}/* V81 하루 사용 시간 */
     if(['bite','hooking','fight'].includes(state)){toast('파이팅을 마친 뒤 켜세요');return;}if(state==='snag'){toast('밑걸림을 먼저 처리한 뒤 켜세요');return;}if(!nearWater()&&state==='idle'&&!waterSnap()){toast('물가에서 켜세요');return;}
     if(!move&&SRV&&SA&&SA.on&&SA.spot&&cur&&SA.spot!==cur.id){const t=SPOTS.find(x=>x.id===SA.spot);if(t){askBox('자동 낚시 중',t.n+'에서 자동 낚시가 돌고 있어요. 그곳으로 돌아갈까요, 아니면 여기로 옮길까요?','그곳으로 돌아가기','여기로 옮기기').then(y=>{if(y){if(state==='idle'&&!curTrip)enterSpot(t);}else setAuto(true,true);});return;}}}/* V73 — 파이팅·밑걸림·출조 검사 뒤에 묻는다 */
   if(on&&srvC&&!srvC.dead)srvC.done=true;// 서버가 자동 켜기 때 물에 있던 채비를 거둔다
@@ -6609,7 +6621,7 @@ function setAuto(on,move){if(on===autoOn)return;
 function renderAutoBtn(){const A=autoNow();const b=$('#autobtn');if(!b)return;const t=autoOn?'자동 ON · '+autoChipTxt(A):'자동';if(b.textContent!==t)b.textContent=t;b.title=autoOn?modeLong(A):'자동 낚시';
   const c=$('#autochip');if(c&&curTrip&&SRV){if(c.hidden)c.hidden=false;const ct=BOATAUTO?'선상':'선상 자동';c.classList.toggle('off',!BOATAUTO);c.classList.remove('full');if(c.dataset.t!==ct){c.dataset.t=ct;c.innerHTML=AUTO_SVG+'<b class="v44an">자동</b><em class="v44ao">'+(BOATAUTO?'ON':'OFF')+'</em><span>'+esc(BOATAUTO?'선상':'선상')+'</span>';c.setAttribute('aria-label',BOATAUTO?'선상 자동 낚시 켜짐 · 끄기':'선상 자동 낚시 켜기(PRO 멤버십)');}}else if(c){if(c.hidden)c.hidden=false;const away=!autoOn&&SRV&&SA&&SA.on&&SA.spot&&cur&&SA.spot!==cur.id;/* V73 다른 낚시터에서 자동 중 */c.classList.toggle('off',!autoOn&&!away);const ct=(away?'다른 곳':autoOn?autoChipTxt(A):'자동')+(A.x2&&isApp()&&!A.pass&&A.adsLeftToday>0?' · 2배':'');if(c.dataset.t!==ct){c.dataset.t=ct;c.innerHTML=AUTO_SVG+'<b class="v44an">자동</b><em class="v44ao">'+(autoOn||away?'ON':'OFF')+'</em><span>'+esc(autoOn||away?ct:ct.replace(/^자동( · )?/,''))+'</span>';/* V44-UI 둥근 자동 버튼 */c.classList.toggle('full',!!(autoOn&&A.full));c.setAttribute('aria-label',autoOn?'자동 낚시 켜짐 · 자세히 보기':away?'다른 낚시터에서 자동 낚시 중 · 자세히 보기':'자동 낚시 켜기');}}
   const mb=document.querySelector('#menu [data-k="autobtn"]');if(mb&&mb.textContent!==t){mb.textContent=t;mb.classList.toggle('on',!!autoOn);}}
-$('#autobtn').addEventListener('click',()=>{if(autoOn)openAutoInfo();else setAuto(true);});
+$('#autobtn').addEventListener('click',()=>{if(curTrip&&SRV){boatAutoToggle();return;}/* V80: 선상에서는 이 버튼도 선상 자동(PRO)으로 */if(autoOn)openAutoInfo();else setAuto(true);});
 // 자동 낚시를 한 번 던졌을 때의 확률(서버 settleCore·calc.autoRates와 같은 식) — 정산과 시간당 예상에 같이 쓴다
 function autoSim(s,chk){const night=sunPos(s).el<-6;const list=shoreCatch(s,chk.meth,chk.G.term.kind,chk.D*.8,night).filter(x=>x.w>0);const me=chk.G.rod.me;const cyc=AUTO_CYC[me]||60;const sumW=list.reduce((q,b)=>q+b.w,0);
   const pB=listBite(me==='pole'?'float':me,1,list,chk.G,false,autoDK(me==='pole'?'float':me)).pB;
@@ -6655,6 +6667,7 @@ function settleLocal(keep,why){const a=save.auto;if(!a.on||!a.spot)return null;c
   /* v38 포만감: 수확이 인정된 시간 [on0, satEnd)만 줄인다 · 쿨러에는 가장 무거운 COOLER_AUTO_N마리 */
   if(!capped&&H!==null&&H<end){capped='hungry';stopAt=H;}const satEnd=capped?stopAt:keep&&!full?now-Math.max(0,Math.min(S.cyc*1000,segs.carry||0)):end;const SS=satSettle(segs,sat0,on0,satEnd,H);save.sat=SS.to;
   let cool=null;try{cool=v38CoolPut(keptF.sort((x,y)=>y.kg-x.kg||x.at-y.at).slice(0,COOLER_AUTO_N),now);}catch(e){}
+  {const uT=Math.min(end,capped?(stopAt||end):keep&&!full?now-(segs.carry||0):end);if(!a.sub)for(const g of autoSegments(a,on0,uT))if(g.mode!=='pass')autoAddUse(a,g.from,g.to);}/* V81 하루 사용 시간(서버 settleCore와 같음) */
   a.on=keep?(!capped&&!full?now-(segs.carry||0):now):0;if(!keep)bankBoosts(a,now);/* v32 D4: 끄면 남은 부스트 보관(서버 settleCore와 같음) */const id='st'+now;if(pts>0)a.last={id,t:now,pts,xp,x2:0};// v29 S2: 반쯤 던진 시간(carry)은 다음 정산으로
   save.dur[rid]=DS.dur;save.spots[s.id]=(save.spots[s.id]||0)+n;save.pt=(save.pt||0)+pts-rep;save.score+=pts;persist();addXP(xp);refreshWallet();renderLv();const lostMs=capped&&capped!=='term'&&stopAt?Math.max(0,end-stopAt):0;/* v38: 서버 settleCore와 같게(채비 소진 말고는 모두) */
   const R={settled:true,id,away,full,capAt,capped:capped||undefined,casts:castN,segs:bySeg,n,lost,pts,xp,best,rels,tally,fresh,lvUp:RG.lv-lv0,spot:s,why,lostMs,item:rid,dur:DS.dur,repairs:DS.repairs,repairCost:rep,...(DS.skip?{repairSkip:DS.skip}:{}),...(capped==='broke'?{broke:true,brokeAt:DS.brokeAt,msg:BROKE_MSG}:{}),sat:SS,...(capped==='hungry'?{hungry:true,hungryAt:H,msg:HUNGRY_MSG}:{}),...(cool?{cooler:cool}:{})};try{dvSettleLog(R);}catch(e){}try{v38HungryNote(R);v38Hud(true);}catch(e){}return R;}
@@ -6667,7 +6680,7 @@ function autoOffAny(){if(autoOn){setAuto(false);return;}if(SRV){srvAutoSet(false
 function nextGoal(){const have=spendNow();const C=[];
   ['rod','line','leader'].forEach(cat=>(GEAR[cat]||[]).forEach(x=>{if(x.price>0&&!save.inv.own[x.id]&&unlockOK(x,RG.lv,dexCount(save.dex)))C.push({t:x.n,sub:CAT_TXT[cat],p:x.price,kind:'gear',id:x.id});}));
   BOAT_TRIPS.forEach(t=>{if((TRIP_LV[t.id]||1)<=RG.lv)C.push({t:'선상 출조 '+t.n,sub:'출조',p:feeOf(t),kind:'boat',id:t.id});});
-  const A=autoNow();if(A.netNext)C.push({t:'어망 '+A.netNext.capH+'시간',sub:'자동 낚시 쌓임 시간',p:A.netNext.price,kind:'net'});
+  const A=autoNow();if(A.netNext)C.push({t:'어망 '+A.netNext.capH+'시간',sub:'하루 자동 낚시 시간',p:A.netNext.price,kind:'net'});
   const up=C.filter(c=>c.p>have).sort((a,b)=>a.p-b.p);return up[0]||null;}
 function goalHTML(s){const g=nextGoal();if(!g)return'';const have=spendNow();const pc=Math.max(0,Math.min(100,Math.round(have/g.p*100)));const v=s&&autoRateH(s);const A=autoNow();const k=autoK(A.on?A.mode:'free');
   const h=v&&v.pts*k>0?(g.p-have)/(v.pts*k):0;
@@ -6680,17 +6693,17 @@ async function netUp(){const A=autoNow();const N=A.netNext;if(!N){toast('가장 
 function curAutoSpot(){const A=autoNow();if(SRV&&A.on&&A.spot){const t=SPOTS.find(x=>x.id===A.spot);if(t)return t;}/* V73 */return cur&&!curTrip?cur:SPOTS.find(x=>x.id===A.spot)||sel||null;}
 function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.now();const app=isApp(),adOk=app&&!!capPlug('AdMob')&&SRV;
   let h='<div class="sumbox" id="autoState"><div>'+(autoOn||A.on?'<b>자동 낚시 켜짐</b> · '+esc(MODE_TXT[A.mode]):'<b>자동 낚시 꺼짐</b>')+(s?' · '+esc(s.n):'')+'</div>'+
-    (A.full?'<div class="fullnote">어망이 가득 찼습니다 · 정산하면 다시 쌓입니다</div>':A.on?'<div class="k">'+(A.mode==='pass'?'이용권 남은 '+fmtMs(A.passUntil-now):'어망이 차기까지 '+fmtMs(A.leftMs))+(A.mode==='ad'?' · 광고 부스트 남은 '+fmtMs(A.boostLeftMs):'')+'</div>':'')+(passNextTxt(A)?'<div class="k" id="passNext">'+passNextTxt(A)+'</div>':'')+(v38Sat()<56?'<div class="k" id="v38autoP">'+esc(v38Sat()<=0?SAT_TXT:v38AutoTxt())+'</div>':'')+
+    (A.full?'<div class="fullnote">'+(A.mode==='sub'?'어망이 가득 찼습니다 · 정산하면 다시 쌓입니다':'오늘 자동 낚시 시간을 다 썼습니다 · 내일 0시(한국 시간)에 다시 채워집니다')+'</div>':A.on?'<div class="k">'+(A.mode==='pass'?'이용권 남은 '+fmtMs(A.passUntil-now):(A.mode==='sub'?'어망이 차기까지 ':'오늘 남은 자동 시간 ')+fmtMs(A.leftMs))+(A.mode==='ad'?' · 광고 부스트 남은 '+fmtMs(A.boostLeftMs):'')+'</div>':'')+(passNextTxt(A)?'<div class="k" id="passNext">'+passNextTxt(A)+'</div>':'')+(v38Sat()<56?'<div class="k" id="v38autoP">'+esc(v38Sat()<=0?SAT_TXT:v38AutoTxt())+'</div>':'')+
     (s&&rateTxt(s,A.on?A.mode:(A.sub?'sub':'free'))?'<div class="k" id="rateNow">지금 자동: '+rateTxt(s,A.on?A.mode:(A.sub?'sub':'free'))+' ('+esc(MODE_TXT[A.on?A.mode:(A.sub?'sub':'free')])+')</div>'+(baitCostTxt(s,A.on?A.mode:(A.sub?'sub':'free'))?'<div class="k" id="baitCost">'+baitCostTxt(s,A.on?A.mode:(A.sub?'sub':'free'))+'</div>':''):'')+'</div>';
   h+=(A.x2&&A.x2.pts>0&&adOk&&!A.pass&&A.adsLeftToday>0?'<div class="item mode" id="x2Card"><div><b>무료·멤버십 자동낚시 몫 2배</b> <span class="mtag">+'+fmtN(A.x2.pts||0)+'P</span><div class="spec">지난 정산의 무료·멤버십 구간만(멤버십은 확인 뒤 첫 '+NET_CAP_H[A.net|0]+'시간 안에 잡은 몫까지 · 무료와 같은 범위) · 이용권·부스트 구간 제외 · 남은 시간 '+fmtMs(A.x2.until-now)+' · 광고 1회</div></div><div class="act2"><button class="mini buy" type="button" id="autoX2">광고 보고 받기</button></div></div>':'');
-  h+='<div class="item mode'+(A.mode==='free'&&A.on?' on':'')+'"><div><b>무료</b> <span class="mtag">기본</span><div class="spec">시간 제한 없음 · 마지막 확인(켜기·정산) 뒤 최대 '+NET_CAP_H[A.net|0]+'시간 쌓임'+(s&&rateTxt(s,'free')?' · '+rateTxt(s,'free'):'')+'</div></div><div class="act2">'+(autoOn||(SRV&&A.on)?'<button class="mini" type="button" id="autoOff">끄고 정산</button>':'<button class="mini buy" type="button" id="autoOnB">자동 낚시 켜기</button>')+'</div></div>';
+  h+='<div class="item mode'+(A.mode==='free'&&A.on?' on':'')+'"><div><b>무료</b> <span class="mtag">기본</span><div class="spec">하루(0시 기준) '+NET_CAP_H[A.net|0]+'시간까지 사용 · 오늘 남은 '+fmtMs(A.on&&A.mode==='free'?A.leftMs:Math.max(0,(A.dayCapMs||NET_CAP_H[A.net|0]*3600e3)-(A.dayUsedMs||0)))+(s&&rateTxt(s,'free')?' · '+rateTxt(s,'free'):'')+'</div></div><div class="act2">'+(autoOn||(SRV&&A.on)?'<button class="mini" type="button" id="autoOff">끄고 정산</button>':'<button class="mini buy" type="button" id="autoOnB">자동 낚시 켜기</button>')+'</div></div>';
   if(app&&!GAME_APP)h+='<div class="item mode'+(A.mode==='ad'?' on':'')+'" id="adCard"><div><b>광고 부스트</b> <span class="mtag">1시간 2배</span><div class="spec">광고 1회 = 1시간 동안 자동 수확 2배(무료 대비) · 오늘 남은 '+A.adsLeftToday+'/'+A.adsMax+'회'+(A.boostLeftMs>0?' · 남은 부스트 '+fmtMs(A.boostLeftMs):'')+(s&&rateTxt(s,'ad')?' · '+rateTxt(s,'ad'):'')+'</div></div><div class="act2">'+
     (!adOk?'<span class="k">앱 업데이트 후 이용할 수 있습니다</span>':A.pass?'<span class="k">이용권 사용 중</span>':!autoOn?'<span class="k">자동 낚시를 켠 뒤 볼 수 있습니다</span>':A.adsLeftToday<=0?'<span class="k">오늘 광고를 모두 봤습니다</span>':'<button class="mini buy" type="button" id="adBoost">광고 보고 1시간 부스트</button>')+'</div></div>';
   if(A.pass)h+='<div class="item mode on"><div><b>24시간 이용권</b> <span class="mtag">사용 중</span><div class="spec">예전에 산 이용권 · 끝까지 자동 수확 2배(무료 대비) · 어망 한도 없이 이용권 끝까지 쌓임</div></div><div class="act2"><span class="k">남은 '+fmtMs(A.passUntil-now)+'</span></div></div>';/* V50 이용권 판매 종료 — 예전에 산 것만 표시 */
-  if(SRV&&(GAME_APP?A.sub:((!v45Beta()&&V45.rating)||A.sub)))/* V78 게임 앱은 가입한 회원에게만(구매 버튼 없음) · V52-4 운영자 미리 보기(A.sub)도 표시 · V50 멤버십 칸: 서버 연결·등급분류 표시가 있을 때만(시험용이면 숨김) */h+='<div class="item mode'+(A.mode==='sub'?' on':'')+'" id="subCard"><div><b>낚시GO PRO 멤버십</b> <span class="mtag">'+(A.sub?'적용 중':'월 9,900원 · 자동 갱신')+'</span><div class="spec">'+(A.sub?'구독 중 · 자동 낚시가 최대 '+A.capH+'시간 쌓임(무료 기본 12시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음':'낚시GO PRO 멤버십을 구독하면 자동 낚시가 최대 '+SUB_CAP_H+'시간 쌓임(무료 기본 12시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음 · 게임 안 유료 상품은 없습니다')+(s&&rateTxt(s,'sub')?' · '+rateTxt(s,'sub'):'')+'</div></div><div class="act2">'+v45RateHTML()+(A.sub?'':'<button class="mini buy" type="button" id="subGo">멤버십 보기</button>')+'</div></div>';
-  const N=A.netNext;h+='<div class="item"><div><b>어망 크기</b> <span class="mtag">'+(A.sub?'내 어망 '+NET_CAP_H[A.net|0]+'시간 · 멤버십 중 '+A.capH+'시간':'지금 '+A.capH+'시간')+'</span><div class="spec">무료·광고 부스트로 쌓이는 최대 시간 · 포인트로만 키움(12 → 13 → 14시간)'+(A.sub?' · 멤버십 중에는 '+SUB_CAP_H+'시간이 먼저 적용되고, 키운 어망은 멤버십이 끝난 뒤 쓰입니다':'')+'</div></div><div class="act2">'+(N?'<button class="mini" type="button" id="netUpB"'+(spendNow()<N.price?' disabled':'')+'>'+N.capH+'시간으로 · '+fmtN(N.price)+'P</button>':'<span class="k">가장 큰 어망</span>')+'</div></div>';
+  if(SRV&&(GAME_APP?A.sub:((!v45Beta()&&(V45.rating||V45.subOn))||A.sub)))/* V78 게임 앱은 가입한 회원에게만(구매 버튼 없음) · V52-4 운영자 미리 보기(A.sub)도 표시 · V50 멤버십 칸: 서버 연결·등급분류 표시가 있을 때만(시험용이면 숨김) */h+='<div class="item mode'+(A.mode==='sub'?' on':'')+'" id="subCard"><div><b>낚시GO PRO 멤버십</b> <span class="mtag">'+(A.sub?'적용 중':'월 9,900원 · 자동 갱신')+'</span><div class="spec">'+(A.sub?'구독 중 · 자동 낚시 하루 24시간(무료는 하루 8시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음':'낚시GO PRO 멤버십을 구독하면 자동 낚시를 하루 '+SUB_CAP_H+'시간(무료는 하루 8시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음 · 게임 안 유료 상품은 없습니다')+(s&&rateTxt(s,'sub')?' · '+rateTxt(s,'sub'):'')+'</div></div><div class="act2">'+v45RateHTML()+(A.sub?'':'<button class="mini buy" type="button" id="subGo">멤버십 보기</button>')+'</div></div>';
+  const N=A.netNext;h+='<div class="item"><div><b>어망 크기</b> <span class="mtag">'+(A.sub?'내 어망 '+NET_CAP_H[A.net|0]+'시간 · 멤버십 중 '+A.capH+'시간':'지금 '+A.capH+'시간')+'</span><div class="spec">무료 자동 낚시를 하루에 쓸 수 있는 시간 · 포인트로만 키움(8 → 10 → 12시간)'+(A.sub?' · 멤버십 중에는 '+SUB_CAP_H+'시간이 먼저 적용되고, 키운 어망은 멤버십이 끝난 뒤 쓰입니다':'')+'</div></div><div class="act2">'+(N?'<button class="mini" type="button" id="netUpB"'+(spendNow()<N.price?' disabled':'')+'>'+N.capH+'시간으로 · '+fmtN(N.price)+'P</button>':'<span class="k">가장 큰 어망</span>')+'</div></div>';
   h+=goalHTML(s);
-  h+='<p class="src">자동 낚시는 직접 낚시와 같은 확률(입질 없음·헛챔질·바늘털이·밑걸림 포함)로 낚시법에 따라 '+AUTO_CYC.lure+'~'+AUTO_CYC.surf+'초에 한 번 던지고, 한 마리당 기본 포인트 50%·경험치 35%를 받습니다. 무료는 그 절반이고, 광고 부스트는 무료의 2배입니다. '+(subAvail(A)?'낚시GO PRO 멤버십은 수확량은 무료와 같고 쌓이는 시간이 최대 '+SUB_CAP_H+'시간(무료 기본 12시간)으로 늘어나며, 포만감은 절반 속도로 줄어듭니다(광고 부스트 시간에는 무료와 같은 속도). ':'')+'직접 낚시로 낚으면 따로 포인트 +30% 보너스가 붙습니다. 게임을 끄거나 화면을 떠난 동안에도 계속되며, 돌아오면 서버 시간으로 정산합니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다. 위험 기상·채비 소진·선상에서는 멈춥니다.</p>';
+  h+='<p class="src">자동 낚시는 직접 낚시와 같은 확률(입질 없음·헛챔질·바늘털이·밑걸림 포함)로 낚시법에 따라 '+AUTO_CYC.lure+'~'+AUTO_CYC.surf+'초에 한 번 던지고, 한 마리당 기본 포인트 50%·경험치 35%를 받습니다. 무료는 그 절반이고, 광고 부스트는 무료의 2배입니다. '+(subAvail(A)?'낚시GO PRO 멤버십은 수확량은 무료와 같고 자동 낚시를 하루 '+SUB_CAP_H+'시간(무료는 하루 8시간) 쓸 수 있으며, 포만감은 절반 속도로 줄어듭니다(광고 부스트 시간에는 무료와 같은 속도). ':'')+'직접 낚시로 낚으면 따로 포인트 +30% 보너스가 붙습니다. 게임을 끄거나 화면을 떠난 동안에도 계속되며, 돌아오면 서버 시간으로 정산합니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다. 위험 기상·채비 소진·선상에서는 멈춥니다.</p>';
   const B=$('#autoBody');B.innerHTML=h;B.dataset.v='info';$('#autoModal').hidden=false;bindPay();
   const on=$('#autoOnB');if(on)on.onclick=()=>{if(!player||$('#world').hidden){toast('낚시터에 들어가서 켜세요');return;}setAuto(true);openAutoInfo();};
   const off=$('#autoOff');if(off)off.onclick=()=>{autoOffAny();$('#autoModal').hidden=true;};/* V73 다른 곳에서 도는 자동도 여기서 끔 */
@@ -6729,7 +6742,7 @@ function showAwayPopup(s,R){if(v36Ret(s,R))return;/* v36 돌아왔을 때 연출
   if(R.slow)h='<div class="sumbox" id="awaySum"><div>자동 낚시 정산 · <b class="num">+'+fmtN(R.pts)+'P</b></div><div class="k">연결이 느려 자세한 내역은 표시하지 못했습니다(잔액은 서버 기준으로 맞췄습니다)</div>';
   else if(R.reason==='gear')h+='<div class="k">채비가 맞지 않거나 다 떨어져 자동 낚시가 진행되지 않았습니다</div>';
   else if(R.reason==='broke'){}/* v35: 아래 dvAwayHTML */
-  else{if(R.full)h+='<div class="fullnote">어망이 가득 찼습니다 · 마지막 확인 뒤 '+(R.capH||A.capH)+'시간까지만 쌓였습니다'+(R.overMs>=60e3?' · 그 뒤 '+fmtMs(R.overMs)+'은 쌓이지 않았습니다':'')+'</div>';
+  else{if(R.full)h+='<div class="fullnote">'+(A.mode==='sub'?'어망이 가득 찼습니다 · 마지막 확인 뒤 '+(R.capH||A.capH)+'시간까지만 쌓였습니다':'오늘 자동 낚시 '+(R.capH||A.capH)+'시간을 다 써서 멈췄습니다 · 내일 0시(한국 시간)에 다시 채워집니다')+(R.overMs>=60e3?' · 그 뒤 '+fmtMs(R.overMs)+'은 쌓이지 않았습니다':'')+'</div>';
     h+='<div style="font-size:18px;margin:6px 0"><b class="num">'+(R.n||0)+'</b>마리 · <b class="num">+'+fmtN(R.pts)+'P</b> · <b class="num">+'+fmtN(R.xp)+'XP</b></div>';
     const SG=R.segs||{};const ord=['pass','sub','ad','free'].filter(k=>SG[k]&&SG[k].ms>0);
     if(ord.length)h+='<div id="awaySegs">'+ord.map(k=>'<div class="segrow" data-seg="'+k+'"><span>'+MODE_TXT[k]+'</span><span class="num">'+fmtMs(SG[k].ms)+' · '+SG[k].n+'마리 · +'+fmtN(SG[k].pts)+'P</span></div>').join('')+'</div>';
@@ -6746,7 +6759,7 @@ function showAwayPopup(s,R){if(v36Ret(s,R))return;/* v36 돌아왔을 때 연출
   const X2=(R.x2&&R.id&&A.x2&&A.x2.id===R.id)?A.x2:null;const adOk=isApp()&&!!capPlug('AdMob')&&SRV&&!!X2&&X2.pts>0&&!A.pass&&A.adsLeftToday>0;// v29 S2: 2배는 무료·광고 구간 몫만(서버 x2)
   if(adOk)h+='<div class="act2" style="margin:0 0 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="mini buy" type="button" id="awayX2">광고 보고 무료 자동낚시 몫 2배 (+'+fmtN(X2.pts)+'P)</button><span class="k">무료 구간만 · 정산 뒤 30분 안에 한 번 · 오늘 남은 광고 '+A.adsLeftToday+'회 · 닫아도 자동 낚시 창에서 받을 수 있습니다</span></div>';
   h+=goalHTML(s);
-  h+='<p class="src">자동 낚시는 게임을 끄거나 화면을 떠난 동안에도 계속되고, 마지막 확인 뒤 어망 크기('+A.capH+'시간)까지만 쌓입니다(이용권은 이용권 끝까지). 광고 부스트·이용권은 무료의 2배를 받습니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다.</p>';
+  h+='<p class="src">자동 낚시는 게임을 끄거나 화면을 떠난 동안에도 계속되고, 무료는 하루(0시 기준) '+A.capH+'시간까지 쓸 수 있습니다(멤버십은 하루 24시간, 이용권은 이용권 끝까지). 광고 부스트·이용권은 무료의 2배를 받습니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다.</p>';
   const ck=s&&checkGear(s),A2=autoNow();if(A2.on)h+='<div class="act2" style="display:flex;gap:8px;flex-wrap:wrap"><span class="k" style="flex-basis:100%">자동 낚시는 계속 켜져 있습니다</span><button class="mini" id="awayOff" type="button">자동 낚시 끄기</button><button class="mini" id="awayInfo" type="button">자동 낚시 모드 보기</button></div>';
   else if(s&&R.reason!=='gear'&&ck.ok&&!(ck.G.term.pack&&termLeft(ck.G.term.id)<=0)&&!autoOn)h+='<div class="act2" style="display:flex;gap:8px;flex-wrap:wrap"><button class="mini buy" id="awayGo">'+esc(s.n)+'에서 자동 낚시 다시 켜기</button><button class="mini" id="awayInfo" type="button">자동 낚시 모드 보기</button></div>';
   const B=$('#autoBody');B.innerHTML=h;B.dataset.v='away';$('#autoModal').hidden=false;
@@ -6769,14 +6782,14 @@ if(!TOPUP_ON){const b=document.getElementById('shopCharge');if(b)b.remove();}let
 // v32 D5 환불 안내 — V55 출시 문구(초안 표시 없음). 서버가 wallet.refundTxt({draft,note,text} 또는 문자열)를 주면 그 문구를 쓴다
 // FIXUP2 LEGAL-2: 서버 src/index.js REFUND_TXT.text와 글자까지 같은 문구(바꾸면 둘 다)
 // v33: 충전이 없어져 24시간 자동낚시 이용권만 다룬다(예전 유상 포인트 기록은 아래 내역·청약철회 버튼으로 계속 처리)
-const REFUND_TXT0='· 현재 게임 안에서 판매하는 유료 상품은 없습니다. 자동 낚시 최대 24시간(무료 기본 12시간)은 낚시GO PRO 멤버십(월 9,900원) 혜택이며, 멤버십 결제·해지·환불은 낚시GO 이용약관(Google Play로 구독한 경우 Google Play 환불 정책 포함)을 따릅니다. 게임 포인트는 낚시로만 모을 수 있고 판매·충전하지 않습니다. 게임 포인트는 게임 안에서만 쓰는 재화로 현금·상품권이나 다른 재화로 바꿀 수 없고, 회원끼리 직접 주고받는 기능은 없습니다. 선장 몫은 게임 규칙에 따라 지급되는 게임 내 보상입니다. 포인트·배·계정을 현금으로 사고팔거나 그런 거래를 중개하면 포인트 회수와 이용 제한 대상이 됩니다.\n' +
+const REFUND_TXT0='· 현재 게임 안에서 판매하는 유료 상품은 없습니다. 자동 낚시 하루 24시간(무료는 하루 8시간)은 낚시GO PRO 멤버십(월 9,900원) 혜택이며, 멤버십 결제·해지·환불은 낚시GO 이용약관(Google Play로 구독한 경우 Google Play 환불 정책 포함)을 따릅니다. 게임 포인트는 낚시로만 모을 수 있고 판매·충전하지 않습니다. 게임 포인트는 게임 안에서만 쓰는 재화로 현금·상품권이나 다른 재화로 바꿀 수 없고, 회원끼리 직접 주고받는 기능은 없습니다. 선장 몫은 게임 규칙에 따라 지급되는 게임 내 보상입니다. 포인트·배·계정을 현금으로 사고팔거나 그런 거래를 중개하면 포인트 회수와 이용 제한 대상이 됩니다.\n' +
     '· 문의: sunjulab.a1@gmail.com';
 let REFUND_TXT=REFUND_TXT0,REFUND_DRAFT=false;/* V55 출시: 초안 표시 없음 */
 // 서버 값이 없으면(다른 응답의 wallet) 마지막으로 받은 문구를 그대로 둔다
 function refundTxtSync(){const r=WAL&&WAL.refundTxt;if(r&&r.beta)return;/* v45 시험용 문구는 refundTxt()가 직접 */const t=typeof r==='string'?r:(r&&typeof r.text==='string'?r.text:'');if(t.trim()){REFUND_TXT=t.trim().slice(0,3000);REFUND_DRAFT=typeof r==='string'?false:!!r.draft;}else if(!REFUND_TXT){REFUND_TXT=REFUND_TXT0;REFUND_DRAFT=false;}}
 /* V55 멤버십 혜택이 켜진 때(서버 연결 + 등급분류 표시, 또는 운영자 미리 보기)만 멤버십 안내를 보인다 — 켜지지 않은 혜택을 약속하지 않게 */
-function subAvail(A){try{A=A||autoNow();}catch(e){}return !!(SRV&&(GAME_APP?(A&&A.sub):((!v45Beta()&&V45.rating)||(A&&A.sub))));}
-const MEMB_SENT='자동 낚시 최대 24시간(무료 기본 12시간)은 낚시GO PRO 멤버십(월 9,900원) 혜택이며, 멤버십 결제·해지·환불은 낚시GO 이용약관(Google Play로 구독한 경우 Google Play 환불 정책 포함)을 따릅니다. ';
+function subAvail(A){try{A=A||autoNow();}catch(e){}return !!(SRV&&(GAME_APP?(A&&A.sub):((!v45Beta()&&(V45.rating||V45.subOn))||(A&&A.sub))));}
+const MEMB_SENT='자동 낚시 하루 24시간(무료는 하루 8시간)은 낚시GO PRO 멤버십(월 9,900원) 혜택이며, 멤버십 결제·해지·환불은 낚시GO 이용약관(Google Play로 구독한 경우 Google Play 환불 정책 포함)을 따릅니다. ';
 function refundTxt(){if(v45Beta())return V45_BETA_REFUND;/* v45 시험용: 유료 상품 없음 */return subAvail()?REFUND_TXT:REFUND_TXT.replace(MEMB_SENT,'');}/* V55: 초안 표시를 붙이지 않는다 */
 let chgSel=TOPUP[0],chgFor=null;
 // 충전 가능 여부: 앱(Capacitor) → 준비 중, 오프라인(아티팩트 등) → 낚시GO 웹 안내, 서버 모드인데 결제 설정 없음 → 준비 중
@@ -7233,6 +7246,7 @@ async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const pos
   try{v36Sync(path,s,j);}catch(e){}/* v36 안내 퀘스트·전국 대물·짧은 목표 */
   try{v37Sync(path,s,j);}catch(e){}/* v37 구명조끼(409 NO_PFD) · 벗을 때 자동 정산 */
   try{v38Sync(path,s,j);}catch(e){}/* v38 포만감·쿨러·손맛·배고픈 정산 */
+  try{if(j&&j.trialOffer)setTimeout(()=>trialShow(j.trialOffer),1800);}catch(e){}/* V82 PRO 3일 체험 제안(서버가 정한 때만) */
   try{v45Sync(path,s,j);}catch(e){}/* v45 시험 기간 끝·인원 다 참 → 화면 전체 안내 */
   return{s,j,to:s===0&&to};}
 // C6 #26: 로그인했는데 서버가 실패하면 '연습 모드(계정에 저장 안 됨)'를 계속 보여 주고 20초마다 다시 연결 → 되면 새로 불러와 계정 기록으로
@@ -7256,7 +7270,17 @@ function tokCheck(){if(NET_DEAD&&tokNow()&&tokNow()!==deadTok)revive(true);}
 addEventListener('focus',tokCheck);
 // 서버 프로필 → 화면 저장값
 function applyRPG(r){for(const k of Object.keys(RG))delete RG[k];Object.assign(RG,{xp:0,lv:1,sp:0,sk:{},day:'',miss:[],streak:0,last:''},r||{});if(!RG.sk)RG.sk={};if(!RG.miss)RG.miss=[];}
-function setSA(a){if(a){SA=Object.assign({},a,{at:Date.now()});try{autoNotify();}catch(e){}try{backSpotRender();}catch(e){}}}
+/* V82 PRO 3일 무료 체험: 서버가 Lv.3 이상 · 처음 하루 자동 시간을 다 써 멈췄을 때 또는 처음 귀항했을 때 계정당 한 번 trialOffer를 준다.
+   결제 정보 없음 · 끝나면 자동으로 무료로(자동 결제 없음) · 게임 앱(GAME_APP)에도 낚시GO 결제 안내는 넣지 않는다(정보만) */
+let TRIAL_SHOWN=false;
+function trialEndTxt(t){const k=new Date(t+9*3600e3);return(k.getUTCMonth()+1)+'월 '+k.getUTCDate()+'일 '+String(k.getUTCHours()).padStart(2,'0')+':'+String(k.getUTCMinutes()).padStart(2,'0');}
+function trialShow(o){if(TRIAL_SHOWN||!o||!SRV)return;TRIAL_SHOWN=true;let m=$('#trialModal');if(!m){m=document.createElement('div');m.id='trialModal';m.className='modal';document.body.appendChild(m);}const d=o.days|0||3;
+  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="trT" style="width:min(460px,100%);box-sizing:border-box"><h2 id="trT" style="margin:0 0 6px">PRO '+d+'일 무료 체험</h2>'+(o.why?'<p style="margin:0 0 10px">'+esc(o.why)+'</p>':'')+'<ul style="margin:0 0 10px;padding-left:18px;line-height:1.7"><li>자동 낚시 하루 24시간(무료는 하루 8시간)</li><li>선상 출조 하루 2번 · 출조 중 자동 낚시</li><li>포만감 줄어드는 속도 절반</li><li>닉네임 옆 <b class="proTag">PRO</b> 표시</li></ul><p class="src" style="margin:0 0 12px">결제 정보 없이 계정당 한 번 · '+d+'일 뒤 자동으로 무료로 돌아갑니다(자동 결제 없음)</p><div class="row" style="gap:8px;justify-content:flex-end"><button class="chgbtn" id="trNo" type="button">괜찮아요</button><button class="chgbtn pay" id="trGo" type="button">'+d+'일 체험 시작</button></div></div>';
+  m.hidden=false;const done=async acc=>{$('#trGo').disabled=$('#trNo').disabled=true;const r=await net('trial',{accept:acc});m.hidden=true;
+    if(r.s===200&&r.j){if(r.j.auto)setSA(r.j.auto);if(acc&&r.j.trial)toast('PRO 체험을 시작했습니다 · '+trialEndTxt(r.j.trial.until)+'까지',3800);try{renderAutoBtn();myLabelSync(true);}catch(e){}}else if(acc)toast(errMsg(r));};
+  $('#trGo').onclick=()=>done(true);$('#trNo').onclick=()=>done(false);}
+function trialEndSoon(){try{const A=SA||{};const u=+A.trialUntil||0,n=Date.now();if(!u||u<=n||u-n>864e5)return;const k='fishinggo.meta.trialEnd';if(localStorage.getItem(k)===String(u))return;localStorage.setItem(k,String(u));toast('PRO 체험이 '+trialEndTxt(u)+'에 끝나고 무료로 돌아갑니다',4200);}catch(e){}}/* V82 끝나기 하루 전 안내(정보만) */
+function setSA(a){if(a){SA=Object.assign({},a,{at:Date.now()});try{trialEndSoon();}catch(e){}try{myLabelSync();}catch(e){}try{autoNotify();}catch(e){}try{backSpotRender();}catch(e){}}}
 function applyProfile(p){if(!p)return;try{boatDayTake(p);}catch(e){}/* V72 */try{save.v34=v4Norm({srv:1});v4Merge(p);}catch(e){}/* v34 */save.nick=p.nick||save.nick;save.pt=p.pt||0;save.score=p.score||0;save.count=p.count||0;
   save.inv=p.inv||{own:{},term:{}};if(!save.inv.own)save.inv.own={};if(!save.inv.term)save.inv.term={};if(p.eq)save.eq=p.eq;save.dex=p.dex||{};save.spots=p.spots||{};save.gold=goldNorm(p.gold);try{v35Prof(p);}catch(e){}/* v35 */
   applyRPG(p.rpg);setWal(p.wallet);save.auto={on:0,pass:0,boosts:[],net:0};save.rk={};setSA(p.auto);SRV_TRIP=p.trip||null;BOATAUTO=baOn(SRV_TRIP);captSync(p);refreshWallet();renderLv();try{if(!$('#intro').hidden)$('#nick').value=save.nick;}catch(e){}notesShow(p.notes);try{myLookApply();chumTick();}catch(e){}try{v36Prof(p);}catch(e){}/* v36 */try{v37Prof(p);}catch(e){}/* v37 외모 */try{v38Prof(p);}catch(e){}/* v38 포만감·쿨러 */try{v45Prof(p);}catch(e){}/* v45 이용등급·시험용 */}
@@ -7596,7 +7620,7 @@ const V45={rating:null,beta:null,stop:null};
 const V45_NOPAY='시험 기간에는 결제를 받지 않습니다',V45_FREE='시험 기간 무료';
 // 시험용일 때 환불 안내 — 서버 src/index.js BETA_REFUND와 글자까지 같게(서버 시험 28절)
 const V45_BETA_REFUND='시험 기간에는 결제를 받지 않아 유료 상품이 없습니다';
-function v45Prof(p){if(!p||typeof p!=='object')return;V45.rating=typeof p.rating==='string'&&p.rating.trim()?p.rating.trim().slice(0,40):null;V45.beta=p.beta&&p.beta.on===true?p.beta:null;v45Hud();v45Notice();}
+function v45Prof(p){if(!p||typeof p!=='object')return;V45.subOn=p.subOn===true;/* V83: 등급분류 전에도 운영자가 SUB_ON으로 PRO를 켤 수 있음(이용등급 표시는 GAME_RATING만) */V45.rating=typeof p.rating==='string'&&p.rating.trim()?p.rating.trim().slice(0,40):null;V45.beta=p.beta&&p.beta.on===true?p.beta:null;v45Hud();v45Notice();}
 function v45Beta(){return!!(SRV&&V45.beta);}
 function v45Date(t){const d=new Date(+t+9*3600e3);return d.getUTCFullYear()+'. '+(d.getUTCMonth()+1)+'. '+d.getUTCDate()+'.';}
 function v45Until(){const B=V45.beta;return B&&+B.until>0?'시험 기간 '+v45Date(B.until)+'까지':'';}
@@ -7766,7 +7790,7 @@ function upSave(u){try{localStorage.setItem(UPK,JSON.stringify(u));}catch(e){}}
 let upType=null;
 function upsell(type){if(TOPUP_ON?!canCharge():(type!=='auto'||!passPayOk()))return false;if(!$('#upsell').hidden)return false;const u=upLoad();const t=u[type]||{};if(t.never||t.day===dayKey())return false;
   t.day=dayKey();u[type]=t;upSave(u);upType=type;
-  if(type==='auto'){$('#upT').textContent='어망이 가득 찼습니다';$('#upP').textContent='무료 자동 낚시는 마지막 확인 뒤 '+autoNow().capH+'시간까지만 쌓입니다. 24시간 자동 낚시 이용권(9,900원, 결제 즉시 시작)은 이용권 끝까지 무료의 2배로 쌓입니다.';$('#upGo').textContent='이용권 보기 (9,900원)';}
+  if(type==='auto'){$('#upT').textContent='어망이 가득 찼습니다';$('#upP').textContent='무료 자동 낚시는 하루 '+autoNow().capH+'시간까지 쓸 수 있습니다(0시에 다시 채워짐). 24시간 자동 낚시 이용권(9,900원, 결제 즉시 시작)은 이용권 끝까지 무료의 2배로 쌓입니다.';$('#upGo').textContent='이용권 보기 (9,900원)';}
   else{$('#upT').textContent='퀘스트 완료!';$('#upP').textContent='낚시와 퀘스트로 포인트를 모아 장비를 갖춰 보세요.';$('#upGo').textContent='상점 보기';}
   $('#upsell').hidden=false;return true;}
 function upClose(){$('#upsell').hidden=true;}
@@ -7933,7 +7957,7 @@ function showEmote(ent,type){if(!ent||!EMO[type])return;if(ent.A){ent.A.emo=type
   ent.bubble=emoteSprite(type);ent.bubble.position.y=3.2;ent.g.add(ent.bubble);ent.bubbleT=3;}
 
 /* ===================== 처음 안내 (6단계) ===================== */
-const TUT_K='fishinggo.meta.tut';const AUTO_TUT=()=>' 바쁠 땐 자동 낚시(무료, 최대 '+AUTO_CAP_H+'시간 쌓임)를 켜 두세요 · '+(TOUCH?'위쪽 "자동" 칩':'위쪽 "자동" 버튼')+'.';let tutI=-1,tutAt=0,tutP0=null,tutFought=false;
+const TUT_K='fishinggo.meta.tut';const AUTO_TUT=()=>' 바쁠 땐 자동 낚시(무료, 하루 '+AUTO_CAP_H+'시간)를 켜 두세요 · '+(TOUCH?'위쪽 "자동" 칩':'위쪽 "자동" 버튼')+'.';let tutI=-1,tutAt=0,tutP0=null,tutFought=false;
 const TUT=[
  {t:'이동',b:()=>TOUCH?'왼쪽 아래 조이스틱을 끌어 걸어 보세요. 빈 화면을 끌면 시점이 돌아갑니다.':'W A S D 또는 방향키로 걸어 보세요. 마우스로 화면을 끌면 시점이 돌아가고, 휠로 확대합니다.',
   ok:()=>player&&tutP0&&Math.hypot(player.g.position.x-tutP0.x,player.g.position.z-tutP0.z)>1.5},
@@ -8148,8 +8172,8 @@ function myVestNow(){const c=vestHex(lookOf('vest'));return c!=null?c:myColor0()
 function myLookApply(){try{if(player)anglerLook(player,myVestNow(),lookOf('hat'),myWear());bobSkinMe();myLabelSync();}catch(e){}try{if(myPresWear())sendPres(true);}catch(e){}/* v37 */
   const c=myColor(),h=V4().eq.hat||null,t=V4().eq.title||null;if(myPres&&myPres.s!=null&&(myPres.c!==c||(myPres.h||null)!==h||(myPres.ti||null)!==t)){myPres.c=c;myPres.h=h;myPres.ti=t;sendPres(true);}}
 function v4PrevClear(){if(!PREV)return;PREV=null;myLookApply();}
-function myLabelSync(force){if(!player||!player.nl)return;const g=hasGold(),t=titleName(lookOf('title'));if(!force&&player.nlG===g&&player.nlT===t)return;
-  player.g.remove(player.nl);try{player.nl.material.map.dispose();player.nl.material.dispose();}catch(e){}player.nl=label(save.nick,{me:1,gold:g,t});player.nl.position.y=AV_LBL;player.g.add(player.nl);player.nlG=g;player.nlT=t;}
+function myLabelSync(force){if(!player||!player.nl)return;const g=hasGold(),t=titleName(lookOf('title')),pr=SRV&&!!(SA&&SA.sub);if(!force&&player.nlG===g&&player.nlT===t&&player.nlP===pr)return;
+  player.g.remove(player.nl);try{player.nl.material.map.dispose();player.nl.material.dispose();}catch(e){}player.nl=label(save.nick,{me:1,gold:g,t,pro:pr});player.nl.position.y=AV_LBL;player.g.add(player.nl);player.nlG=g;player.nlT=t;player.nlP=pr;}
 // 3D 모자: 머리 본(3)에 붙는 작은 메시 묶음. 모자를 쓰면 몸 지오메트리에서 기본 캡을 뺀다
 function hatMesh(id,lite){const g=new THREE.Group();g.name='hat_'+id;const s=lite?10:18,D=THREE.DoubleSide;
   const M=(geo,c,o,x,y,z,rx,ry,rz,sx,sy,sz)=>{const m=new THREE.Mesh(geo,avHatMat(c,o||undefined));m.position.set(x||0,y||0,z||0);m.rotation.set(rx||0,ry||0,rz||0);m.scale.set(sx||1,sy||1,sz||1);m.castShadow=true;g.add(m);if(!lite&&!(o&&o.side)){const ol=new THREE.Mesh(geo,avOLMat2());ol.position.copy(m.position);ol.rotation.copy(m.rotation);ol.scale.copy(m.scale);g.add(ol);}/* v47 외곽선 */return m;};
@@ -8500,7 +8524,7 @@ function tripPal(){const x=hullOk(tripHullId)&&COSM.hull.find(i=>i.id===tripHull
 function boatDeco(b){if(!b)return'';const hu=b.mine?V4().eq.hull||b.hull:b.hull,fl=b.mine?V4().eq.flag||b.flag:b.flag,h=hullOk(hu)&&COSM.hull.find(i=>i.id===hu);return(h?boatSVG(h.c,24):'')+(flagOk(fl)?flagSVG(fl,16):'');}
 
 function lvtHTML(){const ct=titleName(V4().eq.title);return ct?'<span class="lvt ctl">'+esc(ct)+'</span>':'<span class="lvt">'+esc(titleOf(RG.lv))+'</span>';}
-function peerLook(p,st){try{const pw=peerWear(st),wk=wearKey(pw);if(st.c!==p.vest||(st.h||null)!==(p.hatId||null)||wk!==p.wk){p.wk=wk;anglerLook(p,st.c,st.h,pw);}/* v37 외모(lk)·구명조끼·장갑·신발·바지·가방 */const t=st.ti||null;if(t!==(p.t0id||null)&&p.nl){p.g.remove(p.nl);try{p.nl.material.map.dispose();p.nl.material.dispose();}catch(e){}p.nl=label(p.name,{gold:!!st.gd,t:titleName(t)});p.nl.position.y=AV_LBL;p.g.add(p.nl);p.t0id=t;}}catch(e){}}
+function peerLook(p,st){try{const pw=peerWear(st),wk=wearKey(pw);if(st.c!==p.vest||(st.h||null)!==(p.hatId||null)||wk!==p.wk){p.wk=wk;anglerLook(p,st.c,st.h,pw);}/* v37 외모(lk)·구명조끼·장갑·신발·바지·가방 */const t=st.ti||null,pr=!!st.pr;if((t!==(p.t0id||null)||pr!==!!p.pr0)&&p.nl){p.g.remove(p.nl);try{p.nl.material.map.dispose();p.nl.material.dispose();}catch(e){}p.nl=label(p.name,{gold:!!st.gd,t:titleName(t),pro:pr});p.nl.position.y=AV_LBL;p.g.add(p.nl);p.t0id=t;p.pr0=pr;}/* V82 PRO 표시 */}catch(e){}}
 function v4Open(){return['#tankModal','#gyoModal'].some(q=>{const e=$(q);return!!e&&!e.hidden;});}
 function v4Shut(){['#tankModal','#gyoModal'].forEach(q=>{const e=$(q);if(e)e.hidden=true;});}
 /* ---- 버튼 한곳에서 받기 ---- */
@@ -10051,13 +10075,13 @@ function v44GoLbl(id){return{buy:'상점 열기',auto:'자동 낚시 켜기',har
 function v44GoBtn(G){if(!G||G.claim||G.kind!=='tut')return'';const t=TUTQ[G.arg-1],l=t&&v44GoLbl(t.id);if(!l)return'';
   return'<button type="button" class="mini buy v44go" data-v44go="'+t.id+'" aria-label="가기 · '+esc(l)+'" title="'+esc(l)+'">가기'+V44_ARR+'</button>';}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-v44go]');if(b){const k=b.dataset.v44go;try{hudClose();}catch(x){}
-    if(k==='buy')openShop('rod');else if(k==='auto'){if(!autoOn)setAuto(true);else openAutoInfo();}else if(k==='harvest')openAutoInfo();else if(k==='dex5')openDex();else if(k==='tank')openTank();else if(k==='zone2')$('#back').click();return;}
+    if(k==='buy')openShop('rod');else if(k==='auto'){if(curTrip&&SRV)boatAutoToggle();/* V80 */else if(!autoOn)setAuto(true);else openAutoInfo();}else if(k==='harvest')openAutoInfo();else if(k==='dex5')openDex();else if(k==='tank')openTank();else if(k==='zone2')$('#back').click();return;}
   const t=e.target.closest&&e.target.closest('[data-v44th]');if(t)v44Theme(t.dataset.v44th);});
 v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V74 */boatBadge,boatGo,boatPick,boatPortGo,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
