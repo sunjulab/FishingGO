@@ -1422,9 +1422,10 @@ body #v36map{padding:4px;gap:0}
 .thl .v4pv{background:#eef8fd;border-color:#bfe0f2}
 /* V92 꾸미기 미리보기는 스크롤해도 위에 붙어 따라온다(내리면 작게) */
 .v4pv{position:sticky;top:var(--v4top,0px);z-index:2;transition:padding .18s,box-shadow .18s}
-.v4pv.stuck{padding:6px 10px;box-shadow:0 8px 16px rgba(0,30,60,.18);background:#163746}.thl .v4pv.stuck{background:#eef8fd}
-.v4pv.stuck .v4av,.v4pv.stuck .v4av.v4av3{width:84px;height:104px}.v4pv.stuck .v4pvt>.k{display:none}.v4pv.stuck .v4pvt b{font-size:14px}
-.v4pv .v4pvn{display:none;font-size:12px;color:var(--mute)}.v4pv.stuck .v4pvn{display:block}
+.v4pv.stuck{width:max-content;margin-left:auto;padding:4px;border-radius:12px;box-shadow:0 8px 18px rgba(0,30,60,.25);background:#163746}.thl .v4pv.stuck{background:#eef8fd}
+.v4pv.stuck .v4pvt{display:none}.v4pv.stuck .v4av,.v4pv.stuck .v4av.v4av3{width:96px;height:124px}
+@media (max-width:520px){.v4pv.stuck .v4av,.v4pv.stuck .v4av.v4av3{width:76px;height:100px}}
+.v4pv .v4pvn{display:none}/* V92b: 내리면 캐릭터 화면만 오른쪽 위에 작게 따라온다(글·버튼 숨김 — 목록을 덜 가림) */
 .thl .v4av{--v4b1:#e8f6fd;--v4b2:#a9d8ee;--v4b3:#5fb0dc}.thl .v4av.v4av3{background:radial-gradient(120% 90% at 50% 0%,#e8f6fd 0%,#c4e5f5 60%,#a9d8ee 100%);box-shadow:inset 0 0 0 1.5px #bfe0f2}/* V48-UI fix 밝은 화면: 꾸미기 미리보기 뒤도 캐릭터 만들기와 같은 낮 하늘(가이드 12.10) */
 .thl .v39card{background:#fff;box-shadow:0 2px 0 rgba(214,190,146,.35)}
 .thl .qrr{background:#fff;border:1.5px solid var(--cbd);color:var(--rib2)}
