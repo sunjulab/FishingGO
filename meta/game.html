@@ -4202,7 +4202,7 @@ function avDrive(a,S,dt){const A=a.A,P=A.P,Q=A.Q;for(const k in P){const v=P[k];
     A.gy=-.1;if(k>4)break;_av4.set(0,-.1,0).applyQuaternion(_rq).add(_rp);const w=Math.min(1,P.lw),r=_av4.distanceTo(B[7].position);_av1.set(0,0,0);
     if(r>.44)_av1.subVectors(B[7].position,_av4).multiplyScalar((r-.43)/r);if(_av4.z<.27)_av1.z+=.27-_av4.z;const d=avAx(_av4);if(d<.3&&d>.02)_av1.addScaledVector(_tO,(.3-d)/d);_rh.addScaledVector(_av1,1.3*w);}
   // 왼손 목표: 자유 위치 ↔ 대 손잡이(ly) ↔ 릴 핸들 손잡이
-  a.ck.rotation.x=-A.cr;_av3.copy(P.lh);
+  a.ck.rotation.x=A.cr;/* V85: 릴 핸들 감는 방향 반대로 돌던 것 고침(손잡이 위쪽이 앞으로 넘어가게 감음) */_av3.copy(P.lh);
   if(P.lw>.001){const gy=P.ly>0?P.ly:A.gy==null?P.ly:A.gy;_av4.set(0,gy,gy>0?.03:0).applyQuaternion(_rq).add(_rp);_av3.lerp(_av4,Math.min(1,P.lw));}
   if(P.lc>.001&&!a.rodP){_av4.set(.03,-.095*Math.cos(A.cr),.095*Math.sin(A.cr));_av4.add(a.ck.position).applyQuaternion(_rq).add(_rp);_av4.x+=.035;_av3.lerp(_av4,Math.min(1,P.lc));}
   avPush(_av3,.26,1);avArm(B[7],B[8],_av3,POLE_L,1);
