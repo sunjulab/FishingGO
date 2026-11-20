@@ -592,6 +592,7 @@ body.vxcalm #vxburst.on{animation:vxf 1.7s linear forwards}body.vxcalm #vxburst:
 .v4ttl{display:inline-block;font-size:11.5px;font-weight:600;color:var(--mint);border:1px solid rgba(143,240,208,.45);border-radius:999px;padding:0 7px;margin-left:4px;white-space:nowrap;vertical-align:1px}.v4pvt .v4ttl{margin-left:0;align-self:flex-start}
 .v4g{margin:12px 0 6px}
 .ptier{display:inline-block;font-size:11px;font-weight:700;line-height:1;padding:3px 7px;border-radius:999px;color:#0b161d;background:var(--tc,#e8eef0);white-space:nowrap}
+.cfchips{margin:4px 0 6px;flex-wrap:wrap}.cfchips .chip{position:relative;font-weight:700}.cfchips .chip[aria-pressed="true"]{background:var(--rib2,#1f6fb2);color:#fff;border-color:transparent}.cfdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#1f9e6e;margin-left:5px;vertical-align:2px}.cfn{font-size:10.5px;font-weight:700;margin-left:4px;opacity:.7}
 .pbuf{font-size:11px;font-weight:700;color:#1f9e6e}.ptrow{display:flex;align-items:center;gap:8px;margin:10px 0 6px}.v4pick .pdsc{font-size:11px!important}
 .petnm{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 10px;margin:4px 0 8px;border:1px solid rgba(143,240,208,.35);border-radius:8px;background:rgba(143,240,208,.05)}.petnm input{width:9.5em;min-width:0;flex:0 1 auto;font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--fg)}.petnm .k{font-size:11.5px}
 .v4grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin:0 0 6px}
@@ -3975,8 +3976,11 @@ function avBody2(sp){if(AVG[sp.key])return AVG[sp.key];const L=sp.L,lite=sp.lite
     else if(!lite){B.add(new THREE.TorusGeometry(.066,.015,4,ls+1),avDk(scol,.8),kb,0,A0+.038,0,PI/2);for(const zz of[.045,.085])B.add(avRBox(.06,.01,.014,.004,1),sh&&sh.c2!=null?sh.c2:0xf6f4ef,kb,0,A0+.028+zz*-.35,zz+.012,-.5,0,0);}}
   // 팔: 어깨 공 · 소매 · 소매 끝 · 둥근 손(엄지) — 장갑(전체·손가락 컷). 여자는 어깨가 좁아 팔을 조금 안쪽으로
   const gl=sp.gl,hcol=gl?gl.c:skin,hk=gl?0:1,ax=F?.024:0;
-  for(const[s,sx]of[[4,-1],[7,1]]){const ox=-sx*ax;B.add(SP(.074*lw,ls-1,ls-4),sp.life?0xff7a1a:SH,s,ox,-.005,0).add(avCapG(.072*lw,.064*lw,AV_UA-.01,ls,cn),SH,s,ox).add(avCapG(.064*lw,.057*lw,AV_FA-.05,ls,cn),SH,s+1,ox);
-    B.add(CY(.061*lw,.063*lw,.034,ls,true),sp.tp&&sp.tp.c2!=null&&!sp.own&&sp.tp.s!=='tee'?sp.tp.c2:avDk(SH,.86),s+1,ox,.047-AV_FA).add(CY(.044,.047,.05,ls,true),skin,s+1,ox,.015-AV_FA,0,0,0,0,1,1,1,null,1);
+  for(const[s,sx]of[[4,-1],[7,1]]){const ox=-sx*ax;const SS=sp.tp&&!sp.own&&(sp.tp.s==='tee'||sp.tp.s==='stripe');/* V93 반팔: 위팔 반만 소매 · 나머지는 맨살 */
+    B.add(SP(.074*lw,ls-1,ls-4),sp.life?0xff7a1a:SH,s,ox,-.005,0);
+    if(SS){const sl=AV_UA*.5;B.add(avCapG(.066*lw,.058*lw,AV_UA-.01,ls,cn),skin,s,ox,0,0,0,0,0,1,1,1,null,1).add(avCapG(.076*lw,.072*lw,sl,ls,cn),SH,s,ox).add(CY(.077*lw,.077*lw,.028,ls,true),sp.tp.c2!=null?sp.tp.c2:avDk(SH,.86),s,ox,.012-sl).add(avCapG(.058*lw,.052*lw,AV_FA-.05,ls,cn),skin,s+1,ox,0,0,0,0,0,1,1,1,null,1);}
+    else{B.add(avCapG(.072*lw,.064*lw,AV_UA-.01,ls,cn),SH,s,ox).add(avCapG(.064*lw,.057*lw,AV_FA-.05,ls,cn),SH,s+1,ox);
+    B.add(CY(.061*lw,.063*lw,.034,ls,true),sp.tp&&sp.tp.c2!=null&&!sp.own&&sp.tp.s!=='tee'?sp.tp.c2:avDk(SH,.86),s+1,ox,.047-AV_FA).add(CY(.044,.047,.05,ls,true),skin,s+1,ox,.015-AV_FA,0,0,0,0,1,1,1,null,1);}
     B.add(SP(.064,lite?ls:ls+1,lite?ls-3:ls-2),hcol,s+2,ox,-.066,.004,0,0,0,.9,1.08,.98,null,hk).add(avCapG(.021,.019,.034,ls-3,2),hcol,s+2,ox,-.03,.046,-.75,0,0,1,1,1,null,hk);
     if(gl&&gl.s==='cut')B.add(SP(.041,ls,ls-3),skin,s+2,ox,-.112,.004,0,0,0,.95,.72,.98,null,1);
     if(gl&&gl.s!=='cut')B.add(CY(.054,.058,.036,ls,true),gl.c2!=null?gl.c2:avDk(gl.c,.7),s+2,ox,-.008);}
@@ -7171,6 +7175,7 @@ function renderShop(keepBar){if(shopTab==='charge'&&!TOPUP_ON)shopTab='my';const
   if(shopTab==='guide'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=guideHTML();refreshWallet();shopLayout();return;}/* V89 초보 안내 */
   if(shopTab==='unlock'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=unlockHTML();refreshWallet();shopLayout();return;}
   if(shopTab==='net'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=twShopHTML();refreshWallet();shopLayout();return;}/* v35 투망 */
+  if(shopTab==='pet'){shopTab='cosm';COSMF='pet';}/* V93 예전 펫 탭 → 꾸미기 · 펫 칸 */
   if(shopTab==='cosm'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=cosmHTML();try{v4Stick();}catch(e){}/* V92 */refreshWallet();shopLayout();try{v37ShopPv();}catch(e){}cosmCatLoad();return;}/* v34 꾸미기 · v37 3D 미리보기·광고주 목록 */
   if(shopTab==='charge'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=chargeHTML();refreshWallet();shopLayout();return;}
   const my=shopTab==='my',cats=my?['rod','line','leader','term']:[shopTab];
@@ -7195,7 +7200,8 @@ function renderShop(keepBar){if(shopTab==='charge'&&!TOPUP_ON)shopTab='my';const
 function shopPick(cat,id){shopSel=[cat,id];const g=$('#shopGrid');if(g){g.querySelectorAll('.itile.sel').forEach(e=>e.classList.remove('sel'));const b=g.querySelector('.itile[data-id="'+id+'"]');if(b)b.classList.add('sel');}
   const tc=$('#shopList .tipcol');if(tc){tc.querySelector('.tipin').innerHTML=tipHTML(cat,GBY[id]);shopTipOpen=true;tc.classList.add('open');tc.scrollTop=0;}}
 function shopEquip(slot,id,note){const lk=gearLock();if(lk){toast(lk);return;}if(id){const x=GBY[id];if(!x||catOf(id)!==slot||!owned(slot,x)){toast('보유하지 않은 장비는 장착할 수 없습니다');return;}}else if(slot!=='leader')return;if(SRV){srvEquip(slot,id||null).then(()=>{if(note&&save.eq[slot]===(id||null))equipNote(slot,id);});return;}if(autoOn){const R=settleLocal(true,'gear');if(R&&R.n)logMsg('장비를 바꾸기 전까지 자동 정산 · '+R.n+'마리 · +'+fmtN(R.pts)+'P','sys');}save.eq[slot]=id||null;persist();renderShop();bagRefresh();if(note)equipNote(slot,id);}
-$('#shopTabs').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;if(b.dataset.t!=='cosm')v4PrevClear();shopTab=b.dataset.t;shopSel=null;shopTipOpen=false;renderShop();$('#shopSheet').scrollTop=0;});
+$('#shopTabs').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;if(b.dataset.t!=='cosm'&&b.dataset.t!=='pet')v4PrevClear();shopTab=b.dataset.t;shopSel=null;shopTipOpen=false;renderShop();$('#shopSheet').scrollTop=0;});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-cf]');if(!b)return;COSMF=b.dataset.cf;const sh=$('#shopSheet'),y=sh.scrollTop;renderShop();const c=$('.cfchips'),pv=$('#v4pv'),st=$('#shopStick');sh.scrollTop=Math.min(y,c?c.offsetTop-(st?st.offsetHeight:0)-(pv&&pv.classList.contains('stuck')?0:0)-6:y);try{const cb=c&&c.querySelector('[aria-pressed="true"]');if(cb)cb.scrollIntoView({block:'nearest',inline:'center'});}catch(e){}});/* V93 꾸미기 칸 칩 */
 $('#shopSheet').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled||b.closest('#shopTabs'))return;
   if(b.dataset.chg){chgSel=+b.dataset.chg;$('#shopList').querySelectorAll('[data-chg]').forEach(x=>x.setAttribute('aria-pressed',String(+x.dataset.chg===chgSel)));$('#chgNote').textContent=noticeTxt(chgSel);{const db=$('#chgDebtBox');if(db)db.innerHTML=debtHTML(chgSel);}$('#chgPay').textContent=fmtN(chgSel)+'원 결제';chgSync();return;}
   if(b.id==='chgPay'){buyTopup();return;}if(b.id==='chgClose'){shopClose();return;}
@@ -8297,7 +8303,7 @@ async function v4Ask(n,p,extra,q,always){if(p<BUY_ASK&&!always)return true;v4Fly
 function v4Free(){return Math.max(0,walletNow().free);}
 const FREE_PT_TXT='게임 포인트';
 function v4Short(p){const f=v4Free();if(f>=p)return false;toast(fmtN(p-f)+'P 부족합니다'+(SRV?' · '+FREE_PT_TXT+'로만 살 수 있습니다':''));return true;}
-function v4Rerender(){try{if(!$('#shop').hidden&&(shopTab==='cosm'||shopTab==='my'||shopTab==='term'))renderShop();}catch(e){}try{const m=$('#tankModal');if(m&&!m.hidden)renderTank();}catch(e){}try{const c=$('#captModal');if(c&&!c.hidden)renderCapt();}catch(e){}
+function v4Rerender(){try{if(!$('#shop').hidden&&(shopTab==='cosm'||shopTab==='pet'||shopTab==='my'||shopTab==='term'))renderShop();}catch(e){}try{const m=$('#tankModal');if(m&&!m.hidden)renderTank();}catch(e){}try{const c=$('#captModal');if(c&&!c.hidden)renderCapt();}catch(e){}
   try{if(!$('#dex').hidden)openDex();}catch(e){}renderLv();myLookApply();chumTick();}
 
 /* ---- 내 모습: 장착 + (상점에서) 미리보기 ---- */
@@ -8521,12 +8527,17 @@ async function petNameSave(id){const x=petItem(id),el=$('#petNm');if(!x||!el||v4
 // V92 미리보기 고정: 상점 머리(#shopStick) 바로 아래에 붙고, 조금 내리면 작게(왕복 떨림 없게 140px에서 작게 · 60px 아래로 오면 원래 크기)
 function v4Stick(){const pv=$('#v4pv'),sh=$('#shopSheet');if(!pv||!sh)return;const st=$('#shopStick');pv.style.setProperty('--v4top',(st?st.offsetHeight:0)+'px');const y=sh.scrollTop,on=pv.classList.contains('stuck');if(!on&&y>140)pv.classList.add('stuck');else if(on&&y<60)pv.classList.remove('stuck');}
 document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='shopSheet')v4Stick();},true);
-function cosmHTML(){const t=titleName(lookOf('title'));
-  let h='<div class="v4pv" id="v4pv"><div class="v4av" id="v4av">'+avSVG(myVestNow(),lookOf('hat'),lookOf('float'))+'</div><div class="v4pvt"><b>'+esc(save.nick||'낚시꾼')+'</b>'+(t?'<span class="v4ttl">'+esc(t)+'</span>':'')+'<span class="k">칸을 누르면 먼저 입어 봅니다'+(inWorld()?' · 낚시터의 내 모습에도 바로 보입니다':'')+'</span><span class="k">한 번 사면 계속 쓰고, 칸마다 하나씩 착용합니다</span>'+'<span class="v4pvn">'+(PREV?'미리보기 중 · '+esc((cosmBy(PREV.id)||{}).n||V4_SLOT_TXT[PREV.slot]+' 벗기'):'지금 내 모습')+'</span>'+(PREV?'<button class="mini" type="button" data-v4="pvx">미리보기 끝내기</button>':'')+'</div></div>';
+function v4pvHTML(){const t=titleName(lookOf('title'));
+  return'<div class="v4pv" id="v4pv"><div class="v4av" id="v4av">'+avSVG(myVestNow(),lookOf('hat'),lookOf('float'))+'</div><div class="v4pvt"><b>'+esc(save.nick||'낚시꾼')+'</b>'+(t?'<span class="v4ttl">'+esc(t)+'</span>':'')+'<span class="k">칸을 누르면 먼저 입어 봅니다'+(inWorld()?' · 낚시터의 내 모습에도 바로 보입니다':'')+'</span><span class="k">한 번 사면 계속 쓰고, 칸마다 하나씩 착용합니다</span>'+'<span class="v4pvn">'+(PREV?'미리보기 중 · '+esc((cosmBy(PREV.id)||{}).n||V4_SLOT_TXT[PREV.slot]+' 벗기'):'지금 내 모습')+'</span>'+(PREV?'<button class="mini" type="button" data-v4="pvx">미리보기 끝내기</button>':'')+'</div></div>';}
+// V93 꾸미기 칸 고르기(상점 종류 칩처럼): 펫 · 상의 · 하의 · 신발 · 모자 · 조끼 · 구명조끼 · 장갑 · 가방 · 찌 · 칭호 — 고른 칸만 보여 준다
+var COSMF='pet';const COSM_CHIPS=[['pet','펫'],['top','상의'],['pants','하의'],['shoes','신발'],['hat','모자'],['vest','조끼'],['pfd','구명조끼'],['glove','장갑'],['bag','가방'],['float','찌'],['title','칭호']];
+function cosmChipsHTML(){const v=V4();return'<div class="chips cfchips" role="group" aria-label="꾸미기 종류">'+COSM_CHIPS.map(([k,n])=>{const on=k===COSMF,eq=!!v.eq[k],own=(COSM[k]||[]).filter(x=>x.p&&v.own.includes(x.id)).length;return'<button type="button" class="chip" data-cf="'+k+'" aria-pressed="'+on+'">'+n+(eq?'<i class="cfdot" title="착용 중"></i>':'')+(own?'<span class="cfn">'+own+'</span>':'')+'</button>';}).join('')+'</div>';}
+function cosmHTML(){if(!COSM_CHIPS.some(c=>c[0]===COSMF))COSMF='pet';let h=v4pvHTML();
   if(!V4().eq.pfd)h+=pfdWarnHTML();/* v37 */
-  h+=petSecHTML();/* V90 펫(등급별) */
-  for(const slot of['vest','top','pfd','hat','glove','shoes','pants','bag','float','title'])h+='<div class="igrp v4g">'+V4_SLOT_TXT[slot]+'</div>'+(slot==='pfd'?'<p class="k v4pfdt">'+esc(PFD_TXT)+'</p>':'')+'<div class="v4grid">'+(slot==='pfd'?'':cosmCard(slot,null))+COSM[slot].filter(x=>!x.off||V4().own.includes(x.id)).map(x=>cosmCard(slot,x)).join('')+'</div>';
-  return h+'<p class="src">꾸미기는 게임 안에서만 쓰는 모양이며 능력치는 바뀌지 않습니다(펫만 등급별 능력치) · 낚시 조끼·상의·구명조끼·모자·장갑·신발·바지·가방·칭호·펫(이름 포함)은 같은 낚시터의 다른 낚시꾼에게도 보입니다 · 펫 등급은 낚싯대처럼 Lv·어록으로 열립니다 · 수달·점박이물범·여우·바다거북은 실제로는 보호 야생생물이라 허가 없이 잡거나 기를 수 없습니다(야생생물법 등)'+(COSM_AD?' · \'광고\' 표시 항목은 광고주와 제휴해 넣은 광고 꾸미기입니다 · 받거나 입어도 실제 상품은 지급되지 않습니다':'')+'</p>';}
+  h+=cosmChipsHTML();const slot=COSMF;
+  if(slot==='pet')h+=petSecHTML();
+  else h+='<div class="igrp v4g">'+(COSM_CHIPS.find(c=>c[0]===slot)||[0,V4_SLOT_TXT[slot]])[1]+(slot==='top'?' <span class="k">· 겉옷(후드·플리스·재킷)은 낚시 조끼 대신 보입니다</span>':'')+'</div>'+(slot==='pfd'?'<p class="k v4pfdt">'+esc(PFD_TXT)+'</p>':'')+'<div class="v4grid">'+(slot==='pfd'?'':cosmCard(slot,null))+COSM[slot].filter(x=>!x.off||V4().own.includes(x.id)).map(x=>cosmCard(slot,x)).join('')+'</div>';
+  return h+'<p class="src">꾸미기는 게임 안에서만 쓰는 모양이며 능력치는 바뀌지 않습니다(펫만 등급별 능력치 · 자동 낚시는 절반) · 낚시 조끼·상의·구명조끼·모자·장갑·신발·바지·가방·칭호·펫(이름 포함)은 같은 낚시터의 다른 낚시꾼에게도 보입니다 · 펫 등급은 낚싯대처럼 Lv·어록으로 열립니다 · 수달·점박이물범·여우·바다거북은 실제로는 보호 야생생물이라 허가 없이 잡거나 기를 수 없습니다(야생생물법 등)'+(COSM_AD?' · \'광고\' 표시 항목은 광고주와 제휴해 넣은 광고 꾸미기입니다 · 받거나 입어도 실제 상품은 지급되지 않습니다':'')+'</p>';}
 async function cosmBuy(slot,id){const x=(COSM[slot]||[]).find(i=>i.id===id);if(!x||v4Fly)return;const v=V4();if(x.off&&!v.own.includes(id)){toast('기간이 끝난 꾸미기입니다');return;}if(v.own.includes(id)||(!x.p&&!x.sponsor)){/* v37 0P 광고 항목은 '받기' */if(slot==='hull'||slot==='flag')return boatPaint(slot,id);return cosmEquip(slot,id);}
   if((slot==='hull'||slot==='flag')&&!SRV){toast('선장 꾸미기는 낚시GO에서 로그인 후 이용할 수 있습니다');return;}
   if(x.need&&!needOk(x.need)&&!(SRV&&x.need==='capt')){toast(needTxt(x.need));return;}if(v4Short(x.p))return;
@@ -8542,7 +8553,7 @@ async function cosmEquip(slot,id,msg){id=id||null;if(v4Fly)return;if(slot==='pfd
     if(!v4Ok(r)){v4Fail(r,'cosm');v4Rerender();return;}const n=v4Take(r.j);if(!n||(V4().eq[slot]||null)!==id){V4().eq[slot]=id;if(!n)v4Later();}}
   else{v.eq[slot]=id;persist();}
   if(PREV&&PREV.slot===slot)PREV=null;try{v37Equipped(slot,id);}catch(e){}toast(msg||(x?x.n+' 착용':V4_SLOT_TXT[slot]+' 기본으로'));v4Rerender();}
-function cosmPreview(slot,id){id=id||null;const v=V4();PREV=(v.eq[slot]||null)===id?null:{slot,id};myLookApply();if(!$('#shop').hidden&&shopTab==='cosm'){const sc=$('#shopSheet').scrollTop;renderShop();$('#shopSheet').scrollTop=sc;}}
+function cosmPreview(slot,id){id=id||null;const v=V4();PREV=(v.eq[slot]||null)===id?null:{slot,id};myLookApply();if(!$('#shop').hidden&&(shopTab==='cosm'||shopTab==='pet')){const sc=$('#shopSheet').scrollTop;renderShop();$('#shopSheet').scrollTop=sc;}}
 
 /* ---- 집어제(소모품) ---- */
 function chumLeft(){const e=V4().chum;return e>0?Math.max(0,e-Date.now()):0;}
