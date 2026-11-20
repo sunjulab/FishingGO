@@ -833,7 +833,10 @@ button.hb:hover{background:rgba(24,38,50,.9)}
   background:radial-gradient(circle at 50% 37%,#ffd8b8 0 21%,transparent 22%),radial-gradient(ellipse 62% 44% at 50% 100%,var(--acc) 0 98%,transparent 100%),linear-gradient(180deg,#2f5468,#173040);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2)}
 .lvchip.hb b{font-size:14px}.lvchip.hb .lvt{display:none}
 .lvchip.hb .xpbar,#world #spotbar .lvchip.hb .xpbar{display:block;width:54px;height:5px;margin-top:4px;background:rgba(255,255,255,.16)}
-.lvchip.hb .spdot{position:absolute;top:-5px;right:-4px;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 4px;box-sizing:border-box;box-shadow:0 0 0 2px #0b141c}
+.lvchip.hb .spdot{position:absolute;top:auto;bottom:1px;left:3px;right:auto;min-width:24px;height:17px;line-height:17px;text-align:center;padding:0 4px;box-sizing:border-box;font-size:11px;font-weight:800;box-shadow:0 0 0 2px #0b141c;z-index:2;animation:spPulse 1.6s ease-in-out infinite}/* V88 스킬 포인트: 얼굴 동그라미 오른쪽 아래(칩 안 — 예전엔 칩 밖 모서리라 잘림) · ▲숫자 · 깜빡임 */
+
+@keyframes spPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+@media (prefers-reduced-motion:reduce){.lvchip.hb .spdot{animation:none}}
 /* ---- 낚시터 상태 바 ---- */
 #world .top{display:block;padding:calc(8px + var(--sat)) max(10px, env(safe-area-inset-right,0px)) 0 max(10px, env(safe-area-inset-left,0px));pointer-events:none}
 #world #spotbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;row-gap:6px;padding:0;margin:0;background:none;border:0;border-radius:0;backdrop-filter:none;-webkit-backdrop-filter:none;min-width:0;pointer-events:none}
@@ -2165,6 +2168,10 @@ function lureRetrieve(castD,spd){return Math.max(2,Math.min(90,(castD-3)/spd));}
 function noneWait(me,castD,spd,u){if(me==='lure')return lureRetrieve(castD,spd);const w=NONE_WAIT[me]||[30,50];return w[0]+(w[1]-w[0])*u;}
 // 루어 입질 시각은 항상 실제 회수 구간 안(착수 1.5초 뒤 ~ 회수 끝 0.8초 전). 감기를 멈추면 루어가 더 오래 물에 있으므로 그 시각에 그대로 입질한다
 function biteDelay(me,castD,spd,u){if(me==='lure'){const R=(castD-3)/spd,hi=Math.max(.3,R-.8),lo=Math.min(1.5,hi*.5);return lo+u*(hi-lo);}return me==='surf'?10+u*50:me==='boat'?3+u*22:6+u*34;}
+/* V88: 파이팅 시작 거리 = 걸린 순간 채비(찌·루어)가 실제로 있는 거리 — 루어는 감아 오는 중에 물어 던진 거리(castD)보다 가깝다(예: 70m 던져 30m에서 걸렸는데 남은 거리 70m로 나오던 것). 선상은 수심 그대로 */
+function fightStartD(){try{if(curTrip||!pBob||!player)return castD;const p=player.g.position,b=pBob.position,d=Math.hypot(p.x-b.x,p.z-b.z);return isFinite(d)?Math.max(3,Math.min(castD,d)):castD;}catch(e){return castD;}}
+/* V88 '실전 같은 동작' 안내는 하루 한 번만(예전 20초마다 — 너무 자주 뜸) */
+function egiTipOk(){try{const k='fishinggo.meta.egiTip',d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);if(localStorage.getItem(k)===d)return false;localStorage.setItem(k,d);return true;}catch(e){if(window.__egiTip)return false;window.__egiTip=1;return true;}}
 function escapeChance(n,ratio,G,skF){return Math.max(.02,Math.min(.45,(ESC_BASE+(ESC_SP[n]||0))*(1-3*gearSens(G))*(1-.05*(skF||0))+.12*Math.min(1.5,Math.max(0,ratio-1))));}
 function escKind(n){return(ESC_SP[n]||0)>=.04?'jump':'pull';}
 function rawPts(f,cm,method,ratio){const MD={lure:.8,float:1,pole:.8,surf:1.2,boat:2}[method]||1;return cm*f.pts*MD*(1+.5*Math.min(1,ratio));}
@@ -2408,7 +2415,11 @@ const REGIONS=['동해','서해','서남해','남해','제주','민물'];
 const REGION_REWARD=3000;
 function zoneDex(dex,zone,hasNet){let have=0,need=0;for(const f of FISH){if(!f.z.includes(zone)||(f.net&&!hasNet)||(!f.net&&!Object.keys((FX[f.n]||{}).me||{}).length))continue;need++;const d=dex&&dex[f.n];if(d&&(+d.n||0)>0)have++;}return{have,need};}
 // 레벨 목표: 그 레벨에 닿으면 한 번 받는다(레벨업 보상 Lv×30P와 따로). 합계 15,900P — ECON_SPEC v36: Lv.50까지 예상 무상 수입의 3% 미만
-const LV_REWARD={5:300,10:600,15:1000,20:1500,30:2500,40:4000,50:6000};
+/* V87: 레벨 목표 ×약 3~4(수입 상향과 맞춤 · 운영자 결정) */
+const LV_REWARD={5:1000,10:2000,15:3000,20:5000,30:10000,40:15000,50:25000};
+const LVUP_PT=100;const LVUP_BAIT=10;/* V87 레벨업마다 lvUpPt(Lv) = Lv×100 + Lv²×3 P(고레벨일수록 더 · 예전 Lv×30) + 미끼 10개(lvBaitPick: 지금 단 미끼 종류의 내 레벨·어록으로 쓸 수 있는 가장 좋은 등급) */
+function lvUpPt(l){return l*LVUP_PT+l*l*3;}
+function lvBaitPick(eq,lv,dexN){const base=String(eq||'').replace(/_(m|h|x|l)$/,''),g0=GEAR.term.find(x=>x.id===base),b=g0&&g0.pack?base:'t_jig3';let best=b;for(const sf of['_m','_h','_x','_l']){const g=GEAR.term.find(x=>x.id===b+sf);if(!g)continue;const u=unlockOf(g);if((lv|0)>=u.lv&&(dexN|0)>=(u.dex||0))best=g.id;}return best;}
 function lvMiles(lv,claimed){const c=[];for(const v of Array.isArray(claimed)?claimed:[])if(LV_REWARD[v]&&!c.includes(+v))c.push(+v);c.sort((a,b)=>a-b);
   const claimable=Object.keys(LV_REWARD).map(Number).filter(l=>(lv||1)>=l&&!c.includes(l)).sort((a,b)=>a-b);return{claimable,claimed:c};}
 // 전국 대물 이벤트(게임 속 이벤트 — 실제 그 장소에 대물이 나온다는 뜻이 아님). 매일 KST EVENT_SLOTS시에 시작해 EVENT_MS 동안.
@@ -5247,7 +5258,7 @@ function egiTick(dt){
   EG.sag+=(sag-EG.sag)*Math.min(1,dt*(sag<EG.sag?30:10));EG.wv=wv;EG.ph=ph;
   // 리듬 칭찬(연출만) · 오래 샤크리를 안 하면 안내
   const ft=fall?(EG.tot?sj-.45:T-EG.st):0;
-  if(!autoOn&&state==='wait'&&!EG.pend){if(EG.tot&&fall&&!EG.good&&EG.setN>=2&&EG.setN<=3&&ft>=3){EG.good=true;if(T-egiGoodAt>20){egiGoodAt=T;toast(EG.msg='실전 같은 동작입니다 · '+egiWords().n+' '+EG.setN+'번 · '+egiWords().fall+' 3초 (입질 확률은 같고, 손맛 연습용입니다)');/* C6 #91: 리듬은 연출 — 확률에 영향이 있는 것처럼 말하지 않는다 */}}
+  if(!autoOn&&state==='wait'&&!EG.pend){if(EG.tot&&fall&&!EG.good&&EG.setN>=2&&EG.setN<=3&&ft>=3){EG.good=true;EG.msg='실전 같은 동작입니다 · '+egiWords().n+' '+EG.setN+'번 · '+egiWords().fall+' 3초 (입질 확률은 같고, 손맛 연습용입니다)';if(T-egiGoodAt>20&&egiTipOk()){egiGoodAt=T;toast(EG.msg='실전 같은 동작입니다 · '+egiWords().n+' '+EG.setN+'번 · '+egiWords().fall+' 3초 (입질 확률은 같고, 손맛 연습용입니다)');/* C6 #91: 리듬은 연출 — 확률에 영향이 있는 것처럼 말하지 않는다 */}}
     const since=EG.tot?sj:T-EG.st,now=performance.now();if(!EG.hinted&&since>14&&now-egiHintAt>60e3){EG.hinted=true;egiHintAt=now;toast(EG.msg=egiWords().coach);}}
   // 리듬 표시
   egiHud(true);const e=$('#egihud');
@@ -5596,7 +5607,7 @@ function hook(){fishGold=false;evt('bite');if(player)player.A.hookT=0;biteEnd(fa
   const pexp=boat?pexpBoat(C):pexpShore(C,curChk.G);
   fsize=v36EvSize(Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexp))*10)/10);fishKgNow=fishKg(fish,fsize);ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=!fishGold&&Math.random()<escapeChance(fish.n,ratio,curChk.G,sk('fight'))?{at:.2+Math.random()*.65,kind:escKind(fish.n)}:null;// v31 S3 #43: 황금 물고기는 미리 정한 놓침 없음
   if(ratio>BREAK_R){const nm=(fishGold?'황금 ':'')+fish.n;fishGold=false;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+breakHint()+loseRig(),'break');return;}// v31 S3 #64: 공용 한계(서버와 같음)
-  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');if(!autoOn)toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=castD;surge=0;holding=autoOn||pressed;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
+  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');if(!autoOn)toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=autoOn||pressed;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
 // v32 #210: 대여 채비 값 = min(낼 수 있는 포인트, 30). 서버는 포인트에서만·미정산이 있으면 0(rentalCost)
 function rentCost(){return 0;}/* V76 운영자 결정: 선상 대여 채비·미끼는 선비에 모두 포함 — 잃어도 따로 내지 않음 */
 function rigLossAdd(c){if(TS&&c>0)TS.rig=(TS.rig||0)+c;}
@@ -6083,7 +6094,7 @@ addEventListener('keydown',e=>{if(cardDT&&state==='result'&&(e.key===' '||e.key=
 addEventListener('pointerdown',e=>{if(cardDT&&state==='result'&&!$('#world').hidden){e.preventDefault();e.stopPropagation();cardShow(true);}},true);
 
 /* ---- 루프 ---- */
-let T=0,snagMoveT=-1e9,chargeRy0=null;const camP=new THREE.Vector3(0,8,30),camT=new THREE.Vector3();
+let T=0,snagMoveT=-1e9,chargeRy0=null,OCCK=1;const camP=new THREE.Vector3(0,8,30),camT=new THREE.Vector3();
 let lastRT=performance.now();
 let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+=dt;const p=player.g.position;{const bc=state==='bite'||state==='hooking';if(bc!==bitingCls){bitingCls=bc;$('#world').classList.toggle('biting',bc);}
   /* v32 LC2 #255: 입질·밑걸림도 presence로(다른 사람에게 찌가 들어가거나 대를 당기는 모습). wait↔bite↔snag 사이만 여기서 바꾸고 나머지는 기존 흐름 */if(PRES_SUB[myPres.st]&&PRES_SUB[state]&&myPres.st!==state&&!autoOn){myPres.st=state;sendPres(true);}}{const now=performance.now();const rdt=Math.min(1000,now-lastRT);lastRT=now;autoTick(dt,rdt);}try{boatAutoTick(dt);}catch(e){}/* V84 선상 자동 모습 */
@@ -6114,8 +6125,8 @@ let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+
    const hold=!vxCalm()&&state==='result'&&!autoOn&&player.fish.visible&&player.A.fishT<2.2?1:0;if(hold&&VX.yawB==null&&player.A.fishT<.3){VX.yawB=yaw;yawGoal=player.g.rotation.y+(SHW.on?SHW.sd:.55);}/* v38: 한 손으로 들면 오른쪽 앞(고기가 얼굴을 가리지 않게) */if(state!=='result'&&VX.yawB!=null){if(state==='idle')yawGoal=VX.yawB;VX.yawB=null;}VX.HC+=(hold-VX.HC)*Math.min(1,dt*2.5);}
   const FCk=VX.FC,smF=Math.max(0,Math.min(1,(.4-((player.fish&&player.fish.userData.L)||.4))/.3)),dd=(dist+FCk*Math.min(9,Math.max(0,(state==='fight'?fdist:castD*.5))*.22))*(1-(.38+.17*smF)*VX.HC);/* v32 LC2 #256: 작은 고기는 더 가까이 */
   const ck=Math.max(0,Math.min(1,(4-dd)/(4-CAM_MIN)));camT.set(p.x,p.y+1.5-.35*VX.HC-.5*ck,p.z);/* v47 키가 줄어 시점 목표도 조금 내림 · V49: 가까이 당기면 가슴(구명조끼·로고) 높이로 */if(player.nl){const nv=ck<.55;if(player.nl.visible!==nv)player.nl.visible=nv;}if(FCk>.002){/* v32 #197: 흔들림 줄이기 — 찌를 천천히 따라가는 목표점·작은 배율(파이팅 중 좌우 출렁임 없음) */const cm=vxCalm(),bp=pBob.position;if(!VX.cb)VX.cb=bp.clone();if(cm)VX.cb.lerp(bp,Math.min(1,dt*.6));else VX.cb.copy(bp);const B=VX.cb,fk=cm?.15:.34;camT.x+=(B.x-p.x)*fk*FCk;camT.z+=(B.z-p.z)*fk*FCk;camT.y+=(Math.max(B.y,p.y)-camT.y+.6)*(cm?.1:.25)*FCk;}else if(VX.cb)VX.cb=null;const cp=Math.cos(pitch);tmp.set(camT.x+Math.sin(yaw)*cp*dd,camT.y+Math.sin(pitch)*dd,camT.z+Math.cos(yaw)*cp*dd);
-  if(OCC.length){camDir.subVectors(tmp,camT);const L=camDir.length();camDir.divideScalar(L);camRay.set(camT,camDir);camRay.far=L;const h=camRay.intersectObjects(OCC,true)[0];if(h)tmp.copy(camT).addScaledVector(camDir,Math.max(Math.min(1.6,dd),h.distance-.5));}// 등대·바위·배가 사이에 있으면 카메라를 당긴다
-  const wy=waveY(tmp.x,tmp.z,T)+.6;if(tmp.y<wy)tmp.y=wy;camP.lerp(tmp,Math.min(1,dt*6));camera.position.copy(camP);camera.lookAt(camT);if(SHW.on||SHW.w>0||SHW.fs)showCam(dt);if(EATC.on||EATC.w>0||EATC.fs)eatcCam(dt);/* V41 먹는 장면 */
+  if(OCC.length){camDir.subVectors(tmp,camT);const L=camDir.length();camDir.divideScalar(L);camRay.set(camT,camDir);camRay.far=L;const h=camRay.intersectObjects(OCC,true)[0];const f=h?Math.max(Math.min(1.6,dd),h.distance-.5)/L:1;OCCK+=(f-OCCK)*Math.min(1,dt*(f<OCCK?10:1.2));if(OCCK<.999)tmp.copy(camT).addScaledVector(camDir,L*Math.min(1,OCCK));}else OCCK=1;/* V87: 가림 거리 부드럽게(가까이는 빨리, 멀리는 천천히) — 화면을 돌릴 때 나무·기둥·바위 모서리를 스칠 때마다 카메라가 들락날락해 덜덜 떨리던 것 */// 등대·바위·배가 사이에 있으면 카메라를 당긴다
+  {const gy=walkFn(tmp.x,tmp.z);if(gy!=null){if(tmp.y<gy+.6)tmp.y=gy+.6;}else{const wy=waveY(tmp.x,tmp.z,T)+.6;if(tmp.y<wy)tmp.y=wy;}}/* V87: 땅 위에서는 땅 높이로(예전엔 땅 위에서도 파도 높이를 따라 카메라가 오르내려 화면이 흔들림) */camP.lerp(tmp,Math.min(1,dt*6));camera.position.copy(camP);camera.lookAt(camT);if(SHW.on||SHW.w>0||SHW.fs)showCam(dt);if(EATC.on||EATC.w>0||EATC.fs)eatcCam(dt);/* V41 먹는 장면 */
   if(!$('#fight').hidden&&(fightPT-=dt)<=0){fightPT=.15;if(fightPlace())layoutHUD();}
   // 물 표면
   WVU.uT.value=T;SKYT.value=T;stormTick(T);
@@ -6285,12 +6296,12 @@ function unlockRuleTxt(){const by={rod:{},line:new Set(),leader:new Set(),term:n
   return'낚싯대 '+rp.join(' · ')+(ex?' (일부 '+ex+'종은 다름)':'')+' · '+ot.join(' · ');}
 function unlockOK(x,lv,dexN){const u=unlockOf(x);return(lv||1)>=u.lv&&(dexN||0)>=u.dex;}
 function feeOf(t){return Math.round(t.fee*(1-.05*sk('boat')));}
-function addXP(n){RG.xp+=n;const l0=RG.lv;while(RG.xp>=xpNeed(RG.lv)){RG.xp-=xpNeed(RG.lv);RG.lv++;RG.sp++;save.pt=(save.pt||0)+RG.lv*30;}
+function addXP(n){RG.xp+=n;const l0=RG.lv;while(RG.xp>=xpNeed(RG.lv)){RG.xp-=xpNeed(RG.lv);RG.lv++;RG.sp++;save.pt=(save.pt||0)+lvUpPt(RG.lv);try{const tid=lvBaitPick(save.eq&&save.eq.term,RG.lv,dexCount(save.dex));save.inv.term[tid]=(+save.inv.term[tid]||0)+LVUP_BAIT;}catch(e){}}
   if(RG.lv>l0){const l1=RG.lv;setTimeout(()=>lvNote(l0,l1),900);}persist();renderLv();}
 // C6 #78: 레벨이 여러 단계 오르면 알림 한 번으로 합친다(레벨마다 Lv×30P · 스킬 포인트 1)
-function lvGainP(l0,l1){let s=0;for(let l=l0+1;l<=l1;l++)s+=l*30;return s;}
-function lvNote(l0,l1){if(!(l1>l0))return;toast('레벨 업! '+(l1-l0>1?'Lv.'+l0+' → ':'')+'Lv.'+l1+' '+titleOf(l1)+(SKILLS.some(s=>sk(s.id)<s.max)?' · 스킬 포인트 +'+(l1-l0):'')+' · +'+lvGainP(l0,l1).toLocaleString('ko-KR')+'P',4200);try{chime();}catch(e){}}
-function renderLv(){try{questBadge();}catch(e){}document.querySelectorAll('.lvchip').forEach(el=>{el.classList.toggle('gold',hasGold());el.title=hasGold()?'칭호 황금 낚시꾼':'';el.innerHTML='Lv.<b class="num">'+RG.lv+'</b> '+lvtHTML()+'<i class="xpbar"><i style="width:'+Math.min(100,RG.xp/xpNeed(RG.lv)*100).toFixed(0)+'%"></i></i>'+(spUsable()?'<span class="spdot">'+RG.sp+'</span>':'');});if(typeof refreshWallet==='function')refreshWallet();if(typeof unlockCheck==='function')unlockCheck();}
+function lvGainP(l0,l1){let s=0;for(let l=l0+1;l<=l1;l++)s+=lvUpPt(l);return s;}
+function lvNote(l0,l1){if(!(l1>l0))return;toast('레벨 업! '+(l1-l0>1?'Lv.'+l0+' → ':'')+'Lv.'+l1+' '+titleOf(l1)+(SKILLS.some(s=>sk(s.id)<s.max)?' · 스킬 포인트 +'+(l1-l0)+'(왼쪽 위 Lv를 눌러 배우기)':'')+' · +'+lvGainP(l0,l1).toLocaleString('ko-KR')+'P · '+((()=>{try{const g=GEAR.term.find(x=>x.id===lvBaitPick(save.eq&&save.eq.term,l1,dexCount(save.dex)));return(g?g.n.replace(/\s*\d+$/,''):'미끼')+'('+(g&&g.tier||'')+')';}catch(e){return'미끼';}})())+' '+(LVUP_BAIT*(l1-l0))+'개',4200);try{chime();}catch(e){}if(SRV)setTimeout(()=>{try{srvRefresh();}catch(e){}},1500);/* V87 서버가 준 미끼를 가방에 반영 */}
+function renderLv(){try{questBadge();}catch(e){}document.querySelectorAll('.lvchip').forEach(el=>{el.classList.toggle('gold',hasGold());el.title=hasGold()?'칭호 황금 낚시꾼':'';el.innerHTML='Lv.<b class="num">'+RG.lv+'</b> '+lvtHTML()+'<i class="xpbar"><i style="width:'+Math.min(100,RG.xp/xpNeed(RG.lv)*100).toFixed(0)+'%"></i></i>'+(spUsable()?'<span class="spdot" aria-label="스킬 포인트 '+RG.sp+' · 눌러서 배우기">▲'+RG.sp+'</span>':'');el.classList.toggle('hasSp',spUsable());el.setAttribute('aria-label','레벨 '+RG.lv+(spUsable()?' · 스킬 포인트 '+RG.sp+'개 남음 · 눌러서 배우기':''));});if(typeof refreshWallet==='function')refreshWallet();if(typeof unlockCheck==='function')unlockCheck();}
 // 오늘의 미션·출석
 const pad2=n=>String(n).padStart(2,'0');
 function dayKey(off){const d=new Date(Date.now()+9*3600e3+(off||0)*864e5);return d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate());}
@@ -6366,8 +6377,8 @@ function openRPG(tab){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}rpg
 async function renderRPG(){renderLv();const T3=[['me','성장·스킬'],['goal','목표'],['miss','오늘의 퀘스트'],['rank','랭킹'],['gold','황금 물고기'],['draw','협찬 선물']].filter(([k])=>!(k==='draw'&&(v45Beta()||GAME_APP)));if(rpgTab==='draw'&&(v45Beta()||GAME_APP))rpgTab='me';/* V78 게임 앱은 협찬 선물 추첨 없음 *//* v45 시험용이면 협찬 선물 탭 없음 */
   $('#rpgTabs').innerHTML=T3.map(([k,t])=>'<button type="button" role="tab" data-t="'+k+'" aria-selected="'+(k===rpgTab)+'">'+t+'</button>').join('');
   $('#rpgTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{rpgTab=b.dataset.t;renderRPG();});const box=$('#rpgBody');
-  if(rpgTab==='me'){box.innerHTML='<div class="sumbox"><div style="font-size:16px">Lv.<b class="num">'+RG.lv+'</b> '+esc(titleOf(RG.lv))+goldTitleHTML()+'</div><div class="bar" style="margin:6px 0"><i style="width:'+(RG.xp/xpNeed(RG.lv)*100).toFixed(0)+'%;background:var(--buoy)"></i></div><div class="k">경험치 '+RG.xp+' / '+xpNeed(RG.lv)+(SKILLS.some(s=>sk(s.id)<s.max)?' · 스킬 포인트 '+RG.sp:' · 모든 스킬 최대')+(()=>{const nt=TITLES.find(([l])=>l>RG.lv);return nt?' · 다음 칭호 '+esc(nt[1])+' (Lv.'+nt[0]+' · '+(nt[0]-RG.lv)+'레벨 남음)':' · 최고 칭호';})()+'</div><div class="k">경험치: 잡을 때(크기·난이도), 방생, 첫 어종 보너스, 미션 완료. 내 레벨보다 쉬운 어종은 경험치가 줄고(최소 ×0.2), 어려운 어종은 늘어납니다(최대 ×1.3) · 더 어려운 낚시터·어종에 도전하세요. 레벨이 오르면 스킬 포인트 1과 레벨×30P를 받습니다.</div></div>'+captGoalHTML()+
-     SKILLS.map(s=>'<div class="item"><div><b>'+s.n+' <span class="num">'+sk(s.id)+'/'+s.max+'</span></b><div class="spec">'+s.d+' (단계마다)'+(s.id==='hook'?hookSkTxt():'')+'<br>'+skNowNext(s)+'</div></div><div class="act2"><button class="mini buy" data-sk="'+s.id+'"'+(RG.sp>0&&sk(s.id)<s.max&&!skBusy?'':' disabled')+'>'+(skArm===s.id?'한 번 더 눌러 확정':'배우기')+'</button></div></div>').join('')+'<p class="src">스킬 포인트는 한 번 쓰면 되돌릴 수 없습니다 · 배우기를 두 번 눌러 확정</p>'+
+  if(rpgTab==='me'){box.innerHTML='<div class="sumbox"><div style="font-size:16px">Lv.<b class="num">'+RG.lv+'</b> '+esc(titleOf(RG.lv))+goldTitleHTML()+'</div><div class="bar" style="margin:6px 0"><i style="width:'+(RG.xp/xpNeed(RG.lv)*100).toFixed(0)+'%;background:var(--buoy)"></i></div><div class="k">경험치 '+RG.xp+' / '+xpNeed(RG.lv)+(SKILLS.some(s=>sk(s.id)<s.max)?' · 스킬 포인트 '+RG.sp:' · 모든 스킬 최대')+(()=>{const nt=TITLES.find(([l])=>l>RG.lv);return nt?' · 다음 칭호 '+esc(nt[1])+' (Lv.'+nt[0]+' · '+(nt[0]-RG.lv)+'레벨 남음)':' · 최고 칭호';})()+'</div><div class="k">경험치: 잡을 때(크기·난이도), 방생, 첫 어종 보너스, 미션 완료. 내 레벨보다 쉬운 어종은 경험치가 줄고(최소 ×0.2), 어려운 어종은 늘어납니다(최대 ×1.3) · 더 어려운 낚시터·어종에 도전하세요. 레벨이 오르면 스킬 포인트 1, 포인트(레벨이 높을수록 더), 미끼 10개를 받습니다.</div></div>'+captGoalHTML()+
+     (spUsable()?'<div class="item spcall" style="border:2px solid var(--buoy);border-radius:12px;background:rgba(255,140,40,.10)"><div><b>남은 스킬 포인트 <span class="num" style="color:var(--buoy);font-size:18px">'+RG.sp+'</span>개</b><div class="spec">아래 스킬에서 [배우기]를 눌러 쓰세요 · 레벨이 오를 때마다 1개씩 생깁니다</div></div></div>':'')+SKILLS.map(s=>'<div class="item"><div><b>'+s.n+' <span class="num">'+sk(s.id)+'/'+s.max+'</span></b><div class="spec">'+s.d+' (단계마다)'+(s.id==='hook'?hookSkTxt():'')+'<br>'+skNowNext(s)+'</div></div><div class="act2"><button class="mini buy" data-sk="'+s.id+'"'+(RG.sp>0&&sk(s.id)<s.max&&!skBusy?'':' disabled')+'>'+(skArm===s.id?'한 번 더 눌러 확정':'배우기')+'</button></div></div>').join('')+'<p class="src">스킬 포인트는 한 번 쓰면 되돌릴 수 없습니다 · 배우기를 두 번 눌러 확정</p>'+
      '<p class="src">장비 해금 · '+unlockRuleTxt()+' (자세한 단계는 상점 → 해금 탭) · 선상 '+BOAT_TRIPS.map(t=>esc(t.n)+' Lv.'+(TRIP_LV[t.id]||1)).join(' · ')+'</p>';
     box.querySelectorAll('[data-sk]').forEach(b=>b.onclick=()=>{const s=SKILLS.find(x=>x.id===b.dataset.sk);if(RG.sp<=0||sk(s.id)>=s.max||skBusy)return;if(skArm!==s.id){skArm=s.id;clearTimeout(skArmT);skArmT=setTimeout(()=>{skArm='';if(rpgTab==='me'&&!$('#rpg').hidden)renderRPG();},4000);renderRPG();return;}skArm='';clearTimeout(skArmT);/* v32 LC2 #234: 두 번 눌러 확정 */if(SRV){srvSkill(s);return;}RG.sk[s.id]=sk(s.id)+1;RG.sp--;persist();renderRPG();toast(s.n+' '+sk(s.id)+'단계');});}
   else if(rpgTab==='goal'){v36GoalRender(box);}/* v36 안내 퀘스트·레벨 목표·지역 어록·배지 */
@@ -7424,7 +7435,7 @@ function srvMiss(c){const m=curChk.meth;if(m==='lure'){state='wait';holding=pres
 function srvFight(c,h){const f=FISH.find(x=>x.n===h.fish);if(!f){resetLine();return;}c.h=h;c.hooked=true;c.hookAt=performance.now()-(h.minMsLeft!=null?Math.max(0,h.minMs-h.minMsLeft):0);// 재시도로 받은 챔질은 서버 챔질 시각 기준
   if(h.brk){c.done=true;srvLossApply(h);const nm=(h.gold?'황금 ':'')+f.n;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+srvLossTxt(h),'break');return;}// v31 S3 #64: 서버가 한계 초과 터짐을 정하고 채비도 뺌
   fish=f;fishGold=!autoOn&&!!h.gold;fsize=h.cm;fishKgNow=h.kg;ratio=h.ratio;slackT=0;escJ=0;escPlan=h.esc?{at:h.esc.at,kind:h.esc.kind}:null;const C=h.cap;
-  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=castD;surge=0;holding=pressed;$('#fight').hidden=false;$('#limTxt').textContent=(+C).toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
+  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=pressed;$('#fight').hidden=false;$('#limTxt').textContent=(+C).toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
 // 채비 손실: 밑걸림으로 서버가 이미 뺀 것은 표시만, 아니면 /lose-rig
 function srvLoseRig(){const c=srvC;const g=c&&c.snagRes;
   if(state==='snag'&&!(c&&c.n&&c.res&&c.res.snag))return'';// 서버가 굴린 적 없는 밑걸림(자동 연출에서 남은 것 등): 손실 없음
@@ -10095,7 +10106,7 @@ v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V74 */boatBadge,boatGo,boatPick,boatPortGo,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,boatAutoSettleNow/* V84 */}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,boatAutoSettleNow/* V84 */,get OCCK(){return OCCK;}/* V87 */}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
