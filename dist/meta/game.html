@@ -1420,6 +1420,11 @@ body #v36map{padding:4px;gap:0}
 .thl ol.v36tq li{background:#fff;border-color:var(--cb)}
 .thl .fboat[aria-pressed="true"]{background:#e3f1fb;border-color:#5aa4ea}
 .thl .v4pv{background:#eef8fd;border-color:#bfe0f2}
+/* V92 꾸미기 미리보기는 스크롤해도 위에 붙어 따라온다(내리면 작게) */
+.v4pv{position:sticky;top:var(--v4top,0px);z-index:2;transition:padding .18s,box-shadow .18s}
+.v4pv.stuck{padding:6px 10px;box-shadow:0 8px 16px rgba(0,30,60,.18);background:#163746}.thl .v4pv.stuck{background:#eef8fd}
+.v4pv.stuck .v4av,.v4pv.stuck .v4av.v4av3{width:84px;height:104px}.v4pv.stuck .v4pvt>.k{display:none}.v4pv.stuck .v4pvt b{font-size:14px}
+.v4pv .v4pvn{display:none;font-size:12px;color:var(--mute)}.v4pv.stuck .v4pvn{display:block}
 .thl .v4av{--v4b1:#e8f6fd;--v4b2:#a9d8ee;--v4b3:#5fb0dc}.thl .v4av.v4av3{background:radial-gradient(120% 90% at 50% 0%,#e8f6fd 0%,#c4e5f5 60%,#a9d8ee 100%);box-shadow:inset 0 0 0 1.5px #bfe0f2}/* V48-UI fix 밝은 화면: 꾸미기 미리보기 뒤도 캐릭터 만들기와 같은 낮 하늘(가이드 12.10) */
 .thl .v39card{background:#fff;box-shadow:0 2px 0 rgba(214,190,146,.35)}
 .thl .qrr{background:#fff;border:1.5px solid var(--cbd);color:var(--rib2)}
@@ -7165,7 +7170,7 @@ function renderShop(keepBar){if(shopTab==='charge'&&!TOPUP_ON)shopTab='my';const
   if(shopTab==='guide'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=guideHTML();refreshWallet();shopLayout();return;}/* V89 초보 안내 */
   if(shopTab==='unlock'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=unlockHTML();refreshWallet();shopLayout();return;}
   if(shopTab==='net'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=twShopHTML();refreshWallet();shopLayout();return;}/* v35 투망 */
-  if(shopTab==='cosm'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=cosmHTML();refreshWallet();shopLayout();try{v37ShopPv();}catch(e){}cosmCatLoad();return;}/* v34 꾸미기 · v37 3D 미리보기·광고주 목록 */
+  if(shopTab==='cosm'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=cosmHTML();try{v4Stick();}catch(e){}/* V92 */refreshWallet();shopLayout();try{v37ShopPv();}catch(e){}cosmCatLoad();return;}/* v34 꾸미기 · v37 3D 미리보기·광고주 목록 */
   if(shopTab==='charge'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=chargeHTML();refreshWallet();shopLayout();return;}
   const my=shopTab==='my',cats=my?['rod','line','leader','term']:[shopTab];
   $('#gearSum').innerHTML=walletLine()+(my?mySummary()+dvBoxHTML():gearLine())+(my||shopTab==='term'?chumCardHTML():'');/* v34 집어제(소모품) */refreshWallet();
@@ -8512,8 +8517,11 @@ async function petNameSave(id){const x=petItem(id),el=$('#petNm');if(!x||!el||v4
   if(SRV){v4Fly=true;let r;try{r=await net('pet-name',{id,name:n});}finally{v4Fly=false;}if(!v4Ok(r)){const j=(r&&r.j)||{};toast(j.error==='BAD_NAME'||j.error==='TOO_MANY'?String(j.message||j.msg||'이름을 쓸 수 없습니다'):v4Err(r,'pet'));return;}v4Take(r.j);if(r.j&&r.j.cosm&&isObj(r.j.cosm.pn)){V4().pn=petNmNorm(r.j.cosm.pn,V4().own);}}
   else{v.pn=Object.assign({},v.pn||{});if(n)v.pn[id]=n;else delete v.pn[id];persist();}
   try{myLookApply();}catch(e){}toast(n?'펫 이름을 \''+n+'\'(으)로 지었습니다':'펫 이름을 기본('+x.n+')으로 되돌렸습니다');v4Rerender();}
+// V92 미리보기 고정: 상점 머리(#shopStick) 바로 아래에 붙고, 조금 내리면 작게(왕복 떨림 없게 140px에서 작게 · 60px 아래로 오면 원래 크기)
+function v4Stick(){const pv=$('#v4pv'),sh=$('#shopSheet');if(!pv||!sh)return;const st=$('#shopStick');pv.style.setProperty('--v4top',(st?st.offsetHeight:0)+'px');const y=sh.scrollTop,on=pv.classList.contains('stuck');if(!on&&y>140)pv.classList.add('stuck');else if(on&&y<60)pv.classList.remove('stuck');}
+document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='shopSheet')v4Stick();},true);
 function cosmHTML(){const t=titleName(lookOf('title'));
-  let h='<div class="v4pv" id="v4pv"><div class="v4av" id="v4av">'+avSVG(myVestNow(),lookOf('hat'),lookOf('float'))+'</div><div class="v4pvt"><b>'+esc(save.nick||'낚시꾼')+'</b>'+(t?'<span class="v4ttl">'+esc(t)+'</span>':'')+'<span class="k">칸을 누르면 먼저 입어 봅니다'+(inWorld()?' · 낚시터의 내 모습에도 바로 보입니다':'')+'</span><span class="k">한 번 사면 계속 쓰고, 칸마다 하나씩 착용합니다</span>'+(PREV?'<button class="mini" type="button" data-v4="pvx">미리보기 끝내기</button>':'')+'</div></div>';
+  let h='<div class="v4pv" id="v4pv"><div class="v4av" id="v4av">'+avSVG(myVestNow(),lookOf('hat'),lookOf('float'))+'</div><div class="v4pvt"><b>'+esc(save.nick||'낚시꾼')+'</b>'+(t?'<span class="v4ttl">'+esc(t)+'</span>':'')+'<span class="k">칸을 누르면 먼저 입어 봅니다'+(inWorld()?' · 낚시터의 내 모습에도 바로 보입니다':'')+'</span><span class="k">한 번 사면 계속 쓰고, 칸마다 하나씩 착용합니다</span>'+'<span class="v4pvn">'+(PREV?'미리보기 중 · '+esc((cosmBy(PREV.id)||{}).n||V4_SLOT_TXT[PREV.slot]+' 벗기'):'지금 내 모습')+'</span>'+(PREV?'<button class="mini" type="button" data-v4="pvx">미리보기 끝내기</button>':'')+'</div></div>';
   if(!V4().eq.pfd)h+=pfdWarnHTML();/* v37 */
   h+=petSecHTML();/* V90 펫(등급별) */
   for(const slot of['vest','top','pfd','hat','glove','shoes','pants','bag','float','title'])h+='<div class="igrp v4g">'+V4_SLOT_TXT[slot]+'</div>'+(slot==='pfd'?'<p class="k v4pfdt">'+esc(PFD_TXT)+'</p>':'')+'<div class="v4grid">'+(slot==='pfd'?'':cosmCard(slot,null))+COSM[slot].filter(x=>!x.off||V4().own.includes(x.id)).map(x=>cosmCard(slot,x)).join('')+'</div>';
