@@ -1711,6 +1711,11 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
   #world #spotbar>#satchip.warn,#world #spotbar>#satchip.low{max-width:calc((100vw - 20px) / var(--uis,1))!important}
   #world #spotbar>#autochip:not([hidden]){right:calc((max(18px, env(safe-area-inset-right,0px)) + 12px) * var(--uisb,1) / var(--uis,1))!important;bottom:calc((var(--dockh) + 116px) * var(--uisb,1) / var(--uis,1))!important}}
 .proTag{display:inline-block;padding:0 6px;border-radius:6px;background:#39ff88;color:#04230f;font-weight:900;box-shadow:0 0 8px rgba(57,255,136,.8)}
+.ocbox{border:2px solid var(--buoy);border-radius:14px;padding:10px 12px;margin:6px 0 10px;background:rgba(255,140,40,.06)}
+.ocme{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}.ocme button{padding:6px 12px;border-radius:999px;border:1px solid var(--line,#ccc);background:transparent;font-weight:700;color:inherit}.ocme button[aria-selected=true]{background:var(--buoy);color:#1a0d05;border-color:var(--buoy)}
+.ocr{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px}.ocr .k{flex:0 0 46px}.ocr b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ocb{color:#c2410c;font-weight:700;font-size:12px}.oco{color:#15803d;font-size:12px}
+.ocgo{width:100%;margin-top:8px;padding:10px;font-size:15px}.ocgd{width:100%;margin-top:6px}
+.gd .gdh{font-size:15px;margin:14px 0 6px}.gdflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-weight:700;margin:4px 0 8px}.gdflow span{background:var(--buoy);color:#1a0d05;border-radius:8px;padding:4px 10px}.gdl{margin:0 0 6px;padding-left:20px;line-height:1.6;font-size:13px}
 </style>
 
 <!-- ===== 지도 ===== -->
@@ -6793,7 +6798,7 @@ function autoNotify(){const LN=capPlug('LocalNotifications');if(!LN)return;const
   try{const q=LN.requestPermissions?LN.requestPermissions():null;if(q&&q.then)q.then(go,go);else go();}catch(e){go();}}
 
 /* ---- 채비·상점 화면 ---- */
-const TABS=[['my','내 채비'],['rod','낚싯대'],['line','원줄'],['leader','목줄·쇼크리더'],['term','루어·채비'],['net','투망'],['cosm','꾸미기'],['unlock','해금'],['charge','포인트 충전']].filter(x=>TOPUP_ON||x[0]!=='charge');// v33: 충전 끔(TOPUP_ON=false)이면 충전 탭 없음
+const TABS=[['my','내 채비'],['guide','초보 안내'],['rod','낚싯대'],['line','원줄'],['leader','목줄·쇼크리더'],['term','루어·채비'],['net','투망'],['cosm','꾸미기'],['unlock','해금'],['charge','포인트 충전']].filter(x=>TOPUP_ON||x[0]!=='charge');// v33: 충전 끔(TOPUP_ON=false)이면 충전 탭 없음
 if(!TOPUP_ON){const b=document.getElementById('shopCharge');if(b)b.remove();}let shopTab='my';
 // v32 D5 환불 안내 — V55 출시 문구(초안 표시 없음). 서버가 wallet.refundTxt({draft,note,text} 또는 문자열)를 주면 그 문구를 쓴다
 // FIXUP2 LEGAL-2: 서버 src/index.js REFUND_TXT.text와 글자까지 같은 문구(바꾸면 둘 다)
@@ -6863,7 +6868,7 @@ function gearLock(){if(eqBusy)return'장비를 바꾸는 중입니다';if(!inWor
 function busyMsg(){return state==='snag'?'밑걸림을 먼저 처리하세요':state==='charge'?'던진 뒤에 열 수 있습니다':'고기를 걸고 있는 중에는 열 수 없습니다';}
 function bagSet(on){if(on&&inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}const b=$('#bag');if(on){shopClose();hudClose();renderBag();b.hidden=false;b.scrollTop=0;}else b.hidden=true;$('#gearbtn').setAttribute('aria-expanded',!!on);if(!on&&canvas)canvas.focus();}
 function bagRefresh(){updGearBadge();if(!$('#bag').hidden)renderBag();}
-function autoTxt(){const A=autoNow(),nx=passNextTxt(A);return(autoOn||A.on?'켜짐 · '+modeLong(A):(A.sub?'꺼짐 · 멤버십 · 최대 ':'꺼짐 · 무료 · 최대 ')+A.capH+'시간 쌓임')+(A.pass&&!A.on?' · 이용권 남은 '+fmtMs(A.passUntil-Date.now()):'')+(nx?' · '+nx:'');}
+function autoTxt(){const A=autoNow(),nx=passNextTxt(A);return(autoOn||A.on?'켜짐 · '+modeLong(A):(A.sub?'꺼짐 · 멤버십 · 하루 ':'꺼짐 · 무료 · 하루 ')+A.capH+'시간')+(A.pass&&!A.on?' · 이용권 남은 '+fmtMs(A.passUntil-Date.now()):'')+(nx?' · '+nx:'');}
 function bagRowHTML(cat,x,lk,s){const on=save.eq[cat]===(x?x.id:null);const gr=x?grade(x):{n:'',c:'#97a9ae'};
   const env=x&&s&&x.env&&x.env!=='both'&&x.env!==s.w?(s.w==='sea'?'민물용':'바다용'):'';
   const out=cat==='term'&&x&&x.pack>0&&termLeft(x.id)===0;// C6 #149: 다 쓴 장착 채비도 보여 주고 바로 다시 사기
@@ -6873,7 +6878,7 @@ function bagRowHTML(cat,x,lk,s){const on=save.eq[cat]===(x?x.id:null);const gr=x
 function renderBag(){const s=cur||sel;const chk=checkGear(s);const G=chk.G;const lk=gearLock();$('#bagPt').textContent=(save.pt||0).toLocaleString('ko-KR');refreshWallet();const sc=$('#bag').scrollTop;
   let h='';if(lk)h+='<div class="lock">'+esc(lk)+(state==='wait'||state==='cast'?' <button class="mini" type="button" id="bagReel">채비 거두고 바꾸기</button>':'')+'</div>';// C6 #152
   if(!lk&&G.rod&&!chk.ok&&s)h+='<div class="row" style="margin:4px 0"><button class="mini buy" type="button" id="bagFit">채비 맞추기</button> <span class="k">가진 것 중 지금 낚싯대에 맞는 원줄·목줄·채비로 바꿉니다</span></div>';// C6 #151
-  h+=kitBagHTML(s,lk);/* V49 초보자 세트 */
+  h+=ocHTML(s,lk);/* V89 원클릭 채비 */h+=kitBagHTML(s,lk);/* V49 초보자 세트 */
   if(G.rod)h+='<div class="sumln">'+ME_TXT[G.rod.me]+' · 비거리 <b class="num">'+chk.D+'m</b> · 채비 한계 <b class="num">'+chk.C.toFixed(1)+'kg</b></div>';
   chk.msgs.slice(0,2).forEach(m=>h+='<div class="'+(chk.ok?'warnline':'badline')+'" style="font-size:12px">· '+esc(m)+'</div>');
   h+='<div class="sumln sm k">자동 낚시 · '+esc(autoTxt())+'</div>'+v39DvBag();/* v35 · V39-UI: 내구도 한 줄 + 펼치기 */
@@ -6883,12 +6888,76 @@ function renderBag(){const s=cur||sel;const chk=checkGear(s);const G=chk.G;const
   $('#bagBody').innerHTML=h;$('#bag').scrollTop=sc;}
 $('#bagBody').addEventListener('click',e=>{const rb=e.target.closest('button[data-rebuy]');if(rb){bagSet(false);unlockJump('term',rb.dataset.rebuy);return;}
   const kb=e.target.closest('button[data-kit]');if(kb){kitEquip(kb.dataset.kit);return;}/* V49 */
+  const om=e.target.closest('button[data-ocm]');if(om){ocSel=om.dataset.ocm;renderBag();return;}if(e.target.closest('#ocGo')){ocGo();return;}if(e.target.closest('button[data-guide]')){bagSet(false);openShop('guide');return;}/* V89 */
   if(e.target.closest('#bagReel')){resetLine();toast('채비를 거뒀습니다 · 이제 바꿀 수 있습니다');renderBag();return;}if(e.target.closest('#bagFit')){gearFit();return;}
   const b=e.target.closest('button[data-beq]');if(!b||b.disabled)return;const lk=gearLock();if(lk){toast(lk);renderBag();return;}shopEquip(b.dataset.beq,b.dataset.id||null,true);});
 // V49 초보자 세트: 가진 세트(낚싯대·원줄·목줄·채비 넷 다)만 한 줄로 · 누르면 넷을 한 번에 장착(지금 낚시터에 안 맞으면 흐리게)
 function kitHave(S){const o=save.inv.own||{};return['rod','line','leader'].every(c=>!S.eq[c]||!!o[S.eq[c]])&&termLeft(S.eq.term)>0;}
 function kitOn(S){return['rod','line','leader','term'].every(c=>(save.eq[c]||null)===(S.eq[c]||null));}
 function kitFits(S,s){if(!s)return true;const r=GBY[S.eq.rod],t=GBY[S.eq.term];return(r.env==='both'||r.env===s.w)&&(t.env==='both'||t.env===s.w);}
+/* ===================== V89 원클릭 채비 · 초보 안내 =====================
+   이 낚시터에서 쓸 수 있는 낚시법마다 "가진 장비 우선 → 모자란 칸만 가장 싸게 사서" 맞는 한 벌(낚싯대·원줄·목줄·채비)을 고른다.
+   판정은 실제 낚시와 같은 checkGear(ok0 — 채비 개수는 사면 채워지므로 빼고)로, 노릴 어종은 shoreCatch(실제 입질 표)로 계산.
+   실행: 확인 한 번 → 필요한 것만 사고(서버 /buy keep) → 네 칸 장착(서버 /equip). 서버 판정·가격·해금은 그대로 */
+const OC_ME=[['lure','루어'],['egi','에깅'],['float','찌낚시'],['surf','원투'],['pole','민장대']];
+let ocSel=null,ocBusy=false,ocCache=null;
+const ocRodMe=m=>m==='egi'?'lure':m;
+function ocKinds(m){return m==='egi'?['egi']:m==='lure'?ROD_KINDS.lure.filter(k=>k!=='egi'):(ROD_KINDS[m]||[]);}
+function ocEnv(x,s){return!s||!x.env||x.env==='both'||x.env===s.w;}
+function ocHas(cat,x){return cat==='term'?(x.pack===0||termLeft(x.id)>0):(!!save.inv.own[x.id]||x.price===0);}
+function ocCan(x){return lockInfo(x).ok;}
+function ocTry(eq,s){const e0=save.eq;save.eq=Object.assign({},e0,eq);try{return checkGear(s);}finally{save.eq=e0;}}
+function ocFish(s,m,tk,D){try{const night=sunPos(s).el<-6;return shoreCatch(s,ocRodMe(m),tk,D,night).filter(x=>x.w>0).sort((a,b)=>b.w-a.w).map(x=>x.f.n);}catch(e){return[];}}
+function ocPlan(s,m){if(!s||s.w==='boat')return null;const me=ocRodMe(m),K=ocKinds(m);
+  const rods=GEAR.rod.filter(r=>r.me===me&&ocEnv(r,s)),rO=rods.filter(r=>ocHas('rod',r)).sort((a,b)=>b.price-a.price).slice(0,3),rB=rods.filter(r=>!ocHas('rod',r)&&ocCan(r)).sort((a,b)=>a.price-b.price).slice(0,3);
+  const lines=GEAR.line,lO=lines.filter(l=>ocHas('line',l)),lB=lines.filter(l=>!ocHas('line',l)&&ocCan(l)).sort((a,b)=>a.price-b.price);
+  const lc=lO.concat(['pe','nylon','fc'].flatMap(k=>lB.filter(l=>l.kind===k).slice(0,2)));
+  const leads=GEAR.leader,dO=leads.filter(d=>ocHas('leader',d)),dB=leads.filter(d=>!ocHas('leader',d)&&ocCan(d)).sort((a,b)=>a.price-b.price);
+  const dc=[null].concat(dO,dB.slice(0,3),dB.filter(d=>d.kg>=12).slice(0,2));
+  let best=null;
+  for(const R of rO.concat(rB)){const terms=GEAR.term.filter(t=>K.includes(t.kind)&&ocEnv(t,s)&&t.g<=R.w[1]*1.25&&(ocHas('term',t)||ocCan(t)));if(!terms.length)continue;
+    const kinds=[...new Set(terms.map(t=>t.kind))].filter(k=>ocFish(s,m,k,999).length);if(!kinds.length)continue;
+    const tO=terms.filter(t=>kinds.includes(t.kind)&&ocHas('term',t)&&t.pack>0).sort((a,b)=>b.price-a.price).slice(0,3),tB=terms.filter(t=>kinds.includes(t.kind)&&!ocHas('term',t)&&ocCan(t)).sort((a,b)=>(Math.abs(a.g-(R.w[0]+R.w[1])/2)-Math.abs(b.g-(R.w[0]+R.w[1])/2))||(a.price-b.price)).slice(0,3);
+    for(const T of tO.concat(tB))for(const L of lc)for(const D of dc){const k=ocTry({rod:R.id,line:L.id,leader:D?D.id:null,term:T.id},s);if(!k.ok0)continue;
+      const buy=[R,L,D,T].filter(x=>x&&!ocHas(catOf(x.id),x));const cost=buy.reduce((a,x)=>a+x.price,0),q=[R,L,D,T].reduce((a,x)=>a+(x?x.price:0),0);
+      const sc=cost+k.msgs.length*400-k.D*15-q*.002;/* 싸게(가진 것 우선) · 경고 적게 · 멀리 던지는 쪽 */if(!best||sc<best.sc)best={sc,m,eq:{rod:R.id,line:L.id,leader:D?D.id:null,term:T.id},buy:buy.map(x=>x.id),cost,D:k.D,C:k.C,warn:k.msgs};}}
+  if(!best)return null;best.fish=ocFish(s,m,GBY[best.eq.term].kind,best.D);if(!best.fish.length)return null;return best;}
+function ocPlans(s){const key=s&&(s.id+'|'+RG.lv+'|'+dexN()+'|'+JSON.stringify(save.inv)+'|'+(sunPos(s).el<-6));if(ocCache&&ocCache.key===key)return ocCache.P;
+  const P=OC_ME.map(([m,t])=>{const p=ocPlan(s,m);return p?Object.assign(p,{t}):null;}).filter(Boolean);ocCache={key,P};return P;}
+function ocOn(p){return['rod','line','leader','term'].every(c=>(save.eq[c]||null)===(p.eq[c]||null))&&!(GBY[p.eq.term].pack>0&&termLeft(p.eq.term)<=0);}
+function ocHTML(s,lk){if(!s||curTrip)return'';const P=ocPlans(s);if(!P.length)return'';
+  if(!ocSel||!P.some(p=>p.m===ocSel)){const now=P.find(p=>p.m===(save.eq.rod&&GBY[save.eq.rod]&&(GBY[save.eq.rod].me==='lure'&&save.eq.term&&GBY[save.eq.term]&&GBY[save.eq.term].kind==='egi'?'egi':GBY[save.eq.rod].me)));ocSel=(now||P.slice().sort((a,b)=>b.fish.length-a.fish.length||a.cost-b.cost)[0]).m;}
+  const p=P.find(x=>x.m===ocSel),row=(c,lab)=>{const id=p.eq[c];if(!id)return'<div class="ocr"><span class="k">'+lab+'</span><b>없이</b></div>';const x=GBY[id],nb=p.buy.includes(id);return'<div class="ocr"><span class="k">'+lab+'</span><b>'+esc(x.n)+'</b><span class="'+(nb?'ocb':'oco')+'">'+(nb?fmtN(x.price)+'P':'보유')+'</span></div>';};
+  const on=ocOn(p),short=Math.max(0,p.cost-spendNow());
+  return'<div class="ocbox"><div class="bsec" style="margin-top:0">원클릭 채비<span class="k" style="font-weight:400;margin-left:6px">'+esc(s.n)+'</span></div>'+
+    '<div class="ocme" role="tablist">'+P.map(x=>'<button type="button" role="tab" data-ocm="'+x.m+'" aria-selected="'+(x.m===ocSel)+'">'+x.t+'</button>').join('')+'</div>'+
+    row('rod','낚싯대')+row('line','원줄')+row('leader','목줄')+row('term','채비')+
+    '<div class="k" style="margin:6px 0 2px">노릴 수 있는 어종 · '+esc(p.fish.slice(0,5).join(', '))+(p.fish.length>5?' 외 '+(p.fish.length-5):'')+'</div><div class="k">비거리 '+p.D+'m · 채비 한계 '+p.C.toFixed(1)+'kg'+(p.warn[0]?' · '+esc(p.warn[0]):'')+'</div>'+
+    '<button type="button" class="mini buy ocgo" id="ocGo"'+(lk||on||short||ocBusy?' disabled':'')+'>'+(on?'이 채비를 쓰는 중':short?'포인트 '+fmtN(short)+'P 부족':p.cost?'한 번에 채비하기 · '+fmtN(p.cost)+'P':'한 번에 장착하기(구매 없음)')+'</button>'+
+    '<button type="button" class="ghost ocgd" data-guide="1">처음이세요? 초보 안내</button></div>';}
+async function ocGo(){const s=cur||sel;if(!s||ocBusy)return;const lk=gearLock();if(lk){toast(lk);return;}const p=ocPlans(s).find(x=>x.m===ocSel);if(!p)return;
+  if(p.cost>spendNow()){toast('포인트가 부족합니다');return;}
+  if(p.cost>0){const y=await askYes('한 번에 채비할까요?',p.buy.map(id=>'· '+GBY[id].n+' '+fmtN(GBY[id].price)+'P').join('\n')+'\n합계 '+fmtN(p.cost)+'P · 사서 바로 장착합니다\n구매한 장비는 되돌릴 수 없습니다.','사고 장착','취소');if(!y)return;}
+  ocBusy=true;try{for(const id of p.buy){const x=GBY[id],c=catOf(id);if(SRV){await srvBuy(id,true,x.n+' 구매');const got=c==='term'?termLeft(id)>0:!!save.inv.own[id];if(!got){toast('구매를 마치지 못했습니다 · 다시 눌러 주세요');return;}}else{save.pt-=x.price;if(c==='term')save.inv.term[id]=Math.max(0,termLeft(id))+x.pack;else save.inv.own[id]=1;}}
+    for(const c of['rod','line','leader','term']){const id=p.eq[c]||null;if((save.eq[c]||null)===id)continue;if(SRV){await srvEquip(c,id);if((save.eq[c]||null)!==id){toast('장착을 마치지 못했습니다 · 다시 눌러 주세요');return;}}else save.eq[c]=id;}
+    if(!SRV)persist();ocCache=null;const k=checkGear(s);toast(p.t+' 채비 완료'+(k.ok?' · 이대로 낚시할 수 있습니다':' · '+(k.msgs[0]||'')),3600);}
+  finally{ocBusy=false;ocCache=null;try{renderShop();}catch(e){}bagRefresh();}}
+function ocFishOf(m){const me=ocRodMe(m),K=ocKinds(m);return FISH.filter(f=>{const fx=FX[f.n]||{};return((fx.me||{})[me]||0)>0&&(fx.t||[]).some(t=>K.includes(t));}).sort((a,b)=>(((FX[b.n]||{}).me||{})[me]||0)-(((FX[a.n]||{}).me||{})[me]||0)).slice(0,6).map(f=>f.n);}
+function guideHTML(){const s=cur||sel;const M=[
+  ['lure','루어','가짜 미끼(루어)를 멀리 던져 감아 들이면서 물고기를 유혹합니다. 움직이며 넓게 찾기 좋습니다.','루어대 + 합사(PE) 원줄 + 쇼크리더 + 메탈·미노우·지그헤드 등'],
+  ['egi','에깅','새우 모양 루어 "에기"로 오징어·주꾸미 같은 두족류를 노립니다. 무늬오징어는 대를 툭툭 치켜올리고(샤크리) 가라앉히며(폴링) 기다리고, 주꾸미·갑오징어는 바닥에 붙여 살살 끌다가 묵직해지면 챔질합니다.','루어대 + 합사 원줄 + 쇼크리더 + 에기'],
+  ['float','찌낚시','찌를 띄워 미끼를 원하는 수심에 머물게 합니다. 찌가 쑥 들어가면(바다) 또는 천천히 솟아오르면(민물 붕어) 챔질합니다.','릴찌대 + 나일론 원줄 + 목줄(꼭 필요) + 크릴 등 미끼 채비'],
+  ['surf','원투','무거운 봉돌로 멀리 던져 바닥에 미끼를 두고, 초릿대·방울로 입질을 봅니다.','원투대 + 원줄(가늘거나 합사면 힘줄) + 원투 채비'],
+  ['pole','민장대','릴 없이 긴 대에 줄을 바로 매어 발 앞·가까운 곳을 노립니다. 민물에서 많이 씁니다.','민장대 + 나일론 원줄 + 목줄 + 떡밥·지렁이 등']];
+  return'<div class="gd">'+(s?'<div class="item" style="border:2px solid var(--buoy);border-radius:12px"><div><b>'+esc(s.n)+' · 원클릭 채비</b><div class="spec">가방에서 낚시법만 고르면 가진 장비를 먼저 쓰고, 모자란 칸만 가장 싸게 사서 한 번에 맞춰 줍니다.</div></div><div class="act2"><button class="mini buy" type="button" data-ocopen="1">원클릭 채비 열기</button></div></div>':'')+
+  '<h3 class="gdh">1. 채비는 네 칸이면 끝</h3><div class="gdflow"><span>낚싯대</span>→<span>원줄</span>→<span>목줄</span>→<span>루어·채비</span></div>'+
+  '<ul class="gdl"><li><b>낚싯대</b> — 어떤 낚시를 할지(낚시법)를 정합니다. 바다용·민물용이 따로 있고, 게임에서는 낚싯대마다 맞는 채비 무게 범위가 적혀 있습니다(실제로 루어대·원투대는 무게, 찌대·민장대는 호수·길이로 많이 표시합니다).</li><li><b>원줄</b> — 릴에 감는 긴 줄입니다. 합사(PE)는 가늘고 강해 멀리 던지기 좋고, 나일론은 부드러워 찌낚시에 맞습니다.</li><li><b>목줄·쇼크리더</b> — 원줄 끝에 이어 바늘·루어 쪽에 다는 줄입니다. 쇼크리더는 바위 쓸림과 순간 충격에 강하고, 목줄(주로 카본)은 물속에서 잘 안 보여 물고기가 덜 경계합니다. 원투의 힘줄도 게임에서는 이 칸에 답니다.</li><li><b>루어·채비</b> — 실제로 물에 들어가는 것(루어·에기·바늘·봉돌·미끼 세트)입니다. 쓰다 보면 잃기도 하는 소모품이라 개수가 있습니다.</li></ul>'+
+  '<h3 class="gdh">2. 낚시법 고르기</h3>'+M.map(([m,t,d,k])=>{const F=ocFishOf(m);return'<div class="item"><div><b>'+t+'</b><div class="spec">'+d+'</div><div class="spec"><b>조합</b> · '+k+'</div>'+(F.length?'<div class="spec"><b>게임에서 잘 낚이는 어종</b> · '+esc(F.join(', '))+'</div>':'')+'</div></div>';}).join('')+
+  '<h3 class="gdh">3. 이렇게 맞추면 안 돼요 (게임 판정과 같음)</h3><ul class="gdl">'+
+  '<li>바다용 장비는 바다, 민물용은 민물에서만 — 낚시터 이름 아래 바다/민물을 보세요.</li><li>낚싯대에 맞는 채비 종류만 — 루어대에 크릴 채비, 찌대에 메탈 같은 조합은 못 씁니다.</li><li>찌낚시·민장대는 나일론 원줄을 쓰세요 — 합사는 물에 뜨고 바람에 날려 찌를 다루기 어렵습니다. 게임에서는 목줄도 꼭 달아야 합니다.</li><li>원투에 합사나 가는 원줄을 쓰면 원줄 앞쪽에 원줄보다 굵은 힘줄(던질 때 충격 완화)을 이어야 합니다 — 게임에서는 목줄 칸에 장착.</li><li>채비 무게는 낚싯대에 적힌 범위 안이 가장 좋습니다 — 너무 무거우면 대가 부러질 수 있어 못 던지고, 너무 가벼우면 대의 탄력을 못 써 멀리 안 날아갑니다.</li><li>바다 루어는 합사만 쓰면 바위에 쓸려 잘 터집니다 — 쇼크리더를 다세요.</li></ul>'+
+  '<h3 class="gdh">4. 처음이라면 이 순서로</h3><ol class="gdl"><li>지도에서 가까운 낚시터를 고릅니다(바다/민물 확인).</li><li>가방 → <b>원클릭 채비</b>에서 낚시법을 누르고 <b>한 번에 채비하기</b>.</li><li>물가 끝까지 걸어가 <b>던지기</b>를 길게 눌렀다 떼서 던집니다.</li><li>입질이 오면 바로 챔질, 장력이 빨갛게 오르면 손을 떼며 감아 들입니다.</li><li>바쁠 땐 <b>자동 낚시</b>를 켜 두세요.</li></ol></div>';}
+
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-ocopen]');if(b){e.preventDefault();shopClose();if(!(cur||sel)){toast('지도에서 낚시터를 먼저 고르세요');return;}bagSet(true);}});/* V89 초보 안내 → 원클릭 채비 */
 function kitBagHTML(s,lk){const L=KIT_SETS.filter(kitHave);if(!L.length)return'';
   return'<div class="bsec">초보자 세트<span class="cnt">'+L.length+'</span></div><div class="kitrow">'+L.map(S=>{const on=kitOn(S),fit=kitFits(S,s);
     return'<button type="button" class="kitb'+(on?' on':'')+(fit?'':' off')+'" data-kit="'+S.k+'"'+(lk?' disabled':'')+' aria-pressed="'+on+'" title="'+esc(S.t+' 세트 · '+GBY[S.eq.rod].n)+(fit?'':' · 이 낚시터에서는 쓸 수 없음')+'"><b>'+S.t+'</b><small>'+(on?'장착 중':S.sub)+'</small></button>';}).join('')+'</div>';}
@@ -7062,6 +7131,7 @@ function shopLayout(){const sh=$('#shopSheet'),st=$('#shopStick');if(!sh||!st||$
 addEventListener('resize',()=>{if(!$('#shop').hidden)shopLayout();});
 function renderShop(keepBar){if(shopTab==='charge'&&!TOPUP_ON)shopTab='my';const tb=$('#shopTabs'),tl=tb.scrollLeft;tb.innerHTML=TABS.map(([k,t])=>'<button type="button" role="tab" data-t="'+k+'" aria-selected="'+(k===shopTab)+'">'+t+'</button>').join('');tb.scrollLeft=tl;
   $('#shopRefund').textContent=refundTxt();
+  if(shopTab==='guide'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=guideHTML();refreshWallet();shopLayout();return;}/* V89 초보 안내 */
   if(shopTab==='unlock'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=unlockHTML();refreshWallet();shopLayout();return;}
   if(shopTab==='net'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=twShopHTML();refreshWallet();shopLayout();return;}/* v35 투망 */
   if(shopTab==='cosm'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=cosmHTML();refreshWallet();shopLayout();try{v37ShopPv();}catch(e){}cosmCatLoad();return;}/* v34 꾸미기 · v37 3D 미리보기·광고주 목록 */
@@ -10106,7 +10176,7 @@ v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V74 */boatBadge,boatGo,boatPick,boatPortGo,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,boatAutoSettleNow/* V84 */,get OCCK(){return OCCK;}/* V87 */}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,boatAutoSettleNow/* V84 */,get OCCK(){return OCCK;}/* V87 */,ocPlans,ocGo,get ocSel(){return ocSel;},set ocSel(v){ocSel=v;}/* V89 */}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
