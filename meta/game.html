@@ -4132,7 +4132,7 @@ function avTarget(a,S,dt){const A=a.A,t=A.Q,P=A.P;let spd=7;const tt=T+A.seed;
     else{t.rh.set(-.16,-.18,.28);t.rp=.95;t.ry=-.1;t.lw=1;t.hx=.24;t.lean=.05;}
     if(st==='bite'&&m!=='float'&&m!=='pole')t.bend+=S.egi?.14+Math.sin(T*9)*.05:Math.sin(T*35)*.07+.08;
     // v28 에기 샤크리: 0.07초에 손목·팔뚝으로 대를 탁 치켜들고(초릿대가 휘청) 0.4초에 내려놓음 → 세트 사이에는 릴로 여윳줄을 감는다 · 입질 '턱'은 초릿대 끝만 톡
-    if(S.egi){if(A.jkT<.5){const u=A.jkT<.07?sm(A.jkT/.07):1-sm((A.jkT-.07)/.43);t.rp-=(S.boat?.5:.66)*u;t.rh.y+=.1*u;t.rh.z-=.05*u;t.lean-=.05*u;t.bend+=.28*u;spd=34;A.crs=0;}
+    if(S.egi){if(A.jkT<.55){const u=A.jkT<.08?sm(A.jkT/.08):1-sm((A.jkT-.08)/.47);t.rp=Math.max(.06,t.rp-(S.boat?.85:1.1)*u);t.rh.y+=.32*u;t.rh.z-=.1*u;t.lean-=.16*u;t.py+=.04*u;t.bend+=.5*u;spd=42;A.crs=0;}/* V88b 더 크게(운영자): 대가 거의 수직까지 · 팔·상체 더 *//* V88 샤크리 폭 크게: 대를 거의 머리 위(약 60° 더)까지 휙 치켜들고 팔·상체가 같이 뒤로 — 실제 에깅처럼 */
       else if(A.jkT<1.25&&!hold)A.crs=1.8;
       if(A.tkT<.3){const u=Math.sin(Math.min(1,A.tkT/.3)*Math.PI);t.rp+=.1*u;t.bend+=.32*u;spd=Math.max(spd,30);}}
     t.hy*=.3;}
