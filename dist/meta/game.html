@@ -591,6 +591,9 @@ body.vxcalm #vxburst.on{animation:vxf 1.7s linear forwards}body.vxcalm #vxburst:
 .v4pv svg{flex:none;border-radius:10px}.v4pvt{display:flex;flex-direction:column;gap:3px;min-width:0}.v4pvt b{font-size:15px}.v4pvt .k{font-size:12px;line-height:1.45}.v4pvt .mini{align-self:flex-start;margin-top:4px}
 .v4ttl{display:inline-block;font-size:11.5px;font-weight:600;color:var(--mint);border:1px solid rgba(143,240,208,.45);border-radius:999px;padding:0 7px;margin-left:4px;white-space:nowrap;vertical-align:1px}.v4pvt .v4ttl{margin-left:0;align-self:flex-start}
 .v4g{margin:12px 0 6px}
+.ptier{display:inline-block;font-size:11px;font-weight:700;line-height:1;padding:3px 7px;border-radius:999px;color:#0b161d;background:var(--tc,#e8eef0);white-space:nowrap}
+.pbuf{font-size:11px;font-weight:700;color:#1f9e6e}.ptrow{display:flex;align-items:center;gap:8px;margin:10px 0 6px}.v4pick .pdsc{font-size:11px!important}
+.petnm{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 10px;margin:4px 0 8px;border:1px solid rgba(143,240,208,.35);border-radius:8px;background:rgba(143,240,208,.05)}.petnm input{width:9.5em;min-width:0;flex:0 1 auto;font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--fg)}.petnm .k{font-size:11.5px}
 .v4grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin:0 0 6px}
 .v4c{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;min-width:0;background:rgba(255,255,255,.02)}
 .v4c.on{border-color:var(--good)}.v4c.pv{border-color:#7cc4e8;box-shadow:0 0 0 1px #7cc4e8 inset}.v4c.lk .v4ic{opacity:.45}
@@ -2220,12 +2223,30 @@ pfd:[{id:'p_waist',n:'허리형 구명조끼(기본)',c:0xff5a00,c2:0xc9d2d6,s:'
 glove:[{id:'gl_cotton',n:'흰 면장갑',c:0xf2f0ea,s:'full',p:2000},{id:'gl_grip',n:'회색 미끄럼 방지 장갑',c:0x8a9097,c2:0x3d8bff,s:'full',p:4000},{id:'gl_black',n:'검정 낚시 장갑',c:0x25272b,s:'cut',p:4000},{id:'gl_orange',n:'주황 낚시 장갑',c:0xff7a3d,c2:0x25272b,s:'cut',p:4000},{id:'gl_navy',n:'남색 손가락 컷 장갑',c:0x23395b,c2:0xe8eef0,s:'cut',p:6000},{id:'gl_pro',n:'티타늄 프로 장갑',c:0x9aa3ad,c2:0xe8c14a,s:'cut',p:20000}],
 shoes:[{id:'sh_sneak',n:'흰 운동화',c:0xf2f4f5,c2:0x3d8bff,s:'sneak',p:3000},{id:'sh_black',n:'검정 운동화',c:0x2a2c30,c2:0xe8eef0,s:'sneak',p:3000},{id:'sh_boot',n:'노랑 장화',c:0xf2b33d,s:'boot',p:5000},{id:'sh_bootg',n:'초록 장화',c:0x3f7a4c,s:'boot',p:5000},{id:'sh_felt',n:'갯바위 펠트화',c:0x4a4f57,c2:0xff7a3d,s:'felt',p:10000},{id:'sh_spike',n:'프로 스파이크 갯바위화',c:0x1f2833,c2:0x3fbf9f,s:'felt',p:25000}],
 pants:[{id:'pa_jean',n:'청바지',c:0x3b5b8c,s:'long',p:3000},{id:'pa_black',n:'검정 바지',c:0x26282c,s:'long',p:3000},{id:'pa_khaki',n:'카키 카고 바지',c:0x8a7d55,s:'cargo',p:5000},{id:'pa_gray',n:'회색 카고 바지',c:0x6c7178,s:'cargo',p:5000},{id:'pa_short',n:'반바지',c:0x4a6b8a,s:'short',p:4000},{id:'pa_wader',n:'가슴장화(웨이더)',c:0x3e4a3a,c2:0x25272b,s:'wader',p:15000},{id:'pa_rain',n:'프로 방수 바지',c:0x23395b,c2:0xff7a3d,s:'long',p:30000}],
-bag:[{id:'bg_hip',n:'힙색',c:0x2a2c30,c2:0xff7a3d,s:'hip',p:3000},{id:'bg_sling',n:'슬링백',c:0x3d8bff,c2:0x23395b,s:'sling',p:6000},{id:'bg_back',n:'낚시 백팩',c:0x4cc38a,c2:0x26282c,s:'back',p:8000},{id:'bg_cool',n:'쿨러 가방',c:0xe8eef0,c2:0x3d8bff,s:'cool',p:12000},{id:'bg_tackle',n:'태클 숄더백',c:0x8a5a35,c2:0x26282c,s:'sling',p:10000},{id:'bg_pro',n:'프로 태클 백팩',c:0x1f2833,c2:0xe8c14a,s:'back',p:30000}]};
+bag:[{id:'bg_hip',n:'힙색',c:0x2a2c30,c2:0xff7a3d,s:'hip',p:3000},{id:'bg_sling',n:'슬링백',c:0x3d8bff,c2:0x23395b,s:'sling',p:6000},{id:'bg_back',n:'낚시 백팩',c:0x4cc38a,c2:0x26282c,s:'back',p:8000},{id:'bg_cool',n:'쿨러 가방',c:0xe8eef0,c2:0x3d8bff,s:'cool',p:12000},{id:'bg_tackle',n:'태클 숄더백',c:0x8a5a35,c2:0x26282c,s:'sling',p:10000},{id:'bg_pro',n:'프로 태클 백팩',c:0x1f2833,c2:0xe8c14a,s:'back',p:30000}],
+// V90 상의: s 모양 — tee 반팔 · rash 래시가드(가슴 띠) · stripe 줄무늬 · camo 위장무늬 · jacket 바람막이·재킷(지퍼) · hood 후드티 · fleece 플리스. ov:1 = 겉옷(입으면 낚시 조끼 대신 이 옷이 보인다) · 능력치 없음
+top:[{id:'tp_tee_w',n:'흰 반팔 티',c:0xf4f5f2,s:'tee',p:2000},{id:'tp_tee_navy',n:'남색 반팔 티',c:0x23395b,s:'tee',p:2000},{id:'tp_stripe',n:'마린 줄무늬 티',c:0xf2f4f5,c2:0x23395b,s:'stripe',p:4000},{id:'tp_rash_b',n:'파랑 래시가드',c:0x2d7fd8,c2:0xe8eef0,s:'rash',p:4000},{id:'tp_rash_k',n:'검정 래시가드',c:0x24272c,c2:0x3fbf9f,s:'rash',p:4000},
+ {id:'tp_hood',n:'회색 후드티',c:0x8a9097,c2:0xe8eef0,s:'hood',ov:1,p:6000},{id:'tp_fleece',n:'베이지 플리스',c:0xd9c7a5,c2:0x8a7d55,s:'fleece',ov:1,p:6000},{id:'tp_camo',n:'위장무늬 셔츠',c:0x6b7a45,c2:0x3a3f2a,s:'camo',p:8000},{id:'tp_wind',n:'빨강 바람막이',c:0xd83a2e,c2:0x2b2f36,s:'jacket',ov:1,p:8000},{id:'tp_pro',n:'프로 방수 재킷',c:0x1f2833,c2:0xe8c14a,s:'jacket',ov:1,p:30000},{id:'tp_gold',n:'황금 낚시꾼 재킷',c:0xe8c14a,c2:0x8a5a35,s:'jacket',ov:1,p:50000,need:'gold'}],
+// V90 펫: 낚싯대처럼 등급(ti 0 입문 · 1 중급 · 2 상급 · 3 최상급 · 4 전설) — 해금도 낚싯대와 같다(need 'lvN' 레벨 · 'lvNdM' 레벨 + 어록 M종). sp: 모양(클라이언트 그리기) · 능력치 없음(모양·따라다니기만)
+// 이름은 펫마다 따로 지을 수 있다(POST /pet-name, PET_NM_MAX자) — 같은 낚시터의 다른 낚시꾼에게도 펫과 이름이 보인다
+pet:[{id:'pet_dog',n:'흰 강아지',sp:'dog',ti:0,tier:'입문',c:0xf3efe6,c2:0xe0b48a,p:5000,d:'어디든 졸졸 따라오는 첫 친구'},{id:'pet_cat',n:'치즈 고양이',sp:'cat',ti:0,tier:'입문',c:0xf2b36b,c2:0xfff4e0,p:5000,d:'생선 냄새에 가장 먼저 달려와요'},{id:'pet_duck',n:'노랑 오리',sp:'duck',ti:0,tier:'입문',c:0xffd84a,c2:0xff9a2e,p:6000,d:'뒤뚱뒤뚱 걷는 물가 친구'},
+ {id:'pet_shiba',n:'시바견',sp:'shiba',ti:1,tier:'중급',c:0xe0914a,c2:0xfff2e0,p:20000,need:'lv5',d:'말린 꼬리를 흔드는 든든한 짝꿍'},{id:'pet_gull',n:'갈매기',sp:'gull',ti:1,tier:'중급',c:0xf4f6f7,c2:0x8a96a0,p:20000,need:'lv5',d:'방파제 단골 손님 · 머리 위를 맴돌아요'},{id:'pet_bunny',n:'흰 토끼',sp:'bunny',ti:1,tier:'중급',c:0xfafafa,c2:0xffb6c6,p:22000,need:'lv5',d:'깡총깡총 뛰어서 따라와요'},
+ {id:'pet_peng',n:'펭귄',sp:'peng',ti:2,tier:'상급',c:0x2a2f38,c2:0xf6f6f2,p:50000,need:'lv10',d:'남쪽 나라 손님 · 고기를 낚으면 날개를 퍼덕여요'},{id:'pet_otter',n:'수달',sp:'otter',ti:2,tier:'상급',c:0x7a5236,c2:0xd9b48f,p:55000,need:'lv10',d:'물가의 재주꾼 · 실제 수달은 천연기념물·멸종위기 Ⅰ급이에요'},{id:'pet_turtle',n:'바다거북',sp:'turtle',ti:2,tier:'상급',c:0x5d8a4a,c2:0x8a6a3a,p:60000,need:'lv10',d:'느긋한 바다 친구 · 실제 바다거북은 해양보호생물이에요'},
+ {id:'pet_seal',n:'점박이물범',sp:'seal',ti:3,tier:'최상급',c:0xb9bec4,c2:0x5b6470,p:120000,need:'lv15d20',d:'백령도를 찾는 물범 · 실제로는 천연기념물·해양보호생물이에요'},{id:'pet_fox',n:'붉은여우',sp:'fox',ti:3,tier:'최상급',c:0xd8632a,c2:0xfaf5ee,p:120000,need:'lv15d20',d:'복슬복슬 꼬리 · 실제 여우는 멸종위기 Ⅰ급 야생생물이에요'},{id:'pet_koi',n:'비단잉어',sp:'koi',ti:3,tier:'최상급',c:0xf6f2ea,c2:0xe0402a,p:140000,need:'lv15d20',d:'공중을 헤엄쳐 따라오는 비단잉어'},
+ {id:'pet_gkoi',n:'황금 잉어',sp:'koi',ti:4,tier:'전설',c:0xffc83a,c2:0xff8a1a,p:300000,need:'lv25d30',d:'반짝이는 비늘 · 전설 등급 빛무리'},{id:'pet_whale',n:'하늘 고래',sp:'whale',ti:4,tier:'전설',c:0x5a8fd8,c2:0xe8f2ff,p:300000,need:'lv25d30',d:'하늘을 헤엄치는 작은 고래 · 전설 등급 빛무리'},{id:'pet_dragon',n:'아기 청룡',sp:'dragon',ti:4,tier:'전설',c:0x2fae8f,c2:0xffd75e,p:350000,need:'lv25d30',d:'날개를 파닥이는 아기 용 · 전설 등급 빛무리'}]};
+const PET_NM_MAX=8;
+// V91 펫 능력치(등급별, 장착한 한 마리만): [경험치 %, 조과 포인트 %, 입질 확률 %] — 자동 낚시(연안·선상)는 PET_AUTO_K(절반) · 입질은 직접 캐스팅만(상한 biteChance 75% 그대로) · 황금 물고기 확률은 모두 같게 둔다(GOLD_P)
+const PET_BUF=[[5,3,0],[10,6,3],[15,10,6],[22,15,10],[30,20,15]];
+const PET_AUTO_K=.5;
+function petBuf(id,auto){const x=typeof id==='string'?(COSM.pet||[]).find(i=>i.id===id):null;if(!x)return{xp:1,pt:1,bite:1,ti:-1};const b=PET_BUF[x.ti|0]||PET_BUF[0],k=auto?PET_AUTO_K:1;return{xp:1+b[0]*k/100,pt:1+b[1]*k/100,bite:1+b[2]*k/100,ti:x.ti|0};}
+function petBufTxt(ti){const b=PET_BUF[ti]||PET_BUF[0];return'경험치 +'+b[0]+'% · 포인트 +'+b[1]+'%'+(b[2]?' · 입질 +'+b[2]+'%':'');}
+// V90 레벨 해금 꼬리표: 'lv5' = Lv.5 · 'lv15d20' = Lv.15 + 어록 20종 → {lv, dex} | null (서버 needOk·클라이언트 needOk 둘 다 이 함수)
+function needLv(need){const m=/^lv(\d{1,3})(?:d(\d{1,3}))?$/.exec(typeof need==='string'?need:'');return m?{lv:+m[1],dex:m[2]?+m[2]:0}:null;}
 // v37 꾸미기 칸: WEAR는 /cosm-equip로 입는 칸, PAINT는 배(선장실 /boat-paint). 광고주(협찬) 꾸미기는 서버 KV cosm_extra(GET /cosm-catalog)로 더해진다 — id 'x_'로 시작, {brand, sponsor:true, tag:'광고', logo?} · 능력치 없음
-const COSM_WEAR=['vest','hat','float','title','pfd','glove','shoes','pants','bag'];
+const COSM_WEAR=['vest','hat','float','title','pfd','glove','shoes','pants','bag','top','pet'];/* V90 상의·펫 */
 const COSM_PAINT=['hull','flag'];
 const COSM_SLOTS=COSM_WEAR.concat(COSM_PAINT);
-const COSM_SLOT_N={vest:'낚시 조끼',hat:'모자',float:'찌',title:'칭호',pfd:'구명조끼',glove:'장갑',shoes:'신발',pants:'바지',bag:'가방',hull:'선체 색',flag:'깃발'};
+const COSM_SLOT_N={vest:'낚시 조끼',hat:'모자',float:'찌',title:'칭호',pfd:'구명조끼',glove:'장갑',shoes:'신발',pants:'바지',bag:'가방',top:'상의',pet:'펫',hull:'선체 색',flag:'깃발'};
 const PFD_DEF='p_waist';
 const NO_PFD_MSG='구명조끼를 입어야 낚시할 수 있습니다';
 // 실제 바다 안전 안내(게임 밖). 낚시어선 승객은 구명조끼 착용 의무(낚시 관리 및 육성법 — 낚시어선업자가 착용을 조치, 거부하면 과태료). 갯바위·방파제는 시장·군수·구청장·해양경찰서장이 출입 통제·안전 조치를 정할 수 있다
@@ -3760,12 +3781,12 @@ function avLathe(pts,seg,ps,pl){return new THREE.LatheGeometry(pts.map(p=>new TH
 const avDk=(c,k)=>new THREE.Color(c).multiplyScalar(k).getHex(),avMix=(a,b,t)=>new THREE.Color(a).lerp(new THREE.Color(b),t).getHex();
 // 모양 명세: 조끼 색·간략·선상 구명복·모자 여부·외모·입는 꾸미기(항목). 알 수 없는 구명조끼 id(목록에 아직 없는 광고 항목)는 기본 모양
 function avSpec(vest,lite,life,hat,w){w=w||{};const L=avLk(w.L),it=avWearItem;
-  const pf=w.pfd?(it('pfd',w.pfd)||COSM.pfd[0]):null,gl=it('glove',w.gl),sh=it('shoes',w.sh),pa=it('pants',w.pa),bg=it('bag',w.bg);
+  const pf=w.pfd?(it('pfd',w.pfd)||COSM.pfd[0]):null,gl=it('glove',w.gl),sh=it('shoes',w.sh),pa=it('pants',w.pa),bg=it('bag',w.bg),tp=it('top',w.tp);/* V90 상의 */
   const ks=x=>x?(x.s||'')+':'+((+x.c||0)>>>0).toString(16)+':'+(x.c2==null?'-':((+x.c2||0)>>>0).toString(16)):'-';
   const lg=x=>x&&typeof x.logo==='string'&&/^https:\/\/[^\s"'<>\\]+$/.test(x.logo)?x.logo:null;
   const logo=bg&&lg(bg)&&bg.s!=='hip'?{url:lg(bg),slot:'bag',s:bg.s}:pf&&lg(pf)?{url:lg(pf),slot:'pfd'}:null;
   const own=OWN_AP[w.own]?w.own:'';if(own==='sea')hat=true;/* V48 f3 가게 주인: 조끼 대신 앞치마 · 바다 식당은 두건(머리는 모자 쓴 모양) */
-  return{vest,lite:!!lite,life:!!life,hat:!!hat,L,pf,gl,sh,pa,bg,logo,own,key:['v3',vest,lite?1:0,life?1:0,hat?1:0,lookStr(L),ks(pf),ks(gl),ks(sh),ks(pa),ks(bg)].join('|')+(own?'|own_'+own:'')};}
+  return{vest,lite:!!lite,life:!!life,hat:!!hat,L,pf,gl,sh,pa,bg,tp,logo,own,key:['v3',vest,lite?1:0,life?1:0,hat?1:0,lookStr(L),ks(pf),ks(gl),ks(sh),ks(pa),ks(bg)].join('|')+(tp?'|tp_'+ks(tp)+(tp.ov?'o':''):'')+(own?'|own_'+own:'')};}
 // V48 f3 가게 주인 옷: 앞치마(가슴받이·치마·허리끈·주머니)와 두건을 몸 지오메트리에 함께 넣는다(같은 뼈대 · 같은 외곽선 · AVG에 한 번만)
 const OWN_AP={sea:0xf4efe2,fresh:0x8a5f3c,cafe:0x3bab8c};
 function avOwnParts(B,sp,rT,prof,bw,R,f,sg,lite){const k=sp.own,ac=OWN_AP[k],ad=avDk(ac,k==='sea'?.82:.72),PI=Math.PI;
@@ -3890,8 +3911,17 @@ function avBeard(B,L,R,lite){const bd=L.beard;if(!bd)return;const D=Math.PI/180,
 // 몸 지오메트리(외모·입는 꾸미기별 메모). 남자는 어깨가 조금 넓고, 여자는 어깨가 좁고 허리가 들어간 부드러운 실루엣
 const AV_TM=[[.001,.83],[.13,.835],[.178,.87],[.196,.93],[.198,1.0],[.192,1.08],[.196,1.17],[.205,1.26],[.204,1.33],[.19,1.39],[.16,1.44],[.11,1.47],[.06,1.485]],
   AV_TF=[[.001,.83],[.13,.835],[.184,.87],[.2,.93],[.192,1.0],[.17,1.08],[.172,1.16],[.184,1.25],[.183,1.32],[.17,1.38],[.142,1.43],[.1,1.46],[.055,1.475]];
+// V90 상의 무늬: 몸통(높이 .95~1.485, 반지름 rT) 위에 얇게 덧입힌다 — 같은 몸 지오메트리(드로콜 그대로)
+function avTopParts(B,t,rT,bw,sg,lite){const PI=Math.PI,c=t.c,c2=t.c2!=null?t.c2:avDk(c,.6),s=t.s,band=(y,h,col,dk)=>B.add(avLathe([[rT(y-h)+(dk||.006),y-h],[rT(y+h)+(dk||.006),y+h]],sg),col,-1,0,0,0,0,0,0,bw,1,.8*bw,avTW);
+  if(s==='stripe')for(const y of[1.02,1.12,1.22,1.32,1.42])band(y,.022,c2);
+  else if(s==='rash'){band(1.29,.03,c2);band(.99,.016,c2);}
+  else if(s==='camo'){const P=[[.4,1.05,.07],[-.8,1.15,.06],[1.6,1.3,.07],[-1.9,1.02,.06],[2.6,1.2,.065],[-2.7,1.36,.06],[.1,1.38,.05],[1.05,1.12,.055],[-1.3,1.28,.06],[3.1,1.05,.05]];
+    for(const[a,y,r]of P){const R0=rT(y)+.004;B.add(new THREE.SphereGeometry(r,lite?5:7,lite?3:4),c2,-1,Math.sin(a)*R0*bw,y,Math.cos(a)*R0*.8*bw,0,a,0,1,.75,.22,avTW);}}
+  else if(s==='jacket'||s==='fleece'||s==='hood'){if(s!=='hood'||!lite)B.add(avRBox(.022,.47,.016,.006,1),s==='fleece'?avDk(c,.8):c2,-1,0,1.2,rT(1.2)*.8*bw+.012,0,0,0,1,1,1,avTW);band(.97,.026,s==='fleece'?avDk(c,.85):c2,.012);
+    if(s==='fleece')band(1.44,.03,c2,.014);
+    if(s==='hood'){B.add(new THREE.SphereGeometry(.15,lite?6:9,lite?4:6),avDk(c,.92),2,0,.2,-.13,0,0,0,1.15,.62,.75);if(!lite)for(const sx of[-1,1])B.add(avRBox(.01,.12,.01,.004,1),c2,2,sx*.035,.13,.165*bw);}}}
 function avBody2(sp){if(AVG[sp.key])return AVG[sp.key];const L=sp.L,lite=sp.lite,B=avBuilder(1),PI=Math.PI,F=L.sex===1;
-  const skin=LOOK.skin[L.skin],bw=[1,1.13,.93][L.body]*(F?.92:1),lw=[1,1.12,.94][L.body]*(F?.9:1),SH=sp.own?sp.vest:F?0xfdedf0:AV_SHIRT/* 여자 셔츠는 연분홍 크림 · 가게 주인은 조끼 색을 셔츠 색으로 */,R=avHR(L),f=L.face;
+  const skin=LOOK.skin[L.skin],bw=[1,1.13,.93][L.body]*(F?.92:1),lw=[1,1.12,.94][L.body]*(F?.9:1),SH=sp.own?sp.vest:sp.tp?sp.tp.c:F?0xfdedf0:AV_SHIRT/* V90 상의 색 ·  여자 셔츠는 연분홍 크림 · 가게 주인은 조끼 색을 셔츠 색으로 */,R=avHR(L),f=L.face;
   const sg=lite?9:14,ls=lite?6:9,lg=lite?6:10,cn=2,TP=F?AV_TF:AV_TM;/* 분할 수: 내 캐릭터 약 5천 삼각형 · 간략(다른 사람·외곽선) 약 2.5천 */
   const rT=y=>{for(let i=1;i<TP.length;i++)if(y<=TP[i][1]){const a=TP[i-1],b=TP[i];return a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1]);}return TP[TP.length-1][0];};
   const prof=(y0,y1,n,k,dk)=>{const o=[];for(let i=0;i<=n;i++){const y=y0+(y1-y0)*i/n;o.push([Math.max(.001,rT(y)*k+(dk||0)),y]);}return o;};
@@ -3899,7 +3929,8 @@ function avBody2(sp){if(AVG[sp.key])return AVG[sp.key];const L=sp.L,lite=sp.lite
   // 몸통(셔츠) · 엉덩이(바지) · 목깃
   B.add(avLathe(prof(.95,1.485,lite?6:9,1).concat([[.001,1.492]]),sg),SH,-1,0,0,0,0,0,0,bw,1,.8*bw,avTW);
   B.add(avLathe([[.001,.83]].concat(prof(.835,1.01,lite?3:5,1.014)),sg),pc,-1,0,0,0,0,0,0,bw,1,.8*bw,avTW);
-  B.add(new THREE.TorusGeometry(.068,.017,lite?3:4,lite?8:12),avDk(SH,.93),2,0,.228,.004,PI/2-.12,0,0,1,.92,1);
+  B.add(new THREE.TorusGeometry(.068,.017,lite?3:4,lite?8:12),sp.tp&&sp.tp.c2!=null&&!sp.own?sp.tp.c2:avDk(SH,.93),2,0,.228,.004,PI/2-.12,0,0,1,.92,1);
+  if(sp.tp&&!sp.own)avTopParts(B,sp.tp,rT,bw,sg,lite);/* V90 상의 무늬·지퍼·후드 */
   if(ps==='wader'){B.add(avLathe(prof(1.0,1.31,4,1.02,.004),sg,-1.15,2.3),pc,-1,0,0,0,0,0,0,bw,1,.8*bw,avTW);
     for(const sx of[-1,1])B.add(avRBox(.034,.24,.012,.005,1),pa.c2!=null?pa.c2:avDk(pc,.6),2,sx*.085*bw,.12,.162*bw,-.28,0,0);}
   // 조끼(앞이 트인 낚시 조끼: 둥근 주머니·테두리) 또는 선상 구명복
@@ -3907,7 +3938,7 @@ function avBody2(sp){if(AVG[sp.key])return AVG[sp.key];const L=sp.L,lite=sp.lite
     for(const y of[1.12,1.3])B.add(avLathe([[rT(y-.016)+.039,y-.016],[rT(y+.016)+.039,y+.016]],sg,G,2*PI-2*G),0xe8eef0,-1,0,0,0,0,0,0,bw,1,.84*bw,avTW);
     B.add(new THREE.TorusGeometry(.105,.035,lite?4:5,lite?10:14),0xe8650f,2,0,.215,0,PI/2-.15,0,0,bw,1.05*bw,1);
     for(const y of[-.05,.06])B.add(avRBox(.07,.024,.03,.008,1),0x2a2d30,1,0,y+.1,.205*bw).add(avRBox(.03,.034,.034,.008,1),0xc9ced1,1,0,y+.1,.212*bw);}
-  else if(!sp.own){const vc=sp.vest,vd=avDk(vc,.72),G=.26,Vp=prof(1.0,1.45,lite?5:8,1,.017);B.add(avLathe(Vp,sg,G,2*PI-2*G),vc,-1,0,0,0,0,0,0,bw,1,.8*bw,avTW);
+  else if(!sp.own&&!(sp.tp&&sp.tp.ov)){/* V90 겉옷 상의(ov)를 입으면 낚시 조끼 대신 그 옷 */const vc=sp.vest,vd=avDk(vc,.72),G=.26,Vp=prof(1.0,1.45,lite?5:8,1,.017);B.add(avLathe(Vp,sg,G,2*PI-2*G),vc,-1,0,0,0,0,0,0,bw,1,.8*bw,avTW);
     if(!lite)for(const sx of[-1,1]){const P=Vp.map(q=>new THREE.Vector3(sx*Math.sin(G)*(q[0]+.002)*bw,q[1],Math.cos(G)*(q[0]+.002)*.8*bw));B.add(avTube(P,.011,.008,4,()=>[1,1],null,new THREE.Vector3(sx*Math.sin(G),0,Math.cos(G))),avDk(vc,.55),-1,0,0,0,0,0,0,1,1,1,avTW);}
     for(const sx of[-1,1])for(const[y,ph,w,hh]of[[1.08,.62,.1,.085],[1.27,.58,.085,.07]]){const r=rT(y)+.03,x=sx*Math.sin(ph)*r*bw,z=Math.cos(ph)*r*.8*bw,ry=sx*Math.atan2(Math.sin(ph)*bw,Math.cos(ph)*.8*bw);
       B.add(avRBox(w,hh,.03,.012,1),vd,-1,x,y,z,0,ry,0,1,1,1,avTW);if(!lite)B.add(avRBox(w+.008,.026,.036,.01,1),avDk(vc,.5),-1,x,y+hh/2-.005,z+.004,0,ry,0,1,1,1,avTW);if(!lite)B.add(avRBox(.018,.012,.01,.004,1),0xd9dde0,-1,x,y+hh/2-.012,z+.022,0,ry,0,1,1,1,avTW);}}
@@ -3939,7 +3970,7 @@ function avBody2(sp){if(AVG[sp.key])return AVG[sp.key];const L=sp.L,lite=sp.lite
   // 팔: 어깨 공 · 소매 · 소매 끝 · 둥근 손(엄지) — 장갑(전체·손가락 컷). 여자는 어깨가 좁아 팔을 조금 안쪽으로
   const gl=sp.gl,hcol=gl?gl.c:skin,hk=gl?0:1,ax=F?.024:0;
   for(const[s,sx]of[[4,-1],[7,1]]){const ox=-sx*ax;B.add(SP(.074*lw,ls-1,ls-4),sp.life?0xff7a1a:SH,s,ox,-.005,0).add(avCapG(.072*lw,.064*lw,AV_UA-.01,ls,cn),SH,s,ox).add(avCapG(.064*lw,.057*lw,AV_FA-.05,ls,cn),SH,s+1,ox);
-    B.add(CY(.061*lw,.063*lw,.034,ls,true),avDk(SH,.86),s+1,ox,.047-AV_FA).add(CY(.044,.047,.05,ls,true),skin,s+1,ox,.015-AV_FA,0,0,0,0,1,1,1,null,1);
+    B.add(CY(.061*lw,.063*lw,.034,ls,true),sp.tp&&sp.tp.c2!=null&&!sp.own&&sp.tp.s!=='tee'?sp.tp.c2:avDk(SH,.86),s+1,ox,.047-AV_FA).add(CY(.044,.047,.05,ls,true),skin,s+1,ox,.015-AV_FA,0,0,0,0,1,1,1,null,1);
     B.add(SP(.064,lite?ls:ls+1,lite?ls-3:ls-2),hcol,s+2,ox,-.066,.004,0,0,0,.9,1.08,.98,null,hk).add(avCapG(.021,.019,.034,ls-3,2),hcol,s+2,ox,-.03,.046,-.75,0,0,1,1,1,null,hk);
     if(gl&&gl.s==='cut')B.add(SP(.041,ls,ls-3),skin,s+2,ox,-.112,.004,0,0,0,.95,.72,.98,null,1);
     if(gl&&gl.s!=='cut')B.add(CY(.054,.058,.036,ls,true),gl.c2!=null?gl.c2:avDk(gl.c,.7),s+2,ox,-.008);}
@@ -5305,7 +5336,7 @@ async function enterSpot(s,trip){if(!ensureRenderer())return;if(autoOn&&cur&&s&&
   const sp=ENV.sun;logMsg('현지 시각 기준 해 고도 '+sp.el.toFixed(0)+'° · '+(ENV.night?'밤':'낮')+' 장면','sys');
   $('#loading').hidden=true;myPres={s:curTrip?s.id+':'+curTrip.id:s.id,n:save.nick,c:myColor(),h:V4().eq.hat||null,ti:V4().eq.title||null,x:sx,z:sz,ry:Math.PI,st:'idle'};myPresWear();/* v37 */if(curTrip)logMsg('선상 출조 — '+esc(curTrip.n)+' · 대여 장비 '+esc(curTrip.rig.n)+' · '+TRIP_MIN+'분 뒤 귀항'+(tripSeasonTxt(s,curTrip)?' · '+esc(tripSeasonTxt(s,curTrip)):''),'sys');sendPres(true);
   peers.forEach((p,id)=>dropPeer(id));updHere();canvas.focus();audioScene();hudClose();layoutHUD();/* V39-UI: 소식 창은 저절로 열지 않고 빨간 점만 */if($('#log')&&$('#log').children.length)$('#newsbtn').classList.add('unread');evt('enter');qStart();tutMaybe();if(autoPend){autoPend=false;setTimeout(()=>{if(tok===entryTok&&player&&!autoOn){setAuto(true);}},600);}/* V67 지도에서 누른 자동 */else setTimeout(()=>{if(tok!==entryTok)return;if(player&&!autoOn&&!curTrip&&SRV&&SA&&SA.on&&cur&&SA.spot===cur.id)autoAttach();else renderAutoBtn();},600);/* V73 자동 중인 낚시터로 돌아오면 이어서 보여 줌 */setTimeout(()=>{if(tok===entryTok)trShow();},1500);}
-function spawnMe(sx,sz,ry){player=Object.assign(makeAngler(myVestNow(),0x22262a,false,{life:kind==='boat',hat:lookOf('hat'),wear:myWear()}),{name:save.nick});/* v37 외모·입는 꾸미기 */if(walkFn(sx,sz)==null){const d=sx>0?-.3:.3;for(let k=1;k<=8;k++)if(walkFn(sx+d*k,sz)!=null){sx+=d*k;break;}}/* V48 fix: 다시 지을 때 짐 더미 안에 서 있었으면 옆으로 비켜 세움 */player.g.position.set(sx,walkFn(sx,sz)||0,sz);player.g.rotation.y=ry;
+function spawnMe(sx,sz,ry){try{if(player)petDrop(player);}catch(e){}/* V90 */player=Object.assign(makeAngler(myVestNow(),0x22262a,false,{life:kind==='boat',hat:lookOf('hat'),wear:myWear()}),{name:save.nick});/* v37 외모·입는 꾸미기 */if(walkFn(sx,sz)==null){const d=sx>0?-.3:.3;for(let k=1;k<=8;k++)if(walkFn(sx+d*k,sz)!=null){sx+=d*k;break;}}/* V48 fix: 다시 지을 때 짐 더미 안에 서 있었으면 옆으로 비켜 세움 */player.g.position.set(sx,walkFn(sx,sz)||0,sz);player.g.rotation.y=ry;
   const nl=label(save.nick,{me:1,gold:hasGold(),t:titleName(lookOf('title'))});nl.position.y=AV_LBL;player.g.add(nl);player.nl=nl;player.nlG=hasGold();player.nlT=titleName(lookOf('title'));
   {const hl=new THREE.PointLight(0xe2ecff,0,10,2);/* V48 env 마무리: 머리등 .7 → .3 · 고침: .22, 해 고도로 서서히 */hl.userData.bi=ENV.lampsOn?.22:0;hl.intensity=hl.userData.bi*lampK();hl.position.set(0,1.9,.4);player.g.add(hl);SKYR.hl=hl;}
   pBob=makeBobber();pLine=makeLine();goldLook();bobSkinMe();}
@@ -5588,7 +5619,7 @@ let nearN=99;function nearHint(chk,all){if(autoOn||!curList.length)return;nearN+
   if(distX(castD,chk.D,0)<=.3&&dk<=.72&&nearN>=4){nearN=0;toast('발 앞이라 입질이 적습니다 — 더 멀리 던져 보세요');}}
 // 던진 채비가 물에 닿으면 이번 캐스팅의 입질 여부·시각을 정한다(서버 모드에서는 서버 /cast 결과를 쓴다)
 let plan=null,escPlan=null,escJ=0;const SES={c:0,b:0,f:0,none:0,late:0,miss:0,jump:0,pull:0,break:0,snag:0};
-function startWait(){const m=curChk.meth==='pole'?'float':curChk.meth;const dk=listDK(m,castD,curChk.D,curList);const LB=listBite(m,biteFactor()*chumK(),/* v34 집어제(직접 낚시만) */curList,curChk.G,m==='boat',dk);const k=LB.k;ENV.biteK=k;ENV.distK=dk;waitT=0;
+function startWait(){const m=curChk.meth==='pole'?'float':curChk.meth;const dk=listDK(m,castD,curChk.D,curList);const LB=listBite(m,biteFactor()*chumK()*(autoOn?1:petBuf(V4().eq.pet,false).bite)/* V91 펫 입질 */,/* v34 집어제(직접 낚시만) */curList,curChk.G,m==='boat',dk);const k=LB.k;ENV.biteK=k;ENV.distK=dk;waitT=0;
   const spd=m==='lure'?lureSpd(curChk.G.term.kind):1;plan={pB:LB.pB,dk,at:biteDelay(m,castD,spd,Math.random()),wait:noneWait(m,castD,spd,Math.random()),used:false};plan.bite=Math.random()<plan.pB;if(!curList.length){plan.bite=false;plan.wait=Math.min(plan.wait,3);}egiStart();}
 function planDue(){if(!plan||!plan.bite||plan.used||waitT<plan.at)return false;plan.used=true;return true;}
 function planNoneDue(){return!!plan&&!plan.bite&&waitT>=plan.wait;}
@@ -5628,9 +5659,9 @@ function biteFactor(){const w=W||{};let k=1;const wind=+w.wind||0;if(cur.w==='se
 function landCatch(){evt('catch');SES.f++;if(SRV){srvLand();return;}state='result';landAt=performance.now();pBob.visible=false;pLine.l.visible=false;if(!$('#fight').hidden){$('#fight').hidden=true;layoutHUD();}holding=false;player.pivot.rotation.x=1.0;
   const clo=closedRange(fish,0,cur),rel=!!clo||(fish.min!=null&&fsize<=fish.min);const gold=fishGold&&!autoOn;fishGold=false;if(!autoOn)avFish(player,fish,fsize,rel,gold);// 법정 금지체장 이하 → 방생(점수·최고기록 없음, 마릿수만 기록)
   if(autoOn){avFish(player,fish,fsize,rel,false);autoVisNote();chime();myPres.st='idle';delete myPres.bx;sendPres(true);bubble(player,'자동 · 5분마다 정산');return;}// v23: 화면을 켜 둔 자동 낚시도 서버와 같이 시간으로 정산(5분마다·끌 때)
-  const raw=rawPts(fish,fsize,curChk.G.rod.me,ratio);const pts=rel?0:ptsK(fish,fsize,curChk.G.rod.me,ratio,false,curTrip&&curTrip.id,MANUAL_K*(v36Ev&&!v36Ev.srv?EVENT_K:1));save.pt=(save.pt||0)+pts;dcAdd(1);const d=save.dex[fish.n]||{n:0,best:0,where:''};const first=d.n===0;const rec=!rel&&fsize>d.best;d.n++;if(rec){d.best=fsize;d.where=cur.n;d.kg=+fishKgNow.toFixed(2);d.bt=Date.now();}d.me=Array.from(new Set([...(d.me||[]),curChk.G.rod.me]));save.dex[fish.n]=d;save.score+=pts;save.count++;const newSpot=!(save.spots[cur.id]>0);save.spots[cur.id]=(save.spots[cur.id]||0)+1;persist();
+  const raw=rawPts(fish,fsize,curChk.G.rod.me,ratio);const pts=rel?0:Math.round(petBuf(V4().eq.pet,false).pt*ptsK(fish,fsize,curChk.G.rod.me,ratio,false,curTrip&&curTrip.id,MANUAL_K*(v36Ev&&!v36Ev.srv?EVENT_K:1)));save.pt=(save.pt||0)+pts;dcAdd(1);const d=save.dex[fish.n]||{n:0,best:0,where:''};const first=d.n===0;const rec=!rel&&fsize>d.best;d.n++;if(rec){d.best=fsize;d.where=cur.n;d.kg=+fishKgNow.toFixed(2);d.bt=Date.now();}d.me=Array.from(new Set([...(d.me||[]),curChk.G.rod.me]));save.dex[fish.n]=d;save.score+=pts;save.count++;const newSpot=!(save.spots[cur.id]>0);save.spots[cur.id]=(save.spots[cur.id]||0)+1;persist();
   try{showBegin({f:fish,cm:fsize,kg:fishKgNow,gold,evt:!!(v36Ev&&!v36Ev.srv&&!v36S().evt.ids.includes(v36Ev.id)),first,pb:rec&&!first,rel,spot:curTrip?cur.n+' 출항':cur.n});}catch(e){}/* v38 들어 보이기: 레벨 업·해금 창보다 먼저(그 창들은 연출 뒤로) */
-  const xp=xpK(fish,fsize,raw,rel,first,RG.lv,false,v38XpK());/* v38 손맛 */const xL0=RG.lv;addXP(xp);const qAdv=clo?[]:missionEvent({me:curChk.G.rod.me,rel,kg:fishKgNow,newSpot,species:fish.n});if(!rel){let rp=pts;if(curTrip&&TS&&TS.owe>0){const d=Math.min(TS.owe,rp);TS.owe-=d;rp-=d;if(TS.owe===0)setTimeout(()=>toast('선비를 다 갚았습니다 · 이제 랭킹 포인트가 쌓입니다'),1600);}rankAdd(rp,fishKgNow,fish.n);}/* v32 #215: 로컬도 서버처럼 선비를 먼저 갚고 랭킹에 */;tripTally(curTrip,fish,fsize,rel,pts,null);if(rel&&!clo)relTip();
+  const xp=Math.round(petBuf(V4().eq.pet,false).xp*xpK(fish,fsize,raw,rel,first,RG.lv,false,v38XpK()));/* V91 펫 *//* v38 손맛 */const xL0=RG.lv;addXP(xp);const qAdv=clo?[]:missionEvent({me:curChk.G.rod.me,rel,kg:fishKgNow,newSpot,species:fish.n});if(!rel){let rp=pts;if(curTrip&&TS&&TS.owe>0){const d=Math.min(TS.owe,rp);TS.owe-=d;rp-=d;if(TS.owe===0)setTimeout(()=>toast('선비를 다 갚았습니다 · 이제 랭킹 포인트가 쌓입니다'),1600);}rankAdd(rp,fishKgNow,fish.n);}/* v32 #215: 로컬도 서버처럼 선비를 먼저 갚고 랭킹에 */;tripTally(curTrip,fish,fsize,rel,pts,null);if(rel&&!clo)relTip();
   $('#cardKick').textContent=(curTrip?cur.n+' 출항 '+curTrip.n:cur.n)+(rel?'에서 낚아 방생했습니다':'에서 낚았습니다');$('#cardName').textContent=fish.n;$('#cardSize').innerHTML=fsize.toFixed(1)+'<small>cm</small>';
   $('#cardTags').innerHTML='<span class="tag">약 '+(fishKgNow<1?Math.round(fishKgNow*1000)+'g':fishKgNow.toFixed(1)+'kg')+'</span>'+(rel?'<span class="tag" style="color:#7cc4e8;border-color:#7cc4e8">'+(clo?'금어기 '+clo[0]+'.'+clo[1]+'~'+clo[2]+'.'+clo[3]:'금지체장 '+fish.min+'cm 이하')+' · 방생</span>':'<span class="tag">+'+pts+'P</span><span class="tag mbonus">직접 낚시 보너스 +30%</span>')+(rec||first?'<span class="tag" style="color:#ff7a3d;border-color:#ff7a3d">'+(first?'어록 등록':'개인 최고')+'</span>':'')+'<span class="tag">누적 '+save.count+'마리</span><span class="tag">+'+xp+'XP'+xpTagTxt(fish,xL0)+'</span><span class="tag">'+sesTxt()+'</span>'+qTags(qAdv);
   const w=W||{};$('#cardMeta').textContent='당시 기상 · 풍속 '+(w.wind!=null?(+w.wind).toFixed(1)+'m/s':'-')+(cur.w==='sea'?' · 파고 '+(w.wave!=null?(+w.wave).toFixed(1)+'m':'-')+(w.sst!=null&&w.sst!==''?' · 수온 '+w.sst+'°C':'')+((w.tide||{}).phase?' · '+w.tide.phase:''):' · 기온 '+(w.air!=null?w.air+'°C':'-'))+'. 크기는 게임 내 범위('+(curTrip?'선상':'연안')+') 안에서 정해집니다.'+(rel?(clo?' 지금은 법정 금어기('+closedTxt(fish)+(CLOSED_NOTE[fish.n]?', '+CLOSED_NOTE[fish.n]:'')+')라 놓아주었습니다.':' 법정 포획금지체장('+fish.min+'cm 이하)이라 놓아주었습니다.'):'')+(curTrip?' 선상: '+curTrip.n+' · 대여 장비 '+curTrip.rig.n+' · 수심 '+castD+'m.':' 채비: '+curChk.G.rod.n+' · '+curChk.G.line.n+(curChk.G.leader?' · '+curChk.G.leader.n:'')+' · '+curChk.G.term.n+' · 비거리 '+Math.round(castD)+'m.')+((FX[fish.n]||{}).bait?' 실제 낚시 미끼·채비: '+FX[fish.n].bait+'.':'');refreshWallet();
@@ -5818,7 +5849,7 @@ function onPeer(id,st){st=peerNorm(st);if(!scene||!cur||st.s!==myPres.s){dropPee
   try{trNote(p,st);}catch(e){}if(st.k&&st.k.t!==p.k0){p.k0=st.k.t;const kf=FISH.find(x=>x.n===st.k.f),kn=Date.now();if(kf&&!st.__snap&&(st.k.a!=null?+st.k.a<30000:true)&&kn-(p.kAt||0)>=1e4){p.kAt=kn;/* C6 #84: 보낸 사람 시계 대신 도착 시점 기준(서버가 나이 a를 주면 그것으로) · v31 S4 #27: 어종 목록에 없는 이름은 보이지 않고, 사람마다 10초에 한 번 */{const f=kf;avFish(p,f,+st.k.z,(f.min!=null&&+st.k.z<=f.min)||!!closedRange(f,0,cur));if(p.st==='show')p.A.showT=0;peerFx(p,'catch');}logMsg('<b>'+esc(p.name)+'</b> · '+esc(st.k.f)+' '+(+st.k.z).toFixed(1)+'cm');ctxSay('축하해요!','q3');bubble(p,st.k.f+' '+Math.round(st.k.z)+'cm!');}}}
 var peerSeenM=null;function peerSeen(){if(!peerSeenM||peerSeenM.size>500)peerSeenM=new Map();return peerSeenM;}// LS #244: 사라진 사람 번호 → 시각(다시 연결 판별)
 function peerLeft(id){const p=peers.get(id);dropPeer(id);if(!p||peerQuiet)return;const n=p.name,t0=p.t0||Date.now(),tl=peerSeen().get(id);setTimeout(()=>{if(!peers.has(id)&&tl-t0>10e3&&peerSeen().get(id)===tl)logMsg('<b>'+esc(n)+'</b> 님이 나갔습니다','sys');},8000);}// LS #244: 10초 넘게 있던 사람이 8초 안에 돌아오지 않으면 나감을 남긴다
-function dropPeer(id){peerLast.delete(id);const p=peers.get(id);if(!p)return;peerSeen().set(id,Date.now());dropBubble(p);dropAv(p);p.g.traverse(o=>{if(o.isSprite&&o.material){if(o.material.map&&o.material.map!==_dot&&!o.material.map.__keep)o.material.map.dispose();o.material.dispose();}});
+function dropPeer(id){peerLast.delete(id);const p=peers.get(id);if(!p)return;try{petDrop(p);}catch(e){}/* V90 */peerSeen().set(id,Date.now());dropBubble(p);dropAv(p);p.g.traverse(o=>{if(o.isSprite&&o.material){if(o.material.map&&o.material.map!==_dot&&!o.material.map.__keep)o.material.map.dispose();o.material.dispose();}});
   // C5 #86: 찌·채비 지오메트리(사람마다 새로 만듦)·자기 재질·줄 재질까지 해제(공유 재질 mat()·점 텍스처는 그대로)
   if(p.bob)p.bob.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();if(o.material&&o.material.userData&&o.material.userData.own)o.material.dispose();});if(p.line&&p.line.l){p.line.l.geometry.dispose();if(p.line.l.material)p.line.l.material.dispose();}if(scene){scene.remove(p.g);scene.remove(p.bob);scene.remove(p.line.l);}peers.delete(id);plT=-1;updHere();}
 // C6 #110: 다른 사람 찌·루어는 받은 위치로 부드럽게 따라가고(감기·파이팅), 던질 때는 낚싯대를 휘두른 뒤 포물선으로 날아간다
@@ -6102,7 +6133,7 @@ addEventListener('pointerdown',e=>{if(cardDT&&state==='result'&&!$('#world').hid
 let T=0,snagMoveT=-1e9,chargeRy0=null,OCCK=1;const camP=new THREE.Vector3(0,8,30),camT=new THREE.Vector3();
 let lastRT=performance.now();
 let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+=dt;const p=player.g.position;{const bc=state==='bite'||state==='hooking';if(bc!==bitingCls){bitingCls=bc;$('#world').classList.toggle('biting',bc);}
-  /* v32 LC2 #255: 입질·밑걸림도 presence로(다른 사람에게 찌가 들어가거나 대를 당기는 모습). wait↔bite↔snag 사이만 여기서 바꾸고 나머지는 기존 흐름 */if(PRES_SUB[myPres.st]&&PRES_SUB[state]&&myPres.st!==state&&!autoOn){myPres.st=state;sendPres(true);}}{const now=performance.now();const rdt=Math.min(1000,now-lastRT);lastRT=now;autoTick(dt,rdt);}try{boatAutoTick(dt);}catch(e){}/* V84 선상 자동 모습 */
+  /* v32 LC2 #255: 입질·밑걸림도 presence로(다른 사람에게 찌가 들어가거나 대를 당기는 모습). wait↔bite↔snag 사이만 여기서 바꾸고 나머지는 기존 흐름 */if(PRES_SUB[myPres.st]&&PRES_SUB[state]&&myPres.st!==state&&!autoOn){myPres.st=state;sendPres(true);}}{const now=performance.now();const rdt=Math.min(1000,now-lastRT);lastRT=now;autoTick(dt,rdt);}try{boatAutoTick(dt);}catch(e){}/* V84 선상 자동 모습 */try{petTick(dt);}catch(e){}/* V90 펫 */
   // 이동
   let ix=0,iy=0;if(keys.w||keys.arrowup)iy++;if(keys.s||keys.arrowdown)iy--;if(keys.a||keys.arrowleft)ix--;if(keys.d||keys.arrowright)ix++;if(keys.q||keys.e)yawGoal=null;if(keys.q)yaw+=dt*1.6;if(keys.e)yaw-=dt*1.6;
   ix+=joyV.x;iy+=joyV.y;const il=Math.hypot(ix,iy);
@@ -6679,8 +6710,8 @@ function settleLocal(keep,why){const a=save.auto;if(!a.on||!a.spot)return null;c
       if(H!==null&&tm>=H){capped='hungry';stopAt=H;break outer;}/* v38 배고픈 시각부터 거두지 않음 */
       const cut=n>=smax?'settle':dc.n>=dcap?'day':t.pack&&termLeft(t.id)<=0?'term':'';if(cut){capped=cut;stopAt=Math.min(end,sg.from+m*S.cyc*1000);break outer;}castN++;
       const o=S.roll();if(!o)continue;if(o.lost){if(t.pack)save.inv.term[t.id]=Math.max(0,termLeft(t.id)-1);lost++;if(!durHit(DS,WEAR_LOSS,tm)){capped='broke';stopAt=tm;break outer;}continue;}
-      /* v32 LC2 #248: 이월 시간 반영한 실제 던진 시각 */const rel=!!closedRange(o.f,tm,s)||(o.f.min!=null&&o.sz<=o.f.min);const raw=rawPts(o.f,o.sz,S.me,o.ratio);const p=rel?0:ptsK(o.f,o.sz,S.me,o.ratio,true,null,sg.k);
-      const d=save.dex[o.f.n]||{n:0,best:0,where:''};const first=d.n===0;if(first)fresh.push(o.f.n);const gx=xpK(o.f,o.sz,raw,rel,first,lv0,true,sg.k);
+      /* v32 LC2 #248: 이월 시간 반영한 실제 던진 시각 */const rel=!!closedRange(o.f,tm,s)||(o.f.min!=null&&o.sz<=o.f.min);const raw=rawPts(o.f,o.sz,S.me,o.ratio);const PB=petBuf(V4().eq.pet,true),p=rel?0:Math.round(PB.pt*ptsK(o.f,o.sz,S.me,o.ratio,true,null,sg.k));/* V91 펫(자동 절반) */
+      const d=save.dex[o.f.n]||{n:0,best:0,where:''};const first=d.n===0;if(first)fresh.push(o.f.n);const gx=Math.round(PB.xp*xpK(o.f,o.sz,raw,rel,first,lv0,true,sg.k));
       pts+=p;xp+=gx;n++;dc.n++;M.n++;M.pts+=p;M.xp+=gx;if(rel)rels++;else keptF.push({f:o.f.n,cm:o.sz,kg:+o.kg.toFixed(3),at:tm,src:'a'});/* v38 쿨러 후보 */
       d.n++;if(!rel&&o.sz>d.best){d.best=o.sz;d.where=s.n;d.kg=+o.kg.toFixed(2);d.bt=tm;}d.me=Array.from(new Set([...(d.me||[]),S.me]));save.dex[o.f.n]=d;save.count++;
       const T=tally[o.f.n]||(tally[o.f.n]={n:0,max:0});T.n++;if(o.sz>T.max)T.max=o.sz;if(!best||o.kg>best.kg)best={n:o.f.n,sz:o.sz,kg:o.kg};
@@ -7531,7 +7562,7 @@ function srvLand(){const c=srvC,b=c&&c.h;state='result';landAt=performance.now()
   const done=j=>{srvCatchPending=false;const rel=!!j.released,clo=j.closed;const rec=!rel&&cm>best0;const qb0={};(RG.miss||[]).forEach(m=>qb0[m.id]=m.p);
     save.pt=j.pt;setWal(j.wallet);applyRPG(j.rpg);const qAdv=j.daily?null:qAdvDiff(qb0);questBadge();if(j.dex)save.dex[f.n]=j.dex;save.count=(save.count||0)+1;save.spots[spot.id]=(save.spots[spot.id]||0)+1;save.score=(save.score||0)+(j.pts||0);refreshWallet();renderLv();
     $('#cardKick').textContent=(trip?spot.n+' 출항 '+trip.n:spot.n)+(rel?'에서 낚아 방생했습니다':'에서 낚았습니다');
-    $('#cardTags').innerHTML='<span class="tag">약 '+kgTxt(j.kg!=null?j.kg:kg)+'</span>'+(rel?'<span class="tag" style="color:#7cc4e8;border-color:#7cc4e8">'+(clo?'금어기 '+clo[0]+'.'+clo[1]+'~'+clo[2]+'.'+clo[3]:'금지체장 '+f.min+'cm 이하')+' · 방생</span>':'<span class="tag">+'+j.pts+'P</span><span class="tag mbonus">직접 낚시 보너스 +30%</span>'+(trip&&j.rankPt!=null&&j.rankPt<j.pts?'<span class="tag">랭킹 +'+j.rankPt+' · 선비 상환 '+(j.pts-j.rankPt)+'</span>':''))+(rec||first?'<span class="tag" style="color:#ff7a3d;border-color:#ff7a3d">'+(first?'어록 등록':'개인 최고')+'</span>':'')+'<span class="tag">누적 '+save.count+'마리</span><span class="tag">+'+j.xp+'XP'+xpTagTxt(f,RG.lv-(j.levelUps||0))+'</span>'+qTags(qAdv);
+    $('#cardTags').innerHTML='<span class="tag">약 '+kgTxt(j.kg!=null?j.kg:kg)+'</span>'+(rel?'<span class="tag" style="color:#7cc4e8;border-color:#7cc4e8">'+(clo?'금어기 '+clo[0]+'.'+clo[1]+'~'+clo[2]+'.'+clo[3]:'금지체장 '+f.min+'cm 이하')+' · 방생</span>':'<span class="tag">+'+j.pts+'P</span><span class="tag mbonus">직접 낚시 보너스 +30%</span>'+(trip&&j.rankPt!=null&&j.rankPt<j.pts?'<span class="tag">랭킹 +'+j.rankPt+' · 선비 상환 '+(j.pts-j.rankPt)+'</span>':''))+(rec||first?'<span class="tag" style="color:#ff7a3d;border-color:#ff7a3d">'+(first?'어록 등록':'개인 최고')+'</span>':'')+'<span class="tag">누적 '+save.count+'마리</span><span class="tag">+'+j.xp+'XP'+xpTagTxt(f,RG.lv-(j.levelUps||0))+'</span>'+(j.pet&&(j.pet.pt||j.pet.xp)?'<span class="tag" style="color:#1f9e6e;border-color:#1f9e6e">펫 보너스 +'+(j.pet.pt||0)+'P · +'+(j.pet.xp||0)+'XP</span>':'')+qTags(qAdv);/* V91 */
     try{showSrv(j,f,cm);}catch(e){}tripTally(trip,f,cm,rel,j.pts,j);if(rel&&!clo)relTip();
     if(j.gold){goldServer(j.gold);if(j.dex)save.dex[f.n]=j.dex;}if(gold&&!j.gold)$('#cardTags').insertAdjacentHTML('beforeend','<span class="tag">황금 판정 미확인</span>');
     if(rel)$('#cardMeta').textContent=meta(clo?' 지금은 법정 금어기('+closedTxt(f)+(CLOSED_NOTE[f.n]?', '+CLOSED_NOTE[f.n]:'')+')라 놓아주었습니다.':' 법정 포획금지체장('+f.min+'cm 이하)이라 놓아주었습니다.');
@@ -8200,7 +8231,7 @@ $('#enter').addEventListener('click',async()=>{const eb=$('#enter');if(eb.disabl
    모두 정해진 값으로 사는 것(무작위 없음) · 게임 안에서만 쓰는 꾸미기·소모품·전시. 서버 모드는 서버가 기준, 오프라인은 이 기기 저장(save.v34)
    상태 모양(save.v34): {own:[ids], eq:{vest,hat,float,title,hull,flag}, chum:끝 시각(이 기기 시계 ms), tank:{lv,slots:[어종|null],don:[장식],dOn:[켠 장식]},
    gyo:[{k:어종,cm,where,ts,nick}], rel:{mine:내가 방류한 치어 수, n:방류 횟수, month:이번 달 전체(서버만)}, cabin:선실 단계, capt:배를 가진 적 있음} */
-var V4N=Math.random().toString(36).slice(2),V4SLOTS=['vest','hat','float','title','pfd','glove','shoes','pants','bag','hull','flag'],PREV=null,v4Fly=false,v4LaterT=null,tripHullId='',chumWasOn=false;
+var V4N=Math.random().toString(36).slice(2),V4SLOTS=COSM_SLOTS.slice()/* V90: 공유 규칙 칸 목록(상의·펫 포함) */,PREV=null,v4Fly=false,v4LaterT=null,tripHullId='',chumWasOn=false;
 var V4_SLOT_TXT=Object.assign({},COSM_SLOT_N);/* v37: 공유 규칙 칸 이름(구명조끼·장갑·신발·바지·가방 포함) */
 function cosmBy(id){if(typeof id!=='string')return null;for(const s of V4SLOTS){const x=(COSM[s]||[]).find(i=>i.id===id);if(x)return Object.assign({slot:s},x);}return null;}
 function cosmIn(slot,id){return typeof id==='string'&&(COSM[slot]||[]).some(i=>i.id===id)?id:null;}
@@ -8221,11 +8252,13 @@ function v4Norm(o){o=isObj(o)?o:{};const own=v4Arr(o.own,id=>!!cosmBy(id)||XID(i
   const dOk=id=>TANK_DECO.some(d=>d.id===id),don=v4Arr(t0.don,dOk),dOn=v4Arr(t0.dOn,dOk).filter(id=>don.includes(id));
   const r0=isObj(o.rel)?o.rel:{};
   return{_n:V4N,srv:!!o.srv,own,eq,chum:isFinite(+o.chum)&&+o.chum>0?+o.chum:0,tank:{lv,slots:sl,don,dOn},gyo:(Array.isArray(o.gyo)?o.gyo:[]).map(gyoNorm).filter(Boolean).slice(-50),
-    rel:{mine:v4Int(r0.mine),n:v4Int(r0.n),month:r0.month==null?null:v4Int(r0.month)},cabin:Math.max(0,Math.min(CABIN_CAP.length-1,v4Int(o.cabin))),capt:!!o.capt};}
+    rel:{mine:v4Int(r0.mine),n:v4Int(r0.n),month:r0.month==null?null:v4Int(r0.month)},cabin:Math.max(0,Math.min(CABIN_CAP.length-1,v4Int(o.cabin))),capt:!!o.capt,pn:petNmNorm(o.pn,own)};}
+// V90 펫 이름 {펫 id: 이름} — 가진 펫만 · PET_NM_MAX자
+function petNmNorm(o,own){const r={};if(isObj(o))for(const k in o){const x=cosmIn('pet',k);if(x&&own.includes(k)&&typeof o[k]==='string'&&o[k].trim())r[k]=Array.from(o[k].trim()).slice(0,PET_NM_MAX).join('');}return r;}
 function V4(){if(!isObj(save.v34)||save.v34._n!==V4N)save.v34=v4Norm(save.v34);return save.v34;}
 // 서버 응답(프로필·각 엔드포인트) → save.v34. 없는 칸은 그대로 둔다. 모양이 조금 달라도 읽는다
 function v4Merge(j){if(!isObj(j))return 0;const v=Object.assign({},V4());let n=0;
-  if(isObj(j.cosm)){const c=j.cosm;if(Array.isArray(c.own))v.own=c.own;else if(isObj(c.own))v.own=Object.keys(c.own).filter(k=>c.own[k]);if(isObj(c.eq))v.eq=Object.assign({},v.eq,c.eq);if('capt' in c)v.capt=v.capt||!!c.capt;n++;}if('capt' in j)v.capt=v.capt||!!j.capt;
+  if(isObj(j.cosm)){const c=j.cosm;if(Array.isArray(c.own))v.own=c.own;else if(isObj(c.own))v.own=Object.keys(c.own).filter(k=>c.own[k]);if(isObj(c.eq))v.eq=Object.assign({},v.eq,c.eq);if(isObj(c.pn))v.pn=c.pn;/* V90 */if('capt' in c)v.capt=v.capt||!!c.capt;n++;}if('capt' in j)v.capt=v.capt||!!j.capt;
   for(const k of['everCapt','captEver','wasCapt','capt_ever','hadBoat'])if(k in j)v.capt=v.capt||!!j[k];
   if(j.captEver===0||j.captEver===1)v.capt=j.captEver===1;/* V34-verify: 서버 프로필 captEver(1|0)가 기준 — 'capt'는 v33 미수령 알림 객체 */
   const C=isObj(j.chum)?j.chum:{};const cl=j.chumLeftMs!=null?+j.chumLeftMs:C.leftMs!=null?+C.leftMs:j.chumUntil!=null&&j.leftMs!=null?+j.leftMs:null;
@@ -8244,9 +8277,9 @@ function v4Later(){clearTimeout(v4LaterT);v4LaterT=setTimeout(async()=>{const r=
 function durTxt(ms){const m=Math.round(ms/6e4);return m%60?m+'분':m/60+'시간';}
 function relTimes(){const r=V4().rel;return Math.max(r.n,Math.floor(r.mine/RELEASE_N));}
 // 해금 조건(need) — 서버 LOCKED가 기준, 여기서는 미리 알려 주기만
-function needOk(need){if(!need)return true;if(need==='evt1')return v36EvN()>0;/* v36 전국 대물(서버 LOCKED가 기준) */if(need==='gold')return hasGold();if(need==='capt')return SRV&&(!!(MYB&&MYB.boat)||V4().capt);if(need==='dex30')return dexN()>=30;if(need==='dex60')return dexN()>=60;if(need==='rel10')return relTimes()>=10;return false;}
+function needOk(need){if(!need)return true;if(need==='evt1')return v36EvN()>0;/* v36 전국 대물(서버 LOCKED가 기준) */if(need==='gold')return hasGold();if(need==='capt')return SRV&&(!!(MYB&&MYB.boat)||V4().capt);if(need==='dex30')return dexN()>=30;if(need==='dex60')return dexN()>=60;if(need==='rel10')return relTimes()>=10;const L=needLv(need);if(L)return(RG.lv||1)>=L.lv&&dexN()>=L.dex;/* V90 펫 등급 */return false;}
 function needTxt(need){if(need==='evt1')return'전국 대물을 한 번 낚으면 열립니다';if(need==='gold')return'황금 물고기를 한 번 낚으면 열립니다';if(need==='capt')return SRV?'선장이 되면 열립니다':'선장이 되면 열립니다 · 낚시GO 로그인 필요';
-  const m=/^dex(\d+)$/.exec(need||'');if(m)return'어록 '+m[1]+'종이면 열립니다 · 지금 '+dexN()+'종';if(need==='rel10')return'치어 방류 10번이면 열립니다 · 지금 '+relTimes()+'번';return'아직 열리지 않았습니다';}
+  const m=/^dex(\d+)$/.exec(need||'');if(m)return'어록 '+m[1]+'종이면 열립니다 · 지금 '+dexN()+'종';if(need==='rel10')return'치어 방류 10번이면 열립니다 · 지금 '+relTimes()+'번';const L=needLv(need);if(L)return'Lv.'+L.lv+(L.dex?' · 어록 '+L.dex+'종':'')+'이면 열립니다 · 지금 Lv.'+(RG.lv||1)+(L.dex?' · '+dexN()+'종':'');return'아직 열리지 않았습니다';}
 function v4Err(r,ctx){const j=(r&&r.j)||{},e=j.error;
   if(e==='LOCKED')return needTxt(j.need);if(e==='OWNED')return ctx==='gyo'?'이 기록은 이미 어탁을 떴습니다':'이미 가지고 있습니다';if(e==='NOT_OWNED')return'아직 사지 않았습니다';
   if(e==='MAX')return ctx==='chum'?'집어제는 최대 '+durTxt(CHUM.maxMs)+'까지 쌓입니다':ctx==='tank'?'가장 큰 어항입니다':ctx==='cabin'?'가장 넓은 선실입니다':ctx==='gyo'?'어탁은 50장까지 걸 수 있습니다':'더 늘릴 수 없습니다';
@@ -8289,6 +8322,149 @@ function anglerLook(a,vest,hatId,wear){if(!a||!a.body||!a.bones)return;hatId=hat
   const sp=avSpec(vest,a.lite,a.life,!!hatId,wear);a.wear=wear;
   if(sp.key!==a.key){a.body.geometry=avBody2(sp);if(a.ol)a.ol.geometry=a.body.geometry;/* v47 외곽선 */a.key=sp.key;a.vest=vest;a.noCap=!!hatId;avFace(a,sp);linDirty=1;}avLogo(a,sp);
   if(hatId!==(a.hatId||null)){if(a.hatM){a.bones[3].remove(a.hatM);a.hatM=null;}if(hatId){a.hatM=hatMesh(XID(hatId)?'h_cap':hatId,a.lite);/* v37 광고주 모자는 캡 모양 */a.bones[3].add(a.hatM);}a.hatId=hatId;linDirty=1;}avHatFit(a);}
+/* ===================== V90 펫: 낚시꾼 뒤를 졸졸 따라다니는 친구 =====================
+   COSM.pet(공유 규칙) 한 마리를 장착하면 내 낚시꾼 뒤를 따라 걷고, 낚시하는 동안은 옆에 앉아 기다리며, 고기를 낚으면 깡총 뛴다.
+   같은 낚시터의 다른 낚시꾼 펫도 방 메시지(pt 펫 id · pn 이름)로 보인다(가까운 사람만 만들어 둠 · 먼 사람은 치움).
+   모양은 작은 도형을 모은 저폴리(지오메트리는 모양·화질별 메모, 재질은 smat 공유) · 등급: 1+ 목걸이 색 · 3+ 발밑 빛 고리 · 4 전설 빛무리(반짝이)·은은한 빛 */
+const PETGC={};const pg=(k,f)=>PETGC[k]||(PETGC[k]=f());
+const PS=(r,lo)=>pg('s'+r+(lo?'L':''),()=>new THREE.SphereGeometry(r,lo?7:12,lo?5:9)),PCY=(a,b,h,lo)=>pg('c'+a+'_'+b+'_'+h+(lo?'L':''),()=>new THREE.CylinderGeometry(a,b,h,lo?6:10)),PK=(r,h,lo)=>pg('k'+r+'_'+h+(lo?'L':''),()=>new THREE.ConeGeometry(r,h,lo?5:9)),PT=(r,t,lo)=>pg('t'+r+'_'+t+(lo?'L':''),()=>new THREE.TorusGeometry(r,t,lo?3:5,lo?8:14));
+const PET_K=1.3;/* 펫 크기(낚시꾼 키의 약 1/3) */const PET_FLY={koi:1,whale:1,dragon:1,gull:1},PET_EYE=0x18181c;
+function petItem(id){return typeof id==='string'?(COSM.pet||[]).find(x=>x.id===id)||null:null;}
+function pm(g,c,o,x,y,z,sx,sy,sz,rx,ry,rz){const m=new THREE.Mesh(g,smat(c,o));m.position.set(x||0,y||0,z||0);if(sx!=null)m.scale.set(sx,sy,sz);if(rx||ry||rz)m.rotation.set(rx||0,ry||0,rz||0);m.castShadow=true;return m;}
+function pgp(x,y,z){const g=new THREE.Group();g.position.set(x||0,y||0,z||0);return g;}
+// 한 마리 만들기 → {g 뿌리(발밑) · b 몸(흔들림) · h 머리 · legs[앞왼·앞오·뒤왼·뒤오] · tail · wings[] · hy 이름표 높이}
+function petBuild(x,lo){const S=x.sp,c=x.c,c2=x.c2!=null?x.c2:avDk(x.c,.7),L=x.ti===4,o=L?{emissive:c,emissiveIntensity:.28,metalness:.25,roughness:.42}:null,o2=L?{emissive:c2,emissiveIntensity:.3,metalness:.3,roughness:.4}:null;
+  const g=new THREE.Group(),b=new THREE.Group(),h=new THREE.Group();g.add(b);const P={g,b,h,legs:[],tail:null,wings:[],hy:.62,sp:S,fly:!!PET_FLY[S],ti:x.ti|0};
+  const eyes=(r,y,z,dx)=>{for(const sx of[-1,1]){h.add(pm(PS(r,lo),PET_EYE,null,sx*dx,y,z));if(!lo)h.add(pm(PS(r*.36,lo),0xffffff,{emissive:0xffffff,emissiveIntensity:.4},sx*dx+r*.3,y+r*.35,z+r*.75));}};
+  const leg=(x0,y0,z0,len,r,col,paw)=>{const q=pgp(x0,y0,z0);q.add(pm(PCY(r,r*.85,len,lo),col,o,0,-len/2,0));if(paw)q.add(pm(PS(r*1.1,lo),paw,o,0,-len,.01,1,.7,1.2));b.add(q);P.legs.push(q);return q;};
+  const collar=(y,z,r)=>{const cc=x.ti?TIER_ACC[x.ti]:0xd83a2e;b.add(pm(PT(r,.016,lo),cc,{metalness:.3,roughness:.45},0,y,z,1,1,1,Math.PI/2-.35));if(x.ti>=2)b.add(pm(PS(.022,lo),0xffd75e,{metalness:.7,roughness:.25,emissive:0x5a4200},0,y-r*.85,z+r*.55));};
+  if(S==='dog'||S==='cat'||S==='shiba'||S==='fox'||S==='bunny'||S==='otter'){
+    const ot=S==='otter',bn=S==='bunny',BY=ot?.17:bn?.2:.24,lg=ot?.08:bn?.1:.15;
+    b.add(pm(PS(.16,lo),c,o,0,BY,0,ot?.95:1,ot?.78:bn?.95:.88,ot?1.7:bn?1.1:1.35));
+    if(S!=='dog')b.add(pm(PS(.15,lo),c2,o2,0,BY-.035,.04,.78,.7,ot?1.45:1.15));
+    h.position.set(0,BY+(ot?.1:.16),ot?.26:bn?.15:.2);b.add(h);
+    h.add(pm(PS(.145,lo),c,o,0,0,0,1,.95,.95));
+    const mc=S==='shiba'||S==='fox'||S==='cat'||S==='otter'?c2:c;h.add(pm(PS(.068,lo),mc,o2,0,-.045,.115,1.15,.8,1));h.add(pm(PS(.022,lo),0x241c1a,null,0,-.02,.18));
+    eyes(.026,.025,.115,.062);
+    if(S==='dog')for(const sx of[-1,1])h.add(pm(PS(.06,lo),c2,o2,sx*.125,-.01,-.01,.42,1.1,.8,0,0,sx*.32));
+    else if(bn)for(const sx of[-1,1]){const e=pgp(sx*.05,.12,-.02);e.rotation.z=-sx*.12;e.add(pm(PS(.045,lo),c,o,0,.1,0,.6,2.3,.5));e.add(pm(PS(.03,lo),c2,null,0,.1,.016,.5,1.9,.3));h.add(e);P.ears=(P.ears||[]).concat(e);}
+    else if(ot)for(const sx of[-1,1])h.add(pm(PS(.03,lo),avDk(c,.75),o,sx*.11,.06,-.02,1,.8,.6));
+    else for(const sx of[-1,1]){h.add(pm(PK(.055,.12,lo),c,o,sx*.08,.135,-.01,1,1,.6,0,0,-sx*.28));if(!lo)h.add(pm(PK(.032,.07,lo),S==='fox'?0x2b211c:0xf3c7b6,null,sx*.08,.125,.012,1,1,.4,0,0,-sx*.28));}
+    collar(BY+.1,ot?.2:.15,ot?.085:.1);
+    const pc=S==='fox'?0x33251f:S==='shiba'?c2:c,pw=S==='fox'?0x33251f:S==='shiba'||S==='cat'?c2:c;
+    for(const[sx,sz]of[[-1,1],[1,1],[-1,-1],[1,-1]])leg(sx*.075,BY-.07,sz*(ot?.15:bn?.07:.11),lg,ot?.03:.032,pc,pw);
+    const t=pgp(0,BY+.03,-(ot?.27:bn?.16:.21));b.add(t);P.tail=t;
+    if(S==='dog')t.add(pm(PCY(.024,.014,.15,lo),c,o,0,.06,-.03,1,1,1,-.7));
+    else if(S==='cat')t.add(pm(PCY(.02,.016,.26,lo),c,o,0,.11,-.05,1,1,1,-.4));
+    else if(S==='shiba')t.add(pm(PT(.06,.024,lo),c,o,0,.1,-.02,1,1,1,0,Math.PI/2));
+    else if(S==='fox'){t.add(pm(PS(.085,lo),c,o,0,.04,-.12,.8,.8,2,-.45));t.add(pm(PS(.055,lo),c2,o2,0,.12,-.26,.8,.8,1.2,-.45));}
+    else if(bn)t.add(pm(PS(.05,lo),c2,o2,0,0,0));
+    else t.add(pm(PCY(.045,.012,.3,lo),c,o,0,-.04,-.12,1,1,.7,-1.25));
+    P.hy=BY+(bn?.5:.38);}
+  else if(S==='duck'||S==='gull'||S==='peng'){const pe=S==='peng',BY=pe?.25:.2,bk=S==='duck'?c2:S==='gull'?0xf2c12e:0x2b2b2b,ft=pe?0xff9a2e:S==='gull'?0xf2c12e:c2;
+    b.add(pm(PS(.15,lo),c,o,0,BY,0,1,pe?1.45:.95,pe?1:1.25));if(pe)b.add(pm(PS(.14,lo),c2,o2,0,BY-.02,.05,.82,1.3,.85));
+    h.position.set(0,BY+(pe?.21:.17),pe?.03:.1);b.add(h);h.add(pm(PS(.1,lo),S==='duck'?c:pe?c:c,o,0,0,0));
+    if(pe)h.add(pm(PS(.075,lo),c2,null,0,-.01,.045,1,.9,.8));
+    if(S==='duck')h.add(pm(PS(.05,lo),bk,null,0,-.025,.1,1.05,.42,1.5));else h.add(pm(PK(.03,.09,lo),bk,null,0,-.015,.12,1,1,1,Math.PI/2));
+    eyes(.021,.025,.08,.05);
+    for(const sx of[-1,1]){const w=pgp(sx*.135,BY+.03,0);w.add(pm(PS(.08,lo),S==='gull'?c2:c,o,sx*.01,-.02,-.01,.32,.85,1.3));b.add(w);P.wings.push(w);}
+    for(const sx of[-1,1]){const q=pgp(sx*.05,BY-.12*(pe?1.25:1),0);q.add(pm(PCY(.013,.013,.07,lo),ft,null,0,-.035,0));q.add(pm(PS(.035,lo),ft,null,0,-.07,.03,1,.3,1.4));b.add(q);P.legs.push(q);}
+    const t=pgp(0,BY,-.17);t.add(pm(PK(.06,.1,lo),S==='gull'?c2:c,o,0,0,-.02,1,.35,1,-Math.PI/2-.3));b.add(t);P.tail=t;P.hy=BY+.36;}
+  else if(S==='seal'){const BY=.15;b.add(pm(PS(.17,lo),c,o,0,BY,0,1,.82,1.7));if(!lo)for(const[a,y,zz]of[[.5,.2,.05],[-.7,.22,-.08],[.9,.16,-.18],[-.3,.24,.15],[2.6,.2,0],[-2.4,.18,-.1]])b.add(pm(PS(.03,lo),c2,null,Math.sin(a)*.15,y,zz+Math.cos(a)*.02,1,.35,1));
+    h.position.set(0,.29,.25);b.add(h);h.add(pm(PS(.12,lo),c,o,0,0,0));h.add(pm(PS(.06,lo),avMix(c,0xffffff,.35),null,0,-.04,.09,1.25,.85,1));h.add(pm(PS(.022,lo),0x241c1a,null,0,-.02,.15));eyes(.03,.03,.09,.055);
+    for(const sx of[-1,1]){const q=pgp(sx*.15,.08,.12);q.add(pm(PS(.06,lo),avDk(c,.85),o,sx*.03,0,0,.45,.18,1));b.add(q);P.legs.push(q);}
+    const t=pgp(0,.1,-.3);for(const sx of[-1,1])t.add(pm(PS(.06,lo),avDk(c,.85),o,sx*.045,0,-.04,.5,.16,1,0,sx*.4));b.add(t);P.tail=t;P.hy=.62;}
+  else if(S==='turtle'){const BY=.14;b.add(pm(PS(.18,lo),c,o,0,BY,0,1,.55,1.2));b.add(pm(PS(.18,lo),0xd9c98a,null,0,BY-.03,0,.95,.22,1.12));
+    if(!lo)for(const[xx,zz]of[[0,0],[.08,.09],[-.08,.09],[.08,-.09],[-.08,-.09]])b.add(pm(PS(.05,lo),c2,null,xx,BY+.075-Math.abs(xx)*.35,zz,1,.3,1));
+    h.position.set(0,BY,.25);b.add(h);h.add(pm(PS(.07,lo),0x8fae6a,null,0,0,0,1,.9,1.15));eyes(.016,.022,.05,.04);
+    for(const[sx,sz]of[[-1,1],[1,1],[-1,-1],[1,-1]]){const q=pgp(sx*.15,BY-.04,sz*.13);q.add(pm(PS(.06,lo),0x8fae6a,null,sx*.03,0,sz*.01,1.4,.25,.6,0,sx*sz*.5));b.add(q);P.legs.push(q);}
+    const t=pgp(0,BY-.02,-.23);t.add(pm(PK(.025,.06,lo),0x8fae6a,null,0,0,-.02,1,1,1,-Math.PI/2));b.add(t);P.tail=t;P.hy=.5;}
+  else if(S==='koi'){b.add(pm(PS(.13,lo),c,o,0,0,0,.78,.72,1.9));if(x.ti<4)for(const[xx,y,zz]of[[0,.08,.08],[.05,.06,-.08],[-.05,.07,-.02]])b.add(pm(PS(.055,lo),c2,o2,xx,y,zz,1,.35,1.2));else b.add(pm(PS(.12,lo),c2,o2,0,.03,0,.7,.5,1.6));
+    h.position.set(0,0,.2);b.add(h);eyes(.022,.02,.04,.07);if(!lo)for(const sx of[-1,1])h.add(pm(PCY(.004,.004,.1,lo),c2,null,sx*.04,-.04,.06,1,1,1,1.1,0,sx*.5));
+    for(const sx of[-1,1]){const w=pgp(sx*.08,-.04,.06);w.add(pm(PS(.05,lo),c2,o2,sx*.03,0,0,.9,.12,.6,0,0,sx*.4));b.add(w);P.wings.push(w);}
+    b.add(pm(PS(.06,lo),c2,o2,0,.1,-.02,.12,.6,1.3));const t=pgp(0,0,-.24);t.add(pm(PS(.11,lo),c2,o2,0,0,-.08,.1,.95,1.05));b.add(t);P.tail=t;P.hy=.42;}
+  else if(S==='whale'){b.add(pm(PS(.2,lo),c,o,0,0,0,1,.9,1.5));b.add(pm(PS(.18,lo),c2,o2,0,-.06,.03,.86,.55,1.32));
+    h.position.set(0,0,.2);b.add(h);eyes(.026,.02,.1,.12);
+    for(const sx of[-1,1]){const w=pgp(sx*.17,-.06,.08);w.add(pm(PS(.06,lo),c,o,sx*.04,0,0,1.3,.18,.6,0,0,sx*.5));b.add(w);P.wings.push(w);}
+    const t=pgp(0,.02,-.28);t.add(pm(PS(.06,lo),c,o,0,0,-.04,.7,.6,1.4));t.add(pm(PS(.1,lo),c,o,0,.02,-.14,1.6,.14,.6));b.add(t);P.tail=t;P.hy=.5;}
+  else{/* dragon */b.add(pm(PS(.13,lo),c,o,0,0,0,1,1.05,1.2));b.add(pm(PS(.11,lo),c2,o2,0,-.03,.06,.8,.85,.9));
+    h.position.set(0,.15,.14);b.add(h);h.add(pm(PS(.12,lo),c,o,0,0,0));h.add(pm(PS(.07,lo),avMix(c,0xffffff,.2),o,0,-.03,.11,1.1,.8,1));eyes(.025,.035,.08,.06);
+    for(const sx of[-1,1])h.add(pm(PK(.02,.09,lo),c2,{metalness:.5,roughness:.3,emissive:0x5a4200},sx*.06,.11,-.03,1,1,1,-.4,0,-sx*.2));
+    for(const sx of[-1,1]){const w=pgp(sx*.1,.08,-.03);w.add(pm(PS(.12,lo),c2,o2,sx*.11,.02,0,1.1,.07,.7,0,0,sx*.3));b.add(w);P.wings.push(w);}
+    for(const sx of[-1,1]){const q=pgp(sx*.06,-.1,.06);q.add(pm(PCY(.025,.02,.08,lo),c,o,0,-.04,0));b.add(q);P.legs.push(q);}
+    const t=pgp(0,-.04,-.15);t.add(pm(PK(.07,.3,lo),c,o,0,0,-.13,1,1,1,-Math.PI/2+.25));t.add(pm(PK(.04,.07,lo),c2,o2,0,.05,-.27,1,1,.4,-Math.PI/2));b.add(t);P.tail=t;P.hy=.62;}
+  if(P.fly){P.b.position.y=0;P.hover=S==='gull'?1.55:S==='whale'?1.1:.95;}
+  // 등급 효과: 3+ 발밑 빛 고리 · 4 반짝이
+  if(x.ti>=3){const m=new THREE.Mesh(pg('ring',()=>new THREE.RingGeometry(.26,.34,28)),new THREE.MeshBasicMaterial({color:TIER_ACC[x.ti],transparent:true,opacity:.5,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.y=.025;m.renderOrder=2;g.add(m);P.ring=m;}
+  if(x.ti>=4){const n=lo?6:12,pos=new Float32Array(n*3);for(let i=0;i<n;i++){const a=i/n*Math.PI*2;pos[i*3]=Math.cos(a)*.34;pos[i*3+1]=.1+(i%3)*.12;pos[i*3+2]=Math.sin(a)*.34;}const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const sp=new THREE.Points(gg,new THREE.PointsMaterial({color:0xfff2b0,size:.07,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending}));b.add(sp);P.spk=sp;}
+  b.scale.setScalar(PET_K);g.traverse(m=>{if(m.isMesh&&m!==P.ring)m.castShadow=!lo;});P.hy*=PET_K;P.seed=Math.random()*10;return P;}
+// 이름표(작게, 등급 색 점)
+function petTagDraw(cv,name,ti){const x=cv.getContext('2d');x.clearRect(0,0,256,64);x.font='700 28px "IBM Plex Sans KR","Malgun Gothic",sans-serif';const t=Array.from(name).slice(0,PET_NM_MAX).join(''),w=Math.min(232,x.measureText(t).width+(ti?26:0)+20),X=(256-w)/2;
+  x.fillStyle='rgba(10,18,24,.62)';x.beginPath();if(x.roundRect)x.roundRect(X,10,w,44,22);else x.rect(X,10,w,44);x.fill();
+  if(ti){x.fillStyle=TIER_C[ti];x.beginPath();x.arc(X+18,32,7,0,Math.PI*2);x.fill();}
+  x.fillStyle='#fff';x.textBaseline='middle';x.textAlign='left';x.fillText(t,X+(ti?32:10),33);}
+function petTag(name,ti){const cv=document.createElement('canvas');cv.width=256;cv.height=64;petTagDraw(cv,name,ti);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,transparent:true}));sp.scale.set(1.4,.35,1);sp.renderOrder=10;sp.userData.cv=cv;
+  sp.onBeforeRender=function(r,sc,cam){this.getWorldPosition(_lbv);const k=Math.max(.35,Math.min(1.1,cam.position.distanceTo(_lbv)/9));if(Math.abs(this.scale.x-1.4*k)>.01)this.scale.set(1.4*k,.35*k,1);};return sp;}
+function petNameOf(id,pn){const x=petItem(id);if(!x)return'';const v=pn&&typeof pn==='string'?pn:'';return v||x.n;}
+function petNameMe(){const id=lookOf('pet');if(!id)return null;const v=V4().pn||{};return petNameOf(id,v[id]);}
+// 주인(o = player 또는 다른 낚시꾼)에게 펫 붙이기·바꾸기·치우기
+function petDrop(o){const P=o&&o.pet;if(!P)return;try{if(P.g.parent)P.g.parent.remove(P.g);if(P.tag){P.tag.material.map.dispose();P.tag.material.dispose();}if(P.ring)P.ring.material.dispose();if(P.spk){P.spk.geometry.dispose();P.spk.material.dispose();}}catch(e){}o.pet=null;}
+function petSync(o,sc,id,name,lo){const x=petItem(id);if(o.pet&&(!x||o.pet.id!==x.id||o.pet.sc!==sc||o.pet.lo!==!!lo))petDrop(o);if(!x||!sc)return null;
+  if(!o.pet){const P=petBuild(x,!!lo);P.id=x.id;P.sc=sc;P.lo=!!lo;P.pos=new THREE.Vector3();P.yaw=0;P.mv=0;P.ph=0;P.joy=0;P.init=0;sc.add(P.g);o.pet=P;}
+  const P=o.pet;name=name||x.n;if(P.nm!==name){P.nm=name;if(!P.tag){P.tag=petTag(name,x.ti|0);P.g.add(P.tag);}else{petTagDraw(P.tag.userData.cv,name,x.ti|0);P.tag.material.map.needsUpdate=true;}P.tag.position.y=(P.fly?P.hover:0)+P.hy+.2;}return P;}
+const _pw=new THREE.Vector3(),_pf=new THREE.Vector3();
+function petGround(x,z,y0){if(typeof walkFn!=='function')return null;const y=walkFn(x,z);return y!=null&&Math.abs(y-y0)<1.6?y:null;}
+// 따라다니기: busy(주인이 낚시 중) = 옆에 앉아 기다림 · 아니면 뒤에서 따라감 · 너무 멀면 순간 이동
+function petMove(o,P,dt,busy){const g=o.g;g.getWorldPosition(_pw);g.getWorldDirection(_pf);_pf.y=0;if(_pf.lengthSq()<1e-6)_pf.set(0,0,1);_pf.normalize();const fx=_pf.x,fz=_pf.z,sx=fz,sz=-fx,oy=_pw.y;
+  let tx,tz,ty;const om=P.oLast?Math.hypot(_pw.x-P.oLast.x,_pw.z-P.oLast.z)/Math.max(dt,1e-3):0;P.oLast=P.oLast||new THREE.Vector3();P.oLast.copy(_pw);P.om=(P.om||0)+(om-(P.om||0))*Math.min(1,dt*6);
+  if(P.fly){if(P.sp==='gull'&&!busy&&P.om<.4){const a=T*.55+P.seed;tx=_pw.x+Math.cos(a)*1.5;tz=_pw.z+Math.sin(a)*1.5;}else if(busy){tx=_pw.x+sx*.75+fx*.15;tz=_pw.z+sz*.75+fz*.15;}else{tx=_pw.x-fx*.5+sx*.9;tz=_pw.z-fz*.5+sz*.9;}ty=oy;}
+  else{const c=busy?[[sx*.8-fx*.05,sz*.8-fz*.05],[-sx*.8-fx*.05,-sz*.8-fz*.05],[-fx*.7,-fz*.7]]:[[-fx*.55+sx*.9,-fz*.55+sz*.9],[-fx*.55-sx*.9,-fz*.55-sz*.9],[-fx*.8,-fz*.8]]/* 뒤 옆(카메라가 낚시꾼 뒤라 바로 뒤면 화면을 가린다) */;ty=null;
+    for(const[dx,dz]of c){for(const k of[1,.65,.4]){const y=petGround(_pw.x+dx*k,_pw.z+dz*k,oy);if(y!=null){tx=_pw.x+dx*k;tz=_pw.z+dz*k;ty=y;break;}}if(ty!=null)break;}
+    if(ty==null){tx=_pw.x-fx*.42;tz=_pw.z-fz*.42;ty=oy;}}
+  if(!P.init||Math.hypot(tx-P.pos.x,tz-P.pos.z)>9||Math.abs(ty-P.pos.y)>3){P.pos.set(tx,ty,tz);P.yaw=Math.atan2(fx,fz);P.init=1;}
+  const dx=tx-P.pos.x,dz=tz-P.pos.z,d=Math.hypot(dx,dz),sp=d<.1?0:Math.min(P.fly?6.5:5.8,.7+d*2.8),st=Math.min(d,sp*dt);if(st>0){P.pos.x+=dx/d*st;P.pos.z+=dz/d*st;}
+  P.pos.y+=(ty-P.pos.y)*Math.min(1,dt*10);const v=dt>0?st/dt:0;P.mv+=(Math.min(1,v/2.2)-P.mv)*Math.min(1,dt*8);
+  const want=st>.002&&v>.25?Math.atan2(dx,dz):busy?Math.atan2(fx,fz):Math.atan2(_pw.x-P.pos.x,_pw.z-P.pos.z),dy=Math.atan2(Math.sin(want-P.yaw),Math.cos(want-P.yaw));P.yaw+=dy*Math.min(1,dt*(P.mv>.2?9:3.5));
+  P.g.position.copy(P.pos);P.g.rotation.y=P.yaw;P.spd=v;}
+function petAnim(P,dt,busy){const S=P.sp,mv=P.mv,b=P.b,j=P.joy>0;P.ph+=dt*(5+Math.min(6,P.spd||0)*2.2)*(mv>.04?1:0);const ph=P.ph,s=Math.sin(ph),PI=Math.PI;if(j)P.joy=Math.max(0,P.joy-dt);const je=j?1.4-P.joy:0;
+  let by=0,bx=0,bz=0;
+  if(P.fly){by=P.hover+Math.sin(T*2+P.seed)*.07;bx=-.08*mv;if(S==='koi'||S==='whale')b.rotation.y=Math.sin(T*4+P.seed)*.12*(.5+mv);}
+  else if(S==='bunny'){by=Math.abs(Math.sin(ph*.5))*.13*mv;}
+  else if(S==='seal'){by=Math.abs(Math.sin(ph*.55))*.05*mv;bx=Math.sin(ph*.55)*.12*mv;}
+  else by=Math.abs(s)*.024*mv;
+  const sit=busy&&mv<.15&&!P.fly&&S!=='seal'&&S!=='turtle';P.sit=(P.sit||0)+((sit?1:0)-(P.sit||0))*Math.min(1,dt*4);
+  if(j){by+=Math.abs(Math.sin(je*7.5))*(P.fly?.18:.16)*Math.max(0,1-je/1.4);}
+  b.position.y=by-(P.sit||0)*.03;b.rotation.x=bx-(P.sit||0)*.22;b.rotation.z=bz;
+  P.legs.forEach((q,i)=>{const k=P.legs.length===4?((i===0||i===3)?1:-1):(i%2?1:-1);q.rotation.x=s*k*.75*mv+(i>=2&&P.legs.length===4?(P.sit||0)*-.9:0);if(S==='seal'||S==='turtle')q.rotation.y=s*k*.4*mv;});
+  if(P.tail){const w=j?16:busy?3:6;P.tail.rotation.y=Math.sin(T*w+P.seed)*(S==='koi'||S==='whale'?.45:.5);if(S==='bunny'||S==='turtle')P.tail.rotation.y*=.3;}
+  if(P.wings.length){const f=P.fly&&S!=='koi'&&S!=='whale'?Math.sin(T*(S==='gull'?9:13)+P.seed)*.6:j?Math.sin(T*18)*.7:Math.sin(T*3+P.seed)*.08;P.wings.forEach((w,i)=>{w.rotation.z=(i?-1:1)*f;});}
+  if(P.h){P.h.rotation.y=busy?Math.sin(T*.5+P.seed)*.15:Math.sin(T*.6+P.seed)*.38*(1-mv);P.h.rotation.x=j?-.3:0;}
+  if(P.ears)P.ears.forEach((e,i)=>{e.rotation.x=Math.sin(T*2+i)*.08+(j?-.25:0);});
+  if(P.ring){P.ring.material.opacity=.32+.2*Math.sin(T*3+P.seed);const k=1+.06*Math.sin(T*2.2);P.ring.scale.set(k,k,1);P.ring.position.y=.025;}
+  if(P.spk){P.spk.rotation.y+=dt*1.3;P.spk.position.y=Math.sin(T*1.7)*.05;P.spk.material.opacity=.6+.35*Math.sin(T*4);}}
+let petCF=0;
+function petTick(dt){if(!scene||!player)return;const me=lookOf('pet');const P=petSync(player,scene,me,petNameMe(),lqB());
+  if(P){const busy=window.__petBusy!=null?!!window.__petBusy:autoOn||(state!=='idle'&&state!=='result'&&state!=='charge');/* __petBusy: 점검용 */const n=SES.f|0;if(P.cf==null)P.cf=n;if(n!==P.cf||(state==='result'&&P.lst!=='result')){P.cf=n;P.joy=1.4;}P.lst=state;petMove(player,P,dt,busy);petAnim(P,dt,busy);}
+  let k=0;peers.forEach(p=>{if(!p.g)return;const near=camera?Math.hypot(camera.position.x-p.g.position.x,camera.position.z-p.g.position.z):0,id=p.petId&&(near<(p.pet?48:36))&&k<16?p.petId:null;const Q=petSync(p,scene,id,petNameOf(p.petId,p.petNm),true);if(!Q)return;k++;
+    const busy=p.st&&p.st!=='idle';if(p.st==='show'&&Q.lst!=='show')Q.joy=1.4;Q.lst=p.st;petMove(p,Q,dt,busy);petAnim(Q,dt,busy);});}
+// 미리보기 무대(꾸미기 탭): 낚시꾼 옆에 펫을 세워 둔다
+function avpPet(id){if(!AVP.sc)return;const o=AVP.po||(AVP.po={pet:null});const x=petItem(id);if(!x){petDrop(o);return;}const P=petSync(o,AVP.sc,id,petNameOf(id,(V4().pn||{})[id]),false);if(P){P.g.position.set(.4,0,.42);P.g.rotation.y=-.45;if(P.fly)P.hover=.5;if(P.tag)P.tag.visible=false;}}
+function avpPetTick(dt){const P=AVP.po&&AVP.po.pet;if(!P)return;P.mv=0;petAnim(P,dt,false);}
+// 펫 아이콘(상점 카드): 모양별 작은 그림
+function petSVG(x){const c=x?hexCss(x.c):'#6b7178',c2=x?hexCss(x.c2!=null?x.c2:x.c):'#6b7178',S=x?x.sp:'',o=x?'':' opacity=".5"',E='<circle cx="17" cy="19" r="1.8" fill="#18181c"/><circle cx="25" cy="19" r="1.8" fill="#18181c"/>';let p='';
+  if(!x)p='<circle cx="20" cy="22" r="11" fill="none" stroke="#6b7178" stroke-width="2" stroke-dasharray="3 3"/>';
+  else if(S==='dog'||S==='shiba'||S==='cat'||S==='fox'||S==='otter'){const ear=S==='dog'?'<ellipse cx="11" cy="20" rx="3.5" ry="7" fill="'+c2+'"/><ellipse cx="31" cy="20" rx="3.5" ry="7" fill="'+c2+'"/>':S==='otter'?'<circle cx="12" cy="13" r="3" fill="'+c+'"/><circle cx="28" cy="13" r="3" fill="'+c+'"/>':'<path d="M11 15 13 5 19 12z" fill="'+c+'"/><path d="M29 15 27 5 21 12z" fill="'+c+'"/>';
+    p='<ellipse cx="20" cy="33" rx="12" ry="5" fill="'+c+'"/>'+ear+'<circle cx="20" cy="20" r="10" fill="'+c+'"/><ellipse cx="20" cy="24" rx="5.5" ry="4" fill="'+(S==='dog'?c:c2)+'"/>'+E+'<circle cx="20" cy="23" r="1.6" fill="#241c1a"/>'+(S==='fox'?'<path d="M31 32q8-2 6-10q-1 6-7 7z" fill="'+c+'"/>':'');}
+  else if(S==='bunny')p='<ellipse cx="15" cy="9" rx="3" ry="8" fill="'+c+'"/><ellipse cx="25" cy="9" rx="3" ry="8" fill="'+c+'"/><ellipse cx="15" cy="9" rx="1.5" ry="6" fill="'+c2+'"/><ellipse cx="25" cy="9" rx="1.5" ry="6" fill="'+c2+'"/><ellipse cx="20" cy="33" rx="10" ry="5" fill="'+c+'"/><circle cx="20" cy="22" r="9.5" fill="'+c+'"/>'+E+'<circle cx="20" cy="24" r="1.4" fill="'+c2+'"/>';
+  else if(S==='duck'||S==='gull'||S==='peng')p='<ellipse cx="20" cy="29" rx="'+(S==='peng'?9:11)+'" ry="'+(S==='peng'?10:7)+'" fill="'+c+'"/>'+(S==='peng'?'<ellipse cx="20" cy="30" rx="6" ry="8" fill="'+c2+'"/>':'')+'<circle cx="20" cy="17" r="8" fill="'+c+'"/>'+E.replace(/cy="19"/g,'cy="16"')+'<path d="M16 20h8l-4 '+(S==='duck'?3:5)+'z" fill="'+(S==='duck'?c2:S==='gull'?'#f2c12e':'#2b2b2b')+'"/>';
+  else if(S==='seal')p='<ellipse cx="20" cy="29" rx="14" ry="7" fill="'+c+'"/><circle cx="25" cy="20" r="8" fill="'+c+'"/><circle cx="14" cy="28" r="1.5" fill="'+c2+'"/><circle cx="19" cy="31" r="1.3" fill="'+c2+'"/><circle cx="22.5" cy="18.5" r="1.8" fill="#18181c"/><circle cx="28.5" cy="18.5" r="1.8" fill="#18181c"/><circle cx="25.5" cy="22" r="1.4" fill="#241c1a"/>';
+  else if(S==='turtle')p='<ellipse cx="18" cy="26" rx="13" ry="8" fill="'+c+'"/><path d="M10 24h16M14 19v12M22 19v12" stroke="'+c2+'" stroke-width="1.5"/><circle cx="33" cy="25" r="4.5" fill="#8fae6a"/><circle cx="34" cy="24" r="1.2" fill="#18181c"/>';
+  else if(S==='koi')p='<ellipse cx="18" cy="21" rx="13" ry="6.5" fill="'+c+'"/><circle cx="15" cy="19" r="3" fill="'+c2+'"/><circle cx="21" cy="23" r="2.2" fill="'+c2+'"/><path d="M5 21 0 14v14z" fill="'+c2+'"/><circle cx="27" cy="20" r="1.5" fill="#18181c"/>';
+  else if(S==='whale')p='<ellipse cx="21" cy="21" rx="14" ry="9" fill="'+c+'"/><ellipse cx="22" cy="25" rx="11" ry="4.5" fill="'+c2+'"/><path d="M7 19 1 13v12z" fill="'+c+'"/><circle cx="29" cy="19" r="1.7" fill="#18181c"/>';
+  else p='<path d="M8 14q6 4 10 0q-3 8-10 0zM32 14q-6 4-10 0q3 8 10 0z" fill="'+c2+'"/><ellipse cx="20" cy="29" rx="9" ry="8" fill="'+c+'"/><circle cx="20" cy="18" r="8" fill="'+c+'"/><path d="M15 11l1-6 2 5zM25 11l-1-6-2 5z" fill="'+c2+'"/>'+E.replace(/cy="19"/g,'cy="17"');
+  const ti=x?x.ti|0:0;return'<svg viewBox="0 0 40 40" class="v4ic" aria-hidden="true"'+o+'>'+(ti>=3?'<ellipse cx="20" cy="37" rx="15" ry="2.6" fill="'+TIER_ACC[ti]+'" opacity=".55"/>':'')+p+(ti>=4?'<path d="M34 6l1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1zM6 30l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z" fill="#fff2b0"/>':'')+'</svg>';}
+
 // 찌 꾸미기: 찌 구(0)·막대(1) 재질만 바꾼다. 황금 물고기를 낚은 사람은 찌를 안 고르면 금빛 찌(예전 그대로)
 var BOB_SK={f_red:[0xe5332a,{emissive:0x3a0806},0xf6f6f2,{emissive:0x202020}],f_glow:[0xc8ff6a,{emissive:0x7dff3a,emissiveIntensity:1.3},0xf2ffe0,{emissive:0x6aff40,emissiveIntensity:.7}],
   f_gold:[0xffc83a,{metalness:.8,roughness:.25,emissive:0x5a3a00},0xfff0b0,{metalness:.6,roughness:.3,emissive:0x332400}],gold:[0xffc83a,{metalness:.8,roughness:.25,emissive:0x5a3a00},null,null]};
@@ -8319,16 +8495,29 @@ function avSVG(vest,hat,flt){return'<svg viewBox="0 0 120 120" width="112" heigh
 
 /* ---- 상점 "꾸미기" 탭 ---- */
 function cosmCard(slot,x){const v=V4(),eqId=v.eq[slot]||null,id=x?x.id:'',own=!x||(!x.p&&!x.sponsor)||v.own.includes(x.id),on=(x?x.id:null)===eqId,pv=PREV&&PREV.slot===slot&&PREV.id===(x?x.id:null),lk=x&&x.need&&!own&&!needOk(x.need),hard=lk&&!(SRV&&x.need==='capt'),ad=x&&x.sponsor?cosmAdTag(x):'',off=x&&x.off&&!own;/* v37 광고 표시 · 0P 광고 항목 받기 · 기간 끝 */
-  const ic=slot==='vest'?vestSVG(x?x.c:myColor0()):slot==='hat'?'<svg viewBox="0 0 40 40" class="v4ic" aria-hidden="true">'+hatSVG(x?(XID(x.id)?'h_cap':x.id):'',0,6,40)+'<circle cx="20" cy="34" r="7" fill="#e6c29c" opacity=".55"/></svg>':slot==='float'?floatSVG(x?x.id:''):V37_WEAR[slot]?wearSVG(slot,x):'<span class="v4ic v4tic">'+(x?esc(x.n):'—')+'</span>';
-  const nm=x?x.n:slot==='vest'?'기본 조끼':slot==='hat'?'모자 없음':slot==='float'?'기본 찌':slot==='glove'?'맨손':slot==='shoes'?'기본 운동화':slot==='pants'?'기본 바지':slot==='bag'?'가방 없음':'칭호 없음';
+  const ic=slot==='vest'?vestSVG(x?x.c:myColor0()):slot==='hat'?'<svg viewBox="0 0 40 40" class="v4ic" aria-hidden="true">'+hatSVG(x?(XID(x.id)?'h_cap':x.id):'',0,6,40)+'<circle cx="20" cy="34" r="7" fill="#e6c29c" opacity=".55"/></svg>':slot==='float'?floatSVG(x?x.id:''):slot==='pet'?petSVG(x):V37_WEAR[slot]?wearSVG(slot,x):'<span class="v4ic v4tic">'+(x?esc(x.n):'—')+'</span>';
+  const nm=x?x.n:slot==='vest'?'기본 조끼':slot==='hat'?'모자 없음':slot==='float'?'기본 찌':slot==='glove'?'맨손':slot==='shoes'?'기본 운동화':slot==='pants'?'기본 바지':slot==='bag'?'가방 없음':slot==='top'?'기본 셔츠':slot==='pet'?'펫 없음':'칭호 없음';
   const st=on?'<b class="v4on">착용 중</b>':x&&own&&(x.p||x.sponsor)?'<span class="v4own">보유</span>':lk?'<span class="v4lk">'+esc(needTxt(x.need))+'</span>':off?'<span class="k">기간 끝</span>':x&&x.p?'<span class="num">'+fmtN(x.p)+'P</span>':x?'<span class="v4own">무료</span>':slot==='vest'?'<span class="k">이름 색 그대로</span>':'<span class="k">기본</span>';
   const btn=on?(x?'<button class="mini" type="button" data-v4="eq" data-s="'+slot+'" data-id="">벗기</button>':''):own?'<button class="mini" type="button" data-v4="eq" data-s="'+slot+'" data-id="'+id+'">착용</button>':off?'':'<button class="mini buy" type="button" data-v4="buy" data-s="'+slot+'" data-id="'+id+'"'+(hard?' disabled':'')+'>'+(hard?'잠김':x&&!x.p?'받기':'사기')+'</button>';
-  return'<div class="v4c'+(on?' on':'')+(pv?' pv':'')+(lk?' lk':'')+(ad?' ad':'')+'"><button type="button" class="v4pick" data-v4="pv" data-s="'+slot+'" data-id="'+id+'" aria-label="'+esc(nm+(ad?' ('+ad+')':''))+' 미리보기">'+v48CosInk(ic)+'<b>'+esc(nm)+'</b>'+(ad?'<span class="v4ad">'+esc(ad)+'</span>':'')+st+'</button><div class="v4act">'+btn+'</div></div>';}
+  return'<div class="v4c'+(on?' on':'')+(pv?' pv':'')+(lk?' lk':'')+(ad?' ad':'')+'"><button type="button" class="v4pick" data-v4="pv" data-s="'+slot+'" data-id="'+id+'" aria-label="'+esc(nm+(ad?' ('+ad+')':''))+' 미리보기">'+v48CosInk(ic)+(slot==='pet'&&x?'<span class="ptier" style="--tc:'+(TIER_ACC[x.ti]||TIER_C[0])+'">'+esc(x.tier)+'</span>':'')+'<b>'+esc(slot==='pet'&&x&&on?petNameMe()||nm:nm)+'</b>'+(slot==='pet'&&x&&on&&petNameMe()!==x.n?'<span class="k">'+esc(x.n)+'</span>':'')+(x&&x.d&&slot==='pet'?'<span class="k pdsc">'+esc(x.d)+'</span><span class="pbuf">'+esc(petBufTxt(x.ti|0))+'</span>':'')+(x&&x.ov?'<span class="k">겉옷 · 조끼 대신</span>':'')+(ad?'<span class="v4ad">'+esc(ad)+'</span>':'')+st+'</button><div class="v4act">'+btn+'</div></div>';}
+// V90 펫 칸: 등급(입문~전설)별 줄 · 장착한 펫 이름 짓기
+function petSecHTML(){const v=V4(),on=v.eq.pet||null,x=petItem(on),G=['입문','중급','상급','최상급','전설'];let h='<div class="igrp v4g" id="petSec">'+V4_SLOT_TXT.pet+' <span class="k">· 낚시할 때 뒤에서 졸졸 따라다녀요</span></div>';
+  if(x){const nm=(v.pn||{})[on]||'';h+='<div class="petnm"><span class="ptier" style="--tc:'+(TIER_ACC[x.ti]||TIER_C[0])+'">'+esc(x.tier)+'</span><b>'+esc(x.n)+'</b><label class="k" for="petNm">이름</label><input id="petNm" type="text" maxlength="'+PET_NM_MAX+'" autocomplete="off" spellcheck="false" placeholder="'+esc(x.n)+'" value="'+esc(nm)+'" aria-label="펫 이름(최대 '+PET_NM_MAX+'자)"><button class="mini" type="button" data-v4="pnm" data-id="'+on+'">이름 저장</button><span class="k">'+PET_NM_MAX+'자까지 · 다른 낚시꾼에게도 보입니다</span><span class="pbuf">능력치 '+esc(petBufTxt(x.ti|0))+' · 자동 낚시는 절반</span></div>';}
+  else h+='<p class="k">펫을 데려오면 낚시터에서 뒤를 따라다니고, 낚시하는 동안 옆에서 기다리며, 고기를 낚으면 함께 기뻐해요. 이름도 지어 줄 수 있어요.</p>';
+  h+='<p class="k">펫 능력치(장착한 한 마리) · 등급이 높을수록 경험치·조과 포인트·입질 확률이 오릅니다 · 자동 낚시는 절반 · 입질은 직접 캐스팅만 · 황금 물고기 확률은 누구나 같습니다</p>';
+  for(let t=0;t<5;t++){const a=COSM.pet.filter(i=>(i.ti|0)===t);if(!a.length)continue;const n=a[0].need,L=needLv(n);h+='<div class="ptrow"><span class="ptier" style="--tc:'+(TIER_ACC[t]||TIER_C[0])+'">'+G[t]+'</span><span class="k">'+(L?'Lv.'+L.lv+(L.dex?' · 어록 '+L.dex+'종':'')+(needOk(n)?' · 열림':' · 지금 Lv.'+(RG.lv||1)+(L.dex?' · '+dexN()+'종':'')):'누구나')+'</span><span class="pbuf">'+esc(petBufTxt(t))+'</span></div><div class="v4grid">'+(t===0?cosmCard('pet',null):'')+a.map(i=>cosmCard('pet',i)).join('')+'</div>';}
+  return h;}
+async function petNameSave(id){const x=petItem(id),el=$('#petNm');if(!x||!el||v4Fly)return;let n=Array.from(String(el.value||'').replace(/[\u0000-\u001f<>]/g,'').trim()).slice(0,PET_NM_MAX).join('');
+  if(n&&!/[\p{L}\p{N}]/u.test(n)){toast('펫 이름에 글자나 숫자가 하나는 있어야 합니다');return;}const v=V4();if(((v.pn||{})[id]||'')===n){toast('이미 그 이름입니다');return;}
+  if(SRV){v4Fly=true;let r;try{r=await net('pet-name',{id,name:n});}finally{v4Fly=false;}if(!v4Ok(r)){const j=(r&&r.j)||{};toast(j.error==='BAD_NAME'||j.error==='TOO_MANY'?String(j.message||j.msg||'이름을 쓸 수 없습니다'):v4Err(r,'pet'));return;}v4Take(r.j);if(r.j&&r.j.cosm&&isObj(r.j.cosm.pn)){V4().pn=petNmNorm(r.j.cosm.pn,V4().own);}}
+  else{v.pn=Object.assign({},v.pn||{});if(n)v.pn[id]=n;else delete v.pn[id];persist();}
+  try{myLookApply();}catch(e){}toast(n?'펫 이름을 \''+n+'\'(으)로 지었습니다':'펫 이름을 기본('+x.n+')으로 되돌렸습니다');v4Rerender();}
 function cosmHTML(){const t=titleName(lookOf('title'));
   let h='<div class="v4pv" id="v4pv"><div class="v4av" id="v4av">'+avSVG(myVestNow(),lookOf('hat'),lookOf('float'))+'</div><div class="v4pvt"><b>'+esc(save.nick||'낚시꾼')+'</b>'+(t?'<span class="v4ttl">'+esc(t)+'</span>':'')+'<span class="k">칸을 누르면 먼저 입어 봅니다'+(inWorld()?' · 낚시터의 내 모습에도 바로 보입니다':'')+'</span><span class="k">한 번 사면 계속 쓰고, 칸마다 하나씩 착용합니다</span>'+(PREV?'<button class="mini" type="button" data-v4="pvx">미리보기 끝내기</button>':'')+'</div></div>';
   if(!V4().eq.pfd)h+=pfdWarnHTML();/* v37 */
-  for(const slot of['vest','pfd','hat','glove','shoes','pants','bag','float','title'])h+='<div class="igrp v4g">'+V4_SLOT_TXT[slot]+'</div>'+(slot==='pfd'?'<p class="k v4pfdt">'+esc(PFD_TXT)+'</p>':'')+'<div class="v4grid">'+(slot==='pfd'?'':cosmCard(slot,null))+COSM[slot].filter(x=>!x.off||V4().own.includes(x.id)).map(x=>cosmCard(slot,x)).join('')+'</div>';
-  return h+'<p class="src">꾸미기는 게임 안에서만 쓰는 모양이며 능력치는 바뀌지 않습니다 · 낚시 조끼·구명조끼·모자·장갑·신발·바지·가방·칭호는 같은 낚시터의 다른 낚시꾼에게도 보입니다'+(COSM_AD?' · \'광고\' 표시 항목은 광고주와 제휴해 넣은 광고 꾸미기입니다 · 받거나 입어도 실제 상품은 지급되지 않습니다':'')+'</p>';}
+  h+=petSecHTML();/* V90 펫(등급별) */
+  for(const slot of['vest','top','pfd','hat','glove','shoes','pants','bag','float','title'])h+='<div class="igrp v4g">'+V4_SLOT_TXT[slot]+'</div>'+(slot==='pfd'?'<p class="k v4pfdt">'+esc(PFD_TXT)+'</p>':'')+'<div class="v4grid">'+(slot==='pfd'?'':cosmCard(slot,null))+COSM[slot].filter(x=>!x.off||V4().own.includes(x.id)).map(x=>cosmCard(slot,x)).join('')+'</div>';
+  return h+'<p class="src">꾸미기는 게임 안에서만 쓰는 모양이며 능력치는 바뀌지 않습니다(펫만 등급별 능력치) · 낚시 조끼·상의·구명조끼·모자·장갑·신발·바지·가방·칭호·펫(이름 포함)은 같은 낚시터의 다른 낚시꾼에게도 보입니다 · 펫 등급은 낚싯대처럼 Lv·어록으로 열립니다 · 수달·점박이물범·여우·바다거북은 실제로는 보호 야생생물이라 허가 없이 잡거나 기를 수 없습니다(야생생물법 등)'+(COSM_AD?' · \'광고\' 표시 항목은 광고주와 제휴해 넣은 광고 꾸미기입니다 · 받거나 입어도 실제 상품은 지급되지 않습니다':'')+'</p>';}
 async function cosmBuy(slot,id){const x=(COSM[slot]||[]).find(i=>i.id===id);if(!x||v4Fly)return;const v=V4();if(x.off&&!v.own.includes(id)){toast('기간이 끝난 꾸미기입니다');return;}if(v.own.includes(id)||(!x.p&&!x.sponsor)){/* v37 0P 광고 항목은 '받기' */if(slot==='hull'||slot==='flag')return boatPaint(slot,id);return cosmEquip(slot,id);}
   if((slot==='hull'||slot==='flag')&&!SRV){toast('선장 꾸미기는 낚시GO에서 로그인 후 이용할 수 있습니다');return;}
   if(x.need&&!needOk(x.need)&&!(SRV&&x.need==='capt')){toast(needTxt(x.need));return;}if(v4Short(x.p))return;
@@ -8619,12 +8808,12 @@ function tripPal(){const x=hullOk(tripHullId)&&COSM.hull.find(i=>i.id===tripHull
 function boatDeco(b){if(!b)return'';const hu=b.mine?V4().eq.hull||b.hull:b.hull,fl=b.mine?V4().eq.flag||b.flag:b.flag,h=hullOk(hu)&&COSM.hull.find(i=>i.id===hu);return(h?boatSVG(h.c,24):'')+(flagOk(fl)?flagSVG(fl,16):'');}
 
 function lvtHTML(){const ct=titleName(V4().eq.title);return ct?'<span class="lvt ctl">'+esc(ct)+'</span>':'<span class="lvt">'+esc(titleOf(RG.lv))+'</span>';}
-function peerLook(p,st){try{const pw=peerWear(st),wk=wearKey(pw);if(st.c!==p.vest||(st.h||null)!==(p.hatId||null)||wk!==p.wk){p.wk=wk;anglerLook(p,st.c,st.h,pw);}/* v37 외모(lk)·구명조끼·장갑·신발·바지·가방 */const t=st.ti||null,pr=!!st.pr;if((t!==(p.t0id||null)||pr!==!!p.pr0)&&p.nl){p.g.remove(p.nl);try{p.nl.material.map.dispose();p.nl.material.dispose();}catch(e){}p.nl=label(p.name,{gold:!!st.gd,t:titleName(t),pro:pr});p.nl.position.y=AV_LBL;p.g.add(p.nl);p.t0id=t;p.pr0=pr;}/* V82 PRO 표시 */}catch(e){}}
+function peerLook(p,st){try{p.petId=WID(st.pt);p.petNm=typeof st.pn==='string'?Array.from(st.pn.replace(/[\u0000-\u001f<>]/g,'')).slice(0,PET_NM_MAX).join(''):'';/* V90 펫 */const pw=peerWear(st),wk=wearKey(pw);if(st.c!==p.vest||(st.h||null)!==(p.hatId||null)||wk!==p.wk){p.wk=wk;anglerLook(p,st.c,st.h,pw);}/* v37 외모(lk)·구명조끼·장갑·신발·바지·가방 */const t=st.ti||null,pr=!!st.pr;if((t!==(p.t0id||null)||pr!==!!p.pr0)&&p.nl){p.g.remove(p.nl);try{p.nl.material.map.dispose();p.nl.material.dispose();}catch(e){}p.nl=label(p.name,{gold:!!st.gd,t:titleName(t),pro:pr});p.nl.position.y=AV_LBL;p.g.add(p.nl);p.t0id=t;p.pr0=pr;}/* V82 PRO 표시 */}catch(e){}}
 function v4Open(){return['#tankModal','#gyoModal'].some(q=>{const e=$(q);return!!e&&!e.hidden;});}
 function v4Shut(){['#tankModal','#gyoModal'].forEach(q=>{const e=$(q);if(e)e.hidden=true;});}
 /* ---- 버튼 한곳에서 받기 ---- */
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-v4]');if(!b||b.disabled)return;const a=b.dataset.v4,s=b.dataset.s,id=b.dataset.id||null;
-  if(a==='pv'){cosmPreview(s,id);return;}if(a==='pvx'){v4PrevClear();renderShop();return;}if(a==='buy'){cosmBuy(s,id);return;}if(a==='eq'){cosmEquip(s,id);return;}if(a==='paint'){boatPaint(s,id);return;}
+  if(a==='pv'){cosmPreview(s,id);return;}if(a==='pvx'){v4PrevClear();renderShop();return;}if(a==='buy'){cosmBuy(s,id);return;}if(a==='eq'){cosmEquip(s,id);return;}if(a==='paint'){boatPaint(s,id);return;}if(a==='pnm'){petNameSave(id);return;}/* V90 */
   if(a==='chum'){chumBuy();return;}if(a==='ttab'){AQ.tab=id;AQ.pick=false;renderTank(true);return;}if(a==='tpick'){AQ.pick=true;renderTank();return;}if(a==='tpickx'){AQ.pick=false;renderTank();return;}
   if(a==='tadd'){tankAdd(id);return;}if(a==='tdel'){tankDel(+id);return;}if(a==='tup'){tankUp();return;}if(a==='deco'){decoClick(id);return;}
   if(a==='gyogal'){openTank('gyo');return;}if(a==='gmake'){gyoMake();return;}if(a==='gmk1'){gyoMake(id);return;}if(a==='gview'){gyoView(+id);return;}if(a==='rel'){relBuy();return;}if(a==='cabin'){cabinUp();return;}});
@@ -9132,12 +9321,12 @@ function lookFirst(){return SRV?!LKME.L:!lookOK(save.look);}
 function lookNeed(){return SRV?(LKME.srv&&!LKME.L):!lookOK(save.look);}
 function lookPriceNow(){return SRV?LKME.price:LOOK_PRICE;}
 function v37Prof(p){if(!p)return;LKME.srv=true;LKME.L=lookOK(p.look);LKME.need=p.needsLook===true||!LKME.L;if(Number.isInteger(p.lookPrice))LKME.price=p.lookPrice;try{myLookApply();}catch(e){}}
-function myWear(){return{L:myLook(),pfd:lookOf('pfd'),gl:lookOf('glove'),sh:lookOf('shoes'),pa:lookOf('pants'),bg:lookOf('bag')};}
+function myWear(){return{L:myLook(),pfd:lookOf('pfd'),gl:lookOf('glove'),sh:lookOf('shoes'),pa:lookOf('pants'),bg:lookOf('bag'),tp:lookOf('top')};}
 function WID(v){return typeof v==='string'&&/^[a-z][a-z0-9_]{0,40}$/.test(v)?v:null;}
-function peerWear(st){return{L:typeof st.lk==='string'?lookParse(st.lk):null,pfd:WID(st.pfd),gl:WID(st.gl),sh:WID(st.sh),pa:WID(st.pa),bg:WID(st.bg)};}
-function wearKey(w){return w?[w.L?lookStr(w.L):'',w.pfd,w.gl,w.sh,w.pa,w.bg].join('|'):'';}
+function peerWear(st){return{L:typeof st.lk==='string'?lookParse(st.lk):null,pfd:WID(st.pfd),gl:WID(st.gl),sh:WID(st.sh),pa:WID(st.pa),bg:WID(st.bg),tp:WID(st.tp)};}
+function wearKey(w){return w?[w.L?lookStr(w.L):'',w.pfd,w.gl,w.sh,w.pa,w.bg,w.tp].join('|'):'';}
 // 방(아티팩트 방 모드) 접속 정보에 입은 꾸미기·외모를 싣는다. 서버 모드 방은 서버가 입장권·/look으로 채우고 보낸 값은 무시한다
-function myPresWear(){if(!myPres||myPres.s==null)return false;const e=V4().eq,L=myLook(),o={pfd:e.pfd||null,gl:e.glove||null,sh:e.shoes||null,pa:e.pants||null,bg:e.bag||null,lk:L?lookStr(L):null};let ch=false;for(const k in o)if((myPres[k]||null)!==o[k]){myPres[k]=o[k];ch=true;}return ch;}
+function myPresWear(){if(!myPres||myPres.s==null)return false;const e=V4().eq,L=myLook(),o={pfd:e.pfd||null,gl:e.glove||null,sh:e.shoes||null,pa:e.pants||null,bg:e.bag||null,tp:e.top||null,pt:e.pet||null,pn:e.pet?petNameMe():null,lk:L?lookStr(L):null};let ch=false;for(const k in o)if((myPres[k]||null)!==o[k]){myPres[k]=o[k];ch=true;}return ch;}
 function XID(id){return typeof id==='string'&&/^x_[a-z0-9_]{1,32}$/.test(id);}
 
 /* ---- 미리보기 무대(캐릭터 만들기·꾸미기 탭): 따로 그리는 작은 3D 화면 하나를 필요한 곳에 붙여 쓴다 ---- */
@@ -9160,14 +9349,14 @@ function avpInit(){if(AVP.r)return true;if(AVP.fail)return false;try{const cv=do
   const up=()=>{AVP.drag=null;AVP.autoAt=performance.now()+2500;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);cv.addEventListener('webglcontextlost',e=>e.preventDefault());
   return true;}catch(e){AVP.fail=true;return false;}}
 function avpLin(){AVP.sc.traverse(o=>{const m=o.material;if(m)(Array.isArray(m)?m:[m]).forEach(linMat);});}
-function avpSet(vest,hat,wear){if(!avpInit())return false;try{if(!AVP.a){AVP.a=makeAngler(vest,0x22262a,false,{noAdd:1,hat,wear});avRod(AVP.a,1.8);AVP.a.rodM.visible=false;AVP.a.crM.visible=false;AVP.S.st='stand';AVP.sc.add(AVP.a.g);}else anglerLook(AVP.a,vest,hat,wear);avpLin();return true;}catch(e){AVP.fail=true;return false;}}
+function avpSet(vest,hat,wear){if(!avpInit())return false;try{if(!AVP.a){AVP.a=makeAngler(vest,0x22262a,false,{noAdd:1,hat,wear});avRod(AVP.a,1.8);AVP.a.rodM.visible=false;AVP.a.crM.visible=false;AVP.S.st='stand';AVP.sc.add(AVP.a.g);}else anglerLook(AVP.a,vest,hat,wear);try{avpPet(lookOf('pet'));}catch(e){}/* V90 */avpLin();return true;}catch(e){AVP.fail=true;return false;}}
 function avpAttach(host){if(!avpInit()||!host)return false;if(AVP.cv.parentNode!==host){host.appendChild(AVP.cv);AVP.yaw=.3;AVP.ph=0;}/* V37-verify: 열 때 정면 살짝 3/4 */AVP.host=host;if(!AVP.raf){AVP.last=performance.now();AVP.raf=requestAnimationFrame(avpLoop);}return true;}
 function avpLoop(now){AVP.raf=0;const h=AVP.host;if(!h||!AVP.cv.isConnected||!AVP.cv.getClientRects().length){AVP.host=null;return;}
   const dt=Math.min(.05,Math.max(0,(now-AVP.last)/1000));AVP.last=now;const w=h.clientWidth|0,hh=h.clientHeight|0;
   if(w>2&&hh>2){if(AVP.sw!==w||AVP.sh!==hh){AVP.r.setSize(w,hh,false);AVP.sw=w;AVP.sh=hh;AVP.cam.aspect=w/hh;AVP.cam.updateProjectionMatrix();}
     if(!AVP.drag&&now<(AVP.faceAt||0)){const d=Math.atan2(Math.sin(.3-AVP.yaw),Math.cos(.3-AVP.yaw));AVP.yaw+=d*Math.min(1,dt*5);}/* 얼굴을 고르면 잠시 앞을 보게 */
     else if(!AVP.drag&&(AVP.auto||now>AVP.autoAt)){AVP.ph=(AVP.ph||0)+dt*.45;const tg=.22+.48*Math.sin(AVP.ph),d=Math.atan2(Math.sin(tg-AVP.yaw),Math.cos(tg-AVP.yaw));AVP.yaw+=d*Math.min(1,dt*2.5);}/* V37-verify: 한 바퀴 돌지 않고 정면 3/4 둘레에서 천천히 흔들어 얼굴이 늘 보이게(끌면 뒤까지 돌려 볼 수 있음) */
-    const a=AVP.a;if(a){a.A.seed+=dt;a.g.rotation.y=AVP.yaw;avDrive(a,AVP.S,dt);}
+    try{avpPetTick(dt);}catch(e){}const a=AVP.a;if(a){a.A.seed+=dt;a.g.rotation.y=AVP.yaw;avDrive(a,AVP.S,dt);}
     AVP.fz+=(AVP.fzT-AVP.fz)*Math.min(1,dt*5);const f=AVP.fz,asp=AVP.cam.aspect,ty=.89+.65*f,d=(4.3-2.7*f)*(asp<.5?.5/asp:1);/* v47 치비 비율(키 약 1.87m · 머리 중심 1.57m) */
     if(a){a.bones[3].rotation.y*=.3;a.bones[3].rotation.x*=.5;}/* 미리보기에서는 고개를 덜 돌린다 */
     if(AVP.cmO){const k=asp<.8?.8/asp:1,L=Math.min(1,(AVP.a&&AVP.a.fish.userData.L)||.4);AVP.cam.position.set(0,1.4+AV_DY,(2.15+1.5*L)*k);AVP.cam.lookAt(0,1.34+AV_DY-.14*L,0);}/* v38 최고 조과: 가슴·고기·얼굴 */else{AVP.cam.position.set(0,ty+.22-.16*f,d);AVP.cam.lookAt(0,ty,0);}{const fv=AV_FILL.value;AV_FILL.value=0;AVP.r.render(AVP.sc,AVP.cam);AV_FILL.value=fv;}}
@@ -9225,12 +9414,13 @@ async function lkGo(){if(!LKC||LKC.busy)return;const L=lookOK(LKC.L);if(!L)retur
 function lkClose(saved){const m=$('#lkMod');if(m)m.hidden=true;const was=LKC;LKC=null;if(AVP.a)try{anglerLook(AVP.a,myVestNow(),lookOf('hat'),myWear());}catch(e){}
   if(was&&was.introWas&&!saved)$('#intro').hidden=false;try{if(!$('#world').hidden)canvas.focus();}catch(e){}}
 /* ---- 꾸미기 탭: 새 칸 그림 · 3D 미리보기 · 광고 표시 ---- */
-const V37_WEAR={pfd:1,glove:1,shoes:1,pants:1,bag:1};
-function wearSVG(slot,x){const c=hexCss(x?x.c:slot==='pfd'?0xff6a1a:slot==='glove'?0xe6c29c:slot==='shoes'?0x5b6470:slot==='pants'?AV_PANTS:0x6b7178),c2=hexCss(x&&x.c2!=null?x.c2:0x2b2f36),s=x&&x.s||'',o=x?'':' opacity=".55"';let p='';
+const V37_WEAR={pfd:1,glove:1,shoes:1,pants:1,bag:1,top:1};/* V90 상의 */
+function wearSVG(slot,x){const c=hexCss(x?x.c:slot==='pfd'?0xff6a1a:slot==='glove'?0xe6c29c:slot==='shoes'?0x5b6470:slot==='pants'?AV_PANTS:slot==='top'?AV_SHIRT:0x6b7178),c2=hexCss(x&&x.c2!=null?x.c2:0x2b2f36),s=x&&x.s||'',o=x?'':' opacity=".55"';let p='';
   if(slot==='pfd')p='<path d="M3 21q17 7 34 0v5q-17 7-34 0z" fill="'+c2+'"/><rect x="11" y="15" width="18" height="14" rx="6" fill="'+c+'"/><path d="M13 19h14" stroke="'+c2+'" stroke-width="1.4"/><rect x="25" y="26" width="3.5" height="8" rx="1.2" fill="#f2c12e"/>';
   else if(slot==='glove')p='<path d="M12 33V17q0-7 8-7t8 7v16z" fill="'+c+'"/><path d="M28 21q6-1 5.5 5L28 29z" fill="'+c+'"/>'+(s==='cut'?'<path d="M12 17q0-7 8-7t8 7z" fill="#e6c29c"/>':'')+(x?'<rect x="11" y="30" width="18" height="6" rx="2" fill="'+c2+'"/>':'');
   else if(slot==='shoes')p=s==='boot'?'<path d="M10 5h12v18q9 1 13 6v6H10z" fill="'+c+'"/><path d="M10 32h25v3H10z" fill="rgba(0,0,0,.35)"/>':s==='felt'?'<path d="M10 12h12v11q9 1 13 6v3H10z" fill="'+c+'"/><path d="M9 31h27v5H9z" fill="'+c2+'"/>':'<path d="M5 29q0-9 7-11l8 3q9 1 14 5q3 2 2 4H5z" fill="'+c+'"/><path d="M5 30h31v4H5z" fill="#f4f2ec"/>'+(x&&x.c2!=null?'<path d="M14 22l9 6" stroke="'+c2+'" stroke-width="2.4"/>':'');
   else if(slot==='pants')p=s==='short'?'<path d="M10 7h20l3 15h-9l-4-7-4 7H7z" fill="'+c+'"/>':s==='wader'?'<path d="M13 3h14v9h2l2 24h-8l-3-17-3 17H9l2-24h2z" fill="'+c+'"/><path d="M15 3l-3-3M25 3l3-3" stroke="'+c2+'" stroke-width="2"/>':'<path d="M10 5h20l2 31h-8l-4-20-4 20H8z" fill="'+c+'"/>'+(s==='cargo'?'<rect x="8.5" y="18" width="5" height="7" rx="1" fill="rgba(0,0,0,.25)"/><rect x="26.5" y="18" width="5" height="7" rx="1" fill="rgba(0,0,0,.25)"/>':'')+(x&&x.c2!=null&&s==='long'?'<path d="M10.5 6l-1.6 29M29.5 6l1.6 29" stroke="'+c2+'" stroke-width="1.6"/>':'');
+  else if(slot==='top'){const sh='<path d="M13 6l-9 5 3 8 4-2v18h18V17l4 2 3-8-9-5q-3 4-7 4t-7-4z" fill="'+c+'"/>';p=sh+(s==='stripe'?'<path d="M11 19h18M11 24h18M11 29h18M6 12l4-2M34 12l-4-2" stroke="'+c2+'" stroke-width="2"/>':s==='rash'?'<path d="M11 18h18" stroke="'+c2+'" stroke-width="3"/><path d="M5.5 13l3.5 4M34.5 13l-3.5 4" stroke="'+c2+'" stroke-width="1.6"/>':s==='camo'?'<ellipse cx="15" cy="20" rx="3" ry="2" fill="'+c2+'"/><ellipse cx="24" cy="27" rx="3.5" ry="2" fill="'+c2+'"/><ellipse cx="25" cy="15" rx="2.5" ry="1.6" fill="'+c2+'"/><ellipse cx="14" cy="30" rx="2.6" ry="1.6" fill="'+c2+'"/>':s==='jacket'||s==='fleece'?'<path d="M20 10v25" stroke="'+(s==='fleece'?'rgba(0,0,0,.28)':c2)+'" stroke-width="1.8"/><path d="M13 6q7 6 14 0" stroke="'+c2+'" stroke-width="2.4" fill="none"/><path d="M11 33h18" stroke="'+c2+'" stroke-width="2"/>':s==='hood'?'<path d="M13 6q7 9 14 0" stroke="rgba(0,0,0,.25)" stroke-width="3" fill="none"/><path d="M18 11v6M22 11v6" stroke="'+c2+'" stroke-width="1.2"/><rect x="14" y="24" width="12" height="6" rx="2" fill="rgba(0,0,0,.18)"/>':'<path d="M15 6q5 4 10 0" stroke="rgba(0,0,0,.22)" stroke-width="1.6" fill="none"/>');}
   else p=s==='hip'?'<path d="M3 17h34" stroke="'+c2+'" stroke-width="2.2"/><ellipse cx="20" cy="24" rx="13" ry="8" fill="'+c+'"/>':s==='back'?'<rect x="9" y="6" width="22" height="29" rx="8" fill="'+c+'"/><rect x="13" y="21" width="14" height="10" rx="3" fill="'+c2+'"/>':s==='cool'?'<rect x="7" y="15" width="26" height="19" rx="3" fill="'+c+'"/><rect x="6" y="11" width="28" height="6" rx="2" fill="'+c2+'"/>':'<path d="M7 4l27 22" stroke="'+c2+'" stroke-width="3"/><rect x="13" y="17" width="20" height="17" rx="7" fill="'+c+'"/>';
   return'<svg viewBox="0 0 40 40" class="v4ic" aria-hidden="true"'+o+'>'+p+'</svg>';}
 function v37ShopPv(){const h=$('#v4av');if(!h)return;if(!avpSet(myVestNow(),lookOf('hat'),myWear()))return;h.classList.add('v4av3');AVP.fzT=0;avpAttach(h);}
@@ -10176,7 +10366,7 @@ v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V74 */boatBadge,boatGo,boatPick,boatPortGo,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,boatAutoSettleNow/* V84 */,get OCCK(){return OCCK;}/* V87 */,ocPlans,ocGo,get ocSel(){return ocSel;},set ocSel(v){ocSel=v;}/* V89 */}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,petItem,petBuild,petSync,petDrop,petNameMe,petNameSave,petSecHTML,petSVG,avpPet,get PETGC(){return PETGC;},/* V90 */boatAutoSettleNow/* V84 */,get OCCK(){return OCCK;}/* V87 */,ocPlans,ocGo,get ocSel(){return ocSel;},set ocSel(v){ocSel=v;}/* V89 */}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
