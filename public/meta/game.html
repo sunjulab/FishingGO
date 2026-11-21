@@ -5630,8 +5630,8 @@ let nearN=99;function nearHint(chk,all){if(autoOn||!curList.length)return;nearN+
 // 던진 채비가 물에 닿으면 이번 캐스팅의 입질 여부·시각을 정한다(서버 모드에서는 서버 /cast 결과를 쓴다)
 let plan=null,escPlan=null,escJ=0;const SES={c:0,b:0,f:0,none:0,late:0,miss:0,jump:0,pull:0,break:0,snag:0};
 function startWait(){const m=curChk.meth==='pole'?'float':curChk.meth;const dk=listDK(m,castD,curChk.D,curList);const LB=listBite(m,biteFactor()*chumK()*(autoOn?1:petBuf(V4().eq.pet,false).bite)/* V91 펫 입질 */,/* v34 집어제(직접 낚시만) */curList,curChk.G,m==='boat',dk);const k=LB.k;ENV.biteK=k;ENV.distK=dk;waitT=0;
-  const spd=m==='lure'?lureSpd(curChk.G.term.kind):1;plan={pB:LB.pB,dk,at:biteDelay(m,castD,spd,Math.random()),wait:noneWait(m,castD,spd,Math.random()),used:false};plan.bite=Math.random()<plan.pB;if(!curList.length){plan.bite=false;plan.wait=Math.min(plan.wait,3);}egiStart();}
-function planDue(){if(!plan||!plan.bite||plan.used||waitT<plan.at)return false;plan.used=true;return true;}
+  const spd=m==='lure'?lureSpd(curChk.G.term.kind):1;plan={pB:LB.pB,dk,at:biteDelay(m,castD,spd,Math.random()),wait:noneWait(m,castD,spd,Math.random()),used:false};plan.bite=Math.random()<plan.pB;if(!curList.length){plan.bite=false;plan.wait=Math.min(plan.wait,3);}if(autoRT()){plan.rt=1;plan.bite=AQ_R.length>0;plan.at=Math.min(plan.at,1.2+Math.random());plan.wait=Math.max(plan.wait,40);}/* V97 실제 결과가 올 때까지 기다림 */egiStart();}
+function planDue(){if(plan&&plan.rt&&!plan.bite&&!plan.used&&AQ_R.length){plan.bite=true;plan.at=waitT+.6+Math.random()*.8;}/* V97 기다리는 동안 결과가 오면 바로 입질 */if(!plan||!plan.bite||plan.used||waitT<plan.at)return false;plan.used=true;return true;}
 function planNoneDue(){return!!plan&&!plan.bite&&waitT>=plan.wait;}
 // v32 #206: late = 챔질을 안 했거나 늦음(입질 놓침), miss = 눌렀지만 바늘에 안 걸림(헛챔질)
 const NC_TXT={none:'입질 없음',late:'입질 놓침',miss:'헛챔질',jump:'바늘털이',pull:'바늘 빠짐',break:'줄 터짐',snag:'밑걸림',lost:'놓침'};
@@ -5645,7 +5645,10 @@ function breakHint(kg){if(curTrip||autoOn||!(ratio>0))return'';const fk=+kg>0?+k
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-bagopen]');if(b){e.preventDefault();bagSet(true);}});
 function nonCatch(kind,msg){if(player&&kind!=='snag')player.A.shrT=0;SES[kind]=(SES[kind]||0)+1;toast(msg);const L=NC_TXT[kind];logMsg('<b>'+L+'</b> · '+esc(msg.indexOf(L+' — ')===0?msg.slice(L.length+3):msg)+' <span class="k">('+sesTxt()+')</span>','sys');}
 let biteDur=1,slackT=0;
-function hook(){fishGold=false;evt('bite');if(player)player.A.hookT=0;biteEnd(false);if(SRV&&!autoOn)return srvHook();const L=curList;if(!L.length){resetLine();return;}let tot=L.reduce((a,b)=>a+b.w,0),r=Math.random()*tot,f=L[0];for(const x of L){if((r-=x.w)<=0){f=x;break;}}
+function hook(){fishGold=false;evt('bite');if(player)player.A.hookT=0;biteEnd(false);if(SRV&&!autoOn)return srvHook();
+  if(autoRT()&&AQ_R.length&&curChk){const x=AQ_R.shift(),f0=fishBy(x.n);if(f0){AQ_CUR=x;fish=f0;fsize=+x.cm;fishKgNow=+x.kg||fishKg(fish,fsize);const C=curChk.C;ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=null;sEff=Math.max(.15,Math.min(1.5,.15+.55*Math.min(ratio,1.4)));state='fight';fightT=0;tension=.3;fGrace=0;fCue=0;fdist=fightStartD();surge=0;holding=true;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');return;}}/* V97 서버가 정한 그 고기(놓침 없음 — 이미 정산에서 낚은 고기) */
+  if(autoRT()){resetLine();return;}/* V97 실제 결과가 없는 입질은 만들지 않음 */
+  const L=curList;if(!L.length){resetLine();return;}let tot=L.reduce((a,b)=>a+b.w,0),r=Math.random()*tot,f=L[0];for(const x of L){if((r-=x.w)<=0){f=x;break;}}
   f=v36EvRoll(f,L);/* v36 전국 대물(오프라인 — 서버는 /cast가 굴림) */const hk=hookP((HOOK[f.f.n]||.8)+.03*sk('hook'),curChk.G,sk('hook'));// v31 S3 #16: 서버 모드와 같게(서두른 챔질 벌칙 없음)
   if(Math.random()>hk){srvMiss(null);return;}// v32 #204: 로컬도 서버와 같은 헛챔질 처리(루어는 누르는 동안만 감기)
   fish=f.f;fishGold=goldRoll();const C=curChk.C;const boat=curChk.meth==='boat';
@@ -6436,7 +6439,7 @@ async function renderRPG(){renderLv();const T3=[['me','성장·스킬'],['goal',
     box.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{rkP=b.dataset.p;renderRPG();});box.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{rkM=b.dataset.m;renderRPG();});
     const mine=save.rk[rkP]&&save.rk[rkP].k===K[rkP]?save.rk[rkP]:{pt:0,kg:0,f:'',c:0};
     let myLine='<div class="k" style="margin-top:8px">나: '+esc((+mine.pt||0).toLocaleString('ko-KR'))+'P · '+esc(String(+mine.c||0))+'마리 · 최대어 '+(+mine.kg?esc(String(mine.f||''))+' '+esc(String(+mine.kg))+'kg':'-')+'</div>';
-    const seq=++rkSeqN,P0=rkP,M0=rkM;let list=await loadRank();const el=$('#rkList');if(!el||seq!==rkSeqN||rkP!==P0||rkM!==M0||rpgTab!=='rank')return;/* v32 LC2 #235: 늦게 온 앞선 응답은 버림 */let srvMine,srvCut=null;if(SRV){if(list){srvMine=list.mine;srvCut=list.cut;list=list.rows;}else myLine='<div class="k" style="margin-top:8px">내 기록: 불러오지 못함</div>';}if(SRV&&list){const m=srvMine,srvRankCut=srvCut;/* v31 S4 #159: 서버가 준 내 순위 · 50위 밖이면 50위까지 남은 값 */const rkOf=m&&+m.rank>0?'<b>'+(+m.rank).toLocaleString('ko-KR')+'위</b> · ':'';const gap=m&&+m.rank>50&&srvRankCut!=null?(rkM==='pt'?' · 50위까지 '+Math.max(1,Math.ceil(+srvRankCut-(+m.pt||0))).toLocaleString('ko-KR')+'P':' · 50위까지 '+Math.max(.01,+(+srvRankCut-(+m.kg||0)).toFixed(2))+'kg'):'';myLine='<div class="k" style="margin-top:8px">나: '+(m?rkOf+esc((+m.pt||0).toLocaleString('ko-KR'))+'P · '+esc(String(+m.cnt||0))+'마리 · 최대어 '+(+m.kg?esc(String(m.fish||''))+' '+esc(String(+m.kg))+'kg':'-')+gap:'이 기간 기록 없음')+'</div>';}
+    const seq=++rkSeqN,P0=rkP,M0=rkM;let list=await loadRank();const el=$('#rkList');if(!el||seq!==rkSeqN||rkP!==P0||rkM!==M0||rpgTab!=='rank')return;/* v32 LC2 #235: 늦게 온 앞선 응답은 버림 */let srvMine,srvCut=null,srvStaff=false;if(SRV){if(list){srvMine=list.mine;srvCut=list.cut;srvStaff=list.staff;list=list.rows;}else myLine='<div class="k" style="margin-top:8px">내 기록: 불러오지 못함</div>';}if(SRV&&list){const m=srvMine,srvRankCut=srvCut;/* v31 S4 #159: 서버가 준 내 순위 · 50위 밖이면 50위까지 남은 값 */const rkOf=m&&+m.rank>0?'<b>'+(+m.rank).toLocaleString('ko-KR')+'위</b> · ':'';const gap=m&&+m.rank>50&&srvRankCut!=null?(rkM==='pt'?' · 50위까지 '+Math.max(1,Math.ceil(+srvRankCut-(+m.pt||0))).toLocaleString('ko-KR')+'P':' · 50위까지 '+Math.max(.01,+(+srvRankCut-(+m.kg||0)).toFixed(2))+'kg'):'';myLine='<div class="k" style="margin-top:8px">나: '+(m?rkOf+esc((+m.pt||0).toLocaleString('ko-KR'))+'P · '+esc(String(+m.cnt||0))+'마리 · 최대어 '+(+m.kg?esc(String(m.fish||''))+' '+esc(String(+m.kg))+'kg':'-')+gap:'이 기간 기록 없음')+'</div>';if(srvStaff)myLine='<div class="k" style="margin-top:8px">운영(마스터) 계정은 랭킹에 오르지 않습니다</div>';}/* V96 */
     if(!list){el.innerHTML='<div class="k">'+(SRV?'랭킹을 불러오지 못했습니다 · 잠시 뒤 다시 열어 보세요':(NET_API?'서버에 연결되지 않아 랭킹을 볼 수 없습니다 · 낚시GO에 로그인했는지 확인해 주세요':'공유 랭킹은 claude.ai 링크에 로그인한 상태에서 집계됩니다. 낚시GO에 넣으면 계정 기준으로 집계합니다.'))+'</div>'+myLine;return;}
     el.innerHTML=(list.length?'<ol class="rk">'+list.map((r,i)=>'<li class="'+(r.id===ruid?'me':'')+'"><span class="num rkn">'+(i+1)+'</span><span class="rknm">'+esc(r.n||'낚시꾼')+(r.ti?'<span class="v4ttl">'+esc(titleName(r.ti))+'</span>':'')+' <span class="k">Lv.'+esc(String(r.lv|0||1))+'</span>'+(r.id===ruid?' (나)':'')+'</span><b class="num">'+(rkM==='pt'?esc((+r[rkP+'pt']||0).toLocaleString('ko-KR'))+'P':esc(String(+r[rkP+'kg']||0))+'kg <span class="k">'+esc(r[rkP+'f']||'')+'</span>')+'</b></li>').join('')+'</ol>':'<div class="k">아직 이 기간 기록이 없습니다. 첫 기록을 남겨 보세요.</div>')+myLine;}}
 $('#rpgClose').addEventListener('click',()=>{$('#rpg').hidden=true;});$('#rpgBody').addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-capt]');if(b)openCapt();});
@@ -6777,13 +6780,16 @@ function subGo(){if(GAME_APP)return;/* V78 */try{if(window.parent&&window.parent
 $('#autoClose').addEventListener('click',()=>$('#autoModal').hidden=true);
 // 매 프레임 자동 조작
 let autoBeat=0,autoRelT=1.1;
+// V97 화면을 보고 있는 연안 자동 낚시도 '실제로 낚는 것처럼': 서버가 한 번 던짐(AUTO_CYC초)마다 정한 결과를 그 시각에 받아(next) 입질 → 파이팅 → 들어 올리기로 그 고기를 그대로 보여 준다(포인트·경험치 계산은 예전 그대로 서버 정산)
+let AQ_R=[],AQ_CUR=null,A_NEXT=0;
+function autoRT(){return!!(SRV&&autoOn&&SA&&SA.on&&cur&&SA.spot===cur.id&&!curTrip);}
 // 화면을 켜 둔 자동 낚시: 다음 캐스팅 전 채비 정리 시간(정산의 AUTO_CYC와 비슷한 속도가 되도록)
 function autoRest(){return 3;}// 자동 낚시 채비 정리 3초(2026-11-05)
 // C6 #138: 화면 속 자동 낚시는 연출 — 어종·크기를 말하지 않고, 실제 조과는 정산 기록(어종 이름 포함)으로 알린다
 let autoVisT=0;function autoVisNote(){const n=performance.now();if(n-autoVisT<60e3)return;autoVisT=n;const m=Math.max(1,Math.ceil((300e3-autoBeat)/60e3));toast('[자동] 화면의 고기는 연출입니다 · 포인트와 쿨러 고기는 5분마다 한꺼번에 들어옵니다 · 다음 정산 약 '+m+'분 뒤',4200);}
 /* 자동 정산 알림: 포인트가 들어온 걸 바로 보이게 · V58: 무엇을 낚았는지(어종·마릿수·가장 큰 고기)도 */function autoGainNote(n,pts,tally,best){const fish=Object.entries(tally||{}).sort((a,b)=>(b[1].n||0)-(a[1].n||0)).slice(0,3).map(([k,v])=>k+' '+(v.n||0)+'마리').join(' · ');const big=best&&best.n&&best.cm?' · 가장 큰 고기 '+best.n+' '+(Math.round(best.cm*10)/10)+'cm':'';toast('자동 낚시로 낚았습니다 · '+(fish||fmtN(n)+'마리')+big+' · +'+fmtN(pts)+'P',5200);try{const w=$('#wallet');if(w){w.classList.remove('ptpop');void w.offsetWidth;w.classList.add('ptpop');}}catch(e){}}
 const tallyTxt=t=>{const e=Object.entries(t||{}).sort((a,b)=>b[1].n-a[1].n).slice(0,4);return e.length?' ('+e.map(([k,v])=>esc(k)+' '+v.n).join(', ')+')':'';};
-function autoTick(dt,rdt){if(!autoOn)return;if((autoBeat+=rdt)>(SRV&&cur&&SA&&SA.spot===cur.id&&!document.hidden?120e3:300e3)&&!(SRV&&adBusy)){/* V58: 자동 낚시 중인 낚시터를 보고 있으면 2분마다 조과를 보여 줌(그 밖에는 5분) */autoBeat=0;if(SRV)srvSettle(true,'tick');else{const R=settleLocal(true,'tick');if(R&&R.n){logMsg('자동 낚시 · '+R.n+'마리'+tallyTxt(R.tally)+' · +'+fmtN(R.pts)+'P · +'+fmtN(R.xp)+'XP','sys');autoGainNote(R.n,R.pts,R.tally,null);}}}/* 5분마다 확인(정산) → 어망 시간도 그때부터 다시 */
+function autoTick(dt,rdt){if(!autoOn){AQ_R=[];A_NEXT=0;return;}if(autoRT()&&!document.hidden&&!adBusy){if(!A_NEXT)A_NEXT=performance.now()+2000;if(performance.now()>=A_NEXT){A_NEXT=performance.now()+20e3;autoBeat=0;srvSettle(true,'tick');}}/* V97 한 번 던짐마다 */else if((autoBeat+=rdt)>(SRV&&cur&&SA&&SA.spot===cur.id&&!document.hidden?120e3:300e3)&&!(SRV&&adBusy)){/* V58: 자동 낚시 중인 낚시터를 보고 있으면 2분마다 조과를 보여 줌(그 밖에는 5분) */autoBeat=0;if(SRV)srvSettle(true,'tick');else{const R=settleLocal(true,'tick');if(R&&R.n){logMsg('자동 낚시 · '+R.n+'마리'+tallyTxt(R.tally)+' · +'+fmtN(R.pts)+'P · +'+fmtN(R.xp)+'XP','sys');autoGainNote(R.n,R.pts,R.tally,null);}}}/* 5분마다 확인(정산) → 어망 시간도 그때부터 다시 */
   if(W&&status(cur,W)==='b'){setAuto(false);toast('위험 기상이라 자동 낚시를 멈췄습니다');return;}
   autoT+=dt;
   if(state==='idle'){if(autoT>autoRest()&&!nearWater()){autoT=0;}/* v43: 물가 끝이 아니면 화면 속 던지기만 쉬고 자동 낚시는 그대로(수확은 시간으로 정산) */
@@ -7580,7 +7586,7 @@ function srvLoseRig(){const c=srvC;const g=c&&c.snagRes;
 const kgTxt=kg=>kg<1?Math.round(kg*1000)+'g':kg.toFixed(1)+'kg';
 function srvLand(){const c=srvC,b=c&&c.h;state='result';landAt=performance.now();pBob.visible=false;pLine.l.visible=false;if(!$('#fight').hidden){$('#fight').hidden=true;layoutHUD();}holding=false;player.pivot.rotation.x=1.0;myPres.st='idle';delete myPres.bx;
   const f=fish,cm=fsize,kg=fishKgNow;const gold=fishGold&&!autoOn&&!!(c&&c.hooked);fishGold=false;avFish(player,f,cm,(f.min!=null&&cm<=f.min)||!!closedRange(f,0,cur),gold);
-  if(autoOn||!c||!b||!c.hooked){autoVisNote();bubble(player,'자동 낚시 중');sendPres(true);return;}
+  if(autoOn||!c||!b||!c.hooked){const x=AQ_CUR;AQ_CUR=null;if(autoOn&&x){const cmT=(Math.round(x.cm*10)/10).toFixed(1);bubble(player,f.n+' '+cmT+'cm');toast('자동 낚시 · '+f.n+' '+cmT+'cm'+(x.rel?' · 방생':' · +'+fmtN(x.pts|0)+'P · +'+fmtN(x.xp|0)+'XP'),2600);logMsg('자동 낚시 · <b>'+esc(f.n)+'</b> '+cmT+'cm'+(x.rel?' (방생)':' · +'+fmtN(x.pts|0)+'P'),'sys');}else{autoVisNote();bubble(player,'자동 낚시 중');}sendPres(true);return;}/* V97 실제로 낚은 고기 그대로 알림 */
   c.done=true;// 이 입질은 /catch가 마무리
   const old=save.dex[f.n];const first=!old||!old.n;const best0=old?old.best||0:0;const spot=cur,trip=curTrip,chk=curChk,cd=castD,w=W||{};const cnt0=save.count||0,score0=save.score||0;
   $('#cardKick').textContent=(trip?spot.n+' 출항 '+trip.n:spot.n)+'에서 낚았습니다';$('#cardName').textContent=f.n;$('#cardSize').innerHTML=cm.toFixed(1)+'<small>cm</small>';
@@ -7660,7 +7666,7 @@ async function srvTrip(s,t,m){const t0=performance.now();const r=await net('trip
   tripEnd=performance.now()+Math.max(60e3,Math.min(TRIP_MIN*60000,left));if(TS){if(tr.fee!=null)TS.fee=+tr.fee;TS.owe=tr.owe!=null?+tr.owe:TS.fee;}}
 let srvRankMine,srvRankCut=null;
 async function srvRank(){const p=rkP,mm=rkM;const r=await net('rank?p='+p+'&m='+mm);if(r.s!==200||!r.j||!Array.isArray(r.j.rows))return null;ruid='__me';/* v32 LC2 #235: 전역 대신 {rows,mine,cut}로 돌려줌 */
-  return{rows:r.j.rows.map((x,i)=>x&&rkClean({n:x.nick,lv:x.lv,ti:x.title||x.t,[p+'pt']:x.pt,[p+'kg']:x.kg,[p+'f']:x.fish},x.me?'__me':'r'+i)).filter(Boolean),mine:r.j.mine||null,cut:r.j.cut50!=null?r.j.cut50:null};}
+  return{rows:r.j.rows.map((x,i)=>x&&rkClean({n:x.nick,lv:x.lv,ti:x.title||x.t,[p+'pt']:x.pt,[p+'kg']:x.kg,[p+'f']:x.fish},x.me?'__me':'r'+i)).filter(Boolean),mine:r.j.mine||null,cut:r.j.cut50!=null?r.j.cut50:null,staff:!!r.j.staff};}
 
 /* ---- 서버 모드: 자동 낚시(켜기·끄기·정산은 서버 시간 기준) ---- */
 let srvAutoQ=Promise.resolve();
@@ -7683,6 +7689,7 @@ function srvSettle(keep,why){srvAutoQ=srvAutoQ.then(async()=>{const spotId=SA&&S
   // v32 #217: 켜 둔 채 잠깐(10분 미만) 다른 앱을 보고 온 복귀 정산은 큰 창 대신 소식 + 짧은 알림
   const quick=why==='return'&&keep&&Math.max(+j.away||0,+j.elapsed||0)<600e3;
   srvApplySettle(j,why!=='tick'&&!quick);await srvRefresh();if(!(SA&&SA.on)&&autoOn){autoOn=false;$('#autobtn').classList.remove('on');}renderAutoBtn();
+  if(why==='tick'&&autoRT()){const nx=j.next&&j.now?Math.max(4e3,j.next-j.now+600):((j.cyc||50)*1000);A_NEXT=performance.now()+nx;const F=Array.isArray(j.fish)?j.fish:[];if(F.length>3){autoGainNote(j.n,j.pts,j.tally,j.best);AQ_R.push(F[F.length-1]);}else AQ_R.push(...F);return;}/* V97 한 마리씩 화면으로 */
   if(why==='tick'||quick){if(j.n){logMsg('자동 낚시 · '+j.n+'마리'+tallyTxt(j.tally)+(j.best&&j.best.n&&j.best.cm?' · 최대 '+esc(j.best.n)+' '+(Math.round(j.best.cm*10)/10)+'cm':'')+' · +'+fmtN(j.pts)+'P · +'+fmtN(j.xp)+'XP','sys');if(why==='tick')autoGainNote(j.n,j.pts,j.tally,j.best);if(quick)toast('자리를 비운 동안 자동 낚시 · '+j.n+'마리 · +'+fmtN(j.pts)+'P');}return;}
   const s=SPOTS.find(x=>x.id===spotId);showAwayPopup(s,awayR(j));}).catch(()=>{});return srvAutoQ;}
 function srvVis(){if(document.hidden){flushLog(true);return;}tokCheck();ppRun();if(SA&&SA.on&&!adBusy)srvSettle(true,'return');}// C6 #35: 접속·복귀 정산은 자동 낚시를 끄지 않는다(끄기는 직접 눌렀을 때만)// v29 S2: 광고를 보는 중(앱 광고 창이 닫히며 돌아옴)에는 정산하지 않음
@@ -10404,7 +10411,7 @@ v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V74 */boatBadge,boatGo,boatPick,boatPortGo,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,petItem,petBuild,petSync,petDrop,petNameMe,petNameSave,petSecHTML,petSVG,avpPet,get PETGC(){return PETGC;},/* V90 */boatAutoSettleNow/* V84 */,get BA_Q(){return BA_Q;},get BA_P(){return BA_P;},get BA_NEXT(){return BA_NEXT;},get OCCK(){return OCCK;}/* V87 */,ocPlans,ocGo,get ocSel(){return ocSel;},set ocSel(v){ocSel=v;}/* V89 */}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,petItem,petBuild,petSync,petDrop,petNameMe,petNameSave,petSecHTML,petSVG,avpPet,get PETGC(){return PETGC;},/* V90 */boatAutoSettleNow/* V84 */,get BA_Q(){return BA_Q;},get AQ_R(){return AQ_R;},get AQ_CUR(){return AQ_CUR;},get A_NEXT(){return A_NEXT;},set A_NEXT(v){A_NEXT=v;},autoRT,setAuto,get BA_P(){return BA_P;},get BA_NEXT(){return BA_NEXT;},get OCCK(){return OCCK;}/* V87 */,ocPlans,ocGo,get ocSel(){return ocSel;},set ocSel(v){ocSel=v;}/* V89 */}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
