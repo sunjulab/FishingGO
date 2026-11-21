@@ -115,6 +115,36 @@ button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid 
 .lvchip{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.lvchip .lvt{font-size:12px;color:var(--mute)}
 .xpbar{display:inline-block;width:46px;height:5px;background:rgba(232,238,240,.15);border-radius:3px;overflow:hidden;position:relative}.xpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--buoy)}
 .spdot{background:var(--buoy);color:#1a0d05;border-radius:999px;padding:0 6px;font-size:11px;font-weight:700}
+/* V98 캐릭터 창 · 이벤트 창(10일 출석판) */
+.lvpw{font-size:11px;color:#ffd37a;font-weight:700;letter-spacing:-.2px}.lvchip.hb .lvpw{display:none}
+.chsheet{width:min(860px,100%);box-sizing:border-box}.chgrid{display:grid;grid-template-columns:250px minmax(0,1fr);gap:12px}
+@media (max-width:700px){.chgrid{grid-template-columns:1fr}}
+.chcard{border:1px solid var(--line,#2c3b47);border-radius:14px;padding:10px;background:rgba(255,255,255,.03)}
+.chav{border-radius:12px;background:linear-gradient(180deg,#8fd3ff,#d9f1ff 60%,#c8b28a 61%,#a58d63);height:150px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;position:relative}
+.chav svg{height:140px;width:auto}.chav .chg{position:absolute;left:8px;top:8px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(11,20,28,.72);color:#fff}
+.chg.g1{border:1px solid #e6c48a}.chg.g2{border:1px solid #ff8f7a}.chg.g3{border:1px solid #39d0c0}.chg.g4{border:1px solid #6f8bff;box-shadow:0 0 8px #6f8bff}.chg.g5{border:1px solid #c9b8ff;box-shadow:0 0 10px #c9b8ff}
+.chpw{display:flex;justify-content:space-between;align-items:center;margin:8px 0;padding:8px 12px;border-radius:10px;background:rgba(255,190,60,.12);border:1px solid rgba(255,190,60,.5)}.chpw b{font-size:20px}
+.chst{list-style:none;margin:0;padding:0;font-size:13px}.chst li{display:flex;justify-content:space-between;gap:8px;padding:4px 2px;border-bottom:1px dashed rgba(255,255,255,.08)}.chst li span{color:var(--mute)}
+.chgr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.chgr .bar{flex:1;min-width:140px;margin:0}
+.chstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}@media (max-width:420px){.chstats{grid-template-columns:1fr}}
+.chs{text-align:center;padding:10px 6px}.chs b.n{font-size:15px;display:block}.chs .e{font-size:12px;color:var(--mute);margin:4px 0}.chs .v{font-size:13px;margin-bottom:8px}
+.chs .bt{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}.chs .bt button{min-height:40px;white-space:nowrap;padding:0 10px}.chs .v{white-space:nowrap}
+.chsec{margin-top:12px}.chsec h3{font-size:14px;margin:0 0 6px}
+.chdex{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}@media (max-width:520px){.chdex{grid-template-columns:repeat(2,1fr)}}
+.chz{font-size:12px;padding:6px 8px;border-radius:10px;border:1px solid var(--line,#2c3b47)}.chz.on{border-color:#3fd1a0;background:rgba(63,209,160,.1)}.chz b{display:block;font-size:13px}
+.chsp{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.chsp div{font-size:12px;padding:8px;border-radius:10px;background:rgba(255,255,255,.04);color:var(--mute)}
+.chtabs{display:flex;gap:4px;margin-top:12px;border-top:1px solid var(--line,#2c3b47);padding-top:8px}.chtabs button{flex:1;min-height:44px;padding:0 4px}.chtabs button[aria-current="true"]{background:rgba(255,190,60,.15);border-color:#ffbe3c}
+.evsheet{width:min(860px,100%);box-sizing:border-box}.evwrap{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px}@media (max-width:600px){.evwrap{grid-template-columns:1fr}.evmenu{flex-direction:row;overflow-x:auto}}
+.evmenu{display:flex;flex-direction:column;gap:6px}.evmenu button{min-height:44px;text-align:left;white-space:nowrap}.evmenu button[aria-current="true"]{background:rgba(57,208,192,.18);border-color:#39d0c0}.evmenu .rd{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff5a4e;margin-left:6px;vertical-align:middle}
+.evbody{border-radius:14px;padding:12px;background:linear-gradient(180deg,rgba(90,170,255,.18),rgba(80,200,140,.12))}
+.atgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:10px 0}@media (max-width:520px){.atgrid{gap:4px}}
+.atc{position:relative;border-radius:12px;background:#fff;color:#1d2b36;padding:6px 3px 8px;text-align:center;border:2px solid transparent;min-height:96px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.atc .d{font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;background:#8bd35a;color:#123}.atc.big .d{background:#ffa53a}
+.atc .ai{width:38px;height:38px;border-radius:8px;background:#e9eef2;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#1f7a4a}.atc .r{font-size:11.5px;font-weight:700;line-height:1.25;word-break:keep-all}
+.atc.done{opacity:.6}.atc.done::after{content:'✓';position:absolute;top:22px;left:50%;transform:translateX(-50%);font-size:30px;font-weight:900;color:#2b7de9}
+.atc.now{border-color:#2b7de9;box-shadow:0 0 0 3px rgba(43,125,233,.25);animation:atPulse 1.4s ease-in-out infinite}.atc.lock .ai{opacity:.55}
+@keyframes atPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@media (prefers-reduced-motion:reduce){.atc.now{animation:none}}
+.evbtn{position:relative}.evbtn .rd{position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:#ff5a4e;box-shadow:0 0 0 2px #0b141c}
 .tabs2{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}.tabs2 button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-size:13px}.tabs2 button[aria-selected="true"]{background:var(--fg);color:var(--sea);border-color:var(--fg)}
 ol.rk{list-style:none;margin:0;padding:0}
 .gbadge{display:inline-block;font-size:11px;font-weight:700;color:var(--gold-ink);background:linear-gradient(90deg,var(--gold-soft),#ffbf2f,var(--gold-soft));background-size:200% 100%;border-radius:999px;padding:1px 8px;animation:gshine 2.4s linear infinite;vertical-align:middle;white-space:nowrap}
@@ -1882,6 +1912,12 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
   <div class="sheet2 panel"><h2 id="unlockTitle">새 장비 해금!</h2><div id="unlockWhy" class="k"></div><ul id="unlockList"></ul>
     <div class="row" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="mini buy" id="unlockGo" type="button">상점에서 보기</button><button class="ghost" id="unlockClose" type="button">닫기</button></div></div>
 </div>
+<div id="charM" class="modal" hidden role="dialog" aria-labelledby="charT">
+  <div class="sheet2 panel chsheet" id="charSheet" style="width:min(880px,100%);max-width:880px;box-sizing:border-box"><div class="row" style="margin-bottom:6px"><h2 id="charT" style="margin:0">캐릭터</h2><button class="ghost" id="charClose" type="button" style="margin-left:auto">닫기</button></div><div id="charBody"></div><nav class="chtabs" id="charTabs" aria-label="성장 메뉴"></nav></div>
+</div>
+<div id="evtM" class="modal" hidden role="dialog" aria-labelledby="evtT">
+  <div class="sheet2 panel evsheet" id="evtSheet" style="width:min(880px,100%);max-width:880px;box-sizing:border-box"><div class="row" style="margin-bottom:6px"><h2 id="evtT" style="margin:0">이벤트</h2><button class="ghost" id="evtClose" type="button" style="margin-left:auto">닫기</button></div><div class="evwrap"><nav class="evmenu" id="evtMenu" aria-label="이벤트 메뉴"></nav><div id="evtBody" class="evbody"></div></div></div>
+</div>
 <div id="rpg" class="modal" hidden>
   <div class="sheet2 panel" id="rpgSheet" style="width:min(600px,100%);box-sizing:border-box">
     <div class="row" style="margin-bottom:6px"><h2 style="margin:0">성장 · 퀘스트 · 랭킹</h2><button class="ghost" id="rpgClose" type="button" style="margin-left:auto">닫기</button></div>
@@ -2221,7 +2257,7 @@ const TOPUP_ON=false;const BOAT_PRICE=1000000;const BOAT_SLOTS=3;const CAPT_SHAR
 const COSM={vest:[{id:'v0',n:'주황 조끼',c:0xff7a3d,p:3000},{id:'v1',n:'파랑 조끼',c:0x3d8bff,p:3000},{id:'v2',n:'초록 조끼',c:0x4cc38a,p:3000},{id:'v3',n:'노랑 조끼',c:0xf2b33d,p:3000},{id:'v4',n:'분홍 조끼',c:0xd85ac8,p:3000},{id:'v5',n:'흰 조끼',c:0xe8eef0,p:3000},{id:'v6',n:'하늘 조끼',c:0x7cc4e8,p:3000},{id:'vg',n:'황금 조끼',c:0xe8c14a,p:50000,need:'gold'}],
 hat:[{id:'h_cap',n:'낚시 캡',p:5000},{id:'h_bucket',n:'버킷햇',p:8000},{id:'h_straw',n:'밀짚모자',p:12000},{id:'h_capt',n:'선장모',p:20000,need:'capt'}],
 float:[{id:'f_red',n:'빨강 찌',p:2000},{id:'f_glow',n:'야광 찌',p:6000},{id:'f_gold',n:'금빛 찌',p:10000}],
-title:[{id:'t_rookie',n:'초보 낚시꾼',p:0},{id:'t_dex30',n:'어록 30종',p:5000,need:'dex30'},{id:'t_dex60',n:'어록 60종',p:15000,need:'dex60'},{id:'t_gold',n:'황금 손맛',p:20000,need:'gold'},{id:'t_capt',n:'선장',p:10000,need:'capt'},{id:'t_rel',n:'바다지킴이',p:5000,need:'rel10'},{id:'t_evt1',n:'전국 대물 사냥꾼',p:10000,need:'evt1'}],
+title:[{id:'t_rookie',n:'초보 낚시꾼',p:0},{id:'t_att',n:'출석왕',p:0,need:'att'},{id:'t_dexall',n:'전국 어록 완성',p:0,need:'dexall'},{id:'t_dex30',n:'어록 30종',p:5000,need:'dex30'},{id:'t_dex60',n:'어록 60종',p:15000,need:'dex60'},{id:'t_gold',n:'황금 손맛',p:20000,need:'gold'},{id:'t_capt',n:'선장',p:10000,need:'capt'},{id:'t_rel',n:'바다지킴이',p:5000,need:'rel10'},{id:'t_evt1',n:'전국 대물 사냥꾼',p:10000,need:'evt1'}],
 hull:[{id:'b_white',n:'흰 선체',c:0xf2f4f5,p:20000},{id:'b_navy',n:'남색 선체',c:0x23395b,p:20000},{id:'b_red',n:'빨강 선체',c:0xc0392b,p:20000},{id:'b_mint',n:'민트 선체',c:0x3fbf9f,p:20000}],
 flag:[{id:'g_fish',n:'물고기 깃발',p:10000},{id:'g_wave',n:'파도 깃발',p:10000}],
 // v37 몸에 입는 칸 더함(모두 확정 결과·능력치 없음). s: 모양(클라이언트 그리기용) · c: 주색 · c2: 보조색
@@ -2247,6 +2283,39 @@ const PET_BUF=[[5,3,0],[10,6,3],[15,10,6],[22,15,10],[30,20,15]];
 const PET_AUTO_K=.5;
 function petBuf(id,auto){const x=typeof id==='string'?(COSM.pet||[]).find(i=>i.id===id):null;if(!x)return{xp:1,pt:1,bite:1,ti:-1};const b=PET_BUF[x.ti|0]||PET_BUF[0],k=auto?PET_AUTO_K:1;return{xp:1+b[0]*k/100,pt:1+b[1]*k/100,bite:1+b[2]*k/100,ti:x.ti|0};}
 function petBufTxt(ti){const b=PET_BUF[ti]||PET_BUF[0];return'경험치 +'+b[0]+'% · 포인트 +'+b[1]+'%'+(b[2]?' · 입질 +'+b[2]+'%':'');}
+// V98 능력치·등급·도감 능력치 · 10일 출석판(서버 rules.js도 이 정의를 그대로 쓴다)
+// 레벨업마다 능력치 포인트(AP) AP_LV · 기본 능력치 3종은 등급(1~5)마다 상한이 cap씩 늘어남(합 20·40·60·80·100) · 100점을 다 쓴 뒤의 AP는 1점당 AP_OVER_P(소급분은 AP_RETRO_P까지)
+const AP_LV=2;
+const AP_OVER_P=3000;
+const AP_RETRO_P=30000;
+// 등급을 올릴 때마다 AP 보너스(4번 × 4 = 16) — 마지막 등급(어비스)을 Lv43쯤 다 채울 수 있게
+const GRADE_AP=4;
+const STATS=[{id:'str',n:'완력',d:'채비 한계',k:.3,cap:10},{id:'foc',n:'집중',d:'입질',k:.4,cap:5},{id:'vit',n:'체력',d:'포만감 소모',k:-1,cap:5}];
+const GRADES=[{n:'서프',e:'SURF',lv:1},{n:'리프',e:'REEF',lv:10},{n:'커런트',e:'CURRENT',lv:20},{n:'딥',e:'DEEP',lv:30},{n:'어비스',e:'ABYSS',lv:40}];
+// 도감 능력치: 어록에 오른 종마다(어종 힘 str로 세 무리) · 지역(판) 완성 · 여섯 판 모두(단위 %)
+const DEX_STAT={str:.25,vit:-.5,foc:.15};
+const DEX_ZONE={동해:{cap:1.5},서해:{bite:1.5},서남해:{xp:2},남해:{pt:2},제주:{cm:1},민물:{sat:-5}};
+const DEX_ALL={pt:3,xp:3};
+// 10일 출석판: 하루(KST) 첫 접속마다 한 칸 · 빠진 날은 이어서 · 10일차를 받으면 다음 날 다음 회차 · cosm은 처음 한 번, 그 뒤는 alt P를 더 줌
+const ATT_BOARD=[{pt:500},{t:'t_krill',n:20},{pt:1000},{t:'t_metal30',n:6},{pt:3000,big:1},{t:'t_egi',n:6},{pt:1500},{t:'t_sabiki',n:10},{pt:1500},{pt:5000,big:1,cosm:'t_att',alt:2000}];
+function stOf(R){const s=R&&R.st&&typeof R.st==='object'?R.st:{},o={};for(const x of STATS)o[x.id]=Math.max(0,Math.floor(+s[x.id]||0));return o;}
+function grOf(R){const g=Math.floor(+(R&&R.gr)||1);return Math.max(1,Math.min(GRADES.length,g));}
+function statCap(id,g){const x=STATS.find(s=>s.id===id);return x?x.cap*g:0;}
+function stSum(st){let t=0;for(const x of STATS)t+=+(st||{})[x.id]||0;return t;}
+function capSum(g){let t=0;for(const x of STATS)t+=x.cap*g;return t;}
+function gradeNext(R){const g=grOf(R),n=GRADES[g];if(!n)return{ok:false,why:'max'};if(stSum(stOf(R))<capSum(g))return{ok:false,why:'fill',need:capSum(g)};if((+(R&&R.lv)||1)<n.lv)return{ok:false,why:'lv',lv:n.lv};return{ok:true,g:g+1};}
+function statEff(id,l){const x=STATS.find(s=>s.id===id);if(!x)return'';const v=Math.round(x.k*l*10)/10;return x.d+' '+(v>=0?'+':'')+v+'%';}
+function fishGrp(f){return f.str>=.7?'str':f.str<.5?'foc':'vit';}
+function dexOK(f){return!!f&&(!!f.net||Object.keys((FX[f.n]||{}).me||{}).length>0);}
+function dexBuf(dex,hasNet){const o={cap:0,bite:0,sat:1,xp:0,pt:0,cm:0,n:0,g:{str:0,vit:0,foc:0},zones:[],all:false};
+  for(const f of FISH){if(!dexOK(f))continue;const d=dex&&dex[f.n];if(d&&(+d.n||0)>0){o.n++;o.g[fishGrp(f)]++;}}
+  o.cap+=o.g.str*DEX_STAT.str;o.bite+=o.g.foc*DEX_STAT.foc;o.sat*=1+o.g.vit*DEX_STAT.vit/100;
+  for(const z of REGIONS){const q=zoneDex(dex,z,hasNet);if(q.need>0&&q.have>=q.need){o.zones.push(z);const b=DEX_ZONE[z]||{};o.cap+=b.cap||0;o.bite+=b.bite||0;o.xp+=b.xp||0;o.pt+=b.pt||0;o.cm+=b.cm||0;if(b.sat)o.sat*=1+b.sat/100;}}
+  if(o.zones.length===REGIONS.length){o.xp+=DEX_ALL.xp;o.pt+=DEX_ALL.pt;o.all=true;}
+  o.cap=Math.round(o.cap*100)/100;o.bite=Math.round(o.bite*100)/100;o.sat=Math.round(o.sat*1e4)/1e4;return o;}
+// 합친 효과(단위 %): cap = 드랙 관리 계수에 더함 · bite = 집어 계수에 더함 · sat = 포만감 소모 배율(곱) · xp·pt = 펫 배율에 더함 · cm = 길이 배율
+function statBuf(R,dex,hasNet){const st=stOf(R),D=dexBuf(dex,hasNet);return{cap:Math.round((st.str*.3+D.cap)*100)/100,bite:Math.round((st.foc*.4+D.bite)*100)/100,sat:Math.max(.5,Math.round((1-st.vit/100)*D.sat*1e4)/1e4),xp:D.xp,pt:D.pt,cm:D.cm,dex:D};}
+function powerOf(o){return Math.round((o.lv||1)*10+((o.rodTi|0)+1)*100+((o.lineTi|0)+1)*50+(o.skN||0)*8+(o.ap||0)*5+(o.petTi>=0?(o.petTi+1)*40:0)+(o.dexN||0)*5+(o.zones||0)*50);}
 // V90 레벨 해금 꼬리표: 'lv5' = Lv.5 · 'lv15d20' = Lv.15 + 어록 20종 → {lv, dex} | null (서버 needOk·클라이언트 needOk 둘 다 이 함수)
 function needLv(need){const m=/^lv(\d{1,3})(?:d(\d{1,3}))?$/.exec(typeof need==='string'?need:'');return m?{lv:+m[1],dex:m[2]?+m[2]:0}:null;}
 // v37 꾸미기 칸: WEAR는 /cosm-equip로 입는 칸, PAINT는 배(선장실 /boat-paint). 광고주(협찬) 꾸미기는 서버 KV cosm_extra(GET /cosm-catalog)로 더해진다 — id 'x_'로 시작, {brand, sponsor:true, tag:'광고', logo?} · 능력치 없음
@@ -2353,7 +2422,7 @@ function autoStop(a,now){if(a.on)bankBoosts(a,now);a.on=0;return a;}
 // 정산 창 [on, min(now, capAt))을 구간으로 나누고 cycMs마다 한 번 던진 횟수(남는 시간은 다음 구간으로)
 // v29 S2: 이용권 밖(무료·광고) 시간은 켠 뒤 어망 크기(netCapMs)까지만 — 이용권이 capAt을 늘려도 그 앞의 무료 시간이 어망보다 길게 쌓이지 않게. 끝에 남은 반쯤 던진 시간은 out.carry
 function autoCasts(a,now,cycMs){const end=Math.min(now,capAtOf(a));const lim=capFreeOf(a);/* V81 */const segs=autoSegments(a,a.on,end).map(s=>s.mode==='pass'||s.to<=lim?s:Object.assign({},s,{to:Math.max(s.from,lim)})).filter(s=>s.to>s.from);let carry=0;
-  const out=segs.map(s=>{const c0=carry;carry+=s.to-s.from;const n=Math.floor(carry/cycMs);carry-=n*cycMs;return Object.assign({},s,{casts:n,off:cycMs-c0});});out.carry=carry;return out;}/* v32 LC2 #248: off = 구간 시작부터 첫 캐스팅까지(앞 구간 이월 반영), m번째 캐스팅 시각 = from+off+m*cycMs */
+  const vk=+a.vk>0?+a.vk:1;/* V98 체력·도감: 포만감 소모 배율(켤 때·정산 때 정함) */const out=segs.map(s=>{const c0=carry;carry+=s.to-s.from;const n=Math.floor(carry/cycMs);carry-=n*cycMs;return Object.assign({},s,{casts:n,off:cycMs-c0,vk});});out.carry=carry;return out;}/* v32 LC2 #248: off = 구간 시작부터 첫 캐스팅까지(앞 구간 이월 반영), m번째 캐스팅 시각 = from+off+m*cycMs */
 function dayCap(pass){/* V52: 멤버십(24시간 어망)도 pass=true로 부른다 */return pass?DAY_CAP+Math.ceil(PASS_MS/1000/Math.min(...Object.values(AUTO_CYC))):DAY_CAP;}
 // v29 S2: 한 번 정산 상한 — 이용권 구간이 있으면 이용권 하루 한도, 아니면 SETTLE_MAX와 어망 크기만큼 던지는 횟수 중 큰 값(큰 어망을 산 만큼 정산에서 잘리지 않게)
 function settleMax(segs,a){return(segs||[]).some(s=>s.mode==='pass')?dayCap(true):Math.max(SETTLE_MAX,Math.ceil(netCapMs(a)/1000/Math.min(...Object.values(AUTO_CYC))));}
@@ -2436,7 +2505,7 @@ function netPts(f,cm){return ptsK(f,cm,'net',0,false,null,MANUAL_K*NET_PK);}
 // 보상은 모두 포인트(또는 무료 꾸미기)이고 결과가 정해져 있다(유료 무작위 없음). 기존 경제 상수는 그대로 두고 새 상수만 더했다.
 // 안내 퀘스트: 순서대로 보여 주지만 어느 순서로 해도 된다. 조건은 서버 상태로만 판정(클라이언트가 '했다'고 보내는 값은 받지 않음). 계정마다 한 번씩, 합계 4,000P + 낚시 캡(h_cap)
 // (클라이언트의 첫 접속 안내 TUT와 이름이 겹쳐 TUTQ — 안내 "퀘스트")
-const TUTQ=[{id:'cast',n:'첫 캐스팅',pt:200},{id:'catch',n:'첫 고기 낚기',pt:300},{id:'buy',n:'장비 하나 사기',pt:500},{id:'auto',n:'자동 낚시 켜기',pt:300},{id:'harvest',n:'자동 낚시 수확 받기',pt:500},{id:'dex5',n:'어록 5종 채우기',pt:800,need:5},{id:'zone2',n:'다른 지역에서 한 마리',pt:800,need:2},{id:'tank',n:'어항에 고기 넣기',pt:600,cosm:'h_cap'}];
+const TUTQ=[{id:'cast',n:'첫 캐스팅',pt:200},{id:'catch',n:'첫 고기 낚기',pt:300},{id:'buy',n:'장비 하나 사기',pt:500},{id:'auto',n:'자동 낚시 켜기',pt:300},{id:'harvest',n:'자동 낚시 수확 받기',pt:500},{id:'dex5',n:'어록 5종 채우기',pt:800,need:5},{id:'zone2',n:'다른 지역에서 한 마리',pt:800,need:2},{id:'tank',n:'어항에 고기 넣기',pt:600,cosm:'h_cap'},{id:'stat',n:'능력치 강화하기',pt:500},{id:'skill',n:'스킬 배우기',pt:500}];
 // st = {cast, catch, buy, auto, harvest: 참/거짓, dex: 어록 종 수, zones: 고기를 낚은 지역(zoneOf) 수, tank: 참/거짓} — 단계 번호 i는 1부터
 function tutOK(i,st){const t=TUTQ[i-1];if(!t||!st)return false;if(t.id==='dex5')return(+st.dex||0)>=t.need;if(t.id==='zone2')return(+st.zones||0)>=t.need;return!!st[t.id];}
 // done(받은 단계 번호) → {done, claimable(조건을 채웠고 아직 안 받은 단계), next(아직 안 받은 첫 단계 — 안내에 보일 것, 다 받았으면 null)}
@@ -2449,11 +2518,12 @@ const REGION_REWARD=3000;
 function zoneDex(dex,zone,hasNet){let have=0,need=0;for(const f of FISH){if(!f.z.includes(zone)||(f.net&&!hasNet)||(!f.net&&!Object.keys((FX[f.n]||{}).me||{}).length))continue;need++;const d=dex&&dex[f.n];if(d&&(+d.n||0)>0)have++;}return{have,need};}
 // 레벨 목표: 그 레벨에 닿으면 한 번 받는다(레벨업 보상 Lv×30P와 따로). 합계 15,900P — ECON_SPEC v36: Lv.50까지 예상 무상 수입의 3% 미만
 /* V87: 레벨 목표 ×약 3~4(수입 상향과 맞춤 · 운영자 결정) */
-const LV_REWARD={5:1000,10:2000,15:3000,20:5000,30:10000,40:15000,50:25000};
+// V98 Lv21부터 레벨업이 무거워져 마지막 목표를 Lv50 → Lv45
+const LV_REWARD={5:1000,10:2000,15:3000,20:5000,30:10000,40:15000,45:25000};
 const LVUP_PT=100;const LVUP_BAIT=10;/* V87 레벨업마다 lvUpPt(Lv) = Lv×100 + Lv²×3 P(고레벨일수록 더 · 예전 Lv×30) + 미끼 10개(lvBaitPick: 지금 단 미끼 종류의 내 레벨·어록으로 쓸 수 있는 가장 좋은 등급) */
 function lvUpPt(l){return l*LVUP_PT+l*l*3;}
 function lvBaitPick(eq,lv,dexN){const base=String(eq||'').replace(/_(m|h|x|l)$/,''),g0=GEAR.term.find(x=>x.id===base),b=g0&&g0.pack?base:'t_jig3';let best=b;for(const sf of['_m','_h','_x','_l']){const g=GEAR.term.find(x=>x.id===b+sf);if(!g)continue;const u=unlockOf(g);if((lv|0)>=u.lv&&(dexN|0)>=(u.dex||0))best=g.id;}return best;}
-function lvMiles(lv,claimed){const c=[];for(const v of Array.isArray(claimed)?claimed:[])if(LV_REWARD[v]&&!c.includes(+v))c.push(+v);c.sort((a,b)=>a-b);
+function lvMiles(lv,claimed){const c=[];for(const v0 of Array.isArray(claimed)?claimed:[]){const v=+v0===50?45:+v0;/* V98 예전 Lv50 목표를 받았으면 Lv45를 받은 것으로 */if(LV_REWARD[v]&&!c.includes(v))c.push(v);}c.sort((a,b)=>a-b);
   const claimable=Object.keys(LV_REWARD).map(Number).filter(l=>(lv||1)>=l&&!c.includes(l)).sort((a,b)=>a-b);return{claimable,claimed:c};}
 // 전국 대물 이벤트(게임 속 이벤트 — 실제 그 장소에 대물이 나온다는 뜻이 아님). 매일 KST EVENT_SLOTS시에 시작해 EVENT_MS 동안.
 // 슬롯마다 포인트 하나·어종 하나를 날짜+시각 해시로 정한다(서버·오프라인이 같은 결과). 그 포인트에서 직접 연안 캐스팅에 입질이 오면 EVENT_P로 그 어종의 대물(서버가 /cast에서 굴림).
@@ -2509,10 +2579,10 @@ const SAT_INTRO='새로 생긴 포만감 · 낚시를 하면 배가 고파집니
 function satOf(v){const n=v==null?NaN:+v;return Number.isFinite(n)?Math.max(0,Math.min(SAT_MAX,n)):SAT_MAX;}
 function satR(v){return Math.round((+v||0)*1000)/1000;}
 // 자동 낚시 구간(autoCasts의 {mode,from,to})별 1ms당 줄어드는 양 — 이용권은 절반
-function satRate(mode){return SAT_AUTO_H*(mode==='pass'||mode==='sub'?SAT_PASS_K:1)/3600e3;}
+function satRate(mode,vk){return SAT_AUTO_H*(mode==='pass'||mode==='sub'?SAT_PASS_K:1)*(+vk>0?+vk:1)/3600e3;}
 // 정산 창 안에서 포만감이 0이 되는 시각(없으면 null). 시작부터 0이면 첫 구간 시작
-function satHungryAt(segs,sat0){let s=sat0;if(s<=0)return segs.length?segs[0].from:0;for(const g of segs){const r=satRate(g.mode),d=(g.to-g.from)*r;if(d>=s)return g.from+Math.ceil(s/r);s-=d;}return null;}
-function satUse(segs,from,to){let u=0;for(const g of segs){const a=Math.max(from,g.from),b=Math.min(to,g.to);if(b>a)u+=(b-a)*satRate(g.mode);}return u;}
+function satHungryAt(segs,sat0){let s=sat0;if(s<=0)return segs.length?segs[0].from:0;for(const g of segs){const r=satRate(g.mode,g.vk),d=(g.to-g.from)*r;if(d>=s)return g.from+Math.ceil(s/r);s-=d;}return null;}
+function satUse(segs,from,to){let u=0;for(const g of segs){const a=Math.max(from,g.from),b=Math.min(to,g.to);if(b>a)u+=(b-a)*satRate(g.mode,g.vk);}return u;}
 // 정산 끝의 포만감: [on, endAt)(수확이 인정된 시간)만큼 줄인다. endAt = 한도로 멈춘 시각(stopAt) | keep이고 어망이 안 찼으면 새 a.on(now − carry) | end
 function satSettle(segs,sat0,on,endAt,H){const used=satR(Math.min(sat0,satUse(segs,on,endAt)));return{from:sat0,to:H!==null&&endAt>=H?0:satR(Math.max(0,sat0-used)),used,hungryAt:H};}
 // 자동 낚시가 켜져 있을 때 p.sat은 'a.on 시각의 값' → 지금 값·예상 배고픈 시각(어망·이용권 끝까지)
@@ -3040,7 +3110,7 @@ function gear(){const e=save.eq||{};return{rod:GBY[e.rod],line:GBY[e.line],leade
 function termLeft(id){const v=save.inv.term[id];return v==null?0:v;}
 // 비거리(m) — 로드 길이·채비 무게·원줄 굵기로 계산(실제 대표값에 맞춘 근사)
 function castDist(G){if(G.rod&&G.rod.me==='pole')return castBase(G);return Math.round(castBase(G)*(1+.03*sk('cast')));}
-function capacity(G,s){return capBase(G,s)*(1+.03*sk('drag'));}
+function capacity(G,s){return capBase(G,s)*(1+.03*sk('drag')+SB().cap/100);}/* V98 완력·도감 */
 // 채비 점검: 실제 낚시에서 안 되는 조합은 막고 이유를 알려 준다
 function checkGear(s){const G=gear(),m=[];const env=s?s.w:null;let ok=true;
   const r=G.rod,t=G.term,l=G.line,d=G.leader;
@@ -5668,7 +5738,7 @@ function rigSwapSoon(id,k){setTimeout(()=>{if(!save.eq||save.eq.term!==id||termL
   Promise.resolve(shopEquip('term',y.id,false)).then(()=>{if(save.eq.term===y.id)toast('채비를 다 써서 바꿔 끼웠습니다 · '+(y.sub||y.n)+(y.pack?' (남은 '+termLeft(y.id)+'개)':''),3200);updGearBadge();});},k?800:1600);}
 function updGearBadge(){try{dvHud();}catch(e){}const b=$('#gearbtn');if(!b||!save||!save.eq||!save.inv)return;const id=save.eq.term,x=id&&GBY[id];if(!x||!x.pack||curTrip){delete b.dataset.n;b.classList.remove('low');return;}const n=Math.max(0,termLeft(id));b.dataset.n=n;b.classList.toggle('low',n<=2);b.setAttribute('aria-label','가방 · '+(x.sub||x.n)+' 남은 '+n+'개 (B)');}
 function biteFactor(){const w=W||{};let k=1;const wind=+w.wind||0;if(cur.w==='sea'){const H=+w.wave||0;if(H>=.3&&H<=1.2)k*=1.25;if(H>2)k*=.55;const ph=((w.tide||{}).phase||'');const n=parseInt(ph);if(n>=4&&n<=9)k*=1.2+.1*sk('tide');if(ph.includes('조금'))k*=.85;
-    const t=+w.sst||0;if(t&&t<8)k*=.7;}if(wind>10)k*=.7;return k*(1+.05*sk('chum'));}
+    const t=+w.sst||0;if(t&&t<8)k*=.7;}if(wind>10)k*=.7;return k*(1+.05*sk('chum')+SB().bite/100);}/* V98 집중·도감 */
 function landCatch(){evt('catch');SES.f++;if(SRV){srvLand();return;}state='result';landAt=performance.now();pBob.visible=false;pLine.l.visible=false;if(!$('#fight').hidden){$('#fight').hidden=true;layoutHUD();}holding=false;player.pivot.rotation.x=1.0;
   const clo=closedRange(fish,0,cur),rel=!!clo||(fish.min!=null&&fsize<=fish.min);const gold=fishGold&&!autoOn;fishGold=false;if(!autoOn)avFish(player,fish,fsize,rel,gold);// 법정 금지체장 이하 → 방생(점수·최고기록 없음, 마릿수만 기록)
   if(autoOn){avFish(player,fish,fsize,rel,false);autoVisNote();chime();myPres.st='idle';delete myPres.bx;sendPres(true);bubble(player,'자동 · 5분마다 정산');return;}// v23: 화면을 켜 둔 자동 낚시도 서버와 같이 시간으로 정산(5분마다·끌 때)
@@ -6312,7 +6382,11 @@ const spUsable=()=>RG.sp>0&&SKILLS.some(s=>sk(s.id)<s.max);
 const TITLES=[[1,'입문 낚시꾼'],[5,'동네 꾼'],[10,'방파제 고수'],[15,'갯바위 꾼'],[20,'갯바위 명인'],[30,'선장급 조사'],[40,'전설의 조사']];
 function titleOf(lv){let t=TITLES[0][1];TITLES.forEach(([l,n])=>{if(lv>=l)t=n;});return t;}
 // 다음 레벨까지 필요한 경험치: 레벨이 오를수록 제곱으로 늘어난다(Lv1→2 100 · Lv5 1,700 · Lv10 6,400 · Lv20 24,800 · Lv30 55,200)
-function xpNeed(lv){return Math.round(60*lv*lv+40*lv);}
+// V98: Lv21부터 확 무거워진다 — Lv21에서 2.5배로 한 번 뛰고, 그 뒤 레벨마다 12%씩 더(Lv30 약 6.9배 · Lv40 약 21.5배 · Lv50 약 67배)
+const XP_HARD_LV=20;
+const XP_HARD_JUMP=2.5;
+const XP_HARD_K=1.12;
+function xpNeed(lv){const b=60*lv*lv+40*lv;return Math.round(lv>XP_HARD_LV?b*XP_HARD_JUMP*Math.pow(XP_HARD_K,lv-XP_HARD_LV-1):b);}
 // 어종 레벨 = 2 + 3×난이도(pts). 내 레벨보다 낮은 어종은 경험치가 줄고(최소 20%), 높은 어종은 최대 +30%
 function fishLv(f){return 2+3*(f.pts||1);}
 // v29 S2: 가장 높은 어종이 Lv26이라 Lv25 넘어서는 거의 모든 조과가 최소치에 걸렸다 → 레벨 차는 내 레벨을 최대 XP_LV_CAP(24)로 보고 계산(Lv24까지는 그대로)
@@ -6345,12 +6419,12 @@ function unlockRuleTxt(){const by={rod:{},line:new Set(),leader:new Set(),term:n
   return'낚싯대 '+rp.join(' · ')+(ex?' (일부 '+ex+'종은 다름)':'')+' · '+ot.join(' · ');}
 function unlockOK(x,lv,dexN){const u=unlockOf(x);return(lv||1)>=u.lv&&(dexN||0)>=u.dex;}
 function feeOf(t){return Math.round(t.fee*(1-.05*sk('boat')));}
-function addXP(n){RG.xp+=n;const l0=RG.lv;while(RG.xp>=xpNeed(RG.lv)){RG.xp-=xpNeed(RG.lv);RG.lv++;RG.sp++;save.pt=(save.pt||0)+lvUpPt(RG.lv);try{const tid=lvBaitPick(save.eq&&save.eq.term,RG.lv,dexCount(save.dex));save.inv.term[tid]=(+save.inv.term[tid]||0)+LVUP_BAIT;}catch(e){}}
-  if(RG.lv>l0){const l1=RG.lv;setTimeout(()=>lvNote(l0,l1),900);}persist();renderLv();}
+function addXP(n){RG.xp+=n;const l0=RG.lv;while(RG.xp>=xpNeed(RG.lv)){RG.xp-=xpNeed(RG.lv);RG.lv++;RG.sp++;RG.ap=(+RG.ap||0)+AP_LV;save.pt=(save.pt||0)+lvUpPt(RG.lv);try{const tid=lvBaitPick(save.eq&&save.eq.term,RG.lv,dexCount(save.dex));save.inv.term[tid]=(+save.inv.term[tid]||0)+LVUP_BAIT;}catch(e){}}
+  if(RG.lv>l0){const l1=RG.lv;apOverL(false);setTimeout(()=>lvNote(l0,l1),900);}persist();renderLv();}
 // C6 #78: 레벨이 여러 단계 오르면 알림 한 번으로 합친다(레벨마다 Lv×30P · 스킬 포인트 1)
 function lvGainP(l0,l1){let s=0;for(let l=l0+1;l<=l1;l++)s+=lvUpPt(l);return s;}
-function lvNote(l0,l1){if(!(l1>l0))return;toast('레벨 업! '+(l1-l0>1?'Lv.'+l0+' → ':'')+'Lv.'+l1+' '+titleOf(l1)+(SKILLS.some(s=>sk(s.id)<s.max)?' · 스킬 포인트 +'+(l1-l0)+'(왼쪽 위 Lv를 눌러 배우기)':'')+' · +'+lvGainP(l0,l1).toLocaleString('ko-KR')+'P · '+((()=>{try{const g=GEAR.term.find(x=>x.id===lvBaitPick(save.eq&&save.eq.term,l1,dexCount(save.dex)));return(g?g.n.replace(/\s*\d+$/,''):'미끼')+'('+(g&&g.tier||'')+')';}catch(e){return'미끼';}})())+' '+(LVUP_BAIT*(l1-l0))+'개',4200);try{chime();}catch(e){}if(SRV)setTimeout(()=>{try{srvRefresh();}catch(e){}},1500);/* V87 서버가 준 미끼를 가방에 반영 */}
-function renderLv(){try{questBadge();}catch(e){}document.querySelectorAll('.lvchip').forEach(el=>{el.classList.toggle('gold',hasGold());el.title=hasGold()?'칭호 황금 낚시꾼':'';el.innerHTML='Lv.<b class="num">'+RG.lv+'</b> '+lvtHTML()+'<i class="xpbar"><i style="width:'+Math.min(100,RG.xp/xpNeed(RG.lv)*100).toFixed(0)+'%"></i></i>'+(spUsable()?'<span class="spdot" aria-label="스킬 포인트 '+RG.sp+' · 눌러서 배우기">▲'+RG.sp+'</span>':'');el.classList.toggle('hasSp',spUsable());el.setAttribute('aria-label','레벨 '+RG.lv+(spUsable()?' · 스킬 포인트 '+RG.sp+'개 남음 · 눌러서 배우기':''));});if(typeof refreshWallet==='function')refreshWallet();if(typeof unlockCheck==='function')unlockCheck();}
+function lvNote(l0,l1){if(!(l1>l0))return;toast('레벨 업! '+(l1-l0>1?'Lv.'+l0+' → ':'')+'Lv.'+l1+' '+titleOf(l1)+' · 능력치 포인트 +'+AP_LV*(l1-l0)+(SKILLS.some(s=>sk(s.id)<s.max)?' · 스킬 포인트 +'+(l1-l0):'')+'(왼쪽 위 Lv → 캐릭터 창)'+' · +'+lvGainP(l0,l1).toLocaleString('ko-KR')+'P · '+((()=>{try{const g=GEAR.term.find(x=>x.id===lvBaitPick(save.eq&&save.eq.term,l1,dexCount(save.dex)));return(g?g.n.replace(/\s*\d+$/,''):'미끼')+'('+(g&&g.tier||'')+')';}catch(e){return'미끼';}})())+' '+(LVUP_BAIT*(l1-l0))+'개',4200);try{chime();}catch(e){}if(SRV)setTimeout(()=>{try{srvRefresh();}catch(e){}},1500);/* V87 서버가 준 미끼를 가방에 반영 */}
+function renderLv(){try{questBadge();}catch(e){}try{if(!SRV)rpgV98L();apNewCheck();}catch(e){}document.querySelectorAll('.lvchip').forEach(el=>{el.classList.toggle('gold',hasGold());el.title=hasGold()?'칭호 황금 낚시꾼':'';el.innerHTML='Lv.<b class="num">'+RG.lv+'</b> '+lvtHTML()+'<i class="xpbar"><i style="width:'+Math.min(100,RG.xp/xpNeed(RG.lv)*100).toFixed(0)+'%"></i></i>'+'<span class="lvpw" title="낚시력">⚡'+fmtN(myPower())+'</span>'+(ptsBadge()?'<span class="spdot" aria-label="쓸 포인트 '+ptsBadge()+' · 눌러서 캐릭터 창">▲'+ptsBadge()+'</span>':'');el.classList.toggle('hasSp',!!ptsBadge());el.setAttribute('aria-label','레벨 '+RG.lv+' · 낚시력 '+myPower()+(ptsBadge()?' · 쓸 포인트 '+ptsBadge()+'개 · 눌러서 캐릭터 창':''));});if(typeof refreshWallet==='function')refreshWallet();if(typeof unlockCheck==='function')unlockCheck();}
 // 오늘의 미션·출석
 const pad2=n=>String(n).padStart(2,'0');
 function dayKey(off){const d=new Date(Date.now()+9*3600e3+(off||0)*864e5);return d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate());}
@@ -6443,19 +6517,89 @@ async function renderRPG(){renderLv();const T3=[['me','성장·스킬'],['goal',
     if(!list){el.innerHTML='<div class="k">'+(SRV?'랭킹을 불러오지 못했습니다 · 잠시 뒤 다시 열어 보세요':(NET_API?'서버에 연결되지 않아 랭킹을 볼 수 없습니다 · 낚시GO에 로그인했는지 확인해 주세요':'공유 랭킹은 claude.ai 링크에 로그인한 상태에서 집계됩니다. 낚시GO에 넣으면 계정 기준으로 집계합니다.'))+'</div>'+myLine;return;}
     el.innerHTML=(list.length?'<ol class="rk">'+list.map((r,i)=>'<li class="'+(r.id===ruid?'me':'')+'"><span class="num rkn">'+(i+1)+'</span><span class="rknm">'+esc(r.n||'낚시꾼')+(r.ti?'<span class="v4ttl">'+esc(titleName(r.ti))+'</span>':'')+' <span class="k">Lv.'+esc(String(r.lv|0||1))+'</span>'+(r.id===ruid?' (나)':'')+'</span><b class="num">'+(rkM==='pt'?esc((+r[rkP+'pt']||0).toLocaleString('ko-KR'))+'P':esc(String(+r[rkP+'kg']||0))+'kg <span class="k">'+esc(r[rkP+'f']||'')+'</span>')+'</b></li>').join('')+'</ol>':'<div class="k">아직 이 기간 기록이 없습니다. 첫 기록을 남겨 보세요.</div>')+myLine;}}
 $('#rpgClose').addEventListener('click',()=>{$('#rpg').hidden=true;});$('#rpgBody').addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-capt]');if(b)openCapt();});
-document.querySelectorAll('.lvchip').forEach(b=>b.addEventListener('click',()=>openRPG('me')));
+document.querySelectorAll('.lvchip').forEach(b=>b.addEventListener('click',()=>openChar()));/* V98 캐릭터 창 */
+/* ===================== V98 캐릭터 창 · 능력치(AP)·등급 · 도감 능력치 · 낚시력 =====================
+   서버가 판정(/stat·/grade)하고 화면은 공유 규칙(statBuf·gradeNext·powerOf)으로 같은 값을 보여 준다. 오프라인(이 기기 저장)은 같은 규칙으로 로컬 처리 */
+function SB(){try{return statBuf(RG,save.dex,v36HasNet());}catch(e){return{cap:0,bite:0,sat:1,xp:0,pt:0,cm:0,dex:{n:0,g:{str:0,vit:0,foc:0},zones:[],all:false}};}}
+const fx2=v=>Math.round(v*100)/100;
+const DEX_GRP_N={str:'대물',vit:'중형',foc:'소형'};
+function dexBonTxt(f){const g=fishGrp(f);return g==='str'?'채비 한계 +'+DEX_STAT.str+'%':g==='vit'?'포만감 소모 '+DEX_STAT.vit+'%':'입질 +'+DEX_STAT.foc+'%';}
+function zoneBonTxt(z){const b=DEX_ZONE[z]||{};return b.cap?'채비 한계 +'+b.cap+'%':b.bite?'입질 +'+b.bite+'%':b.xp?'경험치 +'+b.xp+'%':b.pt?'포인트 +'+b.pt+'%':b.cm?'고기 길이 +'+b.cm+'%':b.sat?'포만감 소모 '+b.sat+'%':'';}
+function dexZoneTxt(f){try{const net=v36HasNet();for(const z of REGIONS){if(!f.z.includes(z))continue;const q=zoneDex(save.dex,z,net);if(q.need>0&&q.have>=q.need&&q.have-1<q.need)return' · '+z+' 어록 완성! '+zoneBonTxt(z);}}catch(e){}return'';}
+function apUsable(){const g=grOf(RG),st=stOf(RG);return(+RG.ap||0)>0&&STATS.some(x=>st[x.id]<statCap(x.id,g));}
+function ptsBadge(){return(spUsable()?RG.sp:0)+(apUsable()?(+RG.ap||0):0)+(gradeNext(RG).ok?1:0);}
+function myPetTi(){try{const v=V4(),id=v.eq&&v.eq.pet,x=id&&(COSM.pet||[]).find(i=>i.id===id);return x?(x.ti|0):-1;}catch(e){return-1;}}
+function myPower(){let G={};try{G=gear()||{};}catch(e){}const D=SB().dex;return powerOf({lv:RG.lv,rodTi:G.rod?G.rod.ti:0,lineTi:G.line?G.line.ti:0,skN:SKILLS.reduce((t,s)=>t+sk(s.id),0),ap:stSum(stOf(RG)),petTi:myPetTi(),dexN:D.n,zones:D.zones.length});}
+function apOverL(retro){const room=Math.max(0,capSum(GRADES.length)-stSum(stOf(RG)));if((+RG.ap||0)<=room)return 0;const x=RG.ap-room;RG.ap=room;let pt=x*AP_OVER_P;if(retro)pt=Math.min(pt,AP_RETRO_P);save.pt=(save.pt||0)+pt;return pt;}
+function rpgV98L(){if(SRV||RG.apv)return;RG.apv=1;RG.st=stOf(RG);RG.gr=grOf(RG);RG.ap=Math.max(0,AP_LV*Math.max(0,(RG.lv|0)-1)-stSum(RG.st));const pt=apOverL(true);if(RG.ap>0||pt>0)RG.apNew={ap:RG.ap,pt};persist();}
+let chBusy=false,chNote='';
+function openChar(note){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}rpgV98L();chNote=note||'';renderChar();$('#charM').hidden=false;$('#charSheet').scrollTop=0;}
+function closeChar(){$('#charM').hidden=true;}
+function apNewCheck(){try{if(!RG.apNew||!RG.apv||!(RG.apNew.ap>0||RG.apNew.pt>0))return;const iv=$('#intro');if(iv&&!iv.hidden)return;/* 첫 화면이 닫힌 뒤에 */const k='apNew:'+(save.uid||save.nick||'')+':'+RG.apNew.ap+':'+RG.apNew.pt;if(localStorage.getItem(k))return;localStorage.setItem(k,'1');const t='능력치 포인트 '+RG.apNew.ap+'점이 도착했습니다 · 지금까지 오른 레벨만큼'+(RG.apNew.pt?' · 남는 포인트는 '+fmtN(RG.apNew.pt)+'P로 바꿔 넣었습니다':'');setTimeout(()=>{if((inWorld()&&BUSY_ST[state])||!$('#evtM').hidden||!$('#charM').hidden){toast(t+' · 왼쪽 위 Lv를 눌러 나눠 주세요',5200);return;}openChar(t);},2200);}catch(e){}}
+function chStatsHTML(){const B=SB(),pb=petBuf(V4().eq&&V4().eq.pet,false),pct=v=>(v>=0?'+':'')+fx2(v)+'%';
+  const L=[['채비 한계',pct(3*sk('drag')+B.cap)],['입질',pct(5*sk('chum')+B.bite+(pb.bite-1)*100)],['최대 비거리',pct(3*sk('cast'))],['바늘걸림',pct(3*sk('hook'))+'p'],['포만감 소모',pct(-(1-B.sat)*100)],['포인트',pct((pb.pt-1)*100+B.pt)],['경험치',pct((pb.xp-1)*100+B.xp)]];
+  if(B.cm)L.push(['고기 길이',pct(B.cm)]);L.push(['도감 등록',B.dex.n+'종 · 완성 '+B.dex.zones.length+'판']);
+  return'<ul class="chst">'+L.map(([a,b])=>'<li><span>'+a+'</span><b class="num">'+b+'</b></li>').join('')+'</ul><p class="src">스킬·능력치·도감·펫을 모두 더한 값 · 포인트 보너스는 랭킹 점수에 넣지 않습니다</p>';}
+function renderChar(){const g=grOf(RG),st=stOf(RG),G=GRADES[g-1],ap=+RG.ap||0,cs=capSum(g),ss=stSum(st),nx=gradeNext(RG),D=SB().dex,net=v36HasNet();
+  const grpN={str:0,vit:0,foc:0};FISH.forEach(f=>{if(dexOK(f))grpN[fishGrp(f)]++;});
+  let h=(chNote?'<div class="sumbox" style="border-color:#ffbe3c"><b>'+esc(chNote)+'</b></div>':'')+'<div class="chgrid"><div class="chcard"><div class="chav"><span class="chg g'+g+'">'+g+'등급 · '+esc(G.n)+' '+G.e+'</span>'+(()=>{try{return avSVG(myVestNow(),lookOf('hat'),lookOf('float'));}catch(e){return'';}})()+'</div>'+
+   '<div style="margin-top:6px"><b>'+esc(save.nick||'낚시꾼')+'</b> <span class="k">Lv.'+RG.lv+' · '+esc(titleOf(RG.lv))+'</span></div><div class="chpw"><span>낚시력</span><b class="num">'+fmtN(myPower())+'</b></div>'+chStatsHTML()+'</div>';
+  h+='<div><div class="chcard"><div class="chgr"><b>'+g+'등급 · '+esc(G.n)+' <span class="k">'+G.e+'</span></b><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+cs+'" aria-valuenow="'+ss+'"><i style="width:'+Math.min(100,ss/cs*100).toFixed(0)+'%;background:var(--buoy)"></i></div><span class="num">'+ss+'/'+cs+'</span><b class="num">남은 AP '+ap+'</b></div>'+
+   '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">'+(nx.ok?'<button class="btn" type="button" data-chg="1"'+(chBusy?' disabled':'')+'>'+(nx.g)+'등급 '+esc(GRADES[nx.g-1].n)+'(으)로 올리기</button>':'<span class="k">'+(nx.why==='max'?'가장 높은 등급입니다':nx.why==='fill'?'세 능력치를 모두 상한까지 채우'+((RG.lv||1)<GRADES[g].lv?'고 Lv.'+GRADES[g].lv+'이 되':'')+'면 다음 등급('+esc(GRADES[g].n)+')으로 올릴 수 있습니다':'Lv.'+nx.lv+'이 되면 다음 등급('+esc(GRADES[g].n)+')이 열립니다')+'</span>')+(apUsable()?'<button class="mini buy" type="button" data-chauto="1"'+(chBusy?' disabled':'')+'>추천 배분(완력:집중:체력 2:1:1)</button>':'')+'</div>'+
+   '<div class="chstats">'+STATS.map(x=>{const l=st[x.id],c=statCap(x.id,g),can=ap>0&&l<c&&!chBusy;return'<div class="chcard chs"><b class="n">'+x.n+' <span class="num">'+l+'/'+c+'</span></b><div class="e">'+x.d+'</div><div class="v num">'+(l?statEff(x.id,l).replace(x.d+' ',''):'0%')+(l<c?' → '+statEff(x.id,l+1).replace(x.d+' ',''):' · 상한')+'</div><div class="bt"><button class="mini buy" type="button" data-chs="'+x.id+'" data-n="1"'+(can?'':' disabled')+'>AP 1 · 강화</button><button class="mini" type="button" data-chs="'+x.id+'" data-n="5"'+(can&&ap>1?'':' disabled')+' aria-label="'+x.n+' 5번 강화">+5</button></div></div>';}).join('')+'</div>'+
+   '<p class="src">레벨이 오를 때마다 능력치 포인트 '+AP_LV+' · 등급을 올리면 보너스 '+GRADE_AP+' · 등급마다 상한이 늘어납니다(합 20·40·60·80·100) · 100점을 다 쓴 뒤의 포인트는 1점당 '+fmtN(AP_OVER_P)+'P</p></div>';
+  h+='<div class="chcard chsec"><h3>도감 능력치 <span class="k">어록에 오른 종마다 · 한 판(지역)을 다 채우면 더</span></h3><div class="chdex">'+['str','foc','vit'].map(k=>'<div class="chz'+(D.g[k]>=grpN[k]?' on':'')+'"><b>'+DEX_GRP_N[k]+' '+D.g[k]+'/'+grpN[k]+'</b>'+(k==='str'?'채비 한계 +'+fx2(D.g[k]*DEX_STAT.str)+'%':k==='foc'?'입질 +'+fx2(D.g[k]*DEX_STAT.foc)+'%':'포만감 소모 '+fx2(D.g[k]*DEX_STAT.vit)+'%')+'</div>').join('')+'</div>'+
+   '<div class="chdex" style="margin-top:6px">'+REGIONS.map(z=>{const q=zoneDex(save.dex,z,net),on=q.need>0&&q.have>=q.need;return'<div class="chz'+(on?' on':'')+'"><b>'+z+' '+q.have+'/'+q.need+(on?' ✓':'')+'</b>완성 시 '+zoneBonTxt(z)+'</div>';}).join('')+'</div><p class="src">'+(D.all?'전국 어록 완성 · 포인트·경험치 +3% 적용 중':'여섯 판을 모두 채우면 포인트·경험치 +3%와 칭호 ‘전국 어록 완성’')+'</p></div>';
+  h+='<div class="chcard chsec"><h3>특별 능력치 <span class="k">포인트(P)로 올리는 칸 · 다음 업데이트에서 열립니다</span></h3><div class="chsp">'+[[10,'자동 수입'],[15,'경험 누적'],[20,'장비 관리'],[30,'대어 감각'],[40,'손맛 수입'],[50,'황금 물고기']].map(([l,n])=>'<div>'+n+'<br>Lv.'+l+(RG.lv>=l?' · 준비 중':' 달성 필요')+'</div>').join('')+'</div></div></div></div>';
+  $('#charBody').innerHTML=h;
+  const T=[['char','캐릭터'],['gear','장비'],['skill','스킬'+(spUsable()?' ▲'+RG.sp:'')],['pet','펫'],['cosm','꾸미기']];
+  $('#charTabs').innerHTML=T.map(([k,t])=>'<button type="button" class="ghost" data-cht="'+k+'"'+(k==='char'?' aria-current="true"':'')+'>'+t+'</button>').join('');}
+async function chStat(id,n){if(chBusy)return;const x=STATS.find(s=>s.id===id);if(!x)return;
+  if(!SRV){let k=0;const c=statCap(id,grOf(RG));RG.st=stOf(RG);while(k<n&&RG.ap>0&&RG.st[id]<c){RG.st[id]++;RG.ap--;k++;}if(k){persist();toast(x.n+' +'+k+' · '+statEff(id,RG.st[id]));}renderChar();renderLv();return;}
+  chBusy=true;renderChar();let r;try{r=await netRid('stat',{id,n});}finally{chBusy=false;}if(r.s===200&&r.j){applyRPG(r.j.rpg);toast(x.n+' +'+(r.j.n||n)+' · '+statEff(id,stOf(RG)[id]));}else{toast(errMsg(r));if(r.s===0||r.s>=500)await srvReconcile();}renderChar();renderLv();}
+async function chGrade(){if(chBusy)return;const nx=gradeNext(RG);if(!nx.ok)return;
+  if(!SRV){RG.gr=nx.g;RG.ap=(+RG.ap||0)+GRADE_AP;apOverL(false);persist();}else{chBusy=true;renderChar();let r;try{r=await netRid('grade',{});}finally{chBusy=false;}if(!(r.s===200&&r.j)){toast(errMsg(r));renderChar();return;}applyRPG(r.j.rpg);}
+  toast('등급 상승! '+grOf(RG)+'등급 '+GRADES[grOf(RG)-1].n+' · 능력치 상한이 늘고 보너스 AP +'+GRADE_AP);try{chime();}catch(e){}renderChar();renderLv();}
+async function chAuto(){if(chBusy)return;const R=[ 'str','str','foc','vit'];for(let loop=0;loop<6;loop++){const g=grOf(RG),st=stOf(RG);let ap=+RG.ap||0;const add={str:0,foc:0,vit:0};let i=0,stuck=0;
+    while(ap>0&&stuck<4){const id=R[i%4];i++;if(st[id]+add[id]<statCap(id,g)){add[id]++;ap--;stuck=0;}else stuck++;}
+    for(const id of ['str','foc','vit'])if(add[id]>0)await chStat(id,add[id]);if(gradeNext(RG).ok&&(+RG.ap||0)>0)await chGrade();else break;}}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-chs],[data-chg],[data-chauto],[data-cht]');if(!t||$('#charM').hidden)return;
+  if(t.dataset.chs){chStat(t.dataset.chs,+t.dataset.n||1);return;}if(t.dataset.chg){chGrade();return;}if(t.dataset.chauto){chAuto();return;}
+  const k=t.dataset.cht;if(k==='char')return;closeChar();if(k==='gear')bagSet(true);else if(k==='skill')openRPG('me');else{COSMF=k==='pet'?'pet':COSMF==='pet'?'top':COSMF;openShop('cosm');}});
+$('#charClose').addEventListener('click',closeChar);$('#charM').addEventListener('click',e=>{if(e.target.id==='charM')closeChar();});
+/* ===================== V98 이벤트 창 · 10일 출석판 ===================== */
+let evTab='att',evBusy=false;
+const rigShort=id=>{const x=GBY[id];return x?String(x.n).replace(/\s*\d+개입$/,'').replace(/ 세트 \d+$/,'').split(' ').slice(0,2).join(' '):id;};
+function evBadge(){const on=!!(ATT2&&ATT2.on&&ATT2.c<ATT2.n);document.querySelectorAll('.evbtn').forEach(b=>{let i=b.querySelector('.rd');if(on&&!i){i=document.createElement('span');i.className='rd';b.appendChild(i);}else if(!on&&i)i.remove();});}
+function openEvt(tab){if(!SRV){toast('낚시GO에 로그인해 서버에 연결된 뒤 쓸 수 있습니다');return;}if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}evTab=tab||evTab;if(!ATT2)srvDaily().then(()=>{if(!$('#evtM').hidden)renderEvt();});renderEvt();$('#evtM').hidden=false;}
+function closeEvt(){$('#evtM').hidden=true;}
+function attCellTxt(w){return(w.pt?fmtN(w.pt)+'P':'')+(w.t?(w.pt?' + ':'')+rigShort(w.t)+' '+w.n:'')+(w.cosm?' + 칭호 출석왕':'');}
+function renderEvt(){const M=[['att','10일 출석판'],['lv','레벨 달성 보상'],['tut','안내 퀘스트'],['gold','황금 물고기'],['cp','쿠폰 입력']];
+  $('#evtMenu').innerHTML=M.map(([k,t])=>'<button type="button" class="ghost" data-evm="'+k+'"'+(k===evTab?' aria-current="true"':'')+'>'+t+(k==='att'&&ATT2&&ATT2.on&&ATT2.c<ATT2.n?'<span class="rd" aria-label="받을 보상 있음"></span>':'')+'</button>').join('');
+  const A=ATT2;if(!A){$('#evtBody').innerHTML='<div class="k">불러오는 중…</div>';return;}
+  const cells=A.board.map((w,i)=>{const done=i<A.c,now=i===A.c&&A.c<A.n,lock=i>=A.n;return'<div class="atc'+(w.big?' big':'')+(done?' done':'')+(now?' now':'')+(lock?' lock':'')+'"><span class="d">'+(i+1)+'일차</span><span class="ai" aria-hidden="true">'+(w.cosm?'칭호':w.t?'채비':'P')+'</span><span class="r">'+esc(attCellTxt(w))+'</span></div>';}).join('');
+  const can=A.on&&A.c<A.n;
+  $('#evtBody').innerHTML='<div class="row" style="gap:8px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0;font-size:20px">10일 출석판 · '+A.r+'회차</h3><span class="k">별도 공지 때까지 · 빠진 날이 있어도 이어서</span></div><div class="atgrid">'+cells+'</div>'+
+   '<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">'+(can?'<button class="btn" type="button" id="attGo2"'+(evBusy?' disabled':'')+'>'+(A.c+1)+'일차 받기 · '+esc(attCellTxt(A.board[A.c]))+'</button>':'<span class="k">'+(!A.on?'지금은 출석판이 쉬는 중입니다':A.c>=A.board.length?'이번 회차를 모두 받았습니다 · 내일 접속하면 '+(A.r+1)+'회차가 열립니다':'오늘 칸은 받았습니다 · 내일 접속하면 '+(A.n+1)+'일차가 열립니다')+'</span>')+'<span class="num" style="margin-left:auto">'+A.c+'/10 받음</span></div>'+
+   '<p class="src">하루(한국 시각) 첫 접속마다 한 칸이 열립니다 · 받기를 눌러야 들어오고, 못 누른 칸은 다음에 받을 수 있습니다 · 칭호 출석왕은 처음 한 번만(그 뒤엔 대신 +2,000P) · 게임 포인트는 현금·상품권 교환·양도가 안 됩니다</p>';}
+async function attClaim2(){if(evBusy||!ATT2)return;evBusy=true;renderEvt();let r;try{r=await netRid('att-claim',{});}finally{evBusy=false;}
+  if(r.s===200&&r.j&&r.j.ok){ATT2=r.j.att;save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);if(r.j.term&&save.inv)save.inv.term=Object.assign(save.inv.term||{},r.j.term);refreshWallet();try{bagRefresh();}catch(e){}toast(r.j.i+'일차 받기 · '+(r.j.reward?'+'+fmtN(r.j.reward)+'P':'')+(r.j.item?' '+rigNm(r.j.item.id)+' '+r.j.item.n+'개':'')+(r.j.cosm?' · 칭호 ‘출석왕’(꾸미기 → 칭호에서 달기)':''));try{chime();}catch(e){}if(r.j.cosm)setTimeout(()=>{try{srvRefresh();}catch(e){}},400);}
+  else{toast((r.j&&r.j.message)||errMsg(r));if(r.j&&r.j.att)ATT2=r.j.att;}renderEvt();evBadge();}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-evm],#attGo2,[data-evopen],.evbtn');if(!t)return;
+  if(t.classList.contains('evbtn')||t.dataset.evopen){if(t.dataset.evopen&&!$('#rpg').hidden)$('#rpg').hidden=true;openEvt('att');return;}
+  if(t.id==='attGo2'){attClaim2();return;}const k=t.dataset.evm;if(k==='att'){evTab='att';renderEvt();return;}closeEvt();if(k==='lv'||k==='tut')openRPG('goal');else if(k==='gold')openRPG('gold');else if(k==='cp')openCoupon();});
+$('#evtClose').addEventListener('click',closeEvt);$('#evtM').addEventListener('click',e=>{if(e.target.id==='evtM')closeEvt();});
+['#questbtn','#wquestbtn'].forEach((q,i)=>{const b=$(q);if(!b||!b.parentNode)return;const x=document.createElement('button');x.type='button';x.className='ghost evbtn';x.id=i?'wevtbtn':'evtbtn';x.setAttribute('aria-label','이벤트 · 10일 출석판');x.innerHTML='<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M8 3.5v3M16 3.5v3M4 10h16M9 14.5l2 2 4-4"/></svg>출석';b.parentNode.insertBefore(x,b);});
+
 $('#rankbtn').addEventListener('click',()=>openRPG('rank'));
 // v19 오늘의 퀘스트: 3개 × 100P(무상) + 3개 모두 완료 보너스 300P(무상, 하루 한 번)
 /* ===================== V68 주간 출석(월~일) — 서버가 하루 첫 접속에 칸을 채우고 요일 채비를 줌, 7칸이면 완주 보상 ===================== */
-let ATT=null,attBusy=false,attLoading=false;const rigNm=id=>{const x=GBY[id];return x?String(x.n).replace(/\s*\d+개입$/,'').replace(/ 세트 \d+$/,' 세트'):id;};const ATT_DN=['월','화','수','목','금','토','일'];
-function attTake(j){if(!j||!j.att)return;ATT=j.att;if(j.term&&save.inv)save.inv.term=Object.assign(save.inv.term||{},j.term);
-  if(j.attGave){const g=j.attGave,x=GBY[g.id];setTimeout(()=>toast('주간 출석 '+ATT.n+'/7 · '+ATT_DN[g.dow]+'요일 채비 '+rigNm(g.id)+' '+g.n+'개 · 오늘은 '+g.m+' 데이'+(ATT.on&&ATT.n<7?' · '+(7-ATT.n)+'일 더 오면 '+fmtN(ATT.pt)+'P':''),5200),1800);try{bagRefresh();}catch(e){}}
-  if(ATT.on&&ATT.n===7&&!ATT.claimed)setTimeout(()=>toast('이번 주 7일 출석 완료! 퀘스트 창에서 '+fmtN(ATT.pt)+'P를 받으세요',5200),j.attGave?7200:1500);}
-let attTried=0;function attCardHTML(){if(!ATT){if(!attLoading&&!attTried){attTried=1;attLoading=true;srvDaily().finally(()=>{attLoading=false;if(rpgTab==='miss'&&!$('#rpg').hidden)renderRPG();});}return'';}
-  const A=ATT,cells=A.days.map((on,i)=>{const r=A.rigs[i]||{},x=GBY[r.id];return'<div class="attd'+(on?' on':'')+(i===A.today?' today':'')+(i<A.today&&!on?' miss':'')+'" title="'+esc(ATT_DN[i]+'요일 · '+(r.m||'')+' · '+rigNm(r.id)+' '+(r.n||'')+'개')+'"><b>'+ATT_DN[i]+'</b><span class="attm" aria-hidden="true">'+(on?'✓':i<A.today?'–':'')+'</span><small>'+esc(r.m||'')+'</small></div>';}).join('');
-  const missed=A.days.some((on,i)=>i<A.today&&!on);
-  const foot=!A.on?'<div class="k">지금은 완주 보상이 쉬는 중입니다 · 요일 채비는 그대로 받습니다</div>':A.claimed?'<div class="k">이번 주 완주 보상 '+fmtN(A.pt)+'P를 받았습니다 · 다음 주 월요일에 새로 시작</div>':A.n===7?'<button class="btn" type="button" id="attGo"'+(attBusy?' disabled':'')+'>'+fmtN(A.pt)+'P 받기</button>':missed?'<div class="k">이번 주는 빠진 날이 있어 완주가 어렵습니다 · 남은 날도 오면 요일 채비는 받아요</div>':'<div class="k">'+(7-A.n)+'일 더 출석하면 <b>'+fmtN(A.pt)+'P</b></div>';
-  return'<div class="sumbox attbox"><div class="atth"><b>이번 주 출석</b><span class="num">'+A.n+'/7</span></div><div class="attrow">'+cells+'</div>'+foot+'<div class="k attn">접속만 해도 출석 · 요일마다 다른 채비 · 빠진 날은 보충되지 않습니다 · 게임 포인트(현금·상품권 교환·양도 불가)</div></div>';}
+let ATT=null,ATT2=null,attBusy=false,attLoading=false;const rigNm=id=>{const x=GBY[id];return x?String(x.n).replace(/\s*\d+개입$/,'').replace(/ 세트 \d+$/,' 세트'):id;};const ATT_DN=['월','화','수','목','금','토','일'];
+function attTake(j){if(!j||!j.att)return;ATT2=j.att;if(j.term&&save.inv)save.inv.term=Object.assign(save.inv.term||{},j.term);try{evBadge();}catch(e){}/* V98 10일 출석판 */
+  if(j.attLegacy)setTimeout(()=>toast('지난주 주간 출석 완주 보상 +'+fmtN(j.attLegacy)+'P를 넣어 드렸습니다 · 이제 10일 출석판으로 바뀌었습니다',5200),1200);
+  if(j.attOpen&&ATT2.on&&ATT2.c<ATT2.n)setTimeout(()=>{if(!(inWorld()&&BUSY_ST[state])&&$('#evtM').hidden&&$('#charM').hidden)openEvt('att');else toast('10일 출석판 '+ATT2.n+'일차가 열렸습니다 · [출석]을 눌러 받으세요',4200);},1800);}
+let attTried=0;function attCardHTML(){if(!ATT2){if(!attLoading&&!attTried){attTried=1;attLoading=true;srvDaily().finally(()=>{attLoading=false;if(rpgTab==='miss'&&!$('#rpg').hidden)renderRPG();});}return'';}
+  const A=ATT2;return'<div class="sumbox attbox"><div class="atth"><b>10일 출석판 · '+A.r+'회차</b><span class="num">'+A.c+'/10</span></div><div class="k">'+(A.on&&A.c<A.n?'받을 칸이 있습니다':'내일 접속하면 다음 칸이 열립니다')+'</div><button class="btn" type="button" data-evopen="att">출석판 열기</button></div>';}
 document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('#attGo');if(!b||attBusy)return;attBusy=true;b.disabled=true;
   try{const r=await netRid('att-claim',{});if(r.s===200&&r.j&&r.j.ok){ATT=r.j.att;save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);refreshWallet();toast('주간 출석 완주 보상 +'+fmtN(r.j.reward)+'P');}else{toast((r.j&&r.j.message)||errMsg(r));if(r.j&&r.j.error==='ALREADY'&&ATT)ATT.claimed=true;}}
   finally{attBusy=false;if(rpgTab==='miss'&&!$('#rpg').hidden)renderRPG();}});
@@ -7604,6 +7748,7 @@ function srvLand(){const c=srvC,b=c&&c.h;state='result';landAt=performance.now()
     if(rel)$('#cardMeta').textContent=meta(clo?' 지금은 법정 금어기('+closedTxt(f)+(CLOSED_NOTE[f.n]?', '+CLOSED_NOTE[f.n]:'')+')라 놓아주었습니다.':' 법정 포획금지체장('+f.min+'cm 이하)이라 놓아주었습니다.');
     if(gold&&!j.gold)goldUncard(f,cm);else goldCard(!!j.gold);
     if(j.levelUps>0){const l1=RG.lv,l0=l1-j.levelUps;setTimeout(()=>lvNote(l0,l1),900);}
+    try{if(j.dex&&j.dex.n===1){const f0=FISH.find(x=>x.n===j.fish);if(f0&&dexOK(f0))setTimeout(()=>toast('도감 등록 · '+f0.n+' · '+dexBonTxt(f0)+dexZoneTxt(f0)),2600);}}catch(e){}/* V98 도감 능력치 */
     if(j.daily){dayNow=dayKey();if(j.daily.jig!=null)save.inv.term.t_jig3=j.daily.jig;toast('새 하루 · 출석 '+j.daily.streak+'일째 · +'+j.daily.bonus+'P · 오늘의 퀘스트가 바뀌었습니다');}// v29 S2: 서버가 /catch에서 날짜를 넘김
     (j.missions||[]).forEach((m,i)=>setTimeout(()=>toast(m.bonus?'오늘의 퀘스트 3개 모두 완료 · 보너스 +'+m.pt+'P':'퀘스트 완료 · '+m.n+' · +'+m.pt+'P +'+m.xp+'XP'),2000+i*2600));
     if((j.missions||[]).length)setTimeout(()=>upsell('quest'),2600+(j.missions.length)*2600);
@@ -8314,9 +8459,9 @@ function v4Later(){clearTimeout(v4LaterT);v4LaterT=setTimeout(async()=>{const r=
 function durTxt(ms){const m=Math.round(ms/6e4);return m%60?m+'분':m/60+'시간';}
 function relTimes(){const r=V4().rel;return Math.max(r.n,Math.floor(r.mine/RELEASE_N));}
 // 해금 조건(need) — 서버 LOCKED가 기준, 여기서는 미리 알려 주기만
-function needOk(need){if(!need)return true;if(need==='evt1')return v36EvN()>0;/* v36 전국 대물(서버 LOCKED가 기준) */if(need==='gold')return hasGold();if(need==='capt')return SRV&&(!!(MYB&&MYB.boat)||V4().capt);if(need==='dex30')return dexN()>=30;if(need==='dex60')return dexN()>=60;if(need==='rel10')return relTimes()>=10;const L=needLv(need);if(L)return(RG.lv||1)>=L.lv&&dexN()>=L.dex;/* V90 펫 등급 */return false;}
+function needOk(need){if(!need)return true;if(need==='evt1')return v36EvN()>0;/* v36 전국 대물(서버 LOCKED가 기준) */if(need==='gold')return hasGold();if(need==='capt')return SRV&&(!!(MYB&&MYB.boat)||V4().capt);if(need==='dex30')return dexN()>=30;if(need==='dex60')return dexN()>=60;if(need==='rel10')return relTimes()>=10;if(need==='att')return!!(ATT2&&ATT2.hat);if(need==='dexall')return dexBuf(save.dex,v36HasNet()).all;/* V98 */const L=needLv(need);if(L)return(RG.lv||1)>=L.lv&&dexN()>=L.dex;/* V90 펫 등급 */return false;}
 function needTxt(need){if(need==='evt1')return'전국 대물을 한 번 낚으면 열립니다';if(need==='gold')return'황금 물고기를 한 번 낚으면 열립니다';if(need==='capt')return SRV?'선장이 되면 열립니다':'선장이 되면 열립니다 · 낚시GO 로그인 필요';
-  const m=/^dex(\d+)$/.exec(need||'');if(m)return'어록 '+m[1]+'종이면 열립니다 · 지금 '+dexN()+'종';if(need==='rel10')return'치어 방류 10번이면 열립니다 · 지금 '+relTimes()+'번';const L=needLv(need);if(L)return'Lv.'+L.lv+(L.dex?' · 어록 '+L.dex+'종':'')+'이면 열립니다 · 지금 Lv.'+(RG.lv||1)+(L.dex?' · '+dexN()+'종':'');return'아직 열리지 않았습니다';}
+  const m=/^dex(\d+)$/.exec(need||'');if(m)return'어록 '+m[1]+'종이면 열립니다 · 지금 '+dexN()+'종';if(need==='rel10')return'치어 방류 10번이면 열립니다 · 지금 '+relTimes()+'번';if(need==='att')return'10일 출석판 10일차 보상입니다';if(need==='dexall')return'여섯 지역 어록을 모두 채우면 열립니다';const L=needLv(need);if(L)return'Lv.'+L.lv+(L.dex?' · 어록 '+L.dex+'종':'')+'이면 열립니다 · 지금 Lv.'+(RG.lv||1)+(L.dex?' · '+dexN()+'종':'');return'아직 열리지 않았습니다';}
 function v4Err(r,ctx){const j=(r&&r.j)||{},e=j.error;
   if(e==='LOCKED')return needTxt(j.need);if(e==='OWNED')return ctx==='gyo'?'이 기록은 이미 어탁을 떴습니다':'이미 가지고 있습니다';if(e==='NOT_OWNED')return'아직 사지 않았습니다';
   if(e==='MAX')return ctx==='chum'?'집어제는 최대 '+durTxt(CHUM.maxMs)+'까지 쌓입니다':ctx==='tank'?'가장 큰 어항입니다':ctx==='cabin'?'가장 넓은 선실입니다':ctx==='gyo'?'어탁은 50장까지 걸 수 있습니다':'더 늘릴 수 없습니다';
@@ -10337,6 +10482,7 @@ window.__meta={hexAudit:v48HexAudit,nearWater,waterGuide,castSpotAt,cleanNickC,o
   get tension(){return tension;},get holding(){return holding;},get surge(){return surge;},__forceStr(v){if(fish)fish=Object.assign({},fish,{str:v});},__setFish(n,z){fish=FISH.find(f=>f.n===n);fsize=z;},landCatch,get boats(){return boats;},get ROCKS(){return ROCKS;},get PW(){return PW;},get scene(){return scene;},get SRV(){return SRV;},net,emote,EMO,get peers(){return peers;},get myPres(){return myPres;},tutStart,get tutI(){return tutI;},setQuality,get qLevel(){return qLevel();},get QSET(){return QSET;},get pixelRatio(){return renderer?renderer.getPixelRatio():0;},get srvC(){return srvC;},hook,applyProfile,openAutoInfo,openDex,openSheet,openHelp,get ws(){return ws;},srvSettle,closedRange,get fish(){return fish;},get fsize(){return fsize;},get biteT(){return biteT;},get SA(){return SA;},get EVQ(){return EVQ;},get ERRQ(){return ERRQ;},flushLog,get NET_DEAD(){return NET_DEAD;},get netReady(){return netReady;},get waterSegs(){return waterMesh&&waterMesh.geometry.parameters?waterMesh.geometry.parameters.widthSegments:0;},get srvCatchPending(){return srvCatchPending;},resetLine,toast,get yawGoal(){return yawGoal;},get plan(){return plan;},get escPlan(){return escPlan;},__esc(o){escPlan=o;},onPeer,dropPeer,get castRel(){return castRel;},avFish,AVS,get VX(){return VX;},VXS,vxSave,vxBurst,rigShow,get escJ(){return escJ;},get cardDT(){return cardDT;},get QH(){return QH;},get qM(){return qM;},__qTick:()=>qTick(),__qStart:()=>qStart(),__view(d,y,pt){if(d!=null)dist=d;if(y!=null){yaw=y;yawGoal=null;}if(pt!=null)pitch=pt;},__step(dt,nr){update(dt);if(nr)return;if(linDirty)linScene(scene);renderer.render(scene,camera);},get T(){return T;},__tension(v){tension=v;},get castTo(){return castTo;},get pLine(){return pLine;},get EG(){return EG;},egiSnap,egiMode,avSquidGeo,get SES(){return SES;},sesTxt,biteChance,escapeChance,castK,startWait,catchPts,get ac(){return ac;},get qPend(){return qPend;},set qPend(v){qPend=v;},get BLQ(){return BLQ;},waveY,wvDamp,setupWaves,get LAMPS(){return LAMPS;},get lpSlow(){return lpSlow;},qPR,bubble,get waterMesh(){return waterMesh;},__snag(){state='snag';snagP=0;snagAt=performance.now();holding=false;$('#cutbtn').hidden=false;$('#gearbtn').hidden=true;},
   setWal,debtHTML,debtNow,walletTxt,passNextAt,passNextTxt,srvReArm,srvMissWait,payTopOk,payTop,tripResumeAsk,get REFUND_TXT(){return REFUND_TXT;},get REFUND_DRAFT(){return REFUND_DRAFT;},refundTxt,refundTxtSync,errMsg,iapFinish,netRid,/* v33 */isPort,openCapt,renderCapt,captGoalHTML,fleetHTML,boatBuyOpen,loadBoats,captSync,captNoteShow,boatLabel,boatsParse,mineNorm,shopClose,get MYB(){return MYB;},get CAPT(){return CAPT;},get BOATS(){return BOATS;},get tripBoatLbl(){return tripBoatLbl;},get boatPick(){return boatPick;},TOPUP_ON,BOAT_PRICE,CAPT_LV,/* v34 */V4,v4Norm,v4Merge,openTank,renderTank,gyoView,gyoDraw,gyoMake,gyoSave,chumLeft,chumK,chumBuy,chumTick,cosmBuy,cosmEquip,cosmPreview,cosmHTML,tankAdd,tankDel,tankUp,decoClick,relBuy,relTimes,cabinUp,boatPaint,capNow,v4Short,v4Free,chumFull,captRules,drawNoticeLines,needOk,needTxt,hatMesh,anglerLook,bobSkin,fishOutline,titleName,lookOf,myColor,myLookApply,peerNorm,captDecoHTML,v4Err,tripPal,get AQ(){return AQ;},get PREV(){return PREV;},get tripHullId(){return tripHullId;},set tripHullId(v){tripHullId=v;},COSM,CHUM,TANK_SLOTS,TANK_PRICE,TANK_DECO,GYOTAK_PRICE,RELEASE_PRICE,RELEASE_N,CABIN_CAP,CABIN_PRICE,label,refreshWallet,persist,renderLv};
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* v36 화면(V37-C1) */v36Render,v36Claim,v36Tut,v36TutSt,v36Goal,v36Unl,v36Now,v36Next,v36EvOpen,v36PortOpen,v36Ret,v36Reg,v36Lv,v36S,v36PortLock,v36Dress,v36Badges,v36EvN,v36Trophy,openRPG,needOk,needTxt,showAwayPopup,settleLocal,landCatch,hook,get V36P(){return V36P;},get v36Ev(){return v36Ev;},get boatsArr(){return boats;},get kind(){return kind;},get BOATS(){return BOATS;},get RG(){return RG;},__v36clock(t){v36T0=t?t-Date.now():0;v36EvC={};},__v36p(p){v36P=p;},get rpgTab(){return rpgTab;},EVENT_SLOTS,EVENT_MS,EVENT_K,EVENT_P,EVENT_TXT,evtPick,evtSlot,evtAt,checkGear,ptsK,MANUAL_K,FISH,FX,COSM,TUTQ,LV_REWARD,REGIONS,REGION_REWARD,zoneOf,isPort,drawMap,openSheet,persist,resetLine,menuSet,get fish(){return fish;},get fsize(){return fsize;},get ratio(){return ratio;},get sEff(){return sEff;},get curChk(){return curChk;},get view(){return view;}}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V98 */SB,myPower,ptsBadge,apUsable,openChar,closeChar,renderChar,chStat,chGrade,chAuto,openEvt,closeEvt,renderEvt,attClaim2,get ATT2(){return ATT2;},statBuf,dexBuf,gradeNext,stOf,grOf,capacity,gear,applyRPG}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* v35 */srvSettle,srvRefresh,twErrMsg,openShop,openHelp,openDex,actDown,actUp,setAuto,showAwayPopup,GBY,rodWear,WEAR_LOSS,netList,dvUI,NET_CD,DUR_WARN,shopClose,bagSet,enterSpot,SPOTS,TW,twStart,twWhy,twLocal,twCard,twReset,twLeft,dvRepair,dvWearL,arSet,dvBoxHTML,dvTxt,settleLocal,v35Norm,NET_GEAR,NET_NOTICE,NET_FISH,repairCost,durOf,get twNextAt(){return twNextAt;},set twNextAt(v){twNextAt=v;},get state(){return state;},get autoOn(){return autoOn;},get cur(){return cur;},get player(){return player;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* v37 캐릭터·꾸미기·구명조끼·월파(V37-C2) */lkOpen,lkClose,lkGo,lookNeed,lookFirst,myLook,myWear,peerWear,avSpec,avBody2,AVP,avpSet,avpAttach,pfdOn,pfdBlock,pfdWear,pfdBar,cosmCatLoad,wpForce,wpBuild,WP,LOOK,lookRand,lookStr,lookParse,makeAngler,anglerLook,COSM_SLOTS,
   peerKeys(){return[...peers.values()].map(p=>({n:p.name,key:p.key,wk:p.wk,logo:!!p.logoM,face:!!p.faceM}));},get LKC(){return LKC;},get LKME(){return LKME;},get camera(){return camera;},get scene(){return scene;},camSet(y,d,p){if(y!=null)yaw=y;if(d!=null)dist=d;if(p!=null)pitch=p;},get yaw(){return yaw;},get dist(){return dist;}}));
