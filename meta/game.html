@@ -6251,7 +6251,7 @@ let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+
   if(TW.ph)twHud();/* v35 */
   else if(state==='idle'&&curTrip){setHint((TOUCH?'버튼으로':'Space 또는 버튼으로')+' 채비를 내립니다 · '+curTrip.n);setAct('채비 내리기','Space');}
   else if(state==='idle'&&autoOn){setHint('자동 낚시 · 채비를 정리하는 중 · '+Math.max(0,Math.ceil(autoRest()-autoT))+'초 뒤 던집니다');setAct('자동','ON','off');}
-  else if(BOATAUTO&&curTrip){setHint('선상 자동 낚시 중 · 알아서 채비를 내리고 낚습니다(조과는 몇 분마다 정산) · 끄려면 자동 버튼');setAct('자동 중','선상 자동','off');}/* V84 */
+  else if(BOATAUTO&&curTrip){setHint('선상 자동 낚시 중 · 알아서 채비를 내리고, 고기가 물면 바로 끌어 올립니다 · 끄려면 자동 버튼');setAct('자동 중','선상 자동','off');}/* V84 */
   else if(state==='idle'&&V38E){setHint(V38E.q.name+' · '+V38E.o.n);setAct(V38E.o.n,TOUCH?'':'Space','off');}/* v38 요리·먹는 중(누르면 넘김) */
   else if(state==='idle'&&V38.near){const P=V38.near;setHint(P.name+' · '+P.tag);setAct(P.at==='food'?'식당 들어가기':'카페 들어가기',TOUCH?'':'E');}/* v38 걸어 들어가기(2.5m) */
   else if(state==='idle'){if(nearWater()){{const g=gear(),pl=g.rod&&g.rod.me==='pole';setHint((TOUCH?(pl?'던지기 버튼으로 찌를 넣으세요':'누르고 있다가 떼면 던집니다'):(pl?'Space 또는 던지기 버튼으로 찌를 넣으세요':'Space를 누르고 있다가 놓으면 던집니다'))+(g.rod?' · '+g.rod.n:''));setAct('던지기','Space');}}else{{const g0=waterGuide();setHint('물가 끝까지 걸어가세요'+(g0?' · '+g0:'')+' · '+(TOUCH?'조이스틱으로 이동':'WASD·방향키로 이동'));}setAct('던지기','물가에서','off');}}
@@ -7308,15 +7308,33 @@ const baOn=tr=>!!(tr&&tr.auto&&!tr.auto.done);
 /* V84 선상 자동(PRO)도 화면에서 낚는 모습: 서버 정산과 별개로 보여 주기만(서버 /cast를 부르지 않음 · 입질 없음) — 채비 내림 → 고패질 → 몇 분마다 서버 정산해 조과 안내 */
 let BA_T=0,BA_SET=0,BA_H=0,BA_BUSY=false;
 function boatAutoCastVis(){if(!player||!curTrip||!pBob||!pLine)return;curChk=boatChk(curTrip);const p=player.g.position;const side=p.x>=0?1:-1;player.g.rotation.y=side*Math.PI/2;castD=curTrip.depth[1];player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(side*3.4,0,p.z);plan=null;escPlan=null;escJ=0;state='cast';t0=0;castRel=0;pBob.visible=true;pBob.scale.setScalar(.4);pLine.l.visible=true;myPres.st='wait';myPres.bx=+castTo.x.toFixed(1);myPres.bz=+castTo.z.toFixed(1);sendPres(true);}
-async function boatAutoSettleNow(){if(BA_BUSY||!SRV||!BOATAUTO)return;BA_BUSY=true;try{const r=await net('trip-auto-settle',{});if(r.s===200&&r.j){if(r.j.trip)SRV_TRIP=r.j.trip;const o=r.j.boatAuto;if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);if(r.j.rpg)applyRPG(r.j.rpg);refreshWallet();}if(o&&(o.n|0)>0){boatAutoMsg(o);if(state==='wait'){resetLine();BA_T=0;}}if(r.j.trip&&!baOn(r.j.trip)){BOATAUTO=false;resetLine();renderAutoBtn();}}}catch(e){}BA_BUSY=false;}
-function boatAutoTick(dt){if(!BOATAUTO||!curTrip||!player){BA_T=0;BA_SET=0;return;}BA_T+=dt;BA_SET+=dt;
-  if(state==='idle'&&BA_T>2.5){BA_T=0;boatAutoCastVis();}
+// V94 선상 자동을 '실제로 낚는 것처럼': 서버가 한 번 던짐(BOAT_AUTO_CYC초)마다 정한 결과를 바로 받아(next 시각에 맞춰 정산) 입질 → 파이팅 → 들어 올리기로 한 마리씩 보여 준다
+let BA_NEXT=0,BA_Q=[],BA_P=null;
+async function boatAutoSettleNow(){if(BA_BUSY||!SRV||!BOATAUTO)return;BA_BUSY=true;try{const r=await net('trip-auto-settle',{});if(r.s===200&&r.j){if(r.j.trip)SRV_TRIP=r.j.trip;const o=r.j.boatAuto;if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);if(r.j.rpg)applyRPG(r.j.rpg);refreshWallet();}
+    if(o){const nx=o.next&&o.now?Math.max(4e3,o.next-o.now+600):((o.cyc||50)*1000);BA_NEXT=performance.now()+nx;const F=Array.isArray(o.fish)?o.fish:[];
+      if(F.length>3){boatAutoMsg(o);BA_Q.push(F[F.length-1]);}/* 오래 비웠다 돌아오면 한꺼번에 알리고 마지막 한 마리만 보여 줌 */else BA_Q.push(...F);
+      if(!F.length&&(o.n|0)>0)boatAutoMsg(o);try{if(o.missions&&o.missions.length)questBadge();}catch(e){}}
+    else BA_NEXT=performance.now()+30e3;
+    if(r.j.trip&&!baOn(r.j.trip)){BOATAUTO=false;BA_Q=[];BA_P=null;resetLine();renderAutoBtn();}}else BA_NEXT=performance.now()+15e3;}catch(e){BA_NEXT=performance.now()+15e3;}BA_BUSY=false;}
+// 한 마리 연출: 입질(0.7초) → 파이팅(약 3초, 대가 휨) → 들어 올려 보여 주기(3초) → 다시 채비 내림
+function boatAutoPlay(dt){const P=BA_P;P.t+=dt;const f=fishBy(P.x.n);
+  if(P.ph===0){if(state!=='wait'){P.ph=0;if(state==='idle'){boatAutoCastVis();}return;}P.ph=1;P.t=0;bubble(player,'입질!');try{vxSfx('splash',.5);}catch(e){}}
+  if(P.ph===1){holding=true;if(pBob)pBob.scale.setScalar(.4+.08*Math.sin(P.t*30));if(P.t>3.4){P.ph=2;P.t=0;
+      state='result';landAt=performance.now();if(pBob)pBob.visible=false;if(pLine)pLine.l.visible=false;holding=false;player.pivot.rotation.x=1.0;
+      if(f){avFish(player,f,P.x.cm,!!P.x.rel,false);const cm=(Math.round(P.x.cm*10)/10).toFixed(1);bubble(player,f.n+' '+cm+'cm');toast('선상 자동 · '+f.n+' '+cm+'cm'+(P.x.rel?' · 방생':' · +'+fmtN(P.x.pts|0)+'P · +'+fmtN(P.x.xp|0)+'XP'),2600);logMsg('선상 자동 · <b>'+esc(f.n)+'</b> '+cm+'cm'+(P.x.rel?' (방생)':' · +'+fmtN(P.x.pts|0)+'P'),'sys');try{if(TS){TS.n++;TS.pts+=P.x.pts|0;}}catch(e){}}
+      myPres.st='show';sendPres(true);}}
+  else if(P.ph===2&&P.t>3){BA_P=null;resetLine();BA_T=0;}}
+function boatAutoTick(dt){if(!BOATAUTO||!curTrip||!player){BA_T=0;BA_SET=0;BA_P=null;BA_Q=[];BA_NEXT=0;return;}BA_T+=dt;
+  if(!BA_NEXT)BA_NEXT=performance.now()+1500;/* 켜거나 다시 들어오면 곧 한 번 맞춰 봄(서버가 다음 시각을 알려 줌) */
+  if(BA_P)boatAutoPlay(dt);
+  else if(BA_Q.length&&(state==='wait'||state==='idle')){BA_P={x:BA_Q.shift(),t:0,ph:0};if(state==='idle')boatAutoCastVis();}
+  else if(state==='idle'&&BA_T>1.5){BA_T=0;boatAutoCastVis();}
   else if(state==='wait'){BA_H-=dt;if(BA_H<=0){holding=!holding;BA_H=holding?1.2:2.4;}}
-  if(BA_SET>150){BA_SET=0;boatAutoSettleNow();}}
+  if(performance.now()>=BA_NEXT&&!BA_BUSY)boatAutoSettleNow();}
 function boatAutoMsg(o){if(!o)return;const top=Object.entries(o.tally||{}).sort((a,b)=>b[1].n-a[1].n).slice(0,3).map(([k,v])=>k+' '+v.n).join(', ');toast('선상 자동 정산 · '+(o.n|0)+'마리'+(top?' ('+top+')':'')+' · +'+fmtN(o.pts|0)+'P');try{if(TS){TS.n+=o.n|0;TS.pts+=o.pts|0;}}catch(e){}}
 async function boatAutoToggle(){if(!curTrip)return;const want=!BOATAUTO;if(want&&!autoNow().sub){toast('선상 자동 낚시는 낚시GO PRO 멤버십 혜택입니다');return;}if(want&&state!=='idle'){toast('채비를 거둔 뒤 켜세요');return;}
   const r=await net('trip-auto',{on:want});if(r.s!==200||!r.j){toast(errMsg(r));return;}SRV_TRIP=r.j.trip||SRV_TRIP;BOATAUTO=baOn(r.j.trip);if(!BOATAUTO&&state!=='idle')resetLine();/* V84 끄면 내린 채비 거둠 */if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);if(r.j.rpg)applyRPG(r.j.rpg);refreshWallet();}
-  if(want)toast('선상 자동 낚시를 켰습니다 · 출조가 끝날 때까지 자동으로 낚고, 귀항할 때 정산합니다(앱을 꺼도 계속)');else boatAutoMsg(r.j.boatAuto);renderAutoBtn();}
+  if(want){BA_NEXT=performance.now()+52e3;BA_Q=[];BA_P=null;toast('선상 자동 낚시를 켰습니다 · 고기가 물면 바로 끌어 올리고(포인트는 직접 낚을 때와 같음), 앱을 꺼도 출조가 끝날 때까지 계속 낚습니다');}else boatAutoMsg(r.j.boatAuto);renderAutoBtn();}
 function apiURL(p){return new URL(NET_API+'/'+p,location.href).href;}
 function tokNow(){try{return localStorage.getItem('access_token')||'';}catch(e){return'';}}
 /* V58: 낚시GO 로그인 토큰은 1시간이면 끝난다. 게임 화면에서는 낚시GO가 갱신해 주지 않으므로(낚시GO API를 부르지 않음),
@@ -10386,7 +10404,7 @@ v44Dock();v44QInit();v44Q();setInterval(v44Q,500);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V65 */openCoupon,isMasterTok,menuSet,/* V68 */get ATT(){return ATT;},openQuests,/* V67 */quickSay,toggleEmo,QP,EMO,setAuto,waterSnap,get autoOn(){return autoOn;}}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V74 */boatBadge,boatGo,boatPick,boatPortGo,menuSet}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V73 */autoDetach,autoAttach,backSpotTarget,backSpotRender,goMap,get lastSpotId(){return lastSpotId;},get SA(){return SA;}}));
-Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,petItem,petBuild,petSync,petDrop,petNameMe,petNameSave,petSecHTML,petSVG,avpPet,get PETGC(){return PETGC;},/* V90 */boatAutoSettleNow/* V84 */,get OCCK(){return OCCK;}/* V87 */,ocPlans,ocGo,get ocSel(){return ocSel;},set ocSel(v){ocSel=v;}/* V89 */}));
+Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V72 */get BOATD(){return BOATD;},get BOATAUTO(){return BOATAUTO;},boatAutoToggle,srvTrip,tripFinish,get SRV_TRIP(){return SRV_TRIP;},/* V79 */boatDayTake,boatDayHTML,openBoat,trialShow/* V82 */,petItem,petBuild,petSync,petDrop,petNameMe,petNameSave,petSecHTML,petSVG,avpPet,get PETGC(){return PETGC;},/* V90 */boatAutoSettleNow/* V84 */,get BA_Q(){return BA_Q;},get BA_P(){return BA_P;},get BA_NEXT(){return BA_NEXT;},get OCCK(){return OCCK;}/* V87 */,ocPlans,ocGo,get ocSel(){return ocSel;},set ocSel(v){ocSel=v;}/* V89 */}));
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V44-UI */v44Theme,v44MP,v44Q,v44GoBtn,v44Svg,V44_IC}));
 })();
 </script>
