@@ -1769,6 +1769,13 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
 html #world #hint{background:rgba(10,19,27,.43);border-color:rgba(255,255,255,.07);-webkit-backdrop-filter:none;backdrop-filter:none;text-shadow:0 1px 2px rgba(0,0,0,.65),0 0 1px rgba(0,0,0,.65)}
 html.thl #world #hint{background:rgba(255,250,240,.5);border-color:rgba(228,208,170,.5);box-shadow:0 3px 0 rgba(176,140,84,.11),0 10px 26px rgba(40,30,10,.08);text-shadow:0 0 3px rgba(255,250,240,.95),0 0 1px rgba(255,250,240,.95)}
 html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,61,.5);text-shadow:0 0 3px rgba(255,214,190,.95),0 0 1px rgba(255,214,190,.95)}
+
+/* V100 선상 남은 시간 칩(집어제 칩과 같은 자리·모양, 파란색 · 1분 이하 빨강 깜빡임) */
+#tripchip{display:none}
+#world #spotbar>#tripchip:not([hidden]){display:inline-flex;align-items:center;align-self:center;flex:none;height:var(--hbh,32px);min-height:0;box-sizing:border-box;padding:0 11px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;font-family:var(--mono);order:6;background:rgba(10,30,50,.82);color:#cfe8ff;border:1px solid #5aa9ff;cursor:pointer}
+.thl #world #spotbar>#tripchip:not([hidden]){background:#e7f1fb;color:#1557a0;border:2px solid #8fbde8;box-shadow:var(--q-sh)}
+#world #spotbar>#tripchip.warn:not([hidden]){background:#fbebeb;color:#b3261e;border-color:#e58a84;animation:tripWarn 1s ease-in-out infinite}
+@keyframes tripWarn{50%{opacity:.6}}@media (prefers-reduced-motion:reduce){#world #spotbar>#tripchip.warn{animation:none}}
 </style>
 
 <!-- ===== 지도 ===== -->
@@ -1821,7 +1828,7 @@ html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,6
     <div id="spotbar">
       <button class="ghost exitGo" id="exitGo2" type="button" hidden style="font-size:12px;padding:4px 8px">낚시GO로</button><button class="ghost hb" id="back" type="button" aria-label="지도로 돌아가기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg><span class="bl"><span class="sl">← </span>지도</span></button><button class="ghost" id="boatbtn" type="button" hidden>선상</button><button class="ghost" id="autobtn" type="button">자동</button><button class="ghost" id="sndbtn" type="button" aria-label="소리 끄기 (M)" title="소리 켜기·끄기 (M)" style="padding:4px 8px"></button><button class="ghost" id="wtankbtn" type="button">어항</button>
       <button class="ghost lvchip hb" id="lvbtn2" type="button"></button><i class="tbsp" aria-hidden="true"></i><i class="tbbr" aria-hidden="true"></i>
-      <div id="loc" class="hb"><h2 id="spotName">낚시터</h2><button id="wxchip" type="button" aria-expanded="false" aria-controls="wxcard"></button><p id="spotSub"></p></div><button class="num" id="autochip" type="button" hidden aria-label="자동 낚시 상태 · 자세히 보기"></button><button id="chumchip" type="button" hidden aria-label="집어제 남은 시간 · 눌러서 상점 보기"></button><button id="bufchip" type="button" hidden></button><i class="tbsp tbsp2" aria-hidden="true"></i>
+      <div id="loc" class="hb"><h2 id="spotName">낚시터</h2><button id="wxchip" type="button" aria-expanded="false" aria-controls="wxcard"></button><p id="spotSub"></p></div><button class="num" id="autochip" type="button" hidden aria-label="자동 낚시 상태 · 자세히 보기"></button><button id="chumchip" type="button" hidden aria-label="집어제 남은 시간 · 눌러서 상점 보기"></button><button id="tripchip" class="num" type="button" hidden aria-label="선상 출조 남은 시간 · 눌러서 자세히"></button><button id="bufchip" type="button" hidden></button><i class="tbsp tbsp2" aria-hidden="true"></i>
       <button id="ptpill" class="hb rpill" type="button" title="보유 포인트 · 눌러서 상점 열기"><i class="pico" aria-hidden="true">P</i><span class="sl">보유 포인트 </span><b class="num" id="wpt">0</b><span class="sl">P · 상점 열기</span></button><button id="satchip" type="button" hidden></button><button id="newsbtn" class="hb hic" type="button" aria-expanded="false" aria-controls="feed" aria-label="이 낚시터 소식 보기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-4.5 3.5V16H4z"/></svg><span class="sl">소식</span></button><button class="ghost hb hic" id="helpbtn" type="button" aria-label="설정 · 도움말"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.5h3.4l.5 2.4 1.7 1 2.3-.8 1.7 2.9-1.8 1.6v2l1.8 1.6-1.7 2.9-2.3-.8-1.7 1-.5 2.4h-3.4l-.5-2.4-1.7-1-2.3.8-1.7-2.9 1.8-1.6v-2L3.8 9l1.7-2.9 2.3.8 1.7-1z"/><circle cx="12" cy="12" r="2.6"/></svg><span class="sl">설정</span></button>
     </div>
     <div id="rcol"><div id="wxcard" class="panel"></div><div id="alert" hidden></div></div>
@@ -5675,7 +5682,7 @@ function waterGuide(){if(!player||kind==='boat')return'';const now=performance.n
 let curTrip=null,tripEnd=0,tripMo=0,boatG=null;let TS=null,tripGone=false;let chargeT=0,chargeAt=0,landAt=-1e9,charge=0,curChk=null,castD=12,fishKgNow=0,ratio=0,sEff=.5,curList=[];
 function actDown(){audio();if(!player||TAB_RO)return;if(curTrip&&BOATAUTO){toast('선상 자동 낚시 중입니다 · 직접 던지려면 자동 버튼을 눌러 끄세요');return;}/* V79 */if(TW.ph==='aim'){twHold(true);return;}if(TW.ph==='card'){twCardClose();return;}if(TW.ph){toast('투망을 거두는 중입니다');return;}/* v35 */if(document.body.classList.contains('emo-open'))closeEmo();/* v32 LC2 #260: 던지기를 누르면 표현 막대를 닫아 파워 게이지를 가리지 않게 */if(V38E){v38EatSkip();return;}if(state==='idle'&&!autoOn&&V38.near){v38Open();return;}/* v38 식당·카페 앞 */if(!autoOn){pressed=true;}if(state==='idle'&&!autoOn&&pfdBlock())return;/* v37 구명조끼 */if(state==='idle'&&!autoOn&&!curTrip&&v38Block())return;/* v38 포만감 0 */if(state==='idle'&&eqBusy){toast('장비를 바꾸는 중입니다 · 잠시 뒤 던지세요');return;}if(state==='idle'&&performance.now()-missAt<300)return;if(state==='idle'&&SRV&&!autoOn&&!srvCanCast())return;
   if(state==='idle'&&curTrip){curChk=boatChk(curTrip);doCast(1);return;}
-  if(state==='idle'&&!autoOn){if(dvRodBroken()){pressed=false;dvAsk(save.eq.rod);return;}const nl=twLeft();if(nl>0&&save.eq.net){pressed=false;toast('투망을 거두는 중입니다 · '+Math.ceil(nl/1000)+'초 뒤에 던질 수 있습니다');return;}}/* v35 */
+  if(state==='idle'&&!autoOn){if(dvRodBroken()){pressed=false;dvAsk(save.eq.rod);return;}}/* v35 · V100 투망과 낚싯대는 쿨타임이 따로 — 투망을 던진 뒤에도 낚싯대는 바로 던진다 */
   if(state==='idle'){const chk=checkGear(cur);curChk=chk;
     if(!chk.ok){toast(chk.msgs[0]||'채비를 확인하세요');bagSet(true);return;}
     if(!nearWater()){const g0=waterGuide();toast('물가 끝까지 가야 던질 수 있습니다'+(g0?' · '+g0:''));return;}
@@ -9074,6 +9081,11 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   if(a==='tadd'){tankAdd(id);return;}if(a==='tdel'){tankDel(+id);return;}if(a==='tup'){tankUp();return;}if(a==='deco'){decoClick(id);return;}
   if(a==='gyogal'){openTank('gyo');return;}if(a==='gmake'){gyoMake();return;}if(a==='gmk1'){gyoMake(id);return;}if(a==='gview'){gyoView(+id);return;}if(a==='rel'){relBuy();return;}if(a==='cabin'){cabinUp();return;}});
 $('#tankbtn').addEventListener('click',()=>openTank());$('#wtankbtn').addEventListener('click',()=>openTank());$('#chumchip').addEventListener('click',()=>{hudClose();openShop('term');});
+/* V100 선상 출조 남은 시간 칩: 예전 '남은 시간'은 숨긴 #spotSub에만 써서 보이지 않았다 → 위쪽 칩 줄에 늘 보이게(1분 이하 빨강) · 누르면 결산 요약 */
+function tripChipTick(){const c=$('#tripchip');if(!c)return;const on=!!curTrip&&inWorld()&&!tripGone&&tripEnd>0;if(c.hidden===on)c.hidden=!on;if(!on)return;
+  const ms=Math.max(0,tripEnd-performance.now()),t='선상 남은 '+Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0');if(c.dataset.t!==t){c.dataset.t=t;c.textContent=t;}c.classList.toggle('warn',ms<=60e3);}
+setInterval(tripChipTick,500);
+$('#tripchip').addEventListener('click',()=>{hudClose();const ms=Math.max(0,tripEnd-performance.now());toast((curTrip?curTrip.n+' · ':'')+'출조 남은 시간 '+Math.floor(ms/60000)+'분 '+(Math.floor(ms/1000)%60)+'초'+(TS?' · 잡은 고기 '+(TS.n||0)+'마리':'')+(TS&&TS.rig>0?' · 채비 손실 '+fmtN(TS.rig)+'P':'')+(TS&&TS.owe>0?' · 랭킹 선비 상환 남은 '+fmtN(TS.owe)+'P':'')+' · 시간이 끝나면 자동으로 귀항합니다',4200);});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)aqKick();});
 setInterval(chumTick,1000);V4();
 
@@ -9275,7 +9287,7 @@ function twThrow(){if(TW.ph!=='aim')return;$('#twGame').hidden=true;$('#world').
   player.g.rotation.y=ry;yawGoal=ry+Math.PI+.3;TW.pitch=Math.max(pitch,.7);player.g.updateMatrixWorld(true);/* 시점을 비스듬히(그물이 사람 뒤에 가리지 않게) */const hp=player.g.position;
   TW.from=new THREE.Vector3(hp.x+Math.sin(ry)*.6,hp.y+1.5,hp.z+Math.cos(ry)*.6);TW.tg={x:t.x,z:t.z};TW.c={x:TW.from.x,z:TW.from.z};TW.R=(x.d/2)*(.6+.4*q);TW.near={x:hp.x+Math.sin(ry)*Math.min(2,t.d*.35),z:hp.z+Math.cos(ry)*Math.min(2,t.d*.35)};
   TW.M=twMesh();TW.ph='fly';TW.at=0;TW.ry=ry;bubble(player,'투망!');myPres.st='wait';myPres.bx=+t.x.toFixed(1);myPres.bz=+t.z.toFixed(1);sendPres(true);evt('net_throw');
-  TW.applied=false;twReq(q).then(j=>{TW.res=j;if(TW.M)TW.M.fishN=Math.min(NET_MAX_N,(j.fish||[]).length);if(SRV){twNextAt=Date.now()+(+j.nextMs||NET_CD);srvWaitTo(+j.nextMs||NET_CD);}},r=>{TW.err=r||{s:0,j:null};});}
+  TW.applied=false;twReq(q).then(j=>{TW.res=j;if(TW.M)TW.M.fishN=Math.min(NET_MAX_N,(j.fish||[]).length);if(SRV){twNextAt=Date.now()+(+j.nextMs||NET_CD);}/* V100 낚싯대 대기는 걸지 않음 */},r=>{TW.err=r||{s:0,j:null};});}
 function twApply(){if(TW.applied||!TW.res)return TW.res;TW.applied=true;if(TW.res.local)TW.res=twLocalApply(TW.res.pre);else twGot(TW.res);return TW.res;}
 async function twReq(q){if(!SRV){const o=twLocal(q);if(o.err)throw o.err;return o;}
   const r=await netRid('net-throw',{spot:TW.s.id,q:+q.toFixed(3)});if(r.s===200&&r.j&&r.j.ok)return r.j;throw r;}
@@ -9336,7 +9348,7 @@ function twCard(j){const x=GBY[j.item]||TW.x||{},rows=j.fish||[],s=TW.s||cur||{}
   const rep=(j.repairs||[]).length>0;if(j.tear)h+='<div class="'+(rep?'warnline':'badline')+'">'+(s.t==='갯바위'?'그물이 바위에 걸려 찢어졌습니다':'그물이 찢어졌습니다')+(rep?' · 자동 수리했습니다':' · 수리해야 다시 던질 수 있습니다')+'</div>';
   (j.repairs||[]).forEach(r=>h+='<div class="k">자동 수리 · '+esc((GBY[r.item]||{}).n||'투망')+' −'+fmtN(r.cost)+'P</div>');if(j.repairSkip)h+='<div class="warnline">포인트가 부족해 자동 수리를 못 했습니다</div>';
   if(j.item)h+='<div data-dvrow="'+esc(j.item)+'">'+dvRowHTML(j.item,1)+'</div>';
-  h+='<p class="src" style="margin:8px 0 10px">다음 투망은 '+Math.round((+j.nextMs||NET_CD)/1000)+'초 뒤 · 그동안 낚싯대도 쉽니다</p><button class="btn" id="twOk" type="button">확인</button>';
+  h+='<p class="src" style="margin:8px 0 10px">다음 투망은 '+Math.round((+j.nextMs||NET_CD)/1000)+'초 뒤 · 낚싯대는 바로 던질 수 있습니다</p><button class="btn" id="twOk" type="button">확인</button>';
   const m=uiBox('twCard','modal','<div class="sheet2 panel" role="dialog" aria-labelledby="twCardT"></div>');m.hidden=true;const sh=m.querySelector('.sheet2');sh.innerHTML=h;m.hidden=false;sh.scrollTop=0;
   sh.querySelectorAll('canvas[data-twf]').forEach(cv=>{const f=rows[+cv.dataset.twf],F=f&&fr(f);if(F)try{drawFish(cv,F,+f.cm);}catch(e){}});
   const ok=$('#twOk');ok.onclick=twCardClose;try{ok.focus({preventScroll:true});}catch(e){}}
