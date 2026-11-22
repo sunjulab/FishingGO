@@ -2409,7 +2409,7 @@ const HOOK_SLACK=4000;
 // 줄 터짐 한계: 물고기 무게가 채비 한계의 BREAK_R배를 넘으면 챔질 직후 바로 터진다(서버 /hook이 정하고 채비 손실도 서버가 뺀다)
 const BREAK_R=2.2;
 // 하루 기록 한도(직접 + 자동)와 정산 한 번 한도. 이용권 사용 중(최근 24시간)에는 24시간 내내 가장 빠른 자동 주기로 던져도 막히지 않게 올린다
-const DAY_CAP=500;
+const DAY_CAP=1000;/* V105(운영자 결정): 직접 낚시 하루 기록 한도 500 → 1000. 자동 낚시 하루 한도는 dayCap에서 예전 500 기준 그대로 */
 const SETTLE_MAX=300;
 // 구글 플레이 상품 id(원 = P)
 const TOPUP_PRODUCTS={topup_1000:1000,topup_3000:3000,topup_5000:5000,topup_10000:10000,topup_30000:30000,topup_50000:50000};
@@ -2460,7 +2460,7 @@ function autoStop(a,now){if(a.on)bankBoosts(a,now);a.on=0;return a;}
 // v29 S2: 이용권 밖(무료·광고) 시간은 켠 뒤 어망 크기(netCapMs)까지만 — 이용권이 capAt을 늘려도 그 앞의 무료 시간이 어망보다 길게 쌓이지 않게. 끝에 남은 반쯤 던진 시간은 out.carry
 function autoCasts(a,now,cycMs){const end=Math.min(now,capAtOf(a));const lim=capFreeOf(a);/* V81 */const segs=autoSegments(a,a.on,end).map(s=>s.mode==='pass'||s.to<=lim?s:Object.assign({},s,{to:Math.max(s.from,lim)})).filter(s=>s.to>s.from);let carry=0;
   const vk=+a.vk>0?+a.vk:1;/* V98 체력·도감: 포만감 소모 배율(켤 때·정산 때 정함) */const out=segs.map(s=>{const c0=carry;carry+=s.to-s.from;const n=Math.floor(carry/cycMs);carry-=n*cycMs;return Object.assign({},s,{casts:n,off:cycMs-c0,vk});});out.carry=carry;return out;}/* v32 LC2 #248: off = 구간 시작부터 첫 캐스팅까지(앞 구간 이월 반영), m번째 캐스팅 시각 = from+off+m*cycMs */
-function dayCap(pass){/* V52: 멤버십(24시간 어망)도 pass=true로 부른다 */return pass?DAY_CAP+Math.ceil(PASS_MS/1000/Math.min(...Object.values(AUTO_CYC))):DAY_CAP;}
+function dayCap(pass){/* V52: 멤버십(24시간 어망)도 pass=true로 부른다 · V105: 자동은 500 기준 그대로(DAY_CAP 1000은 직접 낚시만) */const B=500;return pass?B+Math.ceil(PASS_MS/1000/Math.min(...Object.values(AUTO_CYC))):B;}
 // v29 S2: 한 번 정산 상한 — 이용권 구간이 있으면 이용권 하루 한도, 아니면 SETTLE_MAX와 어망 크기만큼 던지는 횟수 중 큰 값(큰 어망을 산 만큼 정산에서 잘리지 않게)
 function settleMax(segs,a){return(segs||[]).some(s=>s.mode==='pass')?dayCap(true):Math.max(SETTLE_MAX,Math.ceil(netCapMs(a)/1000/Math.min(...Object.values(AUTO_CYC))));}
 // ---- v35 장비 내구도·수리·자동 수리 + 바다 투망(공유 규칙 — 서버 settleCore·/cast·/catch·/net-throw와 오프라인 settleLocal이 같은 함수를 쓴다) ----
