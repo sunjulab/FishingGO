@@ -1763,6 +1763,12 @@ body.v45b #loc{position:relative;padding-right:98px}#loc>.v45chip{position:absol
 .ocr{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px}.ocr .k{flex:0 0 46px}.ocr b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ocb{color:#c2410c;font-weight:700;font-size:12px}.oco{color:#15803d;font-size:12px}
 .ocgo{width:100%;margin-top:8px;padding:10px;font-size:15px}.ocgd{width:100%;margin-top:6px}
 .gd .gdh{font-size:15px;margin:14px 0 6px}.gdflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-weight:700;margin:4px 0 8px}.gdflow span{background:var(--buoy);color:#1a0d05;border-radius:8px;padding:4px 10px}.gdl{margin:0 0 6px;padding-left:20px;line-height:1.6;font-size:13px}
+
+/* V100 낚시 화면 안내 말풍선(#hint): 글씨는 그대로, 상자(배경·테두리·그림자)만 50% — 낚시 화면을 덜 가리게. 뒤 흐림(blur)도 끔.
+   글씨 둘레에 옅은 테(text-shadow)를 둘러 물결·하늘 위에서도 읽히게 */
+html #world #hint{background:rgba(10,19,27,.43);border-color:rgba(255,255,255,.07);-webkit-backdrop-filter:none;backdrop-filter:none;text-shadow:0 1px 2px rgba(0,0,0,.65),0 0 1px rgba(0,0,0,.65)}
+html.thl #world #hint{background:rgba(255,250,240,.5);border-color:rgba(228,208,170,.5);box-shadow:0 3px 0 rgba(176,140,84,.11),0 10px 26px rgba(40,30,10,.08);text-shadow:0 0 3px rgba(255,250,240,.95),0 0 1px rgba(255,250,240,.95)}
+html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,61,.5);text-shadow:0 0 3px rgba(255,214,190,.95),0 0 1px rgba(255,214,190,.95)}
 </style>
 
 <!-- ===== 지도 ===== -->
@@ -2700,11 +2706,14 @@ function namedTokens(s){return(s.f||'').replace(/\([^)]*\)/g,'').replace(/대물
 function fishRename70(o,top){if(Array.isArray(o)){for(let i=0;i<o.length;i++){if(o[i]==='노래미')o[i]='쥐노래미';else if(o[i]&&typeof o[i]==='object')fishRename70(o[i],false);}return o;}if(!o||typeof o!=='object')return o;for(const k of Object.keys(o)){if(k==='nick'||k==='name')continue;const v=o[k];if(v==='노래미')o[k]='쥐노래미';else if(v&&typeof v==='object')fishRename70(v,false);if(k==='노래미'){if(!Object.prototype.hasOwnProperty.call(o,'쥐노래미'))o['쥐노래미']=o[k];delete o[k];}}return o;}
 function matchFish(tok){return FISH.find(f=>f.n===tok||(f.a||[]).includes(tok))||null;}
 function missingFish(s){return namedTokens(s).filter(t=>!matchFish(t));}
-// v32 LC2 #268: 게임에 있지만 이 낚시터 해역(zone)에서는 나오지 않는 어종(예: 민물 하구의 숭어) — 낚시터 카드에 따로 표시
+// v32 LC2 #268: 게임 어종 설정의 해역(zone) 밖인데 이 낚시터 자료에 적힌 어종(예: 민물 하구의 숭어, 동해 강구항의 전어) — V100부터 제철에 드물게 낚이고 카드에 '드물게'로 표시
 function zoneMissFish(s){const z=zoneOf(s);return namedTokens(s).filter(t=>{const f=matchFish(t);return f&&!f.z.includes(z);});}
+/* V100 해역 밖 주요 어종 안내: 제철이면 이름만, 아니면 제철 달 */
+function zoneRareTxt(s){const mo=kstNow().mo,rg=m=>{const S=new Set(m);if(S.size>=12)return'연중';const st=[...S].find(x=>!S.has(x===1?12:x-1))||m[0];let e=st;while(S.has(e===12?1:e+1)&&(e===12?1:e+1)!==st)e=e===12?1:e+1;return st+'~'+e+'월';}/* 11~2월처럼 해를 넘는 철도 */;return zoneMissFish(s).map(t=>{const f=matchFish(t);return f.m.includes(mo)?t:t+'(제철 '+rg(f.m)+'에만)';}).join(', ');}
 function spotFishList(s){const z=zoneOf(s),mo=kstNow().mo;const named=new Set(namedTokens(s).map(matchFish).filter(Boolean));
-  const list=[];FISH.forEach(f=>{if(f.net||!f.z.includes(z))return;const isNamed=named.has(f);/* v35: 투망 전용 어종(net:1)은 낚싯대 목록에서 뺀다 */
-    let w=f.m.includes(mo)?4:.6;if(isNamed)w*=3;if(w>0)list.push({f,w,named:isNamed});});
+  const list=[];FISH.forEach(f=>{if(f.net)return;const isNamed=named.has(f),inZ=f.z.includes(z);if(!inZ&&!isNamed)return;/* v35: 투망 전용 어종(net:1)은 낚싯대 목록에서 뺀다 */
+    /* V100 해역 밖 어종: 이 낚시터 자료(주요 어종)에 적힌 어종만, 제철에만 드물게(가중치 .8 — 해역 안 제철 4·주요 어종 12의 1/5~1/15), 철이 아니면 안 나옴. 금어기·금지체장 방생은 그대로 */
+    let w=inZ?(f.m.includes(mo)?4:.6)*(isNamed?3:1):(f.m.includes(mo)?.8:0);if(w>0)list.push({f,w,named:isNamed,rare:!inZ});});
   return list;}
 
 /* ===================== 채비 시스템 ===================== */
@@ -2728,7 +2737,7 @@ const FX={
  광어:{k:.011,me:{lure:1,surf:.4},t:['jig','metal','minnow','surf'],r:10},
  쥐노래미:{k:.011,me:{lure:.7,float:.6,surf:.6},t:['jig','krill','surf'],rk:1},
  노래미:{k:.012,me:{lure:.6,float:.7,surf:.5},t:['jig','krill','surf'],rk:1},
- 숭어:{k:.009,me:{float:.6,surf:.3},t:['krill','surf']},
+ 숭어:{k:.009,me:{float:.6,surf:.3},t:['krill','surf','surff']}/* V100 강·하구(금강·영산강·형산강) 숭어는 민물 처박기(떡밥·지렁이)로도 */,
  농어:{k:.009,me:{lure:1,float:.5},t:['minnow','metal','jig','krill'],tm:'n'},
  무늬오징어:{k:.05,me:{lure:1},t:['egi'],tm:'n'},
  갑오징어:{k:.08,me:{lure:1},t:['egi']},
@@ -3148,8 +3157,8 @@ function timeMul(f,night){const x=(FX[f.n]||{}).tm;if(x==='n')return night?1.8:.
 const EGI_BY=.01;
 function shoreCatch(s,me,tk,reach,night){const L=spotFishList(s);
   if(tk!=='egi')return L.map(x=>{const fx=FX[x.f.n]||{};const mw=(fx.me||{})[me]||0;
-    if(!mw||!(fx.t||[]).includes(tk))return null;if((fx.r||0)>reach)return{f:x.f,w:0,far:fx.r,named:x.named};
-    return{f:x.f,w:x.w*mw*timeMul(x.f,night)*((SHORE[x.f.n]||{}).w||1),named:x.named};}).filter(Boolean);
+    if(!mw||!(fx.t||[]).includes(tk))return null;if((fx.r||0)>reach)return{f:x.f,w:0,far:fx.r,named:x.named,rare:x.rare};
+    return{f:x.f,w:x.w*mw*timeMul(x.f,night)*((SHORE[x.f.n]||{}).w||1),named:x.named,rare:x.rare};}).filter(Boolean);
   const mo=kstNow().mo,now=Date.now(),sq=[],by=[];
   for(const x of L){const f=x.f,fx=FX[f.n]||{};if(f.sq?!f.m.includes(mo):!f.m.includes(mo)&&!closedRange(f,now,s))continue;const w=x.w*timeMul(f,night)*((SHORE[f.n]||{}).w||1);
     if(f.sq&&closedRange(f,now,s)){const mw=(fx.me||{})[me]||0;if(mw&&(fx.t||[]).includes('egi'))by.push({f,w:w*mw,named:x.named,by:1});}
@@ -3443,7 +3452,7 @@ function srcLine(s,w){if(!w)return'';const S=w.src||{};const m={KMA_ULTRASRT_PRE
 function openSheet(s){sel=s;const w=WX.spots[s.id];const st=status(s,w);const sh=$('#sheet');
   sh.innerHTML='<div class="row"><span class="status"><span class="dot '+st+'"></span>'+STXT[st]+'</span><button class="ghost" id="sheetClose" type="button" aria-label="닫기">닫기</button></div>'+
    '<h2>'+esc(s.n)+'</h2><p class="meta">'+esc(s.t)+' · '+esc(s.r)+' · <span class="num">'+s.lat.toFixed(4)+', '+s.lng.toFixed(4)+'</span></p>'+
-   '<p class="fish">주요 어종 · '+esc(s.f||'-')+'</p>'+(missingFish(s).length?'<p class="src" style="margin:-8px 0 12px">게임에 아직 없는 어종 · '+esc(missingFish(s).join(', '))+'</p>':'')+(zoneMissFish(s).length?'<p class="src" style="margin:-8px 0 12px">이 낚시터에서는 게임에서 낚이지 않는 어종 · '+esc(zoneMissFish(s).join(', '))+'</p>':'')+closedLine(s)+condCells(s,w)+'<p class="src">'+esc(srcLine(s,w))+'</p>'+
+   '<p class="fish">주요 어종 · '+esc(s.f||'-')+'</p>'+(missingFish(s).length?'<p class="src" style="margin:-8px 0 12px">게임에 아직 없는 어종 · '+esc(missingFish(s).join(', '))+'</p>':'')+(zoneMissFish(s).length?'<p class="src" style="margin:-8px 0 12px">이 낚시터에서는 드물게 낚이는 어종 · '+esc(zoneRareTxt(s))+'</p>':'')+closedLine(s)+condCells(s,w)+'<p class="src">'+esc(srcLine(s,w))+'</p>'+
    (isPort(s)?'<p class="src" style="margin:0 0 8px">선상 출조 가능 항구 · 지금 가능한 선상 '+BOAT_TRIPS.filter(t=>tripState(s,t).ok).length+'종</p>':'')+'<div class="row"><button class="btn" id="go" type="button">이 낚시터로 들어가기</button>'+(isPort(s)?'<button class="ghost" id="goBoat" type="button">선상 출조</button>':'')+'<span class="src" style="margin:0">'+(peerCount[s.id]?peerCount[s.id]+'명 낚시 중':'아직 아무도 없음')+'</span></div>'+(beginSpots().includes(s)?'<p class="src" style="margin:8px 0 0;color:#7ff0c8">초보 추천 · 방파제라 걷기 쉽고, 지금 가진 루어 채비로 노릴 어종이 많은 곳입니다.</p>':'');
   sh.hidden=false;$('#sheetClose').onclick=()=>{sh.hidden=true;sel=null;drawMap();};$('#go').onclick=()=>enterSpot(s);if($('#goBoat'))$('#goBoat').onclick=()=>openBoat(s);try{v36Sheet(s);}catch(e){}/* v36 */drawMap();}
 addEventListener('resize',()=>{resizeMap();resizeWorld();layoutHUD();});
@@ -7248,7 +7257,7 @@ function gearScore(G,s){if(!G||!G.rod)return null;const C=capacity(G,s);const g0
   return{att:Math.round((gearAtt(G)-1)*100),big:Math.round((topQ(pexpShore(C,G))/topQ(pexpShore(C,null))-1)*100),miss:Math.max(0,Math.round((1-lossOf(G)/lossOf(g0))*100))};}
 function scoreHTML(G,s){const g=gearScore(G,s);if(!g)return'';const f=(v,sg)=>v>0?sg+v+'%':'0%';return'<div class="sumln gscore"><span class="k">내 채비 점수</span> 입질 <b class="num">'+f(g.att,'+')+'</b> · 대물 <b class="num">'+f(g.big,'+')+'</b> · 놓침 <b class="num">'+f(g.miss,'−')+'</b> <span class="k">(입문 기준)</span></div>';}
 // v26 어종 칩: 에기의 1% 바닷고기는 한 칩으로 묶어 보여 준다
-function fishChips(L){const M=L.filter(x=>!x.by),B=L.some(x=>x.by);let h=M.map(x=>'<span class="fchip'+(x.w?'':' off')+'"'+((FX[x.f.n]||{}).bait?' title="실제 미끼·채비: '+esc(FX[x.f.n].bait)+'"':'')+'>'+esc(x.f.n)+(x.w?(x.inSeason?'':' (철 아님)'):' ('+x.far+'m 이상 던져야 함)')+closedChip(x.f)+'</span>').join('');
+function fishChips(L){const M=L.filter(x=>!x.by),B=L.some(x=>x.by);let h=M.map(x=>'<span class="fchip'+(x.w?'':' off')+'"'+((FX[x.f.n]||{}).bait?' title="실제 미끼·채비: '+esc(FX[x.f.n].bait)+'"':'')+'>'+esc(x.f.n)+(x.w?(x.inSeason?'':' (철 아님)'):' ('+x.far+'m 이상 던져야 함)')+(x.rare&&x.w?' (드묾)':'')+closedChip(x.f)+'</span>').join('');
   if(B)h+='<span class="fchip" title="에기에는 오징어류가 대부분(약 99%)이고, 이 해역·철의 바닷고기가 가끔(약 1%) 걸립니다">그 밖의 바닷고기 (드묾 · 약 1%)</span>';
   if(B&&!M.length)h+='<div class="badline" style="width:100%">지금 이 해역·철에는 오징어류가 없어 입질이 거의 없습니다(바닷고기 1% 몫만)</div>';return h;}
 function gearSummary(compact){const s=cur||sel;const chk=checkGear(s);const G=chk.G;
