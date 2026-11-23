@@ -1840,6 +1840,21 @@ html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,6
 .thl #world #spotbar>#tripchip:not([hidden]){background:#e7f1fb;color:#1557a0;border:2px solid #8fbde8;box-shadow:var(--q-sh)}
 #world #spotbar>#tripchip.warn:not([hidden]){background:#fbebeb;color:#b3261e;border-color:#e58a84;animation:tripWarn 1s ease-in-out infinite}
 @keyframes tripWarn{50%{opacity:.6}}@media (prefers-reduced-motion:reduce){#world #spotbar>#tripchip.warn{animation:none}}
+/* V135 상태 배지 줄(선상 남은 시간·손맛·집어제): 위쪽 줄이 좁은 폰에서 넘쳐 밀리거나 잘리지 않게 오른쪽 위에 따로 세로로 */
+#stRail{position:fixed;right:max(10px,env(safe-area-inset-right,0px));top:132px;z-index:7;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+#stRail>*{pointer-events:auto}
+#stRail>#tripchip:not([hidden]),#stRail>#bufchip:not([hidden]),#stRail>#chumchip:not([hidden]){display:inline-flex;align-items:center;gap:5px;height:30px;min-height:0;box-sizing:border-box;padding:0 12px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.28);font-variant-numeric:tabular-nums;align-self:flex-end;flex:none;margin:0}
+#stRail>#tripchip{background:#e7f1fb;color:#0f4c8f;border:2px solid #7fb2e5}
+#stRail>#tripchip.warn{background:#fbebeb;color:#b3261e;border-color:#e58a84;animation:tripWarn 1s ease-in-out infinite}
+#stRail>#bufchip{background:#e6f7ec;color:#17683a;border:2px solid #8fd0a3}
+#stRail>#chumchip{background:#fff4dc;color:#7a4f00;border:2px solid #f0c46a}
+@media (prefers-reduced-motion:reduce){#stRail>#tripchip.warn{animation:none}}
+/* V135 문의 창 글씨(어두운 테마에서 밝은 바탕 위 밝은 글씨라 안 보이던 것) · 보낼 내용 늘 보이게 */
+.ctig b{color:#8a1c2c;font-size:17px}.ctig small{color:#4a2c31;opacity:1;font-weight:600;font-size:13px}
+.ctm textarea{color:#1f2a33}.ctm textarea::placeholder{color:#7b8790}
+.ctpv2{margin:8px 0 0;border:2px solid #9fc7e6;border-radius:12px;background:#f4f9fd;padding:8px 10px}
+.ctpv2 .ctlab{margin:0 0 4px;color:#14466e}
+.ctpv2 pre{white-space:pre-wrap;word-break:break-all;font:13px/1.55 system-ui,-apple-system,"Noto Sans KR",sans-serif;color:#1f2a33;margin:0;max-height:220px;overflow:auto}
 </style>
 
 <!-- ===== 지도 ===== -->
@@ -3393,12 +3408,18 @@ function boatGo(){if(curTrip){toast('지금 선상 출조 중입니다');return;
   if(cur&&isPort(cur)&&player&&!$('#world').hidden&&BOAT_TRIPS.some(t=>{try{return tripState(cur,t).ok;}catch(e){return false;}})){openBoat(cur);return;}boatPick();}
 function boatPortGo(s){const m=$('#boatPick');if(m)m.hidden=true;$('#sheet').hidden=true;if(cur&&cur.id===s.id&&player&&!$('#world').hidden){openBoat(cur);return;}
   enterSpot(s);const tok=entryTok;let k=0;const t=()=>{if(tok!==entryTok)return;/* 다른 곳으로 옮기면 멈춤 */if(cur&&cur.id===s.id&&player&&$('#loading').hidden){if(state==='idle'&&$('#boatModal').hidden)openBoat(cur);return;}if(++k<100)setTimeout(t,300);else toast('항구에 도착하면 메뉴 → 선상 낚시를 눌러 주세요');};setTimeout(t,600);}
+/* V135 선상 항구 고르기: 가까운 8곳만 보이던 것 → 출항할 수 있는 항구 전부 · [가까운 순 | 지역별] */
+var BP_MODE='near';const BP_RG=['강원','경북','울산','부산','경남','전남','전북','충남','경기','인천','제주'];
+function bpTabsHTML(n){return'<div class="gpkchips" role="tablist" aria-label="보기 방식" style="margin:0 0 8px;align-items:center">'+[['near','가까운 순'],['rg','지역별']].map(([k,t])=>'<button type="button" class="chip'+(BP_MODE===k?' on':'')+'" role="tab" aria-selected="'+(BP_MODE===k)+'" data-bpm="'+k+'">'+t+'</button>').join('')+'<span class="src" style="margin-left:6px">지금 출항 가능 '+n+'곳</span></div>';}
+function bpGroup(L,row){const G={};L.forEach(x=>{const r=x.s.r||'기타';(G[r]=G[r]||[]).push(x);});const ks=Object.keys(G).sort((a,b)=>{const i=BP_RG.indexOf(a),j=BP_RG.indexOf(b);return(i<0?99:i)-(j<0?99:j)||a.localeCompare(b,'ko');});
+  return ks.map(k=>'<h3 class="bprg" style="margin:12px 2px 6px;font-size:14.5px">'+esc(k)+' <span class="mtag">'+G[k].length+'곳</span></h3>'+G[k].slice().sort((a,b)=>a.s.n.localeCompare(b.s.n,'ko')).map(row).join('')).join('');}
 function boatPick(){const m=uiBox('boatPick','modal','<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="bpT"><div class="bphd"><h2 id="bpT">선상 낚시 · 항구 고르기</h2><button class="ghost" id="bpX" type="button">닫기</button></div><p class="src" id="bpDay"></p><p class="bpmsg" id="bpMsg" role="status" aria-live="polite" hidden></p><div id="bpList"></div></div>');
   const from=(cur&&SPOTS.find(x=>x.id===cur.id))||(typeof sel!=='undefined'&&sel)||(lastSpotId&&SPOTS.find(x=>x.id===lastSpotId))||null,lv=RG.lv||1;
   const L=SPOTS.filter(isPort).map(s=>{const T=BOAT_TRIPS.filter(t=>{try{return tripState(s,t).ok;}catch(e){return false;}});return{s,T,km:kmOf(from,s),minLv:T.length?Math.min(...T.map(t=>TRIP_LV[t.id]||1)):99};}).filter(x=>x.T.length);
   L.sort((a,b)=>(a.minLv<=lv?0:1)-(b.minLv<=lv?0:1)||(a.km==null||b.km==null?a.s.n.localeCompare(b.s.n,'ko'):a.km-b.km));
   {const mm=$('#bpMsg');if(mm){mm.hidden=true;mm.textContent='';}}const bd=boatDayCur(),full=!!(SRV&&bd&&bd.cap&&(bd.left|0)<=0);$('#bpDay').innerHTML=(full?'<b class="bpfull">오늘 선상 출조를 모두 탔어요 · 한국시간 0시에 다시 열려요</b><br>':SRV&&bd&&bd.cap?boatDayHTML()+'<br>':'')+'지금 시간·철·'+(SRV?'':'최근 ')+'날씨로 출항할 수 있는 항구만 보여 드려요'+(from?' · '+esc(from.n)+'에서 가까운 순(직선거리)':'')+'. 누르면 그 항구로 가서 출조 창이 바로 열립니다.'+(SRV&&SA&&SA.on?' 자동 낚시는 출조할 때 정산하고 꺼집니다.':'');
-  $('#bpList').innerHTML=L.length?L.slice(0,8).map(x=>{const ok=x.minLv<=lv;return'<button type="button" class="item bprow'+(ok&&!full?'':' dim')+'" data-bp="'+esc(x.s.id)+'" data-ok="'+(ok&&!full?1:0)+'" data-lv="'+x.minLv+'"><div><b>'+esc(x.s.n)+'</b> <span class="mtag">'+esc(x.s.r||'')+(x.km!=null?(x.km<1?' · 바로 옆':' · 직선 약 '+fmtN(Math.round(x.km))+'km'):'')+'</span><div class="spec">'+x.T.map(t=>esc(t.n)+' <span class="num">Lv.'+(TRIP_LV[t.id]||1)+'</span>').join(' · ')+'</div>'+(ok?'':'<div class="bplock">Lv.'+x.minLv+'부터 탈 수 있어요 · 지금 Lv.'+lv+'</div>')+'</div></div><span class="bpgo" aria-hidden="true">›</span></button>';}).join(''):'<p class="lead">지금은 출항할 수 있는 항구가 없어요(시간대·철·날씨). 조금 뒤에 다시 눌러 보세요.</p>';
+  const bpRow=x=>{const ok=x.minLv<=lv;return'<button type="button" class="item bprow'+(ok&&!full?'':' dim')+'" data-bp="'+esc(x.s.id)+'" data-ok="'+(ok&&!full?1:0)+'" data-lv="'+x.minLv+'"><div><b>'+esc(x.s.n)+'</b> <span class="mtag">'+esc(x.s.r||'')+(x.km!=null?(x.km<1?' · 바로 옆':' · 직선 약 '+fmtN(Math.round(x.km))+'km'):'')+'</span><div class="spec">'+x.T.map(t=>esc(t.n)+' <span class="num">Lv.'+(TRIP_LV[t.id]||1)+'</span>').join(' · ')+'</div>'+(ok?'':'<div class="bplock">Lv.'+x.minLv+'부터 탈 수 있어요 · 지금 Lv.'+lv+'</div>')+'</div></div><span class="bpgo" aria-hidden="true">›</span></button>';};$('#bpList').innerHTML=L.length?bpTabsHTML(L.length)+(BP_MODE==='rg'?bpGroup(L,bpRow):L.map(bpRow).join('')):'<p class="lead">지금은 출항할 수 있는 항구가 없어요(시간대·철·날씨). 조금 뒤에 다시 눌러 보세요.</p>';
+  $('#bpList').querySelectorAll('[data-bpm]').forEach(b=>b.onclick=()=>{if(BP_MODE!==b.dataset.bpm){BP_MODE=b.dataset.bpm;boatPick();}});
   $('#bpList').querySelectorAll('[data-bp]').forEach(b=>b.onclick=()=>{if(full){const mm=$('#bpMsg');mm.hidden=false;mm.textContent='오늘 선상 출조를 모두 탔어요 · 한국시간 0시에 다시 열려요';return;}if(b.dataset.ok!=='1'){const mm=$('#bpMsg');mm.hidden=false;mm.textContent='이 항구의 선상 낚시는 Lv.'+b.dataset.lv+'부터 탈 수 있어요 · 지금 Lv.'+lv+' · 갯바위·방파제에서 레벨을 올려 주세요';b.classList.remove('bpwarn');void b.offsetWidth;b.classList.add('bpwarn');return;}const s=SPOTS.find(x=>x.id===b.dataset.bp);if(s)boatPortGo(s);});
   $('#bpX').onclick=()=>{m.hidden=true;};m.onclick=e=>{if(e.target===m)m.hidden=true;};m.hidden=false;setTimeout(()=>{const f=$('#bpList [data-ok="1"]')||$('#bpX');try{f.focus();}catch(e){}},50);}
 function openBoat(s){const m=$('#boatModal');fleetSpot=s.id;$('#boatTitle').textContent=s.n+' 선상 출조';$('#boatList').innerHTML='<p class="src" id="boatDayBox" style="margin:0 0 10px;font-size:15px">'+boatDayHTML()+'</p>'+(isPort(s)&&window.__du?window.__du.boatHTML(s):'')/* V123 친구랑 함께하는 선상출조 */+(isPort(s)?'<div id="fleetBox">'+fleetHTML(s)+'</div>':'')+'<p class="src" style="margin:0 0 10px">게임에서는 선비에 대여 장비·미끼를 포함했습니다(실제로는 대여료 1~2만 원·채비 별도인 경우가 많습니다). 출조 시간은 게임 기준 '+TRIP_MIN+'분입니다. '+'출조 중 얻은 포인트는 그대로 받지만, 랭킹 점수에는 선비만큼을 먼저 갚은 뒤 반영됩니다. '+'대여 장비·미끼는 선비에 포함되지만, 밑걸림·줄 터짐으로 <b>채비를 잃으면 채비값</b>(출조마다 아래 표시)을 낚시로 모은 포인트에서 냅니다 · 한 출조에 낸 선비의 '+Math.round(TRIP_LOSS_K*100)+'%까지만 · 충전한 포인트에서는 빼지 않습니다. '+(()=>{const w=walletNow();return'쓸 수 있는 포인트 '+fmtN(spendNow())+'P'+(w.held>0?' (환불 요청 중 '+fmtN(w.held)+'P 제외)':'');})()+'</p>'+tripListHTML(s);
@@ -6069,11 +6090,21 @@ function shotFonts(o){try{if(!document.fonts||!document.fonts.load)return Promis
 function shotName(o){return'방구석낚시꾼_'+o.f.n+'_'+(+o.cm).toFixed(1)+'cm.png';}
 function shotCanShare(){try{return!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[new File([new Uint8Array(1)],'a.png',{type:'image/png'})]}));}catch(e){return false;}}
 // 저장은 어탁(gyoSave)과 같은 길: 아티팩트면 downloads 기능, 아니면 <a download>
+/* V135 사진 저장: 폰 웹은 <a download>가 '다운로드' 폴더로만 가서 갤러리에서 못 찾는다는 제보 → 폰이면 공유 창(갤러리·사진 앱으로 저장)을 먼저,
+   공유가 안 되면 파일로 받고 저장 위치를 알려 줌 · 앱(WebView)은 다운로드·공유가 막혀 있어 그림을 크게 띄워 길게 눌러 저장 */
+const IS_PHONE=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+async function imgSave(cv,nm,dl){let b=null;try{b=await new Promise(r=>cv.toBlob?cv.toBlob(r,'image/png'):r(null));}catch(e){}
+  if(IS_PHONE&&b&&navigator.canShare&&navigator.share){try{const f=new File([b],nm,{type:'image/png'});if(navigator.canShare({files:[f]})){toast('공유 창에서 \'갤러리\'·\'사진\'·\'이미지 저장\'을 고르세요',3600);await navigator.share({files:[f]});return;}}catch(e){if(e&&e.name==='AbortError')return;}}
+  if(GAME_APP){imgHold(cv,nm);return;}
+  dl();if(IS_PHONE)toast(/iPhone|iPad|iPod/i.test(navigator.userAgent||'')?'파일 앱 › 다운로드에 저장했어요 · 사진 앱에 넣으려면 열어서 공유 › 이미지 저장':'내 파일 › 다운로드(Download) 폴더에 저장했어요 · 갤러리 앱의 Download 앨범에서도 보여요',5600);}
+function imgHold(cv,nm){let u='';try{u=cv.toDataURL('image/png');}catch(e){}const m=uiBox('imgHold','modal','');m.hidden=false;
+  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-label="사진 저장" style="width:min(520px,100%);box-sizing:border-box;text-align:center"><p style="margin:0 0 8px;font-weight:800;font-size:16px">사진을 <u>길게 눌러</u> 저장하세요</p><img src="'+u+'" alt="'+esc(nm)+'" style="max-width:100%;max-height:62vh;border-radius:10px;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto"><p class="k" style="margin:8px 0">저장 메뉴가 안 나오면 이 화면을 캡처해 주세요</p><button class="btn" type="button" id="imgHoldX">닫기</button></div>';
+  m.onclick=e=>{if(e.target===m)m.hidden=true;};const X=document.getElementById('imgHoldX');if(X)X.onclick=()=>{m.hidden=true;};}
 function shotSave(cv,nm){evt('showSave');const go=u=>{const a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();};
   if(window.claude&&window.claude.use){(async()=>{try{const dl=await window.claude.use('downloads');if(!dl){toast('이 화면에서는 저장할 수 없습니다 · 그림을 길게 눌러 저장해 보세요');return;}
     const b=await new Promise(r=>cv.toBlob?cv.toBlob(r,'image/png'):r(null));if(!b){toast('저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');return;}
     await dl.save({filename:nm,data:b});toast('PNG로 저장했습니다');}catch(e){const c=e&&e.code;if(c==='declined')return;toast(c==='rate_limited'?'잠시 후 다시 눌러 주세요':'저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');}})();return;}
-  try{if(cv.toBlob)cv.toBlob(b=>{if(!b){go(cv.toDataURL('image/png'));return;}const u=URL.createObjectURL(b);go(u);setTimeout(()=>URL.revokeObjectURL(u),4000);},'image/png');else go(cv.toDataURL('image/png'));toast('PNG로 저장합니다');}catch(e){toast('저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');}}
+  imgSave(cv,nm,()=>{try{if(cv.toBlob)cv.toBlob(b=>{if(!b){go(cv.toDataURL('image/png'));return;}const u=URL.createObjectURL(b);go(u);setTimeout(()=>URL.revokeObjectURL(u),4000);},'image/png');else go(cv.toDataURL('image/png'));if(!IS_PHONE)toast('PNG로 저장합니다');}catch(e){toast('저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');}});}
 async function shotShare(cv,nm){try{const b=await new Promise(r=>cv.toBlob(r,'image/png'));if(!b)throw 0;evt('showSave');await navigator.share({files:[new File([b],nm,{type:'image/png'})]});}catch(e){if(e&&e.name==='AbortError')return;toast('공유하지 못했습니다');}}
 {const r=$('#cardShot');if(r){$('#cardShotSv').onclick=()=>{if(SHW.png)shotSave(SHW.png,shotName(SHW.o));};$('#cardShotSh').onclick=()=>{if(SHW.png)shotShare(SHW.png,shotName(SHW.o));};}}
 $('#cardOk').addEventListener('click',()=>{if(performance.now()-landAt>=800){SHW.png=null;SHW.fr=null;}});
@@ -9878,6 +9909,36 @@ async function decoClick(id){const d=TANK_DECO.find(x=>x.id===id),v=V4().tank;if
 
 /* ---- 어탁: 한지 위 먹 물고기 + 어종·크기·날짜·낚시터·이름 · PNG 저장 ---- */
 var GYO_FONT='"Noto Serif KR","Nanum Myeongjo","Batang","AppleMyungjo","Noto Serif CJK KR",serif';
+/* V135 어탁: 어종별 상세 그림(V125 FA)을 먹으로 찍은 것처럼 — 몸통·지느러미는 먹, 무늬는 짙은 먹, 밝은 줄(지느러미 살·옆줄)은 한지 빛,
+   눈은 붓으로 그려 넣음 · 비늘 자국·마른 붓결·먹 번짐 · FA에 없는 어종은 예전 그림 */
+function gyoFA(x,G,W,H,s,Rn){const n=faName(G.f);if(!n)return false;const o=faVar(G.k,+G.cm||0),RO=faOps(n,o);if(!RO)return false;
+  const key=n+JSON.stringify(o),bx=faBox(key,n,o),bw=bx[2]-bx[0],bh=bx[3]-bx[1];if(!(bw>0&&bh>0))return false;
+  let L=W*(bw/bh>3.2?.74:.6);L=Math.min(L,H*.5*bw/bh);const k=L/bw,u=1/k,PAP='238,228,205';
+  const lum=c=>{if(typeof c!=='string'||c[0]!=='#'||c.length<7)return .5;const v=parseInt(c.slice(1,7),16);return((v>>16&255)*.299+(v>>8&255)*.587+(v&255)*.114)/255;};
+  const bp=new Path2D(RO.body);x.save();x.translate(W*.45,H*.47);x.scale(k,k);x.translate(-(bx[0]+bw/2),-(bx[1]+bh/2));x.lineJoin=x.lineCap='round';
+  // 1) 먹 실루엣(몸통·지느러미) + 번짐
+  x.globalCompositeOperation='multiply';x.shadowColor='rgba(28,24,20,.42)';x.shadowBlur=7*s;
+  for(const p of RO.ops){if(p.c||!p.f||/a/.test(p.d)||p.d===RO.body)continue;x.fillStyle='rgba(30,27,24,.5)';x.fill(new Path2D(p.d));}/* 지느러미: 옅은 먹 */
+  x.fillStyle='rgba(22,20,18,.86)';x.fill(bp);/* 몸통: 짙은 먹 */
+  {const S0=faSpec(n)||{};if(S0.sq||S0.oct||S0.shr)for(const p of RO.ops){if(p.c||p.f||!p.s||(p.w||1)<1.2)continue;x.strokeStyle='rgba(24,22,20,.75)';x.lineWidth=p.w||1;x.stroke(new Path2D(p.d));}}/* 오징어 다리·새우 더듬이 같은 굵은 선(물고기 테두리 선은 찍지 않음) */
+  x.shadowBlur=0;
+  // 2) 몸통 안: 가장자리 짙게(번짐) · 무늬 농담 · 비늘 자국 · 마른 붓결
+  x.save();x.clip(bp);
+  x.lineWidth=Math.max(6*u*s,bh*.16);x.strokeStyle='rgba(14,12,10,.42)';try{x.filter='blur('+Math.round(5*s)+'px)';}catch(e){}x.stroke(bp);try{x.filter='none';}catch(e){}
+  for(const p of RO.ops){if(!p.c)continue;const P=new Path2D(p.d),a=p.o!=null?p.o:1;
+    if(p.f){const l=lum(p.f);if(l<.5){x.globalCompositeOperation='multiply';x.fillStyle='rgba(8,6,5,'+(.5*(1-l)*a).toFixed(3)+')';}else{x.globalCompositeOperation='source-over';x.fillStyle='rgba('+PAP+','+(.22*(l-.5)/.5*a).toFixed(3)+')';}x.fill(P);}
+    if(p.s){const l=lum(p.s);x.lineWidth=p.w||1;if(l<.5){x.globalCompositeOperation='multiply';x.strokeStyle='rgba(8,6,5,'+(.3*a).toFixed(3)+')';}else{x.globalCompositeOperation='source-over';x.strokeStyle='rgba('+PAP+','+(.12*a).toFixed(3)+')';}x.stroke(P);}}
+  x.globalCompositeOperation='source-over';
+  for(let i=0;i<Math.round(150*s+30);i++){const X=bx[0]+Rn()*bw,Y=bx[1]+Rn()*bh,l=bw*(.03+Rn()*.1);x.strokeStyle='rgba('+PAP+','+(.03+Rn()*.08).toFixed(3)+')';x.lineWidth=(1+Rn()*2.5)*u*s;x.beginPath();x.moveTo(X,Y);x.lineTo(X+l,Y+(Rn()-.5)*3*u*s);x.stroke();}
+  for(let i=0;i<Math.round(260*s+40);i++){const X=bx[0]+Rn()*bw,Y=bx[1]+Rn()*bh;x.fillStyle='rgba('+PAP+','+(.04+Rn()*.12).toFixed(3)+')';x.beginPath();x.ellipse(X,Y,(2+Rn()*9)*u*s,(1+Rn()*3)*u*s,Rn()*3,0,7);x.fill();}
+  x.restore();
+  // 3) 지느러미 살·옆줄 같은 가는 선: 지느러미 위에서는 한지 빛으로
+  const SP=faSpec(n)||{},soft=!!(SP.sq||SP.oct||SP.shr);
+  for(const p of RO.ops){if(p.c||p.f||!p.s||(p.w||1)>=1.2)continue;const l=lum(p.s);if(soft||l<.5){x.globalCompositeOperation='multiply';x.strokeStyle='rgba(20,18,16,'+(soft?.75:.45)+')';}else{x.globalCompositeOperation='source-over';x.strokeStyle='rgba('+PAP+',.42)';}x.lineWidth=(p.w||1)*(soft?1.1:.9);x.stroke(new Path2D(p.d));}x.globalCompositeOperation='source-over';
+  // 4) 눈: 붓으로 그려 넣음(원 모양 작은 칠)
+  {let E=null;for(const p of RO.ops){if(p.c||!p.f||!/a/.test(p.d))continue;const m=/^M(-?[\d.]+) (-?[\d.]+)a(-?[\d.]+)/.exec(p.d);if(!m)continue;const r=+m[3],ex=+m[1]+r,ey=+m[2];if(!E||r>E.r)E={x:ex,y:ey,r};}
+    if(E){const r=Math.max(E.r*1.15,bh*.06);x.fillStyle='#eee4cd';x.beginPath();x.arc(E.x,E.y,r,0,7);x.fill();x.strokeStyle='rgba(20,18,16,.92)';x.lineWidth=Math.max(.6,r*.24);x.beginPath();x.arc(E.x,E.y,r*.78,0,7);x.stroke();x.fillStyle='rgba(20,18,16,.96)';x.beginPath();x.arc(E.x,E.y,r*.42,0,7);x.fill();}}/* 어탁은 눈을 붓으로 그려 넣는다 */
+  x.restore();return true;}
 function gyoRec(g){const f=fishBy(g.k),d=save.dex[g.k]||{};return{f,k:g.k,cm:g.cm||(+d.best||null),where:g.where||d.where||'',at:g.at||0,ts:g.ts||0,nick:g.nick||save.nick||''};}
 function gyoDraw(cv,g){const G=gyoRec(g);if(!G.f)return;const W=cv.width,H=cv.height,x=cv.getContext('2d'),s=W/1200,R=rngOf(G.k+'|'+G.cm+'|'+G.ts);x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.globalAlpha=1;
   // 액자(짙은 나무)
@@ -9891,7 +9952,7 @@ function gyoDraw(cv,g){const G=gyoRec(g);if(!G.f)return;const W=cv.width,H=cv.he
   const nf=Math.round(1400*s*s+200);for(let i=0;i<nf;i++){const X=R()*W,Y=R()*H,a=R()*Math.PI,l=(6+R()*30)*s;x.strokeStyle=R()<.55?'rgba(150,122,82,.10)':'rgba(255,255,248,.30)';x.lineWidth=(.5+R()*1.1)*s;x.beginPath();x.moveTo(X,Y);x.quadraticCurveTo(X+Math.cos(a)*l*.5+(R()-.5)*6*s,Y+Math.sin(a)*l*.5+(R()-.5)*6*s,X+Math.cos(a)*l,Y+Math.sin(a)*l);x.stroke();}
   const nd=Math.round(1800*s*s+200);for(let i=0;i<nd;i++){x.fillStyle=R()<.7?'rgba(120,95,60,.10)':'rgba(90,70,45,.18)';x.fillRect(R()*W,R()*H,(.6+R())*s,(.6+R())*s);}
   // 먹 물고기(머리는 왼쪽)
-  const k=fishKind(G.f),r=FK_R[k];let L=W*(k==='l'?.8:k==='o'?.5:.62);L=Math.min(L,H*.56/r);const o=fishOutline(G.f,L,0,0),cx=W*.45,cy=H*.46;
+  if(!gyoFA(x,G,W,H,s,R)){const k=fishKind(G.f),r=FK_R[k];let L=W*(k==='l'?.8:k==='o'?.5:.62);L=Math.min(L,H*.56/r);const o=fishOutline(G.f,L,0,0),cx=W*.45,cy=H*.46;
   x.save();x.translate(cx,cy);x.scale(-1,1);x.globalCompositeOperation='multiply';
   x.shadowColor='rgba(28,24,20,.35)';x.shadowBlur=5*s;x.fillStyle='rgba(30,27,24,.27)';for(const F of o.fins){polyPath(x,F);x.fill();}x.shadowBlur=0;
   x.lineCap='round';for(const F of o.fins){const n=F.length/2|0;if(n<3)continue;for(let i=0;i<n;i++){const a=F[i],b=F[F.length-1-i];x.strokeStyle='rgba(26,23,20,'+(.32+R()*.3)+')';x.lineWidth=(.8+R()*1.1)*s;x.beginPath();x.moveTo(a[0],a[1]);x.quadraticCurveTo((a[0]+b[0])/2+(R()-.5)*3*s,(a[1]+b[1])/2,b[0],b[1]);x.stroke();}}
@@ -9907,7 +9968,7 @@ function gyoDraw(cv,g){const G=gyoRec(g);if(!G.f)return;const W=cv.width,H=cv.he
   x.globalAlpha=.22;x.strokeStyle='#eee4cd';x.lineWidth=2.2*s;x.beginPath();x.moveTo(L*.34,o.h*.05);x.quadraticCurveTo(0,-o.h*.15,-L*.3,o.h*.02);x.stroke();x.globalAlpha=1;x.restore();
   if(o.gill){x.strokeStyle='rgba(238,228,205,.38)';x.lineWidth=2.2*s;x.beginPath();x.arc(o.gill.x+o.gill.r*.55,o.gill.y,o.gill.r,Math.PI*.72,Math.PI*1.28);x.stroke();}
   const e=o.eye;if(e){x.fillStyle='#eee4cd';x.beginPath();x.arc(e.x,e.y,e.r*1.05,0,7);x.fill();x.strokeStyle='rgba(24,22,20,.9)';x.lineWidth=Math.max(1.5,e.r*.22);x.beginPath();x.arc(e.x,e.y,e.r*.8,0,7);x.stroke();x.fillStyle='rgba(24,22,20,.95)';x.beginPath();x.arc(e.x,e.y,e.r*.42,0,7);x.fill();}
-  x.restore();
+  x.restore();}
   // 글씨: 오른쪽 세로 어종 · 낙관 · 왼쪽 아래 크기·날짜·낚시터·이름
   const ink='#2a2420',nm=Array.from(G.k),fz=Math.round((nm.length>4?52:62)*s);x.fillStyle=ink;x.textAlign='center';x.textBaseline='middle';x.font='700 '+fz+'px '+GYO_FONT;
   const tx=W-m-62*s;let ty=m+52*s;for(const ch of nm){x.fillText(ch,tx,ty);ty+=fz*1.08;}
@@ -9940,7 +10001,7 @@ function gyoSave(cv,g){const G=gyoRec(g),nm='어탁_'+g.k+(G.cm?'_'+(+G.cm).toFi
   if(window.claude&&window.claude.use){(async()=>{try{const dl=await window.claude.use('downloads');if(!dl){toast('이 화면에서는 저장할 수 없습니다 · 그림을 길게 눌러 저장해 보세요');return;}
     const b=await new Promise(r=>cv.toBlob?cv.toBlob(r,'image/png'):r(null));if(!b){toast('저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');return;}
     await dl.save({filename:nm,data:b});toast('PNG로 저장했습니다');}catch(e){const c=e&&e.code;if(c==='declined')return;toast(c==='rate_limited'?'잠시 후 다시 눌러 주세요':'저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');}})();return;}
-  try{if(cv.toBlob)cv.toBlob(b=>{if(!b){go(cv.toDataURL('image/png'));return;}const u=URL.createObjectURL(b);go(u);setTimeout(()=>URL.revokeObjectURL(u),4000);},'image/png');else go(cv.toDataURL('image/png'));toast('PNG로 저장합니다');}catch(e){toast('저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');}}
+  imgSave(cv,nm,()=>{try{if(cv.toBlob)cv.toBlob(b=>{if(!b){go(cv.toDataURL('image/png'));return;}const u=URL.createObjectURL(b);go(u);setTimeout(()=>URL.revokeObjectURL(u),4000);},'image/png');else go(cv.toDataURL('image/png'));if(!IS_PHONE)toast('PNG로 저장합니다');}catch(e){toast('저장하지 못했습니다 · 그림을 길게 눌러 저장해 보세요');}});}
 function gyoBtn(n,d){const v=V4();let i=-1;v.gyo.forEach((g,j)=>{if(g.k===n)i=j;});if(i>=0)return'<div class="v4dx"><button class="mini" type="button" data-v4="gview" data-id="'+i+'">어탁 보기</button></div>';
   return d&&+d.best>0?'<div class="v4dx"><button class="mini" type="button" data-v4="gmk1" data-id="'+esc(n)+'">어탁 뜨기 · '+fmtN(GYOTAK_PRICE)+'P</button></div>':'';}
 
@@ -9986,6 +10047,10 @@ $('#tankbtn').addEventListener('click',()=>openTank());$('#wtankbtn').addEventLi
 function tripChipTick(){const c=$('#tripchip');if(!c)return;const on=!!curTrip&&inWorld()&&!tripGone&&tripEnd>0;if(c.hidden===on)c.hidden=!on;if(!on)return;
   const ms=Math.max(0,tripEnd-performance.now()),t='선상 남은 '+Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0');if(c.dataset.t!==t){c.dataset.t=t;c.textContent=t;}c.classList.toggle('warn',ms<=60e3);}
 setInterval(tripChipTick,500);
+/* V135 상태 배지 줄: 세 칩을 위쪽 줄(spotbar)에서 꺼내 오른쪽 위 세로 줄로 — 위쪽 줄 바로 아래에 붙인다 */
+function stRailPos(){const r=document.getElementById('stRail'),b=document.getElementById('spotbar');if(!r||!b)return;const y=Math.max(8,Math.round(b.getBoundingClientRect().bottom+6));if(r.dataset.y!==String(y)){r.dataset.y=String(y);r.style.top=y+'px';}}
+function stRailInit(){if(document.getElementById('stRail'))return;const w=document.getElementById('world');if(!w)return;const r=document.createElement('div');r.id='stRail';r.setAttribute('aria-label','지금 걸린 효과');['tripchip','bufchip','chumchip'].forEach(id=>{const e=document.getElementById(id);if(e)r.appendChild(e);});w.appendChild(r);stRailPos();addEventListener('resize',stRailPos);}
+stRailInit();setInterval(stRailPos,700);
 $('#tripchip').addEventListener('click',()=>{hudClose();const ms=Math.max(0,tripEnd-performance.now());toast((curTrip?curTrip.n+' · ':'')+'출조 남은 시간 '+Math.floor(ms/60000)+'분 '+(Math.floor(ms/1000)%60)+'초'+(TS?' · 잡은 고기 '+(TS.n||0)+'마리':'')+(TS&&TS.rig>0?' · 채비 손실 '+fmtN(TS.rig)+'P':'')+(TS&&TS.owe>0?' · 랭킹 선비 상환 남은 '+fmtN(TS.owe)+'P':'')+' · 시간이 끝나면 자동으로 귀항합니다',4200);});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)aqKick();});
 setInterval(chumTick,1000);V4();
@@ -10899,7 +10964,7 @@ function v38Hud(force){const now=performance.now();if(!force&&now-V38.hudT<500)r
     c.classList.toggle('warn',warn&&!low);c.classList.toggle('low',low);c.setAttribute('aria-label','포만감 '+N+' / '+SAT_MAX);
     if(!warn)V38.above=true;else if(V38.above){V38.above=false;toast('배가 출출합니다 · 식당에서 한 끼 하세요',3600);}
     if(low&&(state!=='idle'||autoOn)&&Date.now()-V38.lowT>120e3){V38.lowT=Date.now();toast('배가 많이 고픕니다 · 곧 낚시를 할 수 없습니다',3600);}}
-  if(b){const u=v38Buf(),bo=on&&u>0;if(b.hidden===bo)b.hidden=!bo;if(bo){const m=Math.max(1,Math.ceil((u-Date.now())/60e3)),t='손맛 '+m+'분';if(b.dataset.t!==t){b.dataset.t=t;b.textContent=t;b.title='손맛: 직접 낚시 경험치 +10% · '+m+'분';}}}}
+  if(b){const u=v38Buf(),bo=on&&u>0;if(b.hidden===bo)b.hidden=!bo;if(bo){const m=Math.max(1,Math.ceil((u-Date.now())/60e3)),t='손맛 +10% · '+m+'분';if(b.dataset.t!==t){b.dataset.t=t;b.textContent=t;b.title='손맛: 직접 낚시 경험치 +10% · '+m+'분';}}}}
 function v38ChipClick(){hudClose();if(V38.near){v38Open();return;}const n=v38N(v38Sat());toast(n<=0?SAT_TXT:n<SAT_LOW?'배가 많이 고픕니다 · 곧 낚시를 할 수 없습니다':n<SAT_WARN?'배가 출출합니다 · 식당에서 한 끼 하세요':'포만감 '+n,3000);}
 
 /* ---- 3D: 식당·카페 ---- */
@@ -11255,7 +11320,9 @@ async function v38Order(kind,b){if(V38.busy||V38E)return;const q=V38.q;if(!q)ret
     else{const o=v38EatLocal(kind,b);if(o.err){toast(o.err.message,3600);return;}j=o;if(o.settle&&o.settle.n)logMsg('자동 정산 · '+o.settle.n+'마리 · +'+fmtN(o.settle.pts)+'P','sys');}}
   finally{V38.busy=false;}
   $('#v38M').hidden=true;const o=j.dish||j.drink;const from=v38N(j.satFrom!=null?j.satFrom:j.sat-o.sat),to=v38N(j.sat);
-  const msg=(j.dish?o.n+' 한 그릇':/한 잔$/.test(o.n)?o.n:o.n+' 한 잔')+' · 포만감 +'+o.sat+' ('+from+' → '+to+')';v38Cook(q,kind,o,msg,!!j.free1);v38Hud(true);}
+  let msg=(j.dish?o.n+' 한 그릇':/한 잔$/.test(o.n)?o.n:o.n+' 한 잔')+' · 포만감 +'+o.sat+' ('+from+' → '+to+')';
+  /* V135: 손맛 버프가 붙는 요리인지 바로 알려 줌(음료·탕·구이에는 없음) */{const B=j.dish&&DISH[o.id];if(B&&B.buf){const u=v38Buf();msg+=' · 손맛 +10% '+(u?Math.max(1,Math.ceil((u-Date.now())/60e3)):30)+'분(오른쪽 위)';}else if(!V38.bufTip){V38.bufTip=1;setTimeout(()=>toast('손맛 버프(직접 낚시 경험치 +10% · 30분)는 회·초밥·물회·숙회를 먹을 때만 붙어요',4600),5600);}}
+  v38Cook(q,kind,o,msg,!!j.free1);v38Hud(true);}
 async function v38Drop(id,btn){if(btn)btn.disabled=true;if(SRV){const r=await net('cooler-drop',{id});if(r.s!==200||!r.j){toast(r.j&&r.j.message?String(r.j.message):errMsg(r));if(btn)btn.disabled=false;return;}if(V38.M)V38.M.cooler=r.j.cooler;}
   else{const c=save.cooler=coolerNorm(save.cooler),i=c.items.findIndex(x=>x.id===id);if(i<0){toast('쿨러에 그 고기가 없습니다');return;}c.items.splice(i,1);persist();if(V38.M)V38.M=v38LocalMenu(V38.M.at);}
   if(V38.M&&V38.M.menu&&V38.M.menu.dishes)delete V38.M.menu.dishes[id];V38.sel=null;{const pm=$('#v38M');if(pm&&!pm.hidden)v38Panel();}if(!$('#bag').hidden)renderBag();}
@@ -11674,14 +11741,14 @@ function ctRender(){const m=uiBox('ctM','modal','');m.hidden=false;m.onclick=e=>
    +'<div class="gpkchips" role="radiogroup" aria-label="종류" style="margin:10px 0 6px">'+Object.keys(CT_KIND).map(k=>'<button type="button" class="chip'+(CT.k===k?' on':'')+'" role="radio" aria-checked="'+(CT.k===k)+'" data-ctk="'+k+'">'+esc(CT_KIND[k].n)+'</button>').join('')+'</div>'
    +'<label class="ctlab" for="ctTxt">내용</label><textarea id="ctTxt" rows="4" maxlength="800" placeholder="'+esc(K.ph)+'">'+esc(CT.txt)+'</textarea>'
    +'<label class="duchk" style="margin:6px 0"><input type="checkbox" id="ctInfo"'+(CT.info?' checked':'')+'> 게임 정보 함께 보내기(닉네임·레벨·장소·기기·버전·최근 오류)</label>'
-   +'<details class="ctpv"><summary>보낼 내용 미리 보기</summary><pre id="ctPrev"></pre></details>'
+   +'<div class="ctpv2"><div class="ctlab">보낼 내용(이대로 복사돼요)</div><pre id="ctPrev"></pre></div>'
    +'<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn" type="button" id="ctGo">내용 복사하고 DM 열기</button><button class="ghost" type="button" id="ctPro">인스타그램만 열기</button></div>'
    +'<ol class="ctsteps"><li><b>[내용 복사하고 DM 열기]</b>를 누르면 내용이 복사되고 인스타그램 DM 창이 열려요</li><li>입력칸을 길게 눌러 <b>붙여넣기</b> → 보내기</li><li>화면 캡처를 같이 보내면 훨씬 빨리 고칠 수 있어요</li></ol>'
    +'<p class="k" style="margin:4px 0 0">비밀번호·전화번호 같은 개인정보는 적지 마세요 · DM을 보내려면 인스타그램 계정이 필요해요</p></div>';
   const g=id=>document.getElementById(id);g('ctX').onclick=()=>{m.hidden=true;};
   m.querySelectorAll('[data-ctk]').forEach(b=>b.onclick=()=>{CT.txt=g('ctTxt').value;const k=b.dataset.ctk;if(k!==CT.k){CT.k=k;CT.info=!!CT_KIND[k].info;}ctRender();});
   g('ctTxt').oninput=()=>{CT.txt=g('ctTxt').value;ctPrev();};g('ctInfo').onchange=()=>{CT.info=g('ctInfo').checked;ctPrev();};ctPrev();
-  g('ctGo').onclick=async()=>{CT.txt=g('ctTxt').value;if(CT.k==='bug'&&!CT.txt.trim()){toast('어떤 일이 있었는지 한 줄만 적어 주세요',2600);g('ctTxt').focus();return;}const ok=await ctCopy(ctMsg());toast(ok?'내용을 복사했어요 · DM 창에서 길게 눌러 붙여넣기 해 주세요':'복사가 안 되는 환경이에요 · 미리 보기 내용을 직접 적어 주세요',4200);setTimeout(()=>ctGo(CT_DM),ok?700:1600);};
+  g('ctGo').onclick=async()=>{CT.txt=g('ctTxt').value;if(CT.k==='bug'&&!CT.txt.trim()){toast('어떤 일이 있었는지 한 줄만 적어 주세요',2600);g('ctTxt').focus();return;}const ok=await ctCopy(ctMsg());toast(ok?'내용을 복사했어요 · DM 창에서 길게 눌러 붙여넣기 해 주세요':'복사가 안 되는 환경이에요 · 위 \'보낼 내용\'을 직접 적어 주세요',4200);setTimeout(()=>ctGo(CT_DM),ok?700:1600);};
   g('ctPro').onclick=()=>ctGo(CT_PRO);}
 function v44QInit(){const w=$('#world');if(!w||$('#v44q'))return;const n=document.createElement('nav');n.id='v44q';n.setAttribute('aria-label','바로 가기');
   n.innerHTML=[['duel','대결','대결 · 대회 · 선상 동출'],['ev','전국 대물','전국 대물 보기'],['gift','선물','선물 · 이달의 협찬 선물(무료 추첨)'],['rank','랭킹','랭킹 보기'],['contact','제보·문의','협업 · 오류 제보 · 문의(인스타그램 DM)'],['tank','어항','내 어항'],['food','식당','식당 안내']].map(([k,t,a])=>
