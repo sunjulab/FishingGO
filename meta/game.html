@@ -2781,13 +2781,13 @@ const TRASH_BINS=[{id:'plastic',n:'플라스틱',c:'#3d8bff'},{id:'vinyl',n:'비
 const TRASH={vinyl:{n:'비닐봉지',bin:'vinyl',pt:10,w:25},plastic:{n:'플라스틱 용기',bin:'plastic',pt:20,w:22},can:{n:'음료 캔',bin:'can',pt:20,w:16},glass:{n:'유리병',bin:'glass',pt:30,w:12},foam:{n:'스티로폼 부표 조각',bin:'foam',pt:40,w:10,sea:1},line:{n:'엉킨 낚싯줄·봉돌',bin:'gear',pt:50,w:10},net:{n:'폐그물 조각',bin:'gear',pt:80,w:5}};
 // 걸리는 확률: miss 입질 없음·챔질 실패·입질 놓침(비거리 TRASH_MIN_D m 이상) · snag 밑걸림 · net 투망 한 번(1개) · boat 선상 밑걸림 · 자동 낚시는 없음
 const TRASH_P={miss:.08,snag:.3,net:.2,boat:.3};
-const TRASH_BAG=30;
-const TRASH_DAY=20;
+const TRASH_BAG=100;/* V131: 30→100 */
+const TRASH_DAY=60;/* V131: 20→60 */
 const TRASH_OK_K=1.2;
 const TRASH_MIN_D=5;
 const TRASH_WAIT=10e3;
 const TRASH_STEP=10;
-const TRASH_EVT={md:'05-31',n:'바다의 날',k:2,day:40};
+const TRASH_EVT={md:'05-31',n:'바다의 날',k:2,day:120};
 const TRASH_TITLE=[100,500,1000];
 const TRASH_TIP='무색 투명 페트병은 실제로 라벨을 떼어 따로 배출해요 · 여기서는 유색 페트병·플라스틱 용기만';
 function trashW(id,s,how){const x=TRASH[id];if(!x)return 0;const fr=!!s&&s.w==='fresh';if(fr&&x.sea)return 0;let w=x.w;if(fr&&(id==='vinyl'||id==='can'))w*=1.5;else if(!fr&&s&&s.t==='갯바위'&&id==='line')w*=1.8;else if(!fr&&s&&(s.t==='항구'||s.t==='방파제')&&(id==='plastic'||id==='can'))w*=1.4;if((how==='snag'||how==='boat'||how==='net')&&(id==='net'||id==='line'))w*=2;return w;}
@@ -4884,7 +4884,7 @@ function v106Apply(s,now){if(V106.s!==s||V106.scene!==scene)return;V106.R.forEac
   if(S&&typeof S.logo==='string'&&/^https:\/\//.test(S.logo)){const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{if(q.sign===S){q.logo=im;try{v106Draw(q);}catch(e){q.logo=null;v106Draw(q);}}};im.src=S.logo;}});}
 function v106Hit(){if(V106.scene!==scene||!V106.R.length)return null;return _v38ray.intersectObjects(V106.R.map(q=>q.m),false)[0]||null;}
 const TOWN_W=[0xf6dfb0,0xaae0c0,0xf4b8a4,0xc6d2e0,0xf4efe2],TOWN_R=[0xd65441,0x416ba7,0xe89a36,0x3bab8c];
-/* V129 크리스마스 마을 장식(예고 주간 11/25 ~ 12/26 · xmasDecoOn) — 광고 상가 지붕선 전구 줄 · 상가 사이 큰 트리 · 식당·카페 옆 작은 트리(v38Build) · 밤 장식 눈 · 빈 간판 Merry Christmas */
+/* V129 크리스마스 마을 장식(11/23 ~ 12/26(V130 운영자 요청: 장식만 먼저) · xmasDecoOn) — 광고 상가 지붕선 전구 줄 · 상가 사이 큰 트리 · 식당·카페 옆 작은 트리(v38Build) · 밤 장식 눈 · 빈 간판 Merry Christmas */
 function xmasDecoNow(){try{return xmasDecoOn(Date.now(),xmasNowCfg());}catch(e){return false;}}
 const XDC=[0xff3b3b,0x3bdc6b,0xffd24a,0x4aa8ff];const xdM=()=>XDC.map(c=>ownM(new THREE.MeshBasicMaterial({color:c})));
 function xmasTree(x,y,z,h,LQ){const g=new THREE.Group(),seg=LQ?6:10,gm=ownM(new THREE.MeshLambertMaterial({color:0x1f7a44,emissive:ENV.night?0x0c3a1e:0x000000})),bm=xdM();
@@ -6931,7 +6931,7 @@ function giftOf(inv,id){return!!(inv&&inv.gift&&id&&inv.gift[id]);}
    · 무엇이 들었는지는 열 때 정한다: 지금까지 풀린 몫 − 이미 나간 수(서버 표 xmas_take)에 비례해 종류를 꺼냄(카드 더미에서 한 장씩 뽑는 것과 같음)
    · 포인트 칸은 그날 XMAS_PT_BOX번째 상자까지만, 상자 포인트(중복 환급 포함)는 하루 XMAS_PT_DAY까지 — 넘으면 소모품 · 천장: XMAS_PITY개 안에 C급 이상이 없으면 C급(이벤트당 1번) · 중복은 가격 × XMAS_DUP
    · 받은 장비는 inv.gift(g:'xmas')로 레벨·어록 조건 없이 장착(테스터 감사와 같은 길) · 12/31 23:59까지 못 연 상자는 개당 XMAS_LEFT_PT로 바뀜 ===== */
-const XMAS={teaser:Date.parse('2026-11-25T00:00:00+09:00'),from:Date.parse('2026-12-01T00:00:00+09:00'),until:Date.parse('2026-12-27T00:00:00+09:00'),openUntil:Date.parse('2027-01-01T00:00:00+09:00'),days:26,lv:5,cupFrom:Date.parse('2026-12-20T00:00:00+09:00')};
+const XMAS={teaser:Date.parse('2026-11-25T00:00:00+09:00'),from:Date.parse('2026-12-01T00:00:00+09:00'),until:Date.parse('2026-12-27T00:00:00+09:00'),openUntil:Date.parse('2027-01-01T00:00:00+09:00'),days:26,lv:5,cupFrom:Date.parse('2026-12-20T00:00:00+09:00'),deco:Date.parse('2026-11-23T00:00:00+09:00')};
 const XMAS_KEYS=['pt','c','cos','A','B','C','L'];
 const XMAS_POOL={pt:500000,c:250000,cos:120000,A:80000,B:35000,C:14900,L:100};
 const XMAS_NAME={pt:'포인트',c:'소모품',cos:'꾸미기',A:'A급 장비',B:'B급 장비',C:'C급 장비',L:'전설'};
@@ -6957,9 +6957,9 @@ const XMAS_CUP_PT=[30000,15000,15000,5000,5000,5000,5000,5000,5000,5000];
 const XMAS_CUP_TITLE='t_santa26';
 function xmasCupOn(now,X){X=X||XMAS;return now>=X.cupFrom&&now<X.until;}
 function xmasCupKey(X){X=X||XMAS;return'x'+new Date(X.from+9*36e5).getUTCFullYear();}
-function xmasDecoOn(now,X){X=X||XMAS;return now>=X.teaser&&now<X.until;}
+function xmasDecoOn(now,X){X=X||XMAS;return now>=(X.deco||X.teaser)&&now<X.until;}/* V130 장식은 예고 공지보다 먼저(11/23) */
 
-function xmasCfgOf(fromIso){if(!fromIso)return XMAS;const f=Date.parse(fromIso);if(!(f>0))return XMAS;const d=f-XMAS.from;return{teaser:XMAS.teaser+d,from:f,until:XMAS.until+d,openUntil:XMAS.openUntil+d,days:XMAS.days,lv:XMAS.lv,cupFrom:XMAS.cupFrom+d};}
+function xmasCfgOf(fromIso){if(!fromIso)return XMAS;const f=Date.parse(fromIso);if(!(f>0))return XMAS;const d=f-XMAS.from;return{teaser:XMAS.teaser+d,from:f,until:XMAS.until+d,openUntil:XMAS.openUntil+d,days:XMAS.days,lv:XMAS.lv,cupFrom:XMAS.cupFrom+d,deco:XMAS.deco+d};}
 function xmasOn(now,X){X=X||XMAS;return now>=X.from&&now<X.until;}
 function xmasDayN(now,X){X=X||XMAS;if(now<X.from)return 0;return Math.min(X.days,Math.floor((now-X.from)/864e5)+1);}
 function xmasReleased(k,now,X){X=X||XMAS;return Math.floor((XMAS_POOL[k]||0)*xmasDayN(now,X)/X.days);}
@@ -6971,7 +6971,7 @@ function xmasGroup(k){const R=GEAR.rod,LG=LAND_GEAR,PT=COSM.pet;const by=(tis)=>
 /* 확률 표(공개용): 종류별 비율 = 풀 비율 · 한 항목 = 비율 ÷ 묶음 수 */
 function xmasTable(){const T=XMAS_KEYS.reduce((s,k)=>s+XMAS_POOL[k],0);return XMAS_KEYS.map(k=>{const g=xmasGroup(k);return{k,name:XMAS_NAME[k],total:XMAS_POOL[k],pct:XMAS_POOL[k]/T*100,n:g.length,each:g.length?XMAS_POOL[k]/T*100/g.length:null};});}
 // V120 대결 모드(공유 규칙 — 서버 /duel과 화면이 같은 값을 쓴다) · 판돈·플레이어 간 포인트 이동 없음, 보상은 시스템 고정 보너스만
-const DUEL={mins:[10,20,30],roomMax:20,partyMax:8,partyMins:15,cdMs:10e3,graceMs:30e3,dayRew:5,sameRew:2,askGap:30e3,askTtl:60e3,quickWait:30e3,quickPw:.3,hcK:.02,hcMax:.3,partyDisc:.1,boardMs:30e3,joinLate:3e5,cupOpen:72e5,cupMinN:10,K:32,start:1000,ffMax:3,ffBlockMs:36e5,repHide:3};
+const DUEL={mins:[10,20,30],roomMax:20,partyMax:8,partyMins:15,cdMs:10e3,graceMs:30e3,dayRew:5,sameRew:2,askGap:30e3,askTtl:60e3,quickWait:30e3,quickPw:.3,hcK:.02,hcMax:.3,partyDisc:.1,boardMs:30e3,partyRfDay:1,joinLate:3e5,cupOpen:72e5,cupMinN:10,K:32,start:1000,ffMax:3,ffBlockMs:36e5,repHide:3};
 const DUEL_MODES={sum:'총 점수',big:'대물 한 방',cnt:'마릿수',fish:'지정 어종'};
 const DUEL_REW={'1v1':[300,100],room:[500,300,150],party:[600,350,200],team:[400,150]};
 const DUEL_CUP=[[.01,5000],[.1,2000],[.5,500],[1,200]];
@@ -7189,7 +7189,7 @@ async function attClaim2(){if(evBusy||!ATT2)return;evBusy=true;renderEvt();let r
 /* ===== V128 크리스마스 선물 상자 화면(서버 /xmas · /xmas-open, 공유 규칙 XMAS_*) — 이벤트 창 '크리스마스 선물' 탭
    예고 주간(11/25~)부터 탭이 보이고, 12/1 0시부터 상자가 걸린다 · 남은 전설 N/100 · 오늘 남은 상자 · 확률·총수·남은 수 공개(확률형 아이템 표시) ===== */
 let XA=null,XC=null,xaBusy=false,xcRows=null,xcAt=0,XS=null,XT=null,xmBusy=false,xmLast=null,xmProb=false,xmTeaseDay='';
-function xmasNowCfg(){return XS&&XS.from?{teaser:XS.from-(XMAS.from-XMAS.teaser),from:XS.from,until:XS.until,openUntil:XS.openUntil,days:XMAS.days,lv:XS.lv||XMAS.lv,cupFrom:XS.from+(XMAS.cupFrom-XMAS.from)}:XMAS;}
+function xmasNowCfg(){return XS&&XS.from?{teaser:XS.from-(XMAS.from-XMAS.teaser),from:XS.from,until:XS.until,openUntil:XS.openUntil,days:XMAS.days,lv:XS.lv||XMAS.lv,cupFrom:XS.from+(XMAS.cupFrom-XMAS.from),deco:XS.from+(XMAS.deco-XMAS.from)}:XMAS;}
 function xmasVisible(){if(!SRV)return false;const X=xmasNowCfg(),n=Date.now();return(n>=X.teaser&&n<X.openUntil)||!!(XS&&(XS.preview||XS.held>0));}
 async function xmasLoad(){if(!SRV)return null;const r=await net('xmas',{});if(r.s===200&&r.j&&r.j.xmas){XS=r.j.xmas;if(r.j.table)XT=r.j.table;if(r.j.adv)XA=r.j.adv;if(r.j.cup)XC=r.j.cup;if(r.j.cupWin)xcupWon(r.j);if(r.j.converted){toast('못 연 선물 상자를 '+fmtN(r.j.converted)+'P로 바꿨습니다',4000);if(typeof r.j.pt==='number')save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);refreshWallet();}evBadge();xmasTease();}return XS;}
 function xmasTease(){if(!XS||!XS.teaser)return;const d=dayKey();if(xmTeaseDay===d)return;xmTeaseDay=d;setTimeout(()=>toast('12월 1일 0시, 바다에 크리스마스 선물 상자가 떨어집니다 · 전설은 이벤트 전체 100개 한정',5000),1500);}
@@ -8085,7 +8085,7 @@ const unlKey=()=>{if(!SRV)return KEY+'.unl.l';let u='';try{u=acctUid()||'';}catc
 function unlBase(){let v=null;try{v=JSON.parse(localStorage.getItem(unlKey())||'null');}catch(e){}return Array.isArray(v)?v:(UNL_MEM[unlKey()]||null);}
 function unlSave(a){UNL_MEM[unlKey()]=a;try{localStorage.setItem(unlKey(),JSON.stringify(a));}catch(e){}}
 function unlockCheck(){clearTimeout(unlT);unlT=setTimeout(unlockRun,80);}
-function unlockRun(){if(NET_API&&tokNow()&&!SRV&&!netDone)return[];const S=unlockKeys(),B=unlBase();if(!B){unlSave(S);return[];}const had=new Set(B);const nw=S.filter(k=>!had.has(k));if(!nw.length)return[];
+function unlockRun(){if(NET_API&&authTok()&&!SRV&&!netDone)return[];const S=unlockKeys(),B=unlBase();if(!B){unlSave(S);return[];}const had=new Set(B);const nw=S.filter(k=>!had.has(k));if(!nw.length)return[];
   unlSave(B.concat(nw));unlQ=unlQ.concat(nw);unlockPop();return nw;}
 function unlockPop(){clearTimeout(unlWait);if(!unlQ.length)return;if(BUSY_ST[state]){unlWait=setTimeout(unlockPop,1500);return;}
   const ks=unlQ;unlQ=[];const CO=['rod','line','leader','term'];
@@ -8167,6 +8167,19 @@ async function boatAutoToggle(){if(!curTrip)return;const want=!BOATAUTO;if(want&
   if(want){BA_NEXT=performance.now()+52e3;BA_Q=[];BA_P=null;toast('선상 자동 낚시를 켰습니다 · 고기가 물면 바로 끌어 올리고(포인트는 직접 낚을 때와 같음), 앱을 꺼도 출조가 끝날 때까지 계속 낚습니다');}else boatAutoMsg(r.j.boatAuto);renderAutoBtn();}
 function apiURL(p){return new URL(NET_API+'/'+p,location.href).href;}
 function tokNow(){try{return localStorage.getItem('access_token')||'';}catch(e){return'';}}
+/* V134 게임 전용 로그인 유지(게임 통행증 meta_gsess): 낚시GO 토큰이 살아 있으면 그걸 쓰고, 끝났으면 게임 서버가 준 통행증(7일, 최대 30일)으로 계속 접속.
+   낚시GO 로그인 서버가 잠들어도 기다리지 않음(갱신은 뒤에서). 낚시GO에서 로그아웃(토큰·refresh 모두 없음)하거나 다른 계정이면 통행증을 지운다 */
+const GS_KEY='meta_gsess';let gsAt=0;
+function b64json(seg){try{return JSON.parse(decodeURIComponent(escape(atob(String(seg).replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return null;}}
+function tokUid(t){const p=t&&b64json(String(t).split('.')[1]);if(!p)return'';return String(p.id!=null?p.id:(p.email||'')).trim();}
+function gsDrop(){try{localStorage.removeItem(GS_KEY);}catch(e){}}
+function gsCreds(){return !!(tokNow()||lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token'));}
+function gsTok(){const g=lsGet(GS_KEY);if(!g)return'';if(!gsCreds()){gsDrop();return'';}const p=b64json(g.split('.')[1]);if(!p||p.typ!=='gsess'||(+p.exp||0)*1000-Date.now()<60e3)return'';
+  const a=tokNow(),u=a&&tokUid(a);if(u&&u!==p.uid){gsDrop();return'';}return g;}
+function authTok(){const t=tokNow();if(t&&tokExp(t)-Date.now()>30e3)return t;return gsTok()||t;}
+function gsKeep(){if(!NET_API||Date.now()-gsAt<10*60e3)return;const g=gsTok(),p=g&&b64json(g.split('.')[1]),a=tokNow(),aok=a&&tokExp(a)-Date.now()>30e3;
+  if(!aok&&!g)return;if(g&&p&&(+p.exp*1000-Date.now()>6*864e5))return;gsAt=Date.now();
+  net('session',{}).then(r=>{if(r.s===200&&r.j&&typeof r.j.gs==='string')lsSet(GS_KEY,r.j.gs);}).catch(()=>{});}
 /* V58: 낚시GO 로그인 토큰은 1시간이면 끝난다. 게임 화면에서는 낚시GO가 갱신해 주지 않으므로(낚시GO API를 부르지 않음),
    끝나기 전·401(TOKEN_INVALID)일 때 게임이 직접 낚시GO 갱신(/api/auth/refresh)을 부르고 새 토큰을 낚시GO와 같은 자리에 저장한다.
    CFG.auth(낚시GO 백엔드 주소)가 있을 때만. 여러 창이 동시에 갱신하지 않게 잠금(navigator.locks) + 저장된 새 토큰 다시 확인 */
@@ -8174,7 +8187,7 @@ const AUTH_API=String(CFG.auth||'').replace(/\/+$/,'');
 function tokExp(t){try{const p=JSON.parse(decodeURIComponent(escape(atob(String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))));return(+p.exp||0)*1000;}catch(e){return 0;}}
 function lsGet(k){try{return localStorage.getItem(k)||'';}catch(e){return'';}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
-let tokFly=null,tokFailAt=0;
+let tokFly=null,tokFailAt=0,tokDown=0;/* V133: tokDown=갱신이 낚시GO 서버 응답 없음(잠에서 깨는 중·5xx·시간 초과)으로 실패한 시각 — 401/403(로그인 유지 끝남)과 구분 */
 /* need: 남은 시간이 이보다 적으면 갱신. 실패하면 2분 동안 다시 부르지 않음. 낚시GO가 같은 때 갱신 중일 수 있어 잠깐 기다렸다가 저장소를 다시 본다(같은 refresh 토큰을 두 번 보내지 않게) */
 function tokFresh(force,old,need){if(!AUTH_API)return Promise.resolve(tokNow());if(tokFly)return tokFly;need=need||90e3;
   const run=async()=>{const fresh=t=>t&&(t!==old||!force)&&tokExp(t)-Date.now()>need;let cur0=tokNow();if(fresh(cur0))return cur0;
@@ -8183,12 +8196,12 @@ function tokFresh(force,old,need){if(!AUTH_API)return Promise.resolve(tokNow());
     await sleepMs(300+Math.random()*1200);const cur1=tokNow(),rt=lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token');
     if(cur1!==cur0&&tokExp(cur1)-Date.now()>60e3)return cur1;/* 그 사이 낚시GO가 바꿈 */if(!rt)return cur1;
     const c=new AbortController();const tm=setTimeout(()=>c.abort(),60e3);/* Render가 잠에서 깨는 시간까지 기다림(중간에 끊으면 바뀐 토큰을 못 받음) */
-    try{const res=await xfetch(AUTH_API+'/api/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:rt})},60e3);if(!res.ok){tokFailAt=Date.now();return tokNow();}
+    try{const res=await xfetch(AUTH_API+'/api/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:rt})},60e3);if(!res.ok){tokFailAt=Date.now();tokDown=(res.status>=500||res.status===429)?Date.now():0;return tokNow();}
       const j=await res.json();const at=j&&(j.accessToken||j.token);if(!at){tokFailAt=Date.now();return tokNow();}
       lsSet('access_token',at);if(lsGet('CapacitorStorage.access_token'))lsSet('CapacitorStorage.access_token',at);
       if(j.refreshToken){lsSet('refresh_token',j.refreshToken);if(lsGet('CapacitorStorage.refresh_token'))lsSet('CapacitorStorage.refresh_token',j.refreshToken);}
       try{const P=typeof capPlug==='function'&&isApp()&&capPlug('Preferences');if(P&&P.set){P.set({key:'access_token',value:at}).catch(()=>{});if(j.refreshToken)P.set({key:'refresh_token',value:j.refreshToken}).catch(()=>{});}}catch(e){}/* 앱 저장소도 같이 */
-      tokFailAt=0;return at;}catch(e){tokFailAt=Date.now();return tokNow();}finally{clearTimeout(tm);}};
+      tokFailAt=0;tokDown=0;return at;}catch(e){tokFailAt=Date.now();tokDown=Date.now();return tokNow();}finally{clearTimeout(tm);}};
   tokFly=(async()=>{try{return(navigator.locks&&navigator.locks.request)?await navigator.locks.request('fishinggo-auth-refresh',run):await run();}finally{tokFly=null;}})();return tokFly;}
 /* 미리 갱신: 1분마다 확인해 5분 안에 끝나면 갱신, 끊겨 있었으면 되살림 */
 if(AUTH_API)setInterval(async()=>{const t=tokNow();if(!t||document.hidden)return;if(tokExp(t)-Date.now()<5*60e3){await tokFresh(false,'',5*60e3);}if(typeof NET_DEAD!=='undefined'&&NET_DEAD&&tokNow()&&tokNow()!==deadTok)revive(true);},60e3);
@@ -8215,7 +8228,7 @@ function errMsg(r){const e=r&&r.j&&r.j.error;const T=e&&ERR_KO[e];if(T){try{retu
 const sleepMs=ms=>new Promise(r=>setTimeout(r,ms));
 // v23 요청: 토큰은 매번 다시 읽는다(낚시GO가 갱신함). 8초 제한(본문까지), 409 CONFLICT는 프로필을 다시 받은 뒤 최대 3번 재시도(지터), 401은 새 토큰이 있으면 다시, 없으면 안내 띠
 let deadTok='';
-async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const post=body!==undefined;if(AUTH_API&&tokNow()&&tokExp(tokNow())-Date.now()<60e3)await tokFresh(false);/* V58 */const tok=tokNow();
+async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const post=body!==undefined;if(AUTH_API&&tokNow()&&tokExp(tokNow())-Date.now()<60e3){if(gsTok()&&path!=='session')tokFresh(false).catch(()=>{});else await tokFresh(false);}/* V58 · V134 통행증이 있으면 낚시GO 갱신을 기다리지 않음 */const tok=authTok();
   if(NET_DEAD&&tok&&tok!==deadTok)revive(true);
   if(NET_DEAD&&post)return{s:401,j:{error:'TOKEN_INVALID',message:'다시 로그인해 주세요'}};
   if(TAB_RO&&post)return{s:0,j:{error:'TAB_RO',message:'다른 탭에서 열려 있습니다'}};
@@ -8225,7 +8238,9 @@ async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const pos
   catch(e){s=0;}finally{clearTimeout(tm);}
   const k=o.n409||0;if(s===409&&j&&j.error==='CONFLICT'&&k<3&&!o.no409){await sleepMs(120+Math.random()*380*(k+1));if(!k){const p=await net('profile',undefined,{n409:9});if(p.s===200&&p.j)applyProfile(p.j);}return net(path,body,Object.assign({},o,{n409:k+1}));}
   if(s===401&&!o.again401&&AUTH_API&&tok&&tokExp(tok)-Date.now()<120e3){const nt=await tokFresh(true,tok);if(nt&&nt!==tok){if(NET_DEAD)NET_DEAD=false;return net(path,body,Object.assign({},o,{again401:1}));}}/* V58: 토큰 끝남 → 갱신 뒤 한 번 더 */
+  if(s===401&&tok&&tok===lsGet(GS_KEY)){gsDrop();if(!o.again401&&authTok()&&authTok()!==tok)return net(path,body,Object.assign({},o,{again401:1}));}/* V134 통행증 만료·차단 → 지우고 낚시GO 토큰으로 */
   if(s===401&&!o.again401&&tokNow()&&tokNow()!==tok)return net(path,body,Object.assign({},o,{again401:1}));
+  if(s===200&&path!=='session')gsKeep();
   if(s===401&&SRV)authLost(tok);
   try{v35Sync(path,s,j);}catch(e){}/* v35 내구도·자동 수리 */
   try{v36Sync(path,s,j);}catch(e){}/* v36 안내 퀘스트·전국 대물·짧은 목표 */
@@ -8248,12 +8263,23 @@ async function offRetry(manual){if(SRV)return;const rc=$('#reconnect');if(rc&&ma
 function loginHref(){const s=cur||sel;let r='/meta'+(s&&s.id&&/^[\w-]{1,24}$/.test(s.id)?'?spot='+s.id:'');if(r[0]!=='/'||r.startsWith('//'))r='/meta';return'/login?redirect='+encodeURIComponent(r);}
 function showBanner(){const b=$('#netBanner');b.innerHTML='다시 로그인해 주세요 · 지금은 기록이 저장되지 않습니다<a href="'+esc(loginHref())+'" target="_top">로그인</a><button type="button" id="reconnect">다시 연결</button>';b.hidden=false;
   const rc=$('#reconnect');if(rc)rc.onclick=async()=>{rc.disabled=true;rc.textContent='확인 중…';const ok=await revive(false);if(!ok){rc.disabled=false;rc.textContent='다시 연결';toast('아직 로그인되지 않았습니다 · 낚시GO에서 로그인한 뒤 다시 누르세요');}};}
-function authLost(tok){NET_DEAD=true;deadTok=tok||tokNow();showBanner();}
+function authLost(tok){NET_DEAD=true;deadTok=tok||tokNow();if(wakeOK())wakeBanner();else showBanner();}
+/* V133: 낚시GO 로그인 서버(Render)가 잠에서 깨는 중이라 토큰 갱신이 안 된 경우 — 빨간 '다시 로그인' 대신 '연결 중' 안내 + 20초마다 자동 갱신·재연결(최대 10분) */
+let wakeT=null,wakeAt=0;
+function wakeOK(){return !!(AUTH_API&&tokDown&&Date.now()-tokDown<5*60e3&&(lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token'))&&(!wakeAt||Date.now()-wakeAt<10*60e3));}
+function wakeBanner(){if(!wakeAt)wakeAt=Date.now();const b=$('#netBanner');b.innerHTML='낚시GO 로그인 서버를 깨우는 중입니다 · 잠시만 기다리면 자동으로 다시 연결됩니다(로그인 다시 안 해도 돼요)<button type="button" id="reconnect">지금 다시 시도</button>';b.hidden=false;
+  const rc=$('#reconnect');if(rc)rc.onclick=()=>wakeTry(true);clearInterval(wakeT);wakeT=setInterval(()=>wakeTry(false),20e3);}
+async function wakeTry(manual){const rc=$('#reconnect');if(manual&&rc){rc.disabled=true;rc.textContent='확인 중…';}
+  if(!NET_DEAD){clearInterval(wakeT);wakeT=null;wakeAt=0;return;}
+  tokFailAt=0;await tokFresh(true,deadTok);const ok=await revive(true);
+  if(ok){clearInterval(wakeT);wakeT=null;wakeAt=0;if(!SRV)location.reload();/* 시작할 때 못 붙었으면 새로 불러 계정 기록으로 */return;}
+  if(!wakeOK()){clearInterval(wakeT);wakeT=null;wakeAt=0;showBanner();return;}
+  if(manual&&rc){rc.disabled=false;rc.textContent='지금 다시 시도';toast('아직 깨어나는 중입니다 · 자동으로 계속 시도합니다');}}
 // v23: 같은 창에서 낚시GO가 토큰을 새로 넣으면(또는 "다시 연결") 세션을 되살린다 — 요청마다·포커스·탭 복귀 때 확인
 let reviving=null;
-function revive(quiet){if(reviving)return reviving;reviving=(async()=>{const tok=tokNow();if(!tok)return false;const was=NET_DEAD;NET_DEAD=false;const r=await net('profile');
+function revive(quiet){if(reviving)return reviving;reviving=(async()=>{const tok=authTok();if(!tok)return false;const was=NET_DEAD;NET_DEAD=false;const r=await net('profile');
   if(r.s===200&&r.j&&typeof r.j.pt==='number'){$('#netBanner').hidden=true;deadTok='';if(SRV)applyProfile(r.j);if(was&&!quiet)toast('다시 연결했습니다');else if(was)toast('다시 연결했습니다');ppRun(true);if(was){try{wsBack=1000;wsKick();}catch(e){}}/* V58: 끊겼다 되살아나면 실시간 방도 다시 연결 */return true;}
-  if(r.s===401){NET_DEAD=true;deadTok=tok;showBanner();}else if(was){NET_DEAD=true;}return false;})().finally(()=>{reviving=null;});return reviving;}
+  if(r.s===401){NET_DEAD=true;deadTok=tok;if(wakeOK())wakeBanner();else showBanner();}else if(was){NET_DEAD=true;}return false;})().finally(()=>{reviving=null;});return reviving;}
 function tokCheck(){if(NET_DEAD&&tokNow()&&tokNow()!==deadTok)revive(true);}
 addEventListener('focus',tokCheck);
 // 서버 프로필 → 화면 저장값
@@ -8280,9 +8306,9 @@ async function notesShow(L){if(notesBusy||!Array.isArray(L))return;const q=L.fil
 async function srvReconcile(){const [p,w]=await Promise.all([net('profile'),net('wallet')]);if(p.s===200&&p.j&&typeof p.j.pt==='number')applyProfile(p.j);if(w.s===200&&w.j)setWal(w.j);refreshWallet();bagRefresh();if(!$('#shop').hidden)renderShop();return p.s===200?p.j:null;}
 async function srvRefresh(){const r=await net('profile');if(r.s===200&&r.j)applyProfile(r.j);}
 // 시작: 프로필 → (조건 맞으면) 브라우저 기록 1회 이전
-const netReady=(async()=>{if(NET_API&&!tokNow()&&AUTH_API&&(lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token')))await tokFresh(true,'');/* V59: 접속 토큰이 없어도 로그인 유지 정보(refresh)가 있으면 받아서 자동 연결 */if(!NET_API||!tokNow())return;let local=null;try{local=JSON.parse(JSON.stringify(save));}catch(e){}
+const netReady=(async()=>{if(NET_API&&!tokNow()&&AUTH_API&&(lsGet('refresh_token')||lsGet('CapacitorStorage.refresh_token'))){if(gsTok())tokFresh(true,'').catch(()=>{});else await tokFresh(true,'');}/* V134 통행증이 있으면 바로 접속 *//* V59: 접속 토큰이 없어도 로그인 유지 정보(refresh)가 있으면 받아서 자동 연결 */if(!NET_API||!authTok())return;let local=null;try{local=JSON.parse(JSON.stringify(save));}catch(e){}
   const r=await net('profile');
-  if(r.s!==200||!r.j||typeof r.j.pt!=='number'){if(r.s===401)showBanner();else if(!V45.stop)offBanner();/* v45 시험 끝·인원 다 참이면 연습 모드로 넘기지 않음 */return;}
+  if(r.s!==200||!r.j||typeof r.j.pt!=='number'){if(r.s===401){if(wakeOK()){NET_DEAD=true;deadTok=authTok();wakeBanner();}else showBanner();}/* V134: 낚시GO 서버가 깨어나는 중이면 연결 중 안내 */else if(!V45.stop)offBanner();/* v45 시험 끝·인원 다 참이면 연습 모드로 넘기지 않음 */return;}
   SRV=true;
   /* V57: 기존 기기 기록 자동 이전 — 서버 계정에 조과가 있어도 이 기기 기록이 더 앞서 있으면 1회 옮긴다(상한 Lv.10·10,000P·Lv.3 이하 장비·어록 10종, 서버가 적용).
      옮기는 동안 서버 Lv.1이 잠깐 보이지 않게 이전을 먼저 하고 결과를 한 번에 보여 준다. 예전(V56) 표시는 무시하고 새 표시(.mig2)로 한 번 더 시도 */
@@ -8830,7 +8856,7 @@ async function duelPoll(now){if(!SRV)return;clearTimeout(DU.t);if(DU.busy){DU.t=
   if(r&&r.s===200&&r.j){duTake(r.j);if(r.j.result)duResult(r.j.result);if(r.j.ask&&(!DU.ask||DU.ask.id!==r.j.ask.id))duAsked(r.j.ask);}
   const d=DU.cur;if(d&&duLive(d)){const pre=d.kind==='cup'&&Date.now()<d.start-60e3;DU.t=setTimeout(()=>duelPoll(),pre?30000:d.state==='live'&&d.kind==='cup'?5000:3000);}}
 function duTake(j){if(j.st)DU.st=j.st;if(typeof j.pt==='number'){save.pt=j.pt;if(j.wallet)setWal(j.wallet);refreshWallet();}
-  const prev=DU.cur;DU.cur=j.duel&&j.duel.state!=='cancel'?j.duel:null;if(j.duel&&j.duel.state==='cancel'&&prev&&prev.state!=='cancel')toast('대결이 취소되었습니다',3000);
+  const prev=DU.cur;DU.cur=j.duel&&j.duel.state!=='cancel'?j.duel:null;if(j.duel&&j.duel.state==='cancel'&&(j.duel.refund||prev&&prev.state!=='cancel')){if(j.duel.boatDay)try{boatDayTake({boatDay:j.duel.boatDay});boatBadge();}catch(e){}toast(j.duel.kind==='party'?(j.duel.refund?'파티원이 다 타지 못해 선상 파티가 취소됐어요 · 이번 출조는 평소처럼 계속되고, '+(j.duel.refund==='x'?'충전권 1장':'오늘 선상 횟수 1회')+'을 돌려드렸어요':'선상 파티가 취소됐어요 · 2명 이상 타야 시작해요'):'대결이 취소되었습니다',j.duel.refund?5200:3000);}/* V132 */
   if(DU.cur)duNews(prev,DU.cur);duBar();duBoard();if(!$('#duelM')||$('#duelM').hidden)return;duRender();}
 function duNews(a,b){if(!a||a.id!==b.id||b.state!=='live')return;const P=new Map((a.players||[]).map(x=>[x.nick,x]));
   (b.players||[]).forEach(x=>{const o=P.get(x.nick);if(!o||x.me)return;if(x.cnt>o.cnt)duNote(x.nick+' · '+(x.best>o.best&&x.bestF?x.bestF+' '+(+x.best).toFixed(1)+'cm':'한 마리 더')+' · '+fmtN(x.val)+duUnit(b));});
