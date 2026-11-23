@@ -1849,6 +1849,12 @@ html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,6
 #stRail>#bufchip{background:#e6f7ec;color:#17683a;border:2px solid #8fd0a3}
 #stRail>#chumchip{background:#fff4dc;color:#7a4f00;border:2px solid #f0c46a}
 @media (prefers-reduced-motion:reduce){#stRail>#tripchip.warn{animation:none}}
+/* V136 어두운 화면(설정 › 화면 스타일 어둡게): 밝은 바탕 위 밝은 글씨로 안 보이던 곳 — 선상 파티 카드·항구 고르기·대결 창·꺼진 주황 버튼 */
+:root:not(.thl) .duboat,:root:not(.thl) .duboat b,:root:not(.thl) .duboat small{color:#1f2a33}
+:root:not(.thl) .duboat .ghost{color:#3a2a10;border-color:rgba(176,140,84,.6);background:rgba(255,255,255,.7)}
+:root:not(.thl) #boatPick .bprow{background:rgba(255,255,255,.06);color:var(--fg);border:1px solid rgba(255,255,255,.16);border-radius:14px}
+:root:not(.thl) #boatPick .bprow .spec{color:#b8c6cb}
+:root:not(.thl) .mini.buy:disabled,:root:not(.thl) .mini.buy[disabled]{opacity:1;background:rgba(255,255,255,.08);color:#a9b8bd;border-color:rgba(255,255,255,.2);box-shadow:none}
 /* V135 문의 창 글씨(어두운 테마에서 밝은 바탕 위 밝은 글씨라 안 보이던 것) · 보낼 내용 늘 보이게 */
 .ctig b{color:#8a1c2c;font-size:17px}.ctig small{color:#4a2c31;opacity:1;font-weight:600;font-size:13px}
 .ctm textarea{color:#1f2a33}.ctm textarea::placeholder{color:#7b8790}
@@ -10051,6 +10057,20 @@ setInterval(tripChipTick,500);
 function stRailPos(){const r=document.getElementById('stRail'),b=document.getElementById('spotbar');if(!r||!b)return;const y=Math.max(8,Math.round(b.getBoundingClientRect().bottom+6));if(r.dataset.y!==String(y)){r.dataset.y=String(y);r.style.top=y+'px';}}
 function stRailInit(){if(document.getElementById('stRail'))return;const w=document.getElementById('world');if(!w)return;const r=document.createElement('div');r.id='stRail';r.setAttribute('aria-label','지금 걸린 효과');['tripchip','bufchip','chumchip'].forEach(id=>{const e=document.getElementById(id);if(e)r.appendChild(e);});w.appendChild(r);stRailPos();addEventListener('resize',stRailPos);}
 stRailInit();setInterval(stRailPos,700);
+/* V136 어두운 화면 글씨 지킴이: 밝은 바탕 카드 위에 어두운 화면용 밝은 글씨가 놓여 안 보이는 곳(앞으로 생길 새 카드 포함)을
+   창이 열릴 때 찾아 글자색만 바로잡는다 · 어두운 화면에서만 · 열린 창 안에서만 · 한 번 본 칸은 다시 보지 않음 */
+const CG={q:0,ok:new WeakSet()};
+function cgRGB(c){const m=/rgba?\(([^)]+)\)/.exec(c||'');if(!m)return null;const v=m[1].split(/[ ,\/]+/).filter(Boolean).map(Number);return[v[0],v[1],v[2],v[3]==null?1:v[3]];}
+function cgL(c){const f=x=>{x/=255;return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2]);}
+function cgBg(e){const L=[];for(let n=e;n&&n!==document.documentElement;n=n.parentElement){const cs=getComputedStyle(n);let c=null;const bi=cs.backgroundImage;if(bi&&bi!=='none'&&bi.includes('gradient')){const m=/rgba?\([^)]+\)/.exec(bi);c=m&&cgRGB(m[0]);}
+  if(!c||c[3]<.05){const k=cgRGB(cs.backgroundColor);if(k&&k[3]>=.05)c=k;}if(c&&c[3]>=.05){L.push(c);if(c[3]>=.95)break;}}if(!L.length)return null;
+  let r=[12,24,32];for(let i=L.length-1;i>=0;i--){const c=L[i],a=Math.min(1,c[3]);r=[c[0]*a+r[0]*(1-a),c[1]*a+r[1]*(1-a),c[2]*a+r[2]*(1-a)];}return r;}/* 반투명 바탕은 겹쳐서 실제 보이는 색으로 */
+function cgScan(root){for(const e of root.querySelectorAll('*')){if(CG.ok.has(e)||e.dataset.cg)continue;let t=false;for(const c of e.childNodes)if(c.nodeType===3&&c.textContent.trim()){t=true;break;}if(!t){CG.ok.add(e);continue;}
+  if(!e.getClientRects().length)continue;const fc=cgRGB(getComputedStyle(e).color),bg=fc&&cgBg(e);CG.ok.add(e);if(!bg)continue;const l1=cgL(fc),l2=cgL(bg);
+  const cr=(x,y)=>(Math.max(x,y)+.05)/(Math.min(x,y)+.05);if(cr(l1,l2)<3){const dk=cr(cgL([31,42,51]),l2),lt=cr(cgL([238,243,245]),l2);e.style.setProperty('color',dk>=lt?'#1f2a33':'#eef3f5','important');e.dataset.cg='1';}}}
+function cgRun(){if(document.documentElement.classList.contains('thl'))return;try{document.querySelectorAll('.modal:not([hidden]),#sheet:not([hidden]),#trk:not([hidden])').forEach(cgScan);}catch(e){}}
+function cgReset(){document.querySelectorAll('[data-cg]').forEach(e=>{e.style.removeProperty('color');delete e.dataset.cg;});CG.ok=new WeakSet();}
+try{new MutationObserver(()=>{if(document.documentElement.classList.contains('thl'))return;clearTimeout(CG.q);CG.q=setTimeout(cgRun,120);}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});}catch(e){}
 $('#tripchip').addEventListener('click',()=>{hudClose();const ms=Math.max(0,tripEnd-performance.now());toast((curTrip?curTrip.n+' · ':'')+'출조 남은 시간 '+Math.floor(ms/60000)+'분 '+(Math.floor(ms/1000)%60)+'초'+(TS?' · 잡은 고기 '+(TS.n||0)+'마리':'')+(TS&&TS.rig>0?' · 채비 손실 '+fmtN(TS.rig)+'P':'')+(TS&&TS.owe>0?' · 랭킹 선비 상환 남은 '+fmtN(TS.owe)+'P':'')+' · 시간이 끝나면 자동으로 귀항합니다',4200);});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)aqKick();});
 setInterval(chumTick,1000);V4();
@@ -11686,7 +11706,7 @@ Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V48 a
    화면 스타일: html.thl = 밝게(기본) / 없으면 어둡게(예전 짙은 유리). 이 기기에 기억(fishinggo.meta.theme). 그림은 모두 이 파일에서 직접 그린 SVG */
 const V44_THK='fishinggo.meta.theme';
 function v44Theme(t){const R=document.documentElement;if(t==null)return R.classList.contains('thl')?'light':'dark';
-  t=t==='dark'?'dark':'light';try{localStorage.setItem(V44_THK,t);}catch(e){}R.classList.toggle('thl',t==='light');
+  t=t==='dark'?'dark':'light';try{localStorage.setItem(V44_THK,t);}catch(e){}R.classList.toggle('thl',t==='light');try{cgReset();setTimeout(cgRun,60);}catch(e){}/* V136 */
   document.querySelectorAll('[data-v44th]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v44th===t)));try{drawMap();}catch(e){}try{wlpTheme();}catch(e){}return t;}
 // 지도 색(어둡게 = 예전 값 그대로)
 function v44MP(){return document.documentElement.classList.contains('thl')?
