@@ -634,7 +634,7 @@ export default function DashboardView({
         )}
 
         {/* 1:1 고객센터 */}
-        <CsInquirySection user={user} isAdmin={isAdmin} />
+        <CsInquirySection user={user} isAdmin={isAdmin} pointName={selectedPoint?.name} /> {/* ✅ CS-DM: DM에 '보던 포인트' 첨부 */}
 
         {/* 물때 달력 1시간 이용권 광고 팝업 */}
         {showCalendarAdModal && (

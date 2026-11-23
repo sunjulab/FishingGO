@@ -4166,6 +4166,31 @@ function saveCsInquiries() {
   try { fs.writeFileSync(CS_FILE, JSON.stringify(memCsInquiries, null, 2)); } catch {}
 }
 
+// ✅ CS-DM (2026-11-23): 1:1 문의의 '인스타그램 DM으로 문의' 버튼을 누른 횟수 — 날짜·유형별 건수만 저장(문의 내용·사용자 정보는 저장하지 않음)
+const CS_DM_CATS = ['일반 문의', '서비스 오류', '건의사항', '협업·제휴 제안', '기타'];
+const csDmMem = {}; // DB가 없을 때 'YYYY-MM-DD|유형' → 건수
+app.post('/api/cs/dm-click', async (req, res) => {
+  const cat = CS_DM_CATS.includes(req.body?.category) ? req.body.category : '기타';
+  const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  try {
+    if (dbReady && mongoose.connection?.db) await mongoose.connection.db.collection('cs_dm_clicks').updateOne({ day, category: cat }, { $inc: { count: 1 } }, { upsert: true });
+    else { const k = day + '|' + cat; csDmMem[k] = (csDmMem[k] || 0) + 1; }
+  } catch { /* 집계 실패는 무시 */ }
+  res.json({ ok: true });
+});
+app.get('/api/admin/cs/dm-clicks', async (req, res) => {
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
+  const since = new Date(Date.now() + 9 * 3600e3 - 27 * 864e5).toISOString().slice(0, 10);
+  let rows = [];
+  try {
+    if (dbReady && mongoose.connection?.db) rows = await mongoose.connection.db.collection('cs_dm_clicks').find({ day: { $gte: since } }).project({ _id: 0 }).toArray();
+    else rows = Object.entries(csDmMem).map(([k, count]) => { const [day, category] = k.split('|'); return { day, category, count }; }).filter(r => r.day >= since);
+  } catch { rows = []; }
+  const byCategory = {}; let total = 0;
+  rows.forEach(r => { const n = Number(r.count) || 0; byCategory[r.category] = (byCategory[r.category] || 0) + n; total += n; });
+  res.json({ since, total, byCategory });
+});
+
 // POST /api/cs/inquiry — 문의 등록 (로그인 필수)
 app.post('/api/cs/inquiry', async (req, res) => {
   try {

@@ -357,7 +357,7 @@ const STATUS_CFG = {
   answered: { label: '답변 완료', color: '#00C48C', bg: 'rgba(0,196,140,0.12)' },
   closed:   { label: '처리 완료', color: '#8E8E93', bg: 'rgba(142,142,147,0.15)' },
 };
-const CATS = ['전체', '일반 문의', '서비스 오류', '결제/구독', '계정 문의', '건의사항', '신고/제재', '기타'];
+const CATS = ['전체', '일반 문의', '서비스 오류', '결제/구독', '계정 문의', '건의사항', '협업·제휴 제안', '신고/제재', '기타'];
 
 function CsAdminPanel({ addToast }) {
   const [items, setItems]         = useState([]);
@@ -370,6 +370,7 @@ function CsAdminPanel({ addToast }) {
   const [showFilter, setShowFilter] = useState(false);
 
   const [csError, setCsError] = useState(false); // ✅ FIX-CS: 토스트 대신 인라인 에러 상태
+  const [dmStat, setDmStat] = useState(null);     // ✅ CS-DM: 인스타 DM 버튼 누른 횟수(최근 28일)
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -377,6 +378,7 @@ function CsAdminPanel({ addToast }) {
       const res = await apiClient.get('/api/cs/inquiries');
       setItems(Array.isArray(res.data) ? res.data : []);
       setCsError(false);
+      apiClient.get('/api/admin/cs/dm-clicks').then(r => setDmStat(r.data)).catch(() => {}); // ✅ CS-DM
     } catch {
       // ✅ FIX-CS: 60초 폴링 실패 시 매번 토스트 대신 인라인 표시
       setCsError(true);
@@ -436,6 +438,15 @@ function CsAdminPanel({ addToast }) {
             <RefreshCw size={13} /> 새로고침
           </button>
         </div>
+      {/* ✅ CS-DM: 인스타그램 DM 문의 버튼 사용량 — 실제 DM은 인스타그램 받은 메시지함(@sunju._.dev)에서 확인 */}
+      {dmStat && (
+        <div style={{ padding: '10px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.75)', fontWeight: '700', lineHeight: 1.6 }}>
+          📱 인스타 DM 문의 버튼 · 최근 28일 {dmStat.total || 0}회
+          {Object.keys(dmStat.byCategory || {}).length > 0 && (
+            <span style={{ color: 'rgba(255,255,255,0.5)' }}> ({Object.entries(dmStat.byCategory).map(([k, v]) => `${k} ${v}`).join(' · ')})</span>
+          )}
+        </div>
+      )}
       </div>
 
       {/* 필터 패널 */}

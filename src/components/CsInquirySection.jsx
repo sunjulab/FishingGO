@@ -1,9 +1,35 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MessageSquare, ChevronDown, ChevronUp, Lock, Send, RefreshCw, CheckCircle, Clock } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronUp, Lock, Send, RefreshCw, CheckCircle, Clock, Copy } from 'lucide-react';
 import apiClient from '../api/index';
 import { useToastStore } from '../store/useToastStore';
 
-const CATEGORIES = ['일반 문의', '서비스 오류', '결제/구독', '계정 문의', '건의사항', '신고/제재', '기타'];
+const CATEGORIES = ['일반 문의', '서비스 오류', '결제/구독', '계정 문의', '건의사항', '협업·제휴 제안', '신고/제재', '기타'];
+
+// ✅ CS-DM (2026-11-23): 인스타그램 DM 문의 — @sunju._.dev 한 계정으로 낚시GO·방구석 낚시꾼 문의를 함께 받는다.
+// DM은 링크로 내용을 채울 수 없어 '복사 → DM 열기 → 붙여넣기'. 첫 줄 '📱 낚시GO 앱 문의'로 방구석 낚시꾼([방구석 낚시꾼 · …])과 한눈에 구분
+// 결제·계정·신고는 개인정보·본인 확인 때문에 앱 안 1:1 문의로만 받는다. 아이디·전화번호·실명·결제 정보는 자동으로 붙이지 않는다
+const IG_ID = 'sunju._.dev';
+const IG_DM_URL = 'https://ig.me/m/' + IG_ID;
+const IN_APP_ONLY = ['결제/구독', '계정 문의', '신고/제재'];
+const TIER_KO = { FREE: '무료', BUSINESS_LITE: 'PRO 멤버십', PRO: '기존 PRO', BUSINESS_VIP: 'VVIP', CAPTAIN: '선장', MASTER: '관리자' };
+function isNativeApp() { return !!(window?.Capacitor?.isNativePlatform?.()); }
+function deviceLabel() {
+  const u = navigator.userAgent || '';
+  const os = /Android/i.test(u) ? '안드로이드' : /iPhone|iPad|iPod/i.test(u) ? '아이폰·아이패드' : /Mac/i.test(u) ? 'Mac' : /Windows/i.test(u) ? 'Windows' : '기타';
+  return os + ' ' + (isNativeApp() ? '앱' : '웹');
+}
+function kstNow() { return new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '); }
+// 사용자가 누른 그 순간(동기)에 복사해야 새 창이 열려도 실패하지 않는다
+function copyTextSync(t) {
+  let ok = false;
+  try {
+    const a = document.createElement('textarea');
+    a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(a); a.select(); ok = document.execCommand('copy'); a.remove();
+  } catch { ok = false; }
+  try { navigator.clipboard?.writeText?.(t)?.catch?.(() => {}); } catch { /* ok */ }
+  return ok || !!navigator.clipboard?.writeText;
+}
 
 const TEMPLATE = `[문의 기본 양식]
 
@@ -23,7 +49,7 @@ const STATUS_CONFIG = {
   closed:   { label: '처리 완료', color: '#8E8E93', bg: '#F5F5F5', icon: <CheckCircle size={11}/> },
 };
 
-export default function CsInquirySection({ user, isAdmin }) {
+export default function CsInquirySection({ user, isAdmin, pointName }) {
   const addToast = useToastStore(s => s.addToast);
 
   const [open, setOpen] = useState(false);
@@ -51,6 +77,37 @@ export default function CsInquirySection({ user, isAdmin }) {
   });
 
   const containerRef = useRef(null);
+  const [dmInfo, setDmInfo] = useState(true);        // ✅ CS-DM: 앱 정보 함께 보내기
+  const [dmFallback, setDmFallback] = useState(null); // ✅ CS-DM: 자동 복사 실패 시 직접 복사할 내용
+  const [appVer, setAppVer] = useState('');
+  useEffect(() => {
+    if (!open) return;
+    fetch('/version.json?ts=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j?.version) setAppVer('v' + String(j.version).slice(0, 12)); }).catch(() => {});
+  }, [open]);
+  const buildDm = () => {
+    const body = form.content.trim() === TEMPLATE.trim() ? '' : form.content.trim();
+    const L = ['📱 낚시GO 앱 문의', '──────────', `[유형] ${form.category}`];
+    if (form.title.trim()) L.push(`[제목] ${form.title.trim()}`);
+    L.push('[내용]', body || '(여기에 내용을 적어 주세요)');
+    if (dmInfo) {
+      L.push('', '— 낚시GO 앱 정보 —', `닉네임: ${user?.name || '-'} (${TIER_KO[user?.tier] || '무료'})`, `버전: ${appVer || '-'}`, `기기: ${deviceLabel()}`);
+      if (pointName) L.push(`보던 포인트: ${pointName}`);
+      L.push(`시각: ${kstNow()} (한국)`);
+    }
+    return L.join('\n');
+  };
+  const handleDm = () => {
+    const msg = buildDm();
+    const copied = copyTextSync(msg);
+    apiClient.post('/api/cs/dm-click', { category: form.category }).catch(() => {});
+    if (copied) { setDmFallback(null); addToast('내용이 복사됐어요. DM 창에서 길게 눌러 붙여넣어 주세요.', 'success'); }
+    else { setDmFallback(msg); addToast('자동 복사가 안 됐어요. 아래 내용을 길게 눌러 복사해 주세요.', 'info'); }
+    if (isNativeApp()) { setTimeout(() => { window.location.href = IG_DM_URL; }, 150); return; } // 앱: 인스타그램 앱으로 넘어감(방구석 낚시꾼과 같은 방식)
+    let w = null;
+    try { w = window.open(IG_DM_URL, '_blank'); } catch { w = null; }
+    if (w) { try { w.opener = null; } catch { /* ok */ } }
+    else addToast(`새 창이 막혔어요. 인스타그램에서 @${IG_ID}을 찾아 DM 주세요.`, 'info');
+  };
 
   // URL로 진입 시 탭 열기
   useEffect(() => {
@@ -234,6 +291,40 @@ export default function CsInquirySection({ user, isAdmin }) {
               <p style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#AEAEB2', textAlign: 'center', marginTop: '10px', fontWeight: '600' }}>
                 ※ 영업일 기준 1~2일 내 답변 | 긴급 문의: 앱 내 알림 확인
               </p>
+              {/* ✅ CS-DM: 인스타그램 DM으로 문의 (결제·계정·신고 제외) */}
+              {IN_APP_ONLY.includes(form.category) ? (
+                <div style={{ marginTop: '14px', background: '#F8F9FB', borderRadius: '12px', padding: '10px 14px', fontSize: `calc(11px * var(--fs, 1))`, color: '#636366', fontWeight: '700', lineHeight: 1.5 }}>
+                  🔒 결제·계정·신고 문의는 개인정보 보호를 위해 앱 안 1:1 문의로만 받습니다.
+                </div>
+              ) : (
+                <div style={{ marginTop: '16px', border: '1.5px solid #F2D9E6', borderRadius: '14px', padding: '14px', background: 'linear-gradient(135deg, #FFF5FA, #F7F3FF)' }}>
+                  <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#1A1A2E' }}>또는 인스타그램 DM으로 빠르게 문의</div>
+                  <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: '#636366', fontWeight: '600', marginTop: '3px', lineHeight: 1.5 }}>
+                    @{IG_ID} · 개발자가 직접 읽고 답해요. 사진·화면 녹화도 바로 보낼 수 있어요.
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', cursor: 'pointer', fontSize: `calc(11px * var(--fs, 1))`, color: '#3A3A3C', fontWeight: '700' }}>
+                    <input type="checkbox" checked={dmInfo} onChange={e => setDmInfo(e.target.checked)} />
+                    앱 정보 함께 보내기 (닉네임·버전·기기{pointName ? '·보던 포인트' : ''})
+                  </label>
+                  <button
+                    onClick={handleDm}
+                    style={{ width: '100%', marginTop: '10px', padding: '13px', border: 'none', borderRadius: '12px', cursor: 'pointer', color: '#fff', fontWeight: '900', fontSize: `calc(14px * var(--fs, 1))`, background: 'linear-gradient(135deg, #F58529, #DD2A7B 55%, #8134AF)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    <Copy size={16} /> 복사하고 인스타 DM 열기
+                  </button>
+                  <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: '#8E8E93', fontWeight: '600', marginTop: '8px', lineHeight: 1.5 }}>
+                    DM 창에서 입력칸을 길게 눌러 붙여넣어 주세요. 전화번호·결제 정보는 DM에 적지 마세요.
+                  </div>
+                  {dmFallback && (
+                    <textarea
+                      readOnly
+                      value={dmFallback}
+                      onFocus={e => e.target.select()}
+                      style={{ ...inputStyle, marginTop: '10px', height: '150px', fontSize: `calc(12px * var(--fs, 1))`, background: '#fff', lineHeight: 1.5 }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
 
