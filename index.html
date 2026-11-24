@@ -75,8 +75,41 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="shortcut icon" href="/favicon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.json" />
+    <link id="fg-apple-icon" rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link id="fg-manifest" rel="manifest" href="/manifest.json" />
+    <script>
+      // ✅ INSTALL-PWA(2026-11-25): 게임 주소(/meta)로 들어오면 홈 화면 아이콘을 '방구석 낚시꾼'으로 만든다.
+      // 설치 창(beforeinstallprompt)은 앱이 뜨기 전에 올 수 있어 여기서 먼저 받아 둔다.
+      (function () {
+        try {
+          if (/^\/meta(\/|$|\?)/.test(location.pathname + location.search)) {
+            document.getElementById('fg-manifest').setAttribute('href', '/manifest-game.json');
+            document.getElementById('fg-apple-icon').setAttribute('href', '/icons/game-apple-180.png');
+            var t = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+            if (t) t.setAttribute('content', '방구석 낚시꾼');
+          }
+        } catch (e) {}
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          window.__fgInstallEvent = e;
+          window.dispatchEvent(new Event('fg-install-ready'));
+        });
+        window.addEventListener('appinstalled', function () {
+          try { localStorage.setItem('fg_install_done', '1'); } catch (e) {}
+          window.dispatchEvent(new Event('fg-installed'));
+        });
+        window.addEventListener('load', function () {
+          try {
+            var native = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+            var host = location.hostname;
+            var local = host === 'localhost' || host === '127.0.0.1';
+            if (!native && !local && 'serviceWorker' in navigator && !/BangGusukApp\//.test(navigator.userAgent)) {
+              navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+            }
+          } catch (e) {}
+        });
+      })();
+    </script>
 
     <!-- 🚀 리소스 힌트: DNS/TCP 연결 선점 — 카카오맵 SDK 첫 로드 지연 최소화 -->
     <link rel="preconnect" href="https://dapi.kakao.com" crossorigin />

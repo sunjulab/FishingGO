@@ -44,6 +44,8 @@ export default function AnnouncementPopup() {
   const [idx, setIdx] = useState(0);             // 현재 표시 인덱스
   const [hideToday, setHideToday] = useState(false);
   const [visible, setVisible] = useState(false);
+  // ✅ INSTALL-PWA: 공지 팝업이 떠 있는 동안 홈 화면 추가 안내는 기다린다
+  useEffect(() => { window.__fgAnnouncementOpen = visible; return () => { window.__fgAnnouncementOpen = false; }; }, [visible]);
 
   // ── 공지 목록 로드 (마운트 1회) ──────────────────────────────────────────
   useEffect(() => {

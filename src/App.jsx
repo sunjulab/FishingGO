@@ -104,6 +104,7 @@ import LoginPage from './pages/LoginPage';
 import CrewChat from './pages/CrewChat';
 import WeatherDashboard from './pages/WeatherDashboard';
 import VVIPSubscribe from './pages/VVIPSubscribe';
+import { silentIAPSync } from './services/GoogleIAPService'; // ✅ IAP-SILENT-SYNC
 import GameAppNoPay, { isGameApp } from './components/GameAppNoPay'; // ✅ GAME-APP: 게임 앱에서는 결제 화면 대신 안내
 import WriteBusinessPost from './pages/WriteBusinessPost';
 import CctvAdmin from './pages/CctvAdmin';
@@ -126,6 +127,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SubscriptionFailBanner from './components/SubscriptionFailBanner';
 import KakaoInAppBrowserBanner from './components/KakaoInAppBrowserBanner';
 import AnnouncementPopup from './components/AnnouncementPopup'; // ✅ POPUP: 앱 시작 시 공지 이미지 팝업
+import InstallPrompt from './components/InstallPrompt'; // ✅ INSTALL-PWA: 홈 화면 바로가기·앱 설치 안내
 import ForceUpdateChecker from './components/ForceUpdateChecker'; // ✅ 강제 업데이트 체커
 import AppBanner from './components/AppBanner'; // ✅ 스마트 앱 배너 (Android 브라우저 전용)
 
@@ -451,6 +453,20 @@ function UserSyncChecker() {
   return null;
 }
 
+// ✅ IAP-SILENT-SYNC(2026-11-25): 로그인한 안드로이드 앱 사용자는 앱을 열 때 서버 확인이 안 끝난 결제를 조용히 다시 확인
+function IAPSilentSync() {
+  const user = useUserStore((s) => s.user);
+  const syncFromServer = useUserStore((s) => s.syncFromServer);
+  useEffect(() => {
+    if (!user?.email || isGameApp()) return;
+    const t = setTimeout(() => {
+      silentIAPSync({ onSynced: () => { try { syncFromServer(); } catch { /* ok */ } } }).catch(() => {});
+    }, 4000); // 첫 화면이 다 뜬 뒤에
+    return () => clearTimeout(t);
+  }, [user?.email]);
+  return null;
+}
+
 // ✅ 스토리지 증발 복구: 앱 마운트 시 Capacitor Preferences에서 토큰/유저 복구
 function StoreHydrator() {
   const hydrateFromPreferences = useUserStore((s) => s.hydrateFromPreferences);
@@ -612,11 +628,13 @@ export default function App() {
         <SubscriptionExpiryChecker />
         <StoreHydrator />
         <UserSyncChecker />
+        <IAPSilentSync />
         {/* ENH4-A1: auth_expired 커스텀 이벤트 처리 컴포넌트 */}
         <AuthExpiredChecker />
         <GlobalLevelUpListener />
         {/* ✅ POPUP: 이미지 있는 공지 → 앱 시작 시 carousel 팝업 — useNavigate 사용으로 BrowserRouter 내부에 배치 */}
         <AnnouncementPopup />
+        <InstallPrompt />
         <BackButtonHandler />
         {/* ✅ DEEPLINK-HANDLER: 카카오톡 공유 링크 → 앱 내 게시글 직접 이동 */}
         <DeepLinkHandler />

@@ -10,7 +10,7 @@ import {
   BookOpen, MapPin, Calendar, Scale, Settings, Bell, CreditCard, 
   ShieldAlert, ChevronRight, LayoutGrid, Edit3, Check, X, 
   Trophy, Star, Heart, MessageSquare, Camera, History, Target, Moon,
-  ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon, Users
+  ToggleLeft, ToggleRight, Lock, CreditCard as CardIcon, Users, Smartphone
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { initPushPermission } from '../services/PermissionService';
@@ -22,6 +22,7 @@ const MENU_ITEMS = [
   { id: 'premium',  title: '프리미엄 구독 관리',   color: '#FF9B26', desc: '포인트 및 구독권 요금',   icon: null },
   { id: 'history',  title: '결제 내역',          color: '#00C48C', desc: '자동청구 현황 및 구독 취소', icon: null },
   { id: 'security', title: '보안 및 차단 설정',    color: '#FF5A5F', desc: '계정 보안 및 차단 목록',  icon: null },
+  { id: 'install',  title: '홈 화면에 추가',      color: '#0056D2', desc: '앱처럼 바로 열기',        icon: null }, // ✅ INSTALL-PWA (앱 안에서는 숨김)
 ];
 
 // ✅ 6TH-A2: MyPage 아바타 fallback — pravatar.cc 외부 의존 제거 (App.jsx 3RD-A1과 동일 패턴)
@@ -593,11 +594,12 @@ export default function MyPage() {
   }
 
   // ✅ 6TH-C1: MENU_ITEMS 외부 상수 사용 — 아이콘은 렌더 시 매핑
-  const menuItems = MENU_ITEMS.map(item => ({
+  const menuItems = MENU_ITEMS.filter(item => item.id !== 'install' || !Capacitor.isNativePlatform()).map(item => ({
     ...item,
     icon: item.id === 'noti' ? Bell :
           item.id === 'premium' ? CreditCard :
           item.id === 'history' ? CardIcon :
+          item.id === 'install' ? Smartphone :
           ShieldAlert,
   }));
 
@@ -1172,7 +1174,7 @@ export default function MyPage() {
 
          <div style={{ backgroundColor: '#fff', borderRadius: '28px', overflow: 'hidden', border: '1.5px solid #F2F2F7' }}>
             {menuItems.map((item) => ( // ✅ 26TH-C3: key를 item.id로 교체
-              <div key={item.id} onClick={() => item.id === 'history' ? navigate('/payment-history') : setShowModal(item.id)} style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: item.id !== 'security' ? '1px solid #F8F9FA' : 'none', cursor: 'pointer' }}>
+              <div key={item.id} onClick={() => item.id === 'history' ? navigate('/payment-history') : item.id === 'install' ? window.dispatchEvent(new Event('fg-open-install-guide')) : setShowModal(item.id)} style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: item.id !== menuItems[menuItems.length - 1].id ? '1px solid #F8F9FA' : 'none', cursor: 'pointer' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ backgroundColor: `${item.color}15`, padding: '10px', borderRadius: '12px' }}><item.icon size={20} color={item.color} strokeWidth={2.5} /></div>
                     <div>

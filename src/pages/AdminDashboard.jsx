@@ -95,6 +95,13 @@ export default function AdminDashboard() {
     } catch { /* 무시 */ }
   }, []);
 
+  // ✅ INSTALL-PWA: 홈 화면 추가·앱 설치 안내 집계(최근 28일)
+  const [installStat, setInstallStat] = useState(null);
+  useEffect(() => {
+    if (!authChecked) return;
+    apiClient.get('/api/admin/install-events').then(r => setInstallStat(r.data)).catch(() => {});
+  }, [authChecked]);
+
   // 자동 새로고침 (30초 간격, 관리자 확인 후에만)
   useEffect(() => {
     if (!authChecked) return;
@@ -246,6 +253,11 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
+            {installStat?.total && (
+              <div style={{ marginTop: '8px', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700' }}>
+                📲 홈 화면 추가 안내 · 최근 28일 노출 {fmt(installStat.total.shown)} · 누름 {fmt(installStat.total.click)} · 설치 {fmt(installStat.total.installed)}
+              </div>
+            )}
           </div>
         )}
 

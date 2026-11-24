@@ -1,0 +1,39 @@
+{
+  "id": "/",
+  "name": "낚시GO",
+  "short_name": "낚시GO",
+  "description": "실시간 물때·날씨·포인트·커뮤니티 — 대한민국 낚시인의 필수 플랫폼",
+  "start_url": "/?source=homescreen",
+  "scope": "/",
+  "lang": "ko",
+  "dir": "ltr",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0B1F3A",
+  "background_color": "#0B1F3A",
+  "categories": [
+    "sports",
+    "lifestyle",
+    "weather"
+  ],
+  "icons": [
+    {
+      "src": "/icons/app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/app-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

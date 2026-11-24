@@ -4236,6 +4236,40 @@ app.get('/api/admin/cs/dm-clicks', async (req, res) => {
   res.json({ since, total, byCategory });
 });
 
+// ✅ INSTALL-PWA (2026-11-25): 홈 화면 추가·앱 설치 안내 집계 — 날짜·이벤트·기기별 건수만 저장(사용자 정보 저장 안 함)
+const INSTALL_EVENTS = ['shown', 'click', 'installed', 'dismiss'];
+const INSTALL_DEVICES = ['android', 'ios', 'pc'];
+const installMem = {}; // DB가 없을 때 'YYYY-MM-DD|event|device|target' → 건수
+app.post('/api/stats/install-event', async (req, res) => {
+  const event = INSTALL_EVENTS.includes(req.body?.event) ? req.body.event : null;
+  const device = INSTALL_DEVICES.includes(req.body?.device) ? req.body.device : 'pc';
+  const target = req.body?.target === 'game' ? 'game' : 'home';
+  if (!event) return res.status(400).json({ error: 'event 값이 올바르지 않습니다.' });
+  const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  try {
+    if (dbReady && mongoose.connection?.db) await mongoose.connection.db.collection('install_events').updateOne({ day, event, device, target }, { $inc: { count: 1 } }, { upsert: true });
+    else { const k = [day, event, device, target].join('|'); installMem[k] = (installMem[k] || 0) + 1; }
+  } catch { /* 집계 실패는 무시 */ }
+  res.json({ ok: true });
+});
+app.get('/api/admin/install-events', async (req, res) => {
+  if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' });
+  const since = new Date(Date.now() + 9 * 3600e3 - 27 * 864e5).toISOString().slice(0, 10);
+  let rows = [];
+  try {
+    if (dbReady && mongoose.connection?.db) rows = await mongoose.connection.db.collection('install_events').find({ day: { $gte: since } }).project({ _id: 0 }).toArray();
+    else rows = Object.entries(installMem).map(([k, count]) => { const [day, event, device, target] = k.split('|'); return { day, event, device, target, count }; }).filter(r => r.day >= since);
+  } catch { rows = []; }
+  const total = { shown: 0, click: 0, installed: 0, dismiss: 0 }; const byDevice = {};
+  rows.forEach(r => {
+    const c = Number(r.count) || 0;
+    if (total[r.event] !== undefined) total[r.event] += c;
+    byDevice[r.device] = byDevice[r.device] || { shown: 0, click: 0, installed: 0, dismiss: 0 };
+    if (byDevice[r.device][r.event] !== undefined) byDevice[r.device][r.event] += c;
+  });
+  res.json({ since, total, byDevice });
+});
+
 // POST /api/cs/inquiry — 문의 등록 (로그인 필수)
 app.post('/api/cs/inquiry', async (req, res) => {
   try {

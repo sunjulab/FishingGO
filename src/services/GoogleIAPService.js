@@ -220,6 +220,25 @@ export async function purchasePlan(planKey) {
   return orderResult;
 }
 
+// ── 앱 시작 시 조용한 결제 동기화 ─────────────────────────────────
+// ✅ IAP-SILENT-SYNC(2026-11-25): 결제는 됐는데 서버 확인이 실패해 남아 있는 결제를, 사용자가 결제 화면·복원 버튼을 누르지 않아도
+// 앱을 열 때 자동으로 서버에 다시 확인시킨다(Google이 확인 안 된 결제를 다시 approved로 알려 줌 → 서버 검증 → 등급 적용 → finish)
+// 화면 알림은 띄우지 않고, 성공하면 onSynced로 알려 사용자 정보를 다시 불러온다
+export async function silentIAPSync({ onSynced } = {}) {
+  if (!isNative()) return;
+  try {
+    if (!storeInitialized) {
+      await initIAP({ onSuccess: () => onSynced?.(), onError: () => {}, onRestore: () => {} });
+    } else if (!_onPurchaseSuccess) {
+      _onPurchaseSuccess = () => onSynced?.();
+    }
+    const store = getStore();
+    if (store && storeInitialized) await store.update?.();
+  } catch (e) {
+    console.warn('[IAP] 조용한 동기화 실패(다음 실행 때 다시 시도):', e?.message || e);
+  }
+}
+
 // ── 구독 복원 ─────────────────────────────────────────────────────
 export async function restorePurchases() {
   const store = getStore();
