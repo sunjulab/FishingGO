@@ -260,6 +260,28 @@ ol.rk li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:6px 0;
 .chgbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
 .chgbtn{border:2px solid var(--fg);background:transparent;color:var(--fg);border-radius:8px;padding:11px 10px;font-size:14.5px;font-weight:700}
 .chgbtn.pay{background:var(--buoy);border-color:var(--buoy);color:#1a0d05}
+/* V139 PRO 결제 안내 */
+.proM .proLead{margin:0 0 10px;line-height:1.55}
+.proM .probar{display:flex;flex-direction:column;gap:7px;margin:0 0 12px}
+.proM .probar div{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700}
+.proM .probar span:first-child{width:40px}.proM .probar span:last-child{width:50px;text-align:right}
+.proM .probar i{flex:1;height:14px;border-radius:7px;background:rgba(127,127,127,.25);overflow:hidden;display:block}
+.proM .probar i b{display:block;height:100%;border-radius:7px}
+.proM .proben{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:7px}
+.proM .proben li{position:relative;padding-left:24px;line-height:1.45}
+.proM .proben li:before{content:'';position:absolute;left:3px;top:4px;width:10px;height:6px;border-left:3px solid #2fa866;border-bottom:3px solid #2fa866;transform:rotate(-45deg)}
+.prosteps{background:#fff;color:#1f2a33;border:2px solid #f0d9b5;border-radius:14px;padding:12px 12px 10px;margin:0 0 12px}
+.prosteps>b{display:block;color:#7a4a12;margin:0 0 8px}
+.prosteps ol{margin:0;padding:0;list-style:none;counter-reset:ps;display:flex;flex-direction:column;gap:9px}
+.prosteps li{counter-increment:ps;position:relative;padding-left:34px;display:flex;flex-direction:column;gap:1px}
+.prosteps li:before{content:counter(ps);position:absolute;left:0;top:0;width:24px;height:24px;border-radius:50%;background:#1d64b8;color:#fff;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center}
+.prosteps li b{color:#1f2a33;font-size:14.5px}.prosteps li small{color:#5b6770;font-size:12.5px}
+.proM .pronote{margin:0 0 12px;padding:10px 12px;border:2px dashed rgba(127,127,127,.45);border-radius:12px;font-size:13px;line-height:1.5}
+#proShop{margin:0 0 10px}
+#proShop .prc{border-radius:16px;background:#12324d;color:#e8f1f7;padding:12px 14px;display:flex;align-items:center;gap:12px;border:3px solid #39ff88;box-shadow:0 0 0 3px rgba(57,255,136,.18)}
+#proShop .prc div{flex:1;display:flex;flex-direction:column;gap:2px}#proShop .prc b{color:#fff;font-size:16px}#proShop .prc small{color:#b9d0df;font-size:12.5px}
+#proShop .prc button{flex:none;min-height:44px;padding:0 14px;border-radius:12px;border:0;background:#39ff88;color:#04230f;font-weight:900;font-size:14px}
+
 .chgbtn:disabled{opacity:.45;cursor:not-allowed}
 .chgoff{border:1px dashed var(--warn);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:13px;margin:0 0 10px}
 .chgfor{font-size:12.5px;margin:0 0 8px;color:var(--fg)}
@@ -8049,7 +8071,7 @@ function shopLayout(){const sh=$('#shopSheet'),st=$('#shopStick');if(!sh||!st||$
   const tb=$('#shopTabs'),on=tb&&tb.querySelector('[aria-selected="true"]');if(on){const a=tb.getBoundingClientRect(),c=on.getBoundingClientRect();if(c.left<a.left)tb.scrollLeft+=c.left-a.left-8;else if(c.right>a.right)tb.scrollLeft+=c.right-a.right+8;}}
 addEventListener('resize',()=>{if(!$('#shop').hidden)shopLayout();});
 function renderShop(keepBar){if(shopTab==='charge'&&!TOPUP_ON)shopTab='my';const tb=$('#shopTabs'),tl=tb.scrollLeft;tb.innerHTML=TABS.map(([k,t])=>'<button type="button" role="tab" data-t="'+k+'" aria-selected="'+(k===shopTab)+'">'+t+'</button>').join('');tb.scrollLeft=tl;
-  $('#shopRefund').textContent=refundTxt();
+  $('#shopRefund').textContent=refundTxt();try{proShopSync();}catch(e){}/* V139 */
   if(shopTab==='guide'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=guideHTML();refreshWallet();shopLayout();return;}/* V89 초보 안내 */
   if(shopTab==='unlock'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=unlockHTML();refreshWallet();shopLayout();return;}
   if(shopTab==='net'){if(shopIO){shopIO.disconnect();shopIO=null;}$('#shopBarBox').innerHTML='';$('#gearSum').innerHTML=walletLine();$('#shopList').innerHTML=twShopHTML();refreshWallet();shopLayout();return;}/* v35 투망 */
@@ -8336,6 +8358,34 @@ function applyRPG(r){for(const k of Object.keys(RG))delete RG[k];Object.assign(R
 /* V82 PRO 3일 무료 체험: 서버가 Lv.3 이상 · 처음 하루 자동 시간을 다 써 멈췄을 때 또는 처음 귀항했을 때 계정당 한 번 trialOffer를 준다.
    결제 정보 없음 · 끝나면 자동으로 무료로(자동 결제 없음) · 게임 앱(GAME_APP)에도 낚시GO 결제 안내는 넣지 않는다(정보만) */
 let TRIAL_SHOWN=false;
+/* V139 PRO 결제 안내(운영자 시안 https://claude.ai/artifact/5cJ7PsXVMdXLfuMj6qPgNe): ① 무료 자동 낚시 시간을 다 썼을 때(하루 한 번) ② PRO 체험이 끝났을 때(한 번)
+   ③ 상점 맨 위 카드 ④ 다른 사람 이름표의 Pro를 눌렀을 때 · PRO 구독·이용권·체험 중인 사람에게는 안 보임 · 서버 연결·멤버십 표시 조건은 멤버십 칸과 같음(subAvail)
+   · 구글 플레이 게임 앱(GAME_APP)은 결제 방법·바깥 링크 없이 혜택만(①②④), 상점 카드는 없음 */
+function proOk(){try{if(!SRV)return false;const A=autoNow();if(A.sub||A.pass||(SA&&+SA.trialUntil>Date.now()))return false;return GAME_APP?true:!!(!v45Beta()&&(V45.rating||V45.subOn));}catch(e){return false;}}
+const PRO_BEN=['자동 낚시 하루 <b>24시간</b> (무료 8시간)','선상 출조 중에도 자동 낚시','포만감 줄어드는 속도 <b>절반</b>','닉네임 옆 <b class="proTag">Pro</b> 표시'];
+function proBenHTML(){return'<ul class="proben">'+PRO_BEN.map(t=>'<li>'+t+'</li>').join('')+'</ul>';}
+function proStepsHTML(){return GAME_APP?'':'<div class="prosteps"><b>결제 방법</b><ol><li><b>낚시GO 앱 또는 fishing-go.com에 로그인</b><small>게임과 같은 아이디</small></li><li><b>멤버십 메뉴에서 PRO 구독</b><small>월 9,900원 · 자동 갱신</small></li><li><b>게임으로 돌아오면 바로 적용</b><small>다시 로그인할 필요 없어요</small></li></ol></div>';}
+function proModal(kind,o){o=o||{};let capH=8;try{capH=Math.round((autoNow().dayCapMs||AUTO_CAP_MS)/36e5)||8;}catch(e){}
+  const T={cap:'오늘 무료 자동 낚시가 끝났어요',trial:'PRO 3일 체험이 끝났어요',tag:'PRO 멤버십이란?',shop:'낚시GO PRO 멤버십'}[kind]||'낚시GO PRO 멤버십';
+  const lead={cap:'오늘 쓸 수 있는 무료 자동 낚시 <b>'+capH+'시간</b>을 다 썼어요. 내일 0시(한국 시간)에 다시 채워져요.',trial:'지금부터는 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 자동 결제는 없었어요.',tag:'<b>'+esc(o.nick||'')+'</b>님은 낚시GO PRO 회원이에요.'+(GAME_APP?'':' 월 9,900원이면 이렇게 달라져요.'),shop:GAME_APP?'':'월 9,900원 · 자동 갱신'}[kind]||'';
+  const bar='<div class="probar" aria-label="하루 자동 낚시 시간 비교"><div><span>무료</span><i><b style="width:'+Math.round(capH/24*100)+'%;background:#9aa7b0"></b></i><span>'+capH+'시간</span></div><div><span>PRO</span><i><b style="width:100%;background:#2fa866"></b></i><span>24시간</span></div></div>';
+  const m=uiBox('proM','modal','');m.classList.add('proM');
+  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="proMT" style="width:min(460px,100%);box-sizing:border-box;max-height:92vh;overflow:auto"><h2 id="proMT">'+T+'</h2>'+(lead?'<p class="proLead">'+lead+'</p>':'')+(kind==='cap'||kind==='trial'?bar:'')+(kind==='trial'?'<p class="proLead" style="font-weight:700">PRO를 계속 쓰면</p>':'')+proBenHTML()+proStepsHTML()
+   +(GAME_APP?'<p class="pronote">PRO 회원은 같은 아이디로 들어오면 자동으로 적용돼요.</p><div class="row" style="justify-content:flex-end"><button class="chgbtn pay" id="proOkB" type="button">확인</button></div>'
+     :'<div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="chgbtn" id="proNoB" type="button">'+({cap:'내일 다시 할게요',trial:'무료로 계속할게요'}[kind]||'닫기')+'</button><button class="chgbtn pay" id="proGoB" type="button">'+(kind==='trial'?'낚시GO에서 PRO 계속하기':'낚시GO에서 PRO 시작하기')+'</button></div>')+'</div>';
+  const close=()=>{m.hidden=true;try{canvas.focus();}catch(e){}};m.onclick=e=>{if(e.target===m)close();};
+  ['proOkB','proNoB'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=close;});const g=document.getElementById('proGoB');if(g)g.onclick=()=>{close();subGo();};m.hidden=false;}
+function proFree(){return !document.querySelector('.modal:not([hidden])')&&!(inWorld()&&BUSY_ST[state]);}
+function proDay(){return new Date(Date.now()+9*36e5).toISOString().slice(0,10);}
+function proCheck(){try{if(!SRV)return;const A=autoNow(),now=Date.now();
+  if(SA&&+SA.trialUntil>now)lsSet('fishinggo.meta.trialU',String(+SA.trialUntil));
+  const tu=+(lsGet('fishinggo.meta.trialU')||0);if(tu&&tu<=now&&!A.sub&&!A.pass&&lsGet('fishinggo.meta.trialEndShown')!==String(tu)&&proFree()){lsSet('fishinggo.meta.trialEndShown',String(tu));proModal('trial');return;}
+  if(!proOk()||A.mode!=='free')return;const used=(A.on&&A.full)||(!A.on&&A.dayCapMs&&A.dayUsedMs>=A.dayCapMs-6e4);if(!used)return;
+  const k='fishinggo.meta.proCap',d=proDay();if(lsGet(k)===d||!proFree())return;lsSet(k,d);proModal('cap');}catch(e){}}
+setInterval(proCheck,30e3);
+function proShopSync(){let el=document.getElementById('proShop');const gs=document.getElementById('gearSum');if(!el&&gs){el=document.createElement('div');el.id='proShop';gs.parentNode.insertBefore(el,gs);}if(!el)return;
+  const on=proOk()&&!GAME_APP;el.hidden=!on;if(!on){el.innerHTML='';return;}if(!el.firstChild){el.innerHTML='<div class="prc"><div><b><span class="proTag">Pro</span> 자동 낚시 하루 24시간</b><small>무료 8시간 · 선상 중 자동 · 포만감 절반 · 월 9,900원</small></div><button type="button" id="proShopB">결제 방법 보기</button></div>';document.getElementById('proShopB').onclick=()=>proModal('shop');}}
+function proTagTap(){try{if(!proOk())return false;const L=[];peers.forEach(p=>{if(p&&p.pr0&&p.nl)L.push(p.nl);});if(!L.length)return false;const h=_v38ray.intersectObjects(L,false)[0];if(!h)return false;let who=null;peers.forEach(p=>{if(p.nl===h.object)who=p;});if(!who)return false;proModal('tag',{nick:who.name});return true;}catch(e){return false;}}
 function trialEndTxt(t){const k=new Date(t+9*3600e3);return(k.getUTCMonth()+1)+'월 '+k.getUTCDate()+'일 '+String(k.getUTCHours()).padStart(2,'0')+':'+String(k.getUTCMinutes()).padStart(2,'0');}
 function trialShow(o){if(TRIAL_SHOWN||!o||!SRV)return;TRIAL_SHOWN=true;let m=$('#trialModal');if(!m){m=document.createElement('div');m.id='trialModal';m.className='modal';document.body.appendChild(m);}const d=o.days|0||3;
   m.innerHTML='<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="trT" style="width:min(460px,100%);box-sizing:border-box"><h2 id="trT" style="margin:0 0 6px">PRO '+d+'일 무료 체험</h2>'+(o.why?'<p style="margin:0 0 10px">'+esc(o.why)+'</p>':'')+'<ul style="margin:0 0 10px;padding-left:18px;line-height:1.7"><li>자동 낚시 하루 24시간(무료는 하루 8시간)</li><li>선상 출조 하루 2번 · 출조 중 자동 낚시</li><li>포만감 줄어드는 속도 절반</li><li>닉네임 옆 <b class="proTag">Pro</b> 표시</li></ul><p class="src" style="margin:0 0 12px">결제 정보 없이 계정당 한 번 · '+d+'일 뒤 자동으로 무료로 돌아갑니다(자동 결제 없음)</p><div class="row" style="gap:8px;justify-content:flex-end"><button class="chgbtn" id="trNo" type="button">괜찮아요</button><button class="chgbtn pay" id="trGo" type="button">'+d+'일 체험 시작</button></div></div>';
@@ -8343,7 +8393,7 @@ function trialShow(o){if(TRIAL_SHOWN||!o||!SRV)return;TRIAL_SHOWN=true;let m=$('
     if(r.s===200&&r.j){if(r.j.auto)setSA(r.j.auto);if(acc&&r.j.trial)toast('PRO 체험을 시작했습니다 · '+trialEndTxt(r.j.trial.until)+'까지',3800);try{renderAutoBtn();myLabelSync(true);}catch(e){}}else if(acc)toast(errMsg(r));};
   $('#trGo').onclick=()=>done(true);$('#trNo').onclick=()=>done(false);}
 function trialEndSoon(){try{const A=SA||{};const u=+A.trialUntil||0,n=Date.now();if(!u||u<=n||u-n>864e5)return;const k='fishinggo.meta.trialEnd';if(localStorage.getItem(k)===String(u))return;localStorage.setItem(k,String(u));toast('PRO 체험이 '+trialEndTxt(u)+'에 끝나고 무료로 돌아갑니다',4200);}catch(e){}}/* V82 끝나기 하루 전 안내(정보만) */
-function setSA(a){if(a){SA=Object.assign({},a,{at:Date.now()});try{trialEndSoon();}catch(e){}try{myLabelSync();}catch(e){}try{autoNotify();}catch(e){}try{backSpotRender();}catch(e){}}}
+function setSA(a){if(a){SA=Object.assign({},a,{at:Date.now()});try{trialEndSoon();}catch(e){}try{setTimeout(proCheck,1500);}catch(e){}/* V139 */try{myLabelSync();}catch(e){}try{autoNotify();}catch(e){}try{backSpotRender();}catch(e){}}}
 function applyProfile(p){if(!p)return;if(p.trash&&typeof p.trash==='object')TRS=p.trash;/* V124 */if(typeof p.subOn==='boolean')SUB_ON_C=p.subOn;if(p.duelSt!==undefined)DST=p.duelSt||null;/* V120 */try{boatDayTake(p);}catch(e){}/* V72 */try{save.v34=v4Norm({srv:1});v4Merge(p);}catch(e){}/* v34 */save.nick=p.nick||save.nick;save.pt=p.pt||0;save.score=p.score||0;save.count=p.count||0;
   save.inv=p.inv||{own:{},term:{}};if(!save.inv.own)save.inv.own={};if(!save.inv.term)save.inv.term={};if(p.eq)save.eq=p.eq;save.dex=p.dex||{};save.spots=p.spots||{};save.gold=goldNorm(p.gold);try{v35Prof(p);}catch(e){}/* v35 */
   applyRPG(p.rpg);setWal(p.wallet);save.auto={on:0,pass:0,boosts:[],net:0};save.rk={};setSA(p.auto);SRV_TRIP=p.trip||null;BOATAUTO=baOn(SRV_TRIP);captSync(p);refreshWallet();renderLv();try{if(!$('#intro').hidden)$('#nick').value=save.nick;}catch(e){}notesShow(p.notes);try{myLookApply();chumTick();}catch(e){}try{v36Prof(p);}catch(e){}/* v36 */try{v37Prof(p);}catch(e){}/* v37 외모 */try{v38Prof(p);}catch(e){}/* v38 포만감·쿨러 */try{v45Prof(p);}catch(e){}/* v45 이용등급·시험용 */}
@@ -11269,7 +11319,7 @@ function v38SignsApply(s){try{v106Apply(s,Date.now());}catch(e){}const W=V38W;if
   if(S&&typeof S.logo==='string'&&/^https:\/\//.test(S.logo)){const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{if(q.sign===S&&V38W===W){q.logo=im;try{v38SignDraw(q);}catch(e){q.logo=null;v38SignDraw(q);}}};im.src=S.logo;}});}
 // 간판을 누르면(광고일 때만) '광고 · 브랜드' 안내
 let v38Ptr=null;const _v38ray=new THREE.Raycaster(),_v38v2=new THREE.Vector2();
-function v38BoardTap(e){const W=V38W;if(!camera)return;const r=canvas.getBoundingClientRect();_v38v2.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);_v38ray.setFromCamera(_v38v2,camera);/* V106: 건물 광고판과 식당·카페 간판 중 더 가까운 것만 */const hb=v106Hit(),hs=W&&W.scene===scene?_v38ray.intersectObjects(W.boards,false)[0]:null;if(hb&&(!hs||hb.distance<hs.distance)){const q=hb.object.userData.v106;if(q&&q.sign)v38AdSheet(q.sign);return;}if(!W||W.scene!==scene)return;
+function v38BoardTap(e){const W=V38W;if(!camera)return;const r=canvas.getBoundingClientRect();_v38v2.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);_v38ray.setFromCamera(_v38v2,camera);if(proTagTap())return;/* V139 이름표 Pro */ /* V106: 건물 광고판과 식당·카페 간판 중 더 가까운 것만 */const hb=v106Hit(),hs=W&&W.scene===scene?_v38ray.intersectObjects(W.boards,false)[0]:null;if(hb&&(!hs||hb.distance<hs.distance)){const q=hb.object.userData.v106;if(q&&q.sign)v38AdSheet(q.sign);return;}if(!W||W.scene!==scene)return;
   const h=_v38ray.intersectObjects(W.boards,false)[0];if(!h||!h.uv||h.uv.y>.5)return;const q=h.object.userData.v38b;if(!q||!q.sign)return;v38AdSheet(q.sign);}
 function v38AdSheet(S){const m=uiBox('v38adM','modal','<div class="sheet2 panel" role="dialog" aria-labelledby="v38adT"><h2 id="v38adT"></h2><p class="lead" id="v38adP"></p><div class="row"><button class="ghost" id="v38adX" type="button">닫기</button></div></div>');
   $('#v38adT').textContent=S.ad||signAd(S.brand);$('#v38adP').textContent=SIGN_AD_TXT;$('#v38adX').onclick=()=>{m.hidden=true;};m.onclick=e=>{if(e.target===m)m.hidden=true;};m.hidden=false;}
