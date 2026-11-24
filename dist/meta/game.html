@@ -260,6 +260,7 @@ ol.rk li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:6px 0;
 .chgbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
 .chgbtn{border:2px solid var(--fg);background:transparent;color:var(--fg);border-radius:8px;padding:11px 10px;font-size:14.5px;font-weight:700}
 .chgbtn.pay{background:var(--buoy);border-color:var(--buoy);color:#1a0d05}
+.skdeep{display:inline-block;margin-top:3px;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:700;background:rgba(124,77,255,.12);color:#5b3cc4}.skdeep.lock{background:rgba(127,127,127,.15);color:var(--mut,#777)}:root:not(.thl) .skdeep{color:#c9b8ff}
 /* V143 돌발 물 상황: 현장 띠 · 이벤트 창 탭 */
 .revband{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--hudb,96px) + 8px);z-index:25;width:max-content;max-width:min(92vw,400px);padding:8px 12px;border-radius:14px;background:linear-gradient(135deg,#ff7a2a,#ff4f3a);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28);text-align:center;pointer-events:auto}
 .revband .rvb-h{display:flex;gap:8px;align-items:center;justify-content:center;font-size:15px}.revband .rvb-i{font-size:18px}.revband .rvb-t{font-weight:800;background:rgba(0,0,0,.2);padding:1px 8px;border-radius:999px}
@@ -1910,7 +1911,7 @@ html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,6
 .ntimg{display:block;width:100%;max-height:280px;object-fit:contain;border-radius:12px;margin:8px 0}
 .ntbody{font-size:14.5px;line-height:1.65;margin-top:8px;word-break:keep-all;overflow-wrap:anywhere}.ntbody p{margin:0 0 10px}.ntbody ul{margin:0 0 10px;padding-left:20px}.ntbody li{margin:2px 0}
 .ntgbn{font-size:12.5px;color:var(--mute);margin:6px 0 0;line-height:1.5}
-.ntbtns{gap:8px;flex-wrap:wrap;margin-top:12px}.ntbtns>button{min-height:42px}
+.ntbtns{gap:8px;flex-wrap:wrap;margin-top:12px}.ntbtns>button{min-height:42px;flex:1 1 0;min-width:0}.ntbtns>button:first-child{flex:1 1 100%}/* V148b 첫 버튼은 한 줄 가득, 나머지는 다음 줄에 나란히 */
 .ntpast{margin-top:12px}.ntpast summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--mute);padding:6px 0}
 .ntwarn{color:#e2861d}.ntempty{text-align:center;padding:18px 0}
 .ntpop{width:min(420px,100%)}
@@ -2396,7 +2397,7 @@ function biteDelay(me,castD,spd,u){if(me==='lure'){const R=(castD-3)/spd,hi=Math
 function fightStartD(){try{if(curTrip||!pBob||!player)return castD;const p=player.g.position,b=pBob.position,d=Math.hypot(p.x-b.x,p.z-b.z);return isFinite(d)?Math.max(3,Math.min(castD,d)):castD;}catch(e){return castD;}}
 /* V88 '실전 같은 동작' 안내는 하루 한 번만(예전 20초마다 — 너무 자주 뜸) */
 function egiTipOk(){try{const k='fishinggo.meta.egiTip',d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);if(localStorage.getItem(k)===d)return false;localStorage.setItem(k,d);return true;}catch(e){if(window.__egiTip)return false;window.__egiTip=1;return true;}}
-function escapeChance(n,ratio,G,skF){return Math.max(.02,Math.min(.45,(ESC_BASE+(ESC_SP[n]||0))*(1-3*gearSens(G))*(1-.05*(skF||0))+.12*Math.min(1.5,Math.max(0,ratio-1))));}
+function escapeChance(n,ratio,G,skF,hd){return Math.max(.02,Math.min(.45,(ESC_BASE+(ESC_SP[n]||0))*(1-3*gearSens(G))*(1-.05*(skF||0))*(ratio>=.8?1-SK_HOOK_DEEP*(+hd||0):1)/* V151 챔질 심화: 큰 고기 */+.12*Math.min(1.5,Math.max(0,ratio-1))));}
 function escKind(n){return(ESC_SP[n]||0)>=.04?'jump':'pull';}
 function rawPts(f,cm,method,ratio){const MD={lure:.8,float:1,pole:.8,surf:1.2,boat:2}[method]||1;return cm*f.pts*MD*(1+.5*Math.min(1,ratio));}
 // v15fix 선상 출조별 포인트 배율(게임 조정값, 경험치에는 안 씀): 15분 출조를 잘 했을 때 — 입문 출조(주꾸미·우럭·이카메탈)는 선비를 조금 밑돌거나 본전,
@@ -3364,6 +3365,19 @@ function pexpAuto(G){return 3.4*(1-gearBig(G));}
 function gearSnagK(G){return(G&&G.term&&G.term.snagK)||1;}
 function gearAbr(G){if(!G)return 0;const d=G.leader,l=G.line;return d?(d.abr||0):((l&&l.abr)||0);}
 // v32 #155: 챔질 감각 스킬 레벨(s)마다 상한 +.01(.95 → 최대 .98) — 상한에 닿은 뒤에도 스킬이 의미 있게
+// V151 스킬 심화: 기본 단계(base)까지는 예전 그대로, 그 위(심화)는 효과 절반 · 한 단계에 스킬 포인트 SK_DEEP_SP개 · 심화 1·2단계는 Lv.SK_DEEP_LV[0]·[1]부터
+// 챔질 감각은 심화가 바늘걸림이 아니라 큰 고기(채비 한계의 80% 이상) 바늘 빠짐 -5%/단계(deep:0 = 바늘걸림 계산엔 기본 단계까지만) · 선상 단골 5는 기본 단계(1포인트, 선장 몫은 할인 전 선비 기준)
+const SK_DEF={cast:{max:7,base:5,deep:.5},hook:{max:7,base:5,deep:0},fight:{max:7,base:5,deep:.5},drag:{max:7,base:5,deep:.5},chum:{max:7,base:5,deep:.5},tide:{max:5,base:3,deep:.5},boat:{max:5,base:5,deep:.5}};
+const SK_DEEP_SP=2;
+const SK_DEEP_LV=[30,40];
+const SK_HOOK_DEEP=.05;
+// 효과 단계(기본 단계는 1씩, 심화는 deep씩)
+function skE(id,n){const d=SK_DEF[id];n=Math.max(0,+n||0);if(!d)return n;n=Math.min(n,d.max);return n<=d.base?n:d.base+(n-d.base)*d.deep;}
+// 지금 n단계에서 다음 단계로: 드는 포인트 · 필요한 레벨(0 = 없음)
+function skCost(id,n){const d=SK_DEF[id];return d&&n>=d.base?SK_DEEP_SP:1;}
+function skNeedLv(id,n){const d=SK_DEF[id];if(!d||n<d.base)return 0;return SK_DEEP_LV[Math.min(SK_DEEP_LV.length-1,n-d.base)]||0;}
+// 배운 스킬에 쓴 포인트 합
+function skSpent(S){let t=0;for(const id in SK_DEF){const n=Math.min(SK_DEF[id].max,Math.max(0,+(S&&S[id])||0));for(let i=0;i<n;i++)t+=skCost(id,i);}return t;}
 function hookP(base,G,s){return Math.min(Math.min(.98,.95+.01*(+s||0)),base+gearSens(G));}
 
 // 보유·장착 (첫 지급: 라이트 루어대 + PE 0.8호 + 플로로 2호 + 지그헤드 3g)
@@ -3416,8 +3430,8 @@ function saveFixNote(msg){if(SRV)return;const raw=SAVE_RAW;const m=uiBox('saveFi
 function gear(){const e=save.eq||{};return{rod:GBY[e.rod],line:GBY[e.line],leader:e.leader?GBY[e.leader]||null:null,term:GBY[e.term]};}
 function termLeft(id){const v=save.inv.term[id];return v==null?0:v;}
 // 비거리(m) — 로드 길이·채비 무게·원줄 굵기로 계산(실제 대표값에 맞춘 근사)
-function castDist(G){if(G.rod&&G.rod.me==='pole')return castBase(G);return Math.round(castBase(G)*(1+.03*sk('cast')));}
-function capacity(G,s){return capBase(G,s)*(1+.03*sk('drag')+SB().cap/100);}/* V98 완력·도감 */
+function castDist(G){if(G.rod&&G.rod.me==='pole')return castBase(G);return Math.round(castBase(G)*(1+.03*skv('cast')));}
+function capacity(G,s){return capBase(G,s)*(1+.03*skv('drag')+SB().cap/100);}/* V98 완력·도감 */
 // 채비 점검: 실제 낚시에서 안 되는 조합은 막고 이유를 알려 준다
 function checkGear(s){const G=gear(),m=[];const env=s?s.w:null;let ok=true;
   const r=G.rod,t=G.term,l=G.line,d=G.leader;
@@ -3615,7 +3629,7 @@ function boatBuyWhy(){if(!SRV)return'낚시GO에서 로그인 후 이용할 수 
   if(debtNow()>0)return'미정산 포인트를 먼저 정산해야 합니다';if(curTrip)return'출조 중에는 살 수 없습니다';const fp=boatPts();if(fp<BOAT_PRICE)return fmtN(BOAT_PRICE-fp)+'P 부족';return'';}
 // 서버는 배 값을 낚시로 모은(무상) 포인트에서만 뺀다 — 예전 유상 충전분·환불 요청 보류분은 빼고 센다
 function boatPts(){return Math.max(0,walletNow().free);}
-function captRules(){return['가격 '+fmtN(BOAT_PRICE)+'P · 게임 포인트에서 빠집니다',...(captAddNow()?['선장 혜택: 배를 가진 동안 선상 출조 하루 +'+captAddNow()+'회(어느 항구든)']:[]),'다른 낚시꾼이 내 배로 출조하면 선상비의 '+pctOf(CAPT_SHARE)+'%를 받습니다','본인 탑승, 같은 손님의 같은 날 두 번째 이후 탑승, 가입 초기·낮은 레벨 손님, 선장과 같은 접속 환경의 탑승은 선장 몫에 들어가지 않습니다 · 같은 손님은 한 주에 몇 번까지만 선장 몫에 들어갑니다(손님의 선상비는 그대로입니다)','손님 배정은 자동이며 선장을 지정해 탈 수 없습니다',
+function captRules(){return['가격 '+fmtN(BOAT_PRICE)+'P · 게임 포인트에서 빠집니다',...(captAddNow()?['선장 혜택: 배를 가진 동안 선상 출조 하루 +'+captAddNow()+'회(어느 항구든)']:[]),'다른 낚시꾼이 내 배로 출조하면 선상비의 '+pctOf(CAPT_SHARE)+'%를 받습니다','본인 탑승, 가입 초기·낮은 레벨 손님, 선장과 같은 접속 환경의 탑승은 선장 몫에 들어가지 않습니다(손님의 선상비는 그대로입니다)','손님 배정은 자동이며 선장을 지정해 탈 수 없습니다',
   '선장 몫은 하루(한국 시각) 기본 '+fmtN(CABIN_CAP[0])+'P까지 쌓이고(선실 단계에 따라 최대 '+fmtN(CABIN_CAP[CABIN_CAP.length-1])+'P), 선장실에서 수령합니다','선실을 넓히면 하루 한도가 '+CABIN_CAP.slice(1).map(v=>fmtN(v)+'P').join(', ')+'로 늘어납니다','선실은 하루 한도만 늘립니다 · 손님 수나 선장 몫을 보장하지 않습니다','배는 계정당 1척입니다','선상비와 선장 몫은 게임 포인트이며 현금·재화로 바꿀 수 없습니다. 선장 몫을 노린 다계정·현금거래는 금지되며 적발 시 배와 포인트를 회수합니다',
   '마지막 접속 후 '+BOAT_IDLE_DAYS+'일이 지나면 배가 자동 반납되며, 가격의 '+pctOf(BOAT_REFUND)+'%('+fmtN(BOAT_PRICE*BOAT_REFUND)+'P)와 수령하지 않은 선장 몫을 함께 돌려받습니다','팔 때도 가격의 '+pctOf(BOAT_REFUND)+'%('+fmtN(BOAT_PRICE*BOAT_REFUND)+'P)를 돌려받습니다'];}
 /* V141 배 구매 참고사항(운영자 요청: 배를 사기 전에 잘 보이게) — 항구 배 목록·배 사기 창의 노란 ⓘ 단추 → 정리된 안내 창 · 숫자는 모두 규칙 상수에서 */
@@ -3630,7 +3644,7 @@ function boatNoteHTML(s){const T=(s?BOAT_TRIPS.filter(x=>x.z.includes(zoneOf(s))
    (captAddNow()?li('선장 혜택','배를 가진 동안 <b>선상 출조 하루 +'+captAddNow()+'회</b>(어느 항구에서 타든) · 내 배를 직접 타는 것은 선장 몫에 들어가지 않습니다'):'')+
    li('배 이름·칭호','살 때 정한 배 이름이 칭호 \''+esc(captTitle('은빛'))+'\'처럼 됩니다(꾸미기 › 칭호) · 이름은 7일에 한 번 무료로 바꾸고 그 사이는 '+fmtN(BOAT_RN_PT)+'P · 배를 팔거나 반납하면 칭호도 사라집니다')+
    li('손님 배정','자동입니다(손님이 선장을 고를 수 없음) · 이 항구의 주인 있는 배 중 오늘 손님이 가장 적은 배에 먼저 들어갑니다')+
-   '<li><b>선장 몫에 안 들어가는 경우</b><ul><li>선장 본인이 탈 때</li><li>같은 손님이 같은 날 두 번째 이후로 탈 때</li><li>가입 3일 미만이거나 Lv.5 미만인 손님</li><li>선장과 같은 접속 환경(IP)의 손님</li><li>같은 손님이 7일 안에 3번을 넘게 탈 때</li></ul><span class="k">손님이 내는 선상비는 그대로입니다</span></li>'+
+   '<li><b>선장 몫에 안 들어가는 경우</b><ul><li>선장 본인이 탈 때</li><li>가입 3일 미만이거나 Lv.5 미만인 손님</li><li>선장과 같은 접속 환경(IP)의 손님</li></ul><span class="k">손님이 내는 선상비는 그대로입니다</span></li>'+
    li('하루 한도','<span class="num">'+fmtN(CABIN_CAP[0])+'P</span> · 선실을 넓히면 '+CABIN_CAP.slice(1).map(v=>fmtN(v)+'P').join('·')+'까지 · 한도를 채우려면 하루 손님 약 '+need+'명('+esc(ex.n)+' 기준) · 쌓인 몫은 선장실에서 받습니다')+
    li('반납·판매','마지막 접속 후 '+BOAT_IDLE_DAYS+'일이 지나면 자동 반납 · 반납·판매 모두 <span class="num">'+fmtN(BOAT_PRICE*BOAT_REFUND)+'P</span>('+pctOf(BOAT_REFUND)+'%)와 받지 않은 선장 몫을 돌려받습니다')+
    '</ul><p class="src">선상비와 선장 몫은 게임 포인트이며 현금·재화로 바꿀 수 없습니다 · 손님 수나 선장 몫은 보장되지 않습니다 · 다계정·현금거래 적발 시 배와 포인트를 회수합니다</p>';}
@@ -6129,12 +6143,12 @@ function hook(){fishGold=false;evt('bite');if(player)player.A.hookT=0;biteEnd(fa
   if(autoRT()&&AQ_R.length&&curChk){const x=AQ_R.shift(),f0=fishBy(x.n);if(f0){AQ_CUR=x;fish=f0;fsize=+x.cm;fishKgNow=+x.kg||fishKg(fish,fsize);const C=curChk.C;ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=null;sEff=Math.max(.15,Math.min(1.5,.15+.55*Math.min(ratio,1.4)));state='fight';fightT=0;dragT=0;dragWT=0;tension=.3;fGrace=0;fCue=0;fdist=fightStartD();surge=0;holding=true;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');return;}}/* V97 서버가 정한 그 고기(놓침 없음 — 이미 정산에서 낚은 고기) */
   if(autoRT()){resetLine();return;}/* V97 실제 결과가 없는 입질은 만들지 않음 */
   const L=curList;if(!L.length){resetLine();return;}let tot=L.reduce((a,b)=>a+b.w,0),r=Math.random()*tot,f=L[0];for(const x of L){if((r-=x.w)<=0){f=x;break;}}
-  f=v36EvRoll(f,L);/* v36 전국 대물(오프라인 — 서버는 /cast가 굴림) */const hk=hookP((HOOK[f.f.n]||.8)+.03*sk('hook'),curChk.G,sk('hook'));// v31 S3 #16: 서버 모드와 같게(서두른 챔질 벌칙 없음)
+  f=v36EvRoll(f,L);/* v36 전국 대물(오프라인 — 서버는 /cast가 굴림) */const hk=hookP((HOOK[f.f.n]||.8)+.03*skv('hook'),curChk.G,skv('hook'));// v31 S3 #16: 서버 모드와 같게(서두른 챔질 벌칙 없음)
   if(Math.random()>hk){srvMiss(null);return;}// v32 #204: 로컬도 서버와 같은 헛챔질 처리(루어는 누르는 동안만 감기)
   fish=f.f;fishGold=goldRoll();const C=curChk.C;const boat=curChk.meth==='boat';
   const rng=boat?hiRng(f,Math.random()):nearRng((SHORE[fish.n]||{}).cm||fish.cm,curChk.meth,castD,curChk.D);/* V138 */
   const pexp=boat?pexpBoat(C):pexpShore(C,curChk.G);
-  fsize=v36EvSize(Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexp))*10)/10);fishKgNow=fishKg(fish,fsize);ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=!fishGold&&Math.random()<escapeChance(fish.n,ratio,curChk.G,sk('fight'))?{at:.2+Math.random()*.65,kind:escKind(fish.n)}:null;// v31 S3 #43: 황금 물고기는 미리 정한 놓침 없음
+  fsize=v36EvSize(Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexp))*10)/10);fishKgNow=fishKg(fish,fsize);ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=!fishGold&&Math.random()<escapeChance(fish.n,ratio,curChk.G,skv('fight'),skHd())?{at:.2+Math.random()*.65,kind:escKind(fish.n)}:null;// v31 S3 #43: 황금 물고기는 미리 정한 놓침 없음
   if(ratio>BREAK_R){const nm=(fishGold?'황금 ':'')+fish.n;fishGold=false;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+breakHint()+loseRig(),'break');return;}// v31 S3 #64: 공용 한계(서버와 같음)
   sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;dragT=0;dragWT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');if(!autoOn)toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=autoOn||pressed;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
 // v32 #210: 대여 채비 값 = min(낼 수 있는 포인트, 30). 서버는 포인트에서만·미정산이 있으면 0(rentalCost)
@@ -6147,13 +6161,13 @@ function rigSwapPick(id){const x=GBY[id];if(!x)return null;const env=cur?cur.w:n
 function rigSwapSoon(id,k){setTimeout(()=>{if(!save.eq||save.eq.term!==id||termLeft(id)>0||curTrip||autoOn)return;if(gearLock()){if((k||0)<10)rigSwapSoon(id,(k||0)+1);return;}const y=rigSwapPick(id);if(!y){toast('채비를 다 썼습니다 · 가방에서 다른 채비를 고르거나 상점에서 사세요',3200);return;}
   Promise.resolve(shopEquip('term',y.id,false)).then(()=>{if(save.eq.term===y.id)toast('채비를 다 써서 바꿔 끼웠습니다 · '+(y.sub||y.n)+(y.pack?' (남은 '+termLeft(y.id)+'개)':''),3200);updGearBadge();});},k?800:1600);}
 function updGearBadge(){try{dvHud();}catch(e){}const b=$('#gearbtn');if(!b||!save||!save.eq||!save.inv)return;const id=save.eq.term,x=id&&GBY[id];if(!x||!x.pack||curTrip){delete b.dataset.n;b.classList.remove('low');return;}const n=Math.max(0,termLeft(id));b.dataset.n=n;b.classList.toggle('low',n<=2);b.setAttribute('aria-label','가방 · '+(x.sub||x.n)+' 남은 '+n+'개 (B)');}
-function biteFactor(){const w=W||{};let k=1;const wind=+w.wind||0;if(cur.w==='sea'){const H=+w.wave||0;if(H>=.3&&H<=1.2)k*=1.25;if(H>2)k*=.55;const ph=((w.tide||{}).phase||'');const n=parseInt(ph);if(n>=4&&n<=9)k*=1.2+.1*sk('tide');if(ph.includes('조금'))k*=.85;
-    const t=+w.sst||0;if(t&&t<8)k*=.7;}if(wind>10)k*=.7;return k*(1+.05*sk('chum')+SB().bite/100);}/* V98 집중·도감 */
+function biteFactor(){const w=W||{};let k=1;const wind=+w.wind||0;if(cur.w==='sea'){const H=+w.wave||0;if(H>=.3&&H<=1.2)k*=1.25;if(H>2)k*=.55;const ph=((w.tide||{}).phase||'');const n=parseInt(ph);if(n>=4&&n<=9)k*=1.2+.1*skv('tide');if(ph.includes('조금'))k*=.85;
+    const t=+w.sst||0;if(t&&t<8)k*=.7;}if(wind>10)k*=.7;return k*(1+.05*skv('chum')+SB().bite/100);}/* V98 집중·도감 */
 function landCatch(){evt('catch');SES.f++;if(SRV){srvLand();return;}state='result';landAt=performance.now();pBob.visible=false;pLine.l.visible=false;if(!$('#fight').hidden){$('#fight').hidden=true;layoutHUD();}holding=false;player.pivot.rotation.x=1.0;
   const clo=closedRange(fish,0,cur),rel=!!clo||(fish.min!=null&&fsize<=fish.min);const gold=fishGold&&!autoOn;fishGold=false;if(!autoOn)avFish(player,fish,fsize,rel,gold);// 법정 금지체장 이하 → 방생(점수·최고기록 없음, 마릿수만 기록)
   if(autoOn){avFish(player,fish,fsize,rel,false);autoVisNote();chime();myPres.st='idle';delete myPres.bx;sendPres(true);bubble(player,'자동 · 5분마다 정산');return;}// v23: 화면을 켜 둔 자동 낚시도 서버와 같이 시간으로 정산(5분마다·끌 때)
   const raw=rawPts(fish,fsize,curChk.G.rod.me,ratio);const pts=rel?0:Math.round(petBuf(V4().eq.pet,false).pt*ptsK(fish,fsize,curChk.G.rod.me,ratio,false,curTrip&&curTrip.id,(curTrip?BOAT_MK:MANUAL_K)*(v36Ev&&!v36Ev.srv?EVENT_K:1)));save.pt=(save.pt||0)+pts;dcAdd(1);const d=save.dex[fish.n]||{n:0,best:0,where:''};const first=d.n===0;const rec=!rel&&fsize>d.best;d.n++;if(rec){d.best=fsize;d.where=cur.n;d.kg=+fishKgNow.toFixed(2);d.bt=Date.now();}d.me=Array.from(new Set([...(d.me||[]),curChk.G.rod.me]));save.dex[fish.n]=d;save.score+=pts;save.count++;const newSpot=!(save.spots[cur.id]>0);save.spots[cur.id]=(save.spots[cur.id]||0)+1;persist();
-  try{showBegin({f:fish,cm:fsize,kg:fishKgNow,gold,evt:!!(v36Ev&&!v36Ev.srv&&!v36S().evt.ids.includes(v36Ev.id)),first,pb:rec&&!first,rel,spot:curTrip?cur.n+' 출항':cur.n});}catch(e){}/* v38 들어 보이기: 레벨 업·해금 창보다 먼저(그 창들은 연출 뒤로) */
+  try{showBegin({f:fish,cm:fsize,kg:fishKgNow,gold,evt:!!(v36Ev&&!v36Ev.srv&&!v36S().evt.ids.includes(v36Ev.id)),first,pb:rec&&!first,rel,spot:curTrip?cur.n+' 출항':cur.n});}catch(e){}bigGalCheer(fish,fsize,rel);/* v38 들어 보이기: 레벨 업·해금 창보다 먼저(그 창들은 연출 뒤로) */
   const xp=Math.round(petBuf(V4().eq.pet,false).xp*xpK(fish,fsize,raw,rel,first,RG.lv,false,v38XpK()*(curTrip?bigXk(curTrip.id,fish,RG.lv):1)));/* V91 펫 *//* V147 빅게임 *//* v38 손맛 */const xL0=RG.lv;addXP(xp);const qAdv=clo?[]:missionEvent({me:curChk.G.rod.me,rel,kg:fishKgNow,newSpot,species:fish.n});if(!rel){let rp=pts;if(curTrip&&TS&&TS.owe>0){const d=Math.min(TS.owe,rp);TS.owe-=d;rp-=d;if(TS.owe===0)setTimeout(()=>toast('선비를 다 갚았습니다 · 이제 랭킹 포인트가 쌓입니다'),1600);}rankAdd(rp,fishKgNow,fish.n);}/* v32 #215: 로컬도 서버처럼 선비를 먼저 갚고 랭킹에 */;tripTally(curTrip,fish,fsize,rel,pts,null);if(rel&&!clo)relTip();
   $('#cardKick').textContent=(curTrip?cur.n+' 출항 '+curTrip.n:cur.n)+(rel?'에서 낚아 방생했습니다':'에서 낚았습니다');$('#cardName').textContent=fish.n;$('#cardSize').innerHTML=fsize.toFixed(1)+'<small>cm</small>';
   $('#cardTags').innerHTML='<span class="tag">약 '+(fishKgNow<1?Math.round(fishKgNow*1000)+'g':fishKgNow.toFixed(1)+'kg')+'</span>'+(rel?'<span class="tag" style="color:#7cc4e8;border-color:#7cc4e8">'+(clo?'금어기 '+clo[0]+'.'+clo[1]+'~'+clo[2]+'.'+clo[3]:'금지체장 '+fish.min+'cm 이하')+' · 방생</span>':'<span class="tag">+'+pts+'P</span>'+(curTrip?'':'<span class="tag mbonus">직접 낚시 ×2.5(무료 자동 대비)</span>'))+(rec||first?'<span class="tag" style="color:#ff7a3d;border-color:#ff7a3d">'+(first?'어록 등록':'개인 최고')+'</span>':'')+'<span class="tag">누적 '+save.count+'마리</span><span class="tag">+'+xp+'XP'+xpTagTxt(fish,xL0)+'</span><span class="tag">'+sesTxt()+'</span>'+qTags(qAdv);
@@ -6176,8 +6190,12 @@ function showMode(){const m=showSt().m;return m==='all'||m==='off'?m:'sp';}
 function showDay(){const k=kstNow();return k.y*1e4+k.mo*100+k.d;}
 function sizePct(f,cm){return Math.max(0,Math.min(1,(cm-f.cm[0])/(f.cm[1]-f.cm[0])));}
 // 늘 보여 줌(황금·전국 대물·첫 어종, 쿨다운·하루 횟수에 안 셈) / 쿨다운이 되면(개인 최고·대물·희귀) / 안 함(방생·자동·투망·작은 고기) · 끄기는 모두 안 함
+/* V150 대갈치: 1m(100cm) 이상 갈치를 직접 낚으면 들어 보이기 배지 '대갈치!' + 알림 + 팡파르(자동 낚시·방생은 제외) */
+const BIG_GAL=100;function bigGal(f,cm){return!!(f&&f.n==='갈치'&&+cm>=BIG_GAL);}
+function bigGalCheer(f,cm,rel){if(rel||autoOn||!bigGal(f,cm))return;try{toast('🎉 대갈치! '+(+cm).toFixed(1)+'cm · 1m 넘는 갈치를 낚았어요',3600);}catch(e){}
+  try{[523,659,784,1047].forEach((h,i)=>setTimeout(()=>tone(h,.12,.07,'triangle'),i*110));}catch(e){}setTimeout(()=>{try{if(player)bubble(player,'대갈치! '+Math.round(cm)+'cm');}catch(e){}},1400);}
 function showPick(o){if(!o||!o.f||o.rel||o.auto||o.net)return null;const md=showMode();if(md==='off')return null;const f=o.f,p=o.evt?1:sizePct(f,o.cm);
-  let b=o.gold?'황금 물고기':o.evt?'전국 대물':o.first?'첫 어종!':null;if(b)return{b,must:1,p};
+  let b=o.gold?'황금 물고기':o.evt?'전국 대물':bigGal(f,o.cm)?'대갈치!':o.first?'첫 어종!':null;if(b)return{b,must:1,p};
   const pb=(o.pb!=null?!!o.pb:o.best0>0&&o.cm>o.best0)&&p>=SHOW.minPct,rare=(f.str>=SHOW.rareStr||f.pts>=SHOW.rarePts)&&p>=SHOW.minPct;
   b=pb?'개인 최고':p>=SHOW.pct||rare?'대물':md==='all'?'':null;if(b==null)return null;
   const S=showSt(),d=showDay();if(S.d!==d){S.d=d;S.n=0;}if(Date.now()-(+S.at||0)<SHOW.cdMs||(S.n|0)>=SHOW.dayMax)return null;return{b,must:0,p};}
@@ -7004,7 +7022,7 @@ let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+
     const lzK=fdist<FIGHT_LZ?1:0;/* V138 랜딩 구간(마지막 3m): 고기가 지쳐 덜 차고 나간다 — 차고 나감 확률 ×0.35 · 장력 오름 ×0.6 */
     if(Math.random()<dt*(s*.9+Hs*.4)*(lzK?.35:1)&&surge<=0){surge=.5+Math.random()*.6;fCue=Math.max(fCue,.9);vxSfx('drag',1);const fe=$('#fight');fe.classList.remove('shake');void fe.offsetWidth;fe.classList.add('shake');if(!autoOn)vib(40);}
     if(surge>0){surge-=dt;tension+=(s*.4+Hs*.15)*dt*(holding?1:.5)*(lzK?.6:1);fdist+=s*1.2*dt*(holding?.5:1)*(1+castD/80);}
-    if(holding&&fGrace<=0){tension+=(.18+s*.32)*(1-.04*sk('fight'))*(1-.1*((curChk&&curChk.G.rod&&curChk.G.rod.light)||0))*dt*(lzK?.6:1);fdist-=(2.4-s*.8)*reelF*dt;clickT-=dt;if(clickT<=0){vxSfx('click',tension);clickT=.09-.05*Math.min(1,Math.max(0,tension));}}else{tension-=(.6+s*.6+Hs*.4)*dt;fdist+=s*.5*dt;}tenWarn(dt);
+    if(holding&&fGrace<=0){tension+=(.18+s*.32)*(1-.04*skv('fight'))*(1-.1*((curChk&&curChk.G.rod&&curChk.G.rod.light)||0))*dt*(lzK?.6:1);fdist-=(2.4-s*.8)*reelF*dt;clickT-=dt;if(clickT<=0){vxSfx('click',tension);clickT=.09-.05*Math.min(1,Math.max(0,tension));}}else{tension-=(.6+s*.6+Hs*.4)*dt;fdist+=s*.5*dt;}tenWarn(dt);
     tension=Math.max(0,tension);if(tension<.9)dragT=Math.max(0,dragT-dt*.5);/* 드랙 여유는 천천히 회복(풀렸다 감았다 반복하면 결국 터짐) */slackT=tension<.05?slackT+dt:0;if(slackT>.5&&!slackVib){slackVib=1;if(!autoOn)vib(60);}else if(slackT<=0)slackVib=0;if(fCue>0)fCue-=dt;
     if(escPlan&&!escPlan.fired&&!escPlan.warn&&1-fdist/Math.max(1,castD)>=escPlan.at-.06&&tension<1){escPlan.warn=.6;escPlan.fd=fdist;vxSfx('splash',1);const fe=$('#fight');fe.classList.remove('shake');void fe.offsetWidth;fe.classList.add('shake');}if(escPlan&&escPlan.warn>0){escPlan.warn-=dt;fdist=Math.max(fdist,escPlan.fd);}
     if(escPlan&&!escPlan.fired&&(escPlan.warn!=null&&escPlan.warn<=0)&&tension<1){escPlan.fired=true;escJ=.9;holding=false;tension=0;if(escPlan.kind==='jump'){tone(240,.25,.07,'triangle');bubble(player,'바늘털이!');}else tone(420,.12,.05,'triangle');}
@@ -7067,16 +7085,18 @@ if(!save.rpg)save.rpg={xp:0,lv:1,sp:0,sk:{},day:'',miss:[],streak:0,last:''};
 if(!save.rk)save.rk={};
 const RG=save.rpg;
 const SKILLS=[
- {id:'cast',n:'캐스팅',max:5,d:'최대 비거리 +3%'},
- {id:'hook',n:'챔질 감각',max:5,d:'바늘걸림률 +3%p'},
- {id:'fight',n:'파이팅',max:5,d:'감을 때 장력 상승 -4% · 바늘 빠짐 -5%'},
- {id:'drag',n:'드랙 관리',max:5,d:'채비 한계 +3%'},
- {id:'chum',n:'집어',max:5,d:'입질 확률 +5%'},
- {id:'tide',n:'물때 읽기',max:3,d:'4~9물 입질 보너스 +10%p'},
- {id:'boat',n:'선상 단골',max:4,d:'선비 -5%'}];
+ {id:'cast',n:'캐스팅',max:SK_DEF.cast.max,d:'최대 비거리 +3%'},
+ {id:'hook',n:'챔질 감각',max:SK_DEF.hook.max,d:'바늘걸림률 +3%p',dd:'심화: 큰 고기 바늘 빠짐 -5%'},
+ {id:'fight',n:'파이팅',max:SK_DEF.fight.max,d:'감을 때 장력 상승 -4% · 바늘 빠짐 -5%'},
+ {id:'drag',n:'드랙 관리',max:SK_DEF.drag.max,d:'채비 한계 +3%'},
+ {id:'chum',n:'집어',max:SK_DEF.chum.max,d:'입질 확률 +5%'},
+ {id:'tide',n:'물때 읽기',max:SK_DEF.tide.max,d:'4~9물 입질 보너스 +10%p'},
+ {id:'boat',n:'선상 단골',max:SK_DEF.boat.max,d:'선비 -5%'}];/* V151 심화(6·7단계, 물때 4·5단계): 효과 절반 · 2포인트 · Lv.30/40 */
 const sk=id=>(RG.sk&&+RG.sk[id])||0;
+const skv=id=>skE(id,sk(id));/* V151 효과 단계(심화는 절반) */const skHd=()=>Math.max(0,sk('hook')-SK_DEF.hook.base);
 // v32 #193: 배울 스킬이 남았을 때만 스킬 포인트 배지·안내(모든 스킬 최대면 남은 포인트는 쓸 곳이 없음)
-const spUsable=()=>RG.sp>0&&SKILLS.some(s=>sk(s.id)<s.max);
+const skCan=s=>{const l=sk(s.id);return l<s.max&&RG.sp>=skCost(s.id,l)&&RG.lv>=skNeedLv(s.id,l);};/* V151 포인트·레벨 조건까지 */
+const spUsable=()=>RG.sp>0&&SKILLS.some(skCan);
 const TITLES=[[1,'입문 낚시꾼'],[5,'동네 꾼'],[10,'방파제 고수'],[15,'갯바위 꾼'],[20,'갯바위 명인'],[30,'선장급 조사'],[40,'전설의 조사']];
 function titleOf(lv){let t=TITLES[0][1];TITLES.forEach(([l,n])=>{if(lv>=l)t=n;});return t;}
 // 다음 레벨까지 필요한 경험치: 레벨이 오를수록 제곱으로 늘어난다(Lv1→2 100 · Lv5 1,700 · Lv10 6,400 · Lv20 24,800 · Lv30 55,200)
@@ -7094,10 +7114,10 @@ function xpTagTxt(f,lv){const m=xpMulOf(f,lv||RG.lv);return m<.995?' · 쉬운 �
 // C6 #155: 챔질 감각은 바늘걸림 상한(95%)에서 멈춘다 → 지금 낚싯대 기준 실제 확률과 상한 도달을 보여 준다(서버 공식은 그대로)
 // v32 LC2 #234: 스킬별 지금 → 다음 단계 값과 예외
 let skArm='',skArmT=0;
-function skEff(id,l){return id==='cast'?'최대 비거리 +'+3*l+'%':id==='hook'?'바늘걸림 +'+3*l+'%p':id==='fight'?'장력 상승 -'+4*l+'% · 바늘 빠짐 -'+5*l+'%':id==='drag'?'채비 한계 +'+3*l+'%':id==='chum'?'입질 +'+5*l+'%':id==='tide'?'4~9물 입질 +'+(20+10*l)+'%':id==='boat'?'선비 -'+5*l+'%':'';}
+function skEff(id,l){const e=skE(id,l),r=x=>String(+x.toFixed(1)),hd=id==='hook'?Math.max(0,l-SK_DEF.hook.base):0;return id==='cast'?'최대 비거리 +'+r(3*e)+'%':id==='hook'?'바늘걸림 +'+r(3*e)+'%p'+(hd?' · 큰 고기 바늘 빠짐 -'+5*hd+'%':''):id==='fight'?'장력 상승 -'+r(4*e)+'% · 바늘 빠짐 -'+r(5*e)+'%':id==='drag'?'채비 한계 +'+r(3*e)+'%':id==='chum'?'입질 +'+r(5*e)+'%':id==='tide'?'4~9물 입질 +'+r(20+10*e)+'%':id==='boat'?'선비 -'+r(5*e)+'%':'';}/* V151 심화는 효과 절반 */
 const SK_EX={cast:'민장대는 비거리 고정이라 제외',tide:'바다 낚시터만 · 4~9물일 때만',boat:'선상 출조만',chum:'직접·자동 낚시 모두'};
-function skNowNext(s){const l=sk(s.id);return '<span class="num">지금 '+(l?skEff(s.id,l):'없음')+(l<s.max?' → 다음 '+skEff(s.id,l+1):' · 최대')+'</span>'+(SK_EX[s.id]?' · '+SK_EX[s.id]:'');}
-function hookSkTxt(){try{const G=gear();if(!G.rod)return'';const now=hookP(.8+.03*sk('hook'),G,sk('hook')),nx=hookP(.8+.03*(sk('hook')+1),G,sk('hook')+1);return' · 지금 낚싯대로 보통 어종 바늘걸림 약 '+Math.round(now*100)+'%'+(sk('hook')<5&&nx-now<.001?' · 이미 최대(95%)라 더 배워도 이 낚싯대에선 효과가 없습니다':'');}catch(e){return'';}}
+function skNowNext(s){const l=sk(s.id),c=l<s.max?skCost(s.id,l):0,nl=l<s.max?skNeedLv(s.id,l):0;return '<span class="num">지금 '+(l?skEff(s.id,l):'없음')+(l<s.max?' → 다음 '+skEff(s.id,l+1):' · 최대')+'</span>'+(SK_EX[s.id]?' · '+SK_EX[s.id]:'')+(c>1?'<br><span class="skdeep'+(RG.lv<nl?' lock':'')+'">심화 '+(l-SK_DEF[s.id].base+1)+'단계 · 효과 절반'+(s.dd?' ('+s.dd+')':'')+' · 스킬 포인트 '+c+'개 · Lv.'+nl+'부터'+(RG.lv<nl?' (지금 Lv.'+RG.lv+')':'')+'</span>':'');}
+function hookSkTxt(){try{const G=gear();if(!G.rod)return'';const h0=skE('hook',sk('hook')),h1=skE('hook',sk('hook')+1),now=hookP(.8+.03*h0,G,h0),nx=hookP(.8+.03*h1,G,h1);/* V151 심화는 바늘걸림 그대로 */return' · 지금 낚싯대로 보통 어종 바늘걸림 약 '+Math.round(now*100)+'%'+(sk('hook')<5&&nx-now<.001?' · 이미 최대(95%)라 더 배워도 이 낚싯대에선 효과가 없습니다':'');}catch(e){return'';}}
 function catchXP(f,cm,raw,rel,first,lv,auto){const base=(rel?(8+cm*.15)*XP_K:(10+5*Math.sqrt(raw))*XP_K)+(first?30+10*(f.pts||1):0);/* C6 #100: 첫 어종 보너스는 방생(금지체장·금어기)한 첫 마리에도 */const gap=Math.min(lv,24)-fishLv(f);
   const mul=gap>0?Math.max(.2,1-.08*gap):Math.min(1.3,1-.03*gap);return Math.max(1,Math.round(base*mul*(auto?AUTO_XP:1)));}
 const LV_REQ={"r_light_l":25,"r_trout_l":25,"r_bass_l":25,"r_bspin_l":25,"r_frog_l":25,"r_rockf_l":25,"r_egi_l":25,"r_seabass_l":25,"r_shore_l":25,"r_iso1_l":25,"r_iso15_l":25,"r_iso2_l":25,"r_iso3_l":25,"r_pole24_l":25,"r_pole_l":25,"r_pole40_l":25,"r_spole_l":25,"r_surf1_l":25,"r_surf2_l":25,"r_light_m":5,"r_light_h":12,"r_light_x":20,"r_egi_m":5,"r_egi_h":12,"r_egi_x":20,"r_bass_m":5,"r_bass_h":12,"r_bass_x":20,"r_bspin_m":5,"r_bspin_h":12,"r_rockf_m":5,"r_rockf_h":12,"r_seabass":3,"r_seabass_m":5,"r_seabass_h":12,"r_shore":8,"r_shore_m":10,"r_shore_h":13,"r_frog":6,"r_frog_m":8,"r_frog_h":12,"r_trout_m":5,"r_trout_h":12,"r_trout_x":20,"r_iso1_m":5,"r_iso1_h":12,"r_iso1_x":20,"r_iso15_m":5,"r_iso15_h":12,"r_iso2_m":5,"r_iso2_h":12,"r_iso3":6,"r_iso3_m":8,"r_iso3_h":12,"r_pole24_m":5,"r_pole24_h":12,"r_pole_m":5,"r_pole_h":12,"r_pole40_m":5,"r_pole40_h":12,"r_spole_m":5,"r_spole_h":12,"r_surf1_m":5,"r_surf1_h":12,"r_surf2":5,"r_surf2_m":7,"r_surf2_h":12,"l_ny2_m":3,"l_ny3_m":3,"l_ny5_m":3,"l_pe06_m":3,"l_pe08_m":3,"l_pe1_m":3,"l_pe1_h":8,"l_pe15_m":3,"l_pe2_m":3,"l_pe2_h":8,"l_pe3":8,"l_pe3_m":10,"d_fc15_m":3,"d_fc2_m":3,"d_fc3_m":3,"d_fc5_m":3,"d_fc8_m":3,"d_fc12":8,"d_fc12_m":10,"t_metal40_h":8,"t_metal60":8,"t_metal60_h":13,"t_metal80":8,"t_metal100":8,"t_minnow_h":8,"t_egi_h":8,"t_jig1_m":3,"t_jig1_h":8,"t_jig1_x":15,"t_jig1_l":25,"t_jig3_m":3,"t_jig3_h":8,"t_jig3_x":15,"t_jig3_l":25,"t_jig5_m":3,"t_jig5_h":8,"t_jig5_x":15,"t_jig5_l":25,"t_jig7_m":3,"t_jig7_h":8,"t_jig7_x":15,"t_jig7_l":25,"t_jig10_m":3,"t_jig10_h":8,"t_jig10_x":15,"t_jig10_l":25,"t_metal20_m":3,"t_metal20_h":8,"t_metal20_x":15,"t_metal20_l":25,"t_metal30_m":3,"t_metal30_h":8,"t_metal30_x":15,"t_metal30_l":25,"t_metal40_m":3,"t_metal40_x":15,"t_metal40_l":25,"t_metal60_m":8,"t_metal60_x":15,"t_metal60_l":25,"t_metal80_m":8,"t_metal80_h":8,"t_metal80_x":15,"t_metal80_l":25,"t_metal100_m":8,"t_metal100_h":8,"t_metal100_x":15,"t_metal100_l":25,"t_minnow7_m":3,"t_minnow7_h":8,"t_minnow7_x":15,"t_minnow7_l":25,"t_minnow9_m":3,"t_minnow9_h":8,"t_minnow9_x":15,"t_minnow9_l":25,"t_minnow_m":3,"t_minnow_x":15,"t_minnow_l":25,"t_minnow14_m":3,"t_minnow14_h":8,"t_minnow14_x":15,"t_minnow14_l":25,"t_spoon3_m":3,"t_spoon3_h":8,"t_spoon3_x":15,"t_spoon3_l":25,"t_spoon_m":3,"t_spoon_h":8,"t_spoon_x":15,"t_spoon_l":25,"t_frog_m":3,"t_frog_h":8,"t_frog_x":15,"t_frog_l":25,"t_egi25_m":3,"t_egi25_h":8,"t_egi25_x":15,"t_egi25_l":25,"t_egi_m":3,"t_egi_x":15,"t_egi_l":25,"t_egi35_m":3,"t_egi35_h":8,"t_egi35_x":15,"t_egi35_l":25,"t_krill_m":3,"t_krill_h":8,"t_krill_x":15,"t_krill_l":25,"t_sabiki_m":3,"t_sabiki_h":8,"t_sabiki_x":15,"t_sabiki_l":25,"t_surff_m":3,"t_surff_h":8,"t_surff_x":15,"t_surff_l":25,"t_surf25_m":3,"t_surf25_h":8,"t_surf25_x":15,"t_surf25_l":25,"t_surf30_m":3,"t_surf30_h":8,"t_surf30_x":15,"t_surf30_l":25,"t_paste_m":3,"t_paste_h":8,"t_paste_x":15,"t_paste_l":25,"t_bingeo_m":3,"t_bingeo_h":8,"t_bingeo_x":15,"t_bingeo_l":25,"t_minnow_hs":8};
@@ -7176,7 +7196,7 @@ const CUP_TIER={n:{max:30,per:'w',mins:[10,20,30],ahead:864e5,modes:['sum','cnt'
 const CUP_BAN=['#1f6fb2','#c0392b','#16a085','#8e44ad','#d35400','#2c3e50'];
 function duelTier(r){let i=0;DUEL_TIER.forEach((t,k)=>{if(r>=t[0])i=k;});return i;}
 function bigIdx(f,cm){return f&&f.cm?Math.round(Math.min(150,cm/f.cm[1]*100)*10)/10:0;}
-function feeOf(t){return Math.round(t.fee*(1-.05*sk('boat')));}
+function feeOf(t){return Math.round(t.fee*(1-.05*skv('boat')));}
 function addXP(n){RG.xp+=n;const l0=RG.lv;while(RG.xp>=xpNeed(RG.lv)){RG.xp-=xpNeed(RG.lv);RG.lv++;RG.sp++;RG.ap=(+RG.ap||0)+AP_LV;save.pt=(save.pt||0)+lvUpPt(RG.lv);try{const tid=lvBaitPick(save.eq&&save.eq.term,RG.lv,dexCount(save.dex));save.inv.term[tid]=(+save.inv.term[tid]||0)+LVUP_BAIT;}catch(e){}}
   if(RG.lv>l0){const l1=RG.lv;apOverL(false);setTimeout(()=>lvNote(l0,l1),900);}persist();renderLv();}
 // C6 #78: 레벨이 여러 단계 오르면 알림 한 번으로 합친다(레벨마다 Lv×30P · 스킬 포인트 1)
@@ -7259,9 +7279,9 @@ async function renderRPG(){renderLv();const T3=[['me','성장·스킬'],['goal',
   $('#rpgTabs').innerHTML=T3.map(([k,t])=>'<button type="button" role="tab" data-t="'+k+'" aria-selected="'+(k===rpgTab)+'">'+t+'</button>').join('');
   $('#rpgTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{rpgTab=b.dataset.t;renderRPG();});const box=$('#rpgBody');
   if(rpgTab==='me'){box.innerHTML='<div class="sumbox"><div style="font-size:16px">'+rkBadgeHTML(save.nick)+'Lv.<b class="num">'+RG.lv+'</b> '+esc(titleOf(RG.lv))+goldTitleHTML()+'</div><div class="bar" style="margin:6px 0"><i style="width:'+(RG.xp/xpNeed(RG.lv)*100).toFixed(0)+'%;background:var(--buoy)"></i></div><div class="k">경험치 '+RG.xp+' / '+xpNeed(RG.lv)+(SKILLS.some(s=>sk(s.id)<s.max)?' · 스킬 포인트 '+RG.sp:' · 모든 스킬 최대')+(()=>{const nt=TITLES.find(([l])=>l>RG.lv);return nt?' · 다음 칭호 '+esc(nt[1])+' (Lv.'+nt[0]+' · '+(nt[0]-RG.lv)+'레벨 남음)':' · 최고 칭호';})()+'</div><div class="k">경험치: 잡을 때(크기·난이도), 방생, 첫 어종 보너스, 미션 완료. 내 레벨보다 쉬운 어종은 경험치가 줄고(최소 ×0.2), 어려운 어종은 늘어납니다(최대 ×1.3) · 더 어려운 낚시터·어종에 도전하세요. 레벨이 오르면 스킬 포인트 1, 포인트(레벨이 높을수록 더), 미끼 10개를 받습니다.</div></div>'+captGoalHTML()+
-     (spUsable()?'<div class="item spcall" style="border:2px solid var(--buoy);border-radius:12px;background:rgba(255,140,40,.10)"><div><b>남은 스킬 포인트 <span class="num" style="color:var(--buoy);font-size:18px">'+RG.sp+'</span>개</b><div class="spec">아래 스킬에서 [배우기]를 눌러 쓰세요 · 레벨이 오를 때마다 1개씩 생깁니다</div></div></div>':'')+SKILLS.map(s=>'<div class="item"><div><b>'+s.n+' <span class="num">'+sk(s.id)+'/'+s.max+'</span></b><div class="spec">'+s.d+' (단계마다)'+(s.id==='hook'?hookSkTxt():'')+'<br>'+skNowNext(s)+'</div></div><div class="act2"><button class="mini buy" data-sk="'+s.id+'"'+(RG.sp>0&&sk(s.id)<s.max&&!skBusy?'':' disabled')+'>'+(skArm===s.id?'한 번 더 눌러 확정':'배우기')+'</button></div></div>').join('')+'<p class="src">스킬 포인트는 한 번 쓰면 되돌릴 수 없습니다 · 배우기를 두 번 눌러 확정</p>'+
+     (spUsable()?'<div class="item spcall" style="border:2px solid var(--buoy);border-radius:12px;background:rgba(255,140,40,.10)"><div><b>남은 스킬 포인트 <span class="num" style="color:var(--buoy);font-size:18px">'+RG.sp+'</span>개</b><div class="spec">아래 스킬에서 [배우기]를 눌러 쓰세요 · 레벨이 오를 때마다 1개씩 생깁니다 · 심화 단계는 2개씩(Lv.'+SK_DEEP_LV.join('·')+')</div></div></div>':'')+SKILLS.map(s=>'<div class="item"><div><b>'+s.n+' <span class="num">'+sk(s.id)+'/'+s.max+'</span></b><div class="spec">'+s.d+' (단계마다)'+(s.id==='hook'?hookSkTxt():'')+'<br>'+skNowNext(s)+'</div></div><div class="act2"><button class="mini buy" data-sk="'+s.id+'"'+(skCan(s)&&!skBusy?'':' disabled')+'>'+(skArm===s.id?'한 번 더 눌러 확정':sk(s.id)<s.max&&RG.lv<skNeedLv(s.id,sk(s.id))?'Lv.'+skNeedLv(s.id,sk(s.id))+'부터':'배우기'+(sk(s.id)<s.max&&skCost(s.id,sk(s.id))>1?' ('+skCost(s.id,sk(s.id))+'P)':''))+'</button></div></div>').join('')+'<p class="src">스킬 포인트는 한 번 쓰면 되돌릴 수 없습니다 · 배우기를 두 번 눌러 확정</p>'+
      '<p class="src">장비 해금 · '+unlockRuleTxt()+' (자세한 단계는 상점 → 해금 탭) · 선상 '+BOAT_TRIPS.map(t=>esc(t.n)+' Lv.'+(TRIP_LV[t.id]||1)).join(' · ')+'</p>';
-    box.querySelectorAll('[data-sk]').forEach(b=>b.onclick=()=>{const s=SKILLS.find(x=>x.id===b.dataset.sk);if(RG.sp<=0||sk(s.id)>=s.max||skBusy)return;if(skArm!==s.id){skArm=s.id;clearTimeout(skArmT);skArmT=setTimeout(()=>{skArm='';if(rpgTab==='me'&&!$('#rpg').hidden)renderRPG();},4000);renderRPG();return;}skArm='';clearTimeout(skArmT);/* v32 LC2 #234: 두 번 눌러 확정 */if(SRV){srvSkill(s);return;}RG.sk[s.id]=sk(s.id)+1;RG.sp--;persist();renderRPG();toast(s.n+' '+sk(s.id)+'단계');});}
+    box.querySelectorAll('[data-sk]').forEach(b=>b.onclick=()=>{const s=SKILLS.find(x=>x.id===b.dataset.sk);if(!skCan(s)||skBusy)return;if(skArm!==s.id){skArm=s.id;clearTimeout(skArmT);skArmT=setTimeout(()=>{skArm='';if(rpgTab==='me'&&!$('#rpg').hidden)renderRPG();},4000);renderRPG();return;}skArm='';clearTimeout(skArmT);/* v32 LC2 #234: 두 번 눌러 확정 */if(SRV){srvSkill(s);return;}RG.sp-=skCost(s.id,sk(s.id));RG.sk[s.id]=sk(s.id)+1;persist();renderRPG();toast(s.n+' '+sk(s.id)+'단계');});}
   else if(rpgTab==='goal'){v36GoalRender(box);}/* v36 안내 퀘스트·레벨 목표·지역 어록·배지 */
   else if(rpgTab==='gold'){renderGold(box);}
   else if(rpgTab==='draw'){renderDraw(box);}
@@ -7295,7 +7315,7 @@ function openChar(note){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}r
 function closeChar(){$('#charM').hidden=true;}
 function apNewCheck(){try{if(!RG.apNew||!RG.apv||!(RG.apNew.ap>0||RG.apNew.pt>0))return;const iv=$('#intro');if(iv&&!iv.hidden)return;/* 첫 화면이 닫힌 뒤에 */const k='apNew:'+(save.uid||save.nick||'')+':'+RG.apNew.ap+':'+RG.apNew.pt;if(localStorage.getItem(k))return;localStorage.setItem(k,'1');const t='능력치 포인트 '+RG.apNew.ap+'점이 도착했습니다 · 지금까지 오른 레벨만큼'+(RG.apNew.pt?' · 남는 포인트는 '+fmtN(RG.apNew.pt)+'P로 바꿔 넣었습니다':'');setTimeout(()=>{if((inWorld()&&BUSY_ST[state])||!$('#evtM').hidden||!$('#charM').hidden){toast(t+' · 왼쪽 위 Lv를 눌러 나눠 주세요',5200);return;}openChar(t);},2200);}catch(e){}}
 function chStatsHTML(){const B=SB(),pb=petBuf(V4().eq&&V4().eq.pet,false),pct=v=>(v>=0?'+':'')+fx2(v)+'%';
-  const L=[['채비 한계',pct(3*sk('drag')+B.cap)],['입질',pct(5*sk('chum')+B.bite+(pb.bite-1)*100)],['최대 비거리',pct(3*sk('cast'))],['바늘걸림',pct(3*sk('hook'))+'p'],['포만감 소모',pct(-(1-B.sat)*100)],['포인트',pct((pb.pt-1)*100+B.pt)],['경험치',pct((pb.xp-1)*100+B.xp)]];
+  const L=[['채비 한계',pct(3*skv('drag')+B.cap)],['입질',pct(5*skv('chum')+B.bite+(pb.bite-1)*100)],['최대 비거리',pct(3*skv('cast'))],['바늘걸림',pct(3*skv('hook'))+'p'],['포만감 소모',pct(-(1-B.sat)*100)],['포인트',pct((pb.pt-1)*100+B.pt)],['경험치',pct((pb.xp-1)*100+B.xp)]];
   if(B.cm)L.push(['고기 길이',pct(B.cm)]);L.push(['도감 등록',B.dex.n+'종 · 완성 '+B.dex.zones.length+'판']);
   return'<ul class="chst">'+L.map(([a,b])=>'<li><span>'+a+'</span><b class="num">'+b+'</b></li>').join('')+'</ul><p class="src">스킬·능력치·도감·펫을 모두 더한 값 · 포인트 보너스는 랭킹 점수에 넣지 않습니다</p>';}
 function renderChar(){const g=grOf(RG),st=stOf(RG),G=GRADES[g-1],ap=+RG.ap||0,cs=capSum(g),ss=stSum(st),nx=gradeNext(RG),D=SB().dex,net=v36HasNet();
@@ -7733,8 +7753,8 @@ function autoSim(s,chk){const night=sunPos(s).el<-6;const list=shoreCatch(s,chk.
   const kd=s.w==='fresh'?(/호|저수지|댐|늪/.test(s.n)?'lake':'river'):(s.t==='갯바위'?'rock':s.t==='항구'?'port':'pier');
   const snag=({rock:.09,pier:.06,port:.03,river:.04,lake:.025}[kd]||.04)*({surf:.2,lure:.5,float:.3,pole:.2}[me]||1)*gearSnagK(chk.G)*(1-gearAbr(chk.G))*cyc/60;
   function roll(){if(Math.random()<snag)return{lost:1};if(!list.length||Math.random()>=pB)return null;let r=Math.random()*sumW,f=list[0];for(const x of list){if((r-=x.w)<=0){f=x;break;}}
-    if(Math.random()>hookP((HOOK[f.f.n]||.8)+.03*sk('hook'),chk.G,sk('hook')))return null;const rng=(SHORE[f.f.n]||{}).cm||f.f.cm;const sz=Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexpAuto(chk.G)))*10)/10;const kg=fishKg(f.f,sz);const ratio=kg/chk.C;
-    if(ratio>1.6)return{lost:1};if(Math.random()<escapeChance(f.f.n,ratio,chk.G,sk('fight')))return null;return{f:f.f,sz,kg,ratio};}
+    if(Math.random()>hookP((HOOK[f.f.n]||.8)+.03*skv('hook'),chk.G,skv('hook')))return null;const rng=(SHORE[f.f.n]||{}).cm||f.f.cm;const sz=Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexpAuto(chk.G)))*10)/10;const kg=fishKg(f.f,sz);const ratio=kg/chk.C;
+    if(ratio>1.6)return{lost:1};if(Math.random()<escapeChance(f.f.n,ratio,chk.G,skv('fight'),skHd()))return null;return{f:f.f,sz,kg,ratio};}
   return{list,me,cyc,pB,snag,roll};}
 // 시간당 예상 포인트(k=1 기준, 같은 확률로 1,200번 던져 평균) — "지금 자동: 시간당 약 80P"
 const RATE_C=new Map();
@@ -8713,7 +8733,7 @@ function srvLand(){const c=srvC,b=c&&c.h;
   $('#cardKick').textContent=(trip?spot.n+' 출항 '+trip.n:spot.n)+'에서 낚았습니다';$('#cardName').textContent=f.n;$('#cardSize').innerHTML=cm.toFixed(1)+'<small>cm</small>';
   const tags=x=>{$('#cardTags').innerHTML='<span class="tag">약 '+kgTxt(kg)+'</span>'+x;};tags('<span class="tag">서버에 기록 중…</span><span class="tag">'+sesTxt()+'</span>');
   const meta=rel=>'당시 기상 · 풍속 '+(w.wind!=null?(+w.wind).toFixed(1)+'m/s':'-')+(spot.w==='sea'?' · 파고 '+(w.wave!=null?(+w.wave).toFixed(1)+'m':'-')+(w.sst!=null&&w.sst!==''?' · 수온 '+w.sst+'°C':'')+((w.tide||{}).phase?' · '+w.tide.phase:''):' · 기온 '+(w.air!=null?w.air+'°C':'-'))+'. 어종·크기는 게임 서버가 정합니다.'+(rel||'')+(trip?' 선상: '+trip.n+' · 대여 장비 '+trip.rig.n+' · 수심 '+cd+'m.':' 채비: '+chk.G.rod.n+' · '+chk.G.line.n+(chk.G.leader?' · '+chk.G.leader.n:'')+' · '+chk.G.term.n+' · 비거리 '+Math.round(cd)+'m.')+((FX[f.n]||{}).bait?' 실제 낚시 미끼·채비: '+FX[f.n].bait+'.':'');
-  try{showBegin({f,cm,kg,gold,evt:!!(v36Ev&&v36Ev.srv),first,best0,rel:(f.min!=null&&cm<=f.min)||!!closedRange(f,0,spot),spot:trip?spot.n+' 출항':spot.n});}catch(e){}/* v38: 서버가 나중에 방생으로 정하면 showSrv가 멈춤 */
+  try{showBegin({f,cm,kg,gold,evt:!!(v36Ev&&v36Ev.srv),first,best0,rel:(f.min!=null&&cm<=f.min)||!!closedRange(f,0,spot),spot:trip?spot.n+' 출항':spot.n});}catch(e){}bigGalCheer(f,cm,(f.min!=null&&cm<=f.min)||!!closedRange(f,0,spot));/* v38: 서버가 나중에 방생으로 정하면 showSrv가 멈춤 */
   const ug=()=>{if(gold)goldUncard(f,cm);};$('#cardMeta').textContent=meta('');drawFish($('#fishcv'),f,cm);goldCard(gold,false);if(gold)goldFish($('#fishcv'),f,cm);cardShow();chime();
   srvCatchPending=true;const wait=Math.max(0,c.hookAt+b.minMs-600-performance.now());
   const done=j=>{srvCatchPending=false;if(j.lost){landApply(j);ug();try{showStop();}catch(e){}$('#cardKick').textContent=spot.n+'에서 '+(j.lost===2?'손에서 미끄러졌습니다':'끌어올리다 놓쳤습니다');tags('<span class="tag" style="color:var(--bad);border-color:var(--bad)">놓침 · 포인트 없음</span><span class="tag">+'+(j.xp||0)+'XP'+(j.lost===2?'':' (절반)')+'</span>');$('#cardMeta').textContent=j.lost===3?'높은 자리에서 큰 고기를 끌어올리다 놓쳤습니다 · 자리 높이보다 긴 뜰채와 무게를 견디는 립그립을 장착하면 놓치지 않습니다(상점 → 뜰채·립그립).':'뜰채·립그립이 있으면 덜 놓칩니다(상점 → 뜰채·립그립).';SES.f=Math.max(0,(SES.f||0)-1);nonCatch('lost',(j.lost===2?'손에서 미끄러졌습니다':'끌어올리다 놓쳤습니다')+' — '+f.n+' '+cm.toFixed(1)+'cm');return;}/* V109 서버가 놓친 것으로 판정(쉬운 모드 대물 포함) *//* V109 서버가 놓친 것으로 판정 */
@@ -12011,7 +12031,7 @@ function v48HexAudit(log){const out=[];if(!v48Dev())return out;document.querySel
   while((m=re.exec(css))){const sel=m[1].replace(/^[\s\S]*\{/,'').trim();if(/^:root(\.thl)?$/.test(sel)||/^(from|to|\d+%)/.test(sel))continue;const hx=m[2].match(/#[0-9a-fA-F]{3,8}\b/g);if(hx)hx.forEach(h=>out.push({sel:sel.slice(0,80),hex:h.toLowerCase()}));}});
   if(log!==false)try{console.table(out);}catch(e){}return out;}
 try{if(v48Dev()&&/[?&]dev=hex\b/.test(location.search))setTimeout(()=>v48HexAudit(),0);}catch(e){}
-window.__meta={revTest:k=>{const t=revT();RVS.list=k?[{id:'t',spot:cur.id,k,start:t-1000,until:t+330000}]:[];revUpdate();},fightTest:on=>{$('#fight').hidden=!on;layoutHUD();},wxTest:o=>{W=Object.assign({},W||{},o);if(cur)WX.spots[cur.id]=W;try{renderWx();}catch(e){}return status(cur,W);},wxAltPick,get autoOn(){return autoOn;},get curId(){return cur&&cur.id;},hexAudit:v48HexAudit,nearWater,waterGuide,castSpotAt,cleanNickC,onPeer,emote,get peerN(){return peers.size;},get myPres(){return myPres;},set lastEmote(v){lastEmote=v;},tripFinish,rebuildEnv,envPhase,tripListHTML,tripGoneNow,tripTargets,tripMonths,liveNight,get ENV(){return ENV;},get TS(){return TS;},get tripEnd(){return tripEnd;},set tripEnd(v){tripEnd=v;},unlockJump,shopEquip,unlockPop,get shopTab(){return shopTab;},unlockCheck,unlockRun,unlockKeys,lockInfo,lockTxt,unlockHTML,gearScore,shoreCatch,listBite,dexCount,unlockOf,unlockOK,EGI_BY,DEX_REQ,TRIP_LV,pexpShore,pexpAuto,gearBig,get save(){return save;},
+window.__meta={bigGal,bigGalCheer,showPick:o=>showPick(o),revTest:k=>{const t=revT();RVS.list=k?[{id:'t',spot:cur.id,k,start:t-1000,until:t+330000}]:[];revUpdate();},fightTest:on=>{$('#fight').hidden=!on;layoutHUD();},wxTest:o=>{W=Object.assign({},W||{},o);if(cur)WX.spots[cur.id]=W;try{renderWx();}catch(e){}return status(cur,W);},wxAltPick,get autoOn(){return autoOn;},get curId(){return cur&&cur.id;},hexAudit:v48HexAudit,nearWater,waterGuide,castSpotAt,cleanNickC,onPeer,emote,get peerN(){return peers.size;},get myPres(){return myPres;},set lastEmote(v){lastEmote=v;},tripFinish,rebuildEnv,envPhase,tripListHTML,tripGoneNow,tripTargets,tripMonths,liveNight,get ENV(){return ENV;},get TS(){return TS;},get tripEnd(){return tripEnd;},set tripEnd(v){tripEnd=v;},unlockJump,shopEquip,unlockPop,get shopTab(){return shopTab;},unlockCheck,unlockRun,unlockKeys,lockInfo,lockTxt,unlockHTML,gearScore,shoreCatch,listBite,dexCount,unlockOf,unlockOK,EGI_BY,DEX_REQ,TRIP_LV,pexpShore,pexpAuto,gearBig,get save(){return save;},
   __lv(n){RG.lv=n;RG.xp=0;persist();renderLv();},__dex(n){let k=0;for(const f of FISH){if(k>=n)break;if(!(save.dex[f.n]&&save.dex[f.n].n>0))save.dex[f.n]={n:1,best:f.cm[0],where:'시험'};k=dexCount(save.dex);}persist();renderLv();},
   GOLD_P,GOLD_PCT,GOLD_NOTE,DRAW_CONSENT,__gold(v){goldForce=v!==false;},get fishGold(){return fishGold;},get goldM(){return goldM;},hasGold,renderGold,renderDraw,drawNotice,get drawData(){return drawData;},goldPeer,openGold:()=>openRPG('gold'),openDraw:()=>openRPG('draw'),upsell,walletNow,spendNow,openCharge,openRefund,openQuests,chargeState,get WAL(){return WAL;},TOPUP,Q_PT,Q_BONUS,questHTML,missionEvent,get SRV(){return SRV;},get missAt(){return missAt;},distK,listDK,distX,autoDK,DIST_K,bagSet,renderBag,gearLock,get bitebig(){return!$('#bitebig').hidden;},get camera(){return camera;},get bob(){return pBob;},get renderer(){return renderer;},get qAutoLevel(){return QAUTO;},newsSet,wxSet,menuSet,camDef,setAuto,autoLeft,settleAway,settleLocal,settleReturn,autoNow,autoStatusOf,autoRateH,nextGoal,goalHTML,netUp,showAwayPopup,adWatch,iapBuy,iapKind,isApp,capRoot,playAcct,verifyPay,ppLoad,ppAdd,ppRun,payReturn,revive,srvReconcile,get srvNextAt(){return srvNextAt;},MANUAL_K,AUTO_CAP_MS,NET_CAP_H,NET_PRICE,ptsK,xpK,capAtOf,autoCasts,get autoOn(){return autoOn;},snagRate,cutLine,RG,SKILLS,addXP,rollDaily,periodKeys,openRPG,feeOf,BOAT_TRIPS,SHORE,HOOK,tripState,tripFish,openBoat,get curTrip(){return curTrip;},GEAR,FX,ROD_KINDS,checkGear,catchable,castDist,capacity,gear,LV_REQ,GBY,advLines,lowerOf,fitsNow,get shopMs(){return shopMs;},get shopQ(){return shopQ;},snagPull,hookP,gearAtt,gearSnagK,gearAbr,gearSens,get curChk(){return curChk;},buy,renderShop,get SHOPF(){return SHOPF;},get save(){return save;},openShop,get castD(){return castD;},get curList(){return curList;},get ratio(){return ratio;},get fishKg(){return fishKgNow;},SPOTS,get WX(){return WX;},enterSpot,get state(){return state;},actDown,actUp,status,spotFishList,get kind(){return kind;},get player(){return player;},get cur(){return cur;},FISH,missingFish,isWater,castTarget,
   get tension(){return tension;},get holding(){return holding;},get surge(){return surge;},__forceStr(v){if(fish)fish=Object.assign({},fish,{str:v});},__setFish(n,z){fish=FISH.find(f=>f.n===n);fsize=z;},landCatch,get boats(){return boats;},get ROCKS(){return ROCKS;},get PW(){return PW;},get scene(){return scene;},get SRV(){return SRV;},net,emote,EMO,get peers(){return peers;},get myPres(){return myPres;},tutStart,get tutI(){return tutI;},setQuality,get qLevel(){return qLevel();},get QSET(){return QSET;},get pixelRatio(){return renderer?renderer.getPixelRatio():0;},get srvC(){return srvC;},hook,applyProfile,openAutoInfo,openDex,openSheet,openHelp,get ws(){return ws;},srvSettle,closedRange,get fish(){return fish;},get fsize(){return fsize;},get biteT(){return biteT;},get SA(){return SA;},get EVQ(){return EVQ;},get ERRQ(){return ERRQ;},flushLog,get NET_DEAD(){return NET_DEAD;},get netReady(){return netReady;},get waterSegs(){return waterMesh&&waterMesh.geometry.parameters?waterMesh.geometry.parameters.widthSegments:0;},get srvCatchPending(){return srvCatchPending;},resetLine,toast,get yawGoal(){return yawGoal;},get plan(){return plan;},get escPlan(){return escPlan;},__esc(o){escPlan=o;},onPeer,dropPeer,get castRel(){return castRel;},avFish,AVS,get VX(){return VX;},VXS,vxSave,vxBurst,rigShow,get escJ(){return escJ;},get cardDT(){return cardDT;},get QH(){return QH;},get qM(){return qM;},__qTick:()=>qTick(),__qStart:()=>qStart(),__view(d,y,pt){if(d!=null)dist=d;if(y!=null){yaw=y;yawGoal=null;}if(pt!=null)pitch=pt;},__step(dt,nr){update(dt);if(nr)return;if(linDirty)linScene(scene);renderer.render(scene,camera);},get T(){return T;},__tension(v){tension=v;},get castTo(){return castTo;},get pLine(){return pLine;},get EG(){return EG;},egiSnap,egiMode,avSquidGeo,get SES(){return SES;},sesTxt,biteChance,escapeChance,castK,startWait,catchPts,get ac(){return ac;},get qPend(){return qPend;},set qPend(v){qPend=v;},get BLQ(){return BLQ;},waveY,wvDamp,setupWaves,get LAMPS(){return LAMPS;},get lpSlow(){return lpSlow;},qPR,bubble,get waterMesh(){return waterMesh;},__snag(){state='snag';snagP=0;snagAt=performance.now();holding=false;$('#cutbtn').hidden=false;$('#gearbtn').hidden=true;},
@@ -12187,7 +12207,7 @@ function ntRender(){const m=uiBox('ntM','modal','');m.hidden=false;m.onclick=e=>
   const g=id=>document.getElementById(id);g('ntX').onclick=ntClose;g('ntBk').onclick=ntBack;if(g('ntList'))g('ntList').onclick=()=>{NT.view=null;ntRender();};
   m.querySelectorAll('[data-ntab]').forEach(b=>b.onclick=()=>{NT.tab=b.dataset.ntab;ntRender();});
   m.querySelectorAll('[data-nt]').forEach(b=>b.onclick=()=>{NT.view=b.dataset.nt;ntRender();const s=m.querySelector('.ntm');if(s)s.scrollTop=0;});
-  if(x)m.querySelectorAll('[data-ntb]').forEach(b=>b.onclick=()=>{const B=ntBtns(x)[+b.dataset.ntb];if(!B)return;if(B.url){ctGo(B.url);return;}ntClose();ntGo(B.go);});
+  if(x)m.querySelectorAll('[data-ntb]').forEach(b=>b.onclick=()=>{const B=ntBtns(x)[+b.dataset.ntb];if(!B)return;if(B.copy){ctCopy(B.copy).then(ok=>toast(ok?'\''+B.copy+'\' 복사했어요 · 쿠폰 입력 칸에 붙여 넣으세요':'복사가 안 되는 환경이에요 · 번호를 직접 적어 주세요',3200));return;}/* V148b 복사 버튼 */if(B.url){ctGo(B.url);return;}ntClose();ntGo(B.go);});
   try{v44Q();}catch(e){}}
 /* 앱(WebView)에서 fishing-go.com 링크는 게임 화면을 떠나 그 페이지로 바뀌므로 빼고 보여 준다 · 다른 허용 주소(스마트스토어·인스타그램)는 앱 밖으로 열림 */
 function ntBtns(x){return(x.btn||[]).filter(b=>!(b.url&&GAME_APP&&/^https:\/\/(www\.)?fishing-go\.com(\/|$)/i.test(b.url)));}
