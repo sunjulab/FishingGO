@@ -3765,10 +3765,11 @@ const PKEYS=['s','n','c','x','z','ry','st','bx','bz','g','k','e','en','m','j','h
 function sendPres(force){if(SRV){wsSend(force);return;}if(!room)return;const now=performance.now();if(!force&&now-lastPresSent<160)return;lastPresSent=now;const patch={};PKEYS.forEach(k=>patch[k]=myPres[k]==null?null:myPres[k]);room.presence(patch).catch(()=>{});}
 
 /* ===================== 3D ===================== */
-const canvas=$('#c');let renderer=null,scene,camera,clock=new THREE.Clock();
+/* V-ADRENO: 안드로이드 WebView에서 MSAA를 끈다(Adreno 드라이버 MSAA 해제 크래시 회피) */const GL_AA=!/Android/i.test(navigator.userAgent);
+const canvas=$('#c');let renderer=null,scene,camera,clock=new THREE.Clock();canvas.addEventListener('webglcontextlost',e=>e.preventDefault());
 function glFail(){const m=uiBox('glFail','modal','<div class="sheet2 panel" role="alertdialog" aria-labelledby="glFailT"><h2 id="glFailT">3D 화면을 열 수 없습니다</h2><p class="lead">이 기기나 브라우저에서 WebGL(3D 그래픽)을 쓸 수 없습니다. 브라우저 설정에서 하드웨어 가속을 켜거나, 최신 크롬·사파리로 다시 열어 주세요. 지도·상점·어록·퀘스트는 그대로 쓸 수 있습니다.</p><button class="btn" id="glFailX" type="button">확인</button></div>');
   m.hidden=false;$('#glFailX').onclick=()=>{m.hidden=true;};evt('webgl_fail');}
-function ensureRenderer(){if(renderer)return true;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});}catch(e){renderer=null;glFail();return false;}renderer.setPixelRatio(qPR());
+function ensureRenderer(){if(renderer)return true;try{renderer=new THREE.WebGLRenderer({canvas,antialias:GL_AA,powerPreference:'high-performance'});}catch(e){renderer=null;glFail();return false;}renderer.setPixelRatio(qPR());
   renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=EXPO.day;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.shadowMap.enabled=qLevel()==='high';
   camera=new THREE.PerspectiveCamera(55,1,.1,1400);resizeWorld();return true;}
 function resizeWorld(){if(!renderer)return;renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camFrame();camera.updateProjectionMatrix();}
@@ -7019,7 +7020,7 @@ let lpIn=performance.now(),lpT=0,lpCov=false,lpCovT=0,lpSlow=false;['pointerdown
 function loop(){requestAnimationFrame(loop);if($('#world').hidden||!scene||!player){clock.getDelta();return;}if(window.__PAUSE){clock.getDelta();return;}const now=performance.now();
   if(now-lpCovT>250){lpCovT=now;lpCov=!!document.querySelector('.modal:not([hidden])');}
   const slow=lpCov||(autoOn&&now-lpIn>15000&&state!=='bite'&&state!=='fight');if(slow&&now-lpT<30)return;lpT=now;
-  const dt=Math.min(.1,clock.getDelta());update(dt);try{revTick(dt);}catch(e){}/* V143 돌발 연출 */try{twTick(dt);}catch(e){twReset();}if(linDirty)linScene(scene);renderer.render(scene,camera);if(slow){if(qM){qM.last=0;qM.ws=0;qM.dts=[];}}else qTick();lpSlow=slow;tutTick();}
+  const dt=Math.min(.1,clock.getDelta());update(dt);try{revTick(dt);}catch(e){}/* V143 돌발 연출 */try{twTick(dt);}catch(e){twReset();}if(linDirty)linScene(scene);if(!AVP.host)renderer.render(scene,camera);/* V-ADRENO: 3D 화면 2개 동시 그리기 방지 */if(slow){if(qM){qM.last=0;qM.ws=0;qM.dts=[];}}else qTick();lpSlow=slow;tutTick();}
 loop();
 
 /* ===================== 성장(레벨·스킬)·미션·랭킹 ===================== */
@@ -10949,7 +10950,7 @@ function XID(id){return typeof id==='string'&&/^x_[a-z0-9_]{1,32}$/.test(id);}
 const AVP={r:null,cv:null,sc:null,cam:null,a:null,raf:0,host:null,yaw:.3,auto:1,drag:null,autoAt:0,fz:0,fzT:0,last:0,sw:0,sh:0,fail:false,
   S:{st:'idle',meth:'lure',mv:0,c:0,ct:0,hold:false,ten:0,act:null,tk:null,bob:null,boat:false,egi:false,line:false}};
 function avpInit(){if(AVP.r)return true;if(AVP.fail)return false;try{const cv=document.createElement('canvas');cv.className='avpCv';cv.setAttribute('aria-hidden','true');
-  const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,powerPreference:'low-power'});r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=EXPO.day;r.setPixelRatio(Math.min(2,window.devicePixelRatio||1));r.setClearColor(0x000000,0);
+  const r=new THREE.WebGLRenderer({canvas:cv,antialias:GL_AA,alpha:true,powerPreference:'low-power'});r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=EXPO.day;r.setPixelRatio(Math.min(2,window.devicePixelRatio||1));r.setClearColor(0x000000,0);
   const sc=new THREE.Scene(),hemi=new THREE.HemisphereLight(0xbfd6ff,0x8f93b8,.8),key=new THREE.DirectionalLight(0xfff0d2,1.15)/* V48-UI rp2: 낚시터 낮 빛과 같은 색(따뜻한 해 · 푸른 그늘) */,rim=new THREE.DirectionalLight(0x9fd8ff,.75);key.position.set(2.2,4,3.6);rim.position.set(-3,2.6,-3.2);sc.add(hemi,key,rim);
   [hemi,key,rim].forEach(l=>{l.userData.lin=1;l.color.convertSRGBToLinear();if(l.groundColor)l.groundColor.convertSRGBToLinear();});
   /* v47 둥근 받침대(크림색 + 민트 테두리) · 발밑 부드러운 그림자 · 얼굴을 밝히는 앞 보조광 */
