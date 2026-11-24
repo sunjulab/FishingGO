@@ -55,7 +55,7 @@ export default function AnnouncementPopup() {
         if (!alive) return; // ✅ BUG-06 FIX
         const all = Array.isArray(res.data) ? res.data : [];
         const popups = all
-          .filter(n => (n.isPopup || n.image) && !isHiddenToday(String(n._id || n.id)))
+          .filter(n => n.isPopup === true && !isHiddenToday(String(n._id || n.id))) // ✅ POPUP-ONLY(2026-11-25): 이미지가 있어도 '팝업' 체크한 공지만 띄움
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         if (popups.length > 0) {
           setNotices(popups);
