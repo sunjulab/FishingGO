@@ -1905,7 +1905,7 @@ html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,6
 .ntt{font-size:15px;line-height:1.35}.ntt small,.ntdt small{font-size:12px;font-weight:600;color:var(--mute)}
 .ntu{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3b30;margin-right:6px;vertical-align:2px}
 .nts{font-size:13px;color:var(--mute);line-height:1.45}.ntd{font-size:12px;color:var(--mute)}
-.ntdt{margin:8px 0 2px;font-size:19px;line-height:1.3}
+.ntdt{margin:8px 0 2px;font-size:19px;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere}.ntt,.nts{word-break:keep-all;overflow-wrap:anywhere}/* 제목이 낱말 중간에서 끊기지 않게 */
 .ntper{margin:8px 0;padding:8px 10px;border-radius:12px;background:rgba(127,170,200,.12);font-size:13px;line-height:1.5}
 .ntimg{display:block;width:100%;max-height:280px;object-fit:contain;border-radius:12px;margin:8px 0}
 .ntbody{font-size:14.5px;line-height:1.65;margin-top:8px;word-break:keep-all;overflow-wrap:anywhere}.ntbody p{margin:0 0 10px}.ntbody ul{margin:0 0 10px;padding-left:20px}.ntbody li{margin:2px 0}
@@ -6567,7 +6567,7 @@ let dexNowOnly=false;
 function dexCatchable(f){return Object.keys((FX[f.n]||{}).me||{}).length>0||BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n))||NET_FISH.some(e=>e.n===f.n);}/* v35 투망 어종 */
 function monthsTxt(m){const S=new Set(m||[]);if(S.size>=12)return'연중';const out=[];for(let a=1;a<=12;a++){if(!S.has(a)||S.has(a===1?12:a-1))continue;let b=a;while(S.has(b===12?1:b+1)&&(b===12?1:b+1)!==a)b=b===12?1:b+1;out.push(a===b?a+'월':a+'~'+b+'월');}return out.join('·');}
 function dexMeth(f){const L=Object.keys((FX[f.n]||{}).me||{}).map(x=>ME_TXT[x]);if(BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n)))L.push('선상');if(NET_FISH.some(e=>e.n===f.n))L.push('바다 투망');return[...new Set(L)].join('/');}
-function openDex(){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}const mo=kstNow().mo,all=FISH.filter(f=>dexCatchable(f)&&!f.big)/* V147 참다랑어는 연안 대결·대회 지정 어종 아님 */,nc=FISH.filter(f=>!dexCatchable(f)),got=all.filter(f=>save.dex[f.n]&&(+save.dex[f.n].n||0)>0).length;
+function openDex(){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}const mo=kstNow().mo,all=FISH.filter(f=>dexCatchable(f))/* V148: 참다랑어(big)도 어록에 보이게 — 지역 어록 완성(zoneDex)·전국 대물·대결 제외는 그대로 */,nc=FISH.filter(f=>!dexCatchable(f)),got=all.filter(f=>save.dex[f.n]&&(+save.dex[f.n].n||0)>0).length;
   $('#dexSum').innerHTML=esc('점수 '+save.score.toLocaleString('ko-KR')+' · '+save.count+'마리 · '+got+'/'+all.length+'종 · 방문 낚시터 '+Object.keys(save.spots).length+'곳'+(hasGold()?' · 황금 물고기 '+save.gold.n+'마리(칭호 '+GOLD_TITLE+')':''))+' <button class="chip" type="button" data-v4="gyogal" id="dexGyoB">어탁 액자 '+V4().gyo.length+'</button> <button class="chip" type="button" id="dexNowB" aria-pressed="'+dexNowOnly+'">지금 철('+mo+'월)만</button>';
   /* V39-UI: 3칸 격자 칸(그림 · 이름/최고 cm · 철 점). 자세한 내용(사는 곳·낚는 법·철·금어기·금지체장·게임 식당 요리)은 칸 안 .dexd(숨김)에 그대로 두고 누르면 자세히 창(v39DexOpen) */
   const card=(f,noC)=>{const d=save.dex[f.n];const cl=closedDex(f)+(f.minNote?'<span class="k" style="font-size:11px">법정 '+esc(f.minNote)+'</span>':'');const now=f.m.includes(mo),cn=!!closedNow(f,null);
