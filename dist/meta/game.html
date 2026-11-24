@@ -2313,6 +2313,11 @@ function distX(castD,D,fr){const x=D>0?Math.max(0,Math.min(1,castD/D)):1;return 
 function distK(me,castD,D,fr){if(me==='boat')return 1;const P=DIST_K[me==='pole'?'float':me];if(!P)return 1;const x=me==='lure'?distX(castD,D,0):distX(castD,D,fr);/* C6 #46: 루어는 감는 시간이 거리만큼 짧아지므로 '어종 거리에 막 닿은' 0.7 올림을 주지 않는다(전력 캐스팅이 시간당 가장 유리) */
   for(let i=1;i<P.length;i++)if(x<=P[i][0]){const a=P[i-1],b=P[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);}return P[P.length-1][1];}
 // 이번 캐스팅의 거리 계수: 노릴 수 있는 어종 가중치로 평균(어종마다 붙는 거리 FX.r이 다름)
+/* V138 발 앞 던지기(코앞에만 던져 쉽게 끌어내던 꼼수): 최대 비거리의 NEAR_R 안쪽이면 큰 놈은 잘 안 문다 — 크기 범위 위쪽을 NEAR_CM배까지 줄임
+   (입질 확률은 이미 distK가 줄이고, 방어·부시리처럼 멀리서만 무는 어종은 FX.r로 빠진다) · 선상은 그대로 */
+const NEAR_R=.35;const NEAR_CM=.55;
+function nearCmK(me,castD,D){if(me==='boat'||!(D>0))return 1;const u=Math.max(0,+castD||0)/D;return u>=NEAR_R?1:NEAR_CM+(1-NEAR_CM)*u/NEAR_R;}
+function nearRng(r,me,castD,D){const k=nearCmK(me,castD,D);return k>=1?r:[r[0],Math.round((r[0]+(r[1]-r[0])*k)*10)/10];}
 function listDK(me,castD,D,L){if(me==='boat')return 1;let a=0,b=0;for(const x of L||[]){const r=(FX[x.f.n]||{}).r||0;a+=x.w*distK(me,castD,D,r);b+=x.w;}return b?a/b:distK(me,castD,D,0);}
 function autoDK(me){return distK(me,AUTO_DX,1,0);}
 function lureSpd(kind){return kind==='metal'||kind==='minnow'?1.6:kind==='egi'?.6:1.0;}
@@ -2473,6 +2478,7 @@ const CAST_GAP=4000;
 const CAST_GRACE=20000;
 const FIGHT_GRACE=60000;
 const REEL_GAP=2*CAST_GAP;
+const FIGHT_LZ=3;// V138 랜딩 구간(m): 이 안에서는 고기가 덜 차고 나간다(클라이언트 파이팅만)
 // 챔질 창(입질이 보이는 시간, ms)과 통신·에기 여유: 서버는 입질 시각 + HOOK_WIN[낚시법] + HOOK_SLACK이 지나면 챔질을 받지 않는다
 const HOOK_WIN={lure:800,boat:1000,float:1000,pole:1000,surf:1600};
 const HOOK_SLACK=4000;
@@ -2639,6 +2645,8 @@ const LAND_SLIP=['고등어','전갱이','삼치','갈치','학꽁치','숭어',
 const LAND_AUTO_P=.08;        // 자동 낚시·쉬운 모드: 맞는 도구가 없을 때 대물(①의 조건) 하나를 놓칠 확률
 // V109 쉬운 모드(기본): 버튼 없음 · 자동 낚시와 같은 규칙(LAND_AUTO_P) · 손맛 모드(설정에서 켬): 게이지·꽉 잡기 버튼 · 성공하면 경험치 ×LAND_HARD_XP(포인트는 같음)
 const LAND_HARD_XP=1.1;
+const DRAG_SLIP=.35;/* V138 장력이 끝까지 차면 0.35초 드랙(줄이 풀리며 버팀) 뒤에도 계속 누르고 있으면 터짐 */
+const LAND_D=.3;/* V138 남은 거리 0.3m 이하면 끌어올림(화면 0.0m) */
 // 자리 높이(게임 값, m): 항구 1.5 · 방파제 3~4 · 갯바위 2~5 · 민물 1 — 포인트 id로 정해진 값(같은 자리는 늘 같음)
 function landH(s){if(!s)return 0;if(s.w==='fresh')return 1;if(s.t==='항구')return 1.5;let h=0;const k=String(s.id||'');for(let i=0;i<k.length;i++)h=(h*31+k.charCodeAt(i))>>>0;const u=(h%1000)/1000;return s.t==='갯바위'?Math.round((2+3*u)*10)/10:Math.round((3+u)*10)/10;}
 // 장착한 도구가 쓸 수 있는지(가짐·내구도 > 0) → 아이템 또는 null
@@ -5545,7 +5553,8 @@ function pines(x0,x1,z,night,far){const LQ=lqB(),R=rngOf('pine'+x0+'_'+z+(far?'f
 /* ---- 플레이어 ---- */
 let player=null,pBob=null,pLine=null;const keys={};let OCC=[];const camRay=new THREE.Raycaster(),camDir=new THREE.Vector3();let joyV={x:0,y:0},yaw=0,yawGoal=null,pitch=.38,dist=10,drag=null;
 let pressed=false,retrAt=0,snagAt=0,cutHold=0,fightT=0,snagTk=0;// C3: pressed = 손가락/키가 실제로 눌려 있음(holding은 감기 동작)
-let castRel=0,state='idle',holding=false,castFrom=new THREE.Vector3(),castTo=new THREE.Vector3(),t0=0,waitT=0,biteT=0,nib=0,fish=null,fsize=0,tension=0,fdist=12,surge=0,clickT=0;
+let dragT=0,dragWT=0;/* V138 드랙: 장력이 끝까지 차면 DRAG_SLIP초 동안 줄이 풀리며 버팀 — 계속 누르고 있으면 그때 터짐 */
+let NEAR_TIP=0,castRel=0,state='idle',holding=false,castFrom=new THREE.Vector3(),castTo=new THREE.Vector3(),t0=0,waitT=0,biteT=0,nib=0,fish=null,fsize=0,tension=0,fdist=12,surge=0,clickT=0;
 /* ---- v28 에기 샤크리·폴링: 탭 = 샤크리 한 번(2~3번 빠르게 = 한 세트) · 기다리면 폴링(머리를 든 채 천천히 가라앉음) ----
    연출·조작만 바꾼다. 입질 여부·시각(로컬 plan / 서버 bite.atMs)·밑걸림 확률식·서버 판정은 그대로:
    · 밑걸림 확률식은 기존처럼 '누르고 있는 동안(holding)'만 본다(탭은 짧게 누르는 것) · 자동 낚시의 누름/뗌 주기도 그대로(샤크리는 그 위의 연출)
@@ -5942,7 +5951,7 @@ function doCast(power){const chk=curChk;
   if(!t){state='idle';toast(loose?'민장대가 닿는 '+chk.D+'m 안에 물이 없습니다 · 물가 끝으로 더 다가가세요':'여기서는 '+Math.round(chk.D)+'m 안에 던질 물이 없습니다 · 물가 끝으로 더 다가가세요');return;}
   if(Math.abs(Math.atan2(Math.sin(ry-castRy0),Math.cos(ry-castRy0)))>.5&&!autoOn)toast('고른 방향은 물이 가까워 물이 넓은 쪽으로 몸을 돌려 던졌습니다',2600);// C6 #90
   if(!autoOn&&camFar(ry+Math.PI,Math.abs(Math.atan2(Math.sin(ry-castRy0),Math.cos(ry-castRy0)))>.5?.6:1.75))yawGoal=ry+Math.PI;/* V80: 몸을 크게 돌렸거나 찌가 화면 밖일 때만 시점을 따라 돌린다(던질 때마다 돌아가지 않게) */// 던지면서 몸을 돌렸으면 시점도 천천히 따라 돌아 찌가 화면 안에 오게 · v43: 자동 낚시 중에는 내가 돌려 둔 시점을 그대로 둔다
-  castD=t.d;player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(t.x,0,t.z);state='cast';t0=0;castRel=0;
+  castD=t.d;if(chk.meth!=='boat'&&chk.D>0&&castD/chk.D<NEAR_R&&!autoOn&&!NEAR_TIP){NEAR_TIP=1;setTimeout(()=>toast('발 앞에 던지면 큰 고기는 잘 안 물어요 · 멀리 던질수록 큰 놈이 와요',3600),900);}/* V138 */player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(t.x,0,t.z);state='cast';t0=0;castRel=0;
   const m=chk.meth;pBob.visible=true;pBob.scale.setScalar(m==='lure'||m==='surf'?.45:1);pLine.l.visible=true;vxSfx('whoosh');
   const nt=liveNight(cur),all=catchable(cur,chk,nt).filter(x=>x.w>0);curList=shoreCatch(cur,chk.meth,chk.G.term.kind,castD,nt).filter(x=>x.w>0);// 실제로 날아간 거리 기준(서버 shoreList와 같은 식)
   if(!curList.length){const rr=shoreCatch(cur,chk.meth,chk.G.term.kind,1e3,nt).filter(x=>x.w>0).map(x=>(FX[x.f.n]||{}).r||0),need=rr.length?Math.min(...rr):0;// C6 #122: 닿을 수 없는 거리면 채비 탓이라고 말하고, 빈 캐스팅은 금방 끝낸다
@@ -5972,17 +5981,17 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 function nonCatch(kind,msg){if(player&&kind!=='snag')player.A.shrT=0;SES[kind]=(SES[kind]||0)+1;toast(msg);const L=NC_TXT[kind];logMsg('<b>'+L+'</b> · '+esc(msg.indexOf(L+' — ')===0?msg.slice(L.length+3):msg)+' <span class="k">('+sesTxt()+')</span>','sys');}
 let biteDur=1,slackT=0;
 function hook(){fishGold=false;evt('bite');if(player)player.A.hookT=0;biteEnd(false);if(SRV&&!autoOn)return srvHook();
-  if(autoRT()&&AQ_R.length&&curChk){const x=AQ_R.shift(),f0=fishBy(x.n);if(f0){AQ_CUR=x;fish=f0;fsize=+x.cm;fishKgNow=+x.kg||fishKg(fish,fsize);const C=curChk.C;ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=null;sEff=Math.max(.15,Math.min(1.5,.15+.55*Math.min(ratio,1.4)));state='fight';fightT=0;tension=.3;fGrace=0;fCue=0;fdist=fightStartD();surge=0;holding=true;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');return;}}/* V97 서버가 정한 그 고기(놓침 없음 — 이미 정산에서 낚은 고기) */
+  if(autoRT()&&AQ_R.length&&curChk){const x=AQ_R.shift(),f0=fishBy(x.n);if(f0){AQ_CUR=x;fish=f0;fsize=+x.cm;fishKgNow=+x.kg||fishKg(fish,fsize);const C=curChk.C;ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=null;sEff=Math.max(.15,Math.min(1.5,.15+.55*Math.min(ratio,1.4)));state='fight';fightT=0;dragT=0;dragWT=0;tension=.3;fGrace=0;fCue=0;fdist=fightStartD();surge=0;holding=true;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');return;}}/* V97 서버가 정한 그 고기(놓침 없음 — 이미 정산에서 낚은 고기) */
   if(autoRT()){resetLine();return;}/* V97 실제 결과가 없는 입질은 만들지 않음 */
   const L=curList;if(!L.length){resetLine();return;}let tot=L.reduce((a,b)=>a+b.w,0),r=Math.random()*tot,f=L[0];for(const x of L){if((r-=x.w)<=0){f=x;break;}}
   f=v36EvRoll(f,L);/* v36 전국 대물(오프라인 — 서버는 /cast가 굴림) */const hk=hookP((HOOK[f.f.n]||.8)+.03*sk('hook'),curChk.G,sk('hook'));// v31 S3 #16: 서버 모드와 같게(서두른 챔질 벌칙 없음)
   if(Math.random()>hk){srvMiss(null);return;}// v32 #204: 로컬도 서버와 같은 헛챔질 처리(루어는 누르는 동안만 감기)
   fish=f.f;fishGold=goldRoll();const C=curChk.C;const boat=curChk.meth==='boat';
-  const rng=boat?f.cm:((SHORE[fish.n]||{}).cm||fish.cm);
+  const rng=boat?f.cm:nearRng((SHORE[fish.n]||{}).cm||fish.cm,curChk.meth,castD,curChk.D);/* V138 */
   const pexp=boat?pexpBoat(C):pexpShore(C,curChk.G);
   fsize=v36EvSize(Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexp))*10)/10);fishKgNow=fishKg(fish,fsize);ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=!fishGold&&Math.random()<escapeChance(fish.n,ratio,curChk.G,sk('fight'))?{at:.2+Math.random()*.65,kind:escKind(fish.n)}:null;// v31 S3 #43: 황금 물고기는 미리 정한 놓침 없음
   if(ratio>BREAK_R){const nm=(fishGold?'황금 ':'')+fish.n;fishGold=false;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+breakHint()+loseRig(),'break');return;}// v31 S3 #64: 공용 한계(서버와 같음)
-  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');if(!autoOn)toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=autoOn||pressed;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
+  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;dragT=0;dragWT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');if(!autoOn)toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=autoOn||pressed;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
 // v32 #210: 대여 채비 값 = min(낼 수 있는 포인트, 30). 서버는 포인트에서만·미정산이 있으면 0(rentalCost)
 function rentCost(){const t=curTrip;if(!t||!t.rig||!(t.rig.loss>0))return 0;const fee=TS&&TS.fee!=null?+TS.fee:feeOf(t),cap=Math.round(fee*TRIP_LOSS_K)-((TS&&TS.rig)||0);let free=spendNow();try{const w=walletNow();if(w&&w.free!=null)free=+w.free;}catch(e){}return Math.max(0,Math.min(t.rig.loss,cap,Math.floor(free)));}/* V100 대여 채비값(서버 rentalCost와 같은 식 — 화면 안내·오프라인용, 서버 모드 차감은 서버 값) */
 function rigLossAdd(c){if(TS&&c>0)TS.rig=(TS.rig||0)+c;}
@@ -6846,18 +6855,21 @@ let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+
   else if(state==='fight'&&(fightT+=dt)>FIGHT_CAP){lose('바늘 빠짐 — 오래 버티던 '+iga(fish?fish.n:'물고기')+' 바늘을 털고 달아났습니다','pull');}
   else if(state==='fight'){const s=sEff,Hs=cur.w==='sea'?Math.min(1,(+w.wave||0)/2):0;const span=castD+15,reelF=1+castD/50;
     if(fGrace>0)fGrace-=dt;
-    if(Math.random()<dt*(s*.9+Hs*.4)&&surge<=0){surge=.5+Math.random()*.6;fCue=Math.max(fCue,.9);vxSfx('drag',1);const fe=$('#fight');fe.classList.remove('shake');void fe.offsetWidth;fe.classList.add('shake');if(!autoOn)vib(40);}
-    if(surge>0){surge-=dt;tension+=(s*.4+Hs*.15)*dt*(holding?1:.5);fdist+=s*1.2*dt*(holding?.5:1)*(1+castD/80);}
-    if(holding&&fGrace<=0){tension+=(.18+s*.32)*(1-.04*sk('fight'))*(1-.1*((curChk&&curChk.G.rod&&curChk.G.rod.light)||0))*dt;fdist-=(2.4-s*.8)*reelF*dt;clickT-=dt;if(clickT<=0){vxSfx('click',tension);clickT=.09-.05*Math.min(1,Math.max(0,tension));}}else{tension-=(.6+s*.6+Hs*.4)*dt;fdist+=s*.5*dt;}tenWarn(dt);
-    tension=Math.max(0,tension);slackT=tension<.05?slackT+dt:0;if(slackT>.5&&!slackVib){slackVib=1;if(!autoOn)vib(60);}else if(slackT<=0)slackVib=0;if(fCue>0)fCue-=dt;
+    const lzK=fdist<FIGHT_LZ?1:0;/* V138 랜딩 구간(마지막 3m): 고기가 지쳐 덜 차고 나간다 — 차고 나감 확률 ×0.35 · 장력 오름 ×0.6 */
+    if(Math.random()<dt*(s*.9+Hs*.4)*(lzK?.35:1)&&surge<=0){surge=.5+Math.random()*.6;fCue=Math.max(fCue,.9);vxSfx('drag',1);const fe=$('#fight');fe.classList.remove('shake');void fe.offsetWidth;fe.classList.add('shake');if(!autoOn)vib(40);}
+    if(surge>0){surge-=dt;tension+=(s*.4+Hs*.15)*dt*(holding?1:.5)*(lzK?.6:1);fdist+=s*1.2*dt*(holding?.5:1)*(1+castD/80);}
+    if(holding&&fGrace<=0){tension+=(.18+s*.32)*(1-.04*sk('fight'))*(1-.1*((curChk&&curChk.G.rod&&curChk.G.rod.light)||0))*dt*(lzK?.6:1);fdist-=(2.4-s*.8)*reelF*dt;clickT-=dt;if(clickT<=0){vxSfx('click',tension);clickT=.09-.05*Math.min(1,Math.max(0,tension));}}else{tension-=(.6+s*.6+Hs*.4)*dt;fdist+=s*.5*dt;}tenWarn(dt);
+    tension=Math.max(0,tension);if(tension<.9)dragT=Math.max(0,dragT-dt*.5);/* 드랙 여유는 천천히 회복(풀렸다 감았다 반복하면 결국 터짐) */slackT=tension<.05?slackT+dt:0;if(slackT>.5&&!slackVib){slackVib=1;if(!autoOn)vib(60);}else if(slackT<=0)slackVib=0;if(fCue>0)fCue-=dt;
     if(escPlan&&!escPlan.fired&&!escPlan.warn&&1-fdist/Math.max(1,castD)>=escPlan.at-.06&&tension<1){escPlan.warn=.6;escPlan.fd=fdist;vxSfx('splash',1);const fe=$('#fight');fe.classList.remove('shake');void fe.offsetWidth;fe.classList.add('shake');}if(escPlan&&escPlan.warn>0){escPlan.warn-=dt;fdist=Math.max(fdist,escPlan.fd);}
     if(escPlan&&!escPlan.fired&&(escPlan.warn!=null&&escPlan.warn<=0)&&tension<1){escPlan.fired=true;escJ=.9;holding=false;tension=0;if(escPlan.kind==='jump'){tone(240,.25,.07,'triangle');bubble(player,'바늘털이!');}else tone(420,.12,.05,'triangle');}
     else if(slackT>1.6){lose('바늘 빠짐 — 줄이 느슨해져 바늘이 빠졌습니다. 장력을 조금 유지하세요','pull');}
-    else     if(tension>=1){tone(880,.09,.08,'square');lose((fishGold&&fish?'줄 터짐 — 황금 '+fish.n+'까지 놓쳤습니다 · 장력이 빨간 구간에 들어가면 손을 떼세요':ratio>1.6?'줄 터짐 — 채비 한계보다 훨씬 큰 놈이었습니다'+breakHint():'줄 터짐 — 장력이 빨간 구간에 들어가면 손을 떼세요')+loseRig(),'break');}
+    else if(fdist<=LAND_D)landCatch();/* V138 거리 0(화면 0.0m)이면 장력보다 먼저 끌어올림 */
+    else if(tension>=1&&dragT<DRAG_SLIP){dragT+=dt;tension=.995;fdist+=s*1.5*dt+(holding?(2.4-s*.8)*reelF*dt*.5:0);{const ti=$('#tenbar i');ti.style.width='100%';ti.style.background='var(--bad)';$('#tenTxt').textContent='100% · 드랙';$('#distTxt').textContent=(Math.ceil(Math.max(0,fdist-LAND_D)*10)/10).toFixed(1)+'m';}if((dragWT-=dt)<=0){dragWT=.5;vxSfx('drag',1);vxVib([30,30,30]);const fe=$('#fight');fe.classList.remove('shake');void fe.offsetWidth;fe.classList.add('shake');}}/* V138 드랙이 풀리며 버팀 */
+    else     if(tension>=1){tone(880,.09,.08,'square');const fn=fish?(fishGold?'황금 ':'')+fish.n+' '+(+fsize||0).toFixed(1)+'cm':'';lose((fishGold&&fish?'줄 터짐 — '+fn+'까지 놓쳤습니다 · 장력이 빨간 구간에 들어가면 손을 떼세요':ratio>1.6?'줄 터짐 — '+(fn?fn+'(약 '+kgTxt(fishKgNow)+') · ':'')+'채비 한계보다 훨씬 큰 놈이었습니다'+breakHint():'줄 터짐 — '+(fn?fn+' · ':'')+'드랙이 풀릴 때 손을 떼세요')+loseRig(),'break');}
     else if(fdist>=span)lose('바늘 빠짐 — '+iga(fish.n)+' 줄을 끌고 달아났습니다','pull');else if(fdist<=0)landCatch();
     else{const k=Math.min(1.5,fdist/Math.max(1,castD));const fx=Math.sin(player.g.rotation.y),fz=Math.cos(player.g.rotation.y);let ex=p.x+fx*2.5,ez=p.z+fz*2.5;
       const bx=ex+(castTo.x-ex)*k,bz=ez+(castTo.z-ez)*k;pBob.position.set(bx+Math.sin(T*13)*.08*s,waveY(bx,bz,T)-.15,bz);player.pivot.rotation.x=1.0+tension*.45+Math.sin(T*20)*.02*s;
-      const ti=$('#tenbar i');ti.style.width=(tension*100).toFixed(0)+'%';ti.style.background=tension>.8?'var(--bad)':tension>.6?'var(--warn)':'var(--good)';$('#fight').classList.toggle('slack',slackT>.5);$('#tenTxt').textContent=(tension*100).toFixed(0)+'%';$('#distTxt').textContent=Math.max(0,fdist).toFixed(1)+'m';const di=$('#distbar i');di.style.width=Math.min(100,fdist/span*100)+'%';di.style.background=fdist>castD?'var(--bad)':'';const dz=$('#distzone');if(dz)dz.style.left=(castD/span*100).toFixed(1)+'%';}}// v32 #209: 던진 거리를 넘어 끌려가는 구간은 빨갛게(끝까지 가면 놓침)
+      const ti=$('#tenbar i');ti.style.width=(tension*100).toFixed(0)+'%';ti.style.background=tension>.8?'var(--bad)':tension>.6?'var(--warn)':'var(--good)';$('#fight').classList.toggle('slack',slackT>.5);$('#tenTxt').textContent=(tension*100).toFixed(0)+'%';$('#distTxt').textContent=(Math.ceil(Math.max(0,fdist-LAND_D)*10)/10).toFixed(1)+'m'+(fdist<FIGHT_LZ?' · 랜딩':'');/* V138 0.0m는 끌어올리는 순간에만 */const di=$('#distbar i');di.style.width=Math.min(100,fdist/span*100)+'%';di.style.background=fdist>castD?'var(--bad)':'';const dz=$('#distzone');if(dz)dz.style.left=(castD/span*100).toFixed(1)+'%';}}// v32 #209: 던진 거리를 넘어 끌려가는 구간은 빨갛게(끝까지 가면 놓침)
   avDrive(player,avPlayerS(),dt);cshTick();kitTick();goldFx();player.tip.getWorldPosition(tipW);if(state==='cast'&&!castRel){if(player.A.rel)castRel=Math.max(1e-4,t0*(.5+castD/90));castFrom.copy(tipW);pBob.position.copy(tipW);}
   VX.drift=drift;egiTick(dt);if(pLine.l.visible){if(EG.on&&(state==='wait'||state==='bite'))pLine.set(tipW,pBob.position,EG.sag,state==='wait'?drift:null,EG.wv,EG.ph);else pLine.set(tipW,pBob.position,state==='fight'?.05:.5,state==='wait'?drift:null);}
   if(TW.ph)twHud();/* v35 */
@@ -6879,7 +6891,7 @@ let bitingCls=false;const PRES_SUB={wait:1,bite:1,snag:1};function update(dt){T+
   else if(state==='hooking'){setHint('챔질!');setAct('챔질!','','off');}/* V64: 서버 응답(보통 0.5초 안팎)을 기다리는 동안 '확인 중' 대신 챔질 동작으로 보이게 */
   else if(state==='bite'){setHint(meth==='float'?'찌가 잠겼습니다! 챔질':meth==='surf'?'초릿대가 떨립니다! 챔질':'툭! 입질입니다. 챔질',true);setAct('챔질!','지금');}
   else if(state==='fight'&&escJ>0){setHint(escPlan&&escPlan.kind==='jump'?'바늘털이! 바늘이 빠지는 중…':'바늘이 빠지는 중…',true);setAct('감기','놓치는 중','off');}// v32 #208: 빠지는 연출 중에는 느슨 안내·누르기 요청 없음
-  else if(state==='fight'){const eW=escPlan&&!escPlan.fired&&escPlan.warn>0;setHint(eW?(escPlan.kind==='jump'?'바늘털이! 고기가 물 위로 솟구칩니다':'고기가 머리를 세차게 흔듭니다!'):fGrace>0&&ratio>2.5?'대물! 손을 떼고 드랙으로 버티세요':fCue>0&&surge>0?'차고 나갑니다! 잠깐 떼세요':tension>.8?'장력 위험! 손을 떼세요':slackT>.5?'느슨! '+Math.max(0,1.6-slackT).toFixed(1)+'초 안에 감으세요':tension<.08?'줄이 느슨합니다 — 감으세요':'누르고 있으면 감깁니다',eW||tension>.8||tension<.08||fCue>0||(fGrace>0&&ratio>2.5));setAct('감기','누르고 있기','hold');}
+  else if(state==='fight'){const eW=escPlan&&!escPlan.fired&&escPlan.warn>0;setHint(eW?(escPlan.kind==='jump'?'바늘털이! 고기가 물 위로 솟구칩니다':'고기가 머리를 세차게 흔듭니다!'):fGrace>0&&ratio>2.5?'대물! 손을 떼고 드랙으로 버티세요':dragT>0?'드랙이 풀립니다! 지금 손을 떼세요':fCue>0&&surge>0?'차고 나갑니다! 잠깐 떼세요':tension>.8?'장력 위험! 손을 떼세요':slackT>.5?'느슨! '+Math.max(0,1.6-slackT).toFixed(1)+'초 안에 감으세요':tension<.08?'줄이 느슨합니다 — 감으세요':'누르고 있으면 감깁니다',eW||dragT>0||tension>.8||tension<.08||fCue>0||(fGrace>0&&ratio>2.5));setAct('감기','누르고 있기','hold');}
   else if(state==='snag'){setHint('밑걸림! 누르고 있으면 당깁니다 · 풀릴 때가 많고 가끔 줄이 터집니다 · 줄 끊기는 채비를 바로 잃습니다',true);setAct('당기기','누르고 있기','hold');}
   else if(state==='result'){setHint('낚았습니다!');setAct('확인','');}
   actRing(state==='snag'?snagP:state==='wait'&&retrAt&&pressed?Math.min(1,(performance.now()-retrAt)/RETR_MS):0);cutRing(state==='snag'&&cutHold?Math.min(1,(performance.now()-cutHold)/CUT_MS):0);
@@ -8459,9 +8471,9 @@ function srvHook(){const c=srvC;if(!c||!c.n||!c.res||!c.res.bite){resetLine();re
   go(0);}
 function srvMiss(c){const m=curChk.meth;if(m==='lure'){state='wait';holding=pressed&&!autoOn;nonCatch('miss','헛챔질 — 바늘에 걸리지 않았습니다 · 그대로 감아 회수하세요');}else{resetLine();biteEnd(true);nonCatch('miss',m==='boat'?'헛챔질 — 바늘에 걸리지 않았습니다 · 다시 내리세요':'헛챔질 — 미끼만 따먹혔습니다 · 다시 던지세요');}}
 function srvFight(c,h){const f=FISH.find(x=>x.n===h.fish);if(!f){resetLine();return;}c.h=h;c.hooked=true;c.hookAt=performance.now()-(h.minMsLeft!=null?Math.max(0,h.minMs-h.minMsLeft):0);// 재시도로 받은 챔질은 서버 챔질 시각 기준
-  if(h.brk){c.done=true;srvLossApply(h);const nm=(h.gold?'황금 ':'')+f.n;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+srvLossTxt(h),'break');return;}// v31 S3 #64: 서버가 한계 초과 터짐을 정하고 채비도 뺌
+  if(h.brk){c.done=true;srvLossApply(h);srvWaitTo(REEL_GAP);/* V137 */const nm=(h.gold?'황금 ':'')+f.n;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+srvLossTxt(h),'break');return;}// v31 S3 #64: 서버가 한계 초과 터짐을 정하고 채비도 뺌
   fish=f;fishGold=!autoOn&&!!h.gold;fsize=h.cm;fishKgNow=h.kg;ratio=h.ratio;slackT=0;escJ=0;escPlan=h.esc?{at:h.esc.at,kind:h.esc.kind}:null;const C=h.cap;
-  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=pressed;$('#fight').hidden=false;$('#limTxt').textContent=(+C).toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
+  sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;dragT=0;dragWT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=pressed;$('#fight').hidden=false;$('#limTxt').textContent=(+C).toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
 // 채비 손실: 밑걸림으로 서버가 이미 뺀 것은 표시만, 아니면 /lose-rig
 function srvLoseRig(){const c=srvC;const g=c&&c.snagRes;
   if(state==='snag'&&!(c&&c.n&&c.res&&c.res.snag))return'';// 서버가 굴린 적 없는 밑걸림(자동 연출에서 남은 것 등): 손실 없음
@@ -8469,6 +8481,7 @@ function srvLoseRig(){const c=srvC;const g=c&&c.snagRes;
   if(state==='snag'&&g&&g.err){c.done=true;net('lose-rig',{n:c.n,reason:'cut'}).then(r=>{if(r.s===200&&r.j){srvWaitTo(r.j.nextCastMs||0);if(r.j.term)save.inv.term[r.j.term]=r.j.left;if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);refreshWallet();}}srvReconcile();});return' · 채비 손실은 서버 기록으로 확인합니다';}// 밑걸림 결과를 못 받았으면 직접 빼지 않는다
   if(g&&g.lost){if(curTrip)rigLossAdd(+g.cost||0);}if(g&&g.lost)return curTrip?(g.cost?' · 대여 채비 손실 '+g.cost+'P':' · 대여 채비를 잃었습니다(추가 비용 없음)'):rigLeftTxt(save.eq.term);
   const body=state==='snag'&&c&&c.n?{n:c.n,reason:'cut'}:c&&c.n&&c.hooked&&!c.done?{n:c.n}:{};if(c)c.done=true;
+  if(body.n&&!body.reason)srvWaitTo(REEL_GAP);/* V137 줄 터짐 직후 바로 다시 던져지고 서버에서 '기다리라'가 늦게 뜨던 것 — 서버(nextCastAt)와 같은 채비 다시 묶는 시간을 먼저 건다 */
   const onT=!!curTrip;net('lose-rig',body).then(r=>{if(r.s===200&&r.j){srvWaitTo(r.j.nextCastMs||0);if(r.j.term)save.inv.term[r.j.term]=r.j.left;if(onT&&+r.j.cost>0)rigLossAdd(+r.j.cost);/* V100 서버가 뺀 대여 채비값 */if(r.j.pt!=null){save.pt=r.j.pt;setWal(r.j.wallet);refreshWallet();}}else if(r.s===0||r.s>=500)srvReconcile();});
   if(curTrip){const x=rentCost();return x>0?' · 대여 채비 손실 약 '+x+'P':' · 대여 채비를 잃었습니다(추가 비용 없음)';}
   const t=save.eq.term;save.inv.term[t]=Math.max(0,termLeft(t)-1);return rigLeftTxt(t);}
@@ -8511,7 +8524,7 @@ function srvLand(){const c=srvC,b=c&&c.h;
     if(r.s===200&&r.j&&r.j.ok){done(r.j);return;}
     if(n===0&&r.s===403&&r.j&&r.j.error==='NO_TRIP'){srvCatchPending=false;ug();tags('<span class="tag" style="color:var(--bad);border-color:var(--bad)">출조 시간이 끝난 뒤라 기록되지 않았습니다</span>');tripGoneNow();return;}
     if(r.s===422&&r.j&&r.j.error==='LINE_BREAK'){srvCatchPending=false;ug();if(r.j.term)save.inv.term[r.j.term]=r.j.left;if(r.j.pt!=null){save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);refreshWallet();}SES.f=Math.max(0,SES.f-1);
-      $('#cardKick').textContent='끌어올리다 줄이 터졌습니다';tags('<span class="tag" style="color:var(--bad);border-color:var(--bad)">줄 터짐 · 채비 한계를 크게 넘어 기록되지 않았습니다</span>');nonCatch('break','줄 터짐 — 채비 한계보다 훨씬 큰 놈이었습니다'+breakHint(r.j.kg));srvReconcile();return;}
+      $('#cardKick').textContent='끌어올리다 줄이 터졌습니다';tags('<span class="tag" style="color:var(--bad);border-color:var(--bad)">줄 터짐 · 채비 한계를 크게 넘어 기록되지 않았습니다</span>');nonCatch('break','줄 터짐 — '+f.n+' '+cm.toFixed(1)+'cm · 채비 한계보다 훨씬 큰 놈이었습니다'+breakHint(r.j.kg));srvReconcile();return;}
     const unk=r.s===0||r.s>=500;if(unk&&n<1){tags('<span class="tag">기록 확인 중…</span>');setTimeout(()=>send(n+1),1500);return;}
     if(unk||(n>0&&r.s===403)){tags('<span class="tag">기록 확인 중…</span>');const p=await srvReconcile();srvCatchPending=false;
       if(p&&(p.count||0)>cnt0){const d=(p.score||0)-score0;tags('<span class="tag">기록됨'+(d>0?' · +'+d+'P':'')+'</span><span class="tag">누적 '+(p.count||0)+'마리</span><span class="tag">연결이 느려 다시 확인했습니다</span>');logMsg('<b>'+esc(save.nick)+'</b> · '+esc(f.n)+' '+cm.toFixed(1)+'cm');return;}
