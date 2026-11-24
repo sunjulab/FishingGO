@@ -2810,6 +2810,9 @@ function evtMsg(e,spotName){if(!e)return'';const k=new Date(e.until+9*3600e3);re
 const REV={boil:{n:'보일링',w:5,ms:600e3,bk:1.6,fk:3,pex:.8,alert:1,fish:['방어','부시리','삼치','고등어','전갱이'],txt:'먹이 떼를 쫓는 물고기가 수면을 뒤집는 중 · 회유어 입질 UP'},rise:{n:'라이즈',w:5,ms:600e3,bk:1.5,fk:3,pex:.85,alert:1,fish:['배스','끄리','강준치','가물치','송어','산천어'],txt:'수면에 먹이 사냥 파문이 이는 중 · 수면 사냥 어종 입질 UP'},tide:{n:'물돌이',w:3,ms:720e3,bk:1.4,fk:1,pex:1,alert:0,fish:[],txt:'만조·간조 전후 조류가 바뀌는 때 · 입질이 살아나는 중'},pors:{n:'상괭이',w:1,ms:180e3,bk:1,fk:1,pex:1,alert:0,see:1,fish:[],zones:['남해','서해','서남해'],txt:'상괭이가 지나가는 중 · 해양보호생물이라 낚을 수 없어요'}};
 const REV_SLOT=600e3;
 const REV_P=.06;
+// V149 너무 잦다는 운영 판단 → 낚시터 종류별 확률(10분 칸): 바다 .004 · 민물 .002 — 전국에서 보일링·라이즈 합쳐 하루 약 40번(시간당 1~2번), 낚시터 한 곳은 며칠에 한 번
+const REV_PS=.004;
+const REV_PF=.002;
 const REV_GAP=4;
 const REV_PK=1.5;
 const REV_MAX=5;
@@ -2817,8 +2820,8 @@ const REV_FIRST=500;
 const REV_TITLE_N=10;
 const REV_DELAY=60e3;
 const REV_ALERT_MIN=240e3;
-const REV_ALERT_GAP=900e3;
-const REV_ALERT_DAY=8;
+const REV_ALERT_GAP=2700e3;
+const REV_ALERT_DAY=4;
 const REV_TXT='게임 연출입니다 · 실제 그 장소의 바다·강 상황이 아닙니다';
 // 만조·간조 시각(표시값 HH:MM, KST) 앞뒤 60분 안인지 — 물때 엔진은 읽기만
 function revTideNear(w,t){const T=w&&w.tide;if(!T)return false;const k=new Date(t+9*36e5),m=k.getUTCHours()*60+k.getUTCMinutes();for(const x of[T.high,T.low,T.next_low,T.next_high]){const q=/^(\d{1,2}):(\d{2})$/.exec(x||'');if(!q)continue;let d=Math.abs(m-(+q[1]*60+ +q[2]));d=Math.min(d,1440-d);if(d<=60)return true;}return false;}
@@ -2831,8 +2834,8 @@ function revHash(x){let h=evtHash(x);h^=h>>>16;h=Math.imul(h,0x85ebca6b)>>>0;h^=
 // 새벽·해질녘(5~8시·17~20시) ×2, 한밤(23~4시) ×0.5
 function revHourK(h){return(h>=5&&h<8)||(h>=17&&h<20)?2:(h>=23||h<4)?.5:1;}
 // k번째 10분 칸에 시작하는 돌발 목록 · W: 낚시터별 날씨 · busy(id): 앞 REV_GAP칸 안에 그 낚시터 돌발이 있었는지 · 전국 대물 시간에는 없음
-function revSlot(k,spots,salt,W,busy){const t0=k*REV_SLOT;if(evtSlot(t0)||evtSlot(t0+REV_SLOT-1))return[];const h=new Date(t0+9*36e5).getUTCHours(),P=REV_P*revHourK(h),out=[];
-  for(const s of spots||[]){const u=revHash(salt+'|'+s.id+'|'+k)/4294967296;if(u>=P)continue;const K=revKinds(s,W&&W[s.id],t0);if(!K.length||(busy&&busy(s.id)))continue;
+function revSlot(k,spots,salt,W,busy){const t0=k*REV_SLOT;if(evtSlot(t0)||evtSlot(t0+REV_SLOT-1))return[];const h=new Date(t0+9*36e5).getUTCHours(),hk=revHourK(h),out=[];
+  for(const s of spots||[]){const u=revHash(salt+'|'+s.id+'|'+k)/4294967296;if(u>=(s.w==='fresh'?REV_PF:REV_PS)*hk)continue;const K=revKinds(s,W&&W[s.id],t0);if(!K.length||(busy&&busy(s.id)))continue;
     let r=revHash(salt+'#'+s.id+'#'+k)%K.reduce((a,x)=>a+REV[x].w,0),kd=K[0];for(const x of K){if((r-=REV[x].w)<0){kd=x;break;}}
     const st=t0+revHash(salt+'@'+s.id+'@'+k)%(REV_SLOT-60e3);out.push({id:s.id+'-'+k,spot:s.id,k:kd,start:st,until:st+REV[kd].ms});}
   return out;}
@@ -9393,7 +9396,7 @@ function revRender(){const b=$('#evtBody');if(!b)return;const L=revLive(),t=revT
   const rec=Object.keys(REV).map(k=>'<div class="rvrec"><span aria-hidden="true">'+RV_ICO[k]+'</span><b>'+esc(REV[k].n)+'</b><span class="num">'+((RVX.k||{})[k]|0)+'번</span>'+((RVX.f||{})[k]?'<small>첫 보상 받음</small>':'<small>처음 만나면 +'+fmtN(REV_FIRST)+'P</small>')+'</div>').join('');
   b.innerHTML='<h3 style="margin:0 0 6px;font-size:20px">돌발 물 상황</h3><p class="src" style="margin:0 0 8px">예고 없이 낚시터 한 곳에서 갑자기 터져요 · 보일링(바다)·라이즈(민물)는 1분 뒤 모두에게 알려요</p>'
    +'<h4 class="rvh">지금 진행 중 '+L.length+'곳</h4>'+rows+'<h4 class="rvh">내 기록 · 만난 횟수 '+(RVX.met|0)+'/'+REV_TITLE_N+(RVX.met>=REV_TITLE_N?' · 칭호 「보일링 헌터」 열림':' → 칭호 「보일링 헌터」')+'</h4><div class="rvrecs">'+rec+'</div>'
-   +'<ul class="src rvrules"><li>보일링: 입질 UP · 방어·부시리·삼치·고등어·전갱이가 3배 잘 나와요</li><li>라이즈: 입질 UP · 배스·끄리·강준치·가물치·송어·산천어가 3배</li><li>물돌이: 만조·간조 전후 조류가 바뀔 때만 · 입질 UP</li><li>상괭이: 구경만(해양보호생물 · 잡으면 안 돼요, 그물에 걸리면 해경에 신고) · 📸 기록하기로 기록</li><li>돌발 중 직접 낚은 고기 포인트 ×'+REV_PK+' · 한 돌발에 1인 '+REV_MAX+'마리까지 · 자동·투망 제외</li><li>낚시터마다 평균 몇 시간에 한 번 · 새벽·해질녘에 더 자주 · 위험 기상·전국 대물 시간엔 없어요</li><li>'+esc(REV_TXT)+'</li></ul>';
+   +'<ul class="src rvrules"><li>보일링: 입질 UP · 방어·부시리·삼치·고등어·전갱이가 3배 잘 나와요</li><li>라이즈: 입질 UP · 배스·끄리·강준치·가물치·송어·산천어가 3배</li><li>물돌이: 만조·간조 전후 조류가 바뀔 때만 · 입질 UP</li><li>상괭이: 구경만(해양보호생물 · 잡으면 안 돼요, 그물에 걸리면 해경에 신고) · 📸 기록하기로 기록</li><li>돌발 중 직접 낚은 고기 포인트 ×'+REV_PK+' · 한 돌발에 1인 '+REV_MAX+'마리까지 · 자동·투망 제외</li><li>전국에서 한 시간에 한두 번 · 한 낚시터는 며칠에 한 번 · 새벽·해질녘에 더 자주 · 위험 기상·전국 대물 시간엔 없어요</li><li>'+esc(REV_TXT)+'</li></ul>';
   b.querySelectorAll('[data-rvgo]').forEach(x=>x.onclick=()=>revGo(x.dataset.rvgo));}
 document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-rval]');if(!t)return;try{localStorage.setItem('fishinggo.meta.revAl',t.dataset.rval);}catch(x){}document.querySelectorAll('[data-rval]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rval===t.dataset.rval)));toast(t.dataset.rval==='off'?'돌발 알림을 껐어요 · 지도 🔥는 그대로 보여요':t.dataset.rval==='zone'?'내 해역 돌발만 알려 드려요':'돌발이 터지면 알려 드려요',2400);});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)revPoll();});
@@ -9681,7 +9684,7 @@ function openHelp(){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}const
      v39Row('기준',v39Seg(AUTO_REPAIR_AT.map(n=>'<button type="button" data-arat="'+n+'" aria-pressed="'+(A.at===n)+'">'+n+'%</button>').join(''),'자동 수리 기준','arset'+(A.on?'':' off')))+'<div class="v39note">'+AR_HELP+'</div></div>');
   h+=v39Sec('잡은 고기 들어 보이기',v39Row('<span id="shwL">들어 보이기</span>',v39Seg([['sp','특별할 때'],['all','항상'],['off','끄기']].map(([v,t])=>'<button type="button" data-shw="'+v+'" aria-pressed="'+(showMode()===v)+'">'+t+'</button>').join(''),'','',' aria-labelledby="shwL"'),'wrap'));/* v38 */
   h+=v39Sec('먹는 장면 보기',v39Row('<span id="eatcL">먹는 장면</span><small>식당·카페에서 가까이 보기</small>',v39Seg([[1,'켜기'],[0,'끄기']].map(([v,t])=>'<button type="button" data-eatc="'+v+'" aria-pressed="'+(eatcOn()===!!v)+'">'+t+'</button>').join(''),'','',' aria-labelledby="eatcL"')));/* V41 */
-  h+=v39Sec('돌발 알림',v39Row('<span id="rvalL">돌발 물 상황 알림</span><small>보일링·라이즈가 터지면 화면 위에 [바로 가기] · 15분에 한 번, 하루 '+REV_ALERT_DAY+'번까지</small>',v39Seg([['all','전체'],['zone','내 해역만'],['off','끄기']].map(([v,t])=>'<button type="button" data-rval="'+v+'" aria-pressed="'+(revPref()===v)+'">'+t+'</button>').join(''),'','',' aria-labelledby="rvalL"')));/* V143 */
+  h+=v39Sec('돌발 알림',v39Row('<span id="rvalL">돌발 물 상황 알림</span><small>보일링·라이즈가 터지면 화면 위에 [바로 가기] · '+Math.round(REV_ALERT_GAP/60e3)+'분에 한 번, 하루 '+REV_ALERT_DAY+'번까지</small>',v39Seg([['all','전체'],['zone','내 해역만'],['off','끄기']].map(([v,t])=>'<button type="button" data-rval="'+v+'" aria-pressed="'+(revPref()===v)+'">'+t+'</button>').join(''),'','',' aria-labelledby="rvalL"')));/* V143 */
   h+=v39Sec('도움말',v39Row('처음 안내<small>이동 → 물가로 가기 → 던지기 → 챔질 → 파이팅 → 채비 순서로 다시 봅니다.</small>','<button class="mini buy" id="tutAgain" type="button">처음 안내 다시 보기</button>','wrap')+
      v39Row('용어<small>눌러서 뜻 보기</small>','')+'<div class="v39gl">'+Object.keys(GLOSS).map(k=>gl(k)).join('')+'</div>'+
      v39Row('조작<small>'+(TOUCH?'조이스틱 이동 · 화면 끌기 시점 · 오른쪽 버튼 던지기·챔질·감기 · 표현 버튼 인사·박수·대박·자랑':'WASD·방향키 이동 · 드래그·Q·E 시점 · 휠 확대 · Space·F 던지기·챔질·감기 · G 인사 · 1~4 감정 표현 · B 가방 · M 소리 켜기·끄기 · Esc 창 닫기')+'</small>',''));
