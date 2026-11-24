@@ -363,6 +363,9 @@ export default function AdminDashboard() {
         {/* ══ CS 1:1 문의 관리 패널 ══ */}
         <CsAdminPanel addToast={addToast} />
 
+        {/* ══ 결제했는데 등급이 안 붙은 사용자 복구 (Google 결제 확인 후 적용) ══ */}
+        <IapRecoverPanel addToast={addToast} />
+
         {/* ══ 불법 tier 강제 복원 패널 ══ */}
         <ForceTierPanel addToast={addToast} />
 
@@ -603,6 +606,65 @@ function CsAdminPanel({ addToast }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── IAP-ADMIN-RECOVER(2026-11-25): 결제했는데 등급이 안 붙은 사용자 복구 ─── */
+const IAP_STATE_KO = {
+  SUBSCRIPTION_STATE_ACTIVE: '사용 중', SUBSCRIPTION_STATE_IN_GRACE_PERIOD: '결제 유예 중', SUBSCRIPTION_STATE_CANCELED: '해지 예약(만료일까지 사용)',
+  SUBSCRIPTION_STATE_ON_HOLD: '결제 보류', SUBSCRIPTION_STATE_PAUSED: '일시중지', SUBSCRIPTION_STATE_EXPIRED: '만료', SUBSCRIPTION_STATE_PENDING: '결제 대기',
+};
+function IapRecoverPanel({ addToast }) {
+  const [target, setTarget] = useState('');
+  const [orderId, setOrderId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState(null);
+  const [err, setErr] = useState('');
+  const inp = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '10px 12px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, outline: 'none' };
+  const call = async (dryRun) => {
+    const t = target.trim(), o = orderId.trim();
+    if (!t || !o) { addToast('사용자와 주문 ID를 모두 입력하세요.', 'error'); return; }
+    setBusy(true); setErr(''); if (dryRun) setInfo(null);
+    try {
+      const res = await apiClient.post('/api/admin/iap-recover', { targetEmail: t, orderId: o, dryRun });
+      setInfo(res.data.info || null);
+      if (!dryRun) { addToast(`✅ ${res.data.message}`, 'success'); setOrderId(''); }
+    } catch (e) {
+      setErr(e.response?.data?.error || '확인 실패'); setInfo(e.response?.data?.info || null);
+    } finally { setBusy(false); }
+  };
+  const ok = info && !err;
+  return (
+    <div style={{ marginTop: '24px', background: 'rgba(100,181,246,0.06)', border: '1px solid rgba(100,181,246,0.25)', borderRadius: '18px', overflow: 'hidden' }}>
+      <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(100,181,246,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontSize: '18px' }}>🧾</span>
+        <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#64B5F6' }}>결제 확인 후 멤버십 복구</span>
+      </div>
+      <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+          Play Console › 주문 관리에서 주문 ID(GPA.…)를 복사해 넣으세요. Google에서 실제 결제를 확인한 뒤에만 적용되고, 만료일도 Google 기준으로 맞춰집니다.
+        </div>
+        <input style={inp} placeholder="사용자 이메일 / ID / 닉네임" value={target} onChange={e => setTarget(e.target.value)} />
+        <input style={inp} placeholder="주문 ID (GPA.1234-5678-9012-34567)" value={orderId} onChange={e => setOrderId(e.target.value)} />
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => call(true)} disabled={busy} style={{ flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px', fontWeight: '800', fontSize: `calc(12px * var(--fs, 1))`, cursor: 'pointer' }}>
+            {busy ? '확인 중...' : '① Google에서 확인'}
+          </button>
+          <button onClick={() => call(false)} disabled={busy || !ok} style={{ flex: 1, background: ok ? '#64B5F6' : 'rgba(100,181,246,0.25)', color: '#0B1F3A', border: 'none', borderRadius: '10px', padding: '10px', fontWeight: '900', fontSize: `calc(12px * var(--fs, 1))`, cursor: ok ? 'pointer' : 'not-allowed' }}>
+            ② 멤버십 적용
+          </button>
+        </div>
+        {err && <div style={{ color: '#FF5A5F', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '700' }}>⚠️ {err}</div>}
+        {info && (
+          <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '10px 12px', fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
+            <div>사용자: <b>{info.user?.name || '-'}</b> · {info.user?.email || info.user?.id} · 지금 {TIER_LABEL[info.user?.tier] || info.user?.tier}</div>
+            <div>상품: <b>{info.plan}</b> · 상태: {IAP_STATE_KO[info.state] || info.state}{info.isTest ? ' · 테스트 결제' : ''}</div>
+            <div>만료: {info.expiresAt ? new Date(info.expiresAt).toLocaleString('ko-KR') : '-'} · 결제 확인(ack): {info.acknowledged ? '완료' : <span style={{ color: '#FF9B26' }}>안 됨 → 적용 시 처리(안 하면 3일 뒤 자동 환불)</span>}</div>
+            {info.accountMatch === true && <div style={{ color: '#00C48C' }}>앱 결제 때 기록된 계정과 일치</div>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

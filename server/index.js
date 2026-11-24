@@ -1253,6 +1253,30 @@ app.post('/api/telegram/webhook', async (req, res) => {
 
 // ✅ IAP 구독 자동 만료 스케줄러 (30분마다 실행)
 // iapExpiresAt이 지난 유저 tier → FREE로 강제 회수 + VVIP 슬롯 해제
+// ✅ IAP-RENEW-CHECK(2026-11-25): Google 기준 구독 상태 — keep(만료일 연장됨) / unknown(확인 실패, 최대 3일까지는 내리지 않음) / 그 외 내림
+const iapRenewFail = new Map(); // token → 처음 확인 실패한 시각
+async function iapRenewCheck(token) {
+  const sa = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT;
+  if (!sa) return { keep: false };
+  try {
+    const { google } = require('googleapis');
+    const gauth = new google.auth.GoogleAuth({ credentials: JSON.parse(sa), scopes: ['https://www.googleapis.com/auth/androidpublisher'] });
+    const ap = google.androidpublisher({ version: 'v3', auth: gauth });
+    const { data: sub } = await ap.purchases.subscriptionsv2.get({ packageName: 'kr.fishinggo.app', token });
+    iapRenewFail.delete(token);
+    const li = (sub.lineItems || [])[0] || {};
+    const exp = li.expiryTime ? Date.parse(li.expiryTime) : 0;
+    const okState = ['SUBSCRIPTION_STATE_ACTIVE', 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD', 'SUBSCRIPTION_STATE_CANCELED'].includes(sub.subscriptionState);
+    if (okState && exp > Date.now()) return { keep: true, expiresAt: new Date(exp), autoRenewing: li.autoRenewingPlan?.autoRenewEnabled !== false };
+    return { keep: false };
+  } catch (e) {
+    const st = e?.response?.status || e?.status;
+    if (st === 404 || st === 410 || st === 400) return { keep: false }; // 토큰 무효 → 내림
+    const first = iapRenewFail.get(token) || Date.now(); iapRenewFail.set(token, first);
+    (logger?.warn || console.warn)('[IAP 갱신 확인] Google 확인 실패:', st || '', e.message);
+    return { keep: false, unknown: Date.now() - first < 3 * 24 * 3600 * 1000 };
+  }
+}
 const runIapExpiryCheck = async () => {
   if (!dbReady || !User) return;
   try {
@@ -1264,10 +1288,20 @@ const runIapExpiryCheck = async () => {
         { iapExpiresAt: { $ne: null, $lt: now } },
         { subscriptionExpiresAt: { $ne: null, $lt: now }, iapExpiresAt: null },
       ],
-    }).select('_id email tier iapExpiresAt subscriptionExpiresAt vvipHarborId').lean();
+    }).select('_id email tier iapExpiresAt subscriptionExpiresAt vvipHarborId iapPurchaseToken').lean();
 
     for (const u of expiredUsers) {
       try {
+        // ✅ IAP-RENEW-CHECK(2026-11-25): 내리기 전에 Google에 갱신 여부 확인 — 자동 갱신된 구독자가 앱을 안 열어도 등급 유지
+        if (u.iapPurchaseToken) {
+          const g = await iapRenewCheck(u.iapPurchaseToken);
+          if (g.keep) {
+            await User.findByIdAndUpdate(u._id, { $set: { iapExpiresAt: g.expiresAt, iapAutoRenewing: g.autoRenewing, updatedAt: now } });
+            (logger?.info || console.log)(`[IAP 갱신 확인] ${u.email} 유지 → 만료 ${g.expiresAt.toISOString()}`);
+            continue;
+          }
+          if (g.unknown) continue; // Google 확인 실패(권한·네트워크) → 이번엔 내리지 않고 다음 주기에 다시 확인
+        }
         // tier → FREE 강제 다운그레이드
         await User.findByIdAndUpdate(u._id, {
           $set: { tier: 'FREE', iapExpiresAt: null, subscriptionExpiresAt: null, iapPurchaseToken: null, iapProductId: null, iapAutoRenewing: false, updatedAt: now }
@@ -3316,6 +3350,12 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
         }
         if (sub.paymentState === 1 || sub.paymentState === 2) {
           verified = true;
+          // ✅ IAP-SERVER-ACK(2026-11-25): 앱이 finish()를 못 해도 Google이 3일 뒤 자동 환불하지 않도록 서버에서 결제 확인(acknowledge)
+          if (sub.acknowledgementState === 0) {
+            androidPublisher.purchases.subscriptions.acknowledge({ packageName, subscriptionId: productId, token: purchaseToken, requestBody: {} })
+              .then(() => (logger?.info || console.log)('[Google IAP] 서버 acknowledge 완료'))
+              .catch(e => (logger?.warn || console.warn)('[Google IAP] 서버 acknowledge 실패(앱 finish로 재시도됨):', e.message));
+          }
           autoRenewing = sub.autoRenewing !== false;
           googleIsTest = sub.purchaseType === 0; // ✅ IAP-TEST: Google 정의 0=테스트(라이선스 테스트 계정) 구매
           if (sub.priceCurrencyCode === 'KRW' && sub.priceAmountMicros) {
@@ -4461,6 +4501,133 @@ app.post('/api/admin/force-tier', async (req, res) => {
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
+});
+
+// ✅ IAP-ADMIN-RECOVER(2026-11-25): 결제는 됐는데 등급이 안 붙은 사용자 복구 — 사용자가 '복원'을 누르지 않아도 관리자가 처리
+// Play Console 주문 ID(GPA.xxxx)로 Google에서 구매 토큰을 받아 실제 결제 상태를 확인한 뒤에만 등급을 준다(추측으로 주지 않음)
+// POST /api/admin/iap-recover  { targetEmail, orderId?, purchaseToken?, dryRun? }
+app.post('/api/admin/iap-recover', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
+
+  const targetEmail = String(req.body?.targetEmail || '').trim();
+  const orderId = String(req.body?.orderId || '').trim();
+  let purchaseToken = String(req.body?.purchaseToken || '').trim();
+  const dryRun = req.body?.dryRun === true;
+  if (!targetEmail) return res.status(400).json({ error: '대상 사용자(이메일/ID/닉네임)를 입력하세요.' });
+  if (!orderId && !purchaseToken) return res.status(400).json({ error: '주문 ID(GPA.…) 또는 구매 토큰이 필요합니다.' });
+  if (orderId && !/^GPA\.[0-9A-Za-z.\-]{6,60}$/.test(orderId)) return res.status(400).json({ error: '주문 ID 형식이 아닙니다. (예: GPA.1234-5678-9012-34567)' });
+  if (!dbReady || !User) return res.status(503).json({ error: 'DB 연결 대기 중입니다.' });
+
+  const serviceAccountJson = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT;
+  if (!serviceAccountJson) return res.status(503).json({ error: 'GOOGLE_PLAY_SERVICE_ACCOUNT 미설정 — Google 결제 확인 불가' });
+
+  const PLAN = {
+    'kr.fishinggo.app.lite_monthly': { planId: 'BASIC', tier: 'BUSINESS_LITE', amount: 3300,   label: '베이직(판매종료)' },
+    'kr.fishinggo.app.pro_monthly':  { planId: 'BASIC', tier: 'BUSINESS_LITE', amount: 9900,   label: 'PRO 멤버십' },
+    'kr.fishinggo.app.vvip_monthly': { planId: 'VVIP',  tier: 'BUSINESS_VIP',  amount: 550000, label: 'VVIP' },
+  };
+  const packageName = 'kr.fishinggo.app';
+  let ap;
+  try {
+    const { google } = require('googleapis');
+    const gauth = new google.auth.GoogleAuth({ credentials: JSON.parse(serviceAccountJson), scopes: ['https://www.googleapis.com/auth/androidpublisher'] });
+    ap = google.androidpublisher({ version: 'v3', auth: gauth });
+  } catch (e) { return res.status(500).json({ error: 'Google API 준비 실패: ' + e.message }); }
+
+  const gErr = (e, what) => {
+    const st = e?.response?.status || e?.status;
+    if (st === 401 || st === 403) return res.status(503).json({ error: `${what}: 서비스 계정 권한이 없습니다(${st}). Play Console › 사용자 및 권한에서 이 서비스 계정에 '재무 데이터 보기'와 '주문 및 구독 관리' 권한을 주세요.` });
+    if (st === 404) return res.status(404).json({ error: `${what}: Google에서 찾을 수 없습니다. 주문 ID를 다시 확인하세요.` });
+    return res.status(502).json({ error: `${what} 실패: ${e.message}` });
+  };
+
+  // ① 주문 ID → 구매 토큰·상품
+  let productId = null;
+  if (!purchaseToken) {
+    try {
+      const { data: order } = await ap.orders.get({ packageName, orderId });
+      purchaseToken = order.purchaseToken || '';
+      productId = order.lineItems?.[0]?.productId || null;
+      if (!purchaseToken) return res.status(404).json({ error: '주문에 구매 토큰이 없습니다.' });
+    } catch (e) { return gErr(e, '주문 조회'); }
+  }
+
+  // ② 구매 토큰 → 실제 구독 상태 (Google이 기준)
+  let sub;
+  try { ({ data: sub } = await ap.purchases.subscriptionsv2.get({ packageName, token: purchaseToken })); }
+  catch (e) { return gErr(e, '구독 조회'); }
+  const li = (sub.lineItems || [])[0] || {};
+  productId = li.productId || productId;
+  const plan = PLAN[productId];
+  if (!plan) return res.status(400).json({ error: `알 수 없는 상품: ${productId}` });
+  const state = sub.subscriptionState; // ACTIVE · IN_GRACE_PERIOD · ON_HOLD · PAUSED · CANCELED · EXPIRED · PENDING
+  const expiryMs = li.expiryTime ? Date.parse(li.expiryTime) : 0;
+  const usable = (state === 'SUBSCRIPTION_STATE_ACTIVE' || state === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD' || state === 'SUBSCRIPTION_STATE_CANCELED') && expiryMs > Date.now();
+  const needAck = sub.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING';
+  const isTest = !!sub.testPurchase;
+  const ext = sub.externalAccountIdentifiers || {};
+
+  // ③ 대상 사용자와 토큰 주인 확인
+  const u = await User.findOne({ $or: [{ email: targetEmail }, { id: targetEmail }, { name: targetEmail }] }).lean().catch(() => null);
+  if (!u) return res.status(404).json({ error: '해당 사용자를 찾을 수 없습니다.' });
+  const owner = await User.findOne({ iapPurchaseToken: purchaseToken }).select('email id name').lean().catch(() => null);
+  if (owner && String(owner._id) !== String(u._id)) {
+    return res.status(409).json({ error: `이 결제는 이미 다른 계정(${owner.email || owner.id || owner.name})에 연결돼 있습니다.`, code: 'TOKEN_OWNED' });
+  }
+  const userKeys = [u.email, u.id, String(u._id)].filter(Boolean).map(String);
+  const extId = ext.obfuscatedExternalAccountId || null;
+  const extMatch = extId ? userKeys.includes(extId) : null; // 앱이 결제 때 계정 ID를 실어 보냈다면 대조
+
+  const info = {
+    user: { email: u.email || null, id: u.id || null, name: u.name || null, tier: u.tier || 'FREE' },
+    productId, plan: plan.label, state, expiresAt: expiryMs ? new Date(expiryMs).toISOString() : null,
+    acknowledged: !needAck, isTest, accountMatch: extMatch,
+  };
+  if (!usable) return res.status(402).json({ error: `지금 쓸 수 있는 구독이 아닙니다 (${state}, 만료 ${info.expiresAt || '알 수 없음'}).`, info });
+  if (extMatch === false) return res.status(409).json({ error: '이 결제는 앱에서 다른 계정으로 결제한 것으로 기록돼 있습니다. 사용자를 다시 확인하세요.', info });
+  if (dryRun) return res.json({ success: true, dryRun: true, info });
+
+  // ④ 결제 확인(acknowledge) — 안 하면 Google이 3일 뒤 자동 환불
+  let ackDone = !needAck;
+  if (needAck) {
+    try { await ap.purchases.subscriptions.acknowledge({ packageName, subscriptionId: productId, token: purchaseToken, requestBody: {} }); ackDone = true; }
+    catch (e) { (logger?.warn || console.warn)('[iap-recover] acknowledge 실패:', e.message); }
+  }
+
+  // ⑤ 등급 부여 (기존 상위 등급은 유지)
+  const newTier = ['PRO', 'BUSINESS_VIP', 'MASTER'].includes(u.tier) ? u.tier : plan.tier;
+  const expiresAt = new Date(expiryMs);
+  const updated = await User.findOneAndUpdate({ _id: u._id }, {
+    $set: { tier: newTier, iapPurchaseToken: purchaseToken, iapProductId: productId, iapExpiresAt: expiresAt, iapAutoRenewing: li.autoRenewingPlan?.autoRenewEnabled !== false, updatedAt: new Date() },
+  }, { new: true }).catch(e => { (logger?.error || console.error)('[iap-recover] 등급 저장 실패:', e.message); return null; });
+  if (!updated) return res.status(500).json({ error: '등급 저장에 실패했습니다.', info });
+  const memIdx = memUsers.findIndex(x => (u.email && x.email === u.email) || (u.id && x.id === u.id));
+  if (memIdx !== -1) { memUsers[memIdx].tier = newTier; saveMemUsers(); }
+
+  // ⑥ 결제 이력 (같은 토큰은 한 번만)
+  if (PaymentHistory) {
+    const dup = await PaymentHistory.findOne({ purchaseToken }).lean().catch(() => null);
+    if (!dup) {
+      await PaymentHistory.create({
+        userId: u.id || u.email || String(u._id), email: u.email, pg: 'google_play', method: 'iap',
+        planId: plan.planId, tier: newTier, amount: (() => { const rp = li.autoRenewingPlan?.recurringPrice; const k = rp && rp.currencyCode === 'KRW' ? Number(rp.units) : NaN; return Number.isFinite(k) && k > 0 ? k : plan.amount; })(), purchaseToken, productId,
+        status: 'paid', paidAt: sub.startTime ? new Date(sub.startTime) : new Date(), isTest,
+      }).catch(e => (logger?.warn || console.warn)('[iap-recover] 이력 저장 실패:', e.message));
+    }
+  }
+  await recordTierGrant(u, newTier, tp.email, `결제 확인 복구${orderId ? ' ' + orderId : ''}`);
+  (logger?.info || console.log)(`[iap-recover] ✅ ${u.email || u.id} → ${newTier} (${productId}, 만료 ${expiresAt.toISOString()}, ack ${ackDone}) by ${tp.email}`);
+
+  try {
+    const { sendToUser } = require('./push');
+    await sendToUser(u.id || u.email, { title: `🎣 낚시GO ${plan.label} 적용 완료`, body: '결제가 확인되어 멤버십이 적용됐습니다. 앱을 다시 열면 바로 쓸 수 있어요.' });
+  } catch {}
+
+  return res.json({ success: true, tier: newTier, acknowledged: ackDone, info: Object.assign(info, { acknowledged: ackDone }), message: `${u.email || u.id} → ${plan.label} 적용 (만료 ${expiresAt.toLocaleDateString('ko-KR')})` });
 });
 
 // GET /api/admin/captains
