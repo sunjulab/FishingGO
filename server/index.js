@@ -4551,7 +4551,7 @@ app.post('/api/admin/iap-recover', async (req, res) => {
   const orderId = String(req.body?.orderId || '').trim();
   let purchaseToken = String(req.body?.purchaseToken || '').trim();
   const dryRun = req.body?.dryRun === true;
-  if (!targetEmail) return res.status(400).json({ error: '대상 사용자(이메일/ID/닉네임)를 입력하세요.' });
+  if (!targetEmail && !dryRun) return res.status(400).json({ error: '대상 사용자(이메일/ID/닉네임)를 입력하세요.' }); // 사용자 없이 '확인'만은 허용(주문 조회용)
   if (!orderId && !purchaseToken) return res.status(400).json({ error: '주문 ID(GPA.…) 또는 구매 토큰이 필요합니다.' });
   if (orderId && !/^GPA\.[0-9A-Za-z.\-]{6,60}$/.test(orderId)) return res.status(400).json({ error: '주문 ID 형식이 아닙니다. (예: GPA.1234-5678-9012-34567)' });
   if (!dbReady || !User) return res.status(503).json({ error: 'DB 연결 대기 중입니다.' });
@@ -4604,6 +4604,19 @@ app.post('/api/admin/iap-recover', async (req, res) => {
   const needAck = sub.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING';
   const isTest = !!sub.testPurchase;
   const ext = sub.externalAccountIdentifiers || {};
+
+  // ③-0 사용자 없이 확인만: Google 상태와 이 결제가 연결된 계정만 알려 준다(변경 없음)
+  if (!targetEmail) {
+    const own = await User.findOne({ iapPurchaseToken: purchaseToken }).select('email id name tier').lean().catch(() => null);
+    const hist = PaymentHistory ? await PaymentHistory.findOne({ purchaseToken }).select('userId email createdAt').lean().catch(() => null) : null;
+    return res.json({ success: true, dryRun: true, lookup: true, info: {
+      productId, state, expiresAt: expiryMs ? new Date(expiryMs).toISOString() : null, startTime: sub.startTime || null,
+      acknowledged: !needAck, isTest, latestOrderId: sub.latestOrderId || null, linkedPurchaseToken: !!sub.linkedPurchaseToken,
+      autoRenew: li.autoRenewingPlan?.autoRenewEnabled !== false, externalAccountId: ext.obfuscatedExternalAccountId || null,
+      owner: own ? { email: own.email || null, id: own.id || null, name: own.name || null, tier: own.tier || null } : null,
+      history: hist ? { userId: hist.userId, email: hist.email || null, at: hist.createdAt } : null,
+    } });
+  }
 
   // ③ 대상 사용자와 토큰 주인 확인
   const u = await User.findOne({ $or: [{ email: targetEmail }, { id: targetEmail }, { name: targetEmail }] }).lean().catch(() => null);
@@ -10614,6 +10627,33 @@ app.post('/api/user/favorites', async (req, res) => {
 });
 
 // ── (14) 어드민 수익 대시보드 API ─────────────────────────────────────────────
+// ✅ PAY-UNVERIFIED-HIDE(2026-11-25): 결제사 확인 근거(imp_uid·Google 구매토큰·페이플) 없는 '확인 대기' 결제 기록 조회·숨김
+// 기록은 지우거나 상태를 바꾸지 않고 hidden 표시만 한다 → 대시보드 '확인 대기' 집계에서 빠짐(hidden:false로 되돌리면 다시 보임)
+const UNVERIFIED_PAY = { status: 'paid', isTest: { $ne: true }, imp_uid: { $in: [null, ''] }, purchaseToken: { $in: [null, ''] }, pg: { $ne: 'payple' } };
+app.get('/api/admin/payments/unverified', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp; try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
+  if (!dbReady || !PaymentHistory) return res.status(503).json({ error: 'DB 연결 대기 중' });
+  const rows = await PaymentHistory.find(UNVERIFIED_PAY).sort({ createdAt: -1 }).limit(100).lean().catch(() => []);
+  res.json({ rows: rows.map(r => ({ _id: String(r._id), hidden: !!r.hidden, userId: r.userId, userName: r.userName || null, email: r.email || null, planId: r.planId || null, tier: r.tier || null, pg: r.pg || r.pgProvider || null, method: r.method || null, paymentType: r.paymentType || null, amount: r.amount, merchant_uid: r.merchant_uid || null, productId: r.productId || null, createdAt: r.createdAt, paidAt: r.paidAt || null })) });
+});
+app.post('/api/admin/payments/hide', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp; try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
+  if (!dbReady || !PaymentHistory) return res.status(503).json({ error: 'DB 연결 대기 중' });
+  const ids = (Array.isArray(req.body?.ids) ? req.body.ids : []).map(String).filter(x => /^[0-9a-f]{24}$/i.test(x)).slice(0, 50);
+  const hidden = req.body?.hidden !== false;
+  if (!ids.length) return res.status(400).json({ error: 'ids 필요' });
+  const r = await PaymentHistory.updateMany({ _id: { $in: ids }, ...UNVERIFIED_PAY }, { $set: { hidden, hiddenBy: tp.email, hiddenAt: new Date() } }).catch(e => ({ error: e.message }));
+  if (r.error) return res.status(500).json({ error: r.error });
+  (logger?.info || console.log)(`[payments/hide] ${r.modifiedCount}건 hidden=${hidden} by ${tp.email}`);
+  res.json({ success: true, modified: r.modifiedCount, hidden });
+});
+
 app.get('/api/admin/revenue', async (req, res) => {
   if (!isMaster(req)) return res.status(403).json({ error: '마스터 권한 필요' }); // ✅ FIX-ADMIN-REVENUE-AUTH
   try {
@@ -10645,7 +10685,7 @@ app.get('/api/admin/revenue', async (req, res) => {
         PaymentHistory.find(VERIFIED).sort({ createdAt: -1 }).limit(10).select('userId userName planId pgProvider pg amount status createdAt merchant_uid').lean(),
         PaymentHistory.distinct('userId', VERIFIED),
         PaymentHistory.distinct('userId', { ...VERIFIED, createdAt: { $gte: since31 } }),
-        PaymentHistory.aggregate([{ $match: { status: 'paid', isTest: { $ne: true }, imp_uid: { $in: [null, ''] }, purchaseToken: { $in: [null, ''] }, pg: { $ne: 'payple' } } }, { $group: { _id: null, n: { $sum: 1 }, total: { $sum: '$amount' } } }]),
+        PaymentHistory.aggregate([{ $match: { status: 'paid', isTest: { $ne: true }, hidden: { $ne: true }, imp_uid: { $in: [null, ''] }, purchaseToken: { $in: [null, ''] }, pg: { $ne: 'payple' } } }, { $group: { _id: null, n: { $sum: 1 }, total: { $sum: '$amount' } } }]), // ✅ PAY-UNVERIFIED-HIDE: 숨긴 기록 제외
         PaymentHistory.aggregate([{ $match: VERIFIED }, { $group: { _id: '$planId', count: { $sum: 1 }, revenue: { $sum: '$amount' } } }]),
       ]);
 

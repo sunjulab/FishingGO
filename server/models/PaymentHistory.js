@@ -25,6 +25,9 @@ const paymentHistorySchema = new mongoose.Schema({
   productId:     { type: String, trim: true },
   purchaseToken: { type: String, trim: true, index: true }, // Google Play 구독 토큰 (중복 처리 방지)
   paidAt:        { type: Date },
+  hidden:        { type: Boolean, default: false },   // ✅ PAY-UNVERIFIED-HIDE: 관리자가 숨긴 확인 대기 기록(집계 제외)
+  hiddenBy:      { type: String, trim: true },
+  hiddenAt:      { type: Date },
 }, { timestamps: true }); // ✅ TECH-DEBT: 수동 createdAt 제거 — Mongoose timestamps 자동 관리
 
 paymentHistorySchema.index({ userId: 1, createdAt: -1 });
