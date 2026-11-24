@@ -107,12 +107,12 @@ export default function AdminDashboard() {
   const maxPlanRevenue = Math.max(...Object.values(planBreakdown).map(p => p.revenue || 0), 1);
 
   // ✅ DASH-CLEAN(2026-11-11): 판매 중인 플랜만 표시 (PRO·VIP 판매 종료, MASTER는 관리자라 제외)
+  // ✅ DASH-V2(2026-11-24): '라이트' 폐지 → 지금 파는 상품(PRO 멤버십) 기준. 무료는 막대 없이 숫자만
   const PLAN_ROWS = [
-    ['FREE',          '무료',   '#8E8E93', true],
-    ['BUSINESS_LITE', '라이트', '#64B5F6', true],
-    ['PRO',           '프로',   '#00C48C', false],
-    ['BUSINESS_VIP',  'VIP',    '#FFD700', false],
-    ['CAPTAIN',       '캡틴',   '#00C48C', false],
+    ['BUSINESS_LITE', 'PRO 멤버십', '#64B5F6', true,  '월 9,900원 · 판매 중'],
+    ['PRO',           '예전 PRO',   '#8E8E93', false, '판매종료'],
+    ['BUSINESS_VIP',  'VIP',        '#8E8E93', false, '판매종료'],
+    ['CAPTAIN',       '캡틴',       '#FF9B26', false, '무료 권한 · 매출 제외'],
   ];
   const tierBreakdown = userStats?.tierBreakdown || {};
   const PAY_PLAN_LABEL = { BASIC: 'PRO 멤버십', LITE: 'PRO 멤버십', BUSINESS_LITE: 'PRO 멤버십', PRO: '기존 PRO', VVIP: 'VIP', BUSINESS_VIP: 'VIP' }; // ✅ PRO-9900
@@ -163,59 +163,57 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── 1. 매출 ── */}
+        {/* ── 1. 매출 (DASH-V2: 이번 달 매출을 가장 크게) ── */}
         {stats && !loading && (
-          <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <div style={sectionTitle}>매출</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-              <StatCard label="이번 달 매출" value={`${(stats.monthRevenue || 0).toLocaleString()}원`} icon={TrendingUp} color="#00C48C" />
-              <StatCard label="누적 매출" value={`${(stats.totalRevenue || 0).toLocaleString()}원`} icon={DollarSign} color="#FFD700" />
-              <StatCard label="결제 회원" value={`${stats.activePaidUsers || 0}명`} icon={CreditCard} color="#64B5F6" sub="최근 31일 실제 결제" />
-              <StatCard label="누적 결제자" value={`${stats.paidUsers || 0}명`} icon={Users} color="#FF9B26" sub="한 번 이상 실제 결제" />
+            <div style={{ background: 'rgba(100,181,246,0.10)', border: '1.5px solid rgba(100,181,246,0.45)', borderRadius: '16px', padding: '18px' }}>
+              <div style={{ fontSize: `calc(12px * var(--fs, 1))`, color: 'rgba(255,255,255,0.55)', fontWeight: '800' }}>이번 달 매출</div>
+              <div style={{ fontSize: `calc(34px * var(--fs, 1))`, fontWeight: '950', color: '#fff', lineHeight: 1.15, margin: '4px 0 14px' }}>{(stats.monthRevenue || 0).toLocaleString()}원</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.10)', paddingTop: '12px' }}>
+                {[
+                  ['누적 매출', `${(stats.totalRevenue || 0).toLocaleString()}원`],
+                  ['결제 회원', `${stats.activePaidUsers || 0}명`],
+                  ['결제 전환율', userStats?.totalUsers > 0 ? `${((stats.activePaidUsers || 0) / userStats.totalUsers * 100).toFixed(1)}%` : '-'],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: `calc(10.5px * var(--fs, 1))`, color: 'rgba(255,255,255,0.45)', fontWeight: '700' }}>{k}</div>
+                    <div style={{ fontSize: `calc(16px * var(--fs, 1))`, fontWeight: '900', color: '#fff', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '700', marginTop: '8px' }}>결제 회원 = 최근 31일 Google 확인을 통과한 실제 결제 · 누적 결제자 {stats.paidUsers || 0}명</div>
             </div>
-            {/* ✅ REAL-PAID: 결제사 확인이 안 된 기록은 합계에서 빼고 건수만 알림 */}
+            {/* ✅ DASH-V2: 확인 대기는 눈에 띄는 노란 카드로 (0건이면 숨김) */}
             {stats.unverifiedCount > 0 && (
-              <div style={{ marginTop: '8px', fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
-                결제사 확인이 안 된 기록 {stats.unverifiedCount}건({(stats.unverifiedAmount || 0).toLocaleString()}원)은 합계에서 뺐습니다.
+              <div style={{ marginTop: '10px', background: 'rgba(255,193,7,0.10)', border: '1px solid rgba(255,193,7,0.45)', borderRadius: '14px', padding: '12px 14px' }}>
+                <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#FFD54F' }}>결제사 확인 대기 {stats.unverifiedCount}건 · {(stats.unverifiedAmount || 0).toLocaleString()}원</div>
+                <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '700', marginTop: '3px' }}>Google 확인이 끝나면 매출로 옮겨집니다 (지금은 합계에서 제외)</div>
               </div>
             )}
           </div>
         )}
 
-        {/* ── 2. 방문·회원 (userStats 독립 조건 — stats 실패해도 표시) ── */}
-        {userStats && (
-          <div style={{ marginBottom: '24px' }}>
-            <div style={sectionTitle}>방문·회원</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <Tile icon={Eye} color="#64D2FF" value={fmt(userStats.todayVisitors)} label="오늘 방문자" sub={`누적 ${fmt(userStats.totalVisitors)}`} />
-              <Tile icon={Wifi} color="#00C48C" value={fmt(userStats.onlineNow || 0)} label="지금 접속 중" sub="5분 이내 활동" />
-              <Tile icon={Users} color="#A78BFA" value={fmt(userStats.totalUsers || 0)} label="전체 가입자" />
-              <Tile icon={UserPlus} color="#FF9B26" value={fmt(userStats.newUsers7d || 0)} label="신규 가입" sub="최근 7일" />
-            </div>
-          </div>
-        )}
-
-        {/* ── 3. 플랜별 가입자 ── */}
+        {/* ── 2. 유료 회원 (DASH-V2) ── */}
         {userStats?.tierBreakdown && (
-          <div style={{ marginBottom: '24px' }}>
-            <div style={sectionTitle}>플랜별 가입자</div>
-            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '14px', padding: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
-              {PLAN_ROWS.filter(([tier, , , onSale]) => onSale || (tierBreakdown[tier] || 0) > 0).map(([tier, label, color]) => {
+          <div style={{ marginBottom: '24px', marginTop: '20px' }}>
+            <div style={sectionTitle}>유료 회원</div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '14px', padding: '4px 14px', border: '1px solid rgba(255,255,255,0.08)' }}>
+              {PLAN_ROWS.filter(([tier, , , onSale]) => onSale || (tierBreakdown[tier] || 0) > 0).map(([tier, label, color, onSale, sub], idx) => {
                 const cnt = tierBreakdown[tier] || 0;
-                const pct = userStats.totalUsers > 0 ? Math.round(cnt / userStats.totalUsers * 100) : 0;
                 return (
-                  <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <div style={{ width: '48px', flexShrink: 0, fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '900', color }}>{label}</div>
-                    <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
+                  <div key={tier} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '12px 0', borderTop: idx === 0 ? 'none' : '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: onSale ? color : '#fff' }}>{label}</div>
+                      <div style={{ fontSize: `calc(10.5px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>{sub}</div>
                     </div>
-                    <span style={{ fontSize: `calc(12px * var(--fs, 1))`, color: cnt > 0 ? '#fff' : 'rgba(255,255,255,0.3)', fontWeight: '900', minWidth: '34px', textAlign: 'right' }}>{cnt}명</span>
+                    <span style={{ fontSize: `calc(17px * var(--fs, 1))`, color: cnt > 0 ? '#fff' : 'rgba(255,255,255,0.35)', fontWeight: '950', flexShrink: 0 }}>{cnt}명</span>
                   </div>
                 );
               })}
               {/* DB 원시 티어 경고 — 예상 밖의 티어명이 있을 때만 표시 */}
               {userStats.rawTiers && Object.keys(userStats.rawTiers).some(r => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r)) && (
-                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ padding: '8px 0 10px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                   <div style={{ fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '800', color: '#FF5A5F', marginBottom: '4px' }}>⚠️ 정리가 필요한 티어 값</div>
                   {Object.entries(userStats.rawTiers)
                     .filter(([r]) => !['FREE','BUSINESS_LITE','PRO','BUSINESS_VIP','MASTER','CAPTAIN'].includes(r))
@@ -225,6 +223,28 @@ export default function AdminDashboard() {
                   }
                 </div>
               )}
+            </div>
+            <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '6px' }}>무료 회원 {fmt(tierBreakdown.FREE || 0)}명</div>
+          </div>
+        )}
+
+        {/* ── 3. 방문·가입 (DASH-V2: 한 줄로 작게) ── */}
+        {userStats && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={sectionTitle}>방문·가입</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '12px 6px' }}>
+              {[
+                ['오늘 방문', userStats.todayVisitors, `누적 ${fmt(userStats.totalVisitors)}`],
+                ['지금 접속', userStats.onlineNow || 0, '5분 이내'],
+                ['전체 가입', userStats.totalUsers || 0, null],
+                ['신규 가입', userStats.newUsers7d || 0, '최근 7일'],
+              ].map(([k, v, sub]) => (
+                <div key={k} style={{ textAlign: 'center', minWidth: 0 }}>
+                  <div style={{ fontSize: `calc(17px * var(--fs, 1))`, fontWeight: '950', color: '#fff' }}>{fmt(v)}</div>
+                  <div style={{ fontSize: `calc(10.5px * var(--fs, 1))`, color: 'rgba(255,255,255,0.5)', fontWeight: '800', marginTop: '2px' }}>{k}</div>
+                  {sub && <div style={{ fontSize: `calc(9.5px * var(--fs, 1))`, color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>{sub}</div>}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -371,6 +391,7 @@ function CsAdminPanel({ addToast }) {
 
   const [csError, setCsError] = useState(false); // ✅ FIX-CS: 토스트 대신 인라인 에러 상태
   const [dmStat, setDmStat] = useState(null);     // ✅ CS-DM: 인스타 DM 버튼 누른 횟수(최근 28일)
+  const [csOpen, setCsOpen] = useState(false);    // ✅ DASH-V2: 일반 문의는 인스타 DM으로 → 앱 문의(결제·계정·신고)는 접어서 한 줄로
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -415,6 +436,19 @@ function CsAdminPanel({ addToast }) {
 
   const pendingCnt = items.filter(i => i.status === 'pending').length;
 
+  if (!csOpen) {
+    return (
+      <button onClick={() => setCsOpen(true)} style={{ marginTop: '24px', width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${pendingCnt > 0 ? 'rgba(255,90,95,0.45)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '14px', padding: '13px 16px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', textAlign: 'left' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <MessageSquare size={16} color="#64B5F6" />
+          <span style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', whiteSpace: 'nowrap' }}>앱 문의</span>
+          {pendingCnt > 0 && <span style={{ background: '#FF5A5F', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '2px 8px', borderRadius: '20px', whiteSpace: 'nowrap' }}>미답변 {pendingCnt}</span>}
+        </span>
+        <span style={{ fontSize: `calc(10.5px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', whiteSpace: 'nowrap' }}>결제·계정·신고 · 열기 ›</span>
+      </button>
+    );
+  }
+
   const inp = { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '11px 14px', color: '#fff', fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '700', outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' };
 
   return (
@@ -423,7 +457,7 @@ function CsAdminPanel({ addToast }) {
       <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <MessageSquare size={18} color="#64B5F6" />
-          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>1:1 고객문의 관리</span>
+          <span style={{ fontSize: `calc(14px * var(--fs, 1))`, fontWeight: '900', color: '#fff' }}>앱 문의</span>
           {pendingCnt > 0 && (
             <span style={{ background: '#FF5A5F', color: '#fff', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', padding: '2px 8px', borderRadius: '20px' }}>
               미답변 {pendingCnt}건
@@ -434,6 +468,7 @@ function CsAdminPanel({ addToast }) {
           <button onClick={() => setShowFilter(f => !f)} style={{ background: showFilter ? 'rgba(100,181,246,0.2)' : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', color: '#64B5F6', display: 'flex', alignItems: 'center', gap: '5px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>
             <Filter size={13} /> 필터
           </button>
+          <button onClick={() => setCsOpen(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', color: '#fff', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>접기</button>
           <button onClick={fetchAll} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '10px', padding: '7px 12px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: '5px', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800' }}>
             <RefreshCw size={13} /> 새로고침
           </button>
@@ -574,6 +609,7 @@ function CsAdminPanel({ addToast }) {
 
 /* ─── 강제 Tier 변경 패널 (불법 획득 tier 복원) ─── */
 const TIER_COLOR = { FREE: '#8E8E93', BUSINESS_LITE: '#64B5F6', PRO: '#00C48C', BUSINESS_VIP: '#FFD700', MASTER: '#FF9B26' };
+const TIER_LABEL = { FREE: 'FREE', BUSINESS_LITE: 'PRO 멤버십', PRO: '예전 PRO', BUSINESS_VIP: 'VIP', CAPTAIN: 'CAPTAIN', MASTER: 'MASTER' }; // ✅ DASH-V2
 
 function ForceTierPanel({ addToast }) {
   const [target, setTarget] = useState('');
@@ -584,6 +620,7 @@ function ForceTierPanel({ addToast }) {
   const [suspects, setSuspects] = useState([]);
   const [suspectLoading, setSuspectLoading] = useState(false);
   const [suspectNote, setSuspectNote] = useState('');
+  const [granted, setGranted] = useState([]); // ✅ TIER-GRANT-LOG(2026-11-24): 관리자가 직접 준 유료 등급(기록 있음)
   const [resettingId, setResettingId] = useState(null); // 클릭된 계정 row
 
   const [captains, setCaptains] = useState([]);
@@ -594,6 +631,7 @@ function ForceTierPanel({ addToast }) {
     try {
       const res = await apiClient.get('/api/admin/suspicious-tiers');
       setSuspects(res.data.suspects || []);
+      setGranted(res.data.granted || []);
       setSuspectNote(res.data.note || '');
     } catch (err) {
       addToast(err.response?.data?.error || '목록 로드 실패', 'error');
@@ -610,6 +648,18 @@ function ForceTierPanel({ addToast }) {
     } finally { setCaptainLoading(false); }
   };
 
+  // ✅ TIER-GRANT-LOG: 결제 없이 관리자가 준 등급이라고 기록만 남김 (등급은 그대로)
+  const markGranted = async (uid) => {
+    setResettingId(uid);
+    try {
+      await apiClient.post('/api/admin/tier-grant-note', { targetEmail: uid });
+      addToast('✅ 관리자 지급으로 기록했습니다.', 'success');
+      await loadSuspects();
+    } catch (err) {
+      addToast(err.response?.data?.error || '기록 실패', 'error');
+    } finally { setResettingId(null); }
+  };
+
   // 마운트 시 자동 로드
   useEffect(() => { loadSuspects(); loadCaptains(); }, []);
 
@@ -622,8 +672,9 @@ function ForceTierPanel({ addToast }) {
       const res = await apiClient.post('/api/admin/force-tier', { targetEmail: t, tier: targetTier });
       addToast(`✅ ${res.data.message}`, 'success');
       if (!targetEmail) setTarget('');
-      // 목록에서 제거
+      // 목록에서 제거 후 다시 불러오기(관리자 지급 기록 반영)
       setSuspects(prev => prev.filter(s => s.email !== t && s.id !== t && s.name !== t));
+      loadSuspects();
     } catch (err) {
       addToast(err.response?.data?.error || '변경 실패', 'error');
     } finally { setLoading(false); setResettingId(null); }
@@ -709,7 +760,7 @@ function ForceTierPanel({ addToast }) {
           </div>
         ) : suspects.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '16px', color: '#00C48C', fontSize: `calc(12px * var(--fs, 1))`, fontWeight: '800', border: '1px dashed rgba(0,196,140,0.3)', borderRadius: '10px' }}>
-            ✅ 의심 계정 없음 — 모든 유료 티어 계정이 정상 결제됨
+            ✅ 의심 계정 없음 — 결제했거나 관리자가 준 등급만 있음
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
@@ -734,7 +785,7 @@ function ForceTierPanel({ addToast }) {
                         {s.name || s.id || s.email || '?'}
                       </span>
                       <span style={{ fontSize: `calc(9px * var(--fs, 1))`, background: `${TIER_COLOR[s.tier] || '#888'}22`, color: TIER_COLOR[s.tier] || '#888', padding: '2px 7px', borderRadius: '6px', fontWeight: '900', border: `1px solid ${TIER_COLOR[s.tier] || '#888'}55` }}>
-                        {s.tier}
+                        {TIER_LABEL[s.tier] || s.tier}
                       </span>
                     </div>
                     <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.35)', fontWeight: '700' }}>
@@ -745,6 +796,14 @@ function ForceTierPanel({ addToast }) {
                     </div>
                   </div>
 
+                  {/* ✅ TIER-GRANT-LOG: 내가 직접 준 등급이면 기록으로 남기기 */}
+                  <button
+                    onClick={() => markGranted(uid)}
+                    disabled={isResetting}
+                    style={{ flexShrink: 0, padding: '7px 10px', border: '1px solid rgba(0,196,140,0.5)', borderRadius: '10px', background: 'rgba(0,196,140,0.12)', color: '#00C48C', fontWeight: '900', fontSize: `calc(11px * var(--fs, 1))`, cursor: isResetting ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    내가 줌
+                  </button>
                   {/* 빠른 FREE 복원 버튼 */}
                   <button
                     onClick={() => handleForce(uid, 'FREE')}
@@ -766,6 +825,34 @@ function ForceTierPanel({ addToast }) {
         )}
       </div>
 
+      {/* ✅ TIER-GRANT-LOG: 관리자 지급 기록 목록 */}
+      {granted.length > 0 && (
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,59,48,0.1)' }}>
+          <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginBottom: '10px' }}>
+            ✅ 관리자가 직접 준 유료 등급 {granted.length}명 (정상)
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {granted.map((g, i) => {
+              const uid = g.email || g.id || g.name || '?';
+              return (
+                <div key={uid + i} style={{ background: 'rgba(0,196,140,0.06)', border: '1px solid rgba(0,196,140,0.25)', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: `calc(13px * var(--fs, 1))`, fontWeight: '900', color: '#fff', wordBreak: 'break-all' }}>{g.name || g.id || g.email} <span style={{ fontSize: `calc(10px * var(--fs, 1))`, color: TIER_COLOR[g.tier] || '#888' }}>{TIER_LABEL[g.tier] || g.tier}</span></div>
+                    <div style={{ fontSize: `calc(10px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700', marginTop: '2px' }}>
+                      {g.grantedAt ? new Date(g.grantedAt).toLocaleDateString('ko-KR') : '날짜 없음'} 기록{g.note ? ` · ${g.note}` : ''}
+                    </div>
+                  </div>
+                  <button onClick={() => handleForce(uid, 'FREE')} disabled={resettingId === uid}
+                    style={{ flexShrink: 0, background: 'rgba(255,90,95,0.15)', color: '#FF5A5F', border: '1px solid rgba(255,90,95,0.4)', padding: '6px 10px', borderRadius: '8px', fontSize: `calc(11px * var(--fs, 1))`, fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {resettingId === uid ? '회수 중...' : '회수'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 수동 강제 변경 */}
       <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div style={{ fontSize: `calc(11px * var(--fs, 1))`, color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
@@ -780,7 +867,7 @@ function ForceTierPanel({ addToast }) {
         <div style={{ display: 'flex', gap: '6px' }}>
           {['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'CAPTAIN'].map(t => (
             <button key={t} onClick={() => setTier(t)} style={{ flex: 1, padding: '7px 2px', borderRadius: '10px', border: 'none', fontSize: `calc(10px * var(--fs, 1))`, fontWeight: '900', cursor: 'pointer', background: tier === t ? (t === 'FREE' ? '#FF5A5F' : '#00C48C') : 'rgba(255,255,255,0.08)', color: '#fff', transition: 'all 0.15s' }}>
-              {t === 'FREE' ? 'FREE' : t === 'BUSINESS_LITE' ? 'LITE' : t === 'PRO' ? 'PRO' : t === 'BUSINESS_VIP' ? 'VIP' : 'CAPTAIN'}
+              {t === 'FREE' ? 'FREE' : t === 'BUSINESS_LITE' ? '멤버십' : t === 'PRO' ? '예전PRO' : t === 'BUSINESS_VIP' ? 'VIP' : 'CAPTAIN'}
             </button>
           ))}
         </div>

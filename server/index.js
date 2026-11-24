@@ -4401,6 +4401,26 @@ app.put('/api/user/tier', async (req, res) => {
   }
 });
 
+// ✅ TIER-GRANT-LOG(2026-11-24): 관리자가 직접 바꾼 등급 기록 (결제 없이 준 유료 등급을 '불법'과 구분)
+const tierGrantMem = []; // DB가 없을 때만 사용
+async function recordTierGrant(u, tier, by, note) {
+  const row = { userKey: String(u.email || u.id || u.name || ''), email: u.email || null, id: u.id || null, name: u.name || null, tier, by: by || 'admin', note: note || null, at: new Date() };
+  try {
+    if (dbReady && mongoose.connection?.db) await mongoose.connection.db.collection('admin_tier_grants').insertOne(row);
+    else tierGrantMem.push(row);
+  } catch (e) { (logger?.warn || console.warn)('[tier-grant-log]', e.message); }
+}
+async function latestTierGrants() { // userKey → 가장 최근 기록
+  let rows = [];
+  try {
+    if (dbReady && mongoose.connection?.db) rows = await mongoose.connection.db.collection('admin_tier_grants').find({}).sort({ at: 1 }).limit(5000).toArray();
+    else rows = tierGrantMem.slice();
+  } catch (e) { (logger?.warn || console.warn)('[tier-grant-log read]', e.message); }
+  const m = new Map();
+  for (const r of rows) m.set(r.userKey, r);
+  return m;
+}
+
 // ✅ SECURITY-FIX: 어드민 전용 강제 tier 변경 (결제 없이 획득한 tier 복원용)
 // POST /api/admin/force-tier  { targetEmail, tier }
 app.post('/api/admin/force-tier', async (req, res) => {
@@ -4425,11 +4445,16 @@ app.post('/api/admin/force-tier', async (req, res) => {
       if (result) {
         updated = true;
         (logger?.info || console.log)(`[ADMIN force-tier] ${result.email || result.id} → ${tier} (by ${tp.email})`);
+        await recordTierGrant(result, tier, tp.email, '관리자 강제 변경'); // ✅ TIER-GRANT-LOG
       }
     }
     // in-memory fallback
     const memIdx = memUsers.findIndex(u => u.email === targetEmail || u.id === targetEmail || u.name === targetEmail);
-    if (memIdx !== -1) { memUsers[memIdx].tier = tier; saveMemUsers(); updated = true; }
+    if (memIdx !== -1) {
+      memUsers[memIdx].tier = tier; saveMemUsers();
+      if (!updated) await recordTierGrant(memUsers[memIdx], tier, tp.email, '관리자 강제 변경'); // ✅ TIER-GRANT-LOG
+      updated = true;
+    }
 
     if (!updated) return res.status(404).json({ error: '해당 사용자를 찾을 수 없습니다.' });
     return res.json({ success: true, targetEmail, tier, message: `${targetEmail} → ${tier} 변경 완료` });
@@ -4456,6 +4481,31 @@ app.get('/api/admin/captains', async (req, res) => {
     return res.json({ captains, total: captains.length });
   } catch (e) {
     return res.status(500).json({ error: e.message });
+  }
+});
+
+// ✅ TIER-GRANT-LOG: 이미 관리자가 준 등급을 '관리자 지급'으로 기록만 남김 (등급은 바꾸지 않음)
+// POST /api/admin/tier-grant-note  { targetEmail }
+app.post('/api/admin/tier-grant-note', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: '인증 필요' });
+  let tp;
+  try { tp = jwt.verify(auth.slice(7), JWT_SECRET, { algorithms: ['HS256'] }); } catch { return res.status(401).json({ error: '토큰 오류' }); }
+  if (!isAdminToken(tp)) return res.status(403).json({ error: '어드민 전용 API' });
+  const targetEmail = String(req.body?.targetEmail || '').trim();
+  if (!targetEmail) return res.status(400).json({ error: 'targetEmail 필수' });
+  try {
+    let u = null;
+    if (dbReady && User) u = await User.findOne({ $or: [{ email: targetEmail }, { id: targetEmail }, { name: targetEmail }] }, { email: 1, id: 1, name: 1, tier: 1 }).lean();
+    if (!u) u = memUsers.find(x => x.email === targetEmail || x.id === targetEmail || x.name === targetEmail) || null;
+    if (!u) return res.status(404).json({ error: '해당 사용자를 찾을 수 없습니다.' });
+    if (!u.tier || u.tier === 'FREE') return res.status(400).json({ error: '무료 회원은 기록할 필요가 없습니다.' });
+    await recordTierGrant(u, u.tier, tp.email, '기존 관리자 지급 기록');
+    (logger?.info || console.log)(`[ADMIN tier-grant-note] ${u.email || u.id} = ${u.tier} (by ${tp.email})`);
+    return res.json({ success: true, tier: u.tier });
+  } catch (e) {
+    (logger?.error || console.error)('[tier-grant-note]', e.message);
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
 
@@ -4488,19 +4538,27 @@ app.get('/api/admin/suspicious-tiers', async (req, res) => {
     const proSubIds = new Set(Object.keys(memProSubs || {}));
 
     const ADMIN_EMAILS = new Set(['sunjulab.k', 'sunjulab.k@gmail.com']);
-    const suspects = paidUsers
+    const grants = await latestTierGrants(); // ✅ TIER-GRANT-LOG
+    const unpaid = paidUsers
       .filter(u => {
         const uid = String(u.email || u.id || '');
         if (ADMIN_EMAILS.has(uid)) return false;
         return !paidIdSet.has(uid) && !proSubIds.has(uid);
       })
-      .map(u => ({
-        email: u.email, id: u.id, name: u.name,
-        tier: u.tier, expiresAt: u.subscriptionExpiresAt, joinedAt: u.createdAt,
-      }))
+      .map(u => {
+        const g = grants.get(String(u.email || u.id || u.name || ''));
+        return {
+          email: u.email, id: u.id, name: u.name,
+          tier: u.tier, expiresAt: u.subscriptionExpiresAt, joinedAt: u.createdAt,
+          grantedAt: g && g.tier === u.tier ? g.at : null, note: g && g.tier === u.tier ? g.note : null,
+        };
+      })
       .sort((a, b) => new Date(b.joinedAt || 0) - new Date(a.joinedAt || 0));
+    // 관리자가 지금 등급 그대로 준 기록이 있으면 '정상(관리자 지급)', 없으면 의심
+    const granted = unpaid.filter(u => u.grantedAt);
+    const suspects = unpaid.filter(u => !u.grantedAt);
 
-    return res.json({ suspects, total: suspects.length });
+    return res.json({ suspects, granted, total: suspects.length });
   } catch (e) {
     (logger?.error || console.error)('[suspicious-tiers]', e.message);
     return res.status(500).json({ error: e.message });
