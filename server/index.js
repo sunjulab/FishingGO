@@ -850,7 +850,7 @@ app.get('/api/admin/user-stats', async (req, res) => {
     const STANDARD_TIERS = ['FREE', 'BUSINESS_LITE', 'PRO', 'BUSINESS_VIP', 'CAPTAIN', 'MASTER'];
 
     const now = new Date();
-    const online5m  = new Date(now - 5 * 60 * 1000);
+    const online5m  = new Date(now - 60 * 60 * 1000); // ✅ ONLINE-60M(2026-11-25): '지금 접속' 기준 5분 → 60분
     const online24h = new Date(now - 24 * 60 * 60 * 1000);
     const week7     = new Date(now - 7 * 24 * 60 * 60 * 1000);
 

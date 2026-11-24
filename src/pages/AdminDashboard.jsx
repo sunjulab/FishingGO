@@ -242,7 +242,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '12px 6px' }}>
               {[
                 ['오늘 방문', userStats.todayVisitors, `누적 ${fmt(userStats.totalVisitors)}`],
-                ['지금 접속', userStats.onlineNow || 0, '5분 이내'],
+                ['지금 접속', userStats.onlineNow || 0, '60분 이내'],
                 ['전체 가입', userStats.totalUsers || 0, null],
                 ['신규 가입', userStats.newUsers7d || 0, '최근 7일'],
               ].map(([k, v, sub]) => (
