@@ -52,7 +52,7 @@ const REGION_EMOJI = { '동해권': '🌊', '남해권': '⚓', '서해권': '�
 const META_GAME_LIVE = false;
 
 // ✅ PAY-PAUSE (2026-11-17): 서버 확장 전까지 PRO 멤버십(9,900원) 신규 결제만 '결제 준비 중'으로 막는다. 안내·가격·기존 구독자 표시는 그대로. 다시 열 때 false
-const MEMBERSHIP_PAY_PAUSED = false; // ✅ PAY-RESUME (2026-11-18): 9,900원 멤버십 결제 다시 열음
+const MEMBERSHIP_PAY_PAUSED = true; // ✅ PAY-PAUSE-2 (2026-11-24): 서버가 구글 결제를 확인하지 못해(서비스 계정 미설정) 결제만 되고 등급이 안 붙는 문제 → 설정 끝날 때까지 결제 중지
 
 /* ── 플랜 정의 ──────────────────────────────────────────────────── */
 const PLANS = [
@@ -181,7 +181,7 @@ export default function VVIPSubscribe() {
           if (err?.isVerifyFailure) {
             // ✅ BUG-2 FIX: 결제는 완료됐으나 서버 검증 실패 → 재시도 유도 안 함
             addToast('✅ 결제 완료! 앱 재시작 시 자동으로 등급이 적용됩니다.', 'info');
-          } else if (err?.code !== 6) {
+          } else if (err?.code !== 6 && !/ALREADY_OWNED/i.test(String(err?.message || ''))) { // ✅ IAP-OWNED
             addToast('결제 중 오류가 발생했습니다.', 'error');
           }
           setLoading(null);
@@ -317,7 +317,8 @@ export default function VVIPSubscribe() {
     try {
       await purchasePlan(planKey);
     } catch (err) {
-      if (err?.message !== 'NATIVE_ONLY') addToast(err?.message || '결제를 시작할 수 없습니다.', 'error');
+      if (err?.alreadyOwned) addToast(err.message, 'info'); // ✅ IAP-OWNED
+      else if (err?.message !== 'NATIVE_ONLY') addToast(err?.message || '결제를 시작할 수 없습니다.', 'error');
       setLoading(null);
     }
   }, [addToast]);
@@ -391,7 +392,7 @@ export default function VVIPSubscribe() {
             if (err?.isVerifyFailure) {
               // ✅ BUG-2 FIX: 결제는 완료됐으나 서버 검증 실패
               addToast('✅ 결제 완료! 앱 재시작 시 자동으로 등급이 적용됩니다.', 'info');
-            } else if (err?.code !== 6) {
+            } else if (err?.code !== 6 && !/ALREADY_OWNED/i.test(String(err?.message || ''))) { // ✅ IAP-OWNED: 이미 결제된 구독은 아래 안내로 대신
               addToast('결제 중 오류가 발생했습니다.', 'error');
             }
             setLoading(null);

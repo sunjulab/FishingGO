@@ -7,7 +7,7 @@ import apiClient from '../api/index.js'; // ✅ 토큰 자동 갱신 인터셉�
 
 // ── 상품 ID (Google Play Console에 등록된 값과 동일) ─────────────
 export const IAP_PRODUCTS = {
-  BASIC: { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 9900,   label: 'PRO 멤버십', tier: 'BUSINESS_LITE' }, // ✅ PAY-RESUME(2026-11-18): 일시 중지 해제 · ✅ PRO-9900(2026-11-16): 'PRO 멤버십' = Play '낚시GO PRO' 9,900원
+  BASIC: { id: 'kr.fishinggo.app.pro_monthly',   type: 'PAID_SUBSCRIPTION', price: 9900,   label: 'PRO 멤버십', tier: 'BUSINESS_LITE', paused: true }, // ✅ PAY-PAUSE-2(2026-11-24): 서버 결제 확인 설정(GOOGLE_PLAY_SERVICE_ACCOUNT) 전까지 신규 결제 중지 — 설정 후 paused 삭제 · ✅ PRO-9900(2026-11-16): 'PRO 멤버십' = Play '낚시GO PRO' 9,900원
   LITE_LEGACY: { id: 'kr.fishinggo.app.lite_monthly', type: 'PAID_SUBSCRIPTION', price: 3300, label: '베이직(판매종료)', tier: 'BUSINESS_LITE', closed: true }, // ✅ PRO-9900: 3,300원 폐지 — 기존 구독 복원용 등록만 유지
   VVIP:  { id: 'kr.fishinggo.app.vvip_monthly',  type: 'PAID_SUBSCRIPTION', price: 550000, label: 'VVIP',  tier: 'BUSINESS_VIP', closed: true }, // ✅ VVIP-CLOSED: 폐지 — 기존 구독 복원용 등록만 유지
 };
@@ -208,6 +208,13 @@ export async function purchasePlan(planKey) {
   // ✅ offer.order() IError 반환값 체크 (v13: 에러 시 IError 반환, 성공 시 undefined)
   const orderResult = await offer.order();
   if (orderResult && orderResult.isError) {
+    // ✅ IAP-OWNED (2026-11-24): 이미 결제된 구독(서버 확인이 안 끝난 결제 포함)이면 오류 대신 복원으로 다시 확인한다
+    if (/ALREADY_OWNED/i.test(String(orderResult.message || '')) || /ALREADY_OWNED/i.test(JSON.stringify(orderResult))) {
+      try { await store.restorePurchases(); } catch { /* ok */ }
+      const e = new Error('이미 결제된 구독이 있어요. 등급을 다시 확인하는 중입니다. 잠시 뒤 앱을 다시 열어 주세요.');
+      e.alreadyOwned = true;
+      throw e;
+    }
     throw new Error(`결제 요청 실패: ${orderResult.message || JSON.stringify(orderResult)}`);
   }
   return orderResult;

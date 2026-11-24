@@ -3334,6 +3334,11 @@ app.post('/api/payment/google-iap/verify', verifyToken, async (req, res) => {
       } catch (e) {
         // ✅ BUG-3 FIX: 4xx 오류는 토큰 자체가 유효하지 않음 → 결제 실패 처리 (무료 구독 악용 방지)
         const httpStatus = e?.response?.status || e?.status;
+        // ✅ IAP-AUTH-RETRY(2026-11-24): 401/403은 구매 토큰 문제가 아니라 서비스 계정 권한(Play Console 반영 지연) 문제 → 거절하지 않고 재시도 요청
+        if (httpStatus === 401 || httpStatus === 403) {
+          (logger?.error || console.error)(`[Google IAP] Play API ${httpStatus} — 서비스 계정 권한 확인 필요:`, e.message);
+          return res.status(503).json({ error: '결제 확인 권한을 준비 중입니다. 잠시 후 자동으로 다시 확인합니다.', code: 'IAP_RETRY' });
+        }
         if (httpStatus >= 400 && httpStatus < 500) {
           (logger?.warn || console.warn)(`[Google IAP] Play API ${httpStatus} 오류 → 유효하지 않은 토큰:`, e.message);
           return res.status(402).json({ error: `결제 검증 실패 — 유효하지 않은 구매 토큰 (${httpStatus})` });

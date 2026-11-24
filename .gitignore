@@ -71,3 +71,8 @@ server/.env
 # ✅ SEC (2026-10-25): 토큰·임시 자격증명 파일은 커밋 금지
 server/token.txt
 *.token
+
+# KEY-GUARD(2026-11-24): Google Cloud 서비스 계정 키 파일은 절대 커밋하지 않음
+project-*-*.json
+*service-account*.json
+*serviceaccount*.json
