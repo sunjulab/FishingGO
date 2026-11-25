@@ -10704,9 +10704,12 @@ function gyoFA(x,G,W,H,s,Rn){const n=faName(G.f);if(!n)return false;const o=faVa
   const lum=c=>{if(typeof c!=='string'||c[0]!=='#'||c.length<7)return .5;const v=parseInt(c.slice(1,7),16);return((v>>16&255)*.299+(v>>8&255)*.587+(v&255)*.114)/255;};
   const bp=new Path2D(RO.body);x.save();x.translate(W*.45,H*.47);x.scale(k,k);x.translate(-(bx[0]+bw/2),-(bx[1]+bh/2));x.lineJoin=x.lineCap='round';
   // 1) 먹 실루엣(몸통·지느러미) + 번짐
-  x.globalCompositeOperation='multiply';x.shadowColor='rgba(28,24,20,.42)';x.shadowBlur=7*s;
-  for(const p of RO.ops){if(p.c||!p.f||/a/.test(p.d)||p.d===RO.body)continue;x.fillStyle='rgba(30,27,24,.5)';x.fill(new Path2D(p.d));}/* 지느러미: 옅은 먹 */
+  /* V159b 먹은 그림자 없이 먼저 확실히 찍고, 번짐(그림자)은 따로 옅게 — 일부 휴대폰 브라우저가 shadowBlur 걸린 칠을 통째로 건너뛰어 몸통이 회색·지느러미가 사라지던 문제 */
+  x.globalCompositeOperation='multiply';x.shadowBlur=0;
+  const finP=[];for(const p of RO.ops){if(p.c||!p.f||/a/.test(p.d)||p.d===RO.body)continue;finP.push(new Path2D(p.d));}
+  x.fillStyle='rgba(30,27,24,.5)';for(const P of finP)x.fill(P);/* 지느러미: 옅은 먹 */
   x.fillStyle='rgba(22,20,18,.86)';x.fill(bp);/* 몸통: 짙은 먹 */
+  try{x.save();x.shadowColor='rgba(28,24,20,.42)';x.shadowBlur=7*s;x.fillStyle='rgba(22,20,18,.08)';for(const P of finP)x.fill(P);x.fill(bp);x.restore();}catch(e){}/* 번짐: 빠져도 먹은 남음 */
   {const S0=faSpec(n)||{};if(S0.sq||S0.oct||S0.shr)for(const p of RO.ops){if(p.c||p.f||!p.s||(p.w||1)<1.2)continue;x.strokeStyle='rgba(24,22,20,.75)';x.lineWidth=p.w||1;x.stroke(new Path2D(p.d));}}/* 오징어 다리·새우 더듬이 같은 굵은 선(물고기 테두리 선은 찍지 않음) */
   x.shadowBlur=0;
   // 2) 몸통 안: 가장자리 짙게(번짐) · 무늬 농담 · 비늘 자국 · 마른 붓결
@@ -10733,7 +10736,7 @@ function gyoDraw(cv,g){const G=gyoRec(g);if(!G.f)return;const W=cv.width,H=cv.he
   for(let i=0;i<46;i++){const y=R()*H;x.beginPath();x.moveTo(0,y);for(let X=0;X<=W;X+=60*s)x.lineTo(X,y+Math.sin(X/(90*s)+i)*4*s);x.stroke();}
   const m=40*s,pp=[];const edge=(x0,y0,x1,y1)=>{const n=Math.round(Math.hypot(x1-x0,y1-y0)/(7*s));for(let i=0;i<n;i++){const t=i/n;pp.push([x0+(x1-x0)*t+(R()-.5)*3.2*s,y0+(y1-y0)*t+(R()-.5)*3.2*s]);}};
   edge(m,m,W-m,m);edge(W-m,m,W-m,H-m);edge(W-m,H-m,m,H-m);edge(m,H-m,m,m);
-  x.save();x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=22*s;x.shadowOffsetY=6*s;polyPath(x,pp);x.fillStyle='#eee4cd';x.fill();x.restore();
+  try{x.save();x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=22*s;x.shadowOffsetY=6*s;polyPath(x,pp);x.fillStyle='#eee4cd';x.fill();x.restore();}catch(e){}x.save();x.shadowBlur=0;polyPath(x,pp);x.fillStyle='#eee4cd';x.fill();x.restore();/* V159b 한지 바탕도 그림자 없이 한 번 더(그림자 칠을 건너뛰는 폰 대비) */
   x.save();polyPath(x,pp);x.clip();
   for(let i=0;i<16;i++){const X=R()*W,Y=R()*H,r=(80+R()*220)*s,gg=x.createRadialGradient(X,Y,0,X,Y,r);gg.addColorStop(0,R()<.5?'rgba(196,170,120,.06)':'rgba(255,252,240,.12)');gg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=gg;x.fillRect(X-r,Y-r,r*2,r*2);}
   const nf=Math.round(1400*s*s+200);for(let i=0;i<nf;i++){const X=R()*W,Y=R()*H,a=R()*Math.PI,l=(6+R()*30)*s;x.strokeStyle=R()<.55?'rgba(150,122,82,.10)':'rgba(255,255,248,.30)';x.lineWidth=(.5+R()*1.1)*s;x.beginPath();x.moveTo(X,Y);x.quadraticCurveTo(X+Math.cos(a)*l*.5+(R()-.5)*6*s,Y+Math.sin(a)*l*.5+(R()-.5)*6*s,X+Math.cos(a)*l,Y+Math.sin(a)*l);x.stroke();}
@@ -10741,10 +10744,10 @@ function gyoDraw(cv,g){const G=gyoRec(g);if(!G.f)return;const W=cv.width,H=cv.he
   // 먹 물고기(머리는 왼쪽)
   if(!gyoFA(x,G,W,H,s,R)){const k=fishKind(G.f),r=FK_R[k];let L=W*(k==='l'?.8:k==='o'?.5:.62);L=Math.min(L,H*.56/r);const o=fishOutline(G.f,L,0,0),cx=W*.45,cy=H*.46;
   x.save();x.translate(cx,cy);x.scale(-1,1);x.globalCompositeOperation='multiply';
-  x.shadowColor='rgba(28,24,20,.35)';x.shadowBlur=5*s;x.fillStyle='rgba(30,27,24,.27)';for(const F of o.fins){polyPath(x,F);x.fill();}x.shadowBlur=0;
+  x.shadowBlur=0;x.fillStyle='rgba(30,27,24,.27)';for(const F of o.fins){polyPath(x,F);x.fill();}try{x.save();x.shadowColor='rgba(28,24,20,.35)';x.shadowBlur=5*s;x.fillStyle='rgba(30,27,24,.05)';for(const F of o.fins){polyPath(x,F);x.fill();}x.restore();}catch(e){}/* V159b */
   x.lineCap='round';for(const F of o.fins){const n=F.length/2|0;if(n<3)continue;for(let i=0;i<n;i++){const a=F[i],b=F[F.length-1-i];x.strokeStyle='rgba(26,23,20,'+(.32+R()*.3)+')';x.lineWidth=(.8+R()*1.1)*s;x.beginPath();x.moveTo(a[0],a[1]);x.quadraticCurveTo((a[0]+b[0])/2+(R()-.5)*3*s,(a[1]+b[1])/2,b[0],b[1]);x.stroke();}}
   x.globalCompositeOperation='source-over';for(const a of o.arms)armDraw(x,a,'rgb(40,36,32)');x.globalCompositeOperation='multiply';
-  x.shadowColor='rgba(28,24,20,.45)';x.shadowBlur=6*s;polyPath(x,o.P);x.fillStyle='rgba(24,22,20,.84)';x.fill();x.shadowBlur=0;x.globalCompositeOperation='source-over';
+  x.shadowBlur=0;polyPath(x,o.P);x.fillStyle='rgba(24,22,20,.84)';x.fill();try{x.save();x.shadowColor='rgba(28,24,20,.45)';x.shadowBlur=6*s;polyPath(x,o.P);x.fillStyle='rgba(24,22,20,.06)';x.fill();x.restore();}catch(e){}/* V159b */x.globalCompositeOperation='source-over';
   x.save();polyPath(x,o.P);x.clip();const sc=Math.max(4*s,o.h*(o.k==='f'?.1:.15)),PAP='238,228,205';
   {const g=x.createRadialGradient(L*.05,-o.h*.1,0,L*.05,-o.h*.1,L*.45);g.addColorStop(0,'rgba('+PAP+',.13)');g.addColorStop(1,'rgba('+PAP+',0)');x.fillStyle=g;x.fillRect(-L,-o.h*2,L*2,o.h*4);}
   x.lineWidth=Math.max(8*s,o.h*.32);x.strokeStyle='rgba(14,12,10,.45)';try{x.filter='blur('+Math.round(5*s)+'px)';}catch(e){}polyPath(x,o.P);x.stroke();try{x.filter='none';}catch(e){}
