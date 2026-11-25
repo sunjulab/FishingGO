@@ -2764,6 +2764,7 @@ const BIO_TAG={haz:{n:'위험 생물',c:'#d23a2e',rel:'독·쏘임·물림 위�
  vil:{n:'마을어장 산물',c:'#7a6a52',rel:'마을어장(어촌계) 산물일 수 있어 놓아주었습니다'},pest:{n:'유해해양생물',c:'#a0562a',rel:'유해해양생물이라 바다에 되돌리지 않고 수거했습니다'},weed:{n:'해초',c:'#3a8a3a',rel:'채비에 걸린 해초를 떼어 냈습니다'},free:{n:'놓아줌',c:'#7a8a92',rel:'놓아주었습니다'},
  warn:{n:'주의',c:'#e08a1e'},eco:{n:'생태계교란·외래',c:'#3a9a4a',note:'다시 놓아주면 법에 어긋날 수 있는 외래 생물입니다 · 지자체 수매가 있는 곳도 있어요'}};
 const BIO_REL=['haz','pro','ban','vil','pest','weed','free'];
+const CLIENT_CV=153;/* V155 화면이 아는 어종 판 — 서버는 cv가 없거나 낮은(예전 화면) 요청에 신규 생물(ext)을 주지 않는다 */
 function bioRel(f){return!!f&&BIO_REL.includes(f.tag);}
 // 밑걸림 생물: 루어·채비가 바닥에 걸렸다(밑걸림) 또는 입질 없이 거둘 때(비거리 TRASH_MIN_D 이상) 딸려 오는 것 · t: 갯바위·방파제·항구·민물
 const SNAG_BIO_P={snag:.35,miss:.04};
@@ -9037,7 +9038,7 @@ function srvReel(c){if(!c||!c.n||c.done)return;c.done=true;net('reel-in',{n:c.n}
   else if(z.j.cut&&z.j.cut.lost){srvLossApply(z.j.cut);toast('고기가 걸린 채 거둬 줄이 끊겼습니다 — '+(z.j.cut.term?'채비 1개를 잃었습니다(남은 '+z.j.cut.left+'개)':(z.j.cut.cost?'대여 채비 손실 '+z.j.cut.cost+'P':'대여 채비를 잃었습니다(추가 비용 없음)')));}// v32 #40
   else if(w>5000)toast('앞서 던진 채비 때문에 '+Math.ceil(w/1000)+'초 뒤에 다시 던질 수 있습니다');});}// #55
 function srvCast(){const c={tSend:performance.now(),res:null,n:null,pulls:0,need:1+Math.floor(Math.random()*3)};srvC=c;srvWaitTo(CAST_GAP+300);
-  const b={spot:cur.id,castD:+(curChk&&curChk.D?Math.min(curChk.D,castD):castD).toFixed(1)};if(curTrip)b.trip=curTrip.id;/* v31 S3 #89: 화면 판정(curList)과 같은 거리(반올림 안 함) · FIXUP S3-a: 배 위 trip id 복구 */
+  const b={spot:cur.id,castD:+(curChk&&curChk.D?Math.min(curChk.D,castD):castD).toFixed(1),cv:CLIENT_CV/* V155 이 화면이 아는 어종 판 */};if(curTrip)b.trip=curTrip.id;/* v31 S3 #89: 화면 판정(curList)과 같은 거리(반올림 안 함) · FIXUP S3-a: 배 위 trip id 복구 */
   net('cast',b).then(async function H(r){if(r.s===409&&r.j&&r.j.error==='CAST_PENDING'&&r.j.kind==='none'&&!r.j.hooked&&+r.j.untilMs<=2500&&!c.rt&&!c.dead){c.rt=1;await new Promise(f=>setTimeout(f,+r.j.untilMs+200));if(c.dead){c.res={err:1};c.done=true;return;}c.tSend=performance.now();return net('cast',b).then(H);}/* LS #241: 입질 없음이 2.5초 안에 끝나면(시계 차이) 묻지 않고 잠깐 기다려 다시 던진다 */if(r.s===200&&r.j&&r.j.n){{const now=performance.now(),mid=(c.tSend+now)/2;c.tSend=typeof r.j.age==='number'&&r.j.age>=0?Math.max(mid,now-r.j.age):mid;}/* V64: 서버가 시각을 정한 뒤 지난 시간(age)으로 맞춘다 — 화면 입질이 서버보다 먼저 나와 챔질이 '아직 입질 전'으로 되돌아오며(재시도) 몇 초 멈추던 문제 */c.res=r.j;c.n=r.j.n;if(c.dead)srvReel(c);return;}// 서버는 받은 시각부터 잰다 → 왕복 시간의 절반만큼 늦춰 맞춘다
     c.res={err:1};c.done=true;const e=r.j&&r.j.error;const end=m=>{if(!c.dead){c.dead=true;resetLine();}if(m)toast(m);};
     if(r.s===409&&e==='WX_DANGER'){end('');wxBlockAsk(r.j.message||'게임 기준 위험 기상이라 이 포인트에서는 낚시할 수 없습니다',r.j.alt&&SPOTS.find(x=>x.id===r.j.alt.id),r.j.alt&&r.j.alt.km);return;}/* V140 서버 기상 기준 */
@@ -9093,7 +9094,7 @@ function srvHook(){const c=srvC;if(!c||!c.n||!c.res||!c.res.bite){resetLine();re
     resetLine();toast(errMsg(r));if(r.s===0||r.s>=500)srvReconcile();};
   go(0);}
 function srvMiss(c){const m=curChk.meth;if(m==='lure'){state='wait';holding=pressed&&!autoOn;nonCatch('miss','헛챔질 — 바늘에 걸리지 않았습니다 · 그대로 감아 회수하세요');}else{resetLine();biteEnd(true);nonCatch('miss',m==='boat'?'헛챔질 — 바늘에 걸리지 않았습니다 · 다시 내리세요':'헛챔질 — 미끼만 따먹혔습니다 · 다시 던지세요');}}
-function srvFight(c,h){const f=FISH.find(x=>x.n===h.fish);if(!f){resetLine();return;}c.h=h;c.hooked=true;c.hookAt=performance.now()-(h.minMsLeft!=null?Math.max(0,h.minMs-h.minMsLeft):0);// 재시도로 받은 챔질은 서버 챔질 시각 기준
+function srvFight(c,h){let f=FISH.find(x=>x.n===h.fish);if(!f){f={n:String(h.fish||'물고기'),z:[],m:ALLM,cm:[+h.cm||10,+h.cm||10],str:Math.max(.2,Math.min(1,+h.ratio||.5)),pts:1,col:'#8a9aa2',ext:1};toast('새로 나온 어종입니다 · 화면을 새로 고침하면 그림과 도감이 보여요',3600);}/* V155 예전에는 모르는 어종이면 거둬서 서버가 '걸린 채 거둬 줄 끊김'으로 채비를 뺐다 */c.h=h;c.hooked=true;c.hookAt=performance.now()-(h.minMsLeft!=null?Math.max(0,h.minMs-h.minMsLeft):0);// 재시도로 받은 챔질은 서버 챔질 시각 기준
   if(h.brk){c.done=true;srvLossApply(h);srvWaitTo(REEL_GAP);/* V137 */const nm=(h.gold?'황금 ':'')+f.n;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+srvLossTxt(h),'break');return;}// v31 S3 #64: 서버가 한계 초과 터짐을 정하고 채비도 뺌
   fish=f;fishGold=!autoOn&&!!h.gold;fsize=h.cm;fishKgNow=h.kg;ratio=h.ratio;slackT=0;escJ=0;escPlan=h.esc?{at:h.esc.at,kind:h.esc.kind}:null;const C=h.cap;
   sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;dragT=0;dragWT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=pressed;$('#fight').hidden=false;$('#limTxt').textContent=(+C).toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
@@ -11085,7 +11086,7 @@ function twThrow(){if(TW.ph!=='aim')return;$('#twGame').hidden=true;$('#world').
   TW.applied=false;twReq(q).then(j=>{TW.res=j;if(TW.M)TW.M.fishN=Math.min(NET_MAX_N,(j.fish||[]).length);if(SRV){twNextAt=Date.now()+(+j.nextMs||NET_CD);}/* V100 낚싯대 대기는 걸지 않음 */},r=>{TW.err=r||{s:0,j:null};});}
 function twApply(){if(TW.applied||!TW.res)return TW.res;TW.applied=true;if(TW.res.local)TW.res=twLocalApply(TW.res.pre);else twGot(TW.res);return TW.res;}
 async function twReq(q){if(!SRV){const o=twLocal(q);if(o.err)throw o.err;return o;}
-  const r=await netRid('net-throw',{spot:TW.s.id,q:+q.toFixed(3)});if(r.s===200&&r.j&&r.j.ok)return r.j;throw r;}
+  const r=await netRid('net-throw',{spot:TW.s.id,q:+q.toFixed(3),cv:CLIENT_CV});if(r.s===200&&r.j&&r.j.ok)return r.j;throw r;}
 function twErrMsg(r){const j=(r&&r.j)||{},e=j.error;
   const M={NET_FRESH:'강·호수(내수면)에서는 투망을 쓸 수 없습니다 · 바다 방파제·갯바위에서만 됩니다',NET_SPOT:'항구 안에서는 투망을 쓸 수 없습니다 · 방파제·갯바위로 가세요',NET_CD:'투망은 '+Math.max(1,Math.ceil((+j.waitMs||NET_CD)/1000))+'초 뒤에 다시 던질 수 있습니다',
     NET_BUSY:'투망을 거두는 중입니다 · 잠시 뒤 던지세요',NET_EMPTY:'지금 이 바다에는 투망에 드는 고기가 없습니다(철이 아님)',BROKEN:'투망이 찢어졌습니다 · 수리한 뒤 쓰세요',NO_NET:'투망을 먼저 사서 장착하세요',
