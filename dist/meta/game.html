@@ -9712,6 +9712,22 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&SRV)cupPo
 (function cupBoot(){let n=0;const iv=setInterval(()=>{if(!SRV){if(++n>120)clearInterval(iv);return;}clearInterval(iv);setTimeout(cupPoll,4000);},1000);})();
 duBoot();
 
+/* ===== V156 새 버전 안내 — 서버 /health의 ui(배포된 화면 판)가 이 화면(CLIENT_UI)보다 높으면 '새 버전이 나왔어요' 창.
+   켤 때 + 화면으로 돌아올 때(10분에 한 번). 고기와 겨루는 중이면 끝난 뒤. 같은 판은 이 탭에서 한 번만 묻는다
+   (새로 고침했는데 아직 캐시가 옛 화면이면 다시 묻지 않음 — 무한 반복 방지). 주소에 ?v=판을 붙여 캐시를 피한다 */
+const CLIENT_UI=156;
+const UPD={at:0,busy:false};
+function updAsked(v){try{return+(sessionStorage.getItem('fishinggo.meta.uiAsk')||0)>=v;}catch(e){return false;}}
+function updMark(v){try{sessionStorage.setItem('fishinggo.meta.uiAsk',String(v));}catch(e){}}
+function updGo(v){try{persist();}catch(e){}try{const u=new URL(location.href);u.searchParams.set('v',String(v));location.replace(u.toString());}catch(e){location.reload();}}
+function updCheck(force){if(!SRV||!NET_API||UPD.busy)return;const now=Date.now();if(!force&&now-UPD.at<600e3)return;UPD.at=now;UPD.busy=true;
+  net('health').then(r=>{const v=r&&r.s===200&&r.j?Math.floor(+r.j.ui||0):0;if(!(v>CLIENT_UI)||updAsked(v))return;
+    const ask=()=>{if(['bite','hooking','fight','snag'].includes(state)){setTimeout(ask,5000);return;}updMark(v);
+      askBox('새 버전이 나왔어요','더 안정적인 새 버전이 있어요. 지금 새로 고치면 바로 적용됩니다. (진행 기록은 그대로예요)','지금 새로 고침','나중에').then(y=>{if(y)updGo(v);});};ask();})
+  .catch(()=>{}).finally(()=>{UPD.busy=false;});}
+(function updBoot(){let n=0;const iv=setInterval(()=>{if(!SRV){if(++n>120)clearInterval(iv);return;}clearInterval(iv);setTimeout(()=>updCheck(true),6000);},1000);})();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)updCheck(false);});
+
 /* ===== V143 돌발 물 상황(예고 없는 랜덤 이벤트) — 공유 규칙 REV·revSlot·revActive ·
    서버 GET /revs?spot=(1분마다 · 내 낚시터 것은 바로, 다른 곳은 시작 1분 뒤부터) · 오프라인은 같은 규칙을 이 기기 값으로
    현장: 위 띠(남은 시간)·물보라/파문·상괭이 연출 · 다른 곳: 보일링·라이즈만 알림 띠 [바로 가기](15분에 1번·하루 8번·남은 4분 미만 제외·낚는 중이면 미룸) · 지도 🔥 ===== */
