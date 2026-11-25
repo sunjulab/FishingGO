@@ -8867,7 +8867,7 @@ function errMsg(r){const e=r&&r.j&&r.j.error;const T=e&&ERR_KO[e];if(T){try{retu
 const sleepMs=ms=>new Promise(r=>setTimeout(r,ms));
 // v23 요청: 토큰은 매번 다시 읽는다(낚시GO가 갱신함). 8초 제한(본문까지), 409 CONFLICT는 프로필을 다시 받은 뒤 최대 3번 재시도(지터), 401은 새 토큰이 있으면 다시, 없으면 안내 띠
 let deadTok='';
-async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const post=body!==undefined;if(AUTH_API&&tokNow()&&tokExp(tokNow())-Date.now()<60e3){if(gsTok()&&path!=='session')tokFresh(false).catch(()=>{});else await tokFresh(false);}/* V58 · V134 통행증이 있으면 낚시GO 갱신을 기다리지 않음 */const tok=authTok();
+async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const post=body!==undefined;if(post&&body&&typeof body==='object'&&!Array.isArray(body)&&body.cv==null&&/^(auto|auto-settle|trip-auto|trip-auto-settle)$/.test(path))body=Object.assign({cv:CLIENT_CV},body);/* V155 자동 정산도 이 화면이 아는 어종 판으로(서버는 저장된 cv가 없으면 신규 생물을 빼고 정산) */if(AUTH_API&&tokNow()&&tokExp(tokNow())-Date.now()<60e3){if(gsTok()&&path!=='session')tokFresh(false).catch(()=>{});else await tokFresh(false);}/* V58 · V134 통행증이 있으면 낚시GO 갱신을 기다리지 않음 */const tok=authTok();
   if(NET_DEAD&&tok&&tok!==deadTok)revive(true);
   if(NET_DEAD&&post)return{s:401,j:{error:'TOKEN_INVALID',message:'다시 로그인해 주세요'}};
   if(TAB_RO&&post)return{s:0,j:{error:'TAB_RO',message:'다른 탭에서 열려 있습니다'}};
