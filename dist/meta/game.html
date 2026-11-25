@@ -2309,10 +2309,10 @@ const FISH=[
  {n:'민어',z:['서해','서남해'],m:[6,7,8,9],cm:[50,100],min:33,str:.85,pts:7,col:'#9a8a70'},
  {n:'전어',z:['남해','서해','서남해'],m:[8,9,10,11],cm:[15,28],str:.3,pts:2,col:'#8fa3ae'},
  {n:'임연수어',a:['이면수'],z:['동해'],m:[11,12,1,2,3],cm:[25,45],str:.45,pts:3,col:'#7d8a5a'},
- {n:'독가시치',z:['제주','남해'],m:[7,8,9,10,11],cm:[20,40],str:.65,pts:4,col:'#6a6a58'},
+ {n:'독가시치',z:['제주','남해'],m:[7,8,9,10,11],cm:[20,40],str:.65,pts:4,col:'#6a6a58',tag:'warn',tip:'등·배·뒷지느러미에 독가시가 있습니다 · 맨손 조심'},
  {n:'붕어',z:['민물'],m:ALLM,cm:[15,40],str:.42,pts:2,col:'#8c7a45'},
  {n:'잉어',z:['민물'],m:ALLM,cm:[40,90],str:.8,pts:3,col:'#a3803a'},
- {n:'배스',z:['민물'],m:[3,4,5,6,7,8,9,10,11],cm:[20,55],str:.6,pts:3,col:'#5d6b3a'},
+ {n:'배스',a:['큰입배스'],z:['민물'],m:[3,4,5,6,7,8,9,10,11],cm:[20,55],str:.6,pts:3,col:'#5d6b3a',tag:'eco'},
  {n:'쏘가리',z:['민물'],m:[4,7,8,9,10],cm:[20,50],min:18,str:.62,pts:5,col:'#b49a4e'},
  {n:'누치',z:['민물'],m:[4,5,6,7,8,9,10],cm:[30,60],str:.6,pts:3,col:'#9a9a8a'},
  {n:'끄리',z:['민물'],m:[5,6,7,8,9,10],cm:[20,40],str:.45,pts:2,col:'#8fa1a8'},
@@ -2328,6 +2328,97 @@ const FISH=[
  {n:'송어',z:['민물'],m:ALLM,cm:[30,60],min:12,str:.65,pts:3,col:'#9a7f86'},
  {n:'빙어',z:['민물'],m:[12,1,2],cm:[8,14],str:.12,pts:1,col:'#c3d2d6'},
  {n:'모래무지',z:['민물'],m:[4,5,6,7,8,9,10],cm:[10,20],str:.22,pts:1,col:'#b5a789'},
+ // V153 신규 생물(ext:1 — 도감에는 기록하되 지역 어록 완성·도감 능력치·전국 대물에서는 뺌) · tag: BIO_TAG · rw: 출현 배율 · snag:1 밑걸림·투망으로만(물지 않음)
+ {n:'파란고리문어',a:['파란선문어'],z:['제주', '남해', '동해'],m:[6, 7, 8, 9, 10, 11],cm:[5, 12],str:0.15,pts:0,col:'#d2ab55',tag:'haz',snag:1,ext:1,tip:'맹독(테트로도톡신) · 화려한 파란 고리 무늬 작은 문어는 절대 만지지 마세요'},
+ {n:'쏠배감펭',z:['제주', '남해'],m:[6, 7, 8, 9, 10, 11],cm:[15, 30],str:0.45,pts:0,col:'#c9826a',tag:'haz',rw:0.072,ext:1,tip:'등·배·뒷지느러미 독가시 · 맨손 금지, 집게로 바늘을 빼세요'},
+ {n:'미역치',z:['남해', '동해', '서해', '서남해', '제주'],m:ALLM,cm:[7, 12],str:0.15,pts:0,col:'#d07a3e',tag:'haz',rw:0.12,ext:1,tip:'지느러미 독가시 · 죽은 것도 찌릅니다 · 바닥에 놓고 핀셋으로 바늘을 빼세요'},
+ {n:'쑤기미',z:['남해', '서해', '서남해', '제주'],m:[5, 6, 7, 8, 9, 10],cm:[15, 30],str:0.4,pts:0,col:'#5f564c',tag:'haz',rw:0.06,ext:1,tip:'등지느러미 독가시가 미역치보다 강합니다 · 맨손 금지'},
+ {n:'쏠종개',z:['제주', '남해'],m:[6, 7, 8, 9, 10, 11],cm:[12, 25],str:0.3,pts:0,col:'#4f3f34',tag:'haz',rw:0.072,ext:1,tip:'지느러미 가시에 찔리면 아픕니다 · 맨손 금지'},
+ {n:'곰치',z:['제주', '남해'],m:[6, 7, 8, 9, 10, 11],cm:[50, 100],str:0.75,pts:0,col:'#a07a38',tag:'haz',rw:0.048,ext:1,tip:'날카로운 이빨로 뭅니다 · 바늘을 빼지 말고 줄을 끊어 놓아주세요'},
+ {n:'쏨뱅이',z:['남해', '동해', '서남해', '제주', '서해'],m:ALLM,cm:[12, 30],str:0.45,pts:2,col:'#9a4a34',tag:'warn',rw:0.27,ext:1,tip:'가시에 독이 있습니다 · 잡을 때 가시 조심'},
+ {n:'양태',z:['서해', '서남해', '남해'],m:[5, 6, 7, 8, 9, 10],cm:[30, 70],str:0.55,pts:3,col:'#8a7a62',tag:'warn',rw:0.18,ext:1,tip:'머리·지느러미 가시가 날카롭습니다 · 찔림 주의'},
+ {n:'복어',a:['복섬', '졸복'],z:['동해', '남해', '서해', '서남해'],m:ALLM,cm:[10, 25],str:0.3,pts:1,col:'#76804e',tag:'warn',rw:0.24,nocook:1,ext:1,tip:'독(테트로도톡신)이 있어 게임 식당에서 요리하지 않습니다 · 이빨로 줄을 끊습니다'},
+ {n:'블루길',a:['파랑볼우럭'],z:['민물'],m:[4, 5, 6, 7, 8, 9, 10],cm:[8, 22],str:0.3,pts:1,col:'#6e7e62',tag:'eco',rw:0.3,ext:1},
+ {n:'브라운송어',z:['민물'],m:[3, 4, 5, 6, 7, 8, 9, 10, 11],cm:[25, 60],str:0.65,pts:4,col:'#a89a68',tag:'eco',rw:0.036,ext:1},
+ {n:'열목어',z:['민물'],m:[4, 5, 6, 7, 8, 9, 10],cm:[20, 50],str:0.55,pts:0,col:'#a89478',tag:'pro',rw:0.024,ext:1,tip:'멸종위기 야생생물 2급 · 잡히면 바로 놓아주세요'},
+ {n:'돌상어',z:['민물'],m:[5, 6, 7, 8, 9, 10],cm:[8, 12],str:0.15,pts:0,col:'#a8987a',tag:'pro',rw:0.024,ext:1,tip:'멸종위기 야생생물 2급 · 통에 담지 말고 바로 놓아주세요'},
+ {n:'가는돌고기',z:['민물'],m:[5, 6, 7, 8, 9, 10],cm:[6, 10],str:0.12,pts:0,col:'#c8b888',tag:'pro',rw:0.024,ext:1,tip:'멸종위기 야생생물 2급 · 통에 담지 말고 바로 놓아주세요'},
+ {n:'망상어',z:['동해', '남해', '서해', '서남해'],m:ALLM,cm:[12, 28],str:0.4,pts:2,col:'#8c96a0',rw:0.3,ext:1},
+ {n:'보리멸',z:['남해', '동해', '제주', '서남해'],m:[6, 7, 8, 9, 10],cm:[12, 28],str:0.3,pts:2,col:'#d8ceb0',rw:0.27,ext:1},
+ {n:'열기',a:['불볼락'],z:['동해', '남해'],m:[10, 11, 12, 1, 2, 3, 4],cm:[15, 30],str:0.4,pts:3,col:'#c86a40',rw:0.15,ext:1},
+ {n:'붕장어',a:['아나고'],z:['서해', '서남해', '남해', '동해'],m:[4, 5, 6, 7, 8, 9, 10, 11],cm:[40, 100],str:0.6,pts:3,col:'#8a8270',rw:0.24,ext:1},
+ {n:'참문어',a:['돌문어'],z:['동해', '남해', '서해', '서남해', '제주'],m:ALLM,cm:[20, 35],str:0.6,pts:5,col:'#a65a3e',rw:0.3,sq:1,ext:1},
+ {n:'백조기',a:['보구치'],z:['서해', '서남해'],m:[6, 7, 8, 9, 10],cm:[18, 30],str:0.4,pts:2,col:'#cdd2d4',rw:0.24,ext:1},
+ {n:'쥐치',z:['남해', '동해', '제주'],m:[7, 8, 9, 10, 11],cm:[15, 30],str:0.4,pts:3,col:'#8e8a72',rw:0.21,ext:1},
+ {n:'동자개',a:['빠가사리'],z:['민물'],m:[5, 6, 7, 8, 9, 10],cm:[15, 30],str:0.4,pts:2,col:'#c8a648',rw:0.24,ext:1},
+ {n:'청줄돔',z:['제주'],m:[6, 7, 8, 9, 10, 11],cm:[15, 25],str:0.4,pts:4,col:'#4a4e5e',rw:0.036,ext:1},
+ {n:'범돔',z:['제주', '남해'],m:[6, 7, 8, 9, 10, 11],cm:[12, 25],str:0.35,pts:3,col:'#ecd458',rw:0.072,ext:1},
+ {n:'잿방어',z:['남해', '제주', '동해'],m:[7, 8, 9, 10, 11],cm:[50, 100],str:0.95,pts:8,col:'#a89a92',rw:0.06,ext:1},
+ {n:'아홉동가리',z:['제주', '남해'],m:ALLM,cm:[20, 40],str:0.5,pts:3,col:'#efe8de',rw:0.15,ext:1},
+ {n:'강담돔',z:['제주', '남해'],m:[6, 7, 8, 9, 10, 11],cm:[25, 50],str:0.85,pts:6,col:'#b8bec0',rw:0.06,ext:1},
+ {n:'거북복',z:['제주', '남해'],m:[7, 8, 9, 10],cm:[10, 25],str:0.2,pts:2,col:'#d8b040',rw:0.048,nocook:1,ext:1},
+ {n:'정어리',z:['동해', '남해'],m:[5, 6, 7, 8, 9, 10, 11],cm:[12, 25],str:0.3,pts:1,col:'#9ab4c4',rw:0.24,ext:1},
+ {n:'명태',z:['동해'],m:[12, 1, 2, 3],cm:[17, 45],str:0.45,pts:0,col:'#a89a82',tag:'ban',rw:0.048,ext:1,tip:'2019년 1월부터 1년 내내 포획 금지 · 잡히면 바로 놓아주세요'},
+ {n:'컨빅시클리드',a:['컨빅'],z:['민물'],m:ALLM,cm:[5, 12],str:0.2,pts:1,col:'#c4cac8',tag:'eco',rw:0.024,ext:1},
+ {n:'마블가재',z:['민물'],m:[4, 5, 6, 7, 8, 9, 10],cm:[6, 12],str:0.1,pts:1,col:'#7a7650',tag:'eco',rw:0.048,ext:1,tip:'미끼를 집게로 잡고 매달려 올라왔습니다 · 유입주의 생물이라 놓아주지 않습니다'},
+ {n:'꽃게',z:['서해', '서남해', '남해'],m:[4, 5, 6, 7, 8, 9, 10, 11],cm:[12, 22],str:0.3,pts:3,col:'#7a6a8a',rw:0.21,ext:1,tip:'미끼를 집게로 잡고 매달려 올라왔습니다'},
+ {n:'민꽃게',a:['돌게'],z:['서해', '서남해', '남해'],m:ALLM,cm:[8, 15],str:0.25,pts:2,col:'#5e5644',rw:0.24,ext:1,tip:'미끼를 집게로 잡고 매달려 올라왔습니다'},
+ {n:'용치놀래기',a:['놀래기'],z:['남해', '동해', '제주', '서남해'],m:[5, 6, 7, 8, 9, 10, 11],cm:[12, 25],str:0.3,pts:1,col:'#4e9a76',rw:0.24,ext:1},
+ {n:'자리돔',z:['제주', '남해'],m:[5, 6, 7, 8, 9, 10],cm:[8, 15],str:0.2,pts:1,col:'#4e525a',rw:0.18,ext:1},
+ {n:'벤자리',z:['제주', '남해'],m:[6, 7, 8, 9, 10],cm:[20, 40],str:0.5,pts:3,col:'#8a846a',rw:0.12,ext:1},
+ {n:'황줄깜정이',z:['제주', '남해'],m:ALLM,cm:[25, 50],str:0.65,pts:4,col:'#8a9098',rw:0.09,ext:1},
+ {n:'베도라치',z:['서해', '남해', '동해', '서남해'],m:ALLM,cm:[15, 30],str:0.2,pts:1,col:'#9a8a62',rw:0.15,ext:1},
+ {n:'노랑볼락',a:['황열기'],z:['동해', '남해'],m:ALLM,cm:[15, 30],str:0.4,pts:3,col:'#d0962e',rw:0.09,ext:1},
+ {n:'띠볼락',a:['참우럭'],z:['동해', '남해'],m:ALLM,cm:[20, 40],str:0.55,pts:4,col:'#8a8a7a',rw:0.09,ext:1},
+ {n:'개볼락',z:['남해', '동해', '제주', '서해'],m:ALLM,cm:[15, 30],str:0.45,pts:3,col:'#3e3224',rw:0.15,ext:1},
+ {n:'황점볼락',z:['남해', '동해', '제주'],m:ALLM,cm:[20, 40],str:0.5,pts:4,col:'#7a5a3e',rw:0.072,ext:1},
+ {n:'붉은쏨뱅이',z:['남해', '제주'],m:ALLM,cm:[15, 30],str:0.45,pts:3,col:'#d8703a',rw:0.072,ext:1},
+ {n:'홍감펭',z:['남해', '동해', '제주'],m:ALLM,cm:[15, 30],str:0.4,pts:4,col:'#e0644a',rw:0.048,ext:1},
+ {n:'대구',z:['동해', '남해', '서해'],m:[11, 12, 1, 2],cm:[40, 80],str:0.7,pts:6,col:'#a8987a',rw:0.048,ext:1},
+ {n:'대구횟대',z:['동해'],m:ALLM,cm:[20, 40],str:0.4,pts:2,col:'#7a7a56',rw:0.12,ext:1},
+ {n:'눈볼대',a:['금태', '노도구로'],z:['남해', '동해', '제주'],m:ALLM,cm:[15, 35],str:0.45,pts:5,col:'#e0705a',rw:0.048,ext:1},
+ {n:'강도다리',z:['동해'],m:ALLM,cm:[25, 50],str:0.55,pts:4,col:'#6a604e',rw:0.15,ext:1},
+ {n:'성대',z:['서해', '남해', '서남해'],m:[4, 5, 6, 7, 8, 9, 10, 11],cm:[20, 40],str:0.5,pts:3,col:'#c0644a',rw:0.15,ext:1},
+ {n:'참조기',z:['서해', '서남해', '제주'],m:[9, 10, 11, 12],cm:[15, 30],str:0.35,pts:3,col:'#c4b67a',rw:0.09,ext:1},
+ {n:'긴꼬리벵에돔',z:['제주', '남해'],m:ALLM,cm:[25, 50],str:0.8,pts:6,col:'#43494e',rw:0.09,ext:1},
+ {n:'능성어',z:['제주', '남해'],m:[6, 7, 8, 9, 10, 11],cm:[30, 70],str:0.85,pts:7,col:'#9a9078',rw:0.048,ext:1},
+ {n:'자바리',a:['다금바리'],z:['제주'],m:[6, 7, 8, 9, 10, 11],cm:[40, 90],str:0.95,pts:9,col:'#8a7050',rw:0.018,ext:1},
+ {n:'혹돔',z:['제주', '남해', '동해'],m:ALLM,cm:[40, 80],str:0.9,pts:7,col:'#a85a4e',rw:0.036,ext:1},
+ {n:'넙치농어',z:['제주', '남해'],m:ALLM,cm:[40, 90],str:0.85,pts:6,col:'#8a98a2',rw:0.06,ext:1},
+ {n:'갈전갱이',z:['제주', '남해'],m:[7, 8, 9, 10, 11],cm:[20, 40],str:0.55,pts:3,col:'#b4c0c4',rw:0.072,ext:1},
+ {n:'가다랑어',z:['제주', '남해', '동해'],m:[7, 8, 9, 10],cm:[40, 70],str:0.85,pts:6,col:'#5a6e8e',rw:0.036,ext:1},
+ {n:'꼬치고기',z:['남해', '제주', '동해'],m:[8, 9, 10, 11],cm:[25, 50],str:0.55,pts:3,col:'#a8a88e',rw:0.09,ext:1},
+ {n:'연어병치',z:['남해', '동해'],m:ALLM,cm:[15, 30],str:0.4,pts:3,col:'#a89c90',rw:0.036,ext:1},
+ {n:'청어',z:['동해', '남해'],m:[12, 1, 2, 3, 4],cm:[20, 35],str:0.4,pts:2,col:'#9ab0c0',rw:0.18,ext:1},
+ {n:'갯장어',a:['하모'],z:['남해', '서해', '서남해'],m:[6, 7, 8, 9, 10],cm:[50, 150],str:0.7,pts:5,col:'#a8b0b8',rw:0.072,ext:1},
+ {n:'뱀장어',a:['민물장어'],z:['민물'],m:[5, 6, 7, 8, 9, 10],cm:[40, 90],str:0.6,pts:5,col:'#4a5a3a',rw:0.072,ext:1},
+ {n:'대문어',a:['피문어', '물문어'],z:['동해'],m:ALLM,cm:[30, 60],str:0.85,pts:8,col:'#b0463a',rw:0.15,sq:1,ext:1},
+ {n:'낙지',z:['서해', '서남해', '남해'],m:[9, 10, 11, 3, 4, 5],cm:[8, 15],str:0.3,pts:3,col:'#8a7a6e',rw:0.18,sq:1,ext:1},
+ {n:'호래기',a:['꼴뚜기'],z:['남해', '동해'],m:[11, 12, 1, 2],cm:[6, 12],str:0.15,pts:2,col:'#d8b4a4',rw:0.24,sq:1,ext:1},
+ {n:'화살촉오징어',a:['창오징어'],z:['동해', '남해'],m:[12, 1, 2, 3, 4],cm:[20, 40],str:0.4,pts:3,col:'#e0c0b0',rw:0.18,sq:1,ext:1},
+ {n:'연어',z:['민물'],m:[10, 11],cm:[50, 80],str:0.85,pts:0,col:'#7a7a5a',rw:0.03,ext:1},
+ {n:'눈불개',z:['민물'],m:[5, 6, 7, 8, 9],cm:[25, 50],str:0.55,pts:3,col:'#c4ccce',rw:0.09,ext:1},
+ {n:'갈겨니',z:['민물'],m:[4, 5, 6, 7, 8, 9, 10],cm:[10, 20],str:0.2,pts:1,col:'#b4c0b8',rw:0.24,ext:1},
+ {n:'황어',z:['민물'],m:[3, 4, 5],cm:[25, 45],str:0.55,pts:3,col:'#6a7a66',rw:0.12,ext:1},
+ {n:'퉁가리',z:['민물'],m:[5, 6, 7, 8, 9],cm:[8, 15],str:0.15,pts:1,col:'#b08a44',tag:'warn',rw:0.09,ext:1,tip:'가슴지느러미 가시에 독이 있습니다 · 맨손 조심'},
+ {n:'떡붕어',z:['민물'],m:ALLM,cm:[20, 45],str:0.45,pts:2,col:'#b4bcb6',rw:0.24,ext:1},
+ {n:'버들치',z:['민물'],m:ALLM,cm:[6, 15],str:0.15,pts:1,col:'#a8987a',rw:0.24,ext:1},
+ {n:'동사리',z:['민물'],m:[4, 5, 6, 7, 8, 9, 10],cm:[8, 20],str:0.25,pts:1,col:'#7a6a52',rw:0.15,ext:1},
+ {n:'미꾸라지',z:['민물'],m:[4, 5, 6, 7, 8, 9, 10],cm:[8, 18],str:0.12,pts:1,col:'#8a8250',rw:0.06,ext:1},
+ {n:'해삼',a:['돌기해삼'],z:['동해', '남해', '서해', '서남해', '제주'],m:ALLM,cm:[10, 30],str:0.1,pts:0,col:'#5a4632',tag:'vil',snag:1,ext:1,tip:'마을어장(어촌계) 산물일 수 있어 놓아주었습니다'},
+ {n:'보라성게',a:['성게'],z:['동해', '남해', '제주'],m:ALLM,cm:[4, 8],str:0.1,pts:0,col:'#4a2e54',tag:'vil',snag:1,ext:1,tip:'가시에 찔리지 않게 조심 · 마을어장 산물이라 놓아주었습니다'},
+ {n:'아무르불가사리',a:['불가사리'],z:['동해', '남해', '서해', '서남해'],m:ALLM,cm:[8, 25],str:0.1,pts:0,col:'#e8a83a',tag:'pest',snag:1,ext:1,tip:'해양수산부 지정 유해해양생물 · 조개 양식장에 피해를 줍니다 · 바다에 되돌리지 않고 수거했습니다'},
+ {n:'군소',z:['동해', '남해', '서해', '서남해', '제주'],m:[3, 4, 5, 6],cm:[10, 30],str:0.1,pts:0,col:'#7a6a4a',tag:'free',snag:1,ext:1,tip:'자극하면 보라색 먹물을 뿜습니다 · 놓아주었습니다'},
+ {n:'미역',z:['동해', '남해', '서해', '서남해', '제주'],m:[1, 2, 3, 4, 5],cm:[30, 120],str:0.1,pts:0,col:'#6a6a2e',tag:'weed',snag:1,ext:1,tip:'해초가 채비에 걸려 올라왔습니다'},
+ {n:'다시마',z:['동해', '남해'],m:[1, 2, 3, 4, 5, 6],cm:[50, 200],str:0.1,pts:0,col:'#5a4e22',tag:'weed',snag:1,ext:1,tip:'해초가 채비에 걸려 올라왔습니다'},
+ {n:'모자반',z:['동해', '남해', '서해', '서남해', '제주'],m:ALLM,cm:[20, 100],str:0.1,pts:0,col:'#8a7a2e',tag:'weed',snag:1,ext:1,tip:'해초가 채비에 걸려 올라왔습니다'},
+ {n:'파래',z:['동해', '남해', '서해', '서남해', '제주'],m:[11, 12, 1, 2, 3, 4],cm:[10, 40],str:0.1,pts:0,col:'#5ab84a',tag:'weed',snag:1,ext:1,tip:'해초가 채비에 걸려 올라왔습니다'},
+ {n:'청자고둥',z:['제주', '남해'],m:[6, 7, 8, 9, 10],cm:[5, 12],str:0.1,pts:0,col:'#7a4824',tag:'haz',snag:1,ext:1,tip:'독침이 있는 고둥 · 맨손으로 줍지 마세요'},
+ {n:'보름달물해파리',z:['동해', '남해', '서해', '서남해', '제주'],m:[5, 6, 7, 8, 9, 10],cm:[10, 30],str:0.1,pts:0,col:'#dfe8f4',tag:'haz',snag:1,ext:1,tip:'촉수에 쏘일 수 있습니다 · 맨손 금지'},
+ {n:'노무라입깃해파리',z:['남해', '서해', '동해', '서남해'],m:[7, 8, 9, 10, 11],cm:[40, 150],str:0.1,pts:0,col:'#e6d6c4',tag:'haz',snag:1,ext:1,tip:'대형 해파리 · 쏘이면 심한 통증 · 맨손 금지'},
+ {n:'푸른우산관해파리',z:['제주', '남해', '동해'],m:[7, 8, 9, 10],cm:[2, 5],str:0.1,pts:0,col:'#3a7ad8',tag:'haz',snag:1,ext:1,tip:'촉수에 쏘일 수 있습니다 · 맨손 금지'},
+ {n:'넓은띠큰바다뱀',z:['제주', '남해'],m:[7, 8, 9, 10],cm:[70, 140],str:0.1,pts:0,col:'#8ab4d8',tag:'haz',snag:1,ext:1,tip:'맹독 바다뱀 · 절대 손대지 말고 줄을 끊으세요'},
+ {n:'비파',a:['플레코'],z:['민물'],m:ALLM,cm:[20, 45],str:0.1,pts:2,col:'#a8906a',tag:'eco',snag:1,ext:1,tip:'버려진 관상어(외래종)가 채비에 걸려 올라왔습니다 · 놓아주지 않습니다'},
  // v35 투망 전용(net:1 — 낚싯대 어종 목록 spotFishList에는 나오지 않음, NET_FISH로만 잡힘)
  {n:'멸치',z:['동해','남해','서해','서남해','제주'],m:[4,5,6,7,8],cm:[3,15],str:.08,pts:1,col:'#b8c6cf',net:1},
  {n:'보리새우',a:['오도리'],z:['남해','서해','서남해'],m:[6,7,8,9,10],cm:[5,20],str:.1,pts:2,col:'#c98e6e',net:1}
@@ -2335,12 +2426,13 @@ const FISH=[
 // 법정 금어기(낚시인 포함, 전국 기본 규칙). 수산자원관리법 시행령 별표1(2024.6.4) · 내수면어업법 시행령 별표1(2024.12.24).
 // 금어기에 잡히면 방생(포인트·최고기록 없음). 시·도 조례로 더 엄격할 수 있음. 고등어는 해수부가 매년 4~6월 중 1개월을 고시하므로 제외했습니다(출조 전 고시 확인).
 const CLOSED={감성돔:[[5,1,5,31]],삼치:[[5,1,5,31]],갈치:[[7,1,7,31]],쥐노래미:[[11,1,12,31]],가자미:[[12,1,12,31],[1,1,1,31]],전어:[[5,1,7,15]],
- 살오징어:[[4,1,5,31]],주꾸미:[[5,11,8,31]],쏘가리:[[4,20,6,30]],은어:[[4,1,5,20],[9,1,11,15]],빙어:[[3,1,3,20]]};
+ 살오징어:[[4,1,5,31]],주꾸미:[[5,11,8,31]],쏘가리:[[4,20,6,30]],은어:[[4,1,5,20],[9,1,11,15]],빙어:[[3,1,3,20]],
+ /* V153 */참문어:[[5, 16, 6, 30]],대구:[[1, 16, 2, 15]],꽃게:[[6, 21, 8, 20]],낙지:[[6, 1, 6, 30]],연어:[[10,11,11,30]]};
 // v30 C4: 쏘가리·은어는 지역·댐(호소)마다 기간이 달라(내수면어업법 시행령 별표1, 2024.12.24) 포인트(s)를 알면 그 지역 기간, 모르면 위 CLOSED(모든 지역을 합친 가장 넓은 기간)로 판정한다.
 // r: 시·도(s.r), riv: 하천, dam: 댐·호소. 이름에 '댐'·'○○호'면 댐·호소, 저수지·늪·제는 하천·댐 기간을 모두 적용(법보다 느슨해지지 않게)
 const CLOSED_RG={쏘가리:[{r:['전북','전남','경북','경남'],riv:[[4,20,5,30]],dam:[[5,10,6,20]]},{riv:[[5,1,6,10]],dam:[[5,20,6,30]]}],
  은어:[{r:['강원','경북'],riv:[[4,20,5,20],[9,1,10,31]]},{riv:[[4,1,4,30],[9,15,11,15]]}]};
-const CLOSED_NOTE={전어:'강원·경북 제외',쥐노래미:'백령·대청 해역 11.15~12.14',가자미:'문치가자미 기준',갈치:'북위 33도 이북 해역',쏘가리:'전북·전남·경북·경남 4.20~5.30(댐·호소 5.10~6.20), 그 밖 5.1~6.10(댐·호소 5.20~6.30)',은어:'강원·경북 4.20~5.20·9.1~10.31, 그 밖 4.1~4.30·9.15~11.15'};
+const CLOSED_NOTE={전어:'강원·경북 제외',쥐노래미:'백령·대청 해역 11.15~12.14',가자미:'문치가자미 기준',갈치:'북위 33도 이북 해역',쏘가리:'전북·전남·경북·경남 4.20~5.30(댐·호소 5.10~6.20), 그 밖 5.1~6.10(댐·호소 5.20~6.30)',은어:'강원·경북 4.20~5.20·9.1~10.31, 그 밖 4.1~4.30·9.15~11.15',/* V153 */낙지:'시·도가 4.1~9.30 중 1개월 이상 따로 고시(예: 경남 6.16~7.31, 전남·인천·경기 6.21~7.20)',참문어:'시·도가 5.1~9.15 중 46일 이상 따로 고시',꽃게:'해양수산부 고시 기간 · 서해5도 일부 7.1~8.31 · 알을 품은 암컷은 1년 내내 금지',연어:'내수면 전국'};
 function closedSpan(f,s){const R=CLOSED[f.n];if(!R)return null;const G=s&&s.w==='fresh'&&CLOSED_RG[f.n];if(!G)return R;
   const g=G.find(x=>!x.r||x.r.includes(s.r));if(!g)return R;const n=String(s.n||'');const k=/댐|호( |\(|$)/.test(n)?1:/저수지|늪|제( |\(|$)/.test(n)?2:0;
   return g.dam&&k===1?g.dam:g.dam&&k===2?g.riv.concat(g.dam):g.riv;}
@@ -2488,9 +2580,9 @@ function capSum(g){let t=0;for(const x of STATS)t+=x.cap*g;return t;}
 function gradeNext(R){const g=grOf(R),n=GRADES[g];if(!n)return{ok:false,why:'max'};if(stSum(stOf(R))<capSum(g))return{ok:false,why:'fill',need:capSum(g)};if((+(R&&R.lv)||1)<n.lv)return{ok:false,why:'lv',lv:n.lv};return{ok:true,g:g+1};}
 function statEff(id,l){const x=STATS.find(s=>s.id===id);if(!x)return'';const v=Math.round(x.k*l*10)/10;return x.d+' '+(v>=0?'+':'')+v+'%';}
 function fishGrp(f){return f.str>=.7?'str':f.str<.5?'foc':'vit';}
-function dexOK(f){return!!f&&(!!f.net||Object.keys((FX[f.n]||{}).me||{}).length>0);}
+function dexOK(f){return!!f&&(!!f.net||!!f.snag||Object.keys((FX[f.n]||{}).me||{}).length>0);}
 function dexBuf(dex,hasNet){const o={cap:0,bite:0,sat:1,xp:0,pt:0,cm:0,n:0,g:{str:0,vit:0,foc:0},zones:[],all:false};
-  for(const f of FISH){if(!dexOK(f))continue;const d=dex&&dex[f.n];if(d&&(+d.n||0)>0){o.n++;o.g[fishGrp(f)]++;}}
+  for(const f of FISH){if(!dexOK(f)||f.ext)continue;/* V153 신규 생물은 도감 능력치에서 뺌(밸런스 유지) */const d=dex&&dex[f.n];if(d&&(+d.n||0)>0){o.n++;o.g[fishGrp(f)]++;}}
   o.cap+=o.g.str*DEX_STAT.str;o.bite+=o.g.foc*DEX_STAT.foc;o.sat*=1+o.g.vit*DEX_STAT.vit/100;
   for(const z of REGIONS){const q=zoneDex(dex,z,hasNet);if(q.need>0&&q.have>=q.need){o.zones.push(z);const b=DEX_ZONE[z]||{};o.cap+=b.cap||0;o.bite+=b.bite||0;o.xp+=b.xp||0;o.pt+=b.pt||0;o.cm+=b.cm||0;if(b.sat)o.sat*=1+b.sat/100;}}
   if(o.zones.length===REGIONS.length){o.xp+=DEX_ALL.xp;o.pt+=DEX_ALL.pt;o.all=true;}
@@ -2655,7 +2747,50 @@ const NET_FISH=[
  {n:'멸치',nm:'멸치',z:['동해','남해','서해','서남해','제주'],m:[4,5,6,7,8],cm:[3,12],w:4},
  {n:'보리새우',nm:'보리새우',z:['남해','서해','서남해'],m:[6,7,8,9,10],cm:[5,20],w:1.5},
  {n:'농어',nm:'농어(혼획)',z:['남해','서해','서남해','동해'],m:[6,7,8,9,10,11],cm:[15,45],w:.15},
- {n:'감성돔',nm:'감성돔(혼획)',z:['동해','남해','서남해','서해','제주'],m:[4,5,6,7,8,9,10,11],cm:[12,35],w:.1}];
+ {n:'감성돔',nm:'감성돔(혼획)',z:['동해','남해','서남해','서해','제주'],m:[4,5,6,7,8,9,10,11],cm:[12,35],w:.1},
+ /* V153 */{n:'정어리',nm:'정어리',z:['동해', '남해'],m:[5, 6, 7, 8, 9, 10, 11],cm:[10, 22],w:2},
+ {n:'자리돔',nm:'자리돔',z:['제주'],m:[5, 6, 7, 8, 9, 10],cm:[6, 14],w:1.2},
+ {n:'보름달물해파리',nm:'보름달물해파리',z:['동해', '남해', '서해', '서남해', '제주'],m:[5, 6, 7, 8, 9, 10],cm:[10, 30],w:0.6},
+ {n:'노무라입깃해파리',nm:'노무라입깃해파리',z:['남해', '서해', '동해', '서남해'],m:[7, 8, 9, 10, 11],cm:[40, 150],w:0.2},
+ {n:'푸른우산관해파리',nm:'푸른우산관해파리',z:['제주', '남해', '동해'],m:[7, 8, 9, 10],cm:[2, 5],w:0.15},
+ {n:'넓은띠큰바다뱀',nm:'넓은띠큰바다뱀',z:['제주', '남해'],m:[7, 8, 9, 10],cm:[70, 140],w:0.02},
+ {n:'아무르불가사리',nm:'아무르불가사리',z:['동해', '남해', '서해', '서남해'],m:ALLM,cm:[8, 25],w:0.3},
+ {n:'모자반',nm:'모자반',z:['동해', '남해', '서해', '서남해', '제주'],m:ALLM,cm:[20, 100],w:0.4},
+ {n:'군소',nm:'군소',z:['동해', '남해', '서해', '서남해', '제주'],m:[3, 4, 5, 6],cm:[10, 30],w:0.2}];
+// ---- V153 생물 표식(tag)과 밑걸림 생물 · 기획 claude/meta/plan-hazard-invasive.md ----
+// haz 위험(독·쏘임·물림) · pro 보호종(멸종위기) · ban 포획 금지(명태) · vil 마을어장 산물(해삼·성게) · pest 유해해양생물(수거) · weed 해초 · free 그냥 놓아줌 → 모두 바로 놓아줌(포인트 0 · 쿨러·순위 없음 · 도감만)
+// warn 주의(가시 등 · 평소처럼 가져감) · eco 생태계교란·외래 생물(놓아주지 않음 · 평소 포인트 그대로 · 퇴치 보너스 없음 — 운영자 결정: 포인트 경제 보호)
+const BIO_TAG={haz:{n:'위험 생물',c:'#d23a2e',rel:'독·쏘임·물림 위험이 있어 바로 놓아주었습니다 · 맨손으로 만지지 마세요'},pro:{n:'멸종위기',c:'#2f6fd0',rel:'멸종위기 야생생물이라 통에 담지 않고 바로 놓아주었습니다'},ban:{n:'포획 금지',c:'#2f6fd0',rel:'1년 내내 포획 금지 어종이라 바로 놓아주었습니다'},
+ vil:{n:'마을어장 산물',c:'#7a6a52',rel:'마을어장(어촌계) 산물일 수 있어 놓아주었습니다'},pest:{n:'유해해양생물',c:'#a0562a',rel:'유해해양생물이라 바다에 되돌리지 않고 수거했습니다'},weed:{n:'해초',c:'#3a8a3a',rel:'채비에 걸린 해초를 떼어 냈습니다'},free:{n:'놓아줌',c:'#7a8a92',rel:'놓아주었습니다'},
+ warn:{n:'주의',c:'#e08a1e'},eco:{n:'생태계교란·외래',c:'#3a9a4a',note:'다시 놓아주면 법에 어긋날 수 있는 외래 생물입니다 · 지자체 수매가 있는 곳도 있어요'}};
+const BIO_REL=['haz','pro','ban','vil','pest','weed','free'];
+function bioRel(f){return!!f&&BIO_REL.includes(f.tag);}
+// 밑걸림 생물: 루어·채비가 바닥에 걸렸다(밑걸림) 또는 입질 없이 거둘 때(비거리 TRASH_MIN_D 이상) 딸려 오는 것 · t: 갯바위·방파제·항구·민물
+const SNAG_BIO_P={snag:.35,miss:.04};
+const SNAG_BIO=[
+ {n:'해삼',z:['동해', '남해', '서해', '서남해', '제주'],t:['갯바위', '방파제', '항구'],m:[11, 12, 1, 2, 3, 4],w:1},
+ {n:'보라성게',z:['동해', '남해', '제주'],t:['갯바위', '방파제'],m:ALLM,w:0.6},
+ {n:'아무르불가사리',z:['동해', '남해', '서해', '서남해'],t:['방파제', '항구', '갯바위'],m:ALLM,w:1.2},
+ {n:'군소',z:['동해', '남해', '서해', '서남해', '제주'],t:['갯바위', '방파제'],m:[3, 4, 5, 6],w:0.7},
+ {n:'미역',z:['동해', '남해', '서해', '서남해', '제주'],t:['갯바위', '방파제'],m:[1, 2, 3, 4, 5],w:1.6},
+ {n:'다시마',z:['동해', '남해'],t:['갯바위'],m:[1, 2, 3, 4, 5, 6],w:1},
+ {n:'모자반',z:['동해', '남해', '서해', '서남해', '제주'],t:['갯바위', '방파제', '항구'],m:ALLM,w:1.5},
+ {n:'파래',z:['동해', '남해', '서해', '서남해', '제주'],t:['갯바위', '방파제', '항구'],m:[11, 12, 1, 2, 3, 4],w:1.4},
+ {n:'청자고둥',z:['제주', '남해'],t:['갯바위'],m:[6, 7, 8, 9, 10],w:0.05},
+ {n:'파란고리문어',z:['제주', '남해', '동해'],t:['갯바위', '방파제'],m:[6, 7, 8, 9, 10, 11],w:0.08},
+ {n:'보름달물해파리',z:['동해', '남해', '서해', '서남해', '제주'],t:['항구', '방파제'],m:[5, 6, 7, 8, 9, 10],w:0.6},
+ {n:'노무라입깃해파리',z:['남해', '서해', '동해', '서남해'],t:['방파제', '갯바위'],m:[7, 8, 9, 10, 11],w:0.3},
+ {n:'푸른우산관해파리',z:['제주', '남해', '동해'],t:['갯바위', '방파제'],m:[7, 8, 9, 10],w:0.2},
+ {n:'넓은띠큰바다뱀',z:['제주', '남해'],t:['갯바위'],m:[7, 8, 9, 10],w:0.03},
+ {n:'베도라치',z:['서해', '남해', '동해', '서남해'],t:['갯바위', '방파제'],m:ALLM,w:0.5},
+ {n:'낙지',z:['서해', '서남해', '남해'],t:['방파제', '항구'],m:[9, 10, 11, 3, 4, 5],w:0.3},
+ {n:'비파',z:['민물'],t:['민물'],m:ALLM,w:0.12},
+ {n:'마블가재',z:['민물'],t:['민물'],m:[4, 5, 6, 7, 8, 9, 10],w:0.3},
+ {n:'미꾸라지',z:['민물'],t:['민물'],m:[4, 5, 6, 7, 8, 9, 10],w:0.2}];
+function snagBioPick(s,t,r){if(!s)return null;const fr=s.w==='fresh',kd=fr?'민물':s.t,z=zoneOf(s),mo=new Date((t||Date.now())+9*3600e3).getUTCMonth()+1;let tot=0;const L=[];
+  for(const e of SNAG_BIO){if(!e.t.includes(kd)||!e.z.includes(z)||!e.m.includes(mo))continue;const f=FISH.find(x=>x.n===e.n);if(!f)continue;L.push([e,f]);tot+=e.w;}
+  if(!L.length)return null;let u=(+r||0)*tot;let y=L[L.length-1];for(const x of L){u-=x[0].w;if(u<0){y=x;break;}}
+  const f=y[1],q=((r||0)*7919)%1;return{n:f.n,cm:Math.round((f.cm[0]+(f.cm[1]-f.cm[0])*Math.pow(q,1.4))*10)/10};}
 // 내구도 읽기(dur = {아이템 id: n})
 function durOf(dur,id){const v=dur&&Object.prototype.hasOwnProperty.call(dur,id)?+dur[id]:NaN;return Number.isFinite(v)?Math.max(0,Math.min(DUR_MAX,v)):DUR_MAX;}
 // 끌어올린 한 마리의 낚싯대 마모
@@ -2687,7 +2822,7 @@ function netHaul(s,x,q,t,rnd){rnd=rnd||Math.random;const L=netList(s,t),lam=netL
     const cm=Math.round((y.e.cm[0]+(y.e.cm[1]-y.e.cm[0])*Math.pow(rnd(),1.3))*10)/10;fish.push({f:y.f,nm:y.e.nm,cm,kg:+(((FX[y.f.n]||{}).k||.012)*cm*cm*cm/1000).toFixed(3)});}
   const tear=rnd()<(NET_TEAR[s&&s.t]||0);return{fish,tear,wear:NET_WEAR};}
 // 금어기·금지체장이면 방생(포인트·기록 없음 — 낚싯대와 같은 규칙)
-function netRel(f,cm,t,s){return!!closedRange(f,t,s)||(f.min!=null&&cm<=f.min);}
+function netRel(f,cm,t,s){return!!closedRange(f,t,s)||(f.min!=null&&cm<=f.min)||bioRel(f)/* V153 */;}
 function netPts(f,cm){return ptsK(f,cm,'net',0,false,null,MANUAL_K*NET_PK);}
 // ---- V109 랜딩 도구(뜰채·립그립)와 실수로 놓치기(공유 규칙 — 서버 /hook·/catch·자동 정산과 화면이 같은 식을 쓴다) ----
 // 흐름(직접 연안 낚시): 파이팅 끝 → ① 끌어올리기(뜰채: 높은 자리의 1.5kg 이상) → ② 손에 쥐기(립그립: 1kg 이상) → 결과
@@ -2758,7 +2893,7 @@ function tutView(done,st){const d=[];for(const v of Array.isArray(done)?done:[])
 // 어록은 어종 단위라 다른 지역에서 낚은 같은 어종도 센다 · 게임에 낚을 방법이 없는 어종(FX.me가 빈 은어)은 세지 않는다
 const REGIONS=['동해','서해','서남해','남해','제주','민물'];
 const REGION_REWARD=3000;
-function zoneDex(dex,zone,hasNet){let have=0,need=0;for(const f of FISH){if(f.big||!f.z.includes(zone)||(f.net&&!hasNet)||(!f.net&&!Object.keys((FX[f.n]||{}).me||{}).length))continue;need++;const d=dex&&dex[f.n];if(d&&(+d.n||0)>0)have++;}return{have,need};}
+function zoneDex(dex,zone,hasNet){let have=0,need=0;for(const f of FISH){if(f.big||f.ext||!f.z.includes(zone)||(f.net&&!hasNet)||(!f.net&&!Object.keys((FX[f.n]||{}).me||{}).length))continue;need++;const d=dex&&dex[f.n];if(d&&(+d.n||0)>0)have++;}return{have,need};}
 // 레벨 목표: 그 레벨에 닿으면 한 번 받는다(레벨업 보상 Lv×30P와 따로). 합계 15,900P — ECON_SPEC v36: Lv.50까지 예상 무상 수입의 3% 미만
 /* V87: 레벨 목표 ×약 3~4(수입 상향과 맞춤 · 운영자 결정) */
 // V98 Lv21부터 레벨업이 무거워져 마지막 목표를 Lv50 → Lv45
@@ -2788,7 +2923,7 @@ function evtCm(f){const c=(SHORE[f.n]||{}).cm||f.cm,hi0=c[1]*1.25,cap=EVENT_CAP[
 // 대물 한 마리 크기(u: 0..1 난수) — 작은 쪽이 더 흔하게
 function evtRollCm(f,u){const r=evtCm(f);return Math.round((r[0]+(r[1]-r[0])*Math.pow(Math.max(0,Math.min(1,+u||0)),1.5))*10)/10;}
 // 이 포인트·시각(KST 달)의 후보 어종: 낚싯대 어종 목록(spotFishList와 같은 해역 규칙, 투망 전용 제외) 중 그 달 철·금어기 아님·힘(str) .5 이상
-function evtCands(s,t){const z=zoneOf(s),mo=new Date(t+9*3600e3).getUTCMonth()+1;return FISH.filter(f=>!f.big&&!f.net&&f.z.includes(z)&&f.m.includes(mo)&&f.str>=.5&&!closedRange(f,t,s));}
+function evtCands(s,t){const z=zoneOf(s),mo=new Date(t+9*3600e3).getUTCMonth()+1;return FISH.filter(f=>!f.big&&!f.net&&!f.ext&&f.z.includes(z)&&f.m.includes(mo)&&f.str>=.5&&!closedRange(f,t,s));}
 // t가 든 이벤트 슬롯 {id:'YYYYMMDD-HH', start, until} | null (KST)
 function evtSlot(t){const k=new Date(t+9*3600e3),d0=Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate())-9*3600e3;
   const L=evtLen(d0+12*3600e3);for(const h of EVENT_SLOTS){const s=d0+h*3600e3;if(t>=s&&t<s+L)return{id:''+k.getUTCFullYear()+String(k.getUTCMonth()+1).padStart(2,'0')+String(k.getUTCDate()).padStart(2,'0')+'-'+String(h).padStart(2,'0'),start:s,until:s+L};}return null;}
@@ -2902,7 +3037,8 @@ const DISH_OF={참다랑어:{sv:1,d:['hoe','chobap']},/* V147 */감성돔:{sv:1,
 붕어:{sv:1,d:['jjim','maeun','jorim','eojuk']},잉어:{sv:1,d:['jjim','maeun','jorim']},배스:{sv:1,d:['twigim','maeun','gui']},쏘가리:{sv:1,d:['maeun','jiri','gui','jjim']},누치:{sv:1,d:['maeun','twigim','jorim']},
 끄리:{sv:2,d:['maeun','twigim','jorim']},강준치:{sv:1,d:['twigim','jorim','maeun']},메기:{sv:1,d:['maeun','gui','jjim']},피라미:{sv:6,d:['twigim','dori','eojuk','maeun']},향어:{sv:1,d:['maeun','jjim','gui']},
 꺽지:{sv:3,d:['maeun','twigim','gui']},가물치:{sv:1,d:['maeun','jjim']},산천어:{sv:1,d:['gui','twigim','maeun']},은어:{sv:2,d:['gui','twigim','maeun']},참마자:{sv:3,d:['jorim','maeun','twigim']},
-송어:{sv:1,d:['gui','maeun','twigim','jjim']},빙어:{sv:8,d:['twigim','dori','jorim']},모래무지:{sv:3,d:['maeun','twigim','jorim','eojuk']}};
+송어:{sv:1,d:['gui','maeun','twigim','jjim']},빙어:{sv:8,d:['twigim','dori','jorim']},모래무지:{sv:3,d:['maeun','twigim','jorim','eojuk']},
+/* V153 신규 생물(바로 놓아주는 생물은 요리 없음) */쏨뱅이:{sv:1,d:['hoe','gui','maeun','jorim']},양태:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},복어:{sv:1,d:['maeun']},블루길:{sv:1,d:['maeun','gui','twigim']},브라운송어:{sv:1,d:['maeun','gui','twigim']},망상어:{sv:1,d:['hoe','gui','maeun','jorim']},보리멸:{sv:1,d:['hoe','gui','maeun','jorim']},열기:{sv:1,d:['hoe','gui','maeun','jorim']},붕장어:{sv:1,d:['gui','twigim']},참문어:{sv:1,d:['sukhoe','bokkeum']},백조기:{sv:1,d:['hoe','gui','maeun','jorim']},쥐치:{sv:1,d:['hoe','gui','maeun','jorim']},동자개:{sv:1,d:['maeun','gui','twigim']},청줄돔:{sv:2,d:['hoe','gui','maeun','jorim']},범돔:{sv:2,d:['hoe','gui','maeun','jorim']},잿방어:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},아홉동가리:{sv:1,d:['hoe','gui','maeun','jorim']},강담돔:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},거북복:{sv:1,d:['gui']},정어리:{sv:2,d:['hoe','gui','maeun','jorim']},컨빅시클리드:{sv:3,d:['twigim','jorim','eojuk']},마블가재:{sv:1,d:['jjim']},꽃게:{sv:1,d:['jjim','maeun']},민꽃게:{sv:1,d:['maeun','jjim']},용치놀래기:{sv:2,d:['hoe','gui','maeun','jorim']},자리돔:{sv:3,d:['gui','twigim','jorim']},벤자리:{sv:1,d:['hoe','gui','maeun','jorim']},황줄깜정이:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},베도라치:{sv:1,d:['hoe','gui','maeun','jorim']},노랑볼락:{sv:1,d:['hoe','gui','maeun','jorim']},띠볼락:{sv:1,d:['hoe','gui','maeun','jorim']},개볼락:{sv:1,d:['hoe','gui','maeun','jorim']},황점볼락:{sv:1,d:['hoe','gui','maeun','jorim']},붉은쏨뱅이:{sv:1,d:['hoe','gui','maeun','jorim']},홍감펭:{sv:1,d:['hoe','gui','maeun','jorim']},대구:{sv:1,d:['jiri','maeun','gui','jjim']},대구횟대:{sv:1,d:['hoe','gui','maeun','jorim']},눈볼대:{sv:1,d:['hoe','gui','maeun','jorim']},강도다리:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},성대:{sv:1,d:['hoe','gui','maeun','jorim']},참조기:{sv:1,d:['hoe','gui','maeun','jorim']},긴꼬리벵에돔:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},능성어:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},자바리:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},혹돔:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},넙치농어:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},갈전갱이:{sv:1,d:['hoe','gui','maeun','jorim']},가다랑어:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},꼬치고기:{sv:1,d:['hoe','chobap','gui','maeun','jiri']},연어병치:{sv:1,d:['hoe','gui','maeun','jorim']},청어:{sv:1,d:['hoe','gui','maeun','jorim']},갯장어:{sv:1,d:['sukhoe','gui','jiri']},뱀장어:{sv:1,d:['gui']},대문어:{sv:1,d:['sukhoe','bokkeum']},낙지:{sv:3,d:['sukhoe','bokkeum']},호래기:{sv:3,d:['sukhoe','muchim','bokkeum']},화살촉오징어:{sv:1,d:['hoe','sukhoe','bokkeum','twigim']},연어:{sv:1,d:['gui']},눈불개:{sv:1,d:['maeun','gui','twigim']},갈겨니:{sv:3,d:['twigim','jorim','eojuk']},황어:{sv:1,d:['maeun','gui','twigim']},퉁가리:{sv:3,d:['twigim','jorim','eojuk']},떡붕어:{sv:1,d:['maeun','gui','twigim']},버들치:{sv:3,d:['twigim','jorim','eojuk']},동사리:{sv:3,d:['twigim','jorim','eojuk']},미꾸라지:{sv:3,d:['twigim','jorim','eojuk']},비파:{sv:1,d:['gui']}};
 // 카페 음료(포만감만 — 손맛·새 능력치 없음 · 술 없음). water: 물 한 잔(배가 많이 고프고 포인트가 WATER_PT 미만이거나 빚이 있을 때만, WATER_CD마다 한 번)
 const DRINK={water:{n:'물 한 잔',fee:0,sat:10,rescue:1},greentea:{n:'녹차',fee:140,sat:8},americano:{n:'아메리카노',fee:170,sat:10},yuja:{n:'유자차',fee:170,sat:10},latte:{n:'라떼',fee:200,sat:12},sikhye:{n:'식혜',fee:230,sat:14}};
 const WATER_CD=30*60e3;
@@ -3002,9 +3138,9 @@ function zoneMissFish(s){const z=zoneOf(s);return namedTokens(s).filter(t=>{cons
 /* V100 해역 밖 주요 어종 안내: 제철이면 이름만, 아니면 제철 달 */
 function zoneRareTxt(s){const mo=kstNow().mo,rg=m=>{const S=new Set(m);if(S.size>=12)return'연중';const st=[...S].find(x=>!S.has(x===1?12:x-1))||m[0];let e=st;while(S.has(e===12?1:e+1)&&(e===12?1:e+1)!==st)e=e===12?1:e+1;return st+'~'+e+'월';}/* 11~2월처럼 해를 넘는 철도 */;return zoneMissFish(s).map(t=>{const f=matchFish(t);return f.m.includes(mo)?t:t+'(제철 '+rg(f.m)+'에만)';}).join(', ');}
 function spotFishList(s){const z=zoneOf(s),mo=kstNow().mo;const named=new Set(namedTokens(s).map(matchFish).filter(Boolean));
-  const list=[];FISH.forEach(f=>{if(f.net)return;const isNamed=named.has(f),inZ=f.z.includes(z);if(!inZ&&!isNamed)return;/* v35: 투망 전용 어종(net:1)은 낚싯대 목록에서 뺀다 */
+  const list=[];FISH.forEach(f=>{if(f.net||f.snag)return;/* V153 밑걸림 생물은 물지 않음 */const isNamed=named.has(f),inZ=f.z.includes(z);if(!inZ&&!isNamed)return;/* v35: 투망 전용 어종(net:1)은 낚싯대 목록에서 뺀다 */
     /* V100 해역 밖 어종: 이 낚시터 자료(주요 어종)에 적힌 어종만, 제철에만 드물게(가중치 .8 — 해역 안 제철 4·주요 어종 12의 1/5~1/15), 철이 아니면 안 나옴. 금어기·금지체장 방생은 그대로 */
-    let w=inZ?(f.m.includes(mo)?4:.6)*(isNamed?3:1):(f.m.includes(mo)?.8:0);if(w>0)list.push({f,w,named:isNamed,rare:!inZ});});
+    let w=(inZ?(f.m.includes(mo)?4:.6)*(isNamed?3:1):(f.m.includes(mo)?.8:0))*(f.rw!=null?f.rw:1)/* V153 신규 생물 출현 배율 */;if(w>0)list.push({f,w,named:isNamed,rare:!inZ});});
   return list;}
 
 /* ===================== 채비 시스템 ===================== */
@@ -3028,7 +3164,7 @@ const FX={
  광어:{k:.011,me:{lure:1,surf:.4},t:['jig','metal','minnow','surf'],r:10},
  쥐노래미:{k:.011,me:{lure:.7,float:.6,surf:.6},t:['jig','krill','surf'],rk:1},
  노래미:{k:.012,me:{lure:.6,float:.7,surf:.5},t:['jig','krill','surf'],rk:1},
- 숭어:{k:.009,me:{float:.6,surf:.3},t:['krill','surf','surff']}/* V100 강·하구(금강·영산강·형산강) 숭어는 민물 처박기(떡밥·지렁이)로도 */,
+ 숭어:{k:.009,me:{float:.3,surf:.2},/* V153 찌낚시에 아주 가끔(운영자 결정 · 훌치기 없음) */t:['krill','surf','surff']}/* V100 강·하구(금강·영산강·형산강) 숭어는 민물 처박기(떡밥·지렁이)로도 */,
  농어:{k:.009,me:{lure:1,float:.5},t:['minnow','metal','jig','krill'],tm:'n'},
  무늬오징어:{k:.05,me:{lure:1},t:['egi'],tm:'n'},
  갑오징어:{k:.08,me:{lure:1},t:['egi']},
@@ -3066,7 +3202,98 @@ const FX={
  참마자:{k:.009,me:{pole:.8},t:['paste']},
  송어:{k:.012,me:{lure:1,pole:.5},t:['spoon','minnow','paste']},
  빙어:{k:.006,me:{pole:1},t:['bingeo']},
- 모래무지:{k:.009,me:{pole:.5,surf:.6},t:['paste','surff']}
+ 모래무지:{k:.009,me:{pole:.5,surf:.6},t:['paste','surff']},
+ // V153 신규 생물(게임 조정값 · snag:1 생물은 me 비움 — 물지 않음)
+ 파란고리문어:{k:0.08,me:{},t:[]},
+ 쏠배감펭:{k:0.016,me:{'float': 0.6, 'lure': 0.2},t:['krill', 'jig'],rk:1},
+ 미역치:{k:0.02,me:{'float': 0.8, 'pole': 0.6},t:['krill'],rk:1},
+ 쑤기미:{k:0.02,me:{'surf': 0.6, 'float': 0.3},t:['surf', 'krill'],rk:1},
+ 쏠종개:{k:0.008,me:{'surf': 0.6, 'float': 0.4},t:['surf', 'krill'],tm:'n'},
+ 곰치:{k:0.004,me:{'surf': 0.5, 'float': 0.4},t:['surf', 'krill'],rk:1,tm:'n'},
+ 쏨뱅이:{k:0.02,me:{'float': 0.6, 'lure': 0.6, 'surf': 0.4},t:['krill', 'jig', 'surf'],rk:1,tm:'n'},
+ 양태:{k:0.006,me:{'lure': 0.7, 'surf': 0.6},t:['jig', 'minnow', 'surf']},
+ 복어:{k:0.03,me:{'float': 0.6, 'surf': 0.5},t:['krill', 'surf']},
+ 블루길:{k:0.025,me:{'pole': 0.8, 'lure': 0.5},t:['paste', 'jig', 'spoon']},
+ 브라운송어:{k:0.012,me:{'lure': 1},t:['spoon', 'minnow']},
+ 열목어:{k:0.012,me:{'lure': 0.8, 'pole': 0.4},t:['spoon', 'minnow', 'paste']},
+ 돌상어:{k:0.01,me:{'pole': 0.6},t:['paste']},
+ 가는돌고기:{k:0.01,me:{'pole': 0.6},t:['paste']},
+ 망상어:{k:0.022,me:{'float': 1, 'pole': 0.6},t:['krill'],rk:1},
+ 보리멸:{k:0.006,me:{'surf': 1},t:['surf'],r:20},
+ 열기:{k:0.018,me:{'lure': 0.8, 'float': 0.6},t:['jig', 'krill'],rk:1,tm:'n'},
+ 붕장어:{k:0.003,me:{'surf': 1},t:['surf'],tm:'N'},
+ 참문어:{k:0.08,me:{'lure': 1},t:['egi']},
+ 백조기:{k:0.012,me:{'surf': 1},t:['surf'],r:20},
+ 쥐치:{k:0.02,me:{'float': 0.8},t:['krill']},
+ 동자개:{k:0.01,me:{'surf': 0.8, 'pole': 0.4},t:['surff', 'paste'],tm:'n'},
+ 청줄돔:{k:0.025,me:{'float': 0.6},t:['krill'],rk:1},
+ 범돔:{k:0.025,me:{'float': 0.7},t:['krill'],rk:1},
+ 잿방어:{k:0.013,me:{'lure': 1},t:['metal', 'minnow'],tm:'d',r:50},
+ 아홉동가리:{k:0.02,me:{'float': 0.8},t:['krill'],rk:1},
+ 강담돔:{k:0.022,me:{'surf': 0.8, 'float': 0.3},t:['surf', 'krill'],rk:1},
+ 거북복:{k:0.03,me:{'float': 0.4},t:['krill']},
+ 정어리:{k:0.009,me:{'float': 0.8},t:['sabiki']},
+ 명태:{k:0.006,me:{'lure': 0.6, 'float': 0.4},t:['jig', 'sabiki']},
+ 컨빅시클리드:{k:0.025,me:{'pole': 0.4},t:['paste']},
+ 마블가재:{k:0.02,me:{'pole': 0.4, 'surf': 0.3},t:['paste', 'surff']},
+ 꽃게:{k:0.04,me:{'surf': 0.6, 'float': 0.4},t:['surf', 'krill']},
+ 민꽃게:{k:0.05,me:{'surf': 0.5, 'float': 0.4},t:['surf', 'krill'],rk:1},
+ 용치놀래기:{k:0.012,me:{'float': 0.8},t:['krill'],tm:'d'},
+ 자리돔:{k:0.03,me:{'float': 0.8},t:['krill']},
+ 벤자리:{k:0.015,me:{'float': 0.8},t:['krill']},
+ 황줄깜정이:{k:0.022,me:{'float': 0.8},t:['krill'],rk:1},
+ 베도라치:{k:0.003,me:{'float': 0.4, 'surf': 0.4},t:['krill', 'surf'],rk:1},
+ 노랑볼락:{k:0.018,me:{'lure': 0.8, 'float': 0.5},t:['jig', 'krill'],rk:1},
+ 띠볼락:{k:0.018,me:{'lure': 0.8, 'float': 0.5},t:['jig', 'krill'],rk:1},
+ 개볼락:{k:0.02,me:{'lure': 0.8, 'float': 0.6},t:['jig', 'krill'],rk:1,tm:'n'},
+ 황점볼락:{k:0.019,me:{'lure': 0.8},t:['jig'],rk:1},
+ 붉은쏨뱅이:{k:0.02,me:{'lure': 0.6, 'float': 0.5},t:['jig', 'krill'],rk:1},
+ 홍감펭:{k:0.02,me:{'lure': 0.6},t:['jig'],r:60},
+ 대구:{k:0.01,me:{'lure': 0.7},t:['jig'],r:60},
+ 대구횟대:{k:0.012,me:{'surf': 0.6, 'lure': 0.4},t:['surf', 'jig']},
+ 눈볼대:{k:0.014,me:{'lure': 0.6},t:['jig'],r:60},
+ 강도다리:{k:0.016,me:{'surf': 1},t:['surf'],r:20},
+ 성대:{k:0.012,me:{'surf': 0.8, 'lure': 0.4},t:['surf', 'jig'],r:20},
+ 참조기:{k:0.012,me:{'surf': 0.6, 'float': 0.4},t:['surf', 'krill']},
+ 긴꼬리벵에돔:{k:0.02,me:{'float': 1},t:['krill'],rk:1,tm:'d'},
+ 능성어:{k:0.016,me:{'lure': 0.6, 'surf': 0.5},t:['jig', 'minnow', 'surf'],rk:1},
+ 자바리:{k:0.016,me:{'lure': 0.5, 'surf': 0.5},t:['jig', 'minnow', 'surf'],rk:1},
+ 혹돔:{k:0.02,me:{'surf': 0.7, 'float': 0.4},t:['surf', 'krill'],rk:1},
+ 넙치농어:{k:0.01,me:{'lure': 1},t:['minnow', 'metal'],tm:'n'},
+ 갈전갱이:{k:0.016,me:{'lure': 0.7, 'float': 0.5},t:['metal', 'jig', 'krill']},
+ 가다랑어:{k:0.016,me:{'lure': 1},t:['metal', 'minnow'],tm:'d',r:50},
+ 꼬치고기:{k:0.005,me:{'lure': 1},t:['minnow', 'metal']},
+ 연어병치:{k:0.022,me:{'float': 0.5},t:['krill'],r:30},
+ 청어:{k:0.009,me:{'float': 0.8},t:['sabiki', 'krill']},
+ 갯장어:{k:0.003,me:{'surf': 1},t:['surf'],tm:'N'},
+ 뱀장어:{k:0.003,me:{'surf': 0.8},t:['surff'],tm:'N'},
+ 대문어:{k:0.08,me:{'lure': 1},t:['egi']},
+ 낙지:{k:0.08,me:{'lure': 0.8},t:['egi']},
+ 호래기:{k:0.03,me:{'lure': 1},t:['egi'],tm:'N'},
+ 화살촉오징어:{k:0.012,me:{'lure': 1},t:['egi'],tm:'N'},
+ 연어:{k:0.011,me:{'lure': 0.6},t:['spoon', 'minnow']},
+ 눈불개:{k:0.011,me:{'lure': 0.6, 'pole': 0.4},t:['spoon', 'minnow', 'paste']},
+ 갈겨니:{k:0.01,me:{'pole': 1, 'lure': 0.3},t:['paste', 'spoon']},
+ 황어:{k:0.01,me:{'lure': 0.6, 'pole': 0.4},t:['spoon', 'minnow', 'paste']},
+ 퉁가리:{k:0.012,me:{'pole': 0.5, 'surf': 0.4},t:['paste', 'surff'],rk:1,tm:'n'},
+ 떡붕어:{k:0.024,me:{'pole': 1, 'surf': 0.5},t:['paste', 'surff']},
+ 버들치:{k:0.01,me:{'pole': 1},t:['paste']},
+ 동사리:{k:0.014,me:{'lure': 0.5, 'pole': 0.5},t:['jig', 'paste'],rk:1},
+ 미꾸라지:{k:0.004,me:{'pole': 0.3},t:['paste']},
+ 해삼:{k:0.01,me:{},t:[]},
+ 보라성게:{k:0.1,me:{},t:[]},
+ 아무르불가사리:{k:0.01,me:{},t:[]},
+ 군소:{k:0.03,me:{},t:[]},
+ 미역:{k:0.001,me:{},t:[]},
+ 다시마:{k:0.001,me:{},t:[]},
+ 모자반:{k:0.001,me:{},t:[]},
+ 파래:{k:0.0005,me:{},t:[]},
+ 청자고둥:{k:0.1,me:{},t:[]},
+ 보름달물해파리:{k:0.002,me:{},t:[]},
+ 노무라입깃해파리:{k:0.002,me:{},t:[]},
+ 푸른우산관해파리:{k:0.002,me:{},t:[]},
+ 넓은띠큰바다뱀:{k:0.002,me:{},t:[]},
+ 비파:{k:0.012,me:{},t:[]}
 };
 // 상점 품목. 강도(kg)는 호수→lb 표준 환산 대표값(나일론·플로로 1호≈4lb, PE는 호수별 대표값·제품마다 다름).
 const HO=3.75;// 봉돌·추 1호 ≈ 3.75g
@@ -3491,8 +3718,8 @@ const BOAT_TRIPS=[
  {id:'galchi',n:'갈치 선상(텐빈·외줄)',z:['남해','제주','서남해'],m:[8,9,10,11],tm:'N',fee:1900,won:'약 15~24만 원',depth:[40,80],rig:{n:'갈치 선상대 · PE 3호 · 텐빈 채비+꽁치살',cap:6,loss:60,act:'bait'},lam:.2,fish:[{n:'갈치',w:10,cm:[80,130]}],how:'집어등 아래에서 천천히 고패질합니다'},
  {id:'ureok',n:'우럭·광어 선상',z:['서해','서남해'],m:ALLM,tm:'d',fee:1000,won:'약 9~12만 원',depth:[20,60],rig:{n:'선상 우럭대 · PE 3호 · 외줄·편대 채비+오징어살(광어는 다운샷)',cap:8,loss:40,act:'bait'},lam:.18,fish:[{n:'우럭',w:8,cm:[25,60]},{n:'광어',w:4,cm:[40,90]},{n:'쥐노래미',w:2,cm:[25,45]}],how:'바닥에서 봉돌을 띄워 기다립니다'},
  {id:'taira',n:'참돔 타이라바',z:['남해','서남해','제주','서해'],m:[4,5,6,9,10,11],tm:'d',fee:1200,won:'약 10~13만 원',depth:[40,80],rig:{n:'타이라바 로드 · PE 1호 · 타이라바 100g',cap:6,loss:100,act:'jig'},lam:.14,fish:[{n:'참돔',w:8,cm:[35,90]},{n:'광어',w:2,cm:[40,80]}],how:'바닥을 찍고 일정한 속도로 감아 올립니다'},
- {id:'jigging',n:'방어·부시리 지깅',z:['동해','제주','남해'],m:ALLM,tm:'d',fee:1800,won:'약 15~20만 원',depth:[40,100],rig:{n:'지깅 로드 · PE 4호 · 메탈지그 150g',cap:20,loss:200,act:'jig'},lam:.1,fish:[{n:'방어',w:6,cm:[60,110],hi:[100,.05]},{n:'부시리',w:4,cm:[70,120],hi:[100,.05]},{n:'삼치',w:2,cm:[60,100]}],how:'짧게 저킹하며 빠르게 감아 올립니다'},
- {id:'tuna',n:'빅게임 선상(참치·대방어·대부시리)',z:['동해','제주','남해'],m:ALLM,tm:'d',fee:3000,won:'',depth:[20,60],rig:{n:'빅게임 로드 · PE 8호 · 트롤링 루어·펜슬베이트·빅게임 지그',cap:90,loss:300,act:'jig'},lam:.06,fish:[{n:'참다랑어',w:5,cm:[100,220],open:1},{n:'방어',dn:'대방어',w:3,cm:[80,150],hi:[130,.05],open:1},{n:'부시리',dn:'대부시리',w:3,cm:[100,160]}],how:'배가 달리며 루어를 끌다가 고기 떼가 수면을 끓이면(보일링) 그쪽으로 던집니다',note:'참다랑어는 나라가 어획 한도(TAC)를 정해 관리하는 어종입니다 · 실제 출조 전 선사와 관할 지자체에 규정을 확인하세요 · 게임 속 수치는 게임 기준입니다',seas:'제철 · 참다랑어 6~11월 · 대방어 11~2월 · 대부시리 연중'},
+ {id:'jigging',n:'방어·부시리 지깅',z:['동해','제주','남해'],m:ALLM,tm:'d',h24:1,rt:'보통 새벽 출항 · 오후 입항(선사마다 다름)',fee:1800,won:'약 15~20만 원',depth:[40,100],rig:{n:'지깅 로드 · PE 4호 · 메탈지그 150g',cap:20,loss:200,act:'jig'},lam:.1,fish:[{n:'방어',w:6,cm:[60,110],hi:[100,.05]},{n:'부시리',w:4,cm:[70,120],hi:[100,.05]},{n:'삼치',w:2,cm:[60,100]}],how:'짧게 저킹하며 빠르게 감아 올립니다'},
+ {id:'tuna',n:'빅게임 선상(참치·대방어·대부시리)',z:['동해','제주','남해'],m:ALLM,tm:'d',h24:1,rt:'보통 새벽 출항 · 오후 입항(선사마다 다름)',fee:3000,won:'',depth:[20,60],rig:{n:'빅게임 로드 · PE 8호 · 트롤링 루어·펜슬베이트·빅게임 지그',cap:90,loss:300,act:'jig'},lam:.06,fish:[{n:'참다랑어',w:5,cm:[100,220],open:1},{n:'방어',dn:'대방어',w:3,cm:[80,150],hi:[130,.05],open:1},{n:'부시리',dn:'대부시리',w:3,cm:[100,160]}],how:'배가 달리며 루어를 끌다가 고기 떼가 수면을 끓이면(보일링) 그쪽으로 던집니다',note:'참다랑어는 나라가 어획 한도(TAC)를 정해 관리하는 어종입니다 · 실제 출조 전 선사와 관할 지자체에 규정을 확인하세요 · 게임 속 수치는 게임 기준입니다',seas:'제철 · 참다랑어 6~11월 · 대방어 11~2월 · 대부시리 연중'},
  {id:'ikametal',n:'한치·오징어 이카메탈',z:['제주','동해','남해'],m:[6,7,8,9,10,11],tm:'N',fee:1100,won:'약 10~13만 원',depth:[20,50],rig:{n:'이카메탈 로드 · PE 0.8호 · 이카메탈·오징어 다단 에기',cap:3,loss:80,act:'egi'},lam:.24,fish:[{n:'한치',w:6,cm:[18,40]},{n:'살오징어',w:6,cm:[22,38]}],how:'집어등 아래에서 천천히 흔들고 멈춥니다'}
 ];
 /* V147 빅게임 선상(Lv.25 · tuna): 참다랑어 100~220cm · 대방어 80~150cm(130cm 넘는 놈 5%) · 대부시리 100~160cm — 지깅배(Lv.15)는 그대로(100cm 넘는 놈 5%).
@@ -3522,11 +3749,11 @@ function tripState(s,t){const k=kstNow(),w=WX.spots[s.id]||{};const z=zoneOf(s);
   if(!t.z.includes(z))return{ok:false,why:'이 해역에서는 하지 않는 선상낚시'};
   const tmo=tripMonths(s,t);if(!tmo.includes(k.mo))return{ok:false,why:tmo.length?'철이 아님(이 해역 '+tmo.join('·')+'월)':'이 해역에서는 대상 어종이 나오지 않음'};
   {const f0=FISH.find(y=>y.n===t.fish[0].n),r=f0&&closedRange(f0,Date.now(),s);if(r)return{ok:false,why:f0.n+' 법정 금어기('+r[0]+'.'+r[1]+'~'+r[2]+'.'+r[3]+')라 출조하지 않음'};}
-  const night=k.h>=17||k.h<5;if(t.tm==='N'&&!night)return{ok:false,why:'야간 출조(17시~05시)'};if(t.tm==='d'&&night)return{ok:false,why:'주간 출조(05시~17시)'};
+  const night=k.h>=17||k.h<5;if(t.tm==='N'&&!night)return{ok:false,why:'야간 출조(17시~05시)'};if(t.tm==='d'&&night&&!t.h24)return{ok:false,why:'주간 출조(05시~17시)'};/* V154 빅게임·지깅(h24)은 퇴근 뒤에도 — 24시간 */
   if((+w.wave||0)>=2||(+w.wind||0)>=12)return{ok:false,why:'출항 제한(게임 기준: 파고 2m·풍속 12m/s 이상) — 실제로는 풍랑특보가 발효되면 출항이 통제됩니다'};
   if(!tripFish(s,t).length)return{ok:false,why:'지금은 대상 어종이 없음(금어기·철)'};
   return{ok:true};}
-function tripListHTML(s){return BOAT_TRIPS.map(t=>{const st=tripState(s,t);return'<div class="item'+(st.ok?'':' dim')+'"><div><b>'+esc(t.n)+'</b>'+tripSeasonHTML(s,t)+'<div class="spec">'+esc(t.rig.n)+' · 수심 <span class="num">'+t.depth[0]+'~'+t.depth[1]+'m</span> · 대여 장비 한계 <span class="num">'+t.rig.cap+'kg</span> · 채비 잃으면 <span class="num">'+fmtN(t.rig.loss||0)+'P</span>(출조당 최대 '+fmtN(Math.round(feeOf(t)*TRIP_LOSS_K))+'P)</div><div class="spec">대상 '+tripTargets(s,t)+' · '+(t.won?'현실의 선상낚시 요금 참고: '+t.won+'(게임 포인트와는 관계없습니다) · ':'')+'<b>Lv.'+(TRIP_LV[t.id]||1)+' 이상</b></div>'+(t.seas?'<div class="spec"><b>'+esc(t.seas)+'</b>'+(t.fish.some(x=>x.open)?' · 빅게임 선상은 <b>연중 운항</b> — 철이 아니어도 셋 다 나옵니다':'')+'</div>':'')+(t.note?'<div class="spec">'+esc(t.note)+'</div>':'')/* V147 */+(st.ok?'':'<div class="spec badline">'+esc(st.why)+'</div>')+'</div><div class="act2"><button class="mini buy" data-trip="'+t.id+'"'+(st.ok&&spendNow()>=feeOf(t)&&RG.lv>=(TRIP_LV[t.id]||1)?'':' disabled')+'>'+feeOf(t)+'P 출조</button>'+(st.ok&&RG.lv>=(TRIP_LV[t.id]||1)&&spendNow()<feeOf(t)?(()=>{const sh=feeOf(t)-spendNow(),pk=pkgFor(sh);if(!TOPUP_ON)return'<span class="k">'+fmtN(sh)+'P 부족 · 낚시로 모으기</span>';return pk?'<button class="mini short" type="button" data-tshort="'+pk+'">'+fmtN(sh)+'P 부족 · '+fmtN(pk)+'원 충전하기</button>':'';})():'')+'</div></div>';}).join('');}
+function tripListHTML(s){return BOAT_TRIPS.map(t=>{const st=tripState(s,t);return'<div class="item'+(st.ok?'':' dim')+'"><div><b>'+esc(t.n)+'</b>'+tripSeasonHTML(s,t)+'<div class="spec">'+esc(t.rig.n)+' · 수심 <span class="num">'+t.depth[0]+'~'+t.depth[1]+'m</span> · 대여 장비 한계 <span class="num">'+t.rig.cap+'kg</span> · 채비 잃으면 <span class="num">'+fmtN(t.rig.loss||0)+'P</span>(출조당 최대 '+fmtN(Math.round(feeOf(t)*TRIP_LOSS_K))+'P)</div><div class="spec">대상 '+tripTargets(s,t)+' · '+(t.won?'현실의 선상낚시 요금 참고: '+t.won+'(게임 포인트와는 관계없습니다) · ':'')+'<b>Lv.'+(TRIP_LV[t.id]||1)+' 이상</b></div>'+(t.seas?'<div class="spec"><b>'+esc(t.seas)+'</b>'+(t.fish.some(x=>x.open)?' · 빅게임 선상은 <b>연중 운항</b> — 철이 아니어도 셋 다 나옵니다':'')+'</div>':'')+(t.h24?'<div class="spec">🕘 <b>게임은 24시간 출조</b> · 실제 출조: '+esc(t.rt||'')+'</div>':'')+(t.note?'<div class="spec">'+esc(t.note)+'</div>':'')/* V147 */+(st.ok?'':'<div class="spec badline">'+esc(st.why)+'</div>')+'</div><div class="act2"><button class="mini buy" data-trip="'+t.id+'"'+(st.ok&&spendNow()>=feeOf(t)&&RG.lv>=(TRIP_LV[t.id]||1)?'':' disabled')+'>'+feeOf(t)+'P 출조</button>'+(st.ok&&RG.lv>=(TRIP_LV[t.id]||1)&&spendNow()<feeOf(t)?(()=>{const sh=feeOf(t)-spendNow(),pk=pkgFor(sh);if(!TOPUP_ON)return'<span class="k">'+fmtN(sh)+'P 부족 · 낚시로 모으기</span>';return pk?'<button class="mini short" type="button" data-tshort="'+pk+'">'+fmtN(sh)+'P 부족 · '+fmtN(pk)+'원 충전하기</button>':'';})():'')+'</div></div>';}).join('');}
 // v30 C4: 귀항(시간 끝·서버 출조 끝·직접 귀항) → 항구로 돌아가 출조 결산 카드
 // v30 C4(#59): 처음 금지체장 이하로 놓아줄 때 한 번만 이유 안내
 function relTip(){if(save.relTip)return;save.relTip=1;try{persist();}catch(e){}setTimeout(()=>toast('법정 금지체장 이하라 놓아주었습니다 · 포인트는 없지만 어록 마릿수에 들어갑니다 · 오늘 방생 퀘스트가 있으면 함께 채워집니다'),1800);}
@@ -6368,7 +6595,99 @@ const FA={
  '풀망둑':{base:'망둥어',b:{D:.17,pk:.22,m:.45,pr:.4,tk:.55},c:['#7a7660','#8f8a70','#dcd6c0','#857f66'],mk:[['scat',12,.8,'#5f5a48',-.8,.3]]},
  '문절망둑':{base:'망둥어',b:{D:.2,pk:.22,m:.45,pr:.42,tk:.55},c:['#9a8a64','#b8a77a','#ece2c8','#a8966c'],mk:[['blotchrow',5,'#5c5446'],['finspot']]},
  '숭어 새끼(모치·동어)':{base:'숭어',juv:1,mk:[['hl',7,-.8,.5,'#8fa1ac',.5]]},
- '전갱이 새끼':{base:'전갱이',juv:1}
+ '전갱이 새끼':{base:'전갱이',juv:1},
+ // V153 신규 생물(위험·외래·보호·빠진 어종·밑걸림 생물·해초)
+ '파란고리문어':{oct:1,nogold:1,c:['#b48a3a','#d2ab55','#f0e0b0','#b48a3a'],mk:[['ring',16,2.1,'#2f7cf0']]},
+  '쏠배감펭':{b:{D:.32,pk:.34,m:.8,pr:.26},m:{t:'n',l:7},e:{r:3.2},fin:{d1:[.2,.58,15,13],d2:[.58,.8,7,0],a:[.6,.8,6,3],p:3.6,v:[.3]},tl:{t:'r',s:1.05},c:['#8a3a28','#c9826a','#f2e2d6','#b8644c'],mk:[['vb',11,.14,.92,1.4,'#f6eadf',.85],['finspot']]},
+  '미역치':{b:{D:.32,pk:.24,m:.55,pr:.32},m:{t:'n',l:4},e:{r:3.2},fin:{d1:[.06,.82,10,14],a:[.6,.82,5,3],p:1.2,v:[.3]},tl:{t:'r',s:.95},c:['#8a4a26','#d07a3e','#f0c8a0','#c0402a'],mk:[['mott','#3a2416'],['blotch',5,'#3a2416',.6,-.6,.5]]},
+  '쑤기미':{b:{D:.3,pk:.2,m:.4,pr:.3,tk:.55},m:{t:'up',l:8},e:{r:2.6,top:1},fin:{d1:[.12,.84,8,16],a:[.6,.84,5,2],p:1.8,v:[.3]},tl:{t:'r',s:1},c:['#3f3832','#5f564c','#b9ab98','#4a423a'],mk:[['mott','#262019'],['scat',18,.8,'#c9b9a2',-.9,.5]]},
+  '쏠종개':{b:{D:.16,pk:.28,m:.5,pr:.12},m:{t:'n',l:6,br:4,brL:7,cat:1},e:{r:2},fin:{d1:[.18,.24,6,1],d2:[.45,1.02,3,0],a:[.5,1.02,3,0],p:1,v:[.36]},tl:{t:'c',s:.8},c:['#3a2e26','#4f3f34','#cfc2b0','#3a2e26'],mk:[['band',-.4,.09,'#efe2b8'],['band',.15,.09,'#efe2b8']],fx:'wet'},
+  '곰치':{b:{D:.1,pk:.3,m:.7,pr:.5},m:{t:'n',l:8,teeth:1},e:{r:2},fin:{d1:[.1,1.02,3,0],a:[.45,1.02,3,0]},tl:{t:'c',s:.7},c:['#6a4e22','#a07a38','#d8c08a','#6a4e22'],mk:[['vb',12,.1,.96,3.4,'#3a2a14',.85],['scat',30,.5,'#f0e2b8',-.9,.8,1]],fx:'wet'},
+  '쏨뱅이':{b:{D:.34,pk:.3,m:.72,pr:.3},m:{t:'n',l:8},e:{r:3.6},fin:{d1:[.2,.58,7,12],d2:[.58,.78,6,0],a:[.6,.78,5,3],p:1.3,v:[.3]},tl:{t:'r',s:1},c:['#6e2e22','#9a4a34','#e0b89a','#8a3e2c'],mk:[['blotch',8,'#f2e0cc',.55,-.8,.6],['eyeband',2,'#4a1e16']]},
+  '양태':{b:{D:.13,pk:.22,m:.35,pr:.3,tk:.65},m:{t:'u',l:9},e:{r:2.2,top:1},fin:{d1:[.26,.36,5,8],d2:[.38,.78,4,0],a:[.38,.78,3,0],p:1.2,v:[.26]},tl:{t:'t',s:.95},c:['#5e5040','#8a7a62','#e8e0d0','#6a5c48'],mk:[['scat',40,.6,'#2e261c',-.95,.2,1]]},
+  '복어':{b:{D:.42,pk:.3,m:.5,pr:.3},m:{t:'bk',l:2},e:{r:3},fin:{d2:[.66,.76,5,0],a:[.68,.78,4,0],p:1},tl:{t:'t',s:.9},c:['#4e5a3a','#76804e','#f6f4ea','#d8c05a'],mk:[['scat',22,.9,'#f2f0e0',-.95,-.2]]},
+  '블루길':{b:{D:.5,pk:.4,m:.55,pr:.3},m:{t:'n',l:3},e:{r:3},fin:{d1:[.24,.52,6,10],d2:[.52,.76,6,0],a:[.56,.76,5,3],p:1.1,v:[.32]},tl:{t:'e',s:1},c:['#3e4e44','#6e7e62','#e8c890','#55624e'],mk:[['vb',7,.2,.86,2.6,'#2e3a30',.45],['dot',.2,-.32,2.6,'#121814']]},
+  '브라운송어':{b:{D:.26,pk:.38,m:.9,pr:.24},m:{t:'n',l:8},e:{r:3},fin:{d1:[.38,.52,6,0],a:[.62,.74,4,0],ad:.82,p:.9,v:[.44]},tl:{t:'t',s:1.05},c:['#5a5232','#a89a68','#f0e8d0','#8a7a4a'],mk:[['leo',14,'#f4ecd8'],['scat',26,.8,'#1e1a12',-.9,.3],['scat',10,.8,'#c8402e',-.5,.4]]},
+  '열목어':{b:{D:.25,pk:.38,m:.9,pr:.24},m:{t:'n',l:5},e:{r:3},fin:{d1:[.38,.52,6,0],a:[.62,.74,4,0],ad:.82,p:.9,v:[.44]},tl:{t:'e',s:1.05},c:['#4e4a36','#a89478','#f0e6da','#8a6a52'],mk:[['band',.1,.16,'#c87a62',.45],['scat',30,.6,'#1e1a12',-.95,-.1]]},
+  '돌상어':{b:{D:.16,pk:.3,m:.6,pr:.26,tk:.6},m:{t:'dn',l:3,br:4,brL:3},e:{r:2.4,top:1},fin:{d1:[.32,.44,5,0],a:[.64,.74,3,0],p:1.3,v:[.4]},tl:{t:'f',s:1},c:['#7a6a4a','#a8987a','#ece4d2','#988866'],mk:[['blotchrow',6,'#4a3e2c'],['scat',20,.5,'#4a3e2c',-.95,-.4]]},
+  '가는돌고기':{b:{D:.16,pk:.4,m:1.05,pr:.24},m:{t:'n',l:3},e:{r:2.8},fin:{d1:[.4,.52,5,0],a:[.62,.74,4,0],p:.9,v:[.42]},tl:{t:'f',s:1},c:['#8a7a52','#c8b888','#f2ecd8','#b8a670'],mk:[['band',.0,.12,'#26221a',.9,0,.98]]},
+  '망상어':{b:{D:.42,pk:.4,m:.62,pr:.24},m:{t:'n',l:3},e:{r:3.2},fin:{d1:[.3,.72,5,10],a:[.56,.8,5,3],p:1,v:[.34]},tl:{t:'f',s:1.05},c:['#4e5866','#8c96a0','#e6e8ea','#6a7480'],mk:[['hl',6,-.7,.4,'#5a6470',.5]],fx:'sv'},
+  '보리멸':{b:{D:.16,pk:.4,m:1.35,pr:.2},m:{t:'n',l:3},e:{r:2.8},fin:{d1:[.3,.44,5,11],d2:[.46,.78,4,0],a:[.5,.78,3,2],p:.8,v:[.3]},tl:{t:'e',s:1},c:['#b8aa82','#d8ceb0','#f6f2e8','#d0c39a'],mk:[['band',-.05,.06,'#efe8d4',.6]],fx:'sv'},
+  '열기':{base:'볼락',c:['#a2462a','#c86a40','#f0c8a6','#b8563a'],mk:[['vb',5,.28,.86,3,'#7a2e1a',.3]]},
+  '붕장어':{b:{D:.09,pk:.3,m:1,pr:.5},m:{t:'n',l:6},e:{r:2.4},fin:{d1:[.22,1.02,2.6,0],a:[.42,1.02,2.6,0],p:.8},tl:{t:'c',s:.7},c:['#5a5448','#8a8270','#ece8dc','#6a6252'],mk:[['rows',1,-.05,0,20,.75,'#f8f4ea'],['rows',1,-.55,0,14,.6,'#f0ece0']],fx:'wet'},
+  '참문어':{oct:1,nogold:1,c:['#7a3e2a','#a65a3e','#e8c0a6','#7a3e2a'],mk:[['scat',22,1,'#5a2a1c']]},
+  '백조기':{b:{D:.28,pk:.38,m:.85,pr:.22},m:{t:'n',l:6},e:{r:3},fin:{d1:[.24,.38,6,10],d2:[.4,.8,4,0],a:[.62,.72,4,2],p:1,v:[.32]},tl:{t:'w',s:1},c:['#8a8e90','#cdd2d4','#f6f8f8','#b8bcbe'],mk:[['dot',.2,-.42,2.4,'#1e2224']],fx:'sv'},
+  '쥐치':{b:{D:.56,pk:.36,m:.45,pr:.26},m:{t:'n',l:2},e:{r:3},fin:{d1:[.22,.26,20,1],d2:[.5,.8,5,0],a:[.52,.8,5,0],p:.7},tl:{t:'r',s:1},c:['#5e5a4a','#8e8a72','#d8d2bc','#a49c78'],mk:[['mott','#3e3a2e'],['scat',30,.5,'#2e2a20',-.95,.6]]},
+  '동자개':{b:{D:.2,pk:.3,m:.5,pr:.26,tk:.55},m:{t:'n',l:7,br:4,brL:8,cat:1},e:{r:2.2},fin:{d1:[.3,.38,7,1],a:[.56,.82,3.4,0],ad:.82,p:1.1,v:[.42]},tl:{t:'f',s:.95},c:['#6a5a2a','#c8a648','#f2e4b0','#8a6e2e'],mk:[['snake','#3a2e14']],fx:'wet'},
+  '청줄돔':{b:{D:.55,pk:.4,m:.5,pr:.34},m:{t:'n',l:2},e:{r:3},fin:{d1:[.22,.8,6,12],a:[.52,.82,6,3],p:1,v:[.32]},tl:{t:'r',s:1,col:'#f0c83a'},c:['#2a2c3e','#4a4e5e','#5e6272','#2a2c3e'],mk:[['hl',9,-.85,.85,'#58a8e8',.7]]},
+  '범돔':{b:{D:.55,pk:.4,m:.5,pr:.3},m:{t:'n',l:2},e:{r:3},fin:{d1:[.24,.76,7,11],a:[.54,.8,6,3],p:1,v:[.32]},tl:{t:'e',s:1,col:'#e8c840'},c:['#d8b830','#ecd458','#f6eaa8','#e0c440'],mk:[['obl',5,-.55,1.25,.9,'#1e1e18',2.4],['eyeline','#1e1e18']]},
+ '잿방어':{b:{D:.31,pk:.4,m:1,pr:.14},m:{t:'n',l:6,jaw:'sq'},e:{r:3},fin:{d1:[.24,.3,3,6],d2:[.32,.74,5,0],a:[.52,.74,4,0],p:.9,v:[.32]},tl:{t:'f',s:1.15,col:'#8a7a5a'},c:['#5a4a56','#a89a92','#f0eeec','#7a6a6a'],mk:[['band',0,.1,'#c8a050',.45],['eyeband',1,'#2e2228']],fx:'sv'},
+  '아홉동가리':{b:{D:.42,pk:.38,m:.55,pr:.26},m:{t:'n',l:3,lip:1},e:{r:3},fin:{d1:[.2,.5,7,17],d2:[.5,.8,7,0],a:[.6,.78,5,3],p:1.6,v:[.32]},tl:{t:'f',s:1},c:['#d8d0c4','#efe8de','#faf6f0','#c8b8a6'],mk:[['vb',9,.12,.92,2.4,'#5a3020',.85]]},
+  '강담돔':{b:{D:.45,pk:.36,m:.55,pr:.32},m:{t:'bk',l:3},e:{r:3.2},fin:{d1:[.22,.72,7,12],a:[.58,.76,5,3],p:1.1,v:[.32]},tl:{t:'t',s:1},c:['#8a9094','#b8bec0','#e8eaea','#5a6064'],mk:[['scat',70,1,'#1e2224',-.95,.8,1]]},
+  '거북복':{b:{D:.44,pk:.3,m:.3,pr:.36},m:{t:'n',l:2,lip:1},e:{r:3},fin:{d2:[.64,.74,6,0],a:[.68,.78,5,0],p:1},tl:{t:'r',s:1},c:['#b8902a','#d8b040','#efd890','#c8a03a'],mk:[['scat',34,1,'#5ab4e8',-.95,.8,1]]},
+  '정어리':{b:{D:.18,pk:.4,m:1.05,pr:.18},m:{t:'n',l:4},e:{r:3},fin:{d1:[.4,.52,5,0],a:[.64,.76,3,0],p:.8,v:[.46]},tl:{t:'f',s:1.1},c:['#2f5f7a','#9ab4c4','#f4f7f8','#7a98aa'],mk:[['rows',1,-.3,0,8,1.1,'#16232a']],fx:'sv'},
+  '명태':{b:{D:.17,pk:.36,m:1,pr:.2},m:{t:'u',l:7,br:1,brL:1.6},e:{r:3.2},fin:{d1:[.28,.4,5,0],d2:[.44,.58,5,0],d3:[.62,.76,4,0],a:[.44,.6,3,0],a2:[.64,.76,3,0],p:.9,v:[.24]},tl:{t:'e',s:1},c:['#5e5240','#a89a82','#f0ece2','#7a6e58'],mk:[['hl',2,-.55,-.15,'#4a3e2c',2.2]]},
+  '보름달물해파리':{jel:'moon',c:['#b070c0','#dfe8f4','#ffffff','#c8d4e8']},
+  '노무라입깃해파리':{jel:'nomura',c:['#8a5a3a','#e6d6c4','#f6eee4','#c8a484']},
+  '푸른우산관해파리':{jel:'porpita',c:['#1e4a9a','#3a7ad8','#f0e8a0','#3a8ae8']},
+  '넓은띠큰바다뱀':{b:{D:.13,pk:.5,m:.9,pr:.9},m:{t:'n',l:3},e:{r:1.8},fin:{},tl:{t:'r',s:.9},c:['#5a86b0','#8ab4d8','#c8dcec','#2a2e34'],mk:[['vb',14,.12,.98,2.4,'#1a1e24',.95]]},
+  '청자고둥':{cone:1,c:['#3a1e0c','#7a4824','#f6eede','#3a1e0c']},
+  '컨빅시클리드':{b:{D:.46,pk:.38,m:.7,pr:.3},m:{t:'n',l:4,lip:1},e:{r:3},fin:{d1:[.24,.66,7,17],d2:[.66,.82,8,0],a:[.6,.82,6,9],p:1,v:[.32]},tl:{t:'r',s:1},c:['#7a8084','#c4cac8','#eceeea','#9aa0a0'],mk:[['vb',8,.16,.86,2.8,'#16181a',.9]]},
+  '비파':{b:{D:.2,pk:.24,m:.45,pr:.3,tk:.6},m:{t:'dn',l:4,lip:1,br:1,brL:2},e:{r:2.2,top:1},fin:{d1:[.22,.44,10,1],a:[.62,.7,3,0],ad:.82,p:1.4,v:[.4]},tl:{t:'e',s:1.05},c:['#6a5438','#a8906a','#d8c8a4','#5a4a34'],mk:[['mott','#2e2418'],['scat',50,.9,'#2e2418',-.95,.7,1]]},
+  '구피':{b:{D:.26,pk:.4,m:.9,pr:.4},m:{t:'up',l:2},e:{r:3.4},fin:{d1:[.46,.62,6,0],a:[.6,.7,3,0],p:.7,v:[.44]},tl:{t:'r',s:1.4,col:'#f07a2a'},c:['#7a8a7a','#a8b4a4','#e8ece4','#3a8ae0'],mk:[['dot',.5,-.1,2.2,'#3a8ae0'],['dot',.66,.1,1.8,'#f07a2a'],['dot',.38,.2,1.6,'#f0e040']]},
+  '마블가재':{cray:1,clw:.55,c:['#3e3a26','#7a7650','#c8c0a0','#3e3a26']},
+ '용치놀래기':{b:{D:.24,pk:.4,m:.9,pr:.3},m:{t:'n',l:3,lip:1},e:{r:2.6},fin:{d1:[.24,.84,4,9],a:[.56,.84,3.5,3],p:.9,v:[.34]},tl:{t:'t',s:1},c:['#2e6a52','#4e9a76','#cfe6c4','#6aa88a'],mk:[['dot',.3,-.05,2.4,'#141a16'],['hl',2,.1,.3,'#e08a4a',1]]},
+  '자리돔':{b:{D:.4,pk:.4,m:.6,pr:.24},m:{t:'n',l:2},e:{r:3.4},fin:{d1:[.26,.72,6,13],a:[.56,.76,5,2],p:1,v:[.34]},tl:{t:'f',s:1.05},c:['#2e3036','#4e525a','#8a8e96','#3a3e46'],mk:[['dot',.72,-.78,2,'#f4f4f0']]},
+  '벤자리':{b:{D:.3,pk:.38,m:.8,pr:.24},m:{t:'n',l:4},e:{r:3},fin:{d1:[.24,.62,6,13],a:[.6,.76,4,3],p:1,v:[.32]},tl:{t:'e',s:1},c:['#5a5440','#8a846a','#e0dccc','#6a6450'],mk:[['hl',3,-.6,.2,'#e8dca0',1.4]]},
+  '황줄깜정이':{b:{D:.38,pk:.4,m:.6,pr:.24},m:{t:'n',l:2},e:{r:3},fin:{d1:[.26,.74,5,11],a:[.58,.78,5,3],p:.9,v:[.34]},tl:{t:'f',s:1},c:['#5a6068','#8a9098','#d4d8dc','#6a7078'],mk:[['hl',9,-.85,.75,'#c8a050',.7]]},
+  '베도라치':{b:{D:.13,pk:.4,m:.6,pr:.6},m:{t:'n',l:3},e:{r:2},fin:{d1:[.1,.98,2.4,0],a:[.5,.98,2,0],p:.6},tl:{t:'r',s:.7},c:['#6a5a3a','#9a8a62','#d8ccac','#7a6a4a'],mk:[['vb',12,.12,.95,2.4,'#4a3e28',.5],['mott','#3e3220']]},
+  '노랑볼락':{base:'볼락',c:['#a8702a','#d0962e','#f0d08a','#c08a2e'],mk:[['vb',4,.3,.86,3.4,'#7a4a1a',.35],['ll',1,'#f6e4b0']]},
+  '띠볼락':{base:'우럭',c:['#5a5a52','#8a8a7a','#d8d4c4','#6a6a5e'],mk:[['vb',3,.3,.88,5,'#1e1e1a',.7]]},
+  '개볼락':{base:'우럭',b:{D:.36,pk:.3,m:.7,pr:.3},c:['#2a2018','#3e3224','#9a8a6a','#2e2418'],mk:[['blotch',8,'#c8a84a',.5,-.6,.6]]},
+  '황점볼락':{base:'우럭',c:['#5a3e2a','#7a5a3e','#c8b090','#6a4a32'],mk:[['scat',30,1.1,'#e8c040',-.9,.6]]},
+  '붉은쏨뱅이':{base:'쏨뱅이',c:['#b8461e','#d8703a','#f4c89a','#c85a2a'],mk:[['blotch',6,'#8a2e16',.35,-.8,.4]]},
+  '홍감펭':{b:{D:.32,pk:.3,m:.75,pr:.28},m:{t:'n',l:8},e:{r:5},fin:{d1:[.2,.58,7,12],d2:[.58,.78,6,0],a:[.6,.78,5,3],p:1.3,v:[.3]},tl:{t:'t',s:1},c:['#c03a2a','#e0644a','#f6c8b4','#d04a36'],mk:[['blotch',4,'#7a1e14',.55,-.95,-.5]]},
+  '대구':{b:{D:.22,pk:.3,m:.75,pr:.2},m:{t:'n',l:8,br:1,brL:3},e:{r:3},fin:{d1:[.28,.4,6,0],d2:[.44,.6,6,0],d3:[.64,.78,5,0],a:[.46,.62,4,0],a2:[.66,.78,4,0],p:1,v:[.22]},tl:{t:'t',s:1},c:['#6a5a40','#a8987a','#f0ece0','#7a6a50'],mk:[['scat',40,1,'#4e4230',-.95,.2],['ll',1,'#f4f0e4']]},
+  '대구횟대':{b:{D:.24,pk:.2,m:.4,pr:.24,tk:.55},m:{t:'n',l:8},e:{r:2.6,top:1},fin:{d1:[.2,.4,6,10],d2:[.42,.84,5,0],a:[.48,.84,4,0],p:2.2,v:[.3]},tl:{t:'t',s:.95},c:['#4e4e36','#7a7a56','#d8d4b8','#6a6a4a'],mk:[['vb',4,.2,.8,4,'#2e2e1e',.5],['mott','#3a3a24']]},
+  '눈볼대':{b:{D:.3,pk:.36,m:.8,pr:.22},m:{t:'u',l:7},e:{r:5.6},fin:{d1:[.3,.44,6,9],d2:[.46,.62,5,0],a:[.6,.74,4,3],p:1,v:[.3]},tl:{t:'f',s:1.05},c:['#c8402e','#e0705a','#f8e0d8','#d85a44'],mk:[],fx:'sv'},
+  '강도다리':{flat:'L',b:{D:.48},c:['#4e463a','#6a604e','#cfc4ac','#e8a040'],mk:[['scat',16,1.4,'#2a241c'],['scat',10,1,'#e8dcc4']],e:{r:2.6}},
+  '성대':{b:{D:.24,pk:.28,m:.6,pr:.22},m:{t:'n',l:5},e:{r:3},fin:{d1:[.22,.36,6,9],d2:[.38,.78,4,0],a:[.4,.78,3,0],p:2.6,v:[.3]},tl:{t:'e',s:1},c:['#8a3a2a','#c0644a','#f0c8b4','#2e8aa0'],mk:[['scat',30,.6,'#5a2418',-.95,-.2]]},
+  '참조기':{b:{D:.26,pk:.38,m:.9,pr:.22},m:{t:'n',l:6},e:{r:3},fin:{d1:[.24,.38,6,9],d2:[.4,.8,4,0],a:[.62,.72,4,2],p:1,v:[.32]},tl:{t:'w',s:1},c:['#8a8460','#c4b67a','#f0cc48','#d8b040'],mk:[],fx:'sv'},
+  '긴꼬리벵에돔':{base:'벵에돔',tl:{t:'f',s:1.2},mk:[['eyeline','#121416']]},
+  '능성어':{b:{D:.33,pk:.32,m:.75,pr:.28},m:{t:'u',l:10},e:{r:2.8},fin:{d1:[.24,.6,6,11],d2:[.6,.8,6,0],a:[.62,.8,5,3],p:1.3,v:[.3]},tl:{t:'r',s:1},c:['#6a6050','#9a9078','#d8d0bc','#7a7060'],mk:[['vb',7,.14,.92,3,'#3a3024',.65]]},
+  '자바리':{b:{D:.33,pk:.32,m:.75,pr:.28},m:{t:'u',l:10},e:{r:2.6},fin:{d1:[.24,.6,6,11],d2:[.6,.8,6,0],a:[.62,.8,5,3],p:1.3,v:[.3]},tl:{t:'r',s:1},c:['#5a4630','#8a7050','#cbb898','#6a5438'],mk:[['vb',6,.18,.88,4,'#3a2a1a',.45],['mott','#3a2a1a']]},
+  '혹돔':{b:{D:.38,pk:.36,m:.5,pr:.3},m:{t:'n',l:5,lip:1},e:{r:2.6},fin:{d1:[.24,.7,6,12],a:[.58,.78,5,3],p:1.1,v:[.32]},tl:{t:'t',s:1},c:['#7a3a3a','#a85a4e','#e8c4b4','#8a4a44'],mk:[['hump',6,'#8a4a44'],['band',-.1,.08,'#e8d4c8',.4]]},
+  '넙치농어':{base:'농어',b:{D:.3,pk:.36,m:1,pr:.24},c:['#3e4a54','#8a98a2','#eef2f4','#4a5660'],jm:[]},
+  '갈전갱이':{b:{D:.42,pk:.4,m:.7,pr:.14},m:{t:'n',l:4},e:{r:3.6},fin:{d1:[.3,.42,6,8],d2:[.44,.8,5,0],a:[.5,.8,4,2],p:1.2,v:[.34]},tl:{t:'f',s:1.1},c:['#5e6e74','#b4c0c4','#f2f4f4','#c8b46a'],mk:[['scute',.45,.98]],fx:'sv'},
+  '가다랑어':{base:'참다랑어',b:{D:.3,pk:.42,m:1,pr:.2},c:['#1c2a48','#5a6e8e','#eef2f6','#24364f'],mk:[['hl',5,.15,.75,'#2a3450',1.4]]},
+  '꼬치고기':{b:{D:.13,pk:.45,m:1.5,pr:.2},m:{t:'u',l:9,teeth:1},e:{r:2.8},fin:{d1:[.36,.44,5,5],d2:[.62,.7,4,0],a:[.62,.7,4,0],p:.7,v:[.36]},tl:{t:'f',s:1.05},c:['#6a6a58','#a8a88e','#f0f0e6','#b8a85a'],mk:[['band',-.1,.08,'#c8a84a',.8]],fx:'sv'},
+  '연어병치':{b:{D:.46,pk:.4,m:.4,pr:.2},m:{t:'n',l:2},e:{r:3},fin:{d1:[.3,.8,5,6],a:[.48,.8,4,3],p:.9},tl:{t:'f',s:1.05},c:['#6a6058','#a89c90','#e8e2da','#7a7068'],mk:[['dot',.2,-.3,2.2,'#2a2420']],fx:'sv'},
+  '청어':{b:{D:.22,pk:.4,m:1,pr:.18},m:{t:'n',l:4},e:{r:3},fin:{d1:[.4,.52,6,0],a:[.64,.76,3,0],p:.8,v:[.46]},tl:{t:'f',s:1.1},c:['#2a5a72','#9ab0c0','#f4f7f8','#7a98aa'],mk:[],fx:'sv'},
+  '갯장어':{b:{D:.1,pk:.3,m:1.1,pr:.5},m:{t:'n',l:11,teeth:1},e:{r:2.6},fin:{d1:[.2,1.02,2.4,0],a:[.36,1.02,2.4,0],p:.8},tl:{t:'c',s:.7},c:['#6a7078','#a8b0b8','#eef0f2','#7a8088'],mk:[],fx:'sv'},
+  '뱀장어':{b:{D:.1,pk:.3,m:.8,pr:.5},m:{t:'u',l:4},e:{r:2},fin:{d1:[.36,1.02,2.6,0],a:[.46,1.02,2.6,0],p:.7},tl:{t:'c',s:.7},c:['#2e3a26','#4a5a3a','#e8e4c8','#3a4630'],mk:[],fx:'wet'},
+  '대문어':{oct:1,nogold:1,c:['#8a2e22','#b0463a','#e8b0a0','#8a2e22'],mk:[['scat',26,1.2,'#e8c0b0']]},
+  '낙지':{oct:1,nogold:1,c:['#6a5a50','#8a7a6e','#d8ccc0','#6a5a50'],mk:[['scat',16,.7,'#4a3e36']]},
+  '호래기':{sq:'long',c:['#b88a7a','#d8b4a4','#f4e4dc','#c89a8a'],mk:[['scat',14,.7,'#8a4a3a']],arms:.5},
+  '화살촉오징어':{sq:'rear',c:['#c8a090','#e0c0b0','#f6e8e0','#d0aa9a'],mk:[['scat',18,.6,'#9a5a4a']]},
+  '연어':{b:{D:.26,pk:.38,m:.95,pr:.22},m:{t:'u',l:9,teeth:1},e:{r:2.6},fin:{d1:[.38,.52,6,0],a:[.62,.74,4,0],ad:.82,p:.9,v:[.44]},tl:{t:'e',s:1.05},c:['#3e4a3a','#7a7a5a','#d8d0b8','#4a5040'],mk:[['vb',7,.22,.84,3,'#7a3a5a',.55]]},
+  '눈불개':{b:{D:.24,pk:.4,m:.95,pr:.22},m:{t:'n',l:3},e:{r:3},fin:{d1:[.38,.52,6,0],a:[.64,.76,4,0],p:.9,v:[.42]},tl:{t:'f',s:1.05},c:['#6a7478','#c4ccce','#f4f6f6','#a4aeb0'],mk:[['scales','#a8b0b2'],['dot',.08,-.55,1.6,'#d8402e']],fx:'sv'},
+  '갈겨니':{b:{D:.25,pk:.4,m:1,pr:.2},m:{t:'n',l:3},e:{r:3.8},fin:{d1:[.42,.54,6,0],a:[.6,.78,6,0],p:.9,v:[.42]},tl:{t:'f',s:1.05},c:['#5a6a60','#b4c0b8','#f2f4f0','#9aa89e'],mk:[['band',-.05,.12,'#2a3a34',.8,.1,.98]],fx:'sv'},
+  '황어':{b:{D:.24,pk:.4,m:1,pr:.2},m:{t:'n',l:4},e:{r:2.8},fin:{d1:[.4,.52,6,0],a:[.62,.74,4,0],p:.9,v:[.42]},tl:{t:'f',s:1.05},c:['#2e3a30','#6a7a66','#e8e2d0','#d0603a'],mk:[['band',-.3,.1,'#e8703a',.9],['band',.35,.12,'#e8703a',.9]]},
+  '퉁가리':{b:{D:.2,pk:.3,m:.45,pr:.3,tk:.55},m:{t:'n',l:6,br:4,brL:5,cat:1},e:{r:1.6},fin:{d1:[.3,.38,6,1],a:[.6,.86,3,0],ad:.8,p:1.2,v:[.42]},tl:{t:'r',s:.9},c:['#8a6a32','#b08a44','#e0cc98','#a07a3a'],mk:[],fx:'wet'},
+  '떡붕어':{base:'붕어',b:{D:.46,pk:.4,m:.7,pr:.3},c:['#6a7470','#b4bcb6','#eef0ec','#8a9490'],mk:[['scales','#9aa49e']]},
+  '버들치':{b:{D:.22,pk:.4,m:.95,pr:.26},m:{t:'n',l:3},e:{r:3},fin:{d1:[.42,.54,5,0],a:[.62,.74,4,0],p:.9,v:[.42]},tl:{t:'e',s:1},c:['#6a5a40','#a8987a','#e8e0cc','#8a7a5e'],mk:[['scat',40,.6,'#2e261a',-.95,.3],['band',0,.06,'#4a3e2a',.4]]},
+  '동사리':{b:{D:.24,pk:.24,m:.45,pr:.36,tk:.55},m:{t:'u',l:8},e:{r:2.6,top:1},fin:{d1:[.32,.44,5,7],d2:[.48,.76,5,0],a:[.54,.76,4,0],p:1.3,v:[.3]},tl:{t:'r',s:.95},c:['#4e4232','#7a6a52','#d0c4a8','#5e5240'],mk:[['vb',3,.36,.82,5,'#2a2218',.6],['mott','#2e2618']]},
+  '미꾸라지':{b:{D:.13,pk:.4,m:.6,pr:.6},m:{t:'dn',l:3,br:4,brL:4},e:{r:1.8},fin:{d1:[.48,.58,4,0],a:[.68,.76,3,0],p:.8,v:[.5]},tl:{t:'r',s:.9},c:['#5a5232','#8a8250','#d8d0a8','#6a6240'],mk:[['scat',50,.6,'#2e2a18',-.95,.4]]},
+ '해삼':{inv:'cuc',c:['#3a2e22','#5a4632','#c8b090','#3a2e22']},
+  '아무르불가사리':{inv:'star',c:['#8a2e5a','#e8a83a','#c84a5a','#8a2e5a']},
+  '보라성게':{inv:'urchin',c:['#3a2242','#4a2e54','#9a7aa8','#3a2242']},
+  '군소':{inv:'hare',c:['#4a4030','#7a6a4a','#d8ccb0','#4a4030']},
+  '꽃게':{inv:'crab',swim:1,c:['#5a4a6a','#7a6a8a','#d8d0e8','#5a4a6a']},
+  '민꽃게':{inv:'crab',pad:1,c:['#3e3a2e','#5e5644','#a89a7a','#3e3a2e']},
+  '미역':{inv:'kelp',c:['#3a3a1a','#6a6a2e','#a8a85a','#3a3a1a']},
+  '다시마':{inv:'belt',c:['#2e2a14','#5a4e22','#8a7a3e','#2e2a14']},
+  '모자반':{inv:'sarg',c:['#5a4a1a','#8a7a2e','#c8b45a','#5a4a1a']},
+  '파래':{inv:'ulva',c:['#2e7a2e','#5ab84a','#bde8a0','#2e7a2e']}
 };
 FA['숭어 새끼']=FA['숭어 새끼(모치·동어)'];
 // ---- 작은 도구 ----
@@ -6399,7 +6718,7 @@ function faFishOps(A,ops,o){const RC=!!o.rect,X0=RC?0:6,XT=RC?95:78,LB=XT-X0,CY=
     P.push([X(t1),y(t1)+s*-.6]);
     ops.push({d:n>0?faPath(P,true):faSmooth(P,true),f:fc,s:ink,w:1.2});
     if(poison)ops.push({d:faPath([[X(t0),y(t0)],[X(t0)+1,y(t0)+s*h]]),s:'#c43a2a',w:1});};
-  finTop(F.d1);finTop(F.d2);if(F.a)finTop(F.a,true);
+  finTop(F.d1);finTop(F.d2);if(F.d3)finTop(F.d3);if(F.a)finTop(F.a,true);if(F.a2)finTop(F.a2,true);/* 신규: 등 3·뒷 2 (명태) */
   if(F.ft){const t=F.d1[1];ops.push({d:'M'+faR(X(t))+' '+faR(top(t)-2)+'Q'+faR(X(t)+6)+' '+faR(top(t)-7)+' '+faR(X(t)+12)+' '+faR(top(t+.1)-3),s:ink,w:1.1});}
   if(F.fl){const[nu,nd]=F.fl,a0=F.d2?F.d2[1]:.6;for(let i=0;i<nu;i++){const t=a0+.02+(.985-a0-.02)*i/nu;ops.push({d:faPath([[X(t),top(t)+.4],[X(t+.012),top(t)-2.4],[X(t+.026),top(t+.026)+.4]],true),f:fc,s:ink,w:.9});}
     const b0=F.a?F.a[1]:.6;for(let i=0;i<nd;i++){const t=b0+.02+(.985-b0-.02)*i/nd;ops.push({d:faPath([[X(t),bot(t)-.4],[X(t+.012),bot(t)+2.4],[X(t+.026),bot(t+.026)-.4]],true),f:fc,s:ink,w:.9});}}
@@ -6428,7 +6747,7 @@ function faFishOps(A,ops,o){const RC=!!o.rect,X0=RC?0:6,XT=RC?95:78,LB=XT-X0,CY=
   // 무늬
   const mk=(o.juvenile&&Array.isArray(A.jm)?A.jm:[]).concat(A.mk||[]);
   for(const M of mk){const ty_=M[0];
-    if(ty_==='hl'){const[,n,v0,v1,col,w]=M;for(let i=0;i<n;i++){const v=v0+(v1-v0)*i/Math.max(1,n-1),P=[];for(let j=4;j<=37;j++)P.push(at(j/40,v));ops.push({d:faSmooth(P),s:col,w:w||.7,c:1,o:.85});}}
+    if(ty_==='hump'){const[,sz,col]=M,[x,y]=at(.13,-1);ops.push({d:faEll(x+1,y-1.2,sz*1.3,sz),f:col||C[0],s:FA_INK,w:1.2});}/* 신규: 이마 혹 */else if(ty_==='obl'){const[,n,v0,v1,sl,col,w]=M;for(let i=0;i<n;i++){const v=v0+(v1-v0)*i/Math.max(1,n-1),P=[];for(let j=0;j<=36;j++){const t=.02+j/38;P.push(at(t,v-sl*t));}ops.push({d:faSmooth(P),s:col,w:w||1.4,c:1,o:.95});}}/* 신규: 비스듬한 줄 */if(ty_==='hl'){const[,n,v0,v1,col,w]=M;for(let i=0;i<n;i++){const v=v0+(v1-v0)*i/Math.max(1,n-1),P=[];for(let j=4;j<=37;j++)P.push(at(j/40,v));ops.push({d:faSmooth(P),s:col,w:w||.7,c:1,o:.85});}}
     else if(ty_==='ll'){const[,n,col]=M,vs=n===1?[-.42]:[-.8,-.42,0,.4,.78];for(const v of vs.slice(0,n)){const P=[];for(let j=5;j<=38;j++)P.push(at(j/40,v));ops.push({d:faSmooth(P),s:col,w:.7,c:1,o:.9});}}
     else if(ty_==='band'){const[,v,w,col,op,t0,t1]=M,P=[],Q=[];const a=t0==null?.04:t0,z=t1==null?.99:t1;for(let j=0;j<=30;j++){const t=a+(z-a)*j/30;P.push(at(t,v-w));Q.push(at(t,v+w));}ops.push({d:faSmooth(P.concat(Q.reverse()),true),f:col,c:1,o:op==null?.95:op});}
     else if(ty_==='vb'){const[,n,t0,t1,w,col,op]=M;for(let i=0;i<n;i++){const t=t0+(t1-t0)*i/Math.max(1,n-1),dt=w/LB;ops.push({d:faSmooth([at(t-dt,-1.2),at(t+dt*.6,-.2),at(t+dt,1.2),at(t-dt*.4,1.25),at(t-dt*1.3,.1)],true),f:col,c:1,o:op==null?.8:op});}}
@@ -6478,7 +6797,8 @@ function faFishOps(A,ops,o){const RC=!!o.rect,X0=RC?0:6,XT=RC?95:78,LB=XT-X0,CY=
     if(mm.jaw==='rd')ops.push({d:'M'+faR(sx+ml-1.4)+' '+faR(sy0-1.2)+'Q'+faR(sx+ml+.6)+' '+faR(sy0-1)+' '+faR(sx+ml)+' '+faR(sy0+.4),s:ink,w:1.1});}
   if(mm.teeth)for(let i=0;i<3;i++)ops.push({d:faPath([[sx+1+i*1.4,sy0+.4],[sx+1.6+i*1.4,sy0+1.6],[sx+2.2+i*1.4,sy0+.4]],true),f:'#ffffff',s:ink,w:.4});
   if(mm.br){const L=mm.brL||4;ops.push({d:'M'+faR(sx+1.4)+' '+faR(sy0+.8)+'q'+faR(-L*.4)+' '+faR(L*.35)+' '+faR(-L*.25)+' '+faR(L*(mm.cat?.55:.9)),s:ink,w:mm.cat?1.1:.9});
-    if(mm.br>1)ops.push({d:'M'+faR(sx+2.8)+' '+faR(sy0+1.4)+'q'+faR(-L*.1)+' '+faR(L*.3)+' '+faR(L*.15)+' '+faR(L*(mm.cat?.3:.6)),s:ink,w:.9});}
+    if(mm.br>1)ops.push({d:'M'+faR(sx+2.8)+' '+faR(sy0+1.4)+'q'+faR(-L*.1)+' '+faR(L*.3)+' '+faR(L*.15)+' '+faR(L*(mm.cat?.3:.6)),s:ink,w:.9});
+    for(let k=2;k<mm.br;k++){const dx=k===2?-1.2:3.8,dy=k===2?-2.2:2.4,LL=L*(k===2?.8:.5);ops.push({d:'M'+faR(sx+dx)+' '+faR(sy0+dy)+'q'+faR(-LL*.5)+' '+faR(LL*(k===2?-.3:.3))+' '+faR(-LL*.7)+' '+faR(LL*(k===2?.1:.6)),s:ink,w:.8});}/* 신규: 수염 3~4쌍 */}
   // 눈
   const E=Object.assign({r:3},A.e||{});if(o.juvenile)E.r*=1.2;const [ex,ey]=at(E.top?.1:.085,E.top?-.62:-.3);
   if(E.fat)ops.push({d:faEll(ex,ey,E.r+1.4,E.r+1),f:'#ffffff',o:.35,s:'#ffffff',w:.4});
@@ -6528,8 +6848,8 @@ function faOctOps(A,ops,o){const C=o.col||A.c,ink=FA_INK,rng=faRng(faSeed(o.name
     ops.push({d:'M'+faR(x1)+' '+faR(y1)+'C'+faR(x1-6)+' '+faR(y1+6)+' '+faR(x2)+' '+faR(y2)+' '+faR(x3)+' '+faR(y3),s:ink,w:3.6});ops.push({d:'M'+faR(x1)+' '+faR(y1)+'C'+faR(x1-6)+' '+faR(y1+6)+' '+faR(x2)+' '+faR(y2)+' '+faR(x3)+' '+faR(y3),s:C[1],w:2.2});}
   const body=faSmooth([[cx-14,cy+6],[cx-10,cy-8],[cx+4,cy-14],[cx+18,cy-8],[cx+20,cy+4],[cx+8,cy+10],[cx-6,cy+12]],true);
   ops.push({d:body,f:C[1]});ops.push({d:faEll(cx+5,cy-6,12,6),f:C[0],c:1,o:.5});
-  for(const M of A.mk||[]){const[,n,r,col]=M;for(let i=0;i<n;i++)ops.push({d:faCircle(cx-8+26*rng(),cy-10+18*rng(),r*(.6+.8*rng())),f:col,c:1,o:.8});}
-  for(const s of[0,1]){const x=cx-10+s*6,y=cy+9+s*1.5;ops.push({d:faCircle(x,y,2.6),f:'#d6a83a',s:'#7a5a1a',w:.6});ops.push({d:faCircle(x,y,1.2),f:'#5a3e1c'});}
+  for(const M of A.mk||[]){const[ty,n,r,col]=M;for(let i=0;i<n;i++){const X=cx-8+26*rng(),Y=cy-10+18*rng(),R=r*(.6+.8*rng());if(ty==='ring'){ops.push({d:faCircle(X,Y,R),s:'#1a1a22',w:1.7,c:1});ops.push({d:faCircle(X,Y,R),s:col,w:1,c:1});}else ops.push({d:faCircle(X,Y,R),f:col,c:1,o:.8});}}/* 신규: 고리 무늬 */
+  if(!A.nogold)for(const s of[0,1]){const x=cx-10+s*6,y=cy+9+s*1.5;ops.push({d:faCircle(x,y,2.6),f:'#d6a83a',s:'#7a5a1a',w:.6});ops.push({d:faCircle(x,y,1.2),f:'#5a3e1c'});}
   ops.push({d:faCircle(cx-9,cy+1,2.4),f:'#f4eee2',s:ink,w:.9});ops.push({d:faCircle(cx-9,cy+1,1.4),f:'#1b1610'});
   ops.push({d:body,s:ink,w:1.6});return{body};}
 // ---- 보리새우 ----
@@ -6543,12 +6863,78 @@ function faShrimpOps(A,ops,o){const C=o.col||A.c,ink=FA_INK,cy=30;const seg=[];
   ops.push({d:body,f:C[1]});ops.push({d:faSmooth(top.concat(pts.slice().reverse()),true),f:C[0],c:1,o:.6});
   for(let i=0;i<10;i++){const p=pts[0][0]+(pts[6][0]-pts[0][0])*i/9;let k=0;while(k<pts.length-2&&pts[k+1][0]<p)k++;const y=pts[k][1]+(pts[k+1][1]-pts[k][1])*((p-pts[k][0])/(pts[k+1][0]-pts[k][0]||1));ops.push({d:faPath([[p,y-7],[p+2.2,y],[p+.6,y+6]]),s:'#6b4a2a',w:1.6,c:1,o:.85});}
   ops.push({d:faCircle(19,23,1.8),f:'#1b1610'});ops.push({d:body,s:ink,w:1.5});return{body};}
+
+// ---- 신규: 해파리 (jel: moon 보름달물 · nomura 노무라입깃 · porpita 푸른우산관) ----
+function faJellyOps(A,ops,o){const C=o.col||A.c,ink=FA_INK,rng=faRng(faSeed(o.name)),T=A.jel;let body;
+  if(T==='porpita'){const cx=50,cy=30;for(let i=0;i<22;i++){const a=i/22*Math.PI*2,r1=13,r2=24+rng()*4;const x1=cx+Math.cos(a)*r1,y1=cy+Math.sin(a)*r1*.62,x2=cx+Math.cos(a)*r2,y2=cy+Math.sin(a)*r2*.62;ops.push({d:'M'+faR(x1)+' '+faR(y1)+'L'+faR(x2)+' '+faR(y2),s:C[3],w:1.6});for(let k=1;k<4;k++){const t=k/4;ops.push({d:faCircle(x1+(x2-x1)*t,y1+(y2-y1)*t,.8),f:'#e8f4ff'});}}
+    body=faEll(cx,cy,14,9);ops.push({d:body,f:C[1]});for(let r=11;r>2;r-=3)ops.push({d:faEll(cx,cy,r,r*.64),s:C[0],w:.8,c:1,o:.8});ops.push({d:faEll(cx,cy,3,2),f:C[2]});ops.push({d:body,s:ink,w:1.3});return{body};}
+  const cx=50,top=T==='nomura'?6:10,w=T==='nomura'?34:36,h=T==='nomura'?24:16,by=top+h;
+  body='M'+faR(cx-w)+' '+faR(by)+'C'+faR(cx-w)+' '+faR(top-2)+' '+faR(cx+w)+' '+faR(top-2)+' '+faR(cx+w)+' '+faR(by)+'Q'+faR(cx)+' '+faR(by+4)+' '+faR(cx-w)+' '+faR(by)+'Z';
+  if(T==='nomura'){for(let i=0;i<8;i++){const x=cx-16+i*4.6,L=22+rng()*6;ops.push({d:'M'+faR(x)+' '+faR(by)+'q'+faR(-3+rng()*6)+' '+faR(L*.5)+' '+faR(-1+rng()*2)+' '+faR(L),s:C[3],w:3.4,o:.9});ops.push({d:'M'+faR(x)+' '+faR(by+3)+'q'+faR(-2+rng()*4)+' '+faR(L*.5)+' '+faR(rng()*2)+' '+faR(L-2),s:C[2],w:1.2,o:.8});}}
+  else for(let i=0;i<40;i++){const x=cx-w+1+i*(2*w-2)/39;ops.push({d:'M'+faR(x)+' '+faR(by+.5)+'q'+faR(.6)+' '+faR(2)+' '+faR(0)+' '+faR(3.4),s:C[3],w:.5,o:.7});}
+  ops.push({d:body,f:C[1],o:.78});ops.push({d:'M'+faR(cx-w*.8)+' '+faR(top+h*.35)+'Q'+faR(cx)+' '+faR(top-1)+' '+faR(cx+w*.8)+' '+faR(top+h*.35),s:'#ffffff',w:1.4,o:.6,c:1});
+  if(T==='moon'){for(let i=0;i<4;i++){const x=cx-15+i*10,y=top+h*.6;ops.push({d:'M'+faR(x-3.6)+' '+faR(y+1.6)+'a3.6 3.2 0 1 1 7.2 0',s:C[0],w:2.2,c:1});}}
+  else{for(let i=0;i<26;i++){ops.push({d:faCircle(cx-w*.8+rng()*w*1.6,top+3+rng()*(h-5),.8+rng()),f:C[0],c:1,o:.55});}}
+  ops.push({d:body,s:ink,w:1.3,o:.85});return{body,trans:false};}
+// ---- 신규: 가재 ----
+function faCrayOps(A,ops,o){const C=o.col||A.c,ink=FA_INK,rng=faRng(faSeed(o.name)),cy=32;
+  const body=faSmooth([[22,cy-6],[36,cy-8],[52,cy-7],[66,cy-5],[76,cy-3],[80,cy+1],[76,cy+5],[62,cy+6],[46,cy+7],[30,cy+6],[22,cy+4]],true);
+  ops.push({d:faPath([[78,cy-2],[92,cy-8],[95,cy+1],[92,cy+9],[78,cy+4]],true),f:C[1],s:ink,w:1});
+  for(let i=0;i<4;i++){const x=34+i*6;ops.push({d:'M'+x+' '+(cy+6)+'l-2 7l-2 3',s:ink,w:1.2});}
+  {const k=A.clw||1,T=(x,y)=>[24-(24-x)*k,y];for(const s of[0,1]){const y=s?cy+2:cy-3,P=(x,dy)=>{const q=T(x,y+dy*k);return faR(q[0])+' '+faR(q[1]);};ops.push({d:'M24 '+y+'L'+P(14,s?4:-4)+'L'+P(8,s?2:-2),s:C[0],w:3*Math.max(.6,k)});ops.push({d:faSmooth([[8,s?2:-2],[0,s?-1:-5],[-1,s?5:-9],[4,s?6:-8],[9,s?4:-4]].map(([x,d])=>T(x,y+d*k)),true),f:C[0],s:ink,w:1});}}
+  ops.push({d:'M22 '+(cy-3)+'Q8 '+(cy-18)+' 2 '+(cy-22),s:ink,w:.7});ops.push({d:'M22 '+(cy-2)+'Q12 '+(cy-14)+' 4 '+(cy-14),s:ink,w:.7});
+  ops.push({d:body,f:C[1]});for(let i=0;i<5;i++){const x=48+i*6;ops.push({d:'M'+x+' '+(cy-8)+'Q'+(x+2)+' '+cy+' '+x+' '+(cy+7),s:ink,w:.7,c:1,o:.7});}
+  for(let i=0;i<24;i++)ops.push({d:faBlob(24+rng()*54,cy-6+rng()*12,1.6+rng()*1.6,1+rng(),rng),f:C[0],c:1,o:.7});
+  ops.push({d:faCircle(24,cy-5,1.5),f:'#1b1610'});ops.push({d:body,s:ink,w:1.4});return{body};}
+
+// ---- 신규: 청자고둥(원뿔 껍데기) ----
+function faConeOps(A,ops,o){const C=o.col||A.c,ink=FA_INK,rng=faRng(faSeed(o.name));
+  const body='M14 30Q20 18 34 16L86 26Q90 30 86 34L34 44Q20 42 14 30Z';
+  ops.push({d:'M30 42Q22 50 12 50Q20 46 26 40Z',f:'#c98a7a',s:ink,w:.8});ops.push({d:'M12 30Q4 28 2 24',s:'#c98a7a',w:2});
+  ops.push({d:body,f:C[1]});
+  for(let i=0;i<90;i++){const x=22+rng()*62,y=19+rng()*24,s=.8+rng()*1.2;ops.push({d:faPath([[x-s,y+s*.6],[x,y-s*.6],[x+s,y+s*.6]],true),f:C[2],s:C[0],w:.5,c:1});}
+  ops.push({d:'M30 22L82 28M30 38L82 32',s:C[0],w:2.2,c:1,o:.5});
+  ops.push({d:'M14 30Q20 18 34 16',s:ink,w:1});ops.push({d:body,s:ink,w:1.4});return{body};}
+
+// ---- 신규: 바닥 생물·해초 (inv: cuc 해삼 · star 불가사리 · urchin 성게 · hare 군소 · crab 게 · kelp 미역 · belt 다시마 · sarg 모자반 · ulva 파래) ----
+function faInvOps(A,ops,o){const C=o.col||A.c,ink=FA_INK,rng=faRng(faSeed(o.name)),T=A.inv;let body;
+  if(T==='cuc'){body=faSmooth([[10,32],[18,22],[40,18],[66,19],[86,24],[92,32],[84,40],[60,43],[34,42],[16,40]],true);ops.push({d:body,f:C[1]});
+    for(let i=0;i<22;i++){const x=16+rng()*72,y=19+rng()*10;ops.push({d:faPath([[x-2,y+2],[x,y-2.6],[x+2,y+2]],true),f:C[0],s:ink,w:.6});}
+    ops.push({d:faSmooth([[14,36],[40,40],[70,40],[88,34]]),s:C[2],w:2,c:1,o:.6});for(let i=0;i<6;i++){const a=-.6+i*.24;ops.push({d:'M10 32l'+faR(-4*Math.cos(a))+' '+faR(5*Math.sin(a)),s:C[2],w:1.2});}
+    ops.push({d:body,s:ink,w:1.4});return{body};}
+  if(T==='star'){const cx=50,cy=30,P=[];for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?8:27;P.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r*.9]);}body=faSmooth(P,true);ops.push({d:body,f:C[1]});
+    for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5;for(let k=1;k<6;k++)ops.push({d:faCircle(cx+Math.cos(a)*k*4,cy+Math.sin(a)*k*3.6,1.1),f:C[0],c:1});}
+    for(let i=0;i<30;i++)ops.push({d:faCircle(cx-24+rng()*48,cy-22+rng()*44,.7),f:C[2],c:1,o:.8});ops.push({d:body,s:ink,w:1.4});return{body};}
+  if(T==='urchin'){const cx=50,cy=32;for(let i=0;i<48;i++){const a=i/48*Math.PI*2,L=16+rng()*8;ops.push({d:'M'+cx+' '+cy+'l'+faR(Math.cos(a)*(14+L))+' '+faR(Math.sin(a)*(10+L*.7)),s:C[0],w:1.3});}
+    body=faEll(cx,cy,15,11);ops.push({d:body,f:C[1]});for(let i=0;i<5;i++){const a=i/5*Math.PI*2;ops.push({d:'M'+cx+' '+cy+'l'+faR(Math.cos(a)*14)+' '+faR(Math.sin(a)*10),s:C[2],w:1.2,c:1,o:.6});}ops.push({d:body,s:ink,w:1.3});return{body};}
+  if(T==='hare'){body=faSmooth([[12,36],[20,24],[36,16],[58,14],[78,20],[90,32],[82,42],[56,46],[30,44]],true);ops.push({d:body,f:C[1]});
+    ops.push({d:'M22 24q-4 -10 -10 -12M26 22q0 -10 -4 -14',s:ink,w:2.2});ops.push({d:'M22 24q-4 -10 -10 -12M26 22q0 -10 -4 -14',s:C[1],w:1.2});
+    ops.push({d:faSmooth([[40,18],[56,12],[74,18],[66,26],[48,26]],true),f:C[0],c:1,o:.7});for(let i=0;i<34;i++)ops.push({d:faCircle(16+rng()*72,16+rng()*28,.6+rng()*1.2),f:C[2],c:1,o:.85});
+    ops.push({d:faCircle(26,28,1.2),f:'#1b1610'});ops.push({d:body,s:ink,w:1.4});return{body};}
+  if(T==='crab'){const cx=50,cy=30;for(const s of[-1,1]){for(let i=0;i<4;i++){const x=cx+s*(10+i*3),y=cy+4+i*1.5;ops.push({d:'M'+x+' '+y+'l'+(s*10)+' '+(4+i)+'l'+(s*6)+' '+(6-i),s:ink,w:3.2});ops.push({d:'M'+x+' '+y+'l'+(s*10)+' '+(4+i)+'l'+(s*6)+' '+(6-i),s:C[1],w:2});}
+      if(A.swim||A.pad){ops.push({d:faEll(cx+s*(A.swim?36:31),cy+14,4,2.4),f:C[1],s:ink,w:.8});}
+      ops.push({d:'M'+(cx+s*12)+' '+(cy-6)+'L'+(cx+s*22)+' '+(cy-14),s:C[0],w:3.4});ops.push({d:faSmooth([[cx+s*20,cy-12],[cx+s*24,cy-22],[cx+s*30,cy-20],[cx+s*30,cy-12],[cx+s*24,cy-10]],true),f:C[0],s:ink,w:1});}
+    body=A.swim?faSmooth([[cx-30,cy-2],[cx-12,cy-10],[cx+12,cy-10],[cx+30,cy-2],[cx+12,cy+10],[cx-12,cy+10]],true):faSmooth([[cx-20,cy-4],[cx-10,cy-11],[cx+10,cy-11],[cx+20,cy-4],[cx+14,cy+9],[cx-14,cy+9]],true);
+    ops.push({d:body,f:C[1]});for(let i=0;i<14;i++)ops.push({d:faCircle(cx-18+rng()*36,cy-9+rng()*16,.6+rng()*1.2),f:C[2],c:1,o:.7});
+    ops.push({d:faCircle(cx-4,cy-11,1.4),f:'#1b1610'});ops.push({d:faCircle(cx+4,cy-11,1.4),f:'#1b1610'});ops.push({d:body,s:ink,w:1.4});return{body};}
+  // 해초
+  const stem=(x0,y0,x1,y1,w,col)=>ops.push({d:'M'+x0+' '+y0+'Q'+faR((x0+x1)/2+6)+' '+faR((y0+y1)/2)+' '+x1+' '+y1,s:col,w});
+  if(T==='kelp'){ops.push({d:faEll(16,48,5,3),f:C[0],s:ink,w:.8});stem(16,46,30,34,2.4,C[0]);
+    const L=[];for(let i=0;i<=10;i++){const t=i/10,x=30+t*62,w=4+Math.sin(t*Math.PI)*16;L.push([x,32-w+(i%2?3:-1)]);}const R=[];for(let i=10;i>=0;i--){const t=i/10,x=30+t*62,w=4+Math.sin(t*Math.PI)*16;R.push([x,32+w+(i%2?-3:1)]);}
+    body=faSmooth(L.concat(R),true);ops.push({d:body,f:C[1],o:.95});ops.push({d:'M30 32L92 32',s:C[0],w:2.2,c:1});for(let i=0;i<6;i++){const x=40+i*8;ops.push({d:'M'+x+' 32l4 -10M'+x+' 32l4 10',s:C[0],w:.6,c:1,o:.6});}ops.push({d:body,s:ink,w:1.2});return{body};}
+  if(T==='belt'){body=faSmooth([[10,40],[30,30],[50,26],[70,24],[92,18],[94,26],[72,34],[52,38],[30,44],[12,48]],true);ops.push({d:body,f:C[1]});ops.push({d:faSmooth([[12,44],[50,32],[93,22]]),s:C[0],w:2,c:1,o:.5});
+    for(let i=0;i<8;i++){const x=20+i*9;ops.push({d:'M'+x+' '+(42-i*2.4)+'q3 -2 6 0',s:C[2],w:.7,c:1,o:.6});}ops.push({d:body,s:ink,w:1.2});return{body};}
+  if(T==='sarg'){stem(14,50,86,14,2,C[0]);body='';for(let i=0;i<14;i++){const t=.1+i*.06,x=14+72*t,y=50-36*t;const s=i%2?1:-1;ops.push({d:'M'+faR(x)+' '+faR(y)+'q'+(s*4)+' '+(-3)+' '+(s*9)+' '+(-2),s:C[0],w:1.2});
+      ops.push({d:faEll(x+s*10,y-2,2.6,1.2),f:C[1],s:ink,w:.5});ops.push({d:faCircle(x+s*5,y+2,1.5),f:C[2],s:ink,w:.5});}return{body:faEll(50,30,40,20)};}
+  if(T==='ulva'){body=faSmooth([[14,40],[24,22],[40,14],[52,24],[64,12],[80,18],[90,30],[78,44],[60,40],[46,48],[28,46]],true);ops.push({d:body,f:C[1],o:.85});
+    for(let i=0;i<5;i++)ops.push({d:faSmooth([[20+i*14,44],[26+i*14,32],[22+i*14,20]]),s:C[0],w:.8,c:1,o:.6});ops.push({d:body,s:ink,w:1.1,o:.8});return{body};}
+  return{body:faEll(50,30,10,10)};}
 // ---- 공개 함수 ----
 function faSpec(name){let A=FA[name];if(!A)return null;if(A.base){const B=FA[A.base];A=Object.assign({},B,A,{b:Object.assign({},B.b,A.b||{}),mk:A.mk||B.mk,c:A.c||B.c});}return A;}
 // o: {juv(어린 개체), br(혼인색), old(다 큰 수컷), col(색 덮어쓰기 · 황금)}
 function faOps(name,o){const A=faSpec(name);if(!A)return null;o=Object.assign({name},o||{});const ops=[];
   if(A.juv)o.juvenile=true;if(o.br&&A.br)o.col=A.br.c;if(o.juv)o.juvenile=true;
-  let r;if(A.flat)r=faFlatOps(A,ops,o);else if(A.sq)r=faSquidOps(A,ops,o);else if(A.oct)r=faOctOps(A,ops,o);else if(A.shr)r=faShrimpOps(A,ops,o);else r=faFishOps(A,ops,o);
+  let r;if(A.flat)r=faFlatOps(A,ops,o);else if(A.sq)r=faSquidOps(A,ops,o);else if(A.oct)r=faOctOps(A,ops,o);else if(A.shr)r=faShrimpOps(A,ops,o);else if(A.jel)r=faJellyOps(A,ops,o);else if(A.cone)r=faConeOps(A,ops,o);else if(A.inv)r=faInvOps(A,ops,o);else if(A.cray)r=faCrayOps(A,ops,o);else r=faFishOps(A,ops,o);
   return{ops,body:r.body,trans:!!r.trans};}
 function faSVG(name,o){const R=faOps(name,o);if(!R)return null;const id='fa'+(faSeed(name+JSON.stringify(o||{}))%1e9);
   let s='<svg viewBox="-2 -2 104 64" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="'+id+'"><path d="'+R.body+'"/></clipPath></defs><g'+(R.trans?' opacity=".82"':'')+' stroke-linejoin="round" stroke-linecap="round">';
@@ -6558,6 +6944,7 @@ function faDraw(x,name,o){const R=faOps(name,o);if(!R)return false;const bp=new 
   for(const p of R.ops){const P=new Path2D(p.d);x.save();if(p.c)x.clip(bp);if(p.o!=null)x.globalAlpha*=p.o;if(p.f){x.fillStyle=p.f;x.fill(P);}if(p.s){x.strokeStyle=p.s;x.lineWidth=p.w||1;x.stroke(P);}x.restore();}
   x.restore();return true;}
 
+// 변이: 어린 개체(크기·혼획) · 다 큰 수컷(돌돔 50cm+) · 혼인색(피라미·끄리 5~7월, 크기로 정한 수컷 몫 절반)
 // 변이: 어린 개체(크기·혼획) · 다 큰 수컷(돌돔 50cm+) · 혼인색(피라미·끄리 5~7월, 크기로 정한 수컷 몫 절반)
 function faVar(n,cm){const v={};if(/혼획/.test(n||''))v.juv=1;if(n==='농어'&&cm>0&&cm<30)v.juv=1;if(n==='돌돔'&&cm>=50)v.old=1;
   if((n==='피라미'||n==='끄리')&&cm>0){let mo=0;try{mo=kstNow().mo;}catch(e){}if(mo>=5&&mo<=7&&Math.floor(cm*10)%2===0)v.br=1;}return v;}
@@ -6585,9 +6972,9 @@ function drawFish(cv,f,size){try{if(faDrawFit(cv,f,size)||v48DrawFish(cv,f,size)
   x.globalAlpha=.25;x.fillStyle='#000';x.beginPath();x.ellipse(cx,cy-T*.35,L*.42,T*.35,0,0,Math.PI*2);x.fill();x.globalAlpha=1;x.fillStyle='#13232d';x.beginPath();x.arc(cx-L*.37,cy-T*.2,Math.max(3,T*.11),0,7);x.fill();}
 // v32 LC2 #269: 못 낚은 어종에도 해역·철(지금 철 표시)·금지체장·낚시법 힌트, '지금 철만' 거르기. 게임에서 낚을 방법이 없는 어종(은어)은 집계에서 빼고 따로 표시
 let dexNowOnly=false;
-function dexCatchable(f){return Object.keys((FX[f.n]||{}).me||{}).length>0||BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n))||NET_FISH.some(e=>e.n===f.n);}/* v35 투망 어종 */
+function dexCatchable(f){return!!f.snag||Object.keys((FX[f.n]||{}).me||{}).length>0||BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n))||NET_FISH.some(e=>e.n===f.n);}/* v35 투망 어종 */
 function monthsTxt(m){const S=new Set(m||[]);if(S.size>=12)return'연중';const out=[];for(let a=1;a<=12;a++){if(!S.has(a)||S.has(a===1?12:a-1))continue;let b=a;while(S.has(b===12?1:b+1)&&(b===12?1:b+1)!==a)b=b===12?1:b+1;out.push(a===b?a+'월':a+'~'+b+'월');}return out.join('·');}
-function dexMeth(f){const L=Object.keys((FX[f.n]||{}).me||{}).map(x=>ME_TXT[x]);if(BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n)))L.push('선상');if(NET_FISH.some(e=>e.n===f.n))L.push('바다 투망');return[...new Set(L)].join('/');}
+function dexMeth(f){const L=Object.keys((FX[f.n]||{}).me||{}).map(x=>ME_TXT[x]);if(BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n)))L.push('선상');if(NET_FISH.some(e=>e.n===f.n))L.push('바다 투망');if(SNAG_BIO.some(e=>e.n===f.n))L.push('밑걸림(물지 않고 걸려 옴)');return[...new Set(L)].join('/');}
 function openDex(){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}const mo=kstNow().mo,all=FISH.filter(f=>dexCatchable(f))/* V148: 참다랑어(big)도 어록에 보이게 — 지역 어록 완성(zoneDex)·전국 대물·대결 제외는 그대로 */,nc=FISH.filter(f=>!dexCatchable(f)),got=all.filter(f=>save.dex[f.n]&&(+save.dex[f.n].n||0)>0).length;
   $('#dexSum').innerHTML=esc('점수 '+save.score.toLocaleString('ko-KR')+' · '+save.count+'마리 · '+got+'/'+all.length+'종 · 방문 낚시터 '+Object.keys(save.spots).length+'곳'+(hasGold()?' · 황금 물고기 '+save.gold.n+'마리(칭호 '+GOLD_TITLE+')':''))+' <button class="chip" type="button" data-v4="gyogal" id="dexGyoB">어탁 액자 '+V4().gyo.length+'</button> <button class="chip" type="button" id="dexNowB" aria-pressed="'+dexNowOnly+'">지금 철('+mo+'월)만</button>';
   /* V39-UI: 3칸 격자 칸(그림 · 이름/최고 cm · 철 점). 자세한 내용(사는 곳·낚는 법·철·금어기·금지체장·게임 식당 요리)은 칸 안 .dexd(숨김)에 그대로 두고 누르면 자세히 창(v39DexOpen) */
@@ -7319,7 +7706,7 @@ function chStatsHTML(){const B=SB(),pb=petBuf(V4().eq&&V4().eq.pet,false),pct=v=
   if(B.cm)L.push(['고기 길이',pct(B.cm)]);L.push(['도감 등록',B.dex.n+'종 · 완성 '+B.dex.zones.length+'판']);
   return'<ul class="chst">'+L.map(([a,b])=>'<li><span>'+a+'</span><b class="num">'+b+'</b></li>').join('')+'</ul><p class="src">스킬·능력치·도감·펫을 모두 더한 값 · 포인트 보너스는 랭킹 점수에 넣지 않습니다</p>';}
 function renderChar(){const g=grOf(RG),st=stOf(RG),G=GRADES[g-1],ap=+RG.ap||0,cs=capSum(g),ss=stSum(st),nx=gradeNext(RG),D=SB().dex,net=v36HasNet();
-  const grpN={str:0,vit:0,foc:0};FISH.forEach(f=>{if(dexOK(f))grpN[fishGrp(f)]++;});
+  const grpN={str:0,vit:0,foc:0};FISH.forEach(f=>{if(dexOK(f)&&!f.ext)grpN[fishGrp(f)]++;});
   let h=(chNote?'<div class="sumbox" style="border-color:#ffbe3c"><b>'+esc(chNote)+'</b></div>':'')+'<div class="chgrid"><div class="chcard"><div class="chav"><div class="ch3d" id="chAv">'+(()=>{try{return avSVG(myVestNow(),lookOf('hat'),lookOf('float'));}catch(e){return'';}})()+'</div><span class="chg g'+g+'">'+g+'등급 · '+esc(G.n)+' '+G.e+'</span></div>'+
    '<div style="margin-top:6px">'+rkBadgeHTML(save.nick)+'<b>'+esc(save.nick||'낚시꾼')+'</b> <span class="k">Lv.'+RG.lv+' · '+esc(titleOf(RG.lv))+'</span>'+rkMeTxt()+'</div>'+((TRS.tot|0)||(TRS.got|0)?'<div class="k" style="font-size:12px;margin-top:2px">바다 청소 기록 · 건진 쓰레기 '+fmtN(TRS.got|0)+'개 · 분리수거 '+fmtN(TRS.tot|0)+'개(바르게 '+fmtN(TRS.ok|0)+'개 · '+((TRS.tot|0)?Math.round((TRS.ok|0)/TRS.tot*100):0)+'%)</div>':'')+'<div class="chpw"><span>낚시력</span><b class="num">'+fmtN(myPower())+'</b></div>'+chStatsHTML()+'</div>';
   h+='<div><div class="chcard"><div class="chgr"><b>'+g+'등급 · '+esc(G.n)+' <span class="k">'+G.e+'</span></b><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="'+cs+'" aria-valuenow="'+ss+'"><i style="width:'+Math.min(100,ss/cs*100).toFixed(0)+'%;background:var(--buoy)"></i></div><span class="num">'+ss+'/'+cs+'</span><b class="num">남은 AP '+ap+'</b></div>'+
@@ -8497,7 +8884,7 @@ async function net(path,body,o){o=o||{};if(!NET_API)return{s:0,j:null};const pos
   try{v36Sync(path,s,j);}catch(e){}/* v36 안내 퀘스트·전국 대물·짧은 목표 */
   try{v37Sync(path,s,j);}catch(e){}/* v37 구명조끼(409 NO_PFD) · 벗을 때 자동 정산 */
   try{v38Sync(path,s,j);}catch(e){}/* v38 포만감·쿨러·손맛·배고픈 정산 */
-  try{rcSync(path,s,j);}catch(e){}/* V124 해양쓰레기 */
+  try{rcSync(path,s,j);}catch(e){}/* V124 해양쓰레기 */try{bioSync(path,j);}catch(e){}/* V153 밑걸림 생물 */
   try{if(j&&j.trialOffer)setTimeout(()=>trialShow(j.trialOffer),1800);}catch(e){}
   try{const M=s===200&&j&&/^(auto|auto-settle|trip|trip-end|trip-auto|trip-auto-settle)$/.test(path)?(j.missions||(j.settle&&j.settle.missions)||(j.boatAuto&&j.boatAuto.missions)||[]):[];M.forEach((m,i)=>setTimeout(()=>toast(m.bonus?'오늘의 퀘스트 3개 모두 완료 · 보너스 +'+m.pt+'P':'퀘스트 완료(자동 낚시) · '+m.n+' · +'+m.pt+'P +'+m.xp+'XP'),2400+i*2600));if(M.length){try{questBadge();}catch(e){}}}catch(e){}/* V85 자동 조과로 끝난 오늘의 퀘스트 안내 *//* V82 PRO 3일 체험 제안(서버가 정한 때만) */
   try{const S=s===200&&j?(j.settle||(path==='auto-settle'?j:null)):null;if(S&&S.landLost)setTimeout(()=>toast('자동 낚시 · 대물 '+S.landLost+'마리를 놓쳤습니다 · 자리 높이에 맞는 뜰채와 무게를 견디는 립그립이 있으면 지킬 수 있습니다',4200),3200);}catch(e){}/* V109 */
@@ -8733,7 +9120,7 @@ function srvLand(){const c=srvC,b=c&&c.h;
   $('#cardKick').textContent=(trip?spot.n+' 출항 '+trip.n:spot.n)+'에서 낚았습니다';$('#cardName').textContent=f.n;$('#cardSize').innerHTML=cm.toFixed(1)+'<small>cm</small>';
   const tags=x=>{$('#cardTags').innerHTML='<span class="tag">약 '+kgTxt(kg)+'</span>'+x;};tags('<span class="tag">서버에 기록 중…</span><span class="tag">'+sesTxt()+'</span>');
   const meta=rel=>'당시 기상 · 풍속 '+(w.wind!=null?(+w.wind).toFixed(1)+'m/s':'-')+(spot.w==='sea'?' · 파고 '+(w.wave!=null?(+w.wave).toFixed(1)+'m':'-')+(w.sst!=null&&w.sst!==''?' · 수온 '+w.sst+'°C':'')+((w.tide||{}).phase?' · '+w.tide.phase:''):' · 기온 '+(w.air!=null?w.air+'°C':'-'))+'. 어종·크기는 게임 서버가 정합니다.'+(rel||'')+(trip?' 선상: '+trip.n+' · 대여 장비 '+trip.rig.n+' · 수심 '+cd+'m.':' 채비: '+chk.G.rod.n+' · '+chk.G.line.n+(chk.G.leader?' · '+chk.G.leader.n:'')+' · '+chk.G.term.n+' · 비거리 '+Math.round(cd)+'m.')+((FX[f.n]||{}).bait?' 실제 낚시 미끼·채비: '+FX[f.n].bait+'.':'');
-  try{showBegin({f,cm,kg,gold,evt:!!(v36Ev&&v36Ev.srv),first,best0,rel:(f.min!=null&&cm<=f.min)||!!closedRange(f,0,spot),spot:trip?spot.n+' 출항':spot.n});}catch(e){}bigGalCheer(f,cm,(f.min!=null&&cm<=f.min)||!!closedRange(f,0,spot));/* v38: 서버가 나중에 방생으로 정하면 showSrv가 멈춤 */
+  try{showBegin({f,cm,kg,gold,evt:!!(v36Ev&&v36Ev.srv),first,best0,rel:(f.min!=null&&cm<=f.min)||!!closedRange(f,0,spot)||bioRel(f),spot:trip?spot.n+' 출항':spot.n});}catch(e){}bigGalCheer(f,cm,(f.min!=null&&cm<=f.min)||!!closedRange(f,0,spot)||bioRel(f));/* v38: 서버가 나중에 방생으로 정하면 showSrv가 멈춤 */
   const ug=()=>{if(gold)goldUncard(f,cm);};$('#cardMeta').textContent=meta('');drawFish($('#fishcv'),f,cm);goldCard(gold,false);if(gold)goldFish($('#fishcv'),f,cm);cardShow();chime();
   srvCatchPending=true;const wait=Math.max(0,c.hookAt+b.minMs-600-performance.now());
   const done=j=>{srvCatchPending=false;if(j.lost){landApply(j);ug();try{showStop();}catch(e){}$('#cardKick').textContent=spot.n+'에서 '+(j.lost===2?'손에서 미끄러졌습니다':'끌어올리다 놓쳤습니다');tags('<span class="tag" style="color:var(--bad);border-color:var(--bad)">놓침 · 포인트 없음</span><span class="tag">+'+(j.xp||0)+'XP'+(j.lost===2?'':' (절반)')+'</span>');$('#cardMeta').textContent=j.lost===3?'높은 자리에서 큰 고기를 끌어올리다 놓쳤습니다 · 자리 높이보다 긴 뜰채와 무게를 견디는 립그립을 장착하면 놓치지 않습니다(상점 → 뜰채·립그립).':'뜰채·립그립이 있으면 덜 놓칩니다(상점 → 뜰채·립그립).';SES.f=Math.max(0,(SES.f||0)-1);nonCatch('lost',(j.lost===2?'손에서 미끄러졌습니다':'끌어올리다 놓쳤습니다')+' — '+f.n+' '+cm.toFixed(1)+'cm');return;}/* V109 서버가 놓친 것으로 판정(쉬운 모드 대물 포함) *//* V109 서버가 놓친 것으로 판정 */
@@ -8741,10 +9128,10 @@ function srvLand(){const c=srvC,b=c&&c.h;
     const rel=!!j.released,clo=j.closed;const rec=!rel&&cm>best0;const qb0={};(RG.miss||[]).forEach(m=>qb0[m.id]=m.p);
     save.pt=j.pt;setWal(j.wallet);applyRPG(j.rpg);const qAdv=j.daily?null:qAdvDiff(qb0);questBadge();if(j.dex)save.dex[f.n]=j.dex;save.count=(save.count||0)+1;save.spots[spot.id]=(save.spots[spot.id]||0)+1;save.score=(save.score||0)+(j.pts||0);refreshWallet();renderLv();
     $('#cardKick').textContent=(trip?spot.n+' 출항 '+trip.n:spot.n)+(rel?'에서 낚아 방생했습니다':'에서 낚았습니다');
-    $('#cardTags').innerHTML='<span class="tag">약 '+kgTxt(j.kg!=null?j.kg:kg)+'</span>'+(rel?'<span class="tag" style="color:#7cc4e8;border-color:#7cc4e8">'+(clo?'금어기 '+clo[0]+'.'+clo[1]+'~'+clo[2]+'.'+clo[3]:'금지체장 '+f.min+'cm 이하')+' · 방생</span>':'<span class="tag">+'+j.pts+'P</span>'+(trip?'':'<span class="tag mbonus">직접 낚시 ×2.5(무료 자동 대비)</span>')+(trip&&j.rankPt!=null&&j.rankPt<j.pts?'<span class="tag">랭킹 +'+j.rankPt+' · 선비 상환 '+(j.pts-j.rankPt)+'</span>':''))+(rec||first?'<span class="tag" style="color:#ff7a3d;border-color:#ff7a3d">'+(first?'어록 등록':'개인 최고')+'</span>':'')+'<span class="tag">누적 '+save.count+'마리</span><span class="tag">+'+j.xp+'XP'+xpTagTxt(f,RG.lv-(j.levelUps||0))+'</span>'+(j.pet&&(j.pet.pt||j.pet.xp)?'<span class="tag" style="color:#1f9e6e;border-color:#1f9e6e">펫 보너스 +'+(j.pet.pt||0)+'P · +'+(j.pet.xp||0)+'XP</span>':'')+qTags(qAdv);/* V91 */
-    try{showSrv(j,f,cm);}catch(e){}tripTally(trip,f,cm,rel,j.pts,j);if(rel&&!clo)relTip();
+    $('#cardTags').innerHTML='<span class="tag">약 '+kgTxt(j.kg!=null?j.kg:kg)+'</span>'+(rel?'<span class="tag" style="color:#7cc4e8;border-color:#7cc4e8">'+(clo?'금어기 '+clo[0]+'.'+clo[1]+'~'+clo[2]+'.'+clo[3]:bioRel(f)?BIO_TAG[f.tag].n/* V153 */:'금지체장 '+f.min+'cm 이하')+' · 방생</span>':'<span class="tag">+'+j.pts+'P</span>'+(trip?'':'<span class="tag mbonus">직접 낚시 ×2.5(무료 자동 대비)</span>')+(trip&&j.rankPt!=null&&j.rankPt<j.pts?'<span class="tag">랭킹 +'+j.rankPt+' · 선비 상환 '+(j.pts-j.rankPt)+'</span>':''))+(rec||first?'<span class="tag" style="color:#ff7a3d;border-color:#ff7a3d">'+(first?'어록 등록':'개인 최고')+'</span>':'')+'<span class="tag">누적 '+save.count+'마리</span><span class="tag">+'+j.xp+'XP'+xpTagTxt(f,RG.lv-(j.levelUps||0))+'</span>'+(j.pet&&(j.pet.pt||j.pet.xp)?'<span class="tag" style="color:#1f9e6e;border-color:#1f9e6e">펫 보너스 +'+(j.pet.pt||0)+'P · +'+(j.pet.xp||0)+'XP</span>':'')+qTags(qAdv);/* V91 */
+    try{showSrv(j,f,cm);}catch(e){}tripTally(trip,f,cm,rel,j.pts,j);if(rel&&!clo&&!bioRel(f))relTip();try{bioCard(f,rel);}catch(e){}/* V153 생물 표식 안내 */
     if(j.gold){goldServer(j.gold);if(j.dex)save.dex[f.n]=j.dex;}if(gold&&!j.gold)$('#cardTags').insertAdjacentHTML('beforeend','<span class="tag">황금 판정 미확인</span>');
-    if(rel)$('#cardMeta').textContent=meta(clo?' 지금은 법정 금어기('+closedTxt(f)+(CLOSED_NOTE[f.n]?', '+CLOSED_NOTE[f.n]:'')+')라 놓아주었습니다.':' 법정 포획금지체장('+f.min+'cm 이하)이라 놓아주었습니다.');
+    if(rel)$('#cardMeta').textContent=meta(!clo&&bioRel(f)?' '+BIO_TAG[f.tag].rel+(f.tip?' · '+f.tip:'')+'.':clo?' 지금은 법정 금어기('+closedTxt(f)+(CLOSED_NOTE[f.n]?', '+CLOSED_NOTE[f.n]:'')+')라 놓아주었습니다.':' 법정 포획금지체장('+f.min+'cm 이하)이라 놓아주었습니다.');
     if(gold&&!j.gold)goldUncard(f,cm);else goldCard(!!j.gold);
     if(j.levelUps>0){const l1=RG.lv,l0=l1-j.levelUps;setTimeout(()=>lvNote(l0,l1),900);}
     try{if(j.dex&&j.dex.n===1){const f0=FISH.find(x=>x.n===j.fish);if(f0&&dexOK(f0))setTimeout(()=>toast('도감 등록 · '+f0.n+' · '+dexBonTxt(f0)+dexZoneTxt(f0)),2600);}}catch(e){}/* V98 도감 능력치 */
@@ -9190,7 +9577,7 @@ function duRender(){const m=$('#duelM');if(!m||m.hidden)return;const d=DU.cur,st
   const keep={};if(DU.keepTab===DU.tab)m.querySelectorAll('#duBody select[id],#duBody input[id]').forEach(e=>{keep[e.id]=e.type==='checkbox'?e.checked:e.value;});DU.keepTab=DU.tab;/* V123 목록이 늦게 와 다시 그려도 고르던 값 유지 */
   m.innerHTML=h;for(const id in keep){const e=document.getElementById(id);if(!e)continue;if(e.type==='checkbox')e.checked=keep[id];else if(e.tagName!=='SELECT'||[...e.options].some(o=>o.value===keep[id]))e.value=keep[id];}$('#duX').onclick=()=>{m.hidden=true;};m.querySelectorAll('[data-dut]').forEach(b=>b.onclick=()=>{DU.tab=b.dataset.dut;duRender();if(DU.tab!=='rec'&&DU.tab!=='help')duList();});duWire();}
 function duNewHTML(){const s=cur,port=s&&s.w==='sea'&&(s.t==='항구'||/항/.test(s.n)),trips=port?BOAT_TRIPS.filter(t=>(t.z||[]).includes(zoneOf(s))):[];const L=DU.list||{},rooms=L.rooms||[];
-  const fishOpt=FISH.filter(f=>dexCatchable(f)).map(f=>'<option>'+esc(f.n)+'</option>').join('');
+  const fishOpt=FISH.filter(f=>dexCatchable(f)&&!bioRel(f)&&!f.snag/* V153 */).map(f=>'<option>'+esc(f.n)+'</option>').join('');
   const peersN=[...new Set([...peerLast.values()].map(x=>x&&x.n).filter(n=>n&&n!=='낚시꾼'&&n!==save.nick))].slice(0,20);
   return(s?'':'<p class="warnline">낚시터에 들어가면 대결방을 만들 수 있습니다</p>')
    +'<h3 class="duh">대결방 만들기</h3><div class="dugrid">'
@@ -11428,6 +11815,17 @@ function rcSync(path,s,j){if(!j)return;if(path==='recycle')return;const t=j.tras
   if(t.st)TRS=t.st;else if(typeof t.n==='number'){TRS.n=t.n;}
   if(t.again)return;if(t.full){const now=Date.now();if(now-RCY.fullT>10*60e3){RCY.fullT=now;toast('쓰레기 봉투가 가득 찼어요('+t.n+'/'+(t.cap||TRASH_BAG)+') · 카페 옆 분리수거장에 비워 주세요',3800);}return;}
   const x=TRASH[t.id];if(!x)return;setTimeout(()=>{rcNote(t.id,'해양쓰레기를 건졌어요 · '+x.n,'쓰레기 봉투 '+(TRS.n|0)+'/'+(TRS.cap||TRASH_BAG)+' · 분리수거장에 버리면 포인트');try{tone(520,.06,.03);}catch(e){}},path==='net-throw'?2200:400);}
+/* V153 생물 표식 안내: 위험 생물은 빨간 카드 · 그 밖은 초록 카드(첫 만남은 더 길게) */
+function bioNote(f,a,b,red){const e=uiBox('rcNote','rcnote','');let ic='';try{ic='<span style="width:48px;flex:none">'+(faSVG(faName(f)||f.n,{})||'')+'</span>';}catch(x){}
+  e.innerHTML=ic+'<div><b>'+esc(a)+'</b><small>'+esc(b)+'</small></div>';e.style.borderColor=red?'#d23a2e':'';e.style.background=red?'#fff1ef':'';e.hidden=false;e.classList.remove('out');clearTimeout(RCY.nt);RCY.nt=setTimeout(()=>{e.classList.add('out');setTimeout(()=>{e.hidden=true;e.style.borderColor='';e.style.background='';},260);},red?6500:4200);}
+function bioCard(f,rel){if(!f||!f.tag||!BIO_TAG[f.tag])return;const g=BIO_TAG[f.tag];if(!(rel&&g.rel)&&!f.tip&&!g.note)return;
+  setTimeout(()=>{bioNote(f,g.n+' · '+f.n,(rel&&g.rel?g.rel:(g.note||''))+(f.tip?' · '+f.tip:''),f.tag==='haz');if(f.tag==='haz')try{tone(300,.12,.05);}catch(x){}},1200);}
+function bioSync(path,j){const b=j&&j.bio;if(!b||!b.n)return;const f=FISH.find(x=>x.n===b.n);if(!f)return;
+  if(b.dex)save.dex[f.n]=b.dex;if(b.pt!=null){save.pt=b.pt;if(b.wallet)setWal(b.wallet);refreshWallet();}if(b.rpg){try{applyRPG(b.rpg);renderLv();}catch(e){}}
+  const g=BIO_TAG[f.tag]||null,cmT=(+b.cm||0).toFixed(1);
+  setTimeout(()=>{bioNote(f,(g&&g.rel?'걸려 올라왔어요 · ':'건져 올렸어요 · ')+f.n+' '+cmT+'cm',(g&&g.rel?g.rel:'+'+fmtN(b.pts|0)+'P · +'+fmtN(b.xp|0)+'XP')+(f.tip?' · '+f.tip:''),f.tag==='haz');if(f.tag==='haz')try{tone(300,.12,.05);}catch(x){}},500);
+  (b.missions||[]).forEach((m,i)=>setTimeout(()=>toast(m.bonus?'오늘의 퀘스트 3개 모두 완료 · 보너스 +'+m.pt+'P':'퀘스트 완료 · '+m.n+' · +'+m.pt+'P +'+m.xp+'XP'),2400+i*2600));if(b.ups>0){const l1=RG.lv,l0=l1-b.ups;setTimeout(()=>lvNote(l0,l1),900);}
+  logMsg('<b>'+esc(save.nick)+'</b> · 밑걸림에 '+esc(f.n)+' '+cmT+'cm'+(b.rel?' (놓아줌)':''));if(b.dex&&b.dex.n===1)setTimeout(()=>toast('도감 등록 · '+f.n),5200);}
 function rcNote(id,a,b){const e=uiBox('rcNote','rcnote','');e.innerHTML=rcIc(id,34)+'<div><b>'+esc(a)+'</b><small>'+esc(b)+'</small></div>';e.hidden=false;e.classList.remove('out');clearTimeout(RCY.nt);RCY.nt=setTimeout(()=>{e.classList.add('out');setTimeout(()=>{e.hidden=true;},260);},3600);}
 // 자리: 카페 왼쪽(정면 -z에서 볼 때 +x 쪽) · 뒤 선을 카페와 맞춤 · 발판이 없으면 조금씩 옮겨 보고 그래도 없으면 짓지 않는다
 function rcSpot(c,wf0,k){if(!c)return null;const w=1.9,d=1.05;for(const dx of [.55,.9,1.3]){const x=c.x+c.w/2+dx+w/2,z=c.z+c.d/2-d/2;let y=wf0(x,z),y2=wf0(x,z-d/2-.9);if(y==null||y2==null)continue;if(k==='rock')y=Math.max(y,3.0);return{x,z,w,d,y,ix:x,iz:z-d/2-.9};}return null;}
@@ -12007,6 +12405,7 @@ function v39DexOpen(n){const f=FISH.find(z=>z.n===n);if(!f)return;const d=save.d
   if(ct||cl)L.push(['금어기',(ct?esc(ct)+(CLOSED_NOTE[f.n]?' ('+esc(CLOSED_NOTE[f.n])+')':''):'')+(cl?'<div style="margin-top:4px">'+cl+'</div>':'')]);
   if(f.min!=null||f.minNote)L.push(['금지체장',(f.min!=null?f.min+'cm 이하 방생':'')+(f.minNote?'<div class="k">법정 '+esc(f.minNote)+'</div>':'')]);
   const dl=v38DexLine(f);if(dl)L.push(['게임 식당 요리',dl.replace('게임 식당 요리: ','')]);
+  if(f.tag&&BIO_TAG[f.tag]){const g=BIO_TAG[f.tag];L.unshift(['구분','<b style="color:'+g.c+'">'+esc(g.n)+'</b>'+(g.rel?' · 바로 놓아줌(포인트 없음)':'')+(f.tip?'<div class="k">'+esc(f.tip)+'</div>':'')+(g.note?'<div class="k">'+esc(g.note)+'</div>':'')]);}/* V153 */
   h+='<dl class="v39dl">'+L.map(([a,b])=>'<dt>'+a+'</dt><dd>'+b+'</dd>').join('')+'</dl>'+(d?gyoBtn(f.n,d):'');
   $('#dexDetB').innerHTML=h;m.hidden=false;try{$('#dexDetX').focus({preventScroll:true});}catch(e){}}
 try{VX_MOD.unshift(['#dexDet','#dexDetX']);}catch(e){}
