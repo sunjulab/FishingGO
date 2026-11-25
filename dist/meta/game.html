@@ -6520,12 +6520,22 @@ function shotCanShare(){try{return!!(navigator.share&&navigator.canShare&&naviga
 /* V135 사진 저장: 폰 웹은 <a download>가 '다운로드' 폴더로만 가서 갤러리에서 못 찾는다는 제보 → 폰이면 공유 창(갤러리·사진 앱으로 저장)을 먼저,
    공유가 안 되면 파일로 받고 저장 위치를 알려 줌 · 앱(WebView)은 다운로드·공유가 막혀 있어 그림을 크게 띄워 길게 눌러 저장 */
 const IS_PHONE=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
-async function imgSave(cv,nm,dl){let b=null;try{b=await new Promise(r=>cv.toBlob?cv.toBlob(r,'image/png'):r(null));}catch(e){}
+/* V162 앱(낚시GO·방구석 낚시꾼 = Capacitor WebView)에서는 다운로드·공유·길게 눌러 저장이 모두 안 됨(예전엔 아무 일 없이 '다운로드 폴더에 저장했어요'만 떴다)
+   → 서버에 10분 맡기고(POST /img) 휴대폰 브라우저로 열어 내려받는다. 낚시GO 앱은 AppLauncher, 게임 앱은 맨 위 창 이동(허용 주소 밖이라 브라우저가 열림) */
+function inApp(){if(GAME_APP)return true;const C=capRoot();try{return!!(C&&(C.isNativePlatform?C.isNativePlatform():(C.getPlatform&&C.getPlatform()!=='web')));}catch(e){return false;}}
+async function extOpen(u){const C=capRoot();try{const AL=C&&C.Plugins&&C.Plugins.AppLauncher;if(AL&&AL.openUrl){await AL.openUrl({url:u});return true;}}catch(e){}try{(window.top||window).location.href=u;return true;}catch(e){}try{location.href=u;return true;}catch(e){}return false;}
+let IMG_BUSY=false;
+async function appImgSave(cv,nm){if(IMG_BUSY)return;if(!SRV){imgHold(cv,nm,1);return;}IMG_BUSY=true;toast('저장 준비 중…',2500);
+  try{let d='';try{d=cv.toDataURL('image/png');}catch(e){}if(!d){imgHold(cv,nm,1);return;}
+    const r=await net('img',{n:nm,png:d.slice(d.indexOf(',')+1)},{ms:30000});
+    if(r.s===200&&r.j&&r.j.url&&(/^https:\/\//.test(r.j.url)||(DEV_HOST&&/^http:\/\/localhost[:/]/.test(r.j.url)))){toast('휴대폰 브라우저가 열리며 내려받습니다 · 알림창의 다운로드를 눌러 열어 보세요(갤러리 › Download 앨범)',7000);if(!await extOpen(r.j.url))imgHold(cv,nm,1);}
+    else{toast(r.s===429?'잠시 후 다시 눌러 주세요':(r.j&&r.j.message)||'저장하지 못했습니다');if(r.s!==429)imgHold(cv,nm,1);}}
+  finally{setTimeout(()=>{IMG_BUSY=false;},1500);}}
+async function imgSave(cv,nm,dl){if(inApp()){appImgSave(cv,nm);return;}let b=null;try{b=await new Promise(r=>cv.toBlob?cv.toBlob(r,'image/png'):r(null));}catch(e){}
   if(IS_PHONE&&b&&navigator.canShare&&navigator.share){try{const f=new File([b],nm,{type:'image/png'});if(navigator.canShare({files:[f]})){toast('공유 창에서 \'갤러리\'·\'사진\'·\'이미지 저장\'을 고르세요',3600);await navigator.share({files:[f]});return;}}catch(e){if(e&&e.name==='AbortError')return;}}
-  if(GAME_APP){imgHold(cv,nm);return;}
   dl();if(IS_PHONE)toast(/iPhone|iPad|iPod/i.test(navigator.userAgent||'')?'파일 앱 › 다운로드에 저장했어요 · 사진 앱에 넣으려면 열어서 공유 › 이미지 저장':'내 파일 › 다운로드(Download) 폴더에 저장했어요 · 갤러리 앱의 Download 앨범에서도 보여요',5600);}
-function imgHold(cv,nm){let u='';try{u=cv.toDataURL('image/png');}catch(e){}const m=uiBox('imgHold','modal','');m.hidden=false;
-  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-label="사진 저장" style="width:min(520px,100%);box-sizing:border-box;text-align:center"><p style="margin:0 0 8px;font-weight:800;font-size:16px">사진을 <u>길게 눌러</u> 저장하세요</p><img src="'+u+'" alt="'+esc(nm)+'" style="max-width:100%;max-height:62vh;border-radius:10px;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto"><p class="k" style="margin:8px 0">저장 메뉴가 안 나오면 이 화면을 캡처해 주세요</p><button class="btn" type="button" id="imgHoldX">닫기</button></div>';
+function imgHold(cv,nm,app){let u='';try{u=cv.toDataURL('image/png');}catch(e){}const m=uiBox('imgHold','modal','');m.style.zIndex='60';/* V162 어탁 창(27) 뒤에 가려지던 문제 */m.hidden=false;
+  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-label="사진 저장" style="width:min(520px,100%);box-sizing:border-box;text-align:center"><p style="margin:0 0 8px;font-weight:800;font-size:16px">사진을 <u>길게 눌러</u> 저장하세요</p><img src="'+u+'" alt="'+esc(nm)+'" style="max-width:100%;max-height:62vh;border-radius:10px;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto"><p class="k" style="margin:8px 0">'+(app?'앱 화면에서는 저장 메뉴가 안 나올 수 있어요 · 이 화면을 캡처하거나, 휴대폰 브라우저로 게임에 들어가 저장해 주세요':'저장 메뉴가 안 나오면 이 화면을 캡처해 주세요')+'</p><button class="btn" type="button" id="imgHoldX">닫기</button></div>';
   m.onclick=e=>{if(e.target===m)m.hidden=true;};const X=document.getElementById('imgHoldX');if(X)X.onclick=()=>{m.hidden=true;};}
 function shotSave(cv,nm){evt('showSave');const go=u=>{const a=document.createElement('a');a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();};
   if(window.claude&&window.claude.use){(async()=>{try{const dl=await window.claude.use('downloads');if(!dl){toast('이 화면에서는 저장할 수 없습니다 · 그림을 길게 눌러 저장해 보세요');return;}
