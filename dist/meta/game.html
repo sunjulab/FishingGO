@@ -2323,7 +2323,7 @@ const FISH=[
  {n:'꺽지',z:['민물'],m:[4,5,6,7,8,9,10],cm:[10,20],str:.3,pts:3,col:'#6a5a3a'},
  {n:'가물치',z:['민물'],m:[4,5,6,7,8,9,10],cm:[40,90],str:.85,pts:5,col:'#4a4a3a'},
  {n:'산천어',z:['민물'],m:[4,5,6,7,8,9,10],cm:[19.9,35],min:20,str:.5,pts:4,col:'#8a9a8a'},
- {n:'은어',z:['민물'],m:[6,7,8],cm:[12,25],str:.32,pts:3,col:'#a8b49a'},
+ {n:'은어',z:['민물'],m:[6,7,8],cm:[12,25],str:.32,pts:3,col:'#a8b49a',ext:1/* V157 놀림낚시로 낚게 됨 — 지역 어록 완성·도감 능력치는 예전처럼 빼고 셈(밸런스 유지) */},
  {n:'참마자',z:['민물'],m:[4,5,6,7,8,9,10],cm:[12,25],str:.3,pts:2,col:'#a39a86'},
  {n:'송어',z:['민물'],m:ALLM,cm:[30,60],min:12,str:.65,pts:3,col:'#9a7f86'},
  {n:'빙어',z:['민물'],m:[12,1,2],cm:[8,14],str:.12,pts:1,col:'#c3d2d6'},
@@ -3147,10 +3147,10 @@ function spotFishList(s){const z=zoneOf(s),mo=kstNow().mo;const named=new Set(na
 /* ===================== 채비 시스템 ===================== */
 // 낚시법(me): lure 루어 · float 찌낚시(릴) · pole 민장대 찌낚시(릴 없음) · surf 원투
 // 채비 종류(kind): jig 지그헤드+웜 · metal 메탈지그 · minnow 미노우 · spoon 스푼 · frog 프로그 · egi 에기
-//                  krill 구멍찌+크릴 · sabiki 카드채비 · paste 막대찌+떡밥/지렁이 · bingeo 빙어채비
+//                  krill 구멍찌+크릴 · sabiki 카드채비 · paste 막대찌+떡밥/지렁이 · bingeo 빙어채비 · ayu 은어 놀림 채비(씨은어+걸바늘·꼬리바늘)
 //                  surf 바다 원투(추+갯지렁이) · surff 민물 처박기(추+떡밥)
 // 낚싯대 종류별로 쓸 수 있는 채비 종류(실제 낚시 기준). 어종 가중치(FX.me)는 낚싯대의 me로 찾는다.
-const ROD_KINDS={lure:['jig','metal','minnow','spoon','frog','egi'],float:['krill','sabiki'],pole:['paste','bingeo','krill'],surf:['surf','surff','sabiki']};
+const ROD_KINDS={lure:['jig','metal','minnow','spoon','frog','egi'],float:['krill','sabiki'],pole:['paste','bingeo','krill','ayu'],surf:['surf','surff','sabiki']};
 const ME_TXT={lure:'루어',float:'찌낚시',pole:'민장대 찌낚시',surf:'원투',boat:'선상'};
 const ROD_TXT={lure:'루어대',float:'릴찌대',pole:'민장대',surf:'원투대'};
 const kindRods=k=>Object.keys(ROD_KINDS).filter(m=>ROD_KINDS[m].includes(k));
@@ -3199,7 +3199,7 @@ const FX={
  꺽지:{k:.02,me:{lure:1},t:['jig','spoon'],rk:1},
  가물치:{k:.009,me:{lure:1},t:['frog']},
  산천어:{k:.01,me:{lure:1,pole:.4},t:['spoon','minnow','paste']},
- 은어:{k:.009,me:{},t:[],note:'은어는 살아 있는 씨은어로 텃세 습성을 이용하는 놀림낚시로 잡습니다. 게임에는 아직 없는 낚시법입니다.'},
+ 은어:{k:.009,me:{pole:1},t:['ayu'],bait:'씨은어(살아 있는 은어)·코걸이·걸바늘(꼬리바늘) · 릴 없는 긴 은어대(6~9m) · 여름 바위 여울 — 텃세로 덤비는 은어를 꼬리바늘로 겁니다'},/* V157 놀림낚시 */
  참마자:{k:.009,me:{pole:.8},t:['paste']},
  송어:{k:.012,me:{lure:1,pole:.5},t:['spoon','minnow','paste']},
  빙어:{k:.006,me:{pole:1},t:['bingeo']},
@@ -3560,7 +3560,12 @@ const GEAR={
   {"id":"t_bingeo_m","n":"톨바로 빙어 채비+구더기 세트 10","tier":"중급","ti":1,"krw":8000,"price":80,"src":"game (V76 중급 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"빙어채비+구더기","grp":"민물 찌·빙어","kind":"bingeo","env":"fresh","g":5,"pack":10,"att":1.08,"snagK":0.93,"ref":"빙어(겨울 저수지·얼음낚시) · 중급 등급"},
   {"id":"t_bingeo_h","n":"퀜마르 프리미엄 빙어 채비+구더기 세트 10","tier":"상급","ti":2,"krw":11000,"price":110,"src":"game (V76 상급 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"빙어채비+구더기","grp":"민물 찌·빙어","kind":"bingeo","env":"fresh","g":5,"pack":10,"att":1.16,"snagK":0.87,"ref":"빙어(겨울 저수지·얼음낚시) · 상급 등급"},
   {"id":"t_bingeo_x","n":"제팔트 마스터 빙어 채비+구더기 세트 10","tier":"최상급","ti":3,"krw":17000,"price":170,"src":"game (V76 최상급 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"빙어채비+구더기","grp":"민물 찌·빙어","kind":"bingeo","env":"fresh","g":5,"pack":10,"att":1.24,"snagK":0.78,"ref":"빙어(겨울 저수지·얼음낚시) · 최상급 등급"},
-  {"id":"t_bingeo_l","n":"오르벤 오리진 빙어 채비+구더기 세트 10","tier":"전설","ti":4,"krw":23000,"price":230,"src":"game (V76 전설 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"빙어채비+구더기","grp":"민물 찌·빙어","kind":"bingeo","env":"fresh","g":5,"pack":10,"att":1.32,"snagK":0.68,"ref":"빙어(겨울 저수지·얼음낚시) · 전설 등급"}
+  {"id":"t_bingeo_l","n":"오르벤 오리진 빙어 채비+구더기 세트 10","tier":"전설","ti":4,"krw":23000,"price":230,"src":"game (V76 전설 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"빙어채비+구더기","grp":"민물 찌·빙어","kind":"bingeo","env":"fresh","g":5,"pack":10,"att":1.32,"snagK":0.68,"ref":"빙어(겨울 저수지·얼음낚시) · 전설 등급"},
+  {"id":"t_ayu","n":"브린로 씨은어 놀림 채비 세트 5","tier":"입문","ti":0,"krw":25000,"price":250,"src":"estimate (씨은어 마리당 약 4,000원 + 코걸이·걸바늘 · 게임 조정값)","est":true,"sub":"씨은어+코걸이·걸바늘(꼬리바늘)","grp":"민물 찌·빙어","kind":"ayu","env":"fresh","g":3,"pack":5,"att":1.0,"snagK":1.0,"ref":"은어 놀림낚시(여름 여울 · 씨은어로 텃세를 이용)"},
+  {"id":"t_ayu_m","n":"톨바로 씨은어 놀림 채비 세트 5","tier":"중급","ti":1,"krw":38000,"price":380,"src":"game (V157 중급 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"씨은어+코걸이·걸바늘(꼬리바늘)","grp":"민물 찌·빙어","kind":"ayu","env":"fresh","g":3,"pack":5,"att":1.08,"snagK":0.93,"ref":"은어 놀림낚시(여름 여울 · 씨은어로 텃세를 이용) · 중급 등급"},
+  {"id":"t_ayu_h","n":"퀜마르 프리미엄 씨은어 놀림 채비 세트 5","tier":"상급","ti":2,"krw":52000,"price":520,"src":"game (V157 상급 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"씨은어+코걸이·걸바늘(꼬리바늘)","grp":"민물 찌·빙어","kind":"ayu","env":"fresh","g":3,"pack":5,"att":1.16,"snagK":0.87,"ref":"은어 놀림낚시(여름 여울 · 씨은어로 텃세를 이용) · 상급 등급"},
+  {"id":"t_ayu_x","n":"제팔트 마스터 씨은어 놀림 채비 세트 5","tier":"최상급","ti":3,"krw":82000,"price":820,"src":"game (V157 최상급 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"씨은어+코걸이·걸바늘(꼬리바늘)","grp":"민물 찌·빙어","kind":"ayu","env":"fresh","g":3,"pack":5,"att":1.24,"snagK":0.78,"ref":"은어 놀림낚시(여름 여울 · 씨은어로 텃세를 이용) · 최상급 등급"},
+  {"id":"t_ayu_l","n":"오르벤 오리진 씨은어 놀림 채비 세트 5","tier":"전설","ti":4,"krw":110000,"price":1100,"src":"game (V157 전설 등급 · 게임 전용, 실제 제품 아님)","est":false,"sub":"씨은어+코걸이·걸바늘(꼬리바늘)","grp":"민물 찌·빙어","kind":"ayu","env":"fresh","g":3,"pack":5,"att":1.32,"snagK":0.68,"ref":"은어 놀림낚시(여름 여울 · 씨은어로 텃세를 이용) · 전설 등급"}
  ]};
 const NET_GEAR=[
   {"id":"n_cast30","n":"브린로 자동 투망 3.0m","tier":"입문","ti":0,"krw":15820,"price":3160,"src":"danawa (옥션 최저가, 배송비 3,000원 포함)","est":true,"sub":"투망 3.0m","grp":"투망","slot":"net","d":3.0,"circ":9.4,"cov":0.75,"ref":"바다(방파제·갯바위) 전용 · 지름 3m · 아래 둘레 9.4m(법정 25m 이하)"},
@@ -3688,17 +3693,18 @@ function timeMul(f,night){const x=(FX[f.n]||{}).tm;if(x==='n')return night?1.8:.
 //   오징어류는 철(출현 달)일 때만(v30 C3: 철이 아닌데 금어기라 남던 주꾸미 제외), 철이어도 금어기 중이면 대상이 아니라 곁다리(1%) 몫(잡히면 방생).
 //   대상 오징어류가 없으면 입질 자체가 1% 몫만 남는다(listBite)
 const EGI_BY=.01;
+const EGI_OFF=.08;/* V158 제철 오징어류 입질 대비 철 아닌 오징어류 몫(8%) */
 function shoreCatch(s,me,tk,reach,night){const L=spotFishList(s);
   if(tk!=='egi')return L.map(x=>{const fx=FX[x.f.n]||{};const mw=(fx.me||{})[me]||0;
     if(!mw||!(fx.t||[]).includes(tk))return null;if((fx.r||0)>reach)return{f:x.f,w:0,far:fx.r,named:x.named,rare:x.rare};
     return{f:x.f,w:x.w*mw*timeMul(x.f,night)*((SHORE[x.f.n]||{}).w||1),named:x.named,rare:x.rare};}).filter(Boolean);
-  const mo=kstNow().mo,now=Date.now(),sq=[],by=[];
-  for(const x of L){const f=x.f,fx=FX[f.n]||{};if(f.sq?!f.m.includes(mo):!f.m.includes(mo)&&!closedRange(f,now,s))continue;const w=x.w*timeMul(f,night)*((SHORE[f.n]||{}).w||1);
+  const mo=kstNow().mo,now=Date.now(),sq=[],by=[],of=[];/* V158 of: 철 아닌 오징어류 — 끊지 않고 드물게(제철 오징어류가 있으면 그 EGI_OFF 몫, 없으면 바닷고기와 함께 1% 몫) */
+  for(const x of L){const f=x.f,fx=FX[f.n]||{};if(!f.sq&&!f.m.includes(mo)&&!closedRange(f,now,s))continue;const w=x.w*timeMul(f,night)*((SHORE[f.n]||{}).w||1);
     if(f.sq&&closedRange(f,now,s)){const mw=(fx.me||{})[me]||0;if(mw&&(fx.t||[]).includes('egi'))by.push({f,w:w*mw,named:x.named,by:1});}
-    else if(f.sq){const mw=(fx.me||{})[me]||0;if(mw&&(fx.t||[]).includes('egi'))sq.push({f,w:w*mw,named:x.named});}
+    else if(f.sq){const mw=(fx.me||{})[me]||0;if(mw&&(fx.t||[]).includes('egi'))(f.m.includes(mo)?sq:of).push(f.m.includes(mo)?{f,w:w*mw,named:x.named}:{f,w:w*mw,named:x.named,by:1,off:1});}
     else if((fx.r||0)<=reach&&Object.keys(fx.me||{}).length)by.push({f,w,named:x.named,by:1});}
-  const a=sq.reduce((t,x)=>t+x.w,0),b=by.reduce((t,x)=>t+x.w,0);if(a>0&&b>0){const k=a*EGI_BY/(1-EGI_BY)/b;by.forEach(x=>x.w*=k);}
-  return sq.concat(by);}
+  const a=sq.reduce((t,x)=>t+x.w,0),b=by.reduce((t,x)=>t+x.w,0),o=of.reduce((t,x)=>t+x.w,0);if(a>0&&b>0){const k=a*EGI_BY/(1-EGI_BY)/b;by.forEach(x=>x.w*=k);}if(a>0&&o>0){const k=a*EGI_OFF/o;of.forEach(x=>x.w*=k);}
+  return sq.concat(of,by);}
 // 한 번 던질 때 입질 계수 k와 입질 확률 pB: 밀도는 주 대상(오징어류 등)의 가중치 합, 에기에 주 대상이 없으면 1% 몫(EGI_BY)만
 function listBite(m,bk,L,G,boat,dk){let a=0,b=0;for(const x of L||[])if(x.by)b+=x.w;else a+=x.w;const k=castK(bk,a>0?a:b,G,boat);return{k,pB:L&&L.length?biteChance(m,k*dk)*(a>0||!b?1:EGI_BY):0};}
 function catchable(s,chk,night){chk=chk||checkGear(s);if(!chk.G.term)return[];const mo=kstNow().mo;
@@ -3737,14 +3743,16 @@ function isPort(s){return s&&s.w==='sea'&&(s.t==='항구'||/항/.test(s.n));}
 // v30 C4: 금어기 어종은 출조 대상에서 뺀다(주꾸미 5.11~8.31 등). mo: 출조를 산 달(자정을 넘겨 달이 바뀌어도 그 출조의 대상 어종 유지, 금어기는 늘 지금 기준)
 /* V84 출조 대상 중 이번 달 철이 아닌 어종 안내(예: 11월 한치·오징어 이카메탈 → 이번 달 살오징어만 · 한치 6~9월) */
 function mRange(m){const a=[...m].sort((x,y)=>x-y);const out=[];let st=a[0],pv=a[0];for(let i=1;i<=a.length;i++){if(a[i]===pv+1){pv=a[i];continue;}out.push(st===pv?st+'월':st+'~'+pv+'월');st=pv=a[i];}return out.join('·');}
-function tripSeasonTxt(s,t){const now=tripFish(s,t).map(x=>x.f.n),off=t.fish.map(x=>FISH.find(y=>y.n===x.n)).filter(f=>f&&!now.includes(f.n));if(!off.length)return'';return(now.length?'이번 달은 '+now.join('·')+'만':'이번 달 대상 어종 없음')+' · '+off.map(f=>f.n+' '+mRange(f.m)).join(', ');}
+function tripSeasonTxt(s,t){const L=tripFish(s,t),on=L.filter(x=>!x.off).map(x=>x.f.n),rare=L.filter(x=>x.off).map(x=>x.f),got=L.map(x=>x.f.n),miss=t.fish.map(x=>FISH.find(y=>y.n===x.n)).filter(f=>f&&!got.includes(f.n));if(!rare.length&&!miss.length)return'';/* V158 철 아닌 어종은 '드물게' */return(on.length?'이번 달 제철 '+on.join('·'):'이번 달 제철 어종 없음')+(rare.length?' · 드물게: '+rare.map(f=>f.n+'(철 아님 · 제철 '+mRange(f.m)+')').join(', '):'')+(miss.length?' · 지금 안 나옴: '+miss.map(f=>f.n+' '+mRange(f.m)).join(', '):'');}
 function tripSeasonHTML(s,t){const x=tripSeasonTxt(s,t);return x?'<div class="spec" style="color:var(--warn,#b45309)">'+esc(x)+'</div>':'';}
-function tripFish(s,t,mo){mo=mo||kstNow().mo;const z=zoneOf(s),now=Date.now();return t.fish.map(x=>{const f=FISH.find(y=>y.n===x.n);if(!f||!f.z.includes(z)||!(f.m.includes(mo)||x.open)||closedRange(f,now,s))return null;return{f,w:x.w,cm:x.cm,hi:x.hi};}).filter(Boolean);}
+/* V158 선상도 철 아닌 대상 어종은 끊지 않고 드물게(가중치 ×TRIP_OFF_K = 연안 철 아님 .6/4와 같은 15%) · 금어기·해역 밖은 그대로 안 나옴 · 서버 index.js tripFish와 같은 식 */
+const TRIP_OFF_K=.15;
+function tripFish(s,t,mo){mo=mo||kstNow().mo;const z=zoneOf(s),now=Date.now();return t.fish.map(x=>{const f=FISH.find(y=>y.n===x.n);if(!f||!f.z.includes(z)||closedRange(f,now,s))return null;const off=!(f.m.includes(mo)||x.open);return{f,w:x.w*(off?TRIP_OFF_K:1),cm:x.cm,hi:x.hi,off};}).filter(Boolean);}
 // 이 해역에서 실제로 대상 어종이 나오는 달(출조 철 ∩ 어종 철), 카드의 철 안내용
 function tripMonths(s,t){const z=zoneOf(s);return t.m.filter(mo=>t.fish.some(x=>{const f=FISH.find(y=>y.n===x.n);return f&&f.z.includes(z)&&f.m.includes(mo);}));}
 // 카드의 대상 어종: 지금 나오는 어종은 그대로, 못 나오는 어종은 흐리게 + 이유
 function tripTargets(s,t){const z=zoneOf(s),mo=kstNow().mo,now=Date.now();return t.fish.map(x=>{const f=FISH.find(y=>y.n===x.n);let why='';
-  if(!f||!f.z.includes(z))why='이 해역에 없음';else{const r=closedRange(f,now,s);if(r)why='금어기 '+r[0]+'.'+r[1]+'~'+r[2]+'.'+r[3];else if(!f.m.includes(mo)&&!x.open)why='철 아님';}
+  if(!f||!f.z.includes(z))why='이 해역에 없음';else{const r=closedRange(f,now,s);if(r)why='금어기 '+r[0]+'.'+r[1]+'~'+r[2]+'.'+r[3];else if(!f.m.includes(mo)&&!x.open)return esc(x.dn||x.n)+' '+x.cm[0]+'~'+x.cm[1]+'cm <span class="badline">(철 아님 · 드물게)</span>';/* V158 */}
   const tx=esc(x.dn||x.n)+' '+x.cm[0]+'~'+x.cm[1]+'cm';return why?'<span style="opacity:.5;text-decoration:line-through">'+tx+'</span> <span class="badline">('+esc(why)+')</span>':tx;}).join(', ');}
 function tripState(s,t){const k=kstNow(),w=WX.spots[s.id]||{};const z=zoneOf(s);
   if(!t.z.includes(z))return{ok:false,why:'이 해역에서는 하지 않는 선상낚시'};
@@ -3752,7 +3760,7 @@ function tripState(s,t){const k=kstNow(),w=WX.spots[s.id]||{};const z=zoneOf(s);
   {const f0=FISH.find(y=>y.n===t.fish[0].n),r=f0&&closedRange(f0,Date.now(),s);if(r)return{ok:false,why:f0.n+' 법정 금어기('+r[0]+'.'+r[1]+'~'+r[2]+'.'+r[3]+')라 출조하지 않음'};}
   const night=k.h>=17||k.h<5;if(t.tm==='N'&&!night)return{ok:false,why:'야간 출조(17시~05시)'};if(t.tm==='d'&&night&&!t.h24)return{ok:false,why:'주간 출조(05시~17시)'};/* V154 빅게임·지깅(h24)은 퇴근 뒤에도 — 24시간 */
   if((+w.wave||0)>=2||(+w.wind||0)>=12)return{ok:false,why:'출항 제한(게임 기준: 파고 2m·풍속 12m/s 이상) — 실제로는 풍랑특보가 발효되면 출항이 통제됩니다'};
-  if(!tripFish(s,t).length)return{ok:false,why:'지금은 대상 어종이 없음(금어기·철)'};
+  if(!tripFish(s,t).some(x=>!x.off))return{ok:false,why:'지금은 대상 어종이 없음(금어기·철)'};/* V158 서버와 같게: 제철 어종이 하나는 있어야 */
   return{ok:true};}
 function tripListHTML(s){return BOAT_TRIPS.map(t=>{const st=tripState(s,t);return'<div class="item'+(st.ok?'':' dim')+'"><div><b>'+esc(t.n)+'</b>'+tripSeasonHTML(s,t)+'<div class="spec">'+esc(t.rig.n)+' · 수심 <span class="num">'+t.depth[0]+'~'+t.depth[1]+'m</span> · 대여 장비 한계 <span class="num">'+t.rig.cap+'kg</span> · 채비 잃으면 <span class="num">'+fmtN(t.rig.loss||0)+'P</span>(출조당 최대 '+fmtN(Math.round(feeOf(t)*TRIP_LOSS_K))+'P)</div><div class="spec">대상 '+tripTargets(s,t)+' · '+(t.won?'현실의 선상낚시 요금 참고: '+t.won+'(게임 포인트와는 관계없습니다) · ':'')+'<b>Lv.'+(TRIP_LV[t.id]||1)+' 이상</b></div>'+(t.seas?'<div class="spec"><b>'+esc(t.seas)+'</b>'+(t.fish.some(x=>x.open)?' · 빅게임 선상은 <b>연중 운항</b> — 철이 아니어도 셋 다 나옵니다':'')+'</div>':'')+(t.h24?'<div class="spec">🕘 <b>게임은 24시간 출조</b> · 실제 출조: '+esc(t.rt||'')+'</div>':'')+(t.note?'<div class="spec">'+esc(t.note)+'</div>':'')/* V147 */+(st.ok?'':'<div class="spec badline">'+esc(st.why)+'</div>')+'</div><div class="act2"><button class="mini buy" data-trip="'+t.id+'"'+(st.ok&&spendNow()>=feeOf(t)&&RG.lv>=(TRIP_LV[t.id]||1)?'':' disabled')+'>'+feeOf(t)+'P 출조</button>'+(st.ok&&RG.lv>=(TRIP_LV[t.id]||1)&&spendNow()<feeOf(t)?(()=>{const sh=feeOf(t)-spendNow(),pk=pkgFor(sh);if(!TOPUP_ON)return'<span class="k">'+fmtN(sh)+'P 부족 · 낚시로 모으기</span>';return pk?'<button class="mini short" type="button" data-tshort="'+pk+'">'+fmtN(sh)+'P 부족 · '+fmtN(pk)+'원 충전하기</button>':'';})():'')+'</div></div>';}).join('');}
 // v30 C4: 귀항(시간 끝·서버 출조 끝·직접 귀항) → 항구로 돌아가 출조 결산 카드
@@ -6975,7 +6983,7 @@ function drawFish(cv,f,size){try{if(faDrawFit(cv,f,size)||v48DrawFish(cv,f,size)
 let dexNowOnly=false;
 function dexCatchable(f){return!!f.snag||Object.keys((FX[f.n]||{}).me||{}).length>0||BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n))||NET_FISH.some(e=>e.n===f.n);}/* v35 투망 어종 */
 function monthsTxt(m){const S=new Set(m||[]);if(S.size>=12)return'연중';const out=[];for(let a=1;a<=12;a++){if(!S.has(a)||S.has(a===1?12:a-1))continue;let b=a;while(S.has(b===12?1:b+1)&&(b===12?1:b+1)!==a)b=b===12?1:b+1;out.push(a===b?a+'월':a+'~'+b+'월');}return out.join('·');}
-function dexMeth(f){const L=Object.keys((FX[f.n]||{}).me||{}).map(x=>ME_TXT[x]);if(BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n)))L.push('선상');if(NET_FISH.some(e=>e.n===f.n))L.push('바다 투망');if(SNAG_BIO.some(e=>e.n===f.n))L.push('밑걸림(물지 않고 걸려 옴)');return[...new Set(L)].join('/');}
+function dexMeth(f){const L=((FX[f.n]||{}).t||[]).includes('ayu')?['놀림낚시(민장대 · 씨은어 채비)']:Object.keys((FX[f.n]||{}).me||{}).map(x=>ME_TXT[x]);if(BOAT_TRIPS.some(t=>t.fish.some(x=>x.n===f.n)))L.push('선상');if(NET_FISH.some(e=>e.n===f.n))L.push('바다 투망');if(SNAG_BIO.some(e=>e.n===f.n))L.push('밑걸림(물지 않고 걸려 옴)');return[...new Set(L)].join('/');}
 function openDex(){if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}const mo=kstNow().mo,all=FISH.filter(f=>dexCatchable(f))/* V148: 참다랑어(big)도 어록에 보이게 — 지역 어록 완성(zoneDex)·전국 대물·대결 제외는 그대로 */,nc=FISH.filter(f=>!dexCatchable(f)),got=all.filter(f=>save.dex[f.n]&&(+save.dex[f.n].n||0)>0).length;
   $('#dexSum').innerHTML=esc('점수 '+save.score.toLocaleString('ko-KR')+' · '+save.count+'마리 · '+got+'/'+all.length+'종 · 방문 낚시터 '+Object.keys(save.spots).length+'곳'+(hasGold()?' · 황금 물고기 '+save.gold.n+'마리(칭호 '+GOLD_TITLE+')':''))+' <button class="chip" type="button" data-v4="gyogal" id="dexGyoB">어탁 액자 '+V4().gyo.length+'</button> <button class="chip" type="button" id="dexNowB" aria-pressed="'+dexNowOnly+'">지금 철('+mo+'월)만</button>';
   /* V39-UI: 3칸 격자 칸(그림 · 이름/최고 cm · 철 점). 자세한 내용(사는 곳·낚는 법·철·금어기·금지체장·게임 식당 요리)은 칸 안 .dexd(숨김)에 그대로 두고 누르면 자세히 창(v39DexOpen) */
@@ -7504,11 +7512,11 @@ function xpTagTxt(f,lv){const m=xpMulOf(f,lv||RG.lv);return m<.995?' · 쉬운 �
 let skArm='',skArmT=0;
 function skEff(id,l){const e=skE(id,l),r=x=>String(+x.toFixed(1)),hd=id==='hook'?Math.max(0,l-SK_DEF.hook.base):0;return id==='cast'?'최대 비거리 +'+r(3*e)+'%':id==='hook'?'바늘걸림 +'+r(3*e)+'%p'+(hd?' · 큰 고기 바늘 빠짐 -'+5*hd+'%':''):id==='fight'?'장력 상승 -'+r(4*e)+'% · 바늘 빠짐 -'+r(5*e)+'%':id==='drag'?'채비 한계 +'+r(3*e)+'%':id==='chum'?'입질 +'+r(5*e)+'%':id==='tide'?'4~9물 입질 +'+r(20+10*e)+'%':id==='boat'?'선비 -'+r(5*e)+'%':'';}/* V151 심화는 효과 절반 */
 const SK_EX={cast:'민장대는 비거리 고정이라 제외',tide:'바다 낚시터만 · 4~9물일 때만',boat:'선상 출조만',chum:'직접·자동 낚시 모두'};
-function skNowNext(s){const l=sk(s.id),c=l<s.max?skCost(s.id,l):0,nl=l<s.max?skNeedLv(s.id,l):0;return '<span class="num">지금 '+(l?skEff(s.id,l):'없음')+(l<s.max?' → 다음 '+skEff(s.id,l+1):' · 최대')+'</span>'+(SK_EX[s.id]?' · '+SK_EX[s.id]:'')+(c>1?'<br><span class="skdeep'+(RG.lv<nl?' lock':'')+'">심화 '+(l-SK_DEF[s.id].base+1)+'단계 · 효과 절반'+(s.dd?' ('+s.dd+')':'')+' · 스킬 포인트 '+c+'개 · Lv.'+nl+'부터'+(RG.lv<nl?' (지금 Lv.'+RG.lv+')':'')+'</span>':'');}
+function skNowNext(s){const l=sk(s.id),c=l<s.max?skCost(s.id,l):0,nl=l<s.max?skNeedLv(s.id,l):0;return '<span class="num">지금 '+(l?skEff(s.id,l):'없음')+(l<s.max&&c<2?' → 다음 '+skEff(s.id,l+1):l<s.max?'':' · 최대')+'</span>'+(SK_EX[s.id]?' · '+SK_EX[s.id]:'')+(c>1?'<br><span class="skdeep'+(RG.lv<nl?' lock':'')+'">심화 '+(l-SK_DEF[s.id].base+1)+'단계 → <span class="num">'+skEff(s.id,l+1)+'</span> · 스킬 포인트 '+c+'개 · Lv.'+nl+'부터'+(RG.lv<nl?' (지금 Lv.'+RG.lv+')':'')+'</span>':'');}/* V158 심화 칩: '효과 절반' 대신 심화 뒤 최종 수치(지금 수치는 위 줄) — 줄어드는 걸로 오해하지 않게 */
 function hookSkTxt(){try{const G=gear();if(!G.rod)return'';const h0=skE('hook',sk('hook')),h1=skE('hook',sk('hook')+1),now=hookP(.8+.03*h0,G,h0),nx=hookP(.8+.03*h1,G,h1);/* V151 심화는 바늘걸림 그대로 */return' · 지금 낚싯대로 보통 어종 바늘걸림 약 '+Math.round(now*100)+'%'+(sk('hook')<5&&nx-now<.001?' · 이미 최대(95%)라 더 배워도 이 낚싯대에선 효과가 없습니다':'');}catch(e){return'';}}
 function catchXP(f,cm,raw,rel,first,lv,auto){const base=(rel?(8+cm*.15)*XP_K:(10+5*Math.sqrt(raw))*XP_K)+(first?30+10*(f.pts||1):0);/* C6 #100: 첫 어종 보너스는 방생(금지체장·금어기)한 첫 마리에도 */const gap=Math.min(lv,24)-fishLv(f);
   const mul=gap>0?Math.max(.2,1-.08*gap):Math.min(1.3,1-.03*gap);return Math.max(1,Math.round(base*mul*(auto?AUTO_XP:1)));}
-const LV_REQ={"r_light_l":25,"r_trout_l":25,"r_bass_l":25,"r_bspin_l":25,"r_frog_l":25,"r_rockf_l":25,"r_egi_l":25,"r_seabass_l":25,"r_shore_l":25,"r_iso1_l":25,"r_iso15_l":25,"r_iso2_l":25,"r_iso3_l":25,"r_pole24_l":25,"r_pole_l":25,"r_pole40_l":25,"r_spole_l":25,"r_surf1_l":25,"r_surf2_l":25,"r_light_m":5,"r_light_h":12,"r_light_x":20,"r_egi_m":5,"r_egi_h":12,"r_egi_x":20,"r_bass_m":5,"r_bass_h":12,"r_bass_x":20,"r_bspin_m":5,"r_bspin_h":12,"r_rockf_m":5,"r_rockf_h":12,"r_seabass":3,"r_seabass_m":5,"r_seabass_h":12,"r_shore":8,"r_shore_m":10,"r_shore_h":13,"r_frog":6,"r_frog_m":8,"r_frog_h":12,"r_trout_m":5,"r_trout_h":12,"r_trout_x":20,"r_iso1_m":5,"r_iso1_h":12,"r_iso1_x":20,"r_iso15_m":5,"r_iso15_h":12,"r_iso2_m":5,"r_iso2_h":12,"r_iso3":6,"r_iso3_m":8,"r_iso3_h":12,"r_pole24_m":5,"r_pole24_h":12,"r_pole_m":5,"r_pole_h":12,"r_pole40_m":5,"r_pole40_h":12,"r_spole_m":5,"r_spole_h":12,"r_surf1_m":5,"r_surf1_h":12,"r_surf2":5,"r_surf2_m":7,"r_surf2_h":12,"l_ny2_m":3,"l_ny3_m":3,"l_ny5_m":3,"l_pe06_m":3,"l_pe08_m":3,"l_pe1_m":3,"l_pe1_h":8,"l_pe15_m":3,"l_pe2_m":3,"l_pe2_h":8,"l_pe3":8,"l_pe3_m":10,"d_fc15_m":3,"d_fc2_m":3,"d_fc3_m":3,"d_fc5_m":3,"d_fc8_m":3,"d_fc12":8,"d_fc12_m":10,"t_metal40_h":8,"t_metal60":8,"t_metal60_h":13,"t_metal80":8,"t_metal100":8,"t_minnow_h":8,"t_egi_h":8,"t_jig1_m":3,"t_jig1_h":8,"t_jig1_x":15,"t_jig1_l":25,"t_jig3_m":3,"t_jig3_h":8,"t_jig3_x":15,"t_jig3_l":25,"t_jig5_m":3,"t_jig5_h":8,"t_jig5_x":15,"t_jig5_l":25,"t_jig7_m":3,"t_jig7_h":8,"t_jig7_x":15,"t_jig7_l":25,"t_jig10_m":3,"t_jig10_h":8,"t_jig10_x":15,"t_jig10_l":25,"t_metal20_m":3,"t_metal20_h":8,"t_metal20_x":15,"t_metal20_l":25,"t_metal30_m":3,"t_metal30_h":8,"t_metal30_x":15,"t_metal30_l":25,"t_metal40_m":3,"t_metal40_x":15,"t_metal40_l":25,"t_metal60_m":8,"t_metal60_x":15,"t_metal60_l":25,"t_metal80_m":8,"t_metal80_h":8,"t_metal80_x":15,"t_metal80_l":25,"t_metal100_m":8,"t_metal100_h":8,"t_metal100_x":15,"t_metal100_l":25,"t_minnow7_m":3,"t_minnow7_h":8,"t_minnow7_x":15,"t_minnow7_l":25,"t_minnow9_m":3,"t_minnow9_h":8,"t_minnow9_x":15,"t_minnow9_l":25,"t_minnow_m":3,"t_minnow_x":15,"t_minnow_l":25,"t_minnow14_m":3,"t_minnow14_h":8,"t_minnow14_x":15,"t_minnow14_l":25,"t_spoon3_m":3,"t_spoon3_h":8,"t_spoon3_x":15,"t_spoon3_l":25,"t_spoon_m":3,"t_spoon_h":8,"t_spoon_x":15,"t_spoon_l":25,"t_frog_m":3,"t_frog_h":8,"t_frog_x":15,"t_frog_l":25,"t_egi25_m":3,"t_egi25_h":8,"t_egi25_x":15,"t_egi25_l":25,"t_egi_m":3,"t_egi_x":15,"t_egi_l":25,"t_egi35_m":3,"t_egi35_h":8,"t_egi35_x":15,"t_egi35_l":25,"t_krill_m":3,"t_krill_h":8,"t_krill_x":15,"t_krill_l":25,"t_sabiki_m":3,"t_sabiki_h":8,"t_sabiki_x":15,"t_sabiki_l":25,"t_surff_m":3,"t_surff_h":8,"t_surff_x":15,"t_surff_l":25,"t_surf25_m":3,"t_surf25_h":8,"t_surf25_x":15,"t_surf25_l":25,"t_surf30_m":3,"t_surf30_h":8,"t_surf30_x":15,"t_surf30_l":25,"t_paste_m":3,"t_paste_h":8,"t_paste_x":15,"t_paste_l":25,"t_bingeo_m":3,"t_bingeo_h":8,"t_bingeo_x":15,"t_bingeo_l":25,"t_minnow_hs":8};
+const LV_REQ={"r_light_l":25,"r_trout_l":25,"r_bass_l":25,"r_bspin_l":25,"r_frog_l":25,"r_rockf_l":25,"r_egi_l":25,"r_seabass_l":25,"r_shore_l":25,"r_iso1_l":25,"r_iso15_l":25,"r_iso2_l":25,"r_iso3_l":25,"r_pole24_l":25,"r_pole_l":25,"r_pole40_l":25,"r_spole_l":25,"r_surf1_l":25,"r_surf2_l":25,"r_light_m":5,"r_light_h":12,"r_light_x":20,"r_egi_m":5,"r_egi_h":12,"r_egi_x":20,"r_bass_m":5,"r_bass_h":12,"r_bass_x":20,"r_bspin_m":5,"r_bspin_h":12,"r_rockf_m":5,"r_rockf_h":12,"r_seabass":3,"r_seabass_m":5,"r_seabass_h":12,"r_shore":8,"r_shore_m":10,"r_shore_h":13,"r_frog":6,"r_frog_m":8,"r_frog_h":12,"r_trout_m":5,"r_trout_h":12,"r_trout_x":20,"r_iso1_m":5,"r_iso1_h":12,"r_iso1_x":20,"r_iso15_m":5,"r_iso15_h":12,"r_iso2_m":5,"r_iso2_h":12,"r_iso3":6,"r_iso3_m":8,"r_iso3_h":12,"r_pole24_m":5,"r_pole24_h":12,"r_pole_m":5,"r_pole_h":12,"r_pole40_m":5,"r_pole40_h":12,"r_spole_m":5,"r_spole_h":12,"r_surf1_m":5,"r_surf1_h":12,"r_surf2":5,"r_surf2_m":7,"r_surf2_h":12,"l_ny2_m":3,"l_ny3_m":3,"l_ny5_m":3,"l_pe06_m":3,"l_pe08_m":3,"l_pe1_m":3,"l_pe1_h":8,"l_pe15_m":3,"l_pe2_m":3,"l_pe2_h":8,"l_pe3":8,"l_pe3_m":10,"d_fc15_m":3,"d_fc2_m":3,"d_fc3_m":3,"d_fc5_m":3,"d_fc8_m":3,"d_fc12":8,"d_fc12_m":10,"t_metal40_h":8,"t_metal60":8,"t_metal60_h":13,"t_metal80":8,"t_metal100":8,"t_minnow_h":8,"t_egi_h":8,"t_jig1_m":3,"t_jig1_h":8,"t_jig1_x":15,"t_jig1_l":25,"t_jig3_m":3,"t_jig3_h":8,"t_jig3_x":15,"t_jig3_l":25,"t_jig5_m":3,"t_jig5_h":8,"t_jig5_x":15,"t_jig5_l":25,"t_jig7_m":3,"t_jig7_h":8,"t_jig7_x":15,"t_jig7_l":25,"t_jig10_m":3,"t_jig10_h":8,"t_jig10_x":15,"t_jig10_l":25,"t_metal20_m":3,"t_metal20_h":8,"t_metal20_x":15,"t_metal20_l":25,"t_metal30_m":3,"t_metal30_h":8,"t_metal30_x":15,"t_metal30_l":25,"t_metal40_m":3,"t_metal40_x":15,"t_metal40_l":25,"t_metal60_m":8,"t_metal60_x":15,"t_metal60_l":25,"t_metal80_m":8,"t_metal80_h":8,"t_metal80_x":15,"t_metal80_l":25,"t_metal100_m":8,"t_metal100_h":8,"t_metal100_x":15,"t_metal100_l":25,"t_minnow7_m":3,"t_minnow7_h":8,"t_minnow7_x":15,"t_minnow7_l":25,"t_minnow9_m":3,"t_minnow9_h":8,"t_minnow9_x":15,"t_minnow9_l":25,"t_minnow_m":3,"t_minnow_x":15,"t_minnow_l":25,"t_minnow14_m":3,"t_minnow14_h":8,"t_minnow14_x":15,"t_minnow14_l":25,"t_spoon3_m":3,"t_spoon3_h":8,"t_spoon3_x":15,"t_spoon3_l":25,"t_spoon_m":3,"t_spoon_h":8,"t_spoon_x":15,"t_spoon_l":25,"t_frog_m":3,"t_frog_h":8,"t_frog_x":15,"t_frog_l":25,"t_egi25_m":3,"t_egi25_h":8,"t_egi25_x":15,"t_egi25_l":25,"t_egi_m":3,"t_egi_x":15,"t_egi_l":25,"t_egi35_m":3,"t_egi35_h":8,"t_egi35_x":15,"t_egi35_l":25,"t_krill_m":3,"t_krill_h":8,"t_krill_x":15,"t_krill_l":25,"t_sabiki_m":3,"t_sabiki_h":8,"t_sabiki_x":15,"t_sabiki_l":25,"t_surff_m":3,"t_surff_h":8,"t_surff_x":15,"t_surff_l":25,"t_surf25_m":3,"t_surf25_h":8,"t_surf25_x":15,"t_surf25_l":25,"t_surf30_m":3,"t_surf30_h":8,"t_surf30_x":15,"t_surf30_l":25,"t_paste_m":3,"t_paste_h":8,"t_paste_x":15,"t_paste_l":25,"t_bingeo_m":3,"t_bingeo_h":8,"t_bingeo_x":15,"t_bingeo_l":25,"t_ayu":5,"t_ayu_m":8,"t_ayu_h":12,"t_ayu_x":15,"t_ayu_l":25,"t_minnow_hs":8};
 // v26 해금: 선상 출조 레벨을 넓게(주꾸미 2 · 우럭 4 · 이카메탈 6 · 갈치 8 · 타이라바 10 · 지깅 15)
 const TRIP_LV={jjukku:2,ureok:4,ikametal:6,galchi:8,taira:10,jigging:15,tuna:25};
 // v26 최상급(ti 3)은 레벨에 더해 어록 등록 DEX_REQ종이 필요. 이미 가진 장비는 잠겨도 그대로 쓴다(사는 것만 막음) — 서버 /buy가 같은 함수로 확인
@@ -8018,6 +8026,7 @@ function artTerm(x,id,acc){const k=x.kind;let s='';
   else if(k==='egi')s='<path d="M24 62 C34 40 82 40 96 58 C84 74 36 80 24 62Z" fill="'+acc+'"/><path d="M28 60 C40 46 78 46 92 58" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2"/>'+[0,1,2,3,4,5].map(i=>'<path d="M'+(36+i*9)+' 50 l4 18" stroke="#0d1418" stroke-opacity=".35" stroke-width="2"/>').join('')+'<circle cx="34" cy="56" r="4.5" fill="#fff"/><circle cx="34" cy="56" r="2" fill="#111"/><path d="M26 64 C30 74 46 74 52 68 L50 64Z" fill="url(#mt'+id+')"/><path d="M60 50 l8 -14 l6 14Z" fill="'+acc+'" opacity=".8"/><g stroke="#e8eef0" stroke-width="1.4">'+[0,1,2,3,4,5,6,7].map(i=>{const a=-.9+i*.25;return'<line x1="98" y1="58" x2="'+(98+Math.cos(a)*12)+'" y2="'+(58+Math.sin(a)*12)+'"/>';}).join('')+'</g>';
   else if(k==='krill')s='<line x1="60" y1="8" x2="60" y2="92" stroke="#e8eef0" stroke-width="1"/><circle cx="60" cy="40" r="16" fill="#ff7a3d"/><path d="M44 40 A16 16 0 0 0 76 40Z" fill="#ffe36b"/><ellipse cx="54" cy="34" rx="5" ry="3" fill="#fff" opacity=".6"/><path d="M60 92 q0 12 -10 8" fill="none" stroke="#cfd6db" stroke-width="2"/><path d="M48 98 c4-8 14-8 16 0 c-4 6 -12 6 -16 0Z" fill="#ff9aa2"/>';
   else if(k==='sabiki')s='<line x1="60" y1="6" x2="60" y2="98" stroke="#e8eef0" stroke-width="1"/>'+[0,1,2,3,4].map(i=>{const y=18+i*15,sd=i%2?1:-1;return'<line x1="60" y1="'+y+'" x2="'+(60+sd*16)+'" y2="'+(y+5)+'" stroke="#e8eef0" stroke-width="1"/><path d="M'+(60+sd*16)+' '+(y+5)+' q'+sd*4+' 6 0 9" fill="none" stroke="#cfd6db" stroke-width="1.6"/><rect x="'+(60+sd*16-3)+'" y="'+(y+1)+'" width="6" height="5" fill="url(#hl'+id+')"/>';}).join('')+'<path d="M52 98 L68 98 L64 112 L56 112Z" fill="url(#mt'+id+')"/>';
+  else if(k==='ayu')s='<line x1="60" y1="6" x2="60" y2="40" stroke="#e8eef0" stroke-width="1"/><circle cx="60" cy="44" r="4" fill="none" stroke="#c9a24a" stroke-width="2"/><path d="M30 62 C40 48 80 46 96 60 C80 74 40 76 30 62Z" fill="#9aa27e"/><path d="M34 60 C46 52 78 52 92 60" fill="none" stroke="#fff" stroke-width="2" opacity=".5"/><circle cx="60" cy="58" r="3" fill="#e0c040"/><circle cx="40" cy="60" r="2.4" fill="#111"/><path d="M96 60 L108 52 L106 60 L108 68Z" fill="#9aa27e"/><path d="M100 80 q6 6 0 12 M108 80 q6 6 0 12 M104 78 L104 96" fill="none" stroke="#555" stroke-width="1.6"/>';/* V157 씨은어+걸바늘 */
   else if(k==='paste'||k==='bingeo')s='<line x1="60" y1="6" x2="60" y2="96" stroke="#e8eef0" stroke-width="1"/><rect x="56" y="14" width="8" height="40" rx="3" fill="#2a3139"/><rect x="56" y="14" width="8" height="14" rx="3" fill="#ff5c7a"/><rect x="56" y="26" width="8" height="6" fill="#ffe36b"/>'+(k==='paste'?'<circle cx="60" cy="96" r="9" fill="#c8a26a"/><circle cx="57" cy="93" r="3" fill="#e2c38c"/>':[0,1,2,3].map(i=>'<path d="M60 '+(66+i*8)+' q8 2 6 7" fill="none" stroke="#cfd6db" stroke-width="1.4"/><ellipse cx="66" cy="'+(73+i*8)+'" rx="2.5" ry="1.6" fill="#f3ead2"/>').join(''));
   else if(k==='surf'||k==='surff')s='<line x1="60" y1="6" x2="60" y2="70" stroke="#e8eef0" stroke-width="1.2"/><path d="M60 70 L46 104 L74 104Z" fill="url(#mt'+id+')"/>'+(k==='surff'?'<g stroke="#cfd6db" stroke-width="1.6" fill="none">'+[0,1,2,3,4].map(i=>'<ellipse cx="60" cy="'+(40+i*5)+'" rx="10" ry="3"/>').join('')+'</g><circle cx="60" cy="50" r="6" fill="#c8a26a"/>':'')+'<line x1="60" y1="30" x2="84" y2="40" stroke="#e8eef0"/><line x1="60" y1="50" x2="36" y2="60" stroke="#e8eef0"/><path d="M84 40 q6 8 -2 10" fill="none" stroke="#cfd6db" stroke-width="1.8"/><path d="M36 60 q-6 8 2 10" fill="none" stroke="#cfd6db" stroke-width="1.8"/>'+(k==='surf'?'<path d="M80 48 c8 4 10 12 4 16 M34 68 c-8 4 -8 12 -2 16" stroke="#c96a5a" stroke-width="3" fill="none" stroke-linecap="round"/>':'');
   s+='<rect x="74" y="98" width="40" height="16" rx="4" fill="#0d1418" opacity=".85"/><text x="94" y="110" font-size="10" font-weight="700" text-anchor="middle" fill="#fff" font-family="IBM Plex Mono,monospace">'+(KIND_TXT_W(x))+'</text>';
@@ -8408,10 +8417,10 @@ function kitFits(S,s){if(!s)return true;const r=GBY[S.eq.rod],t=GBY[S.eq.term];r
    이 낚시터에서 쓸 수 있는 낚시법마다 "가진 장비 우선 → 모자란 칸만 가장 싸게 사서" 맞는 한 벌(낚싯대·원줄·목줄·채비)을 고른다.
    판정은 실제 낚시와 같은 checkGear(ok0 — 채비 개수는 사면 채워지므로 빼고)로, 노릴 어종은 shoreCatch(실제 입질 표)로 계산.
    실행: 확인 한 번 → 필요한 것만 사고(서버 /buy keep) → 네 칸 장착(서버 /equip). 서버 판정·가격·해금은 그대로 */
-const OC_ME=[['lure','루어'],['egi','에깅'],['float','찌낚시'],['surf','원투'],['pole','민장대']];
+const OC_ME=[['lure','루어'],['egi','에깅'],['float','찌낚시'],['surf','원투'],['pole','민장대'],['ayu','놀림낚시']];/* V157 */
 let ocSel=null,ocBusy=false,ocCache=null;
-const ocRodMe=m=>m==='egi'?'lure':m;
-function ocKinds(m){return m==='egi'?['egi']:m==='lure'?ROD_KINDS.lure.filter(k=>k!=='egi'):(ROD_KINDS[m]||[]);}
+const ocRodMe=m=>m==='egi'?'lure':m==='ayu'?'pole':m;
+function ocKinds(m){return m==='egi'?['egi']:m==='ayu'?['ayu']:m==='lure'?ROD_KINDS.lure.filter(k=>k!=='egi'):m==='pole'?ROD_KINDS.pole.filter(k=>k!=='ayu'):(ROD_KINDS[m]||[]);}
 function ocEnv(x,s){return!s||!x.env||x.env==='both'||x.env===s.w;}
 function ocHas(cat,x){return cat==='term'?(x.pack===0||termLeft(x.id)>0):(!!save.inv.own[x.id]||x.price===0);}
 function ocCan(x){return lockInfo(x).ok;}
@@ -8435,7 +8444,7 @@ function ocPlans(s){const key=s&&(s.id+'|'+RG.lv+'|'+dexN()+'|'+JSON.stringify(s
   const P=OC_ME.map(([m,t])=>{const p=ocPlan(s,m);return p?Object.assign(p,{t}):null;}).filter(Boolean);ocCache={key,P};return P;}
 function ocOn(p){return['rod','line','leader','term'].every(c=>(save.eq[c]||null)===(p.eq[c]||null))&&!(GBY[p.eq.term].pack>0&&termLeft(p.eq.term)<=0);}
 function ocHTML(s,lk){if(!s||curTrip)return'';const P=ocPlans(s);if(!P.length)return'';
-  if(!ocSel||!P.some(p=>p.m===ocSel)){const now=P.find(p=>p.m===(save.eq.rod&&GBY[save.eq.rod]&&(GBY[save.eq.rod].me==='lure'&&save.eq.term&&GBY[save.eq.term]&&GBY[save.eq.term].kind==='egi'?'egi':GBY[save.eq.rod].me)));ocSel=(now||P.slice().sort((a,b)=>b.fish.length-a.fish.length||a.cost-b.cost)[0]).m;}
+  if(!ocSel||!P.some(p=>p.m===ocSel)){const tk0=save.eq.term&&GBY[save.eq.term]&&GBY[save.eq.term].kind;const now=P.find(p=>p.m===(save.eq.rod&&GBY[save.eq.rod]&&(GBY[save.eq.rod].me==='lure'&&tk0==='egi'?'egi':GBY[save.eq.rod].me==='pole'&&tk0==='ayu'?'ayu':GBY[save.eq.rod].me)));ocSel=(now||P.slice().sort((a,b)=>b.fish.length-a.fish.length||a.cost-b.cost)[0]).m;}
   const p=P.find(x=>x.m===ocSel),row=(c,lab)=>{const id=p.eq[c];if(!id)return'<div class="ocr"><span class="k">'+lab+'</span><b>없이</b></div>';const x=GBY[id],nb=p.buy.includes(id);return'<div class="ocr"><span class="k">'+lab+'</span><b>'+esc(x.n)+'</b><span class="'+(nb?'ocb':'oco')+'">'+(nb?fmtN(x.price)+'P':'보유')+'</span></div>';};
   const on=ocOn(p),short=Math.max(0,p.cost-spendNow());
   return'<div class="ocbox"><div class="bsec" style="margin-top:0">원클릭 채비<span class="k" style="font-weight:400;margin-left:6px">'+esc(s.n)+'</span></div>'+
@@ -8509,7 +8518,7 @@ function gearScore(G,s){if(!G||!G.rod)return null;const C=capacity(G,s);const g0
   return{att:Math.round((gearAtt(G)-1)*100),big:Math.round((topQ(pexpShore(C,G))/topQ(pexpShore(C,null))-1)*100),miss:Math.max(0,Math.round((1-lossOf(G)/lossOf(g0))*100))};}
 function scoreHTML(G,s){const g=gearScore(G,s);if(!g)return'';const f=(v,sg)=>v>0?sg+v+'%':'0%';return'<div class="sumln gscore"><span class="k">내 채비 점수</span> 입질 <b class="num">'+f(g.att,'+')+'</b> · 대물 <b class="num">'+f(g.big,'+')+'</b> · 놓침 <b class="num">'+f(g.miss,'−')+'</b> <span class="k">(입문 기준)</span></div>';}
 // v26 어종 칩: 에기의 1% 바닷고기는 한 칩으로 묶어 보여 준다
-function fishChips(L){const M=L.filter(x=>!x.by),B=L.some(x=>x.by);let h=M.map(x=>'<span class="fchip'+(x.w?'':' off')+'"'+((FX[x.f.n]||{}).bait?' title="실제 미끼·채비: '+esc(FX[x.f.n].bait)+'"':'')+'>'+esc(x.f.n)+(x.w?(x.inSeason?'':' (철 아님)'):' ('+x.far+'m 이상 던져야 함)')+(x.rare&&x.w?' (드묾)':'')+closedChip(x.f)+'</span>').join('');
+function fishChips(L){const M=L.filter(x=>!x.by||x.off),B=L.some(x=>x.by&&!x.off);/* V158 철 아닌 오징어류는 따로 '(철 아님)' 칩 */let h=M.map(x=>'<span class="fchip'+(x.w?'':' off')+'"'+((FX[x.f.n]||{}).bait?' title="실제 미끼·채비: '+esc(FX[x.f.n].bait)+'"':'')+'>'+esc(x.f.n)+(x.w?(x.inSeason?'':' (철 아님)'):' ('+x.far+'m 이상 던져야 함)')+(x.rare&&x.w?' (드묾)':'')+closedChip(x.f)+'</span>').join('');
   if(B)h+='<span class="fchip" title="에기에는 오징어류가 대부분(약 99%)이고, 이 해역·철의 바닷고기가 가끔(약 1%) 걸립니다">그 밖의 바닷고기 (드묾 · 약 1%)</span>';
   if(B&&!M.length)h+='<div class="badline" style="width:100%">지금 이 해역·철에는 오징어류가 없어 입질이 거의 없습니다(바닷고기 1% 몫만)</div>';return h;}
 function gearSummary(compact){const s=cur||sel;const chk=checkGear(s);const G=chk.G;
@@ -9715,7 +9724,7 @@ duBoot();
 /* ===== V156 새 버전 안내 — 서버 /health의 ui(배포된 화면 판)가 이 화면(CLIENT_UI)보다 높으면 '새 버전이 나왔어요' 창.
    켤 때 + 화면으로 돌아올 때(10분에 한 번). 고기와 겨루는 중이면 끝난 뒤. 같은 판은 이 탭에서 한 번만 묻는다
    (새로 고침했는데 아직 캐시가 옛 화면이면 다시 묻지 않음 — 무한 반복 방지). 주소에 ?v=판을 붙여 캐시를 피한다 */
-const CLIENT_UI=156;
+const CLIENT_UI=158;
 const UPD={at:0,busy:false};
 function updAsked(v){try{return+(sessionStorage.getItem('fishinggo.meta.uiAsk')||0)>=v;}catch(e){return false;}}
 function updMark(v){try{sessionStorage.setItem('fishinggo.meta.uiAsk',String(v));}catch(e){}}
