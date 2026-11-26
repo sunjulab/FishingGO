@@ -10299,7 +10299,9 @@ function v4Norm(o){o=isObj(o)?o:{};const own=v4Arr(o.own,id=>!!cosmBy(id)||XID(i
   const dOk=id=>TANK_DECO.some(d=>d.id===id),don=v4Arr(t0.don,dOk),dOn=v4Arr(t0.dOn,dOk).filter(id=>don.includes(id));
   const r0=isObj(o.rel)?o.rel:{};
   return{_n:V4N,srv:!!o.srv,own,eq,chum:isFinite(+o.chum)&&+o.chum>0?+o.chum:0,tank:{lv,slots:sl,don,dOn},gyo:(Array.isArray(o.gyo)?o.gyo:[]).map(gyoNorm).filter(Boolean).slice(-50),
-    rel:{mine:v4Int(r0.mine),n:v4Int(r0.n),month:r0.month==null?null:v4Int(r0.month)},cabin:Math.max(0,Math.min(CABIN_CAP.length-1,v4Int(o.cabin))),capt:!!o.capt,pn:petNmNorm(o.pn,own)};}
+    rel:{mine:v4Int(r0.mine),n:v4Int(r0.n),month:r0.month==null?null:v4Int(r0.month)},cabin:Math.max(0,Math.min(CABIN_CAP.length-1,v4Int(o.cabin))),capt:!!o.capt,pn:petNmNorm(o.pn,own),
+    /* V167 기록 칭호(recF·recTn)·배 칭호(boat·bn)가 정리(v4Norm)에서 빠져 프로필을 받아도 늘 비어 있던 문제 — 이름표·칭호 카드에 '기록 칭호'만 보이고 글자가 안 나왔다 */
+    boat:!!o.boat,bn:typeof o.bn==='string'&&o.bn?o.bn.slice(0,40):null,recF:typeof o.recF==='string'&&o.recF?o.recF.slice(0,24):null,recTn:typeof o.recTn==='string'&&o.recTn?o.recTn.slice(0,40):null};}
 // V90 펫 이름 {펫 id: 이름} — 가진 펫만 · PET_NM_MAX자
 function petNmNorm(o,own){const r={};if(isObj(o))for(const k in o){const x=cosmIn('pet',k);if(x&&own.includes(k)&&typeof o[k]==='string'&&o[k].trim())r[k]=Array.from(o[k].trim()).slice(0,PET_NM_MAX).join('');}return r;}
 function V4(){if(!isObj(save.v34)||save.v34._n!==V4N)save.v34=v4Norm(save.v34);return save.v34;}
