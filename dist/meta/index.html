@@ -22,6 +22,9 @@
 <title>방구석 낚시꾼</title>
 <script>
   // /meta/ 주소의 링크 미리보기(og)용 페이지 — 사람은 404.html과 같은 방식으로 낚시GO 앱의 /meta(로그인 → 게임)로 보낸다
+  // V165 친구 초대 링크(?inv=코드): 코드를 이 도메인 localStorage에 남겨 두면 로그인·가입 뒤 게임이 자동으로 입력한다 · 방문 수만 센다
+  try { var iv = new URLSearchParams(location.search).get('inv'); if (iv && /^[A-Za-z0-9]{4,12}$/.test(iv)) { localStorage.setItem('fishinggo.meta.inv', JSON.stringify({ c: iv.toUpperCase(), t: Date.now() }));
+    try { fetch('https://fishinggo-meta.fishinggo.workers.dev/api/meta/inv-hit?c=' + encodeURIComponent(iv), { mode: 'no-cors', keepalive: true }); } catch (e) {} } } catch (e) {}
   try { sessionStorage.redirect = 'https://www.fishing-go.com/meta' + location.search + location.hash; } catch (e) {}
   location.replace('https://www.fishing-go.com/');
 </script>
