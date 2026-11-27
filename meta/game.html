@@ -464,6 +464,8 @@ body.fighting .revband,#world.biting~.revband{opacity:.75}
 #loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;color:var(--mute)}
 /* ---- v10: 휴대폰 HUD — 위쪽은 한 줄 + 기상 칩 한 줄, 나머지는 눌러서 펼침 ---- */
 #wxchip,#newsbtn,#menubtn,#autochip,#fhint{display:none}
+#mdock>#tankbtn{display:none!important}/* V174 지도 독: 어항 → 메뉴 안 */
+#mmenu{position:fixed;z-index:45;bottom:calc(var(--dockc,84px) + 8px);right:max(10px, env(safe-area-inset-right,0px));width:min(320px,calc(100vw - 20px));padding:10px;box-sizing:border-box;border-radius:18px;background:var(--glass2,#fffaf0);box-shadow:0 14px 40px rgba(0,0,0,.35);display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:calc(100% - var(--dockc,84px) - 90px);overflow:auto;overscroll-behavior:contain}#mmenu[hidden]{display:none}#mmenu .mq{display:flex;align-items:center;gap:8px;text-align:left;min-height:44px}#mmenu .mq svg{width:22px;height:22px;flex:none}#mmenu .rdot{position:relative}
 #menu{position:fixed;right:max(12px, env(safe-area-inset-right,0px));top:var(--hudb,64px);z-index:9;width:min(280px, calc(100vw - 24px));padding:10px;box-sizing:border-box;display:grid;gap:6px}
 #menu p{margin:0 0 2px;font-size:12px;color:var(--mute);line-height:1.5}
 #menu .ghost{text-align:left;padding:9px 12px;font-size:14px}
@@ -1958,9 +1960,11 @@ html #world #hint.hot{background:rgba(255,122,61,.5);border-color:rgba(255,122,6
     <button class="ghost" id="questbtn" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 9l1.8 1.8L14 7.5M8.5 15h7"/></svg>퀘스트</button>
     <button class="ghost" id="captbtn" type="button" hidden>선장실</button>
     <button class="ghost" id="dexbtn" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c3.2-4.6 9.2-5.6 13.2-2L20.5 7v10l-4.3-3c-4 3.6-10 2.6-13.2-2z"/><path d="M8 11.2v.01"/></svg>어록</button>
-    <button class="ghost" id="tankbtn" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="14" rx="2.5"/><path d="M3.5 9.5c2.2 1.3 4 1.3 5.7 0s3.5-1.3 5.6 0 3.6 1.3 5.7 0M9 15.5c1.5-1.6 3.6-1.6 5 0l1.5-1.2v2.4L14 15.5"/></svg>어항</button>
+    <button class="ghost" id="tankbtn" type="button" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="14" rx="2.5"/><path d="M3.5 9.5c2.2 1.3 4 1.3 5.7 0s3.5-1.3 5.6 0 3.6 1.3 5.7 0M9 15.5c1.5-1.6 3.6-1.6 5 0l1.5-1.2v2.4L14 15.5"/></svg>어항</button>
     <button class="ghost" id="shopbtn" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.5V20h15v-9.5M3.5 10.5L5.5 4h13l2 6.5zM10 20v-5h4v5"/></svg>상점</button>
+    <button class="ghost" id="mmenubtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="mmenu"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg>메뉴</button><!-- V174 지도 메뉴(어항은 이 안으로) -->
   </nav>
+  <div id="mmenu" class="panel" hidden role="menu" aria-label="메뉴"></div>
   <div id="legend" class="panel v39lg">
     <div class="lgbar"><button type="button" id="backSpot" hidden></button><button type="button" id="lgBtn" aria-expanded="false" aria-controls="lgBody"><span class="lgd" aria-hidden="true"><i class="g"></i><i class="w"></i><i class="b"></i></span>범례<svg class="cv" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg></button><div id="beginRow" hidden><button class="ghost" id="beginBtn" type="button" style="padding:4px 10px;font-size:12.5px;color:#7ff0c8;border-color:#7ff0c8" title="방파제 · 지금 채비로 잡기 쉬운 곳(눌러서 차례로 보기)">초보 추천 3곳</button> <span>방파제 · 지금 채비로 잡기 쉬운 곳(눌러서 차례로 보기)</span></div></div>
     <div id="lgBody">
@@ -12628,9 +12632,23 @@ const V44_IC={
 function v44Svg(k,cls){const b=V44_IC[k];return b?'<svg class="'+(cls||'v44s')+'" viewBox="0 0 32 32" aria-hidden="true" focusable="false">'+b+'</svg>':'';}
 const V44_ARR='<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // 하단 독: 같은 버튼(id·글자 그대로)에 그림만 바꿈
-function v44Dock(){const M={gearbtn:'bag',wshopbtn:'shop',wquestbtn:'quest',wdexbtn:'dex',menubtn:'menu',rankbtn:'rank',questbtn:'quest',dexbtn:'dex',tankbtn:'tank',shopbtn:'shop'};
+function v44Dock(){const M={gearbtn:'bag',wshopbtn:'shop',wquestbtn:'quest',wdexbtn:'dex',menubtn:'menu',rankbtn:'rank',questbtn:'quest',dexbtn:'dex',tankbtn:'tank',shopbtn:'shop',mmenubtn:'menu'};
   for(const id in M){const b=document.getElementById(id);if(!b||b.querySelector('svg.v44i'))continue;const o=b.querySelector('svg.ic');const h=v44Svg(M[id],'ic v44i');if(o)o.outerHTML=h;else b.insertAdjacentHTML('afterbegin',h);}}
 // 오른쪽 바로 가기(낚시터): 전국 대물 · 선물(협찬 추첨) · 랭킹 · 어항 · 식당(가까이 있거나 배가 고플 때)
+/* V174 지도 하단 메뉴: 낚시터 안 메뉴처럼 바로 가기를 모음(어항 포함) */
+function mmenuSet(on){const m=$('#mmenu'),b=$('#mmenubtn');if(!m||!b)return;if(on)mmenuBuild();m.hidden=!on;b.setAttribute('aria-expanded',!!on);b.classList.toggle('v44on',!!on);}
+function mmenuBuild(){const m=$('#mmenu');m.innerHTML='';const add=(k,ic,t,fn,dot)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');b.dataset.k=k;b.className='ghost mq'+(dot?' rdot':'');b.innerHTML=v44Svg(ic)+'<span>'+esc(t)+'</span>';b.onclick=()=>{mmenuSet(false);try{fn();}catch(e){}};m.appendChild(b);};
+  const q=k=>{const x=document.querySelector('#v44q [data-v44q="'+k+'"]');return x;};const qd=k=>{const x=q(k);return!!(x&&x.classList.contains('rdot'));};
+  add('notice','notice','공지',()=>ntOpen(),qd('notice'));
+  if(SRV)add('duel','duel','대결',()=>{if(window.__du)window.__du.open();});
+  {const e=q('ev');if(e&&!e.hidden)add('ev','ev','전국 대물',()=>v36EvOpen());}
+  add('event','star','이벤트',()=>openEvt());
+  add('gift','gift','선물',()=>{try{localStorage.setItem('fishinggo.meta.v44gift',v44Month());}catch(x){}openRPG('draw');},v44GiftNew());
+  add('tank','tank','어항',()=>openTank());
+  if(SRV)add('coupon','coin','쿠폰 입력',()=>openCoupon());
+  add('help','gear','설정',()=>openHelp());
+  add('contact','contact','제보·문의',()=>ctOpen());}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#mmenubtn');if(b){const m=$('#mmenu');mmenuSet(m.hidden);return;}const m=$('#mmenu');if(m&&!m.hidden&&!e.target.closest('#mmenu'))mmenuSet(false);},true);
 function v44Month(){return new Date(Date.now()+9*3600e3).toISOString().slice(0,7);}
 function v44GiftNew(){try{return localStorage.getItem('fishinggo.meta.v44gift')!==v44Month();}catch(e){return false;}}
 /* ===== V126 협업 · 오류 제보 · 문의: 인스타그램 @sunju._.dev DM으로 — DM은 링크로 내용을 채울 수 없어 '내용 복사 → DM 열기 → 붙여넣기'
