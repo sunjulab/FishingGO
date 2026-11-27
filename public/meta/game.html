@@ -12699,7 +12699,8 @@ var NT={items:null,at:0,err:false,tab:'all',view:null,busy:false};
 function ntGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
 function ntSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function ntTime(x){return x.from||x.t||0;}
-function ntShow(x){if(!x||!NT_K[x.kind])return false;if(x.target==='web'&&GAME_APP)return false;if(x.target==='app'&&!GAME_APP)return false;const n=Date.now();if(x.from&&n<x.from)return false;if(x.until&&n>=x.until)return false;return true;}
+function ntShow(x){if(!x||!NT_K[x.kind])return false;if(x.target==='web'&&(GAME_APP||ntNative()))return false;/* V174 웹 전용 공지는 방구석 앱과 낚시GO 앱(네이티브) 안에서 숨김 — 구글 플레이 결제 정책 */if(x.target==='app'&&!GAME_APP)return false;const n=Date.now();if(x.from&&n<x.from)return false;if(x.until&&n>=x.until)return false;return true;}
+function ntNative(){try{return!!isApp();}catch(e){return false;}}
 function ntList(){return(NT.items||[]).filter(ntShow);}
 function ntRead(){const r=ntGet(NT_RD,[]);return Array.isArray(r)?r:[];}
 function ntIsRead(id){return ntRead().includes(id);}
