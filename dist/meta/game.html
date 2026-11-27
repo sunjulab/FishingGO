@@ -8295,7 +8295,7 @@ function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.n
   const B=$('#autoBody');B.innerHTML=h;B.dataset.v='info';$('#autoModal').hidden=false;bindPay();
   const on=$('#autoOnB');if(on)on.onclick=()=>{if(!player||$('#world').hidden){toast('낚시터에 들어가서 켜세요');return;}setAuto(true);openAutoInfo();};
   const off=$('#autoOff');if(off)off.onclick=()=>{autoOffAny();$('#autoModal').hidden=true;};/* V73 다른 곳에서 도는 자동도 여기서 끔 */
-  const ad=$('#adBoost');if(ad)ad.onclick=async()=>{ad.disabled=true;const t0=ad.textContent;ad.textContent='보상 확인 중…';const r=await adWatch('boost');if(document.body.contains(ad)&&!(r&&r.status==='credited')){ad.disabled=false;ad.textContent=t0;}};
+  const ad=$('#adBoost');if(ad)ad.onclick=async()=>{ad.disabled=true;const t0=ad.textContent;ad.textContent='광고 불러오는 중…';const r=await adWatch('boost');if(document.body.contains(ad)&&!(r&&r.status==='credited')){ad.disabled=false;ad.textContent=t0;}};
   const sg=$('#subGo');if(sg)sg.onclick=subGo;/* V50 */const ax=$('#autoX2');if(ax)ax.onclick=x2Click(ax);const nb=$('#netUpB');if(nb)nb.onclick=()=>{nb.disabled=true;netUp();};}
 // V50 멤버십 보기: 낚시GO 안(iframe)이면 낚시GO 멤버십 화면으로(부모 창이 이동), 따로 연 게임이면 새 창으로
 const SUB_URL='https://www.fishing-go.com/vvip-subscribe';
@@ -8326,7 +8326,7 @@ function autoTick(dt,rdt){if(!autoOn){AQ_R=[];A_NEXT=0;return;}if(autoRT()&&!doc
   if(state!=='result'&&state!=='idle')autoT=state==='bite'?autoT:0;}
 // 재접속 팝업: 자리를 비운 동안 쌓인 것(구간별: 이용권·광고 부스트·무료)
 // v29 C2: 2배 받기 — 광고를 못 봤거나 실패하면 다시 시도할 수 있게(보상 지급·오늘 한도·2배 기한 지남이면 끝)
-function x2Click(b,id){return async()=>{b.disabled=true;const t0=b.textContent;b.textContent='보상 확인 중…';const r=await adWatch('x2',id);if(!document.body.contains(b))return;
+function x2Click(b,id){return async()=>{b.disabled=true;const t0=b.textContent;b.textContent='광고 불러오는 중…';const r=await adWatch('x2',id);if(!document.body.contains(b))return;
   if(r&&r.status==='credited'){b.textContent='2배 받음';return;}if(r&&r.status==='rejected'&&['AD_LIMIT','NO_X2'].includes(r.reason)){b.textContent=r.reason==='AD_LIMIT'?'오늘 광고를 모두 봤습니다':'2배 받기 기한이 지났습니다';return;}
   b.disabled=false;b.textContent=r?'다시 시도 · '+t0.replace(/^다시 시도 · /,''):t0;};}
 function showAwayPopup(s,R){if(v36Ret(s,R))return;/* v36 돌아왔을 때 연출(4초 이하, 눌러서 넘김) 뒤 이 창 */evt('away_popup');const A=autoNow();s=s||SPOTS.find(x=>x.id===A.spot)||null;let h='<div class="sumbox" id="awaySum"><div>'+(s?'<b>'+esc(s.n)+'</b>에서 ':'')+'자리를 비운 <b class="num">'+fmtMs(R.elapsed||R.away||0)+'</b> 동안 자동 낚시</div>';
@@ -8350,7 +8350,7 @@ function showAwayPopup(s,R){if(v36Ret(s,R))return;/* v36 돌아왔을 때 연출
   const X2=(R.x2&&R.id&&A.x2&&A.x2.id===R.id)?A.x2:null;const adOk=AD_ON&&isApp()&&!!capPlug('AdMob')&&SRV&&!!X2&&X2.pts>0&&!A.pass&&A.adsLeftToday>0;// v29 S2: 2배는 무료·광고 구간 몫만(서버 x2)
   if(adOk)h+='<div class="act2" style="margin:0 0 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="mini buy" type="button" id="awayX2">광고 보고 무료 자동낚시 몫 2배 (+'+fmtN(X2.pts)+'P)</button><span class="k">무료 구간만 · 정산 뒤 30분 안에 한 번 · 오늘 남은 광고 '+A.adsLeftToday+'회 · 닫아도 자동 낚시 창에서 받을 수 있습니다</span></div>';
   h+=goalHTML(s);
-  h+='<p class="src">자동 낚시는 게임을 끄거나 화면을 떠난 동안에도 계속되고, 무료는 하루(0시 기준) '+A.capH+'시간까지 쓸 수 있습니다(멤버십은 하루 24시간, 이용권은 이용권 끝까지). 광고 부스트·이용권은 무료의 2배를 받습니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다.</p>';
+  h+='<p class="src">자동 낚시는 게임을 끄거나 화면을 떠난 동안에도 계속되고, 무료는 하루(0시 기준) '+(NET_CAP_H[A.net|0]||AUTO_CAP_H)+'시간까지 쓸 수 있습니다(멤버십은 하루 24시간, 이용권은 이용권 끝까지). 광고 부스트·이용권은 무료의 2배를 받습니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다.</p>';
   const ck=s&&checkGear(s),A2=autoNow();if(A2.on)h+='<div class="act2" style="display:flex;gap:8px;flex-wrap:wrap"><span class="k" style="flex-basis:100%">자동 낚시는 계속 켜져 있습니다</span><button class="mini" id="awayOff" type="button">자동 낚시 끄기</button><button class="mini" id="awayInfo" type="button">자동 낚시 모드 보기</button></div>';
   else if(s&&R.reason!=='gear'&&ck.ok&&!(ck.G.term.pack&&termLeft(ck.G.term.id)<=0)&&!autoOn)h+='<div class="act2" style="display:flex;gap:8px;flex-wrap:wrap"><button class="mini buy" id="awayGo">'+esc(s.n)+'에서 자동 낚시 다시 켜기</button><button class="mini" id="awayInfo" type="button">자동 낚시 모드 보기</button></div>';
   try{const M=R.wxMove||(SA&&SA.wxMove&&wxMoveNew(SA.wxMove)?SA.wxMove:null);if(M&&!R.slow){h=wxMoveHTML(M)+h;wxMoveMark(M);}}catch(e){}/* V140 기상 악화 자동 이동 알림 */
@@ -9375,8 +9375,9 @@ async function adWatch(kind,id){if(!AD_ON){toast('광고 준비 중입니다');r
   if(kind==='boost'&&!autoOn){toast('자동 낚시를 켠 뒤 광고 부스트를 받을 수 있습니다');return null;}
   adBusy=true;try{const r=await net('ad-nonce',kind==='x2'?(id?{kind:'x2',id}:{kind:'x2'}):{});if(r.s!==200||!r.j||!r.j.nonce){toast(errMsg(r));return r.j&&r.j.error?{status:'rejected',reason:r.j.error}:null;}const nonce=r.j.nonce;
     // v29 C2: 닫기·표시 실패는 리스너로만 오기도 한다 → 보상(Rewarded)·닫힘(Dismissed)·표시 실패(FailedToShow)·90초 제한 중 먼저 오는 것으로 판단. 보상 신호가 있을 때만 서버에 확인
-    let seen=false;try{if(!adInit){await AM.initialize({});adInit=true;}await AM.prepareRewardVideoAd({adId:unit,ssv:{customData:nonce,userId:acctUid()}});seen=await adShow(AM);}
-    catch(e){toast('광고를 불러오지 못했습니다 · 잠시 후 다시 시도하세요');return{status:'fail'};}
+    let seen=false;const toP=(p,ms)=>Promise.race([Promise.resolve(p),new Promise((_,rj)=>setTimeout(()=>rj({code:'TIMEOUT'}),ms))]);/* V176 광고 준비가 끝나지 않으면 '보상 확인 중…'에서 영원히 멈추던 문제 → 시간 제한 */
+    try{if(!adInit){try{await toP(AM.initialize({}),8000);}catch(e){}adInit=true;}/* 낚시GO 앱이 이미 초기화했을 수 있음 · 실패해도 계속 */await toP(AM.prepareRewardVideoAd({adId:unit,ssv:{customData:nonce,userId:acctUid()}}),30000);seen=await adShow(AM);}
+    catch(e){const c=String((e&&(e.code||e.message))||'').slice(0,40);console.warn('[ad] prepare/show',e);toast(c==='TIMEOUT'?'광고를 아직 받을 수 없어요 · 새 광고는 준비에 몇 시간 걸릴 수 있어요 · 잠시 후 다시 시도하세요':'광고를 불러오지 못했습니다'+(c?' ('+c+')':'')+' · 잠시 후 다시 시도하세요',5200);return{status:'fail'};}
     if(!seen){toast('광고를 끝까지 보면 보상이 지급됩니다');return{status:'skipped'};}
     toast('광고 보상을 확인하는 중…');
     for(let i=0;i<24;i++){await sleepMs(i<4?1500:3000);const c=await net('ad-claim',{nonce});if(c.s!==200||!c.j)continue;if(c.j.auto)setSA(c.j.auto);
