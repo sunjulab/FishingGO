@@ -9371,14 +9371,17 @@ async function iapResume(){try{const k=iapKind();if(k==='cdv'){cdvInit().catch((
 // 광고 보상(앱의 AdMob 보상형 광고 · 서버 SSV 확인): kind 'boost'(자동 낚시 켠 동안·이용권 없을 때) | 'x2'(재접속 정산분 2배)
 let adInit=false,adBusy=false;
 function adUnit(){const a=CFG.admob||{};return a.rewardId||a.reward||ADMOB_REWARD_ID;}
-async function adWatch(kind,id){if(!AD_ON){toast('광고 준비 중입니다');return null;}const AM=capPlug('AdMob');if(!AM||!SRV||adBusy)return null;const unit=adUnit();if(!unit){toast('광고 준비 중입니다');return null;}
+async function adWatch(kind,id){if(!AD_ON){toast('광고 준비 중입니다');return null;}const AM=capPlug('AdMob');const AT=(()=>{try{return isMasterTok();}catch(e){return false;}})();/* V177 운영자(MASTER) 계정 = 광고 시험 모드: 구글 공식 테스트 광고 단위로 단계마다 안내(실제 광고·보상과 무관) */
+  if(AT&&!AM){toast('[광고 시험] 이 화면에는 AdMob 기능이 없어요(웹·방구석 앱) · 낚시GO 앱에서 시험하세요',5200);return null;}
+  if(!AM||!SRV||adBusy)return null;const unit=AT?'ca-app-pub-3940256099942544/5224354917':adUnit();if(!unit){toast('광고 준비 중입니다');return null;}
   if(kind==='boost'&&!autoOn){toast('자동 낚시를 켠 뒤 광고 부스트를 받을 수 있습니다');return null;}
   adBusy=true;try{const r=await net('ad-nonce',kind==='x2'?(id?{kind:'x2',id}:{kind:'x2'}):{});if(r.s!==200||!r.j||!r.j.nonce){toast(errMsg(r));return r.j&&r.j.error?{status:'rejected',reason:r.j.error}:null;}const nonce=r.j.nonce;
     // v29 C2: 닫기·표시 실패는 리스너로만 오기도 한다 → 보상(Rewarded)·닫힘(Dismissed)·표시 실패(FailedToShow)·90초 제한 중 먼저 오는 것으로 판단. 보상 신호가 있을 때만 서버에 확인
-    let seen=false;const toP=(p,ms)=>Promise.race([Promise.resolve(p),new Promise((_,rj)=>setTimeout(()=>rj({code:'TIMEOUT'}),ms))]);/* V176 광고 준비가 끝나지 않으면 '보상 확인 중…'에서 영원히 멈추던 문제 → 시간 제한 */
-    try{if(!adInit){try{await toP(AM.initialize({}),8000);}catch(e){}adInit=true;}/* 낚시GO 앱이 이미 초기화했을 수 있음 · 실패해도 계속 */await toP(AM.prepareRewardVideoAd({adId:unit,ssv:{customData:nonce,userId:acctUid()}}),30000);seen=await adShow(AM);}
-    catch(e){const c=String((e&&(e.code||e.message))||'').slice(0,40);console.warn('[ad] prepare/show',e);toast(c==='TIMEOUT'?'광고를 아직 받을 수 없어요 · 새 광고는 준비에 몇 시간 걸릴 수 있어요 · 잠시 후 다시 시도하세요':'광고를 불러오지 못했습니다'+(c?' ('+c+')':'')+' · 잠시 후 다시 시도하세요',5200);return{status:'fail'};}
-    if(!seen){toast('광고를 끝까지 보면 보상이 지급됩니다');return{status:'skipped'};}
+    let seen=false;const step=t=>{if(AT)toast('[광고 시험] '+t,2600);};const toP=(p,ms)=>Promise.race([Promise.resolve(p),new Promise((_,rj)=>setTimeout(()=>rj({code:'TIMEOUT'}),ms))]);/* V176 광고 준비가 끝나지 않으면 '보상 확인 중…'에서 영원히 멈추던 문제 → 시간 제한 */
+    let at='init';try{step('1/3 광고 기능 준비');if(!adInit){try{await toP(AM.initialize({}),8000);}catch(e){}adInit=true;}/* 낚시GO 앱이 이미 초기화했을 수 있음 · 실패해도 계속 */at='prepare';step('2/3 광고 받는 중');await toP(AM.prepareRewardVideoAd({adId:unit,ssv:{customData:nonce,userId:acctUid()}}),30000);at='show';step('3/3 광고 보여 주는 중');seen=await adShow(AM);}
+    catch(e){const c=String((e&&(e.code||e.message))||'').slice(0,40);console.warn('[ad] prepare/show',e);if(AT){toast('[광고 시험] 실패 · 단계 '+at+' · '+(c||'원인 없음'),9000);return{status:'fail'};}toast(c==='TIMEOUT'?'광고를 아직 받을 수 없어요 · 새 광고는 준비에 몇 시간 걸릴 수 있어요 · 잠시 후 다시 시도하세요':'광고를 불러오지 못했습니다'+(c?' ('+c+')':'')+' · 잠시 후 다시 시도하세요',5200);return{status:'fail'};}
+    if(!seen){toast(AT?'[광고 시험] 광고는 나왔지만 끝까지 보기 신호가 없음':'광고를 끝까지 보면 보상이 지급됩니다');return{status:'skipped'};}
+    if(AT){toast('[광고 시험] 성공 · 광고 표시·시청 완료 신호 정상 (테스트 광고라 보상은 없음)',7000);return{status:'skipped'};}
     toast('광고 보상을 확인하는 중…');
     for(let i=0;i<24;i++){await sleepMs(i<4?1500:3000);const c=await net('ad-claim',{nonce});if(c.s!==200||!c.j)continue;if(c.j.auto)setSA(c.j.auto);
       if(c.j.status==='credited'){if(c.j.pt!=null){save.pt=c.j.pt;setWal(c.j.wallet);if(c.j.rpg)applyRPG(c.j.rpg);refreshWallet();renderLv();}
