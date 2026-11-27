@@ -4744,11 +4744,15 @@ app.get('/api/admin/suspicious-tiers', async (req, res) => {
 
     const paidUsers = await User.find(
       { tier: { $in: PAID_TIERS } },
-      { email: 1, id: 1, name: 1, tier: 1, subscriptionExpiresAt: 1, createdAt: 1 }
+      { email: 1, id: 1, name: 1, tier: 1, subscriptionExpiresAt: 1, iapExpiresAt: 1, iapPurchaseToken: 1, createdAt: 1 }
     ).lean();
 
+    // ✅ SUSPECT-FIX(2026-11-27): 구글 플레이 결제 이력은 userId에 ObjectId(tp.id)가, 유저 비교 키는 email이라 서로 안 맞아 정상 구독자가 '결제기록 없음'으로 떴다
+    //    → 결제 이력의 userId와 email을 모두 모으고, 구글이 확인한 구독(iapPurchaseToken + 아직 안 지난 iapExpiresAt)도 정상으로 본다
     const paidIds = await PaymentHistory.distinct('userId', { status: 'paid' });
-    const paidIdSet = new Set(paidIds.map(String));
+    const paidEmails = await PaymentHistory.distinct('email', { status: 'paid' }).catch(() => []);
+    const paidIdSet = new Set([...paidIds, ...paidEmails].filter(Boolean).map(String));
+    const nowD = new Date();
     const proSubIds = new Set(Object.keys(memProSubs || {}));
 
     const ADMIN_EMAILS = new Set(['sunjulab.k', 'sunjulab.k@gmail.com']);
@@ -4757,13 +4761,15 @@ app.get('/api/admin/suspicious-tiers', async (req, res) => {
       .filter(u => {
         const uid = String(u.email || u.id || '');
         if (ADMIN_EMAILS.has(uid)) return false;
-        return !paidIdSet.has(uid) && !proSubIds.has(uid);
+        if (u.iapPurchaseToken && u.iapExpiresAt && new Date(u.iapExpiresAt) > nowD) return false; // 구글 플레이 구독 중(만료 전) = 정상
+        const keys = [u.email, u.id, u._id].filter(Boolean).map(String);
+        return !keys.some(k => paidIdSet.has(k) || proSubIds.has(k));
       })
       .map(u => {
         const g = grants.get(String(u.email || u.id || u.name || ''));
         return {
           email: u.email, id: u.id, name: u.name,
-          tier: u.tier, expiresAt: u.subscriptionExpiresAt, joinedAt: u.createdAt,
+          tier: u.tier, expiresAt: u.subscriptionExpiresAt || u.iapExpiresAt || null, joinedAt: u.createdAt,
           grantedAt: g && g.tier === u.tier ? g.at : null, note: g && g.tier === u.tier ? g.note : null,
         };
       })
