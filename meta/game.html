@@ -288,7 +288,7 @@ body.fighting .revband,#world.biting~.revband{opacity:.75}
 /* V139 PRO 결제 안내 */
 #proM{z-index:80}/* V142 상점(z 60) 위에 뜨게 — 상점을 닫아야 보이던 것 */
 .proM .proLead{margin:0 0 10px;line-height:1.55}
-.proM .probar{display:flex;flex-direction:column;gap:7px;margin:0 0 12px}
+.proM .proIf{display:flex;flex-direction:column;gap:3px;margin:4px 0 12px;padding:10px 12px;border-radius:12px;background:rgba(47,168,102,.12);border:1.5px solid rgba(47,168,102,.5)}.proIf>b{font-size:15px;color:inherit}.proIf span{font-size:15px;line-height:1.45}.proIf small{font-size:12px;line-height:1.4;opacity:.75}/* V171 오늘 PRO였다면 */.probar{display:flex;flex-direction:column;gap:7px;margin:0 0 12px}
 .proM .probar div{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700}
 .proM .probar span:first-child{width:40px}.proM .probar span:last-child{width:50px;text-align:right}
 .proM .probar i{flex:1;height:14px;border-radius:7px;background:rgba(127,127,127,.25);overflow:hidden;display:block}
@@ -2529,9 +2529,11 @@ const AUTO_CAP_MS=AUTO_CAP_H*3600e3;
 const NET_CAP_H=[8,10,12];/* V80: 8 → 10 → 12시간(V79 12·13·14에서 되돌림) */
 const SUB_CAP_H=24;/* V79 낚시GO PRO 멤버십: 어망 24시간(무료 8시간) · V52 예전 20시간 · 수확은 무료와 같음 */
 const NET_PRICE=[0,20000,60000];
-/* V165 어망 기능 숨김(운영자 결정 2026-11-26): 무료는 모두 하루 8시간 · PRO 24시간 · 산 어망(a.net)은 저장만 해 두고 쓰지 않음(환급 없음) · 다시 쓰려면 NET_OFF=0 */
+/* V165 어망 판매 중단(운영자 결정 2026-11-26) · V170 이미 산 어망은 그대로 쓴다(운영자 결정 2026-11-27 · 이용자 문의 "12시간으로 늘려놨는데 8시간으로 줄고 환급도 없다") → NET_OFF는 새 구매·어망 칸·목표 카드만 막음 · 무료 기본 8시간 · 산 사람 10·12시간 · PRO 24시간 · 다시 팔려면 NET_OFF=0 */
 const NET_OFF=1;
 // 광고 보상 1회 = 1시간 100%(앞선 부스트 뒤에 이어 붙음) · 하루(KST) 5회 · 이용권 중에는 광고 없음 · 자동 낚시를 켠 동안만
+/* V171 광고 준비 중(운영자 2026-11-27: 지금 광고가 안 됨) — 광고 버튼은 '광고 보기 (광고 준비 중)'으로 막아 두고, 광고 2배 칸은 숨김 · 광고가 되면 AD_ON=1 */
+const AD_ON=0;
 const AD_BOOST_MS=3600e3;
 const AD_MAX_PER_DAY=5;
 // 재접속 정산 뒤 이 시간 안에 "광고 보고 2배 받기"(같은 하루 5회 한도에 포함)
@@ -2591,7 +2593,7 @@ const DEX_STAT={str:.25,vit:-.5,foc:.15};
 const DEX_ZONE={동해:{cap:1.5},서해:{bite:1.5},서남해:{xp:2},남해:{pt:2},제주:{cm:1},민물:{sat:-5}};
 const DEX_ALL={pt:3,xp:3};
 // 10일 출석판: 하루(KST) 첫 접속마다 한 칸 · 빠진 날은 이어서 · 10일차를 받으면 다음 날 다음 회차 · cosm은 처음 한 번, 그 뒤는 alt P를 더 줌
-const ATT_BOARD=[{pt:500},{t:'t_krill',n:20},{pt:1000},{t:'t_metal30',n:6},{pt:3000,big:1},{t:'t_egi',n:6},{pt:1500},{t:'t_sabiki',n:10},{pt:1500},{pt:5000,big:1,cosm:'t_att',alt:2000}];
+const ATT_BOARD=[{pt:500},{t:'t_krill',n:20},{pt:1000},{t:'t_metal30',n:6},{pt:3000,big:1},{t:'t_egi',n:6},{pt:1500,pro:1}/* V171 7일차 + PRO 하루 체험권(구독 중이면 대신 +8,000P) */,{t:'t_sabiki',n:10},{pt:1500},{pt:5000,big:1,cosm:'t_att',alt:2000}];
 function stOf(R){const s=R&&R.st&&typeof R.st==='object'?R.st:{},o={};for(const x of STATS)o[x.id]=Math.max(0,Math.floor(+s[x.id]||0));return o;}
 function grOf(R){const g=Math.floor(+(R&&R.gr)||1);return Math.max(1,Math.min(GRADES.length,g));}
 function statCap(id,g){const x=STATS.find(s=>s.id===id);return x?x.cap*g:0;}
@@ -2679,7 +2681,7 @@ function xpK(f,cm,raw,rel,first,lv,auto,k){const x=catchXP(f,cm,raw,rel,first,lv
 function manualK(){return MANUAL_K;}
 function autoK(mode){return mode==='pass'?AUTO_PASS_K:mode==='ad'?AUTO_AD_K:AUTO_FREE_K;}
 // 어망 크기(a.net 0·1·2) → V81: 무료 자동 낚시 하루 사용 시간(멤버십은 마지막 확인 뒤 24시간)
-function netCapMs(a){const L=NET_OFF?0:Math.max(0,Math.min(NET_CAP_H.length-1,Math.floor(+((a&&a.net)||0))));return(a&&a.sub?Math.max(SUB_CAP_H,NET_CAP_H[L]):NET_CAP_H[L])*3600e3;}
+function netCapMs(a){const L=Math.max(0,Math.min(NET_CAP_H.length-1,Math.floor(+((a&&a.net)||0))));return(a&&a.sub?Math.max(SUB_CAP_H,NET_CAP_H[L]):NET_CAP_H[L])*3600e3;}
 // a = auto { on(켠·마지막 정산 시각), passFrom, pass(이용권 끝), boosts:[[시작,끝],...], net }
 /* V81 무료 자동 낚시 = 하루(한국 시간 0시 기준) 사용 시간 총량(netCapMs: 8·10·12시간). a.ud = 사용 기록한 날(kday), a.um = 그날 쓴 ms.
    켠 뒤 켠 날 남은 시간을 다 쓰면 멈춤(수확해도 다시 늘지 않음) · 켜 둔 채 0시를 넘기면 넘긴 만큼은 다음 날 사용 시간으로 셈 · 멤버십(sub)은 예전처럼 마지막 확인 뒤 24시간 */
@@ -6431,7 +6433,7 @@ function hook(){fishGold=false;evt('bite');if(player)player.A.hookT=0;biteEnd(fa
   fish=f.f;fishGold=goldRoll();const C=curChk.C;const boat=curChk.meth==='boat';
   const rng=boat?hiRng(f,Math.random()):nearRng((SHORE[fish.n]||{}).cm||fish.cm,curChk.meth,castD,curChk.D);/* V138 */
   const pexp=boat?pexpBoat(C):pexpShore(C,curChk.G);
-  fsize=v36EvSize(Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexp))*10)/10);fishKgNow=fishKg(fish,fsize);ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=!fishGold&&Math.random()<escapeChance(fish.n,ratio,curChk.G,skv('fight'),skHd())?{at:.2+Math.random()*.65,kind:escKind(fish.n)}:null;// v31 S3 #43: 황금 물고기는 미리 정한 놓침 없음
+  fsize=v36EvSize(Math.round((rng[0]+(rng[1]-rng[0])*Math.pow(Math.random(),pexp))*10)/10);fishKgNow=fishKg(fish,fsize);ratio=fishKgNow/C;slackT=0;escJ=0;escPlan=!fishGold&&!(v36Ev&&!v36Ev.srv)&&Math.random()<escapeChance(fish.n,ratio,curChk.G,skv('fight'),skHd())?{at:.2+Math.random()*.65,kind:escKind(fish.n)}:null;// v31 S3 #43: 황금 물고기는 미리 정한 놓침 없음
   if(ratio>BREAK_R){const nm=(fishGold?'황금 ':'')+fish.n;fishGold=false;tone(880,.09,.08,'square');lose('줄 터짐 — '+iga(nm)+' 채비 한계보다 훨씬 커서 바로 터졌습니다'+breakHint()+loseRig(),'break');return;}// v31 S3 #64: 공용 한계(서버와 같음)
   sEff=Math.max(.15,Math.min(1.5,.15+.55*ratio));state='fight';fightT=0;dragT=0;dragWT=0;tension=ratio>2.5?.85:.3;fGrace=ratio>2.5?.5:0;fCue=0;if(ratio>2.5)setTimeout(()=>{if(state==='fight'){bubble(player,'대물!');if(!autoOn)toast('채비 한계보다 훨씬 큰 놈입니다 · 장력이 오르면 바로 손을 떼세요',2600);}},0);fdist=fightStartD();surge=0;holding=autoOn||pressed;$('#fight').hidden=false;$('#limTxt').textContent=C.toFixed(1)+'kg';layoutHUD();myPres.st='fight';sendPres(true);tone(520,.1,.06,'triangle');}
 // v32 #210: 대여 채비 값 = min(낼 수 있는 포인트, 30). 서버는 포인트에서만·미정산이 있으면 0(rentalCost)
@@ -7842,8 +7844,8 @@ const rigShort=id=>{const x=GBY[id];return x?String(x.n).replace(/\s*\d+개입$/
 function evBadge(){const on=invDot()||!!(ATT2&&ATT2.on&&ATT2.c<ATT2.n)||!!(XS&&XS.held>0)||!!(XA&&XA.canClaim);document.querySelectorAll('.evbtn').forEach(b=>{let i=b.querySelector('.rd');if(on&&!i){i=document.createElement('span');i.className='rd';b.appendChild(i);}else if(!on&&i)i.remove();});}
 function openEvt(tab){if(!SRV){toast('낚시GO에 로그인해 서버에 연결된 뒤 쓸 수 있습니다');return;}if(inWorld()&&BUSY_ST[state]){toast(busyMsg());return;}evTab=tab||evTab;if(evTab==='inv')invLoad();if(!ATT2)srvDaily().then(()=>{if(!$('#evtM').hidden)renderEvt();});renderEvt();$('#evtM').hidden=false;}
 function closeEvt(){$('#evtM').hidden=true;}
-function attIco(w){try{if(w.cosm)return v44Svg('star','atsv');if(w.t){const x=GBY[w.t];if(x)return itemArt(catOf(w.t),x);}}catch(e){}return v44Svg('coin','atsv');}/* V99 칭호=별 · 채비=그 채비 그림 · 포인트=동전 */
-function attCellTxt(w){return(w.pt?fmtN(w.pt)+'P':'')+(w.t?(w.pt?' + ':'')+rigShort(w.t)+' '+w.n:'')+(w.cosm?' + 칭호 출석왕':'');}
+function attIco(w){try{if(w.cosm||w.pro)return v44Svg('star','atsv');if(w.t){const x=GBY[w.t];if(x)return itemArt(catOf(w.t),x);}}catch(e){}return v44Svg('coin','atsv');}/* V99 칭호=별 · 채비=그 채비 그림 · 포인트=동전 */
+function attCellTxt(w){return(w.pt?fmtN(w.pt)+'P':'')+(w.t?(w.pt?' + ':'')+rigShort(w.t)+' '+w.n:'')+(w.cosm?' + 칭호 출석왕':'')+(w.pro?' + PRO 하루':'');}
 function renderEvt(){const M=[['inv','친구 초대 1만P'],...(xmasVisible()?[['xm','크리스마스 선물'],['xa','어드벤트 출석'],['xc','대물 대회']]:[]),['att','10일 출석판'],['lv','레벨 달성 보상'],['tut','안내 퀘스트'],['gold','황금 물고기'],['rv','돌발 물 상황'],['cp','쿠폰 입력']];if((evTab==='xm'||evTab==='xa'||evTab==='xc')&&!xmasVisible())evTab='att';
   $('#evtMenu').innerHTML=M.map(([k,t])=>'<button type="button" class="ghost" data-evm="'+k+'"'+(k===evTab?' aria-current="true"':'')+'>'+t+((k==='att'&&ATT2&&ATT2.on&&ATT2.c<ATT2.n)||(k==='xm'&&XS&&XS.held>0)||(k==='xa'&&XA&&XA.canClaim)||(k==='inv'&&invDot())?'<span class="rd" aria-label="받을 보상 있음"></span>':'')+'</button>').join('');
   if(evTab==='inv'){invRender();return;}/* V165 */if(evTab==='rv'){revRender();return;}/* V143 */if(evTab==='xm'){xmasRender();return;}if(evTab==='xa'){xadvRender();return;}if(evTab==='xc'){xcupRender();return;}
@@ -7852,9 +7854,9 @@ function renderEvt(){const M=[['inv','친구 초대 1만P'],...(xmasVisible()?[[
   const can=A.on&&A.c<A.n;
   $('#evtBody').innerHTML='<div class="row" style="gap:8px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0;font-size:20px">10일 출석판 · '+A.r+'회차</h3><span class="k">별도 공지 때까지 · 빠진 날이 있어도 이어서</span></div><div class="atgrid">'+cells+'</div>'+
    '<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">'+(can?'<button class="btn" type="button" id="attGo2"'+(evBusy?' disabled':'')+'>'+(A.c+1)+'일차 받기 · '+esc(attCellTxt(A.board[A.c]))+'</button>':'<span class="k">'+(!A.on?'지금은 출석판이 쉬는 중입니다':A.c>=A.board.length?'이번 회차를 모두 받았습니다 · 내일 접속하면 '+(A.r+1)+'회차가 열립니다':'오늘 칸은 받았습니다 · 내일 접속하면 '+(A.n+1)+'일차가 열립니다')+'</span>')+'<span class="num" style="margin-left:auto">'+A.c+'/10 받음</span></div>'+
-   '<p class="src">하루(한국 시각) 첫 접속마다 한 칸이 열립니다 · 받기를 눌러야 들어오고, 못 누른 칸은 다음에 받을 수 있습니다 · 칭호 출석왕은 처음 한 번만(그 뒤엔 대신 +2,000P) · 게임 포인트는 현금·상품권 교환·양도가 안 됩니다</p>';}
+   '<p class="src">하루(한국 시각) 첫 접속마다 한 칸이 열립니다 · 받기를 눌러야 들어오고, 못 누른 칸은 다음에 받을 수 있습니다 · 칭호 출석왕은 처음 한 번만(그 뒤엔 대신 +2,000P) · 7일차 PRO 하루 체험은 받는 순간부터 24시간(PRO 구독 중이면 대신 +8,000P) · 게임 포인트는 현금·상품권 교환·양도가 안 됩니다</p>';}
 async function attClaim2(){if(evBusy||!ATT2)return;evBusy=true;renderEvt();let r;try{r=await netRid('att-claim',{});}finally{evBusy=false;}
-  if(r.s===200&&r.j&&r.j.ok){ATT2=r.j.att;save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);if(r.j.term&&save.inv)save.inv.term=Object.assign(save.inv.term||{},r.j.term);refreshWallet();try{bagRefresh();}catch(e){}toast(r.j.i+'일차 받기 · '+(r.j.reward?'+'+fmtN(r.j.reward)+'P':'')+(r.j.item?' '+rigNm(r.j.item.id)+' '+r.j.item.n+'개':'')+(r.j.cosm?' · 칭호 ‘출석왕’(꾸미기 → 칭호에서 달기)':''));try{chime();}catch(e){}if(r.j.cosm)setTimeout(()=>{try{srvRefresh();}catch(e){}},400);}
+  if(r.s===200&&r.j&&r.j.ok){ATT2=r.j.att;save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);if(r.j.term&&save.inv)save.inv.term=Object.assign(save.inv.term||{},r.j.term);refreshWallet();try{bagRefresh();}catch(e){}toast(r.j.i+'일차 받기 · '+(r.j.reward?'+'+fmtN(r.j.reward)+'P':'')+(r.j.item?' '+rigNm(r.j.item.id)+' '+r.j.item.n+'개':'')+(r.j.cosm?' · 칭호 ‘출석왕’(꾸미기 → 칭호에서 달기)':'')+(r.j.proDay?' · PRO 하루 체험 시작('+trialEndTxt(r.j.proDay)+'까지)':'')+(r.j.proAlt?' (PRO 구독 중이라 체험 대신 +'+fmtN(r.j.proAlt)+'P)':''),r.j.proDay?5200:undefined);if(r.j.auto)setSA(r.j.auto);if(r.j.settle)try{srvApplySettle(r.j,true);}catch(e){}if(r.j.proDay)try{lsSet('fishinggo.meta.proDayU',String(r.j.proDay));myLabelSync(true);}catch(e){}try{chime();}catch(e){}if(r.j.cosm)setTimeout(()=>{try{srvRefresh();}catch(e){}},400);}
   else{toast((r.j&&r.j.message)||errMsg(r));if(r.j&&r.j.att)ATT2=r.j.att;}renderEvt();evBadge();}
 /* ===== V128 크리스마스 선물 상자 화면(서버 /xmas · /xmas-open, 공유 규칙 XMAS_*) — 이벤트 창 '크리스마스 선물' 탭
    예고 주간(11/25~)부터 탭이 보이고, 12/1 0시부터 상자가 걸린다 · 남은 전설 N/100 · 오늘 남은 상자 · 확률·총수·남은 수 공개(확률형 아이템 표시) ===== */
@@ -8272,14 +8274,14 @@ async function netUp(){if(NET_OFF){toast('어망 상품은 지금 판매하지 �
   else{const a=save.auto;if(a.on)settleLocal(true,'net');save.pt-=N.price;a.net=A.net+1;persist();refreshWallet();toast('어망을 '+N.capH+'시간으로 키웠습니다');}
   if(!$('#autoModal').hidden&&$('#autoBody').dataset.v==='info')openAutoInfo();autoNotify();}
 function curAutoSpot(){const A=autoNow();if(SRV&&A.on&&A.spot){const t=SPOTS.find(x=>x.id===A.spot);if(t)return t;}/* V73 */return cur&&!curTrip?cur:SPOTS.find(x=>x.id===A.spot)||sel||null;}
-function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.now();const app=isApp(),adOk=app&&!!capPlug('AdMob')&&SRV;
+function openAutoInfo(){const A=autoNow();const s=curAutoSpot();const now=Date.now();const app=isApp(),adOk=AD_ON&&app&&!!capPlug('AdMob')&&SRV;
   let h='<div class="sumbox" id="autoState"><div>'+(autoOn||A.on?'<b>자동 낚시 켜짐</b> · '+esc(MODE_TXT[A.mode]):'<b>자동 낚시 꺼짐</b>')+(s?' · '+esc(s.n):'')+'</div>'+
     (A.full?'<div class="fullnote">'+(A.mode==='sub'?'어망이 가득 찼습니다 · 정산하면 다시 쌓입니다':'오늘 자동 낚시 시간을 다 썼습니다 · 내일 0시(한국 시간)에 다시 채워집니다')+'</div>':A.on?'<div class="k">'+(A.mode==='pass'?'이용권 남은 '+fmtMs(A.passUntil-now):(A.mode==='sub'?'어망이 차기까지 ':'오늘 남은 자동 시간 ')+fmtMs(A.leftMs))+(A.mode==='ad'?' · 광고 부스트 남은 '+fmtMs(A.boostLeftMs):'')+'</div>':'')+(passNextTxt(A)?'<div class="k" id="passNext">'+passNextTxt(A)+'</div>':'')+(v38Sat()<56?'<div class="k" id="v38autoP">'+esc(v38Sat()<=0?SAT_TXT:v38AutoTxt())+'</div>':'')+
     (s&&rateTxt(s,A.on?A.mode:(A.sub?'sub':'free'))?'<div class="k" id="rateNow">지금 자동: '+rateTxt(s,A.on?A.mode:(A.sub?'sub':'free'))+' ('+esc(MODE_TXT[A.on?A.mode:(A.sub?'sub':'free')])+')</div>'+(baitCostTxt(s,A.on?A.mode:(A.sub?'sub':'free'))?'<div class="k" id="baitCost">'+baitCostTxt(s,A.on?A.mode:(A.sub?'sub':'free'))+'</div>':''):'')+'</div>';
-  h+=(A.x2&&A.x2.pts>0&&adOk&&!A.pass&&A.adsLeftToday>0?'<div class="item mode" id="x2Card"><div><b>무료·멤버십 자동낚시 몫 2배</b> <span class="mtag">+'+fmtN(A.x2.pts||0)+'P</span><div class="spec">지난 정산의 무료·멤버십 구간만(멤버십은 확인 뒤 첫 '+(NET_OFF?AUTO_CAP_H:NET_CAP_H[A.net|0])+'시간 안에 잡은 몫까지 · 무료와 같은 범위) · 이용권·부스트 구간 제외 · 남은 시간 '+fmtMs(A.x2.until-now)+' · 광고 1회</div></div><div class="act2"><button class="mini buy" type="button" id="autoX2">광고 보고 받기</button></div></div>':'');
-  h+='<div class="item mode'+(A.mode==='free'&&A.on?' on':'')+'"><div><b>무료</b> <span class="mtag">기본</span><div class="spec">하루(0시 기준) '+(NET_OFF?AUTO_CAP_H:NET_CAP_H[A.net|0])+'시간까지 사용 · 오늘 남은 '+fmtMs(A.on&&A.mode==='free'?A.leftMs:Math.max(0,(A.dayCapMs||NET_CAP_H[A.net|0]*3600e3)-(A.dayUsedMs||0)))+(s&&rateTxt(s,'free')?' · '+rateTxt(s,'free'):'')+'</div></div><div class="act2">'+(autoOn||(SRV&&A.on)?'<button class="mini" type="button" id="autoOff">끄고 정산</button>':'<button class="mini buy" type="button" id="autoOnB">자동 낚시 켜기</button>')+'</div></div>';
+  h+=(A.x2&&A.x2.pts>0&&adOk&&!A.pass&&A.adsLeftToday>0?'<div class="item mode" id="x2Card"><div><b>무료·멤버십 자동낚시 몫 2배</b> <span class="mtag">+'+fmtN(A.x2.pts||0)+'P</span><div class="spec">지난 정산의 무료·멤버십 구간만(멤버십은 확인 뒤 첫 '+(NET_CAP_H[A.net|0]||AUTO_CAP_H)+'시간 안에 잡은 몫까지 · 무료와 같은 범위) · 이용권·부스트 구간 제외 · 남은 시간 '+fmtMs(A.x2.until-now)+' · 광고 1회</div></div><div class="act2"><button class="mini buy" type="button" id="autoX2">광고 보고 받기</button></div></div>':'');
+  h+='<div class="item mode'+(A.mode==='free'&&A.on?' on':'')+'"><div><b>무료</b> <span class="mtag">기본</span><div class="spec">하루(0시 기준) '+(NET_CAP_H[A.net|0]||AUTO_CAP_H)+'시간까지 사용 · 오늘 남은 '+fmtMs(A.on&&A.mode==='free'?A.leftMs:Math.max(0,(A.dayCapMs||NET_CAP_H[A.net|0]*3600e3)-(A.dayUsedMs||0)))+(s&&rateTxt(s,'free')?' · '+rateTxt(s,'free'):'')+'</div></div><div class="act2">'+(autoOn||(SRV&&A.on)?'<button class="mini" type="button" id="autoOff">끄고 정산</button>':'<button class="mini buy" type="button" id="autoOnB">자동 낚시 켜기</button>')+'</div></div>';
   if(app&&!GAME_APP)h+='<div class="item mode'+(A.mode==='ad'?' on':'')+'" id="adCard"><div><b>광고 부스트</b> <span class="mtag">1시간 2배</span><div class="spec">광고 1회 = 1시간 동안 자동 수확 2배(무료 대비) · 오늘 남은 '+A.adsLeftToday+'/'+A.adsMax+'회'+(A.boostLeftMs>0?' · 남은 부스트 '+fmtMs(A.boostLeftMs):'')+(s&&rateTxt(s,'ad')?' · '+rateTxt(s,'ad'):'')+'</div></div><div class="act2">'+
-    (!adOk?'<span class="k">앱 업데이트 후 이용할 수 있습니다</span>':A.pass?'<span class="k">이용권 사용 중</span>':!autoOn?'<span class="k">자동 낚시를 켠 뒤 볼 수 있습니다</span>':A.adsLeftToday<=0?'<span class="k">오늘 광고를 모두 봤습니다</span>':'<button class="mini buy" type="button" id="adBoost">광고 보고 1시간 부스트</button>')+'</div></div>';
+    (!AD_ON?'<button class="mini" type="button" disabled>광고 보기 (광고 준비 중)</button>':!adOk?'<span class="k">앱 업데이트 후 이용할 수 있습니다</span>':A.pass?'<span class="k">이용권 사용 중</span>':!autoOn?'<span class="k">자동 낚시를 켠 뒤 볼 수 있습니다</span>':A.adsLeftToday<=0?'<span class="k">오늘 광고를 모두 봤습니다</span>':'<button class="mini buy" type="button" id="adBoost">광고 보고 1시간 부스트</button>')+'</div></div>';
   if(A.pass)h+='<div class="item mode on"><div><b>24시간 이용권</b> <span class="mtag">사용 중</span><div class="spec">예전에 산 이용권 · 끝까지 자동 수확 2배(무료 대비) · 어망 한도 없이 이용권 끝까지 쌓임</div></div><div class="act2"><span class="k">남은 '+fmtMs(A.passUntil-now)+'</span></div></div>';/* V50 이용권 판매 종료 — 예전에 산 것만 표시 */
   if(SRV&&(GAME_APP?A.sub:((!v45Beta()&&(V45.rating||V45.subOn))||A.sub)))/* V78 게임 앱은 가입한 회원에게만(구매 버튼 없음) · V52-4 운영자 미리 보기(A.sub)도 표시 · V50 멤버십 칸: 서버 연결·등급분류 표시가 있을 때만(시험용이면 숨김) */h+='<div class="item mode'+(A.mode==='sub'?' on':'')+'" id="subCard"><div><b>낚시GO PRO 멤버십</b> <span class="mtag">'+(A.sub?'적용 중':'월 9,900원 · 자동 갱신')+'</span><div class="spec">'+(A.sub?'구독 중 · 자동 낚시 하루 24시간(무료는 하루 8시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음':'낚시GO PRO 멤버십을 구독하면 자동 낚시를 하루 '+SUB_CAP_H+'시간(무료는 하루 8시간) · 포만감 줄어드는 속도 절반 · 선상 출조 중 자동 낚시 · 수확량은 무료와 같음 · 게임 안 유료 상품은 없습니다')+(s&&rateTxt(s,'sub')?' · '+rateTxt(s,'sub'):'')+'</div></div><div class="act2">'+v45RateHTML()+(A.sub?'':'<button class="mini buy" type="button" id="subGo">멤버십 보기</button>')+'</div></div>';
   const N=A.netNext;if(!A.sub&&!NET_OFF)/* V165 어망 숨김 · V112 PRO(멤버십 24시간)에게는 어망 칸을 숨긴다 */h+='<div class="item"><div><b>어망 크기</b> <span class="mtag">'+(A.sub?'내 어망 '+NET_CAP_H[A.net|0]+'시간 · 멤버십 중 '+A.capH+'시간':'지금 '+A.capH+'시간')+'</span><div class="spec">무료 자동 낚시를 하루에 쓸 수 있는 시간 · 포인트로만 키움(8 → 10 → 12시간)'+(A.sub?' · 멤버십 중에는 '+SUB_CAP_H+'시간이 먼저 적용되고, 키운 어망은 멤버십이 끝난 뒤 쓰입니다':'')+'</div></div><div class="act2">'+(N?'<button class="mini" type="button" id="netUpB"'+(spendNow()<N.price?' disabled':'')+'>'+N.capH+'시간으로 · '+fmtN(N.price)+'P</button>':'<span class="k">가장 큰 어망</span>')+'</div></div>';
@@ -8340,7 +8342,7 @@ function showAwayPopup(s,R){if(v36Ret(s,R))return;/* v36 돌아왔을 때 연출
     if(R.capped==='day')h+='<div class="k">오늘 자동 낚시 기록 한도에 닿아 멈췄습니다'+lostT+'</div>';else if(R.capped==='settle')h+='<div class="k">한 번에 정산할 수 있는 양을 넘어 멈췄습니다'+lostT+'</div>';else if(R.capped==='term')h+='<div class="k">채비를 다 써서 멈췄습니다</div>';}
   try{h+=v38AwayHTML(R);}catch(e){}/* v38 배고파 멈춤·포만감 */if(!R.slow)h+=dvAwayHTML(R);/* v35 */
   h+='</div>';
-  const X2=(R.x2&&R.id&&A.x2&&A.x2.id===R.id)?A.x2:null;const adOk=isApp()&&!!capPlug('AdMob')&&SRV&&!!X2&&X2.pts>0&&!A.pass&&A.adsLeftToday>0;// v29 S2: 2배는 무료·광고 구간 몫만(서버 x2)
+  const X2=(R.x2&&R.id&&A.x2&&A.x2.id===R.id)?A.x2:null;const adOk=AD_ON&&isApp()&&!!capPlug('AdMob')&&SRV&&!!X2&&X2.pts>0&&!A.pass&&A.adsLeftToday>0;// v29 S2: 2배는 무료·광고 구간 몫만(서버 x2)
   if(adOk)h+='<div class="act2" style="margin:0 0 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="mini buy" type="button" id="awayX2">광고 보고 무료 자동낚시 몫 2배 (+'+fmtN(X2.pts)+'P)</button><span class="k">무료 구간만 · 정산 뒤 30분 안에 한 번 · 오늘 남은 광고 '+A.adsLeftToday+'회 · 닫아도 자동 낚시 창에서 받을 수 있습니다</span></div>';
   h+=goalHTML(s);
   h+='<p class="src">자동 낚시는 게임을 끄거나 화면을 떠난 동안에도 계속되고, 무료는 하루(0시 기준) '+A.capH+'시간까지 쓸 수 있습니다(멤버십은 하루 24시간, 이용권은 이용권 끝까지). 광고 부스트·이용권은 무료의 2배를 받습니다. 자동 낚시 조과는 랭킹·황금 물고기·퀘스트에 포함되지 않습니다.</p>';
@@ -9002,27 +9004,34 @@ let TRIAL_SHOWN=false;
    · 구글 플레이 게임 앱(GAME_APP)은 결제 방법·바깥 링크 없이 혜택만(①②④), 상점 카드는 없음 */
 function proOk(){try{if(!SRV)return false;const A=autoNow();if(A.sub||A.pass||(SA&&+SA.trialUntil>Date.now()))return false;return GAME_APP?true:!!(!v45Beta()&&(V45.rating||V45.subOn));}catch(e){return false;}}
 /* V140 혜택은 실제 값으로: 무료 자동 시간 = 지금 내 어망(8·10·12시간), 선상 하루 횟수 = 서버 boatDay(free·subCap, 운영자 설정 · 기본 1·2) */
-function proVals(){let fh=AUTO_CAP_H,bf=1,bs=2;try{const A=autoNow();fh=Math.round((NET_OFF?AUTO_CAP_H:NET_CAP_H[A.net|0])||A.capH||AUTO_CAP_H);}catch(e){}try{const b=BOATD;if(b){if(b.free!=null)bf=b.free|0;if(b.subCap!=null)bs=b.subCap|0;}}catch(e){}return{fh,bf,bs};}
+function proVals(){let fh=AUTO_CAP_H,bf=1,bs=2;try{const A=autoNow();fh=Math.round((NET_CAP_H[A.net|0]||AUTO_CAP_H)||A.capH||AUTO_CAP_H);}catch(e){}try{const b=BOATD;if(b){if(b.free!=null)bf=b.free|0;if(b.subCap!=null)bs=b.subCap|0;}}catch(e){}return{fh,bf,bs};}
 function proBenList(){const v=proVals();return['자동 낚시 하루 <b>24시간</b> (지금 무료 '+v.fh+'시간)',(v.bs>v.bf?'선상 출조 하루 <b>'+v.bs+'번</b> (무료 '+v.bf+'번)':''),'선상 출조 중에도 자동 낚시','포만감 줄어드는 속도 <b>절반</b>','닉네임 옆 <b class="proTag">Pro</b> 표시'].filter(Boolean);}
 function proBenHTML(){return'<ul class="proben">'+proBenList().map(t=>'<li>'+t+'</li>').join('')+'</ul>';}
 /* V141 PRO는 낚시GO 앱에서 구글 플레이 결제로만 판다(웹 판매 없음 — 운영자) → 어디서나 '낚시GO 앱 › 멤버십' 안내 · 웹 주소·링크 없음 · 플레이 게임 앱에도 같은 안내(구글 결제로 이어지므로) */
 function proInApp(){try{return window.parent&&window.parent!==window;}catch(e){return false;}}
 function proStepsHTML(){return'<div class="prosteps"><b>구독 방법</b><ol><li><b>낚시GO 앱에 로그인</b><small>게임과 같은 아이디</small></li><li><b>멤버십 메뉴에서 PRO 구독</b><small>구글 플레이 결제 · 월 9,900원 · 자동 갱신</small></li><li><b>게임으로 돌아오면 바로 적용</b><small>다시 로그인할 필요 없어요</small></li></ol></div>';}
 function proModal(kind,o){o=o||{};const capH=proVals().fh;
-  const T={cap:'오늘 무료 자동 낚시가 끝났어요',trial:'PRO 3일 체험이 끝났어요',tag:'PRO 멤버십이란?',shop:'낚시GO PRO 멤버십'}[kind]||'낚시GO PRO 멤버십';
-  const lead={cap:'오늘 쓸 수 있는 무료 자동 낚시 <b>'+capH+'시간</b>을 다 썼어요. 내일 0시(한국 시간)에 다시 채워져요.',trial:'지금부터는 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 자동 결제는 없었어요.',tag:'<b>'+esc(o.nick||'')+'</b>님은 낚시GO PRO 회원이에요. 월 9,900원이면 이렇게 달라져요.',shop:'월 9,900원 · 자동 갱신'}[kind]||'';
+  const T={cap:'오늘 무료 자동 낚시가 끝났어요',trial:'PRO 3일 체험이 끝났어요',dayEnd:'PRO 하루 체험이 끝났어요',tag:'PRO 멤버십이란?',shop:'낚시GO PRO 멤버십'}[kind]||'낚시GO PRO 멤버십';
+  const lead={cap:'오늘 쓸 수 있는 무료 자동 낚시 <b>'+capH+'시간</b>을 다 썼어요. 내일 0시(한국 시간)에 다시 채워져요.',trial:'지금부터는 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 자동 결제는 없었어요.',dayEnd:'출석 보상 PRO 하루가 끝나 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 결제는 없었어요.',tag:'<b>'+esc(o.nick||'')+'</b>님은 낚시GO PRO 회원이에요. 월 9,900원이면 이렇게 달라져요.',shop:'월 9,900원 · 자동 갱신'}[kind]||'';
   const bar='<div class="probar" aria-label="하루 자동 낚시 시간 비교"><div><span>무료</span><i><b style="width:'+Math.round(capH/24*100)+'%;background:#9aa7b0"></b></i><span>'+capH+'시간</span></div><div><span>PRO</span><i><b style="width:100%;background:#2fa866"></b></i><span>24시간</span></div></div>';
   const m=uiBox('proM','modal','');m.classList.add('proM');
-  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="proMT" style="width:min(460px,100%);box-sizing:border-box;max-height:92vh;overflow:auto"><h2 id="proMT">'+T+'</h2>'+(lead?'<p class="proLead">'+lead+'</p>':'')+(kind==='cap'||kind==='trial'?bar:'')+(kind==='trial'?'<p class="proLead" style="font-weight:700">PRO를 계속 쓰면</p>':'')+proBenHTML()+proStepsHTML()
+  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="proMT" style="width:min(460px,100%);box-sizing:border-box;max-height:92vh;overflow:auto"><h2 id="proMT">'+T+'</h2>'+(lead?'<p class="proLead">'+lead+'</p>':'')+(kind==='cap'?proIfHTML(capH):'')+(kind==='cap'||kind==='trial'||kind==='dayEnd'?bar:'')+(kind==='trial'||kind==='dayEnd'?'<p class="proLead" style="font-weight:700">PRO를 계속 쓰면</p>':'')+proBenHTML()+proStepsHTML()
    +(!proInApp()?'<div class="row" style="justify-content:flex-end"><button class="chgbtn pay" id="proOkB" type="button">확인</button></div>'/* 낚시GO 앱 밖(웹·플레이 게임 앱)은 바로 가는 버튼 없이 안내만 */
-     :'<div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="chgbtn" id="proNoB" type="button">'+({cap:'내일 다시 할게요',trial:'무료로 계속할게요'}[kind]||'닫기')+'</button><button class="chgbtn pay" id="proGoB" type="button">'+(kind==='trial'?'낚시GO에서 PRO 계속하기':'낚시GO에서 PRO 시작하기')+'</button></div>')+'</div>';
+     :'<div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="chgbtn" id="proNoB" type="button">'+({cap:'내일 다시 할게요',trial:'무료로 계속할게요',dayEnd:'무료로 계속할게요'}[kind]||'닫기')+'</button><button class="chgbtn pay" id="proGoB" type="button">'+(kind==='trial'||kind==='dayEnd'?'낚시GO에서 PRO 계속하기':'낚시GO에서 PRO 시작하기')+'</button></div>')+'</div>';
   const close=()=>{m.hidden=true;try{canvas.focus();}catch(e){}};m.onclick=e=>{if(e.target===m)close();};
   ['proOkB','proNoB'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=close;});const g=document.getElementById('proGoB');if(g)g.onclick=()=>{close();subGo();};m.hidden=false;}
+/* V171 "오늘 PRO였다면": 오늘(KST) 무료 자동 정산 조과를 이 기기에 모아 두고(마리·포인트), 무료 시간을 다 쓴 순간 같은 속도로 남은 시간(24 − 무료 시간)을 더 낚았다면의 값을 보여 준다 · 실제 내 조과로만 계산 · 조과가 없으면 줄을 보이지 않음 */
+function proTally(){try{const o=JSON.parse(lsGet('fishinggo.meta.proToday')||'null');if(o&&o.d===proDay())return o;}catch(e){}return{d:proDay(),n:0,p:0};}
+function proTallyAdd(j){try{const A=autoNow();if(A.sub||A.pass)return;const n=+j.n||0,pt=+j.pts||0;if(!(n>0||pt>0))return;const o=proTally();o.n+=n;o.p+=pt;lsSet('fishinggo.meta.proToday',JSON.stringify(o));}catch(e){}}
+function proIfHTML(capH){const o=proTally();if(!(capH>0&&capH<24)||!(o.n>0))return'';const k=(24-capH)/capH,xn=Math.round(o.n*k),xp=Math.round(o.p*k/10)*10;if(!(xn>0))return'';
+  return'<div class="proIf"><b>오늘 PRO였다면</b><span>남은 '+(24-capH)+'시간 동안 약 <b>+'+fmtN(xn)+'마리</b>'+(xp>0?' · <b>+'+fmtN(xp)+'P</b>':'')+' 더</span><small>오늘 무료 자동 낚시 '+fmtN(o.n)+'마리 · '+fmtN(o.p)+'P를 같은 속도로 이어 낚았다고 친 값이에요(날씨·포만감·채비에 따라 달라요)</small></div>';}
 function proFree(){return !document.querySelector('.modal:not([hidden])')&&!(inWorld()&&BUSY_ST[state]);}
 function proDay(){return new Date(Date.now()+9*36e5).toISOString().slice(0,10);}
 function proCheck(){try{if(!SRV)return;const A=autoNow(),now=Date.now();
   if(SA&&+SA.trialUntil>now)lsSet('fishinggo.meta.trialU',String(+SA.trialUntil));
   const tu=+(lsGet('fishinggo.meta.trialU')||0);if(tu&&tu<=now&&!A.sub&&!A.pass&&lsGet('fishinggo.meta.trialEndShown')!==String(tu)&&proFree()){lsSet('fishinggo.meta.trialEndShown',String(tu));proModal('trial');return;}
+  if(SA&&+SA.proDayUntil>now)lsSet('fishinggo.meta.proDayU',String(+SA.proDayUntil));
+  const du=+(lsGet('fishinggo.meta.proDayU')||0);if(du&&du<=now&&!A.sub&&!A.pass&&lsGet('fishinggo.meta.proDayEndShown')!==String(du)&&proFree()){lsSet('fishinggo.meta.proDayEndShown',String(du));proModal('dayEnd');return;}/* V171 PRO 하루 체험권 끝 */
   if(!proOk()||A.mode!=='free')return;const used=(A.on&&A.full)||(!A.on&&A.dayCapMs&&A.dayUsedMs>=A.dayCapMs-6e4);if(!used)return;
   const k='fishinggo.meta.proCap',d=proDay();if(lsGet(k)===d||!proFree())return;lsSet(k,d);proModal('cap');}catch(e){}}
 setInterval(proCheck,30e3);
@@ -9288,7 +9297,7 @@ function srvApplySettle(j,quiet){try{dvSettleLog(j.settle||j);}catch(e){}/* v35 
 // keep:true → 화면을 켜 둔 채 정산하고 계속, why: enter(접속)·return(탭 복귀)·tick(5분마다)
 function srvSettle(keep,why){srvAutoQ=srvAutoQ.then(async()=>{const spotId=SA&&SA.spot;const pt0=save.pt;const r=await net('auto-settle',{keep:!!keep});
   if(r.s===0||r.s>=500){const p=await srvReconcile();if(p&&why!=='tick'){const d=(p.pt||0)-(pt0||0);if(d>0)showAwayPopup(SPOTS.find(x=>x.id===spotId),{away:0,n:0,pts:d,xp:0,segs:{},tally:{},fresh:[],slow:1});}return;}
-  if(r.s!==200||!r.j)return;const j=r.j;if(j.auto)setSA(j.auto);if(!j.settled)return;
+  if(r.s!==200||!r.j)return;const j=r.j;if(j.auto)setSA(j.auto);if(!j.settled)return;proTallyAdd(j);/* V171 */
   // v32 #217: 켜 둔 채 잠깐(10분 미만) 다른 앱을 보고 온 복귀 정산은 큰 창 대신 소식 + 짧은 알림
   const quick=why==='return'&&keep&&Math.max(+j.away||0,+j.elapsed||0)<600e3;
   srvApplySettle(j,why!=='tick'&&!quick);await srvRefresh();if(!(SA&&SA.on)&&autoOn){autoOn=false;$('#autobtn').classList.remove('on');}renderAutoBtn();
@@ -9357,7 +9366,7 @@ async function iapResume(){try{const k=iapKind();if(k==='cdv'){cdvInit().catch((
 // 광고 보상(앱의 AdMob 보상형 광고 · 서버 SSV 확인): kind 'boost'(자동 낚시 켠 동안·이용권 없을 때) | 'x2'(재접속 정산분 2배)
 let adInit=false,adBusy=false;
 function adUnit(){const a=CFG.admob||{};return a.rewardId||a.reward||'';}
-async function adWatch(kind,id){const AM=capPlug('AdMob');if(!AM||!SRV||adBusy)return null;const unit=adUnit();if(!unit){toast('광고 준비 중입니다');return null;}
+async function adWatch(kind,id){if(!AD_ON){toast('광고 준비 중입니다');return null;}const AM=capPlug('AdMob');if(!AM||!SRV||adBusy)return null;const unit=adUnit();if(!unit){toast('광고 준비 중입니다');return null;}
   if(kind==='boost'&&!autoOn){toast('자동 낚시를 켠 뒤 광고 부스트를 받을 수 있습니다');return null;}
   adBusy=true;try{const r=await net('ad-nonce',kind==='x2'?(id?{kind:'x2',id}:{kind:'x2'}):{});if(r.s!==200||!r.j||!r.j.nonce){toast(errMsg(r));return r.j&&r.j.error?{status:'rejected',reason:r.j.error}:null;}const nonce=r.j.nonce;
     // v29 C2: 닫기·표시 실패는 리스너로만 오기도 한다 → 보상(Rewarded)·닫힘(Dismissed)·표시 실패(FailedToShow)·90초 제한 중 먼저 오는 것으로 판단. 보상 신호가 있을 때만 서버에 확인
@@ -12743,7 +12752,7 @@ function ntRender(){const m=uiBox('ntM','modal','');m.hidden=false;m.onclick=e=>
   try{v44Q();}catch(e){}}
 /* 앱(WebView)에서 fishing-go.com 링크는 게임 화면을 떠나 그 페이지로 바뀌므로 빼고 보여 준다 · 다른 허용 주소(스마트스토어·인스타그램)는 앱 밖으로 열림 */
 function ntBtns(x){return(x.btn||[]).filter(b=>!(b.url&&GAME_APP&&/^https:\/\/(www\.)?fishing-go\.com(\/|$)/i.test(b.url)));}
-function ntGo(k){try{if(k==='event')openEvt();else if(k==='coupon')openCoupon();else if(k==='boat')boatGo();else if(k==='shop')openShop('rod');else if(k==='quest')openQuests();else if(k==='rank')openRPG('rank');else if(k==='duel'){if(window.__du)window.__du.open();}else if(k==='dex')openDex();else if(k==='contact')ctOpen();else if(k==='invite')openEvt('inv');else if(k==='invshare')invShare();}catch(e){toast('지금은 열 수 없어요');}}
+function ntGo(k){try{if(k==='event')openEvt();else if(k==='att')openEvt('att');/* V171 출석판 바로 */else if(k==='coupon')openCoupon();else if(k==='boat')boatGo();else if(k==='shop')openShop('rod');else if(k==='quest')openQuests();else if(k==='rank')openRPG('rank');else if(k==='duel'){if(window.__du)window.__du.open();}else if(k==='dex')openDex();else if(k==='contact')ctOpen();else if(k==='invite')openEvt('inv');else if(k==='invshare')invShare();}catch(e){toast('지금은 열 수 없어요');}}
 /* 접속 팝업: pop 공지 중 안 읽은 것 하나 · 하루 1번 · 입질·파이팅·선상 출조 중이거나 다른 창이 열려 있으면 5초 뒤 다시 */
 let ntPopT=0;function ntPopTry(){clearTimeout(ntPopT);const pd=ntGet(NT_PD,{});const today=ntDay();if(pd.d===today)return;const x=ntList().filter(v=>v.pop&&!ntIsRead(v.id)).sort((a,b)=>ntTime(b)-ntTime(a))[0];if(!x)return;
   let busy=false;try{busy=!!(inWorld()&&BUSY_ST[state])||!!curTrip||!!vxTop()||[...document.querySelectorAll('.modal:not([hidden]),[aria-modal="true"]:not([hidden])')].some(e=>e.id!=='ntPop'&&getComputedStyle(e).display!=='none');/* 첫 안내(#intro)·캐릭터 만들기(#lkMod) 같은 다른 창 위에 겹치지 않게 */}catch(e){}if(busy){ntPopT=setTimeout(ntPopTry,5000);return;}
@@ -12755,7 +12764,7 @@ VX_MOD.push(['#ntPop','#ntPX'],['#ntM','#ntBk']);
 setTimeout(()=>ntLoad(true),2500);setInterval(()=>ntLoad(false),600e3);
 Object.defineProperties(window.__meta,Object.getOwnPropertyDescriptors({/* V148 */ntOpen,ntLoad,ntPopTry,get NT(){return NT;}}));
 /* ===================== V165 친구 초대 이벤트 =====================
-   내 초대 코드·링크(https://www.fishing-go.com/meta/?inv=코드) → 친구가 그 링크로 들어와 낚시GO에 가입·로그인하면 코드가 자동 입력(가입 후 INV_EV.days일 안) → 웰컴 1,000P
+   내 초대 코드·링크(https://www.fishing-go.com/meta/?inv=코드) → 친구가 그 링크로 들어와 낚시GO에 가입·로그인하면 코드가 자동 입력(V173: 기간 제한 없이 한 번 · 기존 계정은 입력 뒤 직접 낚시만 셈) → 웰컴 1,000P
    친구가 Lv.10 + 직접 낚시 10마리 → 친구·나 각각 1만P(이벤트 창 › 친구 초대에서 받기) · 운영자(MASTER)는 같은 탭 아래에서 효과(방문·공유·가입·Lv10·신규 가입) 확인 */
 const INV_LS='fishinggo.meta.inv',DEV_LS='fishinggo.meta.dev';
 var INVS=null,INVB=null,invTried=false,invAt=0,invBusy=false,INVA=null,invErr=false,invPingAt=0;
@@ -12792,15 +12801,15 @@ function invRender(){const b=$('#evtBody'),S=INVS,E=INV_EV;if(!S){if(invErr){b.i
    +(S.on?'':'<div class="invoff">지금은 새 초대를 받지 않아요 · 이미 받은 초대 보상은 그대로 받을 수 있어요</div>')
    +'<div class="invcode"><span>내 초대 코드</span><b class="num" id="invCodeTxt">'+esc(S.code)+'</b><button type="button" class="ghost" id="invCC">코드 복사</button></div>'
    +'<div class="row invbtns"><button type="button" class="btn" id="invShareB">친구에게 공유하기</button><button type="button" class="ghost" id="invLinkB">링크 복사</button></div></div>';
-  if(me)h+='<div class="invme"><b>'+esc(me.ref)+'님의 초대로 시작했어요</b>'+(me.paid?'<span class="invok">'+fmtN(E.reward)+'P 받음 ✓</span>':me.ready?'<button type="button" class="btn" id="invClaim">'+fmtN(E.reward+Math.min(M.pend,M.room)*E.reward)+'P 받기</button>':'<div class="invpg"><span>Lv. '+Math.min(me.lv,E.lv)+' / '+E.lv+'</span><i style="--p:'+Math.min(1,me.lv/E.lv)+'"></i><span>직접 낚시 '+Math.min(me.man,E.man)+' / '+E.man+'마리</span><i style="--p:'+Math.min(1,me.man/E.man)+'"></i></div><small>둘 다 채우면 나와 초대한 친구 모두 '+fmtN(E.reward)+'P</small>')+'</div>';
-  else if(S.can&&S.on)h+='<div class="invin"><label for="invIn">친구에게 받은 초대 코드가 있나요? <small>('+day(S.canUntil-1)+'까지)</small></label><div class="row"><input id="invIn" type="text" maxlength="12" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="예: '+esc(S.code.replace(/./g,'X').slice(0,6))+'"><button type="button" class="btn" id="invInB">입력</button></div></div>';
+  if(me)h+='<div class="invme"><b>'+esc(me.ref)+'님의 초대'+(me.old?'를 받았어요':'로 시작했어요')+'</b>'+(me.paid?'<span class="invok">'+fmtN(E.reward)+'P 받음 ✓</span>':me.ready?'<button type="button" class="btn" id="invClaim">'+fmtN(E.reward+Math.min(M.pend,M.room)*E.reward)+'P 받기</button>':'<div class="invpg"><span>Lv. '+Math.min(me.lv,E.lv)+' / '+E.lv+'</span><i style="--p:'+Math.min(1,me.lv/E.lv)+'"></i><span>'+(me.old?'코드를 넣은 뒤 ':'')+'직접 낚시 '+Math.min(me.man,E.man)+' / '+E.man+'마리</span><i style="--p:'+Math.min(1,me.man/E.man)+'"></i></div><small>둘 다 채우면 나와 초대한 친구 모두 '+fmtN(E.reward)+'P</small>')+'</div>';
+  else if(S.can&&S.on)h+='<div class="invin"><label for="invIn">친구에게 받은 초대 코드가 있나요?'+(S.canUntil?' <small>('+day(S.canUntil-1)+'까지)</small>':' <small>(한 번만 넣을 수 있어요)</small>')+'</label><div class="row"><input id="invIn" type="text" maxlength="12" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="예: '+esc(S.code.replace(/./g,'X').slice(0,6))+'"><button type="button" class="btn" id="invInB">입력</button></div></div>';
   h+='<div class="invst"><div><b class="num">'+M.n+'</b><small>초대한 친구</small></div><div><b class="num">'+M.n10+'</b><small>Lv.'+E.lv+' 달성</small></div><div><b class="num">'+fmtN(M.paid*E.reward)+'P</b><small>받은 보상</small></div></div>';
   if(M.pend>0&&!(me&&me.ready))h+='<button type="button" class="btn invbig" id="invClaim">친구 보상 받기 +'+fmtN(Math.min(M.pend,M.room)*E.reward)+'P</button>';
   if(M.pend>M.room)h+='<p class="k">이번 달은 '+E.cap+'명분까지 받을 수 있어요 · 남은 '+(M.pend-M.room)+'명분은 다음 달 1일부터</p>';
   h+='<div class="invti"><span>칭호 <b>인싸 낚시꾼</b> <small>(조건을 채운 친구)</small></span><span class="num">'+Math.min(M.n10,E.titleN)+' / '+E.titleN+'명</span><i style="--p:'+Math.min(1,M.n10/E.titleN)+'"></i>'+(S.title?'<small>받음 · 꾸미기 › 칭호에서 달 수 있어요</small>':(M.n10>=E.titleN?'<button type="button" class="ghost" id="invClaim2">칭호 받기</button>':''))+'</div>';
   if(S.list.length)h+='<h3 class="invh3">내가 초대한 친구</h3><div class="invlist">'+S.list.map(x=>'<div><b>'+esc(x.nick)+'</b><span>Lv.'+x.lv+'</span><span class="'+(x.paid?'ok':x.l10?'go':'')+'">'+(x.paid?'보상 받음':x.l10?'보상 받기 가능':'진행 중')+'</span></div>').join('')+'</div>';
   h+='<h3 class="invh3">초대 랭킹 (조건을 채운 친구 수)</h3>'+(S.rank.length?'<ol class="invrk">'+S.rank.map(x=>'<li><b>'+esc(x.nick)+'</b><span class="num">'+x.n10+'명</span></li>').join('')+'</ol>':'<p class="k">아직 Lv.'+E.lv+'을 달성한 초대 친구가 없어요 · 1등의 기회!</p>');
-  h+='<details class="invrule"><summary>이벤트 규칙</summary><ul><li>링크로 들어와 처음 시작한 친구는 코드가 자동으로 들어가요. 직접 입력은 처음 시작한 날부터 '+E.days+'일 안에 한 번만 할 수 있어요.</li><li>친구가 Lv.'+E.lv+'에 닿고 직접 낚시(자동 낚시·투망 제외)로 '+E.man+'마리를 낚으면 친구와 나 모두 '+fmtN(E.reward)+'P를 받을 수 있어요.</li><li>초대한 사람의 보상은 한 달에 '+E.cap+'명분까지예요. 넘는 만큼은 다음 달에 이어서 받아요.</li><li>초대한 친구와 같은 기기나 같은 인터넷(와이파이)에서 코드를 넣으면 인정되지 않아요. 한 기기에서는 초대 코드를 한 번만 쓸 수 있어요.</li><li>Lv.'+E.lv+' + 직접 낚시 '+E.man+'마리를 채운 친구가 '+E.titleN+'명이면 칭호 \'인싸 낚시꾼\'을 받아요([받기]를 누르면 열려요).</li><li>부정한 방법으로 받은 보상은 회수될 수 있어요.</li></ul></details>';
+  h+='<details class="invrule"><summary>이벤트 규칙</summary><ul><li>링크로 들어와 처음 시작한 친구는 코드가 자동으로 들어가요. 직접 입력은 이벤트 기간 동안 한 계정에 한 번만 할 수 있어요. 이미 하던 분도 넣을 수 있어요.</li><li>이미 하던 분(시작한 지 '+E.days+'일이 지난 계정)은 Lv.'+E.lv+' 이상(기록 이전으로 받은 레벨은 빼고 셈)이면서 코드를 넣은 뒤 직접 낚시로 '+E.man+'마리를 낚으면 보상을 받을 수 있어요.</li><li>친구가 Lv.'+E.lv+'에 닿고 직접 낚시(자동 낚시·투망 제외)로 '+E.man+'마리를 낚으면 친구와 나 모두 '+fmtN(E.reward)+'P를 받을 수 있어요.</li><li>초대한 사람의 보상은 한 달에 '+E.cap+'명분까지예요. 넘는 만큼은 다음 달에 이어서 받아요.</li><li>초대한 친구와 같은 기기나 같은 인터넷(와이파이)에서 코드를 넣으면 인정되지 않아요. 한 기기에서는 초대 코드를 한 번만 쓸 수 있어요.</li><li>Lv.'+E.lv+' + 직접 낚시 '+E.man+'마리를 채운 친구가 '+E.titleN+'명이면 칭호 \'인싸 낚시꾼\'을 받아요([받기]를 누르면 열려요).</li><li>부정한 방법으로 받은 보상은 회수될 수 있어요.</li></ul></details>';
   if(S.master)h+='<div class="invadm" id="invAdm"><h3 class="invh3">운영자 · 친구 초대 효과</h3><div class="k">불러오는 중…</div></div>';
   b.innerHTML=h;const g=id=>document.getElementById(id);
   g('invShareB').onclick=invShare;g('invLinkB').onclick=()=>invCopy('url');g('invCC').onclick=()=>invCopy('code');
