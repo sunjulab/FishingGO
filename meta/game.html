@@ -2537,7 +2537,8 @@ const NET_PRICE=[0,20000,60000];
 const NET_OFF=1;
 // 광고 보상 1회 = 1시간 100%(앞선 부스트 뒤에 이어 붙음) · 하루(KST) 5회 · 이용권 중에는 광고 없음 · 자동 낚시를 켠 동안만
 /* V171 광고 준비 중(운영자 2026-11-27: 지금 광고가 안 됨) — 광고 버튼은 '광고 보기 (광고 준비 중)'으로 막아 두고, 광고 2배 칸은 숨김 · 광고가 되면 AD_ON=1 */
-const AD_ON=0;
+const AD_ON=1;/* V175 운영자가 AdMob 보상형 광고 단위를 만듦(2026-11-27) → 켬 · 낚시GO 안드로이드 앱(AdMob 플러그인 있는 곳)에서만 보임 · 웹·방구석 앱은 그대로 숨김 */
+const ADMOB_REWARD_ID='ca-app-pub-9774243773523817/1020026097';/* V175 낚시GO 앱 보상형 광고 단위(공개 ID · 비밀 아님) */
 const AD_BOOST_MS=3600e3;
 const AD_MAX_PER_DAY=5;
 // 재접속 정산 뒤 이 시간 안에 "광고 보고 2배 받기"(같은 하루 5회 한도에 포함)
@@ -9369,7 +9370,7 @@ async function iapResume(){try{const k=iapKind();if(k==='cdv'){cdvInit().catch((
     ppAdd({id:tok,kind:'play',productId:pid,pk:pid===PASS_PRODUCT?'pass':'topup',oid:typeof t.orderId==='string'?t.orderId:'',spot:pid===PASS_PRODUCT?paySpot():undefined,uid:''});n++;}if(n)ppSchedule();}catch(e){}}
 // 광고 보상(앱의 AdMob 보상형 광고 · 서버 SSV 확인): kind 'boost'(자동 낚시 켠 동안·이용권 없을 때) | 'x2'(재접속 정산분 2배)
 let adInit=false,adBusy=false;
-function adUnit(){const a=CFG.admob||{};return a.rewardId||a.reward||'';}
+function adUnit(){const a=CFG.admob||{};return a.rewardId||a.reward||ADMOB_REWARD_ID;}
 async function adWatch(kind,id){if(!AD_ON){toast('광고 준비 중입니다');return null;}const AM=capPlug('AdMob');if(!AM||!SRV||adBusy)return null;const unit=adUnit();if(!unit){toast('광고 준비 중입니다');return null;}
   if(kind==='boost'&&!autoOn){toast('자동 낚시를 켠 뒤 광고 부스트를 받을 수 있습니다');return null;}
   adBusy=true;try{const r=await net('ad-nonce',kind==='x2'?(id?{kind:'x2',id}:{kind:'x2'}):{});if(r.s!==200||!r.j||!r.j.nonce){toast(errMsg(r));return r.j&&r.j.error?{status:'rejected',reason:r.j.error}:null;}const nonce=r.j.nonce;
