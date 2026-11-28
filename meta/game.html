@@ -6221,7 +6221,7 @@ uisSet();addEventListener('resize',()=>{uisSet();try{layoutHUD();}catch(e){}});
 function topFit(){const sb=$('#spotbar');if(!sb)return;const b=$('#back'),sat=$('#satchip'),pt=$('#ptpill');const top=e=>e&&e.offsetParent?e.getBoundingClientRect().top:null;
   for(const c of ['tight1','tight2'])sb.classList.remove(c);const t0=top(b);if(t0==null)return;
   const wrapped=()=>[sat&&!sat.classList.contains('warn')&&!sat.classList.contains('low')?sat:null,pt].some(e=>{const t=top(e);return t!=null&&t>t0+8;});
-  if(wrapped())sb.classList.add('tight1');if(wrapped())sb.classList.add('tight2');}
+  if(wrapped())sb.classList.add('tight1');if(wrapped())sb.classList.add('tight2');try{ptFit();}catch(e){}}
 function layoutHUD(){if($('#world').hidden)return;try{topFit();}catch(e){}const Wd=$('#world');Wd.classList.toggle('fighting',!$('#fight').hidden);Wd.classList.toggle('charging',!$('#charge').hidden);
   if(cmp()){const hb=hudBottom();document.documentElement.style.setProperty('--hudb',hb+'px');if(!$('#fight').hidden&&!fightOn){fightOn=1;hudClose();}fightOn=$('#fight').hidden?0:1;
     const fe=$('#feed');fe.style.top=hb+'px';$('#menu').style.top='';$('#charge').style.bottom='';egiPlace();tutPlace();fightPlace();toastRecheck();trkPlace();return;}/* v38-UI: 소식은 상태 바 바로 아래로 펼치고, 메뉴는 하단 독 위로 */
@@ -6400,7 +6400,7 @@ function doCast(power){const chk=curChk;
   if(!t){state='idle';toast(loose?'민장대가 닿는 '+chk.D+'m 안에 물이 없습니다 · 물가 끝으로 더 다가가세요':'여기서는 '+Math.round(chk.D)+'m 안에 던질 물이 없습니다 · 물가 끝으로 더 다가가세요');return;}
   if(Math.abs(Math.atan2(Math.sin(ry-castRy0),Math.cos(ry-castRy0)))>.5&&!autoOn)toast('고른 방향은 물이 가까워 물이 넓은 쪽으로 몸을 돌려 던졌습니다',2600);// C6 #90
   if(!autoOn&&camFar(ry+Math.PI,Math.abs(Math.atan2(Math.sin(ry-castRy0),Math.cos(ry-castRy0)))>.5?.6:1.75))yawGoal=ry+Math.PI;/* V80: 몸을 크게 돌렸거나 찌가 화면 밖일 때만 시점을 따라 돌린다(던질 때마다 돌아가지 않게) */// 던지면서 몸을 돌렸으면 시점도 천천히 따라 돌아 찌가 화면 안에 오게 · v43: 자동 낚시 중에는 내가 돌려 둔 시점을 그대로 둔다
-  castD=t.d;if(chk.meth!=='boat'&&chk.D>0&&castD/chk.D<NEAR_R&&!autoOn&&!NEAR_TIP){NEAR_TIP=1;setTimeout(()=>toast('발 앞에 던지면 큰 고기는 잘 안 물어요 · 멀리 던질수록 큰 놈이 와요',3600),900);}/* V138 */player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(t.x,0,t.z);state='cast';t0=0;castRel=0;
+  castD=t.d;if(chk.meth!=='boat'&&chk.D>0&&castD/dkD(cur,chk.D)<NEAR_R&&!autoOn&&!NEAR_TIP){NEAR_TIP=1;setTimeout(()=>toast('발 앞에 던지면 큰 고기는 잘 안 물어요 · 멀리 던질수록 큰 놈이 와요',3600),900);}/* V138 */player.g.updateMatrixWorld(true);player.tip.getWorldPosition(castFrom);castTo.set(t.x,0,t.z);state='cast';t0=0;castRel=0;
   const m=chk.meth;pBob.visible=true;pBob.scale.setScalar(m==='lure'||m==='surf'?.45:1);pLine.l.visible=true;vxSfx('whoosh');
   const nt=liveNight(cur),all=catchable(cur,chk,nt).filter(x=>x.w>0);curList=shoreCatch(cur,chk.meth,chk.G.term.kind,castD,nt).filter(x=>x.w>0);// 실제로 날아간 거리 기준(서버 shoreList와 같은 식)
   if(!curList.length){const rr=shoreCatch(cur,chk.meth,chk.G.term.kind,1e3,nt).filter(x=>x.w>0).map(x=>(FX[x.f.n]||{}).r||0),need=rr.length?Math.min(...rr):0;// C6 #122: 닿을 수 없는 거리면 채비 탓이라고 말하고, 빈 캐스팅은 금방 끝낸다
@@ -6409,11 +6409,11 @@ function doCast(power){const chk=curChk;
   plan=null;escPlan=null;escJ=0;SES.c++;logMsg('비거리 '+Math.round(castD)+'m · '+ME_TXT[chk.G.rod.me]+' · '+esc(chk.G.term.n),'sys');nearHint(chk,all);
   myPres.st='wait';myPres.bx=+t.x.toFixed(1);myPres.bz=+t.z.toFixed(1);sendPres(true);evt('cast');if(SRV&&!autoOn)srvCast();}
 // 발 앞(최대 비거리의 30% 이하)에 떨어졌고 거리 계수가 낮으면 안내 — 처음 한 번, 그 뒤로는 4번 던질 때마다 한 번까지
-let nearN=99;function nearHint(chk,all){if(autoOn||!curList.length)return;nearN++;const dk=listDK(chk.meth,castD,chk.D,curList);
+let nearN=99;function nearHint(chk,all){if(autoOn||!curList.length)return;nearN++;const dk=listDK(chk.meth,castD,dkD(cur,chk.D),curList);
   if(distX(castD,chk.D,0)<=.3&&dk<=.72&&nearN>=4){nearN=0;toast('발 앞이라 입질이 적습니다 — 더 멀리 던져 보세요');}}
 // 던진 채비가 물에 닿으면 이번 캐스팅의 입질 여부·시각을 정한다(서버 모드에서는 서버 /cast 결과를 쓴다)
 let plan=null,escPlan=null,escJ=0;const SES={c:0,b:0,f:0,none:0,late:0,miss:0,jump:0,pull:0,break:0,snag:0};
-function startWait(){const m=curChk.meth==='pole'?'float':curChk.meth;const dk=listDK(m,castD,curChk.D,curList);const LB=listBite(m,biteFactor()*chumK()*(autoOn?1:petBuf(V4().eq.pet,false).bite*revBk())/* V91 펫 입질 · V143 돌발 */,/* v34 집어제(직접 낚시만) */curList,curChk.G,m==='boat',dk);const k=LB.k;ENV.biteK=k;ENV.distK=dk;waitT=0;
+function startWait(){const m=curChk.meth==='pole'?'float':curChk.meth;const dk=listDK(m,castD,dkD(cur,curChk.D),curList);const LB=listBite(m,biteFactor()*chumK()*(autoOn?1:petBuf(V4().eq.pet,false).bite*revBk())/* V91 펫 입질 · V143 돌발 */,/* v34 집어제(직접 낚시만) */curList,curChk.G,m==='boat',dk);const k=LB.k;ENV.biteK=k;ENV.distK=dk;waitT=0;
   const spd=m==='lure'?lureSpd(curChk.G.term.kind):1;plan={pB:LB.pB,dk,at:biteDelay(m,castD,spd,Math.random()),wait:noneWait(m,castD,spd,Math.random()),used:false};plan.bite=Math.random()<plan.pB;if(!curList.length){plan.bite=false;plan.wait=Math.min(plan.wait,3);}if(autoRT()){plan.rt=1;plan.bite=AQ_R.length>0;plan.at=Math.min(plan.at,1.2+Math.random());plan.wait=Math.max(plan.wait,40);}/* V97 실제 결과가 올 때까지 기다림 */egiStart();}
 function planDue(){if(plan&&plan.rt&&!plan.bite&&!plan.used&&AQ_R.length){plan.bite=true;plan.at=waitT+.6+Math.random()*.8;}/* V97 기다리는 동안 결과가 오면 바로 입질 */if(!plan||!plan.bite||plan.used||waitT<plan.at)return false;plan.used=true;return true;}
 function planNoneDue(){return!!plan&&!plan.bite&&waitT>=plan.wait;}
@@ -8462,7 +8462,7 @@ function renderBag(){const s=cur||sel;const chk=checkGear(s);const G=chk.G;const
   let h='';if(lk)h+='<div class="lock">'+esc(lk)+(state==='wait'||state==='cast'?' <button class="mini" type="button" id="bagReel">채비 거두고 바꾸기</button>':'')+'</div>';// C6 #152
   if(!lk&&G.rod&&!chk.ok&&s)h+='<div class="row" style="margin:4px 0"><button class="mini buy" type="button" id="bagFit">채비 맞추기</button> <span class="k">가진 것 중 지금 낚싯대에 맞는 원줄·목줄·채비로 바꿉니다</span></div>';// C6 #151
   h+=ocHTML(s,lk);/* V89 원클릭 채비 */h+=kitBagHTML(s,lk);/* V49 초보자 세트 */
-  if(G.rod)h+='<div class="sumln">'+ME_TXT[G.rod.me]+' · 비거리 <b class="num">'+chk.D+'m</b> · 채비 한계 <b class="num">'+chk.C.toFixed(1)+'kg</b></div>';
+  if(G.rod)h+='<div class="sumln">'+ME_TXT[G.rod.me]+' · 비거리 <b class="num">'+chk.D+'m</b>'+rvNote(cur||sel,chk.D)+' · 채비 한계 <b class="num">'+chk.C.toFixed(1)+'kg</b></div>';
   chk.msgs.slice(0,2).forEach(m=>h+='<div class="'+(chk.ok?'warnline':'badline')+'" style="font-size:12px">· '+esc(m)+'</div>');
   h+='<div class="sumln sm k">자동 낚시 · '+esc(autoTxt())+'</div>'+v39DvBag();/* v35 · V39-UI: 내구도 한 줄 + 펼치기 */
   const bv=bagView(),rowF=bv==='grid'?bagTileHTML:bagRowHTML;
@@ -8592,7 +8592,7 @@ function fishChips(L){const M=L.filter(x=>!x.by||x.off),B=L.some(x=>x.by&&!x.off
   if(B&&!M.length)h+='<div class="badline" style="width:100%">지금 이 해역·철에는 오징어류가 없어 입질이 거의 없습니다(바닷고기 1% 몫만)</div>';return h;}
 function gearSummary(compact){const s=cur||sel;const chk=checkGear(s);const G=chk.G;
   let h='<div class="sumbox"><div><span class="k">장착</span> '+esc(G.rod?G.rod.n:'-')+' · '+esc(G.line?G.line.n:'-')+' · '+esc(G.leader?G.leader.n:'쇼크리더/목줄 없음')+' · '+esc(G.term?G.term.n:'-')+(G.term&&G.term.pack?' (남은 '+termLeft(G.term.id)+'개)':'')+'</div>';
-  if(G.rod)h+='<div><span class="k">낚시법</span> '+ME_TXT[G.rod.me]+' · <span class="k">최대 비거리</span> <b class="num">'+chk.D+'m</b> · <span class="k">채비 한계</span> <b class="num">'+chk.C.toFixed(1)+'kg</b> <span class="k">(가장 약한 곳 기준)</span></div>'+scoreHTML(G,s);
+  if(G.rod)h+='<div><span class="k">낚시법</span> '+ME_TXT[G.rod.me]+' · <span class="k">최대 비거리</span> <b class="num">'+chk.D+'m</b>'+rvNote(cur||sel,chk.D)+' · <span class="k">채비 한계</span> <b class="num">'+chk.C.toFixed(1)+'kg</b> <span class="k">(가장 약한 곳 기준)</span></div>'+scoreHTML(G,s);
   chk.msgs.forEach(m=>h+='<div class="'+(chk.ok?'warnline':'badline')+'">· '+esc(m)+'</div>');
   if(SES.c)h+='<div><span class="k">이번 접속</span> <b class="num">'+sesTxt()+'</b>'+(SES.c>SES.b?' <span class="k">· 입질 없음 '+SES.none+' · 입질 놓침 '+(SES.late||0)+' · 헛챔질 '+SES.miss+' · 바늘털이 '+SES.jump+' · 바늘 빠짐 '+SES.pull+' · 줄 터짐 '+SES.break+'</span>':'')+'</div>';
   if(compact){}else if(s){const L=catchable(s,chk,liveNight(s));
@@ -8691,14 +8691,14 @@ function tileHTML(cat,x){const gr=grade(x),own=owned(cat,x),on=save.eq[cat]===x.
 function noneTileHTML(){const on=!save.eq.leader;return'<button type="button" class="itile none'+(on?' on':'')+'" data-none="1" style="--g:#97a9ae"><span class="tiart">'+NONE_SVG+(on?'<span class="tieq">E</span>':'')+'</span><span class="tibody"><span class="tinm">리더 없음</span><span class="tist">원줄에 바로 채비를 묶음</span></span><span class="tiside"><span class="tipr'+(on?' own':'')+'">'+(on?'장착 중':'빼기')+'</span></span></button>';}
 // 넓은 화면이 아닌 곳의 짧은 요약(한두 줄)
 function gearLine(){const s=cur||sel;const chk=checkGear(s);const G=chk.G;let h='<div class="sumln1">';
-  if(G.rod)h+='<span class="k">지금 채비</span> '+ME_TXT[G.rod.me]+' · 비거리 <b class="num">'+chk.D+'m</b> · 채비 한계 <b class="num">'+chk.C.toFixed(1)+'kg</b>';
+  if(G.rod)h+='<span class="k">지금 채비</span> '+ME_TXT[G.rod.me]+' · 비거리 <b class="num">'+chk.D+'m</b>'+rvNote(cur||sel,chk.D)+' · 채비 한계 <b class="num">'+chk.C.toFixed(1)+'kg</b>';
   if(chk.msgs.length)h+='<span class="'+(chk.ok?'warnline':'badline')+'"> · '+esc(chk.msgs[0])+'</span>';h+='</div>';return h+(G.rod?scoreHTML(G,s):'');}
 // 내 채비: 장착 4줄(바꾸기 → 그 종류의 맞는 것만) + 수치 한 줄 + 어종(접힘)
 let shopFishOpen=false;
 function mySummary(){const s=cur||sel;const chk=checkGear(s);const G=chk.G;
   let h='<div class="sumbox my"><div class="eqsum">'+[['rod','낚싯대'],['line','원줄'],['leader','목줄'],['term','채비']].map(([c,t])=>{const x=G[c];const gr=x?grade(x):{c:'#97a9ae'};
     return'<div class="eqrow'+(x?' t'+(x.ti||0):'')+'" style="--g:'+gr.c+'"><button type="button" class="eqmain"'+(x?' data-pick="'+c+'" data-id="'+x.id+'"':' disabled')+'><span class="tiart">'+(x?itemArt(c,x):NONE_SVG)+'</span><span class="tibody"><span class="tinm"><span class="eqk">'+t+'</span>'+(x?esc(x.n):c==='leader'?'목줄 없음':'없음')+'</span><span class="tist">'+(x?esc(statLine(c,x)):c==='leader'?'원줄에 바로 채비를 묶음':'')+'</span></span></button><button type="button" class="mini eqjump" data-jump="'+c+'">바꾸기</button></div>';}).join('')+'</div>';
-  if(G.rod)h+='<div class="sumln">'+ME_TXT[G.rod.me]+' · 비거리 <b class="num">'+chk.D+'m</b> · 채비 한계 <b class="num">'+chk.C.toFixed(1)+'kg</b> <span class="k">(가장 약한 곳)</span></div>'+scoreHTML(G,s);
+  if(G.rod)h+='<div class="sumln">'+ME_TXT[G.rod.me]+' · 비거리 <b class="num">'+chk.D+'m</b>'+rvNote(cur||sel,chk.D)+' · 채비 한계 <b class="num">'+chk.C.toFixed(1)+'kg</b> <span class="k">(가장 약한 곳)</span></div>'+scoreHTML(G,s);
   chk.msgs.forEach(m=>h+='<div class="sumln '+(chk.ok?'warnline':'badline')+'">· '+esc(m)+'</div>');
   if(SES.c)h+='<div class="sumln sm"><span class="k">이번 접속</span> <b class="num">'+sesTxt()+'</b>'+(SES.c>SES.b?' <span class="k">· 입질 없음 '+SES.none+' · 입질 놓침 '+(SES.late||0)+' · 헛챔질 '+SES.miss+' · 바늘털이 '+SES.jump+' · 바늘 빠짐 '+SES.pull+' · 줄 터짐 '+SES.break+'</span>':'')+'</div>';
   if(s){const L=catchable(s,chk,liveNight(s));const n=L.filter(x=>x.w&&x.inSeason&&!x.by).length;
@@ -9016,15 +9016,15 @@ function proBenHTML(){return'<ul class="proben">'+proBenList().map(t=>'<li>'+t+'
 function proInApp(){try{return window.parent&&window.parent!==window;}catch(e){return false;}}
 function proStepsHTML(){return'<div class="prosteps"><b>구독 방법</b><ol><li><b>낚시GO 앱에 로그인</b><small>게임과 같은 아이디</small></li><li><b>멤버십 메뉴에서 PRO 구독</b><small>구글 플레이 결제 · 월 9,900원 · 자동 갱신</small></li><li><b>게임으로 돌아오면 바로 적용</b><small>다시 로그인할 필요 없어요</small></li></ol></div>';}
 function proModal(kind,o){o=o||{};const capH=proVals().fh;
-  const T={cap:'오늘 무료 자동 낚시가 끝났어요',trial:'PRO 3일 체험이 끝났어요',dayEnd:'PRO 하루 체험이 끝났어요',tag:'PRO 멤버십이란?',shop:'낚시GO PRO 멤버십'}[kind]||'낚시GO PRO 멤버십';
-  const lead={cap:'오늘 쓸 수 있는 무료 자동 낚시 <b>'+capH+'시간</b>을 다 썼어요. 내일 0시(한국 시간)에 다시 채워져요.',trial:'지금부터는 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 자동 결제는 없었어요.',dayEnd:'출석 보상 PRO 하루가 끝나 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 결제는 없었어요.',tag:'<b>'+esc(o.nick||'')+'</b>님은 낚시GO PRO 회원이에요. 월 9,900원이면 이렇게 달라져요.',shop:'월 9,900원 · 자동 갱신'}[kind]||'';
+  const T={cap:'오늘 무료 자동 낚시가 끝났어요',trial:'PRO 3일 체험이 끝났어요',dayEnd:'PRO 하루 체험이 끝났어요',monthEnd:'PRO 한 달이 끝났어요',tag:'PRO 멤버십이란?',shop:'낚시GO PRO 멤버십'}[kind]||'낚시GO PRO 멤버십';
+  const lead={cap:'오늘 쓸 수 있는 무료 자동 낚시 <b>'+capH+'시간</b>을 다 썼어요. 내일 0시(한국 시간)에 다시 채워져요.',trial:'지금부터는 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 자동 결제는 없었어요.',dayEnd:'출석 보상 PRO 하루가 끝나 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 결제는 없었어요.',monthEnd:'PRO 한 달(쿠폰)이 끝나 무료(자동 낚시 하루 '+capH+'시간)로 돌아가요. 자동으로 결제되지 않아요. 계속 쓰려면 아래 <b>제보·문의</b>로 PRO 한 달을 다시 신청해 주세요.',tag:'<b>'+esc(o.nick||'')+'</b>님은 낚시GO PRO 회원이에요. 월 9,900원이면 이렇게 달라져요.',shop:'월 9,900원 · 자동 갱신'}[kind]||'';
   const bar='<div class="probar" aria-label="하루 자동 낚시 시간 비교"><div><span>무료</span><i><b style="width:'+Math.round(capH/24*100)+'%;background:#9aa7b0"></b></i><span>'+capH+'시간</span></div><div><span>PRO</span><i><b style="width:100%;background:#2fa866"></b></i><span>24시간</span></div></div>';
   const m=uiBox('proM','modal','');m.classList.add('proM');
-  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="proMT" style="width:min(460px,100%);box-sizing:border-box;max-height:92vh;overflow:auto"><h2 id="proMT">'+T+'</h2>'+(lead?'<p class="proLead">'+lead+'</p>':'')+(kind==='cap'?proIfHTML(capH):'')+(kind==='cap'||kind==='trial'||kind==='dayEnd'?bar:'')+(kind==='trial'||kind==='dayEnd'?'<p class="proLead" style="font-weight:700">PRO를 계속 쓰면</p>':'')+proBenHTML()+proStepsHTML()
-   +(!proInApp()?'<div class="row" style="justify-content:flex-end"><button class="chgbtn pay" id="proOkB" type="button">확인</button></div>'/* 낚시GO 앱 밖(웹·플레이 게임 앱)은 바로 가는 버튼 없이 안내만 */
+  m.innerHTML='<div class="sheet2 panel" role="dialog" aria-modal="true" aria-labelledby="proMT" style="width:min(460px,100%);box-sizing:border-box;max-height:92vh;overflow:auto"><h2 id="proMT">'+T+'</h2>'+(lead?'<p class="proLead">'+lead+'</p>':'')+(kind==='cap'?proIfHTML(capH):'')+(kind==='cap'||kind==='trial'||kind==='dayEnd'||kind==='monthEnd'?bar:'')+(kind==='trial'||kind==='dayEnd'||kind==='monthEnd'?'<p class="proLead" style="font-weight:700">PRO를 계속 쓰면</p>':'')+proBenHTML()+(kind==='monthEnd'?'':proStepsHTML())
+   +(kind==='monthEnd'?'<div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="chgbtn" id="proNoB" type="button">무료로 계속할게요</button><button class="chgbtn pay" id="proCtB" type="button">제보·문의</button></div>'/* V174 쿠폰으로 산 한 달: 다시 신청은 문의로 */:!proInApp()?'<div class="row" style="justify-content:flex-end"><button class="chgbtn pay" id="proOkB" type="button">확인</button></div>'/* 낚시GO 앱 밖(웹·플레이 게임 앱)은 바로 가는 버튼 없이 안내만 */
      :'<div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="chgbtn" id="proNoB" type="button">'+({cap:'내일 다시 할게요',trial:'무료로 계속할게요',dayEnd:'무료로 계속할게요'}[kind]||'닫기')+'</button><button class="chgbtn pay" id="proGoB" type="button">'+(kind==='trial'||kind==='dayEnd'?'낚시GO에서 PRO 계속하기':'낚시GO에서 PRO 시작하기')+'</button></div>')+'</div>';
   const close=()=>{m.hidden=true;try{canvas.focus();}catch(e){}};m.onclick=e=>{if(e.target===m)close();};
-  ['proOkB','proNoB'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=close;});const g=document.getElementById('proGoB');if(g)g.onclick=()=>{close();subGo();};m.hidden=false;}
+  ['proOkB','proNoB'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=close;});const g=document.getElementById('proGoB');if(g)g.onclick=()=>{close();subGo();};const ct=document.getElementById('proCtB');if(ct)ct.onclick=()=>{close();try{ctOpen();}catch(e){}};m.hidden=false;}
 /* V171 "오늘 PRO였다면": 오늘(KST) 무료 자동 정산 조과를 이 기기에 모아 두고(마리·포인트), 무료 시간을 다 쓴 순간 같은 속도로 남은 시간(24 − 무료 시간)을 더 낚았다면의 값을 보여 준다 · 실제 내 조과로만 계산 · 조과가 없으면 줄을 보이지 않음 */
 function proTally(){try{const o=JSON.parse(lsGet('fishinggo.meta.proToday')||'null');if(o&&o.d===proDay())return o;}catch(e){}return{d:proDay(),n:0,p:0};}
 function proTallyAdd(j){try{const A=autoNow();if(A.sub||A.pass)return;const n=+j.n||0,pt=+j.pts||0;if(!(n>0||pt>0))return;const o=proTally();o.n+=n;o.p+=pt;lsSet('fishinggo.meta.proToday',JSON.stringify(o));}catch(e){}}
@@ -9035,8 +9035,8 @@ function proDay(){return new Date(Date.now()+9*36e5).toISOString().slice(0,10);}
 function proCheck(){try{if(!SRV)return;const A=autoNow(),now=Date.now();
   if(SA&&+SA.trialUntil>now)lsSet('fishinggo.meta.trialU',String(+SA.trialUntil));
   const tu=+(lsGet('fishinggo.meta.trialU')||0);if(tu&&tu<=now&&!A.sub&&!A.pass&&lsGet('fishinggo.meta.trialEndShown')!==String(tu)&&proFree()){lsSet('fishinggo.meta.trialEndShown',String(tu));proModal('trial');return;}
-  if(SA&&+SA.proDayUntil>now)lsSet('fishinggo.meta.proDayU',String(+SA.proDayUntil));
-  const du=+(lsGet('fishinggo.meta.proDayU')||0);if(du&&du<=now&&!A.sub&&!A.pass&&lsGet('fishinggo.meta.proDayEndShown')!==String(du)&&proFree()){lsSet('fishinggo.meta.proDayEndShown',String(du));proModal('dayEnd');return;}/* V171 PRO 하루 체험권 끝 */
+  if(SA&&+SA.proDayUntil>now){lsSet('fishinggo.meta.proDayU',String(+SA.proDayUntil));lsSet('fishinggo.meta.proDayM',SA.proDayM?'1':'0');}
+  const du=+(lsGet('fishinggo.meta.proDayU')||0);if(du&&du<=now&&!A.sub&&!A.pass&&lsGet('fishinggo.meta.proDayEndShown')!==String(du)&&proFree()){lsSet('fishinggo.meta.proDayEndShown',String(du));proModal(lsGet('fishinggo.meta.proDayM')==='1'?'monthEnd':'dayEnd');return;}/* V171 PRO 하루 체험권 끝 */
   if(!proOk()||A.mode!=='free')return;const used=(A.on&&A.full)||(!A.on&&A.dayCapMs&&A.dayUsedMs>=A.dayCapMs-6e4);if(!used)return;
   const k='fishinggo.meta.proCap',d=proDay();if(lsGet(k)===d||!proFree())return;lsSet(k,d);proModal('cap');}catch(e){}}
 setInterval(proCheck,30e3);
@@ -10017,7 +10017,7 @@ function openCoupon(){if(!SRV){toast('낚시GO에 로그인해 서버에 연결�
   const use=async()=>{const v=code.value.trim();if(!v){msg.className='cpmsg bad';msg.textContent='쿠폰 번호를 넣어 주세요';return;}const g=$('#cpGo');g.disabled=true;msg.className='cpmsg';msg.textContent='확인 중…';
     const r=await netRid('coupon',{code:v});g.disabled=false;
     if(r.s===200&&r.j&&r.j.need==='pick'){msg.className='cpmsg';msg.textContent='전설 낚시대를 골라 주세요(아직 쿠폰은 쓰지 않았습니다)';gpkOpen(r.j.code||v,r.j,x=>{if(x.s===200&&x.j&&x.j.ok){msg.className='cpmsg ok';msg.textContent='받았습니다 · '+cpGotTxt(x.j.got)+' · 테스터 감사';code.value='';}else{msg.className='cpmsg bad';msg.textContent=(x.j&&x.j.message)||errMsg(x);}});return;}
-    if(r.s===200&&r.j&&r.j.ok){msg.className='cpmsg ok';msg.textContent='받았습니다 · '+cpGotTxt(r.j.got)+(r.j.note?' ('+r.j.note+')':'');code.value='';try{boatDayTake(r.j);}catch(e){}if(r.j.got&&r.j.got.pro){try{if(r.j.auto)setSA(r.j.auto);if(r.j.settle)srvApplySettle(r.j,true);if(r.j.got.proUntil){lsSet('fishinggo.meta.proDayU',String(r.j.got.proUntil));myLabelSync(true);}}catch(e){}}/* V174 PRO 한 달 */if(typeof r.j.pt==='number')save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);if(r.j.inv)save.inv=r.j.inv;refreshWallet();try{bagRefresh();}catch(e){}toast('쿠폰 · '+cpGotTxt(r.j.got));srvRefresh();return;}
+    if(r.s===200&&r.j&&r.j.ok){msg.className='cpmsg ok';msg.textContent='받았습니다 · '+cpGotTxt(r.j.got)+(r.j.note?' ('+r.j.note+')':'');code.value='';try{boatDayTake(r.j);}catch(e){}if(r.j.got&&r.j.got.pro){try{if(r.j.auto)setSA(r.j.auto);if(r.j.settle)srvApplySettle(r.j,true);if(r.j.got.proUntil){lsSet('fishinggo.meta.proDayU',String(r.j.got.proUntil));lsSet('fishinggo.meta.proDayM','1');myLabelSync(true);}}catch(e){}}/* V174 PRO 한 달 */if(typeof r.j.pt==='number')save.pt=r.j.pt;if(r.j.wallet)setWal(r.j.wallet);if(r.j.inv)save.inv=r.j.inv;refreshWallet();try{bagRefresh();}catch(e){}toast('쿠폰 · '+cpGotTxt(r.j.got));srvRefresh();return;}
     msg.className='cpmsg bad';msg.textContent=(r.j&&r.j.message)||errMsg(r);};
   $('#cpGo').onclick=use;code.addEventListener('keydown',e=>{if(e.key==='Enter')use();});
   if(!adm)return;
@@ -12427,8 +12427,10 @@ function dockSync(){try{const G=v36Goal(),c=!!(G&&G.claim);['#wquestbtn','#quest
   on('#ptpill',()=>{hudClose();openShop('my');});on('#mptbtn',()=>openShop('my'));
   on('#loc',e=>{if(!e.target.closest('#wxchip'))$('#wxchip').click();});
   ['#wquestbtn','#questbtn'].forEach(q=>on(q,e=>{if(!e.currentTarget.classList.contains('rdot'))return;e.stopImmediatePropagation();shopClose();if(!$('#bag').hidden)bagSet(false);hudClose();openRPG('goal');},true));
-  const ws=()=>{const a=$('#wallet'),b=$('#wpt');if(!a||!b)return;const n=+String(a.textContent).replace(/[^0-9]/g,''),t=n>=1e6?Math.floor(n/1e4).toLocaleString('ko-KR')+'만':a.textContent;/* V77 100만 P 이상은 줄여 칸 폭 고정 */if(b.textContent!==t){b.textContent=t;b.title=a.textContent+'P';}};try{new MutationObserver(ws).observe($('#wallet'),{childList:true,characterData:true,subtree:true});}catch(e){}ws();
+  const ws=()=>ptFit();/* V77 100만 P 이상은 줄여 칸 폭 고정 · V175 잘리면 만 단위 */try{new MutationObserver(ws).observe($('#wallet'),{childList:true,characterData:true,subtree:true});}catch(e){}ws();
   setInterval(trkSync,300);setInterval(dockSync,1000);setTimeout(()=>{trkSync();dockSync();},0);}
+/* V175 강 장면은 맞은편 둑까지 약 44m라 그보다 멀리 못 던진다 — 거리 계수(입질)·발 앞 판정은 이 거리를 최대로 본다(서버 /cast와 같은 식) */const RIVER_REACH=44;function isRiverSpot(s){return!!s&&s.w==='fresh'&&!/호|저수지|댐|늪|제\b|제$/.test(s.n);}function dkD(s,D){return isRiverSpot(s)?Math.min(D,RIVER_REACH):D;}function rvNote(s,D){return isRiverSpot(s)&&D>RIVER_REACH?' <span class="k">· 강폭 때문에 약 50m까지만 날아가요</span>':'';}
+/* V175 보유 포인트: 칸이 좁아 숫자가 잘리면(52…) 'NN.N만'으로 줄여 보여 준다 */function ptFit(){const a=$('#wallet'),b=$('#wpt');if(!a||!b)return;const n=+String(a.textContent).replace(/[^0-9]/g,'');let t=n>=1e6?Math.floor(n/1e4).toLocaleString('ko-KR')+'만':a.textContent;if(b.textContent!==t)b.textContent=t;if(n>=1e4&&n<1e6&&b.clientWidth>0&&b.scrollWidth>b.clientWidth+1){t=(Math.floor(n/1e3)/10).toLocaleString('ko-KR',{maximumFractionDigits:1})+'만';b.textContent=t;}const ti=a.textContent+'P';if(b.title!==ti)b.title=ti;}
 /* ===================== V39-UI: 두 번째 정리 — 접는 칸 · 아이콘 칸 · 처음 안내 카드 · 낚은 고기 카드 · 어록 자세히 · 가방 내구도 =====================
    화면 그리기만 바꾼다(게임 규칙·서버·공유 규칙 블록은 그대로). */
 const V39={dis:{card:false,food:false},tipQ:[]};
